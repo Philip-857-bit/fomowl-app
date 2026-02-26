@@ -43,7 +43,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       }
 
       final url = Uri.parse('https://fomowl-backend.onrender.com/api/history/$address');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      final response = await http.get(url).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

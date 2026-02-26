@@ -70,7 +70,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       final baseUrl = 'https://fomowl-backend.onrender.com/api/blockchain';
       final url = Uri.parse('$baseUrl/${chain.chainId}/nfts/$address');
       
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      final response = await http.get(url).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

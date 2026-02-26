@@ -86,7 +86,7 @@ class SwapExecutionService {
       // Amount out of decimal representation into Wei
       final rawAmountStr = (fromAmount * (BigInt.from(10).pow(fromToken.decimals).toDouble())).toStringAsFixed(0);
 
-      final url = Uri.parse('$_backendApiBase/swap'
+      final url = Uri.parse('$_backendApiBase/transaction'
           '?chainId=${blockchain.activeChain.chainId}'
           '&src=$src'
           '&dst=$dst'

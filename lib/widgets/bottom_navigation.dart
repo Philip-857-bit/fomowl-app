@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import '../screens/profile/coming_soon_overlay.dart';
 
 /// Shared Bottom Navigation Bar
 /// 5 tabs: Wallet, Swap, Earn, Payment, Me
@@ -103,7 +104,14 @@ class BottomNavBar extends StatelessWidget {
         break;
       case 2: // Earn
       case 3: // Payment
-        Navigator.pushNamed(context, '/coming-soon', arguments: ['Earn', 'Payment'][index - 2]);
+        showDialog(
+          context: context,
+          barrierColor: Colors.transparent,
+          builder: (ctx) => ComingSoonOverlay(
+            title: ['Earn', 'Payment'][index - 2],
+            child: const SizedBox(), // Empty child as overlay will provide black background
+          ),
+        );
         break;
       case 4: // Me
         if (currentScreenIndex == 0) {

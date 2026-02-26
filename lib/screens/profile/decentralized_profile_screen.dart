@@ -123,7 +123,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
               const SizedBox(height: 8),
               _buildSectionHeader('Support'),
               _buildMenuItem(Icons.build_outlined, 'Version', () {
-                ToastUtils.showInfo('Owllet Wallet v1.0.0');
+                ToastUtils.showInfo('Owllet Wallet v1.0.1');
               }),
               _buildMenuItem(Icons.delete_outline, l.resetWallet, () {
                 _showResetWalletDialog();

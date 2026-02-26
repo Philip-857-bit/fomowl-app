@@ -27,7 +27,7 @@ class SwapGaslessToggle extends StatelessWidget {
             Icon(Icons.bolt, color: value ? AppColors.accentRed : Colors.white54, size: 20),
             const SizedBox(width: 8),
             Text(
-              '1inch Fusion (Gasless)',
+              'Owllet Gasless Beta',
               style: GoogleFonts.outfit(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -49,7 +49,7 @@ class SwapGaslessToggle extends StatelessWidget {
           ],
         ),
         subtitle: Text(
-          'Trade without paying native network gas fees. Uses off-chain 1inch resolvers.',
+          'Trade without paying native network gas fees. Powered by Owllet decentralized relayers.',
           style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
         ),
         value: value,

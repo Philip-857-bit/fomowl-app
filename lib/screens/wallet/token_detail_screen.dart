@@ -32,6 +32,8 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   TokenMarketData? _marketData;
   bool _isLoadingInfo = false;
   BlockchainService? _blockchain;
+  String? _lastResolvedCoinId;
+  int? _lastChainId;
 
   final List<String> _timeframes = ['5M', '1H', '1D', '1W', '1M', '1Y'];
 
@@ -81,7 +83,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       TokenInfoRowData(label: 'Market Cap', value: marketCapText),
       TokenInfoRowData(label: 'Total Supply', value: totalSupplyText),
       TokenInfoRowData(label: 'Circulating Supply', value: circulatingSupplyText),
-      const TokenInfoRowData(label: 'Holders', value: '--'),
+      const TokenInfoRowData(label: 'Holders', value: '0'),
       TokenInfoRowData(label: 'Created On', value: createdOn),
     ];
   }
@@ -105,7 +107,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       case 'USDC': return 'usd-coin';
       case 'USDT': return 'tether';
       case 'MATIC': return 'matic-network';
-      default: return 'ethereum';
+      default: return '';
     }
   }
 
@@ -126,10 +128,10 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         final tokens = service.tokens;
         _token = _findMatchingToken(tokens, passedToken) ?? passedToken;
       }
-      _fetchChartData();
-      _fetchTokenStats();
+      _reloadTokenMarketData(force: true);
     } else {
       _refreshTokenFromService();
+      _reloadTokenMarketData();
     }
   }
 
@@ -142,6 +144,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   void _handleBlockchainUpdate() {
     if (!mounted) return;
     _refreshTokenFromService();
+    _reloadTokenMarketData();
   }
 
   void _refreshTokenFromService() {
@@ -153,6 +156,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       setState(() {
         _token = updated;
       });
+      _reloadTokenMarketData(force: true);
     }
   }
 
@@ -175,6 +179,14 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   Future<void> _fetchChartData() async {
     setState(() => _isLoadingChart = true);
     final coinId = _resolveCoinGeckoId();
+    if (coinId == null || coinId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _priceData = [];
+        _isLoadingChart = false;
+      });
+      return;
+    }
     final days = _timeframeToDays(_selectedTimeframe);
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final data = await blockchain.getPriceHistory(coinId, days: days);
@@ -189,6 +201,14 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   Future<void> _fetchTokenStats() async {
     setState(() => _isLoadingInfo = true);
     final coinId = _resolveCoinGeckoId();
+    if (coinId == null || coinId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _marketData = null;
+        _isLoadingInfo = false;
+      });
+      return;
+    }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final stats = await blockchain.getTokenMarketData(coinId);
     if (!mounted) return;
@@ -199,7 +219,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   String _formatFiatValue(double? value) {
-    if (value == null || value <= 0) return '--';
+    if (value == null || value <= 0) return '\$0.00';
     if (value >= 1e12) return '\$${(value / 1e12).toStringAsFixed(2)}T';
     if (value >= 1e9) return '\$${(value / 1e9).toStringAsFixed(2)}B';
     if (value >= 1e6) return '\$${(value / 1e6).toStringAsFixed(2)}M';
@@ -208,7 +228,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   String _formatSupplyValue(double? value) {
-    if (value == null || value <= 0) return '--';
+    if (value == null || value <= 0) return '0';
     if (value >= 1e12) return '${(value / 1e12).toStringAsFixed(2)}T';
     if (value >= 1e9) return '${(value / 1e9).toStringAsFixed(2)}B';
     if (value >= 1e6) return '${(value / 1e6).toStringAsFixed(2)}M';
@@ -229,12 +249,27 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     return _formatFiatValue(usdValue);
   }
 
-  String _resolveCoinGeckoId() {
+  String? _resolveCoinGeckoId() {
     final token = _token;
     if (token != null && token.coinGeckoId != null && token.coinGeckoId!.isNotEmpty) {
       return token.coinGeckoId!;
     }
-    return _tokenToCoinGeckoId(token?.symbol ?? 'ETH');
+    final mapped = _tokenToCoinGeckoId(token?.symbol ?? '');
+    if (mapped.isEmpty) return null;
+    return mapped;
+  }
+
+  void _reloadTokenMarketData({bool force = false}) {
+    final blockchain = _blockchain;
+    final coinId = _resolveCoinGeckoId();
+    final chainId = blockchain?.activeChain.chainId;
+    if (!force && coinId == _lastResolvedCoinId && chainId == _lastChainId) {
+      return;
+    }
+    _lastResolvedCoinId = coinId;
+    _lastChainId = chainId;
+    _fetchChartData();
+    _fetchTokenStats();
   }
 
 

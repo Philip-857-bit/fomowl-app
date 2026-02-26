@@ -19,6 +19,7 @@ import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/social_banner_card.dart';
 import 'widgets/tokens_section.dart';
+import '../profile/coming_soon_overlay.dart';
 
 /// Home Screen - Main Wallet Dashboard
 /// Shows wallet balance, quick actions, and token list
@@ -216,7 +217,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateComingSoon(String feature) {
-    Navigator.pushNamed(context, '/coming-soon', arguments: feature);
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => ComingSoonOverlay(
+        title: feature,
+        child: const SizedBox(),
+      ),
+    );
   }
 
   Future<void> _openSocialLink() async {

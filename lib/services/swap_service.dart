@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 
 /// Swap Quote Model
@@ -53,9 +54,9 @@ class SwapService {
         final allowanceTarget = data['allowanceTarget'] ?? '';
         
         // Convert wei to simple formatted string for UI
-        final double estimate = double.tryParse(dstAmountWei) ?? 0.0;
+        final estimate = double.tryParse(dstAmountWei) ?? 0.0;
         final decimals = (data['tokenMetadata']?['buyToken']?['decimals'] ?? 18) as int;
-        final formatted = (estimate / (10 * decimals)).toStringAsFixed(4);
+        final formatted = (estimate / math.pow(10, decimals)).toStringAsFixed(6);
         
         return SwapQuote(
           amountOutWei: dstAmountWei,

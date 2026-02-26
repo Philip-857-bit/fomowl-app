@@ -205,7 +205,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (lower.contains('nonce too low')) {
       return 'Transaction nonce is too low. Please wait for pending transactions to finish.';
     }
-    return raw;
+    return 'Swap failed. Please verify your token selection and balance.';
   }
 
   Future<void> _refreshWalletState() async {

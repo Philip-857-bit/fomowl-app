@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'constants/app_colors.dart';
 import 'l10n/app_localizations.dart';
@@ -53,7 +54,8 @@ import 'services/blockchain_service.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
@@ -178,7 +180,7 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
         '/add-network': (context) => const AddNetworkScreen(),
         // Fiat/Centralized routes → Coming Soon until backend is live
         '/transaction-processing': (context) => const ComingSoonOverlay(title: 'Transaction Processing', child: TransactionProcessingScreen()),
-        '/transactions': (context) => const ComingSoonOverlay(title: 'Transactions', child: TransactionsScreen()),
+        '/transactions': (context) => const TransactionsScreen(),
         '/payments': (context) => const ComingSoonOverlay(title: 'Payments', child: PaymentsScreen()),
         '/bill-payment': (context) => const ComingSoonOverlay(title: 'Pay Bills', child: BillPaymentScreen()),
         '/withdraw-to-bank': (context) => const ComingSoonOverlay(title: 'Withdraw to Bank', child: WithdrawToBankScreen()),
@@ -226,6 +228,8 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     }
 
     if (!mounted) return;
+
+    FlutterNativeSplash.remove();
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(

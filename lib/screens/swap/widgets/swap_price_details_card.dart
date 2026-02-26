@@ -27,9 +27,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
       children: [
         _buildDetailRow('Price', priceText),
         const SizedBox(height: 12),
-        _buildDetailRow('Total Tax', '${slippage.toStringAsFixed(1)}%'),
+        _buildDetailRow('Slippage', '${slippage.toStringAsFixed(1)}%'),
         const SizedBox(height: 12),
-        _buildDetailRow('Fee', '${feeAmount > 0 ? feeAmount.toStringAsFixed(4) : "0"} $feeSymbol'),
+        _buildDetailRow('Network Fee', '~\$${feeAmount.toStringAsFixed(2)}'),
         const SizedBox(height: 12),
         _buildDetailRow('To Receive', receiveText),
       ],

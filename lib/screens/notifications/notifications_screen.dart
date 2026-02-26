@@ -41,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
 
       final url = Uri.parse('https://fomowl-backend.onrender.com/api/notifications/$address');
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      final response = await http.get(url).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
