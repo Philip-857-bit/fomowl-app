@@ -171,6 +171,10 @@ class BlockchainService extends ChangeNotifier {
   static const String priceApiBase = 'https://api.coingecko.com/api/v3';
 
   List<Token> _walletTokens = [];
+  final Map<String, _CachedChartData> _priceHistoryCache = {};
+  final Map<String, _CachedMarketData> _tokenMarketDataCache = {};
+  static const Duration _priceHistoryCacheTtl = Duration(minutes: 2);
+  static const Duration _tokenMarketDataCacheTtl = Duration(minutes: 2);
   
   // Getter for tokens matching the active chain
   List<Token> get tokens {
@@ -401,19 +405,85 @@ class BlockchainService extends ChangeNotifier {
 List<double> _parsePriceHistory(String responseBody) {
   try {
     final data = jsonDecode(responseBody);
-    final prices = data['prices'] as List;
-    return prices.map<double>((p) => (p[1] as num).toDouble()).toList();
+    final prices = data['prices'] as List? ?? const [];
+    return prices
+        .whereType<List>()
+        .map<double>((p) => (p.length > 1 && p[1] is num) ? (p[1] as num).toDouble() : 0.0)
+        .where((v) => v.isFinite && v > 0)
+        .toList();
   } catch(e) {
     return [];
   }
 }
 
+List<double> _parseOhlcHistory(String responseBody) {
+  try {
+    final data = jsonDecode(responseBody);
+    if (data is! List) return [];
+    return data
+        .whereType<List>()
+        .map<double>((p) => (p.length > 4 && p[4] is num) ? (p[4] as num).toDouble() : 0.0)
+        .where((v) => v.isFinite && v > 0)
+        .toList();
+  } catch (_) {
+    return [];
+  }
+}
+
   Future<List<double>> getPriceHistory(String coinId, {int days = 7}) async {
-    try {
+    if (coinId.isEmpty) return [];
+    final cacheKey = '$coinId:$days';
+    final cached = _priceHistoryCache[cacheKey];
+    final now = DateTime.now();
+    if (cached != null && now.difference(cached.fetchedAt) < _priceHistoryCacheTtl) {
+      return cached.values;
+    }
+
+    Future<List<double>> fetchMarketChart() async {
       final url = '$priceApiBase/coins/$coinId/market_chart?vs_currency=usd&days=$days';
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
       if (response.statusCode == 200) {
-        return await compute(_parsePriceHistory, response.body);
+        return compute(_parsePriceHistory, response.body);
+      }
+      debugPrint('Price history market_chart failed for $coinId ($days d): ${response.statusCode}');
+      return [];
+    }
+
+    Future<List<double>> fetchOhlcFallback() async {
+      final normalizedDays = days <= 1
+          ? 1
+          : days <= 7
+              ? 7
+              : days <= 14
+                  ? 14
+                  : days <= 30
+                      ? 30
+                      : days <= 90
+                          ? 90
+                          : days <= 180
+                              ? 180
+                              : 365;
+      final url = '$priceApiBase/coins/$coinId/ohlc?vs_currency=usd&days=$normalizedDays';
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
+      if (response.statusCode == 200) {
+        return compute(_parseOhlcHistory, response.body);
+      }
+      debugPrint('Price history OHLC fallback failed for $coinId ($normalizedDays d): ${response.statusCode}');
+      return [];
+    }
+
+    try {
+      var data = await fetchMarketChart();
+      if (data.isEmpty) {
+        await Future.delayed(const Duration(milliseconds: 350));
+        data = await fetchMarketChart();
+      }
+      if (data.isEmpty) {
+        data = await fetchOhlcFallback();
+      }
+      if (data.isNotEmpty) {
+        _priceHistoryCache[cacheKey] = _CachedChartData(values: data, fetchedAt: now);
+        return data;
       }
     } catch (e) {
       debugPrint('Error fetching price history: $e');
@@ -448,30 +518,83 @@ List<double> _parsePriceHistory(String responseBody) {
   }
 
   Future<TokenMarketData?> getTokenMarketData(String coinId) async {
+    if (coinId.isEmpty) return null;
+    final now = DateTime.now();
+    final cached = _tokenMarketDataCache[coinId];
+    if (cached != null && now.difference(cached.fetchedAt) < _tokenMarketDataCacheTtl) {
+      return cached.value;
+    }
+
+    TokenMarketData? parseTokenMarketFromCoin(Map<String, dynamic> data) {
+      final marketData = data['market_data'] as Map<String, dynamic>?;
+      if (marketData == null) return null;
+
+      double? toDouble(dynamic value) {
+        if (value == null) return null;
+        if (value is num) return value.toDouble();
+        if (value is String && value.isNotEmpty) return double.tryParse(value);
+        return null;
+      }
+
+      final marketCapMap = marketData['market_cap'] as Map<String, dynamic>?;
+      final currentPriceMap = marketData['current_price'] as Map<String, dynamic>?;
+      return TokenMarketData(
+        priceUsd: toDouble(currentPriceMap?['usd']),
+        marketCapUsd: toDouble(marketCapMap?['usd']),
+        totalSupply: toDouble(marketData['total_supply']),
+        circulatingSupply: toDouble(marketData['circulating_supply']),
+        genesisDate: data['genesis_date'] as String?,
+      );
+    }
+
+    TokenMarketData? parseTokenMarketFromMarkets(List<dynamic> list) {
+      if (list.isEmpty || list.first is! Map<String, dynamic>) return null;
+      final market = list.first as Map<String, dynamic>;
+
+      double? toDouble(dynamic value) {
+        if (value == null) return null;
+        if (value is num) return value.toDouble();
+        if (value is String && value.isNotEmpty) return double.tryParse(value);
+        return null;
+      }
+
+      return TokenMarketData(
+        priceUsd: toDouble(market['current_price']),
+        marketCapUsd: toDouble(market['market_cap']),
+        totalSupply: toDouble(market['total_supply']),
+        circulatingSupply: toDouble(market['circulating_supply']),
+        genesisDate: null,
+      );
+    }
+
     try {
-      final url = '$priceApiBase/coins/$coinId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final marketData = data['market_data'] as Map<String, dynamic>?;
-        if (marketData == null) return null;
-
-        double? toDouble(dynamic value) {
-          if (value == null) return null;
-          if (value is num) return value.toDouble();
-          if (value is String && value.isNotEmpty) return double.tryParse(value);
-          return null;
+      final coinUrl = '$priceApiBase/coins/$coinId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
+      for (int attempt = 0; attempt < 2; attempt++) {
+        final response = await http.get(Uri.parse(coinUrl)).timeout(const Duration(seconds: 12));
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final parsed = parseTokenMarketFromCoin(data);
+          if (parsed != null) {
+            _tokenMarketDataCache[coinId] = _CachedMarketData(value: parsed, fetchedAt: now);
+            return parsed;
+          }
+        } else {
+          debugPrint('Token market (coin endpoint) failed for $coinId: ${response.statusCode}');
         }
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
 
-        final marketCapMap = marketData['market_cap'] as Map<String, dynamic>?;
-        final currentPriceMap = marketData['current_price'] as Map<String, dynamic>?;
-        return TokenMarketData(
-          priceUsd: toDouble(currentPriceMap?['usd']),
-          marketCapUsd: toDouble(marketCapMap?['usd']),
-          totalSupply: toDouble(marketData['total_supply']),
-          circulatingSupply: toDouble(marketData['circulating_supply']),
-          genesisDate: data['genesis_date'] as String?,
-        );
+      final fallbackUrl = '$priceApiBase/coins/markets?vs_currency=usd&ids=$coinId&sparkline=false&price_change_percentage=24h';
+      final fallbackResponse = await http.get(Uri.parse(fallbackUrl)).timeout(const Duration(seconds: 12));
+      if (fallbackResponse.statusCode == 200) {
+        final list = jsonDecode(fallbackResponse.body) as List<dynamic>;
+        final parsed = parseTokenMarketFromMarkets(list);
+        if (parsed != null) {
+          _tokenMarketDataCache[coinId] = _CachedMarketData(value: parsed, fetchedAt: now);
+          return parsed;
+        }
+      } else {
+        debugPrint('Token market (markets fallback) failed for $coinId: ${fallbackResponse.statusCode}');
       }
     } catch (e) {
       debugPrint('Error fetching token market data: $e');
@@ -682,6 +805,26 @@ List<double> _parsePriceHistory(String responseBody) {
     final addr = address.startsWith('0x') ? address.substring(2) : address;
     return addr.padLeft(64, '0');
   }
+}
+
+class _CachedChartData {
+  final List<double> values;
+  final DateTime fetchedAt;
+
+  const _CachedChartData({
+    required this.values,
+    required this.fetchedAt,
+  });
+}
+
+class _CachedMarketData {
+  final TokenMarketData value;
+  final DateTime fetchedAt;
+
+  const _CachedMarketData({
+    required this.value,
+    required this.fetchedAt,
+  });
 }
 
 class TokenMarketData {

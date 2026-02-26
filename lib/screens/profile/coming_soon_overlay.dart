@@ -21,6 +21,7 @@ class ComingSoonOverlay extends StatelessWidget {
     final String displayTitle = title ?? ModalRoute.of(context)?.settings.arguments as String? ?? 'Feature';
 
     return Scaffold(
+      backgroundColor: Colors.transparent, // Prevents opaque inheritance out of Stack boundaries
       body: Stack(
         children: [
           // Underlying UI with pointer events disabled so they can't click things

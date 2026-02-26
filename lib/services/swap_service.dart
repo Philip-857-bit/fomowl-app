@@ -22,6 +22,19 @@ class SwapQuote {
 /// Routes all swap intents through the secure Rust backend aggregating 1inch V5.2 and Fusion.
 class SwapService {
   static const String _backendApiBase = 'https://fomowl-backend.onrender.com/api/swap';
+  static const Set<int> supportedQuoteChainIds = {
+    1, 10, 56, 137, 8453, 42161, 43114, 59144, 534352, 5000,
+    81457, 34443, 480, 10143, 130, 80094, 57073, 9745, 143, 146, 2741,
+  };
+  static const Set<int> supportedGaslessChainIds = {1, 10, 137, 8453, 42161};
+  String? _lastError;
+
+  String? get lastError => _lastError;
+
+  bool isChainSupported(int chainId, {required bool isGasless}) {
+    if (isGasless) return supportedGaslessChainIds.contains(chainId);
+    return supportedQuoteChainIds.contains(chainId);
+  }
 
   /// Get aggregated quote from 0x via backend
   Future<SwapQuote?> get0xQuote({
@@ -30,7 +43,21 @@ class SwapService {
     required String toTokenAddress,
     required String amountWei,
     required bool isGasless,
+    String? walletAddress,
   }) async {
+    _lastError = null;
+    if (!isChainSupported(chainId, isGasless: isGasless)) {
+      _lastError = isGasless
+          ? 'Gasless swaps are not available on this network yet.'
+          : 'Swaps are not available on this network yet.';
+      return null;
+    }
+
+    if (isGasless && (walletAddress == null || walletAddress.isEmpty)) {
+      _lastError = 'Wallet not connected';
+      return null;
+    }
+
     try {
       final endpoint = isGasless ? 'fusion/quote' : 'quote';
       
@@ -38,24 +65,38 @@ class SwapService {
       final src = fromTokenAddress.isEmpty ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : fromTokenAddress;
       final dst = toTokenAddress.isEmpty ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : toTokenAddress;
 
-      final url = Uri.parse('$_backendApiBase/$endpoint'
-          '?chainId=$chainId'
-          '&src=$src'
-          '&dst=$dst'
-          '&amount=$amountWei');
+      final queryParams = <String, String>{
+        'chainId': '$chainId',
+        'amount': amountWei,
+      };
+      if (isGasless) {
+        queryParams['fromTokenAddress'] = src;
+        queryParams['toTokenAddress'] = dst;
+        queryParams['walletAddress'] = walletAddress!;
+      } else {
+        queryParams['src'] = src;
+        queryParams['dst'] = dst;
+      }
+
+      final url = Uri.parse('$_backendApiBase/$endpoint').replace(
+        queryParameters: queryParams,
+      );
 
       final response = await http.get(url).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
         
         // 0x response
-        final dstAmountWei = data['buyAmount'] ?? '0';
-        final allowanceTarget = data['allowanceTarget'] ?? '';
+        final dstAmountWei = data['buyAmount']?.toString() ?? '0';
+        final allowanceTarget = data['allowanceTarget']?.toString() ?? '';
         
         // Convert wei to simple formatted string for UI
         final estimate = double.tryParse(dstAmountWei) ?? 0.0;
-        final decimals = (data['tokenMetadata']?['buyToken']?['decimals'] ?? 18) as int;
+        final rawDecimals = data['tokenMetadata']?['buyToken']?['decimals'];
+        final decimals = rawDecimals is int
+            ? rawDecimals
+            : int.tryParse(rawDecimals?.toString() ?? '') ?? 18;
         final formatted = (estimate / math.pow(10, decimals)).toStringAsFixed(6);
         
         return SwapQuote(
@@ -65,10 +106,12 @@ class SwapService {
           allowanceTarget: allowanceTarget,
         );
       } else {
+        _lastError = response.body;
         debugPrint('Backend Swap Quote Error: ${response.body}');
         return null;
       }
     } catch (e) {
+      _lastError = e.toString();
       debugPrint('SwapService Exception: $e');
       return null;
     }

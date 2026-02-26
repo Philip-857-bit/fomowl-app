@@ -37,7 +37,7 @@ class SwapExecutionService {
     required SwapQuote quote, // Keep signature compatibility, despite us re-querying 1inch for calldata
     required Token fromToken,
     required Token toToken,
-    required double fromAmount,
+    required String fromAmountWei,
     required double expectedToAmount,
     required double slippagePercent,
     required BlockchainService blockchain,
@@ -49,7 +49,7 @@ class SwapExecutionService {
         return await _executeFusion(
           fromToken: fromToken,
           toToken: toToken,
-          fromAmount: fromAmount,
+          fromAmountWei: fromAmountWei,
           blockchain: blockchain,
           walletAddress: recipientAddress,
         );
@@ -57,7 +57,7 @@ class SwapExecutionService {
         return await _executeStandard(
           fromToken: fromToken,
           toToken: toToken,
-          fromAmount: fromAmount,
+          fromAmountWei: fromAmountWei,
           slippagePercent: slippagePercent,
           blockchain: blockchain,
           walletAddress: recipientAddress,
@@ -72,7 +72,7 @@ class SwapExecutionService {
   Future<SwapExecutionResult> _executeStandard({
      required Token fromToken,
      required Token toToken,
-     required double fromAmount,
+     required String fromAmountWei,
      required double slippagePercent,
      required BlockchainService blockchain,
      required String walletAddress,
@@ -83,8 +83,7 @@ class SwapExecutionService {
       final src = fromToken.contractAddress?.isNotEmpty == true ? fromToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
       final dst = toToken.contractAddress?.isNotEmpty == true ? toToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
       
-      // Amount out of decimal representation into Wei
-      final rawAmountStr = (fromAmount * (BigInt.from(10).pow(fromToken.decimals).toDouble())).toStringAsFixed(0);
+      final rawAmountStr = fromAmountWei;
 
       final url = Uri.parse('$_backendApiBase/transaction'
           '?chainId=${blockchain.activeChain.chainId}'
@@ -138,7 +137,7 @@ class SwapExecutionService {
   Future<SwapExecutionResult> _executeFusion({
      required Token fromToken,
      required Token toToken,
-     required double fromAmount,
+     required String fromAmountWei,
      required BlockchainService blockchain,
      required String walletAddress,
   }) async {
@@ -146,7 +145,7 @@ class SwapExecutionService {
       final src = fromToken.contractAddress?.isNotEmpty == true ? fromToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
       final dst = toToken.contractAddress?.isNotEmpty == true ? toToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
       
-      final rawAmountStr = (fromAmount * (BigInt.from(10).pow(fromToken.decimals).toDouble())).toStringAsFixed(0);
+      final rawAmountStr = fromAmountWei;
 
       // 1. Get Gasless Quote
       final quoteUrl = Uri.parse('$_backendApiBase/fusion/quote'
@@ -203,7 +202,10 @@ class SwapExecutionService {
       }
 
       final submitData = jsonDecode(submitResponse.body);
-      final transactionHash = submitData['transactionHash'] ?? submitData['hash'];
+      final transactionHash = submitData['transactionHash'] ??
+          submitData['hash'] ??
+          submitData['orderHash'] ??
+          submitData['orderId'];
 
       return SwapExecutionResult(success: true, transactionHash: transactionHash);
     } catch (e) {

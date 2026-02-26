@@ -78,7 +78,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "Error connecting to server";
+          _errorMessage = "Exception: $e";
         });
       }
     }

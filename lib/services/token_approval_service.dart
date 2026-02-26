@@ -33,7 +33,7 @@ class TokenApprovalService {
 
   Future<TokenApprovalResult> ensureApproval({
     required Token token,
-    required double amount,
+    required String amountWei,
     required String ownerAddress,
     required BlockchainService blockchain,
     required String allowanceTarget,
@@ -48,15 +48,19 @@ class TokenApprovalService {
       return const TokenApprovalResult(approvalSatisfied: false, error: 'Missing allowance target from DEX provider');
     }
 
+    final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
     try {
-      final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
       final ownerAddr = EthereumAddress.fromHex(ownerAddress);
 
-      final decimals = token.decimals;
-      final rawAmountStr = (amount * (BigInt.from(10).pow(decimals).toDouble())).toStringAsFixed(0);
-      final requiredAmount = BigInt.parse(rawAmountStr);
+      final requiredAmount = BigInt.tryParse(amountWei) ?? BigInt.zero;
+      if (requiredAmount <= BigInt.zero) {
+        return const TokenApprovalResult(
+          approvalSatisfied: false,
+          error: 'Invalid token amount',
+        );
+      }
 
       final abi = ContractAbi.fromJson('''[
         {
@@ -124,6 +128,8 @@ class TokenApprovalService {
         approvalSatisfied: false,
         error: e.toString(),
       );
+    } finally {
+      client.dispose();
     }
   }
 }

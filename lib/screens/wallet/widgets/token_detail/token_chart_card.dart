@@ -13,6 +13,7 @@ class TokenChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chartData = data.where((v) => v.isFinite && v > 0).toList();
     return Container(
       height: 170,
       decoration: BoxDecoration(
@@ -26,13 +27,13 @@ class TokenChartCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: isLoading
           ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed, strokeWidth: 2))
-          : data.isEmpty
+          : chartData.isEmpty
               ? const Center(child: Text('No chart data', style: TextStyle(color: Colors.white38)))
               : CustomPaint(
                   size: const Size(double.infinity, double.infinity),
                   painter: _ChartPainter(
-                    data: data,
-                    lineColor: data.last >= data.first ? AppColors.success : AppColors.error,
+                    data: chartData,
+                    lineColor: chartData.last >= chartData.first ? AppColors.success : AppColors.error,
                   ),
                 ),
     );
@@ -58,7 +59,33 @@ class _ChartPainter extends CustomPainter {
     final minVal = data.reduce((a, b) => a < b ? a : b);
     final maxVal = data.reduce((a, b) => a > b ? a : b);
     final range = maxVal - minVal;
-    if (range == 0) return;
+
+    // Stable assets (e.g., USDT) can have a flat series. Draw a centered flat line.
+    if (data.length < 2 || range == 0) {
+      final y = size.height * 0.55;
+      final flatPath = Path()
+        ..moveTo(0, y)
+        ..lineTo(size.width, y);
+      canvas.drawPath(flatPath, paint);
+
+      final fillPath = Path()
+        ..moveTo(0, y)
+        ..lineTo(size.width, y)
+        ..lineTo(size.width, size.height)
+        ..lineTo(0, size.height)
+        ..close();
+      final fillPaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            lineColor.withValues(alpha: 0.12),
+            lineColor.withValues(alpha: 0.0),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+      canvas.drawPath(fillPath, fillPaint);
+      return;
+    }
 
     final step = size.width / (data.length - 1);
     final points = <Offset>[];
