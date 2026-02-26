@@ -1,0 +1,8 @@
+Analyzing fomowl_wallet...
+
+  error - lib\main.dart:154:38 - The method 'NftGalleryScreen' isn't defined for the type 'FOMOwlWalletAppState'. Try correcting the name to the name of an existing method, or defining a method named 'NftGalleryScreen'. - undefined_method
+warning - lib\screens\wallet\token_detail_screen.dart:77:8 - The declaration '_showComingSoon' isn't referenced. Try removing the declaration of '_showComingSoon'. - unused_element
+   info - lib\main.dart:3:8 - The imported package 'flutter_native_splash' isn't a dependency of the importing package. Try adding a dependency for 'flutter_native_splash' in the 'pubspec.yaml' file. - depend_on_referenced_packages
+   info - lib\screens\wallet\nft_gallery_screen.dart:57:57 - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check. - use_build_context_synchronously
+
+4 issues found.
