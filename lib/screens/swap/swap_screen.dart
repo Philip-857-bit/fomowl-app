@@ -287,6 +287,9 @@ class _SwapScreenState extends State<SwapScreen> {
     if (lower.contains('selling native token is not supported for gasless trades')) {
       return 'Gasless mode only supports ERC-20 source tokens. Select a token like USDC/USDT.';
     }
+    if (lower.contains('no route found') || lower.contains('no liquidity')) {
+      return 'No route found for this pair on this network right now.';
+    }
     if (lower.contains('user denied') || lower.contains('user rejected') || lower.contains('user canceled')) {
       return 'Transaction was cancelled.';
     }
@@ -390,6 +393,7 @@ class _SwapScreenState extends State<SwapScreen> {
         fromTokenAddress: _fromToken!.contractAddress ?? '',
         toTokenAddress: _toToken!.contractAddress ?? '',
         amountWei: amountWei,
+        buyTokenDecimals: _toToken!.decimals,
         isGasless: _isGasless,
         walletAddress: _walletAddress,
       );

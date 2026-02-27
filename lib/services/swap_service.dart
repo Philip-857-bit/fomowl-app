@@ -42,6 +42,7 @@ class SwapService {
     required String fromTokenAddress,
     required String toTokenAddress,
     required String amountWei,
+    required int buyTokenDecimals,
     required bool isGasless,
     String? walletAddress,
   }) async {
@@ -86,17 +87,27 @@ class SwapService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final liquidityAvailable = data['liquidityAvailable'] == true;
+        if (!liquidityAvailable) {
+          _lastError = 'No route found for this token pair on the selected network.';
+          return null;
+        }
         
         // 0x response
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';
+        final dstAmount = BigInt.tryParse(dstAmountWei) ?? BigInt.zero;
+        if (dstAmount <= BigInt.zero) {
+          _lastError = 'No route found for this token pair on the selected network.';
+          return null;
+        }
         final allowanceTarget = data['allowanceTarget']?.toString() ?? '';
         
         // Convert wei to simple formatted string for UI
-        final estimate = double.tryParse(dstAmountWei) ?? 0.0;
+        final estimate = dstAmount.toDouble();
         final rawDecimals = data['tokenMetadata']?['buyToken']?['decimals'];
         final decimals = rawDecimals is int
             ? rawDecimals
-            : int.tryParse(rawDecimals?.toString() ?? '') ?? 18;
+            : int.tryParse(rawDecimals?.toString() ?? '') ?? buyTokenDecimals;
         final formatted = (estimate / math.pow(10, decimals)).toStringAsFixed(6);
         
         return SwapQuote(
