@@ -48,16 +48,24 @@ class TokenSelectorCard extends StatelessWidget {
                   TokenIcon(
                     tokenSymbol: token!.symbol,
                     tokenAddress: token!.contractAddress,
+                    tokenImageUrl: token!.imageUrl,
                     size: 38,
                   ),
                 if (token != null) const SizedBox(width: 12),
                 Text(
                   token?.symbol ?? 'Select',
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
@@ -66,10 +74,17 @@ class TokenSelectorCard extends StatelessWidget {
                     children: [
                       Text(
                         'Network: ${blockchain.activeChain.name}',
-                        style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios, size: 10, color: Colors.white.withValues(alpha: 0.5)),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 10,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
                     ],
                   ),
                 ),

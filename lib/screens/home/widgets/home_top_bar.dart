@@ -19,7 +19,7 @@ class HomeTopBar extends StatelessWidget {
     required this.chainSymbol,
     required this.onChainTap,
     required this.onNotificationsTap,
-    this.showNotificationDot = true,
+    this.showNotificationDot = false,
   });
 
   @override

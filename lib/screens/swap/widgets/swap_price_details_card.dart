@@ -39,10 +39,30 @@ class SwapPriceDetailsCard extends StatelessWidget {
   Widget _buildDetailRow(String label, String value) {
     final isPrice = label == 'Price' && value.contains(priceSeparator);
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6))),
-        isPrice ? _buildPriceText(value) : Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+        Expanded(
+          flex: 3,
+          child: Text(
+            label,
+            style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 5,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: isPrice
+                ? _buildPriceText(value)
+                : Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                  ),
+          ),
+        ),
       ],
     );
   }
@@ -50,13 +70,30 @@ class SwapPriceDetailsCard extends StatelessWidget {
   Widget _buildPriceText(String text) {
     final parts = text.split(priceSeparator);
     if (parts.length == 2) {
-      return Row(
-        children: [
-          Text('${parts[0]}$priceSeparator ', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
-          Text(parts[1].trim(), style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.success)),
-        ],
+      return Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '${parts[0]}$priceSeparator ',
+              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+            ),
+            TextSpan(
+              text: parts[1].trim(),
+              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.success),
+            ),
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.end,
       );
     }
-    return Text(text, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white));
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.end,
+      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+    );
   }
 }

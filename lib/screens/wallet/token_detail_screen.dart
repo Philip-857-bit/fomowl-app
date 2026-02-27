@@ -37,20 +37,6 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
 
   final List<String> _timeframes = ['5M', '1H', '1D', '1W', '1M', '1Y'];
 
-  // Map timeframe labels to CoinGecko days parameter
-  int _timeframeToDays(String tf) {
-    switch (tf) {
-      case '5M': return 1;
-      case '1H': return 1;
-      case '1D': return 1;
-      case '1W': return 7;
-      case '1M': return 30;
-      case '1Y': return 365;
-      default: return 7;
-    }
-  }
-
-
   List<TokenInfoRowData> _buildTokenInfoRows({
     required Token token,
     required String networkName,
@@ -72,7 +58,9 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       TokenInfoRowData(label: 'Network', value: networkName),
       TokenInfoRowData(
         label: 'Contract Address',
-        value: contract == null || contract.isEmpty ? '--' : _shortenAddress(contract),
+        value: contract == null || contract.isEmpty
+            ? '--'
+            : _shortenAddress(contract),
         trailing: (contract == null || contract.isEmpty)
             ? null
             : IconButton(
@@ -82,7 +70,10 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       ),
       TokenInfoRowData(label: 'Market Cap', value: marketCapText),
       TokenInfoRowData(label: 'Total Supply', value: totalSupplyText),
-      TokenInfoRowData(label: 'Circulating Supply', value: circulatingSupplyText),
+      TokenInfoRowData(
+        label: 'Circulating Supply',
+        value: circulatingSupplyText,
+      ),
       const TokenInfoRowData(label: 'Holders', value: '0'),
       TokenInfoRowData(label: 'Created On', value: createdOn),
     ];
@@ -101,13 +92,20 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   // Map token symbol to CoinGecko ID
   String _tokenToCoinGeckoId(String symbol) {
     switch (symbol.toUpperCase()) {
-      case 'ETH': return 'ethereum';
-      case 'BTC': return 'bitcoin';
-      case 'BNB': return 'binancecoin';
-      case 'USDC': return 'usd-coin';
-      case 'USDT': return 'tether';
-      case 'MATIC': return 'matic-network';
-      default: return '';
+      case 'ETH':
+        return 'ethereum';
+      case 'BTC':
+        return 'bitcoin';
+      case 'BNB':
+        return 'binancecoin';
+      case 'USDC':
+        return 'usd-coin';
+      case 'USDT':
+        return 'tether';
+      case 'MATIC':
+        return 'matic-network';
+      default:
+        return '';
     }
   }
 
@@ -187,9 +185,11 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       });
       return;
     }
-    final days = _timeframeToDays(_selectedTimeframe);
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final data = await blockchain.getPriceHistory(coinId, days: days);
+    final data = await blockchain.getPriceHistoryForTimeframe(
+      coinId,
+      _selectedTimeframe,
+    );
     if (mounted) {
       setState(() {
         _priceData = data;
@@ -251,7 +251,9 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
 
   String? _resolveCoinGeckoId() {
     final token = _token;
-    if (token != null && token.coinGeckoId != null && token.coinGeckoId!.isNotEmpty) {
+    if (token != null &&
+        token.coinGeckoId != null &&
+        token.coinGeckoId!.isNotEmpty) {
       return token.coinGeckoId!;
     }
     final mapped = _tokenToCoinGeckoId(token?.symbol ?? '');
@@ -272,21 +274,28 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     _fetchTokenStats();
   }
 
-
   @override
   Widget build(BuildContext context) {
     final token = _token;
     if (token == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: const Center(child: Text('Token not found', style: TextStyle(color: Colors.white))),
+        body: const Center(
+          child: Text('Token not found', style: TextStyle(color: Colors.white)),
+        ),
       );
     }
     final blockchain = Provider.of<BlockchainService>(context);
     final networkName = blockchain.activeChain.name;
-    final marketCapText = _isLoadingInfo ? 'Loading...' : _formatFiatValue(_marketData?.marketCapUsd);
-    final totalSupplyText = _isLoadingInfo ? 'Loading...' : _formatSupplyValue(_marketData?.totalSupply);
-    final circulatingSupplyText = _isLoadingInfo ? 'Loading...' : _formatSupplyValue(_marketData?.circulatingSupply);
+    final marketCapText = _isLoadingInfo
+        ? 'Loading...'
+        : _formatFiatValue(_marketData?.marketCapUsd);
+    final totalSupplyText = _isLoadingInfo
+        ? 'Loading...'
+        : _formatSupplyValue(_marketData?.totalSupply);
+    final circulatingSupplyText = _isLoadingInfo
+        ? 'Loading...'
+        : _formatSupplyValue(_marketData?.circulatingSupply);
     final livePriceUsd = _marketData?.priceUsd ?? token.unitPriceUsd;
     final priceDisplay = _formatPriceLabel(livePriceUsd);
     final holdingsDisplay = _formatHoldingsValue(token, _marketData?.priceUsd);
@@ -320,7 +329,8 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                   token: token,
                   isFavorite: _isFavorite,
                   onBack: () => Navigator.pop(context),
-                  onToggleFavorite: () => setState(() => _isFavorite = !_isFavorite),
+                  onToggleFavorite: () =>
+                      setState(() => _isFavorite = !_isFavorite),
                 ),
                 Expanded(
                   child: SingleChildScrollView(
@@ -354,17 +364,22 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                             TokenActionData(
                               icon: Icons.south_rounded,
                               label: 'Receive',
-                              onTap: () => Navigator.pushNamed(context, '/receive-token'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/receive-token',
+                              ),
                             ),
                             TokenActionData(
                               icon: Icons.north_rounded,
                               label: 'Send',
-                              onTap: () => Navigator.pushNamed(context, '/send-token'),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/send-token'),
                             ),
                             TokenActionData(
                               icon: Icons.sync_alt_rounded,
                               label: 'Swap',
-                              onTap: () => Navigator.pushNamed(context, '/swap'),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/swap'),
                             ),
                           ],
                         ),
@@ -391,5 +406,4 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       ),
     );
   }
-
 }

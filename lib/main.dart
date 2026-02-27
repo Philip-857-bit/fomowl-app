@@ -27,6 +27,7 @@ import 'screens/wallet/transfer_confirmation_screen.dart';
 import 'screens/wallet/token_detail_screen.dart';
 import 'screens/wallet/token_management_screen.dart';
 import 'screens/wallet/nft_gallery_screen.dart';
+import 'screens/earn/earn_coming_soon_screen.dart';
 import 'screens/swap/swap_screen.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/profile/coming_soon_screen.dart';
@@ -56,7 +57,7 @@ import 'package:provider/provider.dart';
 void main() {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -66,7 +67,7 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => BlockchainService()..init(),
@@ -80,7 +81,7 @@ class FOMOwlWalletApp extends StatefulWidget {
 
   @override
   State<FOMOwlWalletApp> createState() => FOMOwlWalletAppState();
-  
+
   // Static method to update locale from anywhere in the app
   static void setLocale(BuildContext context, String languageCode) {
     final state = context.findAncestorStateOfType<FOMOwlWalletAppState>();
@@ -120,7 +121,7 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
     return MaterialApp(
       title: 'Owllet Wallet',
       debugShowCheckedModeBanner: false,
-      
+
       // Localization
       locale: _locale,
       localizationsDelegates: const [
@@ -130,7 +131,7 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      
+
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.background,
@@ -156,14 +157,17 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
         '/confirm-passcode': (context) => const ConfirmPasscodeScreen(),
         '/biometric-setup': (context) => const BiometricSetupScreen(),
         '/face-id-verification': (context) => const FaceIdVerificationScreen(),
-        '/fingerprint-verification': (context) => const FingerprintVerificationScreen(),
+        '/fingerprint-verification': (context) =>
+            const FingerprintVerificationScreen(),
         '/congratulations': (context) => const CongratulationsScreen(),
         '/home': (context) => const HomeScreen(),
+        '/earn': (context) => const EarnComingSoonScreen(),
         '/wallets': (context) => const WalletsScreen(),
         '/swap': (context) => const SwapScreen(),
         '/select-token': (context) => const SelectTokenScreen(),
         '/send-token': (context) => const SendTokenScreen(),
-        '/transfer-confirmation': (context) => const TransferConfirmationScreen(),
+        '/transfer-confirmation': (context) =>
+            const TransferConfirmationScreen(),
         '/token-detail': (context) => const TokenDetailScreen(),
         '/token-management': (context) => const TokenManagementScreen(),
         '/nft-gallery': (context) => NftGalleryScreen(),
@@ -179,15 +183,24 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
         '/backup-seed-phrase': (context) => const BackupSeedPhraseScreen(),
         '/add-network': (context) => const AddNetworkScreen(),
         // Fiat/Centralized routes → Coming Soon until backend is live
-        '/transaction-processing': (context) => const ComingSoonOverlay(title: 'Transaction Processing', child: TransactionProcessingScreen()),
+        '/transaction-processing': (context) =>
+            const TransactionProcessingScreen(),
         '/transactions': (context) => const TransactionsScreen(),
-        '/payments': (context) => const ComingSoonOverlay(title: 'Payments', child: PaymentsScreen()),
-        '/bill-payment': (context) => const ComingSoonOverlay(title: 'Pay Bills', child: BillPaymentScreen()),
-        '/withdraw-to-bank': (context) => const ComingSoonOverlay(title: 'Withdraw to Bank', child: WithdrawToBankScreen()),
-        '/deposit-funds': (context) => const ComingSoonOverlay(title: 'Deposit Funds', child: DepositFundsScreen()),
-        '/third-party-deposit': (context) => const ComingSoonOverlay(title: 'Provider Deposit', child: ThirdPartyDepositScreen()),
-        '/electricity-suppliers': (context) => const ComingSoonOverlay(title: 'Electricity Suppliers', child: ElectricitySuppliersScreen()),
-        '/kyc-success': (context) => const ComingSoonOverlay(title: 'Identity Verified', child: KycSuccessScreen()),
+        '/payments': (context) =>
+            const ComingSoonOverlay(title: 'Payments', child: PaymentsScreen()),
+        '/bill-payment': (context) => const BillPaymentScreen(),
+        '/withdraw-to-bank': (context) => const ComingSoonOverlay(
+          title: 'Withdraw to Bank',
+          child: WithdrawToBankScreen(),
+        ),
+        '/deposit-funds': (context) => const ComingSoonOverlay(
+          title: 'Deposit Funds',
+          child: DepositFundsScreen(),
+        ),
+        '/third-party-deposit': (context) => const ThirdPartyDepositScreen(),
+        '/electricity-suppliers': (context) =>
+            const ElectricitySuppliersScreen(),
+        '/kyc-success': (context) => const KycSuccessScreen(),
       },
     );
   }
@@ -249,7 +262,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Blank `#131313` backdrop mimicking the native splash 
+    // Blank `#131313` backdrop mimicking the native splash
     // before the dissolve triggers off the framework.
     return Scaffold(
       backgroundColor: const Color(0xFF131313),

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
-import '../screens/profile/coming_soon_overlay.dart';
 
 /// Shared Bottom Navigation Bar
 /// 5 tabs: Wallet, Swap, Earn, Payment, Me
@@ -39,7 +38,11 @@ class BottomNavBar extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildNavItem(Icons.account_balance_wallet_rounded, l.wallet, 0),
+                  _buildNavItem(
+                    Icons.account_balance_wallet_rounded,
+                    l.wallet,
+                    0,
+                  ),
                   _buildNavItem(Icons.swap_horiz_rounded, l.swap, 1),
                   _buildNavItem(Icons.trending_up_rounded, l.earn, 2),
                   _buildNavItem(Icons.credit_card_rounded, l.payment, 3),
@@ -88,7 +91,11 @@ class BottomNavBar extends StatelessWidget {
   }
 
   /// Standard navigation handler
-  static void handleNavigation(BuildContext context, int index, int currentScreenIndex) {
+  static void handleNavigation(
+    BuildContext context,
+    int index,
+    int currentScreenIndex,
+  ) {
     if (index == currentScreenIndex) return;
 
     switch (index) {
@@ -103,15 +110,18 @@ class BottomNavBar extends StatelessWidget {
         }
         break;
       case 2: // Earn
+        if (currentScreenIndex == 0) {
+          Navigator.pushNamed(context, '/earn');
+        } else {
+          Navigator.pushReplacementNamed(context, '/earn');
+        }
+        break;
       case 3: // Payment
-        showDialog(
-          context: context,
-          barrierColor: Colors.transparent,
-          builder: (ctx) => ComingSoonOverlay(
-            title: ['Earn', 'Payment'][index - 2],
-            child: const SizedBox(), // Empty child as overlay will provide black background
-          ),
-        );
+        if (currentScreenIndex == 0) {
+          Navigator.pushNamed(context, '/payments');
+        } else {
+          Navigator.pushReplacementNamed(context, '/payments');
+        }
         break;
       case 4: // Me
         if (currentScreenIndex == 0) {
@@ -122,6 +132,4 @@ class BottomNavBar extends StatelessWidget {
         break;
     }
   }
-
-
 }

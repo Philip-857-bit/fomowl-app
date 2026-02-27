@@ -5,6 +5,7 @@ import '../../models/token.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
+import '../profile/coming_soon_overlay.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/transfer_type_toggle.dart';
@@ -25,7 +26,6 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final WalletService _walletService = WalletService();
-
 
   Token? _selectedToken;
 
@@ -50,26 +50,46 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     if (address != null) {
       if (!mounted) return;
       try {
-        final blockchain = Provider.of<BlockchainService>(context, listen: false);
+        final blockchain = Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        );
         final balance = await blockchain.getEthBalance(address);
         if (mounted) {
           setState(() {
             _selectedToken = Token(
-              symbol: blockchain.activeChain.symbol, name: blockchain.activeChain.name, balance: balance,
-              valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 18,
-              coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty ? blockchain.activeChain.coinGeckoId : null,
+              symbol: blockchain.activeChain.symbol,
+              name: blockchain.activeChain.name,
+              balance: balance,
+              valueUsd: 0,
+              changePercent24h: 0,
+              contractAddress: '',
+              decimals: 18,
+              coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty
+                  ? blockchain.activeChain.coinGeckoId
+                  : null,
             );
             _availableBalance = balance;
           });
         }
       } catch (e) {
         if (!mounted) return;
-        final blockchain = Provider.of<BlockchainService>(context, listen: false);
+        final blockchain = Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        );
         setState(() {
           _selectedToken = Token(
-            symbol: blockchain.activeChain.symbol, name: blockchain.activeChain.name, balance: 0,
-            valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 18,
-            coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty ? blockchain.activeChain.coinGeckoId : null,
+            symbol: blockchain.activeChain.symbol,
+            name: blockchain.activeChain.name,
+            balance: 0,
+            valueUsd: 0,
+            changePercent24h: 0,
+            contractAddress: '',
+            decimals: 18,
+            coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty
+                ? blockchain.activeChain.coinGeckoId
+                : null,
           );
         });
       }
@@ -78,9 +98,16 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       setState(() {
         _selectedToken = Token(
-          symbol: blockchain.activeChain.symbol, name: blockchain.activeChain.name, balance: 0,
-          valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 18,
-          coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty ? blockchain.activeChain.coinGeckoId : null,
+          symbol: blockchain.activeChain.symbol,
+          name: blockchain.activeChain.name,
+          balance: 0,
+          valueUsd: 0,
+          changePercent24h: 0,
+          contractAddress: '',
+          decimals: 18,
+          coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty
+              ? blockchain.activeChain.coinGeckoId
+              : null,
         );
       });
     }
@@ -113,10 +140,14 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
 
     if (destination.isEmpty) {
-      _showError(_isInterTransfer ? 'Please enter a Fomowl email or username' : 'Please enter a receiving address');
+      _showError(
+        _isInterTransfer
+            ? 'Please enter a Fomowl email or username'
+            : 'Please enter a receiving address',
+      );
       return;
     }
-    
+
     if (!_isInterTransfer) {
       if (!destination.startsWith('0x') || destination.length != 42) {
         _showError('Invalid Ethereum address');
@@ -134,13 +165,20 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     }
 
     // Navigate to confirmation screen
-    Navigator.pushNamed(context, '/transfer-confirmation', arguments: {
-      'token': _selectedToken,
-      'toAddress': destination,
-      'amount': amount,
-      'network': Provider.of<BlockchainService>(context, listen: false).activeChain.name,
-      'isInterTransfer': _isInterTransfer,
-    });
+    Navigator.pushNamed(
+      context,
+      '/transfer-confirmation',
+      arguments: {
+        'token': _selectedToken,
+        'toAddress': destination,
+        'amount': amount,
+        'network': Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        ).activeChain.name,
+        'isInterTransfer': _isInterTransfer,
+      },
+    );
   }
 
   void _showError(String message) {
@@ -178,7 +216,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                     TransferTypeToggle(
                       isInterTransfer: _isInterTransfer,
                       onExternalTap: () {},
-                      onInterTransferTap: () => Navigator.pushNamed(context, '/coming-soon', arguments: 'Inter-Transfer'),
+                      onInterTransferTap: () => ComingSoonOverlay.show(
+                        context,
+                        title: 'Inter-Transfer',
+                      ),
                     ),
                     const SizedBox(height: 24),
 
@@ -199,7 +240,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                 ),
               ),
             ),
-            
+
             // Send button
             Padding(
               padding: const EdgeInsets.all(16),

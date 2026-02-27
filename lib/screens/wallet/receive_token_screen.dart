@@ -7,6 +7,7 @@ import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
 import '../../models/token.dart';
 import '../../utils/toast_utils.dart';
+import '../profile/coming_soon_overlay.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/transfer_type_toggle.dart';
@@ -35,6 +36,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
       }
     }
   }
+
   final bool _isInterTransfer = false;
   String _walletAddress = '';
   final WalletService _walletService = WalletService();
@@ -55,7 +57,10 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   }
 
   void _showTokenSelector() async {
-    final tokens = Provider.of<BlockchainService>(context, listen: false).tokens;
+    final tokens = Provider.of<BlockchainService>(
+      context,
+      listen: false,
+    ).tokens;
     final result = await showDialog<Token>(
       context: context,
       builder: (context) => TokenSelectorDialog(tokens: tokens),
@@ -96,7 +101,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                 child: TransferTypeToggle(
                   isInterTransfer: _isInterTransfer,
                   onExternalTap: () {},
-                  onInterTransferTap: () => Navigator.pushNamed(context, '/coming-soon', arguments: 'Inter-Transfer'),
+                  onInterTransferTap: () =>
+                      ComingSoonOverlay.show(context, title: 'Inter-Transfer'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -107,27 +113,41 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                   message: _isInterTransfer
                       ? 'Receive instantly with zero gas fees from other Fomowl wallet users using your email.'
                       : 'Only send supported tokens to this address. Sending unsupported tokens may result in permanent loss.',
-                  icon: _isInterTransfer ? Icons.info_outline : Icons.warning_amber_rounded,
-                  iconColor: _isInterTransfer ? Colors.green : AppColors.accentRed,
-                  borderColor: _isInterTransfer ? Colors.green : AppColors.accentRed,
+                  icon: _isInterTransfer
+                      ? Icons.info_outline
+                      : Icons.warning_amber_rounded,
+                  iconColor: _isInterTransfer
+                      ? Colors.green
+                      : AppColors.accentRed,
+                  borderColor: _isInterTransfer
+                      ? Colors.green
+                      : AppColors.accentRed,
                 ),
               ),
               const SizedBox(height: 32),
 
               QrCodeCard(
-                data: _isInterTransfer ? 'fomowl:sample.user@fomowl.com' : _walletAddress,
+                data: _isInterTransfer
+                    ? 'fomowl:sample.user@fomowl.com'
+                    : _walletAddress,
               ),
               const SizedBox(height: 32),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: AddressDisplayCard(
-                  value: _isInterTransfer ? 'sample.user@fomowl.com' : _walletAddress,
+                  value: _isInterTransfer
+                      ? 'sample.user@fomowl.com'
+                      : _walletAddress,
                   isInterTransfer: _isInterTransfer,
                   onCopy: () {
-                    final copyData = _isInterTransfer ? 'sample.user@fomowl.com' : _walletAddress;
+                    final copyData = _isInterTransfer
+                        ? 'sample.user@fomowl.com'
+                        : _walletAddress;
                     Clipboard.setData(ClipboardData(text: copyData));
-                    ToastUtils.showSuccess(_isInterTransfer ? 'Username copied' : 'Address copied');
+                    ToastUtils.showSuccess(
+                      _isInterTransfer ? 'Username copied' : 'Address copied',
+                    );
                   },
                 ),
               ),
@@ -135,13 +155,20 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
               const SizedBox(height: 32),
 
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 child: ReceiveActionButtons(
                   onShare: () => Navigator.pop(context),
                   onCopy: () {
-                    final copyData = _isInterTransfer ? 'sample.user@fomowl.com' : _walletAddress;
+                    final copyData = _isInterTransfer
+                        ? 'sample.user@fomowl.com'
+                        : _walletAddress;
                     Clipboard.setData(ClipboardData(text: copyData));
-                    ToastUtils.showSuccess(_isInterTransfer ? 'Username copied' : 'Address copied');
+                    ToastUtils.showSuccess(
+                      _isInterTransfer ? 'Username copied' : 'Address copied',
+                    );
                   },
                 ),
               ),

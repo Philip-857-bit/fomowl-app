@@ -281,6 +281,10 @@ class _SwapScreenState extends State<SwapScreen> {
     if (lower.contains('insufficient funds')) {
       return 'You do not have enough $nativeSymbol to cover the amount and gas fees.';
     }
+    if (lower.contains('insufficient_balance') || lower.contains('insufficient balance')) {
+      final tokenSymbol = _fromToken?.symbol ?? 'token';
+      return 'You do not have enough $tokenSymbol for this swap amount.';
+    }
     if (lower.contains('invalid chain id')) {
       return 'Swap is not available on this network yet.';
     }

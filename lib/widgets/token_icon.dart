@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 class TokenIcon extends StatelessWidget {
   final String tokenSymbol;
   final String? tokenAddress;
+  final String? tokenImageUrl;
   final double size;
   final Color? backgroundColor;
 
@@ -13,6 +14,7 @@ class TokenIcon extends StatelessWidget {
     super.key,
     required this.tokenSymbol,
     this.tokenAddress,
+    this.tokenImageUrl,
     this.size = 40,
     this.backgroundColor,
   });
@@ -26,32 +28,29 @@ class TokenIcon extends StatelessWidget {
         color: backgroundColor ?? _getDefaultColor(tokenSymbol),
         shape: BoxShape.circle,
       ),
-      child: ClipOval(
-        child: _buildIcon(),
-      ),
+      child: ClipOval(child: _buildIcon()),
     );
   }
 
   Widget _buildIcon() {
     // Try local asset first
     final localPath = 'assets/images/tokens/${tokenSymbol.toLowerCase()}.png';
-    
+
     return Image.asset(
       localPath,
       width: size,
       height: size,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-        // If local asset fails, try network (Trust Wallet)
-        if (tokenAddress != null && tokenAddress!.isNotEmpty) {
+        // If local asset fails, try backend-provided image URL.
+        if (tokenImageUrl != null && tokenImageUrl!.isNotEmpty) {
           return Image.network(
-            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/$tokenAddress/logo.png',
+            tokenImageUrl!,
             width: size,
             height: size,
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
-              // If network fails, show placeholder
-              return _buildPlaceholder();
+              return _buildTrustWalletIcon();
             },
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
@@ -59,11 +58,34 @@ class TokenIcon extends StatelessWidget {
             },
           );
         }
-        
-        // No address available, show placeholder
-        return _buildPlaceholder();
+
+        // If image URL is not available, fallback to Trust Wallet.
+        return _buildTrustWalletIcon();
       },
     );
+  }
+
+  Widget _buildTrustWalletIcon() {
+    // Try network (Trust Wallet)
+    if (tokenAddress != null && tokenAddress!.isNotEmpty) {
+      return Image.network(
+        'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/$tokenAddress/logo.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // If network fails, show placeholder
+          return _buildPlaceholder();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildPlaceholder();
+        },
+      );
+    }
+
+    // No address available, show placeholder
+    return _buildPlaceholder();
   }
 
   Widget _buildPlaceholder() {
@@ -93,7 +115,7 @@ class TokenIcon extends StatelessWidget {
       'FOWL': const Color(0xFFFF6B35),
       'FOMOWL': const Color(0xFFFF6B35),
     };
-    
+
     return colors[symbol.toUpperCase()] ?? const Color(0xFF6B7280);
   }
 }

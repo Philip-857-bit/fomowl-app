@@ -21,7 +21,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   final WalletService _walletService = WalletService();
-  
+
   List<Token> _allTokens = [];
   List<Token> _filteredTokens = [];
   bool _isLoading = true;
@@ -44,7 +44,10 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       final address = await _walletService.getCurrentWalletAddress();
       if (address != null) {
         if (!mounted) return;
-        final tokens = await Provider.of<BlockchainService>(context, listen: false).fetchWalletTokens(address);
+        final tokens = await Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        ).fetchWalletTokens(address);
         if (mounted) {
           setState(() {
             _allTokens = tokens;
@@ -75,20 +78,60 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
 
   List<Token> _getDefaultTokens() {
     return [
-      Token(symbol: 'ETH', name: 'Ethereum', balance: 0, valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 18, coinGeckoId: 'ethereum'),
-      Token(symbol: 'BNB', name: 'BNB', balance: 0, valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 18, coinGeckoId: 'binancecoin'),
-      Token(symbol: 'MATIC', name: 'Polygon', balance: 0, valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 18, coinGeckoId: 'matic-network'),
-      Token(symbol: 'USDC', name: 'USD Coin', balance: 0, valueUsd: 0, changePercent24h: 0, contractAddress: '', decimals: 6, coinGeckoId: 'usd-coin'),
+      Token(
+        symbol: 'ETH',
+        name: 'Ethereum',
+        balance: 0,
+        valueUsd: 0,
+        changePercent24h: 0,
+        contractAddress: '',
+        decimals: 18,
+        coinGeckoId: 'ethereum',
+      ),
+      Token(
+        symbol: 'BNB',
+        name: 'BNB',
+        balance: 0,
+        valueUsd: 0,
+        changePercent24h: 0,
+        contractAddress: '',
+        decimals: 18,
+        coinGeckoId: 'binancecoin',
+      ),
+      Token(
+        symbol: 'MATIC',
+        name: 'Polygon',
+        balance: 0,
+        valueUsd: 0,
+        changePercent24h: 0,
+        contractAddress: '',
+        decimals: 18,
+        coinGeckoId: 'matic-network',
+      ),
+      Token(
+        symbol: 'USDC',
+        name: 'USD Coin',
+        balance: 0,
+        valueUsd: 0,
+        changePercent24h: 0,
+        contractAddress: '',
+        decimals: 6,
+        coinGeckoId: 'usd-coin',
+      ),
     ];
   }
 
   void _filterTokens(String query) {
     setState(() {
       _filteredTokens = _allTokens.where((token) {
-        final matchesSearch = query.isEmpty ||
+        final matchesSearch =
+            query.isEmpty ||
             token.name.toLowerCase().contains(query.toLowerCase()) ||
             token.symbol.toLowerCase().contains(query.toLowerCase()) ||
-            token.contractAddress?.toLowerCase().contains(query.toLowerCase()) == true;
+            token.contractAddress?.toLowerCase().contains(
+                  query.toLowerCase(),
+                ) ==
+                true;
         return matchesSearch;
       }).toList();
     });
@@ -114,7 +157,11 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                   Expanded(
                     child: Text(
                       'Select Token',
-                      style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -123,12 +170,15 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             // Search bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.cardDark,
                   borderRadius: BorderRadius.circular(14),
@@ -138,32 +188,47 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                   onChanged: _filterTokens,
                   style: GoogleFonts.outfit(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
-                    icon: Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5)),
+                    icon: Icon(
+                      Icons.search,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
                     hintText: 'Search token or paste contract address',
-                    hintStyle: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.4)),
+                    hintStyle: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Colors.white.withValues(alpha: 0.4),
+                    ),
                     border: InputBorder.none,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 14),
-            
 
-            
             // Token list
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.accentRed,
+                      ),
+                    )
                   : _filteredTokens.isEmpty
-                      ? Center(
-                          child: Text('No tokens found', style: GoogleFonts.outfit(fontSize: 16, color: Colors.white54)),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          separatorBuilder: (_, a) => const SizedBox(height: 8),
-                          itemCount: _filteredTokens.length,
-                          itemBuilder: (context, index) => _buildTokenItem(_filteredTokens[index]),
+                  ? Center(
+                      child: Text(
+                        'No tokens found',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: Colors.white54,
                         ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      separatorBuilder: (_, a) => const SizedBox(height: 8),
+                      itemCount: _filteredTokens.length,
+                      itemBuilder: (context, index) =>
+                          _buildTokenItem(_filteredTokens[index]),
+                    ),
             ),
           ],
         ),
@@ -182,24 +247,55 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
         ),
         child: Row(
           children: [
-            TokenIcon(tokenSymbol: token.symbol, tokenAddress: token.contractAddress, size: 42),
+            TokenIcon(
+              tokenSymbol: token.symbol,
+              tokenAddress: token.contractAddress,
+              tokenImageUrl: token.imageUrl,
+              size: 42,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(token.name, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                  Text(
+                    token.name,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(token.symbol, style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.5))),
+                  Text(
+                    token.symbol,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ],
               ),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(token.balance.toStringAsFixed(2), style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                Text(
+                  token.balance.toStringAsFixed(2),
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(token.formattedValue, style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.5))),
+                Text(
+                  token.formattedValue,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
+                ),
               ],
             ),
           ],

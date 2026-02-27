@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../onboarding/language_selection_screen.dart';
 import '../../utils/toast_utils.dart';
+import 'coming_soon_overlay.dart';
 
 /// Decentralized Profile Screen — No backend required
 /// Shows wallet info, seed phrase backup, language, network, and privacy policy
@@ -18,10 +19,12 @@ class DecentralizedProfileScreen extends StatefulWidget {
   const DecentralizedProfileScreen({super.key});
 
   @override
-  State<DecentralizedProfileScreen> createState() => _DecentralizedProfileScreenState();
+  State<DecentralizedProfileScreen> createState() =>
+      _DecentralizedProfileScreenState();
 }
 
-class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen> {
+class _DecentralizedProfileScreenState
+    extends State<DecentralizedProfileScreen> {
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
 
@@ -50,8 +53,6 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -72,7 +73,11 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                 child: Center(
                   child: Text(
                     l.profile,
-                    style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -88,27 +93,39 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                 Navigator.pushNamed(context, '/backup-seed-phrase');
               }),
               _buildMenuItem(Icons.lock_outline, 'Password & Security', () {
-                Navigator.pushNamed(context, '/coming-soon', arguments: 'Password & Security');
+                ComingSoonOverlay.show(context, title: 'Password & Security');
               }),
               const SizedBox(height: 8),
 
               // Settings
               _buildSectionHeader(l.settings),
-              _buildMenuItem(Icons.language, l.chooseLanguage, () async {
-                final languageCode = await Navigator.push(
+              _buildMenuItem(
+                Icons.language,
+                l.chooseLanguage,
+                () async {
+                  final languageCode = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LanguageSelectionScreen(),
+                    ),
+                  );
+
+                  if (languageCode != null && context.mounted) {
+                    FOMOwlWalletApp.setLocale(context, languageCode);
+                  }
+                },
+                subtitle: AppLocalizations.languageNames[l.locale.languageCode],
+              ),
+              _buildMenuItem(
+                Icons.settings_outlined,
+                l.network,
+                () {
+                  _showNetworkSelector(l);
+                },
+                subtitle: Provider.of<BlockchainService>(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => const LanguageSelectionScreen(),
-                  ),
-                );
-                
-                if (languageCode != null && context.mounted) {
-                  FOMOwlWalletApp.setLocale(context, languageCode);
-                }
-              }, subtitle: AppLocalizations.languageNames[l.locale.languageCode]),
-              _buildMenuItem(Icons.settings_outlined, l.network, () {
-                _showNetworkSelector(l);
-              }, subtitle: Provider.of<BlockchainService>(context).activeChain.name),
+                ).activeChain.name,
+              ),
               const SizedBox(height: 8),
 
               // Legal
@@ -155,7 +172,11 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
               color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 28),
+            child: const Icon(
+              Icons.account_balance_wallet,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -164,7 +185,11 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
               children: [
                 Text(
                   _walletName,
-                  style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 GestureDetector(
@@ -178,10 +203,17 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                     children: [
                       Text(
                         _shortenAddress(_walletAddress),
-                        style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.8)),
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
                       ),
                       const SizedBox(width: 6),
-                      Icon(Icons.copy, size: 14, color: Colors.white.withValues(alpha: 0.6)),
+                      Icon(
+                        Icons.copy,
+                        size: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
                     ],
                   ),
                 ),
@@ -199,29 +231,52 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reset Wallet?', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+        title: Text(
+          'Reset Wallet?',
+          style: GoogleFonts.outfit(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
         content: Text(
           'This will delete your wallet data from this device. Make sure you have backed up your seed phrase before proceeding.',
-          style: GoogleFonts.outfit(fontSize: 14, color: Colors.white70, height: 1.5),
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            color: Colors.white70,
+            height: 1.5,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white54)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: Colors.white54),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () async {
               Navigator.pop(ctx);
               await _walletService.deleteWallet();
               if (mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/welcome',
+                  (route) => false,
+                );
               }
             },
-            child: Text('Reset', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+            child: Text(
+              'Reset',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -242,7 +297,12 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String label, VoidCallback onTap, {String? subtitle}) {
+  Widget _buildMenuItem(
+    IconData icon,
+    String label,
+    VoidCallback onTap, {
+    String? subtitle,
+  }) {
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -250,12 +310,17 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
         child: Row(
           children: [
             Container(
-              width: 32, height: 32,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 17),
+              child: Icon(
+                icon,
+                color: Colors.white.withValues(alpha: 0.7),
+                size: 17,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -264,17 +329,28 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   if (subtitle != null)
                     Text(
                       subtitle,
-                      style: GoogleFonts.outfit(fontSize: 12, color: AppColors.accentRed.withValues(alpha: 0.8)),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: AppColors.accentRed.withValues(alpha: 0.8),
+                      ),
                     ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
           ],
         ),
       ),
@@ -300,7 +376,8 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
           child: Column(
             children: [
               Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: Colors.white24,
                   borderRadius: BorderRadius.circular(2),
@@ -309,7 +386,11 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
               const SizedBox(height: 16),
               Text(
                 l.selectNetwork,
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -317,10 +398,13 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                   controller: scrollController,
                   children: [
                     ...blockchain.allChains.map((chain) {
-                      final isActive = blockchain.activeChain.chainId == chain.chainId;
+                      final isActive =
+                          blockchain.activeChain.chainId == chain.chainId;
                       return Dismissible(
                         key: ValueKey(chain.chainId),
-                        direction: chain.isCustom ? DismissDirection.endToStart : DismissDirection.none,
+                        direction: chain.isCustom
+                            ? DismissDirection.endToStart
+                            : DismissDirection.none,
                         background: Container(
                           alignment: Alignment.centerRight,
                           padding: const EdgeInsets.only(right: 20),
@@ -333,18 +417,28 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         },
                         child: ListTile(
                           leading: Container(
-                            width: 36, height: 36,
+                            width: 36,
+                            height: 36,
                             decoration: BoxDecoration(
-                              color: isActive ? AppColors.accentRed.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.06),
+                              color: isActive
+                                  ? AppColors.accentRed.withValues(alpha: 0.2)
+                                  : Colors.white.withValues(alpha: 0.06),
                               shape: BoxShape.circle,
                             ),
                             child: Center(
                               child: Text(
-                                chain.symbol.substring(0, chain.symbol.length > 3 ? 3 : chain.symbol.length),
+                                chain.symbol.substring(
+                                  0,
+                                  chain.symbol.length > 3
+                                      ? 3
+                                      : chain.symbol.length,
+                                ),
                                 style: GoogleFonts.outfit(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: isActive ? AppColors.accentRed : Colors.white60,
+                                  color: isActive
+                                      ? AppColors.accentRed
+                                      : Colors.white60,
                                 ),
                               ),
                             ),
@@ -356,29 +450,49 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                                   chain.name,
                                   style: GoogleFonts.outfit(
                                     fontSize: 15,
-                                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                                    color: isActive ? AppColors.accentRed : Colors.white,
+                                    fontWeight: isActive
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: isActive
+                                        ? AppColors.accentRed
+                                        : Colors.white,
                                   ),
                                 ),
                               ),
                               if (chain.isCustom)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.08),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: Text('Custom', style: GoogleFonts.outfit(fontSize: 9, color: Colors.white38)),
+                                  child: Text(
+                                    'Custom',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 9,
+                                      color: Colors.white38,
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),
                           subtitle: Text(
                             'Chain ID: ${chain.chainId}',
-                            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white38),
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: Colors.white38,
+                            ),
                           ),
                           trailing: isActive
-                            ? const Icon(Icons.check_circle, color: AppColors.accentRed, size: 20)
-                            : null,
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: AppColors.accentRed,
+                                  size: 20,
+                                )
+                              : null,
                           onTap: () {
                             blockchain.setActiveChain(chain);
                             Navigator.pop(ctx);
@@ -402,16 +516,26 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppColors.accentRed.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppColors.accentRed.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.add_circle_outline, color: AppColors.accentRed, size: 20),
+                            const Icon(
+                              Icons.add_circle_outline,
+                              color: AppColors.accentRed,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               l.addCustomNetwork,
-                              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.accentRed),
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.accentRed,
+                              ),
                             ),
                           ],
                         ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../services/wallet_service.dart';
@@ -17,6 +16,7 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
+  final WalletService _walletService = WalletService();
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Deposit', 'Withdrawal'];
 
@@ -32,8 +32,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   Future<void> _fetchHistory() async {
     try {
-      final walletService = context.read<WalletService>();
-      final address = await walletService.getCurrentWalletAddress();
+      final address = await _walletService.getCurrentWalletAddress();
       if (address == null) {
         setState(() {
           _isLoading = false;

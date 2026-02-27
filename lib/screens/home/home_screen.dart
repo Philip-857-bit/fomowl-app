@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/token_visibility_service.dart';
+import '../../services/nft_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
@@ -19,7 +21,6 @@ import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/social_banner_card.dart';
 import 'widgets/tokens_section.dart';
-import '../profile/coming_soon_overlay.dart';
 
 /// Home Screen - Main Wallet Dashboard
 /// Shows wallet balance, quick actions, and token list
@@ -34,19 +35,23 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Token> _tokens = [];
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
-  final TokenVisibilityService _tokenVisibilityService = TokenVisibilityService();
+  final TokenVisibilityService _tokenVisibilityService =
+      TokenVisibilityService();
+  final NftService _nftService = NftService();
   BlockchainService? _blockchain;
-  
-  
+
   String? _walletName;
   bool _isLoading = true;
   bool _isLoadingBalances = false;
+  bool _isLoadingNfts = false;
   double _totalBalance = 0.0;
   bool _balanceVisible = true;
+  bool _hasUnreadNotifications = false;
   bool? _hasInternet;
   String _connectivityStatus = 'Checking...';
   int? _lastChainId;
   Set<String> _hiddenTokenKeys = {};
+  List<NftAsset> _nftPreview = [];
 
   @override
   void initState() {
@@ -75,12 +80,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _checkConnectivity() async {
     try {
-      final response = await http.get(
-        Uri.parse('https://www.google.com'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('https://www.google.com'))
+          .timeout(const Duration(seconds: 5));
       if (mounted) {
         setState(() {
-          _hasInternet = response.statusCode == 200 || response.statusCode == 429;
+          _hasInternet =
+              response.statusCode == 200 || response.statusCode == 429;
           _connectivityStatus = _hasInternet! ? 'Connected' : 'No connection';
         });
       }
@@ -103,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadHiddenTokens(_lastChainId!);
       final address = await _walletService.getCurrentWalletAddress();
       final name = await _storage.getWalletName();
-      
+
       if (mounted) {
         setState(() {
           _walletName = name ?? 'Main Wallet';
@@ -112,12 +118,19 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (address != null && address.isNotEmpty) {
-        await _fetchRealBalances(address);
+        await Future.wait([
+          _fetchRealBalances(address),
+          _fetchNftPreview(address),
+          _refreshNotificationDot(address: address),
+        ]);
       } else {
         if (mounted) {
           setState(() {
             _tokens = [];
             _totalBalance = 0.0;
+            _nftPreview = [];
+            _hasUnreadNotifications = false;
+            _isLoadingNfts = false;
           });
         }
       }
@@ -155,7 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoadingBalances = false;
           // Fallback: show native token with 0 balance so list isn't empty
           if (_tokens.isEmpty) {
-            final chain = Provider.of<BlockchainService>(context, listen: false).activeChain;
+            final chain = Provider.of<BlockchainService>(
+              context,
+              listen: false,
+            ).activeChain;
             _tokens = [
               Token(
                 symbol: chain.symbol,
@@ -163,7 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 balance: 0,
                 valueUsd: 0,
                 changePercent24h: 0,
-                coinGeckoId: chain.coinGeckoId.isNotEmpty ? chain.coinGeckoId : null,
+                coinGeckoId: chain.coinGeckoId.isNotEmpty
+                    ? chain.coinGeckoId
+                    : null,
               ),
             ];
           }
@@ -181,6 +199,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _walletService.getCurrentWalletAddress().then((address) {
       if (!mounted || address == null) return;
       _fetchRealBalances(address);
+      _fetchNftPreview(address);
+      _refreshNotificationDot(address: address);
     });
   }
 
@@ -207,24 +227,100 @@ class _HomeScreenState extends State<HomeScreen> {
     return _hiddenTokenKeys.contains(TokenVisibilityUtils.identifier(token));
   }
 
+  Future<void> _refreshNotificationDot({String? address}) async {
+    try {
+      final walletAddress =
+          address ?? await _walletService.getCurrentWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) {
+        if (mounted) {
+          setState(() => _hasUnreadNotifications = false);
+        }
+        return;
+      }
 
-  String get _formattedTotalBalance {
-    if (!_balanceVisible) return '••••••';
-    return '\$${_totalBalance.toStringAsFixed(2).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    )}';
+      final url = Uri.parse(
+        'https://fomowl-backend.onrender.com/api/notifications/$walletAddress',
+      );
+      final response = await http.get(url).timeout(const Duration(seconds: 20));
+      if (response.statusCode != 200) {
+        if (mounted) {
+          setState(() => _hasUnreadNotifications = false);
+        }
+        return;
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final notifications = data['notifications'] as List<dynamic>? ?? const [];
+      final hasUnread = notifications.any((item) {
+        final notification = item as Map<String, dynamic>;
+        final isRead =
+            notification['is_read'] == 1 || notification['is_read'] == true;
+        return !isRead;
+      });
+
+      if (mounted) {
+        setState(() => _hasUnreadNotifications = hasUnread);
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _hasUnreadNotifications = false);
+      }
+    }
   }
 
-  void _navigateComingSoon(String feature) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.transparent,
-      builder: (ctx) => ComingSoonOverlay(
-        title: feature,
-        child: const SizedBox(),
-      ),
-    );
+  Future<void> _fetchNftPreview(String address) async {
+    if (address.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _nftPreview = [];
+          _isLoadingNfts = false;
+        });
+      }
+      return;
+    }
+
+    final chain = Provider.of<BlockchainService>(
+      context,
+      listen: false,
+    ).activeChain;
+    if (!_nftService.isSupportedChain(chain.chainId)) {
+      if (mounted) {
+        setState(() {
+          _nftPreview = [];
+          _isLoadingNfts = false;
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _isLoadingNfts = true);
+    }
+
+    try {
+      final nfts = await _nftService.fetchOwnedNfts(
+        chainId: chain.chainId,
+        chainName: chain.name,
+        walletAddress: address,
+      );
+      if (!mounted) return;
+      setState(() {
+        _nftPreview = nfts.take(8).toList();
+        _isLoadingNfts = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _nftPreview = [];
+          _isLoadingNfts = false;
+        });
+      }
+    }
+  }
+
+  String get _formattedTotalBalance {
+    if (!_balanceVisible) return '******';
+    return '\$${_totalBalance.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
   }
 
   Future<void> _openSocialLink() async {
@@ -273,16 +369,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.accentRed),
+            )
           : SafeArea(
               child: Column(
                 children: [
                   HomeTopBar(
                     walletName: _walletName ?? 'Main Wallet',
                     onWalletTap: () => Navigator.pushNamed(context, '/wallets'),
-                    chainSymbol: Provider.of<BlockchainService>(context).activeChain.symbol,
+                    chainSymbol: Provider.of<BlockchainService>(
+                      context,
+                    ).activeChain.symbol,
                     onChainTap: _showNetworkSelector,
-                    onNotificationsTap: () => Navigator.pushNamed(context, '/notifications'),
+                    showNotificationDot: _hasUnreadNotifications,
+                    onNotificationsTap: () async {
+                      await Navigator.pushNamed(context, '/notifications');
+                      await _refreshNotificationDot();
+                    },
                   ),
                   Expanded(
                     child: RefreshIndicator(
@@ -302,15 +406,28 @@ class _HomeScreenState extends State<HomeScreen> {
                               formattedBalance: _formattedTotalBalance,
                               isBalanceVisible: _balanceVisible,
                               isLoadingBalances: _isLoadingBalances,
-                              onToggleVisibility: () => setState(() => _balanceVisible = !_balanceVisible),
-                              onHistoryTap: () => _navigateComingSoon('Transaction History'),
-                              onDepositTap: () => _navigateComingSoon('Deposit Funds'),
+                              onToggleVisibility: () => setState(
+                                () => _balanceVisible = !_balanceVisible,
+                              ),
+                              onHistoryTap: () =>
+                                  Navigator.pushNamed(context, '/transactions'),
+                              onDepositTap: () => Navigator.pushNamed(
+                                context,
+                                '/deposit-funds',
+                              ),
                             ),
                             const SizedBox(height: 24),
                             QuickActionsRow(
-                              onReceive: () => Navigator.pushNamed(context, '/receive-token'),
-                              onSend: () => Navigator.pushNamed(context, '/send-token'),
-                              onWithdraw: () => _navigateComingSoon('Withdraw to Bank'),
+                              onReceive: () => Navigator.pushNamed(
+                                context,
+                                '/receive-token',
+                              ),
+                              onSend: () =>
+                                  Navigator.pushNamed(context, '/send-token'),
+                              onWithdraw: () => Navigator.pushNamed(
+                                context,
+                                '/withdraw-to-bank',
+                              ),
                             ),
                             const SizedBox(height: 24),
                             SocialBannerCard(onTap: _openSocialLink),
@@ -318,12 +435,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             TokensSection(
                               tokens: _tokens,
                               isLoading: _isLoadingBalances,
+                              isLoadingNfts: _isLoadingNfts,
+                              nftPreview: _nftPreview,
                               localization: l,
                               onManageTokens: _openTokenManager,
-                              onOpenNfts: () => Navigator.pushNamed(context, '/nft-gallery'),
+                              onOpenNfts: () =>
+                                  Navigator.pushNamed(context, '/nft-gallery'),
                               isTokenHidden: _isTokenHidden,
                               onSelectToken: (token) {
-                                Navigator.pushNamed(context, '/token-detail', arguments: token);
+                                Navigator.pushNamed(
+                                  context,
+                                  '/token-detail',
+                                  arguments: token,
+                                );
                               },
                             ),
                             const SizedBox(height: 20),
@@ -341,5 +465,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 }

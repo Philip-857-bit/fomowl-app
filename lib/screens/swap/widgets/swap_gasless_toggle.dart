@@ -26,12 +26,16 @@ class SwapGaslessToggle extends StatelessWidget {
           children: [
             Icon(Icons.bolt, color: value ? AppColors.accentRed : Colors.white54, size: 20),
             const SizedBox(width: 8),
-            Text(
-              'Owllet Gasless Beta',
-              style: GoogleFonts.outfit(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: value ? AppColors.accentRed : Colors.white,
+            Expanded(
+              child: Text(
+                'Owllet Gasless Beta',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: value ? AppColors.accentRed : Colors.white,
+                ),
               ),
             ),
             const SizedBox(width: 8),

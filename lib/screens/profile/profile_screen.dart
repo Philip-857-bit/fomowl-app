@@ -5,6 +5,7 @@ import '../../widgets/bottom_navigation.dart';
 import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
 import '../../utils/toast_utils.dart';
+import 'coming_soon_overlay.dart';
 
 /// My Profile Screen — "Me" tab
 /// Avatar, KYC badge, Account/Preferences/Support sections
@@ -30,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     final name = await _storage.getWalletName();
     final loggedIn = await _authService.isLoggedIn();
-    
+
     if (mounted) {
       setState(() {
         _walletName = name ?? 'User';
@@ -45,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _navigateComingSoon(String feature) {
-    Navigator.pushNamed(context, '/coming-soon', arguments: feature);
+    ComingSoonOverlay.show(context, title: feature);
   }
 
   @override
@@ -86,28 +87,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     _buildAvatarHeader(),
                     const SizedBox(height: 32),
-                    
+
                     // Account section
                     _buildSectionHeader('Account'),
                     _buildMenuItem(Icons.badge_outlined, 'Identity status', () {
                       Navigator.pushNamed(context, '/kyc-success');
                     }),
-                    _buildMenuItem(Icons.lock_outline, 'Password & Security', () {
-                      Navigator.pushNamed(context, '/unlock');
-                    }),
-                    _buildMenuItem(Icons.language, 'Language', () => _navigateComingSoon('Language')),
-                    _buildMenuItem(Icons.public, 'Join our communities', () => _navigateComingSoon('Communities')),
+                    _buildMenuItem(
+                      Icons.lock_outline,
+                      'Password & Security',
+                      () {
+                        Navigator.pushNamed(context, '/unlock');
+                      },
+                    ),
+                    _buildMenuItem(
+                      Icons.language,
+                      'Language',
+                      () => _navigateComingSoon('Language'),
+                    ),
+                    _buildMenuItem(
+                      Icons.public,
+                      'Join our communities',
+                      () => _navigateComingSoon('Communities'),
+                    ),
                     const SizedBox(height: 16),
 
                     // Preferences section
                     _buildSectionHeader('Preferences'),
-                    _buildMenuItem(Icons.info_outline, 'About us', () => _navigateComingSoon('About us')),
-                    _buildMenuItem(Icons.settings_outlined, 'Networks', () => _navigateComingSoon('Networks')),
+                    _buildMenuItem(
+                      Icons.info_outline,
+                      'About us',
+                      () => _navigateComingSoon('About us'),
+                    ),
+                    _buildMenuItem(
+                      Icons.settings_outlined,
+                      'Networks',
+                      () => _navigateComingSoon('Networks'),
+                    ),
                     const SizedBox(height: 16),
 
                     // Support section
                     _buildSectionHeader('Support'),
-                    _buildMenuItem(Icons.help_outline, 'Help Center', () => _navigateComingSoon('Help Center')),
+                    _buildMenuItem(
+                      Icons.help_outline,
+                      'Help Center',
+                      () => _navigateComingSoon('Help Center'),
+                    ),
                     _buildMenuItem(Icons.build_outlined, 'Version', () {
                       ToastUtils.showInfo('Owllet Wallet v1.0.0');
                     }),
@@ -115,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildMenuItem(Icons.logout, 'Log Out', _logout),
                   ],
                 ),
-                
+
               const SizedBox(height: 30),
             ],
           ),
@@ -136,17 +161,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.shield_outlined, size: 56, color: AppColors.accentRed),
+            const Icon(
+              Icons.shield_outlined,
+              size: 56,
+              color: AppColors.accentRed,
+            ),
             const SizedBox(height: 16),
             Text(
               'Sync Identity',
-              style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white),
+              style: GoogleFonts.outfit(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Log in or register to secure your account and unlock KYC limits without exposing keys.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.7), height: 1.4),
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.7),
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             Row(
@@ -156,16 +193,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       elevation: 0,
                     ),
                     onPressed: () async {
-                      final result = await Navigator.pushNamed(context, '/profile-login');
+                      final result = await Navigator.pushNamed(
+                        context,
+                        '/profile-login',
+                      );
                       if (result == true) _loadProfile();
                     },
-                    child: Text('Log In', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Log In',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -179,14 +229,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                       onPressed: () async {
-                        final result = await Navigator.pushNamed(context, '/profile-register');
+                        final result = await Navigator.pushNamed(
+                          context,
+                          '/profile-register',
+                        );
                         if (result == true) _loadProfile();
                       },
-                      child: Text('Register', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                      child: Text(
+                        'Register',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -234,7 +296,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1B5E20),
                   borderRadius: BorderRadius.circular(16),
@@ -283,7 +348,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: Colors.white.withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 17),
+              child: Icon(
+                icon,
+                color: Colors.white.withValues(alpha: 0.7),
+                size: 17,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(

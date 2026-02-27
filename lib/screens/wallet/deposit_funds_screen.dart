@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/deposit_modals.dart';
+import '../profile/coming_soon_overlay.dart';
 
 class DepositFundsScreen extends StatefulWidget {
   const DepositFundsScreen({super.key});
@@ -35,22 +36,14 @@ class _DepositFundsScreenState extends State<DepositFundsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => const ServiceProviderBottomSheet(),
     );
-    
+
     if (result != null && mounted) {
-      Navigator.pushNamed(
-        context,
-        '/third-party-deposit',
-        arguments: null,
-      );
+      Navigator.pushNamed(context, '/third-party-deposit', arguments: null);
     }
   }
 
   void _routeToBankTransfer() {
-    Navigator.pushNamed(
-      context,
-      '/third-party-deposit',
-      arguments: null,
-    );
+    Navigator.pushNamed(context, '/third-party-deposit', arguments: null);
   }
 
   @override
@@ -110,7 +103,8 @@ class _DepositFundsScreenState extends State<DepositFundsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          width: 20, height: 20,
+                          width: 20,
+                          height: 20,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.green,
@@ -204,7 +198,7 @@ class _DepositFundsScreenState extends State<DepositFundsScreen> {
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, '/coming-soon', arguments: 'P2P Deposit');
+                  ComingSoonOverlay.show(context, title: 'P2P Deposit');
                 },
                 child: Container(
                   width: double.infinity,

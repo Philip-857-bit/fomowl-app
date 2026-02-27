@@ -15,7 +15,14 @@ class BalanceSummaryCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('MY BALANCE', style: GoogleFonts.outfit(fontSize: 12, letterSpacing: 1, color: Colors.white60)),
+        Text(
+          'MY BALANCE',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            letterSpacing: 1,
+            color: Colors.white60,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(16),
@@ -25,25 +32,54 @@ class BalanceSummaryCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              TokenIcon(tokenSymbol: token.symbol, tokenAddress: token.contractAddress, size: 46),
+              TokenIcon(
+                tokenSymbol: token.symbol,
+                tokenAddress: token.contractAddress,
+                tokenImageUrl: token.imageUrl,
+                size: 46,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(token.name, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-                    Text(token.formattedBalance, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white54)),
+                    Text(
+                      token.name,
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      token.formattedBalance,
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: Colors.white54,
+                      ),
+                    ),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(token.formattedValue, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
+                  Text(
+                    token.formattedValue,
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     token.formattedChange,
-                    style: GoogleFonts.outfit(color: token.isPositiveChange ? AppColors.success : AppColors.error),
+                    style: GoogleFonts.outfit(
+                      color: token.isPositiveChange
+                          ? AppColors.success
+                          : AppColors.error,
+                    ),
                   ),
                 ],
               ),

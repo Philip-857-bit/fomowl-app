@@ -1,134 +1,161 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../constants/app_colors.dart';
 
-/// Wraps an existing UI screen with an 80% black opacity layer 
-/// and displays the "Coming Soon" message on top, preventing interactions
-/// with the underlying UI via an AbsorbPointer.
+/// Blocks interaction with [child] and displays a centered "Coming Soon" panel.
+/// Can also be shown as a modal overlay with [show].
 class ComingSoonOverlay extends StatelessWidget {
   final Widget child;
   final String? title;
 
-  const ComingSoonOverlay({
-    super.key,
-    required this.child,
-    this.title,
-  });
+  const ComingSoonOverlay({super.key, required this.child, this.title});
+
+  static Future<void> show(BuildContext context, {String title = 'Feature'}) {
+    return showGeneralDialog<void>(
+      context: context,
+      barrierLabel: 'coming-soon-overlay',
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.78),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return Material(
+          color: Colors.transparent,
+          child: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _ComingSoonPanel(
+                  title: title,
+                  onDismiss: () => Navigator.of(dialogContext).pop(),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+          child: child,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Check if a title was passed in arguments
-    final String displayTitle = title ?? ModalRoute.of(context)?.settings.arguments as String? ?? 'Feature';
+    final displayTitle =
+        title ??
+        (ModalRoute.of(context)?.settings.arguments as String?) ??
+        'Feature';
 
-    return Scaffold(
-      backgroundColor: Colors.transparent, // Prevents opaque inheritance out of Stack boundaries
-      body: Stack(
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
         children: [
-          // Underlying UI with pointer events disabled so they can't click things
-          AbsorbPointer(
-            child: child,
+          Positioned.fill(child: AbsorbPointer(absorbing: true, child: child)),
+          Positioned.fill(
+            child: Container(color: Colors.black.withValues(alpha: 0.78)),
           ),
-          
-          // Dark 80% opacity overlay
-          Container(
-            color: Colors.black.withValues(alpha: 0.8),
-          ),
-          
-          // Centered Coming Soon content
           SafeArea(
-            child: Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 8, 16, 16),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Expanded(
-                        child: Text(
-                          displayTitle,
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      const SizedBox(width: 48), // Balance for centering
-                    ],
-                  ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _ComingSoonPanel(
+                  title: displayTitle,
+                  onDismiss: () => Navigator.pop(context),
                 ),
-                const Spacer(),
-                
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.construction,
-                    size: 80,
-                    color: AppColors.accentRed,
-                  ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ComingSoonPanel extends StatelessWidget {
+  final String title;
+  final VoidCallback onDismiss;
+
+  const _ComingSoonPanel({required this.title, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(maxWidth: 420),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF131313),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.construction,
+              size: 34,
+              color: AppColors.accentRed,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 19,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Coming Soon',
+            style: GoogleFonts.outfit(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'This feature is under active development.',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onDismiss,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 32),
-                
-                // Text
-                Text(
-                  'Coming Soon',
-                  style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
+              ),
+              child: Text(
+                'Go Back',
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                 ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    'We are working hard to bring you this feature. Stay tuned for updates!',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      color: Colors.white.withValues(alpha: 0.6),
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const Spacer(flex: 2),
-                
-                // Go Back Button
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Go Back',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

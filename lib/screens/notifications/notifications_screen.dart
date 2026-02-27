@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
@@ -18,6 +17,7 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  final WalletService _walletService = WalletService();
   bool _isLoading = true;
   String? _errorMessage;
   List<_Notification> _notifications = [];
@@ -30,8 +30,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _fetchNotifications() async {
     try {
-      final walletService = context.read<WalletService>();
-      final address = await walletService.getCurrentWalletAddress();
+      final address = await _walletService.getCurrentWalletAddress();
       if (address == null) {
         setState(() {
           _isLoading = false;
