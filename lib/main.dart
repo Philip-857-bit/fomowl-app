@@ -40,6 +40,10 @@ import 'screens/profile/privacy_policy_screen.dart';
 import 'screens/profile/terms_and_conditions_screen.dart';
 import 'screens/profile/add_network_screen.dart';
 import 'screens/profile/kyc_success_screen.dart';
+import 'screens/profile/password_security_screen.dart';
+import 'screens/profile/referrals_screen.dart';
+import 'screens/profile/feedback_screen.dart';
+import 'screens/profile/community_links_screen.dart';
 import 'screens/wallet/receive_token_screen.dart';
 import 'screens/wallet/qr_scanner_screen.dart';
 import 'screens/wallet/deposit_funds_screen.dart';
@@ -52,6 +56,9 @@ import 'screens/payments/bill_payment_screen.dart';
 import 'screens/payments/electricity_suppliers_screen.dart';
 import 'services/storage_service.dart';
 import 'services/blockchain_service.dart';
+import 'services/rpc_service.dart';
+import 'services/token_price_service.dart';
+import 'services/language_bridge_service.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -69,8 +76,16 @@ void main() {
   );
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => BlockchainService()..init(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => RpcService()),
+        ChangeNotifierProvider(create: (_) => TokenPriceService()),
+        ChangeNotifierProxyProvider2<RpcService, TokenPriceService, BlockchainService>(
+          create: (_) => BlockchainService(),
+          update: (_, rpc, price, blockchain) =>
+              blockchain!..updateDependencies(rpc, price)..init(),
+        ),
+      ],
       child: const FOMOwlWalletApp(),
     ),
   );
@@ -91,6 +106,8 @@ class FOMOwlWalletApp extends StatefulWidget {
 
 class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
   final StorageService _storage = StorageService();
+  final WalletService _walletService = WalletService();
+  final LanguageBridgeService _languageBridgeService = LanguageBridgeService();
   Locale _locale = const Locale('en', '');
 
   @override
@@ -105,6 +122,29 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
       setState(() {
         _locale = Locale(languageCode, '');
       });
+    }
+    _reconcileLanguageWithBackend(languageCode);
+  }
+
+  Future<void> _reconcileLanguageWithBackend(String? localLanguageCode) async {
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (walletAddress == null || walletAddress.isEmpty) return;
+
+    try {
+      final backendLanguageCode = await _languageBridgeService
+          .getLanguagePreference(walletAddress: walletAddress)
+          .timeout(const Duration(seconds: 2));
+
+      if (backendLanguageCode == null || backendLanguageCode.isEmpty) return;
+      if (backendLanguageCode == localLanguageCode) return;
+      if (!mounted) return;
+
+      await _storage.setLanguage(backendLanguageCode);
+      setState(() {
+        _locale = Locale(backendLanguageCode, '');
+      });
+    } catch (_) {
+      // Silent fail: app continues with local language for instant UX.
     }
   }
 
@@ -181,6 +221,10 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
         '/privacy-policy': (context) => const PrivacyPolicyScreen(),
         '/terms-and-conditions': (context) => const TermsAndConditionsScreen(),
         '/backup-seed-phrase': (context) => const BackupSeedPhraseScreen(),
+        '/password-security': (context) => const PasswordSecurityScreen(),
+        '/referrals': (context) => const ReferralsScreen(),
+        '/feedback': (context) => const FeedbackScreen(),
+        '/community': (context) => const CommunityLinksScreen(),
         '/add-network': (context) => const AddNetworkScreen(),
         // Fiat/Centralized routes → Coming Soon until backend is live
         '/transaction-processing': (context) =>
@@ -218,6 +262,7 @@ class AppBootstrapper extends StatefulWidget {
 class _AppBootstrapperState extends State<AppBootstrapper> {
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
+  final LanguageBridgeService _languageBridgeService = LanguageBridgeService();
 
   @override
   void initState() {
@@ -226,6 +271,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   }
 
   Future<void> _checkAuthAndNavigate() async {
+    await _hydrateLanguageFromBackend();
     final hasWallet = await _walletService.hasWallet();
     if (!mounted) return;
 
@@ -258,6 +304,25 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
         reverseTransitionDuration: const Duration(milliseconds: 300),
       ),
     );
+  }
+
+  Future<void> _hydrateLanguageFromBackend() async {
+    try {
+      final walletAddress = await _walletService.getCurrentWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) return;
+      final localLanguage = await _storage.getLanguage();
+      final backendLanguage = await _languageBridgeService
+          .getLanguagePreference(walletAddress: walletAddress)
+          .timeout(const Duration(seconds: 2));
+      if (backendLanguage == null || backendLanguage.isEmpty) return;
+      if (backendLanguage == localLanguage) return;
+
+      await _storage.setLanguage(backendLanguage);
+      if (!mounted) return;
+      FOMOwlWalletApp.setLocale(context, backendLanguage);
+    } catch (_) {
+      // Keep startup resilient: fall back to local language silently.
+    }
   }
 
   @override

@@ -36,10 +36,10 @@ class TokenSelectorCard extends StatelessWidget {
         GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
               color: AppColors.cardDark,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
               border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Row(
@@ -55,38 +55,28 @@ class TokenSelectorCard extends StatelessWidget {
                 Text(
                   token?.symbol ?? 'Select',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: 31,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
                 const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Network: ${blockchain.activeChain.name}',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
+                Row(
+                  children: [
+                    Text(
+                      'Network: ${blockchain.activeChain.name}',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.72),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 10,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ],
                 ),
               ],
             ),

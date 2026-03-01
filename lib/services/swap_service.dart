@@ -7,13 +7,15 @@ import 'package:http/http.dart' as http;
 class SwapQuote {
   final String amountOutWei;
   final String amountOutFormatted;
-  final double estimatedGasUsd;
+  final double networkFeeUsd;
+  final double networkFeeNative;
   final String allowanceTarget;
 
   SwapQuote({
     required this.amountOutWei,
     required this.amountOutFormatted,
-    required this.estimatedGasUsd,
+    required this.networkFeeUsd,
+    required this.networkFeeNative,
     required this.allowanceTarget,
   });
 }
@@ -113,7 +115,8 @@ class SwapService {
         return SwapQuote(
           amountOutWei: dstAmountWei,
           amountOutFormatted: formatted,
-          estimatedGasUsd: 0.0, 
+          networkFeeUsd: (data['networkFeeUsd'] as num?)?.toDouble() ?? 0.0,
+          networkFeeNative: (data['networkFeeNative'] as num?)?.toDouble() ?? 0.0,
           allowanceTarget: allowanceTarget,
         );
       } else {

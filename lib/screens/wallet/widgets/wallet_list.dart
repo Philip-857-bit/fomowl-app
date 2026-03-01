@@ -9,6 +9,7 @@ class WalletList extends StatelessWidget {
   final String? activeAddress;
   final void Function(WalletAccount) onSelect;
   final void Function(WalletAccount) onRename;
+  final void Function(WalletAccount) onDelete;
   final String Function(String) shortenAddress;
 
   const WalletList({
@@ -17,6 +18,7 @@ class WalletList extends StatelessWidget {
     required this.activeAddress,
     required this.onSelect,
     required this.onRename,
+    required this.onDelete,
     required this.shortenAddress,
   });
 
@@ -69,12 +71,24 @@ class WalletList extends StatelessWidget {
                       ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => onRename(account),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(Icons.edit, color: Colors.white54, size: 18),
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => onRename(account),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(Icons.edit, color: Colors.white54, size: 18),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => onDelete(account),
+                        child: const Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Icon(Icons.delete_outline, color: Color(0xFFFF6B6B), size: 19),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

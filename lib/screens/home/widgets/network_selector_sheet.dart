@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../services/blockchain_service.dart';
+import '../../../models/chain.dart';
 
 class NetworkSelectorSheet extends StatelessWidget {
   final List<EvmChain> chains;
@@ -47,7 +47,7 @@ class NetworkSelectorSheet extends StatelessWidget {
               radius: 18,
               backgroundColor: isActive ? AppColors.accentRed.withValues(alpha: 0.2) : Colors.white12,
               child: Text(
-                chain.symbol.substring(0, chain.symbol.length > 3 ? 3 : chain.symbol.length),
+                chain.symbol.isEmpty ? '?' : chain.symbol.substring(0, chain.symbol.length > 3 ? 3 : chain.symbol.length),
                 style: GoogleFonts.outfit(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,

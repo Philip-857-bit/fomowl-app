@@ -65,6 +65,7 @@ dependencies:
   url_launcher: ^6.3.0
   eth_sig_util: ^0.0.9
   flutter_native_splash: ^2.4.0
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -146,9 +147,9 @@ flutter_native_splash:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo.png"
-  adaptive_icon_background: "#E53935"
-  adaptive_icon_foreground: "assets/images/logo.png"
+  image_path: "assets/images/launcher_icon.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/images/launcher_foreground.png"
   
   # Remove default Flutter icon
   remove_alpha_ios: true

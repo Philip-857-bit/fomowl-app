@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -52,6 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _lastChainId;
   Set<String> _hiddenTokenKeys = {};
   List<NftAsset> _nftPreview = [];
+  bool _hasMoreNfts = false;
+  bool _clipboardChecked = false;
 
   @override
   void initState() {
@@ -123,12 +126,14 @@ class _HomeScreenState extends State<HomeScreen> {
           _fetchNftPreview(address),
           _refreshNotificationDot(address: address),
         ]);
+        await _checkClipboardTokenSuggestion();
       } else {
         if (mounted) {
           setState(() {
             _tokens = [];
             _totalBalance = 0.0;
             _nftPreview = [];
+            _hasMoreNfts = false;
             _hasUnreadNotifications = false;
             _isLoadingNfts = false;
           });
@@ -144,6 +149,102 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  bool _isContractAddress(String value) {
+    return RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(value.trim());
+  }
+
+  bool _tokenExistsForAddress(String contractAddress) {
+    final target = contractAddress.toLowerCase();
+    return _tokens.any(
+      (token) => (token.contractAddress ?? '').toLowerCase() == target,
+    );
+  }
+
+  Future<void> _checkClipboardTokenSuggestion() async {
+    if (_clipboardChecked || !mounted) return;
+    _clipboardChecked = true;
+
+    try {
+      final data = await Clipboard.getData('text/plain');
+      if (!mounted) return;
+      final copied = data?.text?.trim() ?? '';
+      if (!_isContractAddress(copied)) return;
+      if (_tokenExistsForAddress(copied)) return;
+
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final detected = await blockchain.detectTokenByContract(copied);
+      if (detected == null || !mounted) return;
+
+      final shouldAdd = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text(
+            'Token Detected',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                detected.name,
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                detected.symbol,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                copied,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(
+                'Ignore',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.background,
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Add Token'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldAdd != true || !mounted) return;
+      final added = await blockchain.addCustomToken(
+        chainId: blockchain.activeChain.chainId,
+        token: detected,
+      );
+      if (!added) {
+        ToastUtils.showInfo('Token already exists on this network');
+        return;
+      }
+      await _loadWalletData();
+      if (!mounted) return;
+      ToastUtils.showSuccess('${detected.symbol} added from clipboard');
+    } catch (_) {}
   }
 
   Future<void> _fetchRealBalances(String address) async {
@@ -273,6 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _nftPreview = [];
+          _hasMoreNfts = false;
           _isLoadingNfts = false;
         });
       }
@@ -287,6 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _nftPreview = [];
+          _hasMoreNfts = false;
           _isLoadingNfts = false;
         });
       }
@@ -306,12 +409,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         _nftPreview = nfts.take(8).toList();
+        _hasMoreNfts = nfts.length > 8;
         _isLoadingNfts = false;
       });
     } catch (_) {
       if (mounted) {
         setState(() {
           _nftPreview = [];
+          _hasMoreNfts = false;
           _isLoadingNfts = false;
         });
       }
@@ -377,7 +482,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   HomeTopBar(
                     walletName: _walletName ?? 'Main Wallet',
-                    onWalletTap: () => Navigator.pushNamed(context, '/wallets'),
+                    onWalletTap: () async {
+                      await Navigator.pushNamed(context, '/wallets');
+                      await _loadWalletData();
+                    },
                     chainSymbol: Provider.of<BlockchainService>(
                       context,
                     ).activeChain.symbol,
@@ -437,10 +545,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               isLoading: _isLoadingBalances,
                               isLoadingNfts: _isLoadingNfts,
                               nftPreview: _nftPreview,
+                              hasMoreNfts: _hasMoreNfts,
                               localization: l,
                               onManageTokens: _openTokenManager,
-                              onOpenNfts: () =>
-                                  Navigator.pushNamed(context, '/nft-gallery'),
+                              onOpenNfts: () {
+                                if (_hasMoreNfts) {
+                                  Navigator.pushNamed(context, '/nft-gallery');
+                                  return;
+                                }
+                                ToastUtils.showInfo('NFTs are already shown on home');
+                              },
                               isTokenHidden: _isTokenHidden,
                               onSelectToken: (token) {
                                 Navigator.pushNamed(

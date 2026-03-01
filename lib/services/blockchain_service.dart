@@ -4,73 +4,24 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/token.dart';
-
-/// EVM Chain configuration
-class EvmChain {
-  final String name;
-  final String symbol;
-  final int chainId;
-  final String rpcUrl;
-  final String coinGeckoId;
-  final String? explorerUrl;
-  final bool isCustom;
-
-  const EvmChain({
-    required this.name,
-    required this.symbol,
-    required this.chainId,
-    required this.rpcUrl,
-    required this.coinGeckoId,
-    this.explorerUrl,
-    this.isCustom = false,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'symbol': symbol,
-    'chainId': chainId,
-    'rpcUrl': rpcUrl,
-    'coinGeckoId': coinGeckoId,
-    'explorerUrl': explorerUrl,
-    'isCustom': isCustom,
-  };
-
-  factory EvmChain.fromJson(Map<String, dynamic> json) => EvmChain(
-    name: json['name'] as String,
-    symbol: json['symbol'] as String,
-    chainId: json['chainId'] as int,
-    rpcUrl: json['rpcUrl'] as String,
-    coinGeckoId: json['coinGeckoId'] as String? ?? '',
-    explorerUrl: json['explorerUrl'] as String?,
-    isCustom: json['isCustom'] as bool? ?? true,
-  );
-}
+import '../models/chain.dart';
+import 'rpc_service.dart';
+import 'token_price_service.dart';
 
 /// Blockchain Service — Shared ChangeNotifier Provider
-/// Manages active chain, custom chains, and all blockchain interactions
+/// Manages active chain, custom chains, and all blockchain interactions.
+/// Now delegates core RPC and Price logic to specialized services.
 class BlockchainService extends ChangeNotifier {
-  // Built-in EVM chains (Supports all 1inch v5.2 natively using backend JSON-RPC proxy)
-  static const String _backendRpcBase =
-      'https://fomowl-backend.onrender.com/api/blockchain';
+  // Dependencies
+  RpcService? _rpcService;
+  TokenPriceService? _priceService;
+
+  // Configuration Constants
+  static const String _backendRpcBase = 'https://fomowl-backend.onrender.com/api/blockchain';
   static const List<String> _backendDiscoveryBases = [
     'https://fomowl-backend.onrender.com/api/blockchain',
   ];
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 8);
-  static const Duration _backendDiscoveryBaseCooldown = Duration(minutes: 5);
-  static const Map<int, List<String>> _publicRpcFallbacks = {
-    1: ['https://cloudflare-eth.com'],
-    56: ['https://bsc-dataseed.binance.org'],
-    137: ['https://polygon-rpc.com'],
-    42161: ['https://arb1.arbitrum.io/rpc'],
-    10: ['https://mainnet.optimism.io'],
-    8453: ['https://mainnet.base.org'],
-    324: ['https://mainnet.era.zksync.io'],
-    43114: ['https://api.avax.network/ext/bc/C/rpc'],
-    250: ['https://rpc.ankr.com/fantom'],
-    100: ['https://rpc.gnosischain.com'],
-    8217: ['https://public-en-cypress.klaytn.net'],
-    1313161554: ['https://mainnet.aurora.dev'],
-  };
 
   static const List<EvmChain> builtInChains = [
     EvmChain(
@@ -176,28 +127,20 @@ class BlockchainService extends ChangeNotifier {
   static const String _keyActiveChainId = 'active_chain_id';
   static const String _keyCustomTokens = 'custom_tokens_v1';
 
-  // All chains (built-in + custom)
+  // State
   List<EvmChain> _customChains = [];
   EvmChain _activeChain = builtInChains[0];
   final Map<int, List<CustomTokenDefinition>> _customTokens = {};
+  List<Token> _walletTokens = [];
+  final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
 
+  // Getters
   List<EvmChain> get allChains => [...builtInChains, ..._customChains];
   List<EvmChain> get customChains => _customChains;
   EvmChain get activeChain => _activeChain;
   List<CustomTokenDefinition> get customTokensForActiveChain =>
       List.unmodifiable(_customTokens[_activeChain.chainId] ?? []);
 
-  // CoinGecko API for token prices
-  static const String priceApiBase = 'https://api.coingecko.com/api/v3';
-
-  List<Token> _walletTokens = [];
-  final Map<String, _CachedChartData> _priceHistoryCache = {};
-  final Map<String, _CachedMarketData> _tokenMarketDataCache = {};
-  final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
-  static const Duration _priceHistoryCacheTtl = Duration(minutes: 2);
-  static const Duration _tokenMarketDataCacheTtl = Duration(minutes: 2);
-
-  // Getter for tokens matching the active chain
   List<Token> get tokens {
     if (_walletTokens.isNotEmpty) return _walletTokens;
     return [
@@ -207,12 +150,16 @@ class BlockchainService extends ChangeNotifier {
         balance: 0.0,
         valueUsd: 0.0,
         changePercent24h: 0.0,
-        imageUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
-        coinGeckoId: activeChain.coinGeckoId.isNotEmpty
-            ? activeChain.coinGeckoId
-            : null,
+        imageUrl: _getIconUrl(activeChain.symbol),
+        coinGeckoId: activeChain.coinGeckoId.isNotEmpty ? activeChain.coinGeckoId : null,
       ),
     ];
+  }
+
+  /// Update dependencies from ProxyProvider
+  void updateDependencies(RpcService rpc, TokenPriceService price) {
+    _rpcService = rpc;
+    _priceService = price;
   }
 
   /// Initialize — load persisted chains and active chain from storage
@@ -221,6 +168,13 @@ class BlockchainService extends ChangeNotifier {
     await _loadActiveChain();
     await _loadCustomTokens();
   }
+
+  void refresh() {
+    _walletTokens = [];
+    notifyListeners();
+  }
+
+  // ─── CHAIN MANAGEMENT ───────────────────────────
 
   Future<void> _loadCustomChains() async {
     try {
@@ -271,52 +225,10 @@ class BlockchainService extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadCustomTokens() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonStr = prefs.getString(_keyCustomTokens);
-      if (jsonStr == null) return;
-      final Map<String, dynamic> data =
-          jsonDecode(jsonStr) as Map<String, dynamic>;
-      data.forEach((key, value) {
-        final chainId = int.tryParse(key);
-        if (chainId == null) return;
-        final list = (value as List)
-            .map(
-              (entry) =>
-                  CustomTokenDefinition.fromJson(entry as Map<String, dynamic>),
-            )
-            .toList();
-        _customTokens[chainId] = list;
-      });
-    } catch (e) {
-      debugPrint('Error loading custom tokens: $e');
-    }
-  }
-
-  Future<void> _saveCustomTokens() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final data = _customTokens.map(
-        (key, value) =>
-            MapEntry(key.toString(), value.map((t) => t.toJson()).toList()),
-      );
-      await prefs.setString(_keyCustomTokens, jsonEncode(data));
-    } catch (e) {
-      debugPrint('Error saving custom tokens: $e');
-    }
-  }
-
-  /// Switch active chain and persist
-  void _clearCachedTokens() {
-    _walletTokens = [];
-  }
-
   void setActiveChain(EvmChain chain) {
     _activeChain = chain;
-    _clearCachedTokens();
+    refresh();
     _saveActiveChain();
-    notifyListeners();
   }
 
   void setActiveChainByChainId(int chainId) {
@@ -324,27 +236,20 @@ class BlockchainService extends ChangeNotifier {
       (c) => c.chainId == chainId,
       orElse: () => builtInChains[0],
     );
-    _clearCachedTokens();
+    refresh();
     _saveActiveChain();
-    notifyListeners();
   }
 
-  /// Add a custom EVM chain
   Future<bool> addCustomChain(EvmChain chain) async {
-    // Prevent duplicates
-    if (allChains.any((c) => c.chainId == chain.chainId)) {
-      return false;
-    }
+    if (allChains.any((c) => c.chainId == chain.chainId)) return false;
     _customChains.add(chain);
     await _saveCustomChains();
     notifyListeners();
     return true;
   }
 
-  /// Remove a custom chain
   Future<void> removeCustomChain(int chainId) async {
     _customChains.removeWhere((c) => c.chainId == chainId);
-    // If the removed chain was active, switch to Ethereum
     if (_activeChain.chainId == chainId) {
       _activeChain = builtInChains[0];
       await _saveActiveChain();
@@ -353,75 +258,21 @@ class BlockchainService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Validate an RPC URL by making a test call
-  Future<bool> testRpcUrl(String rpcUrl) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse(rpcUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'jsonrpc': '2.0',
-              'method': 'eth_chainId',
-              'params': [],
-              'id': 1,
-            }),
-          )
-          .timeout(const Duration(seconds: 8));
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // ─── RPC HELPERS ─────────────────────────────────
-
-  String get _rpcUrl => _activeChain.rpcUrl;
-  List<String> get _rpcCandidates {
-    final candidates = <String>[_rpcUrl];
-    final fallbacks = _publicRpcFallbacks[_activeChain.chainId] ?? const [];
-    for (final fallback in fallbacks) {
-      if (!candidates.contains(fallback)) {
-        candidates.add(fallback);
-      }
-    }
-    return candidates;
-  }
+  // ─── RPC DELEGATION ─────────────────────────────
 
   Future<dynamic> _rpcCall(String method, List<dynamic> params) async {
-    for (final rpcUrl in _rpcCandidates) {
-      try {
-        final response = await http
-            .post(
-              Uri.parse(rpcUrl),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'jsonrpc': '2.0',
-                'method': method,
-                'params': params,
-                'id': 1,
-              }),
-            )
-            .timeout(const Duration(seconds: 10));
+    if (_rpcService == null) return null;
+    return _rpcService!.rpcCall(
+      chainId: _activeChain.chainId,
+      primaryRpcUrl: _activeChain.rpcUrl,
+      method: method,
+      params: params,
+    );
+  }
 
-        if (response.statusCode != 200) {
-          continue;
-        }
-
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (data['error'] != null) {
-          debugPrint('RPC error ($method @ $rpcUrl): ${data['error']}');
-          continue;
-        }
-        if (rpcUrl != _rpcUrl) {
-          debugPrint('RPC fallback in use for $method: $rpcUrl');
-        }
-        return data['result'];
-      } catch (e) {
-        debugPrint('RPC call failed ($method @ $rpcUrl): $e');
-      }
-    }
-    return null;
+  Future<bool> testRpcUrl(String rpcUrl) async {
+    if (_rpcService == null) return false;
+    return _rpcService!.testRpcUrl(rpcUrl);
   }
 
   // ─── GAS ESTIMATION ──────────────────────────────
@@ -429,351 +280,73 @@ class BlockchainService extends ChangeNotifier {
   Future<double> getGasPrice() async {
     final result = await _rpcCall('eth_gasPrice', []);
     if (result != null) {
-      final gasPriceWei = BigInt.parse(
-        (result as String).substring(2),
-        radix: 16,
-      );
+      final gasPriceWei = BigInt.parse((result as String).substring(2), radix: 16);
       return gasPriceWei.toDouble() / 1e9;
     }
     return 20.0;
   }
 
-  Future<Map<String, double>> estimateGasFee({
-    double nativePriceUsd = 0,
-  }) async {
+  Future<Map<String, double>> estimateGasFee({double nativePriceUsd = 0}) async {
     final gasPriceGwei = await getGasPrice();
     const gasLimit = 21000;
     final totalFeeWei = gasPriceGwei * 1e9 * gasLimit;
     final totalFeeNative = totalFeeWei / 1e18;
-    final totalFeeUsd = totalFeeNative * nativePriceUsd;
     return {
       'gasGwei': gasPriceGwei,
       'gasLimitUnits': gasLimit.toDouble(),
       'totalFeeEth': totalFeeNative,
-      'totalFeeUsd': totalFeeUsd,
+      'totalFeeUsd': totalFeeNative * nativePriceUsd,
     };
   }
 
-  // ─── PRICE DATA ──────────────────────────────────
-
-  // Static parser functions are isolate-safe for compute().
-  static List<double> _parsePriceHistory(String responseBody) {
-    try {
-      final data = jsonDecode(responseBody);
-      final prices = data['prices'] as List? ?? const [];
-      return prices
-          .whereType<List>()
-          .map<double>(
-            (p) =>
-                (p.length > 1 && p[1] is num) ? (p[1] as num).toDouble() : 0.0,
-          )
-          .where((v) => v.isFinite && v > 0)
-          .toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  static List<double> _parseOhlcHistory(String responseBody) {
-    try {
-      final data = jsonDecode(responseBody);
-      if (data is! List) return [];
-      return data
-          .whereType<List>()
-          .map<double>(
-            (p) =>
-                (p.length > 4 && p[4] is num) ? (p[4] as num).toDouble() : 0.0,
-          )
-          .where((v) => v.isFinite && v > 0)
-          .toList();
-    } catch (_) {
-      return [];
-    }
-  }
+  // ─── PRICE DATA DELEGATION ───────────────────────
 
   Future<List<double>> getPriceHistory(String coinId, {int days = 7}) async {
-    if (coinId.isEmpty) return [];
-    final cacheKey = '$coinId:$days';
-    final cached = _priceHistoryCache[cacheKey];
-    final now = DateTime.now();
-    if (cached != null &&
-        now.difference(cached.fetchedAt) < _priceHistoryCacheTtl) {
-      return cached.values;
-    }
-
-    Future<List<double>> fetchMarketChart() async {
-      final url =
-          '$priceApiBase/coins/$coinId/market_chart?vs_currency=usd&days=$days';
-      final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode == 200) {
-        return compute(BlockchainService._parsePriceHistory, response.body);
-      }
-      debugPrint(
-        'Price history market_chart failed for $coinId ($days d): ${response.statusCode}',
-      );
-      return [];
-    }
-
-    Future<List<double>> fetchOhlcFallback() async {
-      final normalizedDays = days <= 1
-          ? 1
-          : days <= 7
-          ? 7
-          : days <= 14
-          ? 14
-          : days <= 30
-          ? 30
-          : days <= 90
-          ? 90
-          : days <= 180
-          ? 180
-          : 365;
-      final url =
-          '$priceApiBase/coins/$coinId/ohlc?vs_currency=usd&days=$normalizedDays';
-      final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode == 200) {
-        return compute(BlockchainService._parseOhlcHistory, response.body);
-      }
-      debugPrint(
-        'Price history OHLC fallback failed for $coinId ($normalizedDays d): ${response.statusCode}',
-      );
-      return [];
-    }
-
-    try {
-      var data = await fetchMarketChart();
-      if (data.isEmpty) {
-        await Future.delayed(const Duration(milliseconds: 350));
-        data = await fetchMarketChart();
-      }
-      if (data.isEmpty) {
-        data = await fetchOhlcFallback();
-      }
-      if (data.isNotEmpty) {
-        _priceHistoryCache[cacheKey] = _CachedChartData(
-          values: data,
-          fetchedAt: now,
-        );
-        return data;
-      }
-    } catch (e) {
-      debugPrint('Error fetching price history: $e');
-    }
-    return [];
+    if (_priceService == null) return [];
+    return _priceService!.getPriceHistory(coinId, days: days);
   }
 
-  Future<List<double>> getPriceHistoryForTimeframe(
-    String coinId,
-    String timeframe,
-  ) async {
+  Future<List<double>> getPriceHistoryForTimeframe(String coinId, String timeframe) async {
+    if (_priceService == null) return [];
+    if (timeframe == '5M') {
+      return _priceService!.getPriceHistoryRange(
+        coinId,
+        window: const Duration(minutes: 5),
+      );
+    }
+    if (timeframe == '1H') {
+      return _priceService!.getPriceHistoryRange(
+        coinId,
+        window: const Duration(hours: 1),
+      );
+    }
+
+    int days = 7;
     switch (timeframe) {
-      case '5M':
-        return _getIntradayPriceHistory(
-          coinId,
-          duration: const Duration(minutes: 5),
-          fallbackTailPoints: 12,
-        );
-      case '1H':
-        return _getIntradayPriceHistory(
-          coinId,
-          duration: const Duration(hours: 1),
-          fallbackTailPoints: 24,
-        );
-      case '1D':
-        return getPriceHistory(coinId, days: 1);
-      case '1W':
-        return getPriceHistory(coinId, days: 7);
-      case '1M':
-        return getPriceHistory(coinId, days: 30);
-      case '1Y':
-        return getPriceHistory(coinId, days: 365);
-      default:
-        return getPriceHistory(coinId, days: 7);
+      case '1D': days = 1; break;
+      case '1W': days = 7; break;
+      case '1M': days = 30; break;
+      case '1Y': days = 365; break;
     }
-  }
-
-  Future<List<double>> _getIntradayPriceHistory(
-    String coinId, {
-    required Duration duration,
-    required int fallbackTailPoints,
-  }) async {
-    if (coinId.isEmpty) return [];
-    final now = DateTime.now();
-    final from = now.subtract(duration);
-    final cacheKey =
-        '$coinId:range:${from.millisecondsSinceEpoch ~/ 1000}:${now.millisecondsSinceEpoch ~/ 1000}';
-    final cached = _priceHistoryCache[cacheKey];
-    if (cached != null &&
-        now.difference(cached.fetchedAt) < const Duration(seconds: 30)) {
-      return cached.values;
-    }
-
-    try {
-      final rangeUrl =
-          '$priceApiBase/coins/$coinId/market_chart/range?vs_currency=usd&from=${from.millisecondsSinceEpoch ~/ 1000}&to=${now.millisecondsSinceEpoch ~/ 1000}';
-      final response = await http
-          .get(Uri.parse(rangeUrl))
-          .timeout(const Duration(seconds: 12));
-
-      if (response.statusCode == 200) {
-        final rangeData = await compute(
-          BlockchainService._parsePriceHistory,
-          response.body,
-        );
-        if (rangeData.length >= 2) {
-          _priceHistoryCache[cacheKey] = _CachedChartData(
-            values: rangeData,
-            fetchedAt: now,
-          );
-          return rangeData;
-        }
-      }
-    } catch (e) {
-      debugPrint('Intraday range fetch failed for $coinId: $e');
-    }
-
-    // Fallback: use 1D data and show the tail so 5M/1H tabs always render.
-    final dayData = await getPriceHistory(coinId, days: 1);
-    if (dayData.isEmpty) return [];
-    if (dayData.length <= fallbackTailPoints) return dayData;
-    return dayData.sublist(dayData.length - fallbackTailPoints);
+    return getPriceHistory(coinId, days: days);
   }
 
   Future<Map<String, double>> getTokenPrices(List<String> tokenIds) async {
-    if (tokenIds.isEmpty) return {};
-    try {
-      final ids = tokenIds.join(',');
-      final url =
-          '$priceApiBase/simple/price?ids=$ids&vs_currencies=usd&include_24hr_change=true';
-      final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final prices = <String, double>{};
-        data.forEach((key, value) {
-          if (value is Map && value['usd'] != null) {
-            prices[key] = (value['usd'] as num).toDouble();
-            if (value['usd_24h_change'] != null) {
-              prices['${key}_change'] = (value['usd_24h_change'] as num)
-                  .toDouble();
-            }
-          }
-        });
-        return prices;
-      }
-    } catch (e) {
-      debugPrint('Error fetching token prices: $e');
-    }
-    return {};
+    if (_priceService == null) return {};
+    return _priceService!.getTokenPrices(tokenIds);
   }
 
   Future<TokenMarketData?> getTokenMarketData(String coinId) async {
-    if (coinId.isEmpty) return null;
-    final now = DateTime.now();
-    final cached = _tokenMarketDataCache[coinId];
-    if (cached != null &&
-        now.difference(cached.fetchedAt) < _tokenMarketDataCacheTtl) {
-      return cached.value;
-    }
-
-    TokenMarketData? parseTokenMarketFromCoin(Map<String, dynamic> data) {
-      final marketData = data['market_data'] as Map<String, dynamic>?;
-      if (marketData == null) return null;
-
-      double? toDouble(dynamic value) {
-        if (value == null) return null;
-        if (value is num) return value.toDouble();
-        if (value is String && value.isNotEmpty) return double.tryParse(value);
-        return null;
-      }
-
-      final marketCapMap = marketData['market_cap'] as Map<String, dynamic>?;
-      final currentPriceMap =
-          marketData['current_price'] as Map<String, dynamic>?;
-      return TokenMarketData(
-        priceUsd: toDouble(currentPriceMap?['usd']),
-        marketCapUsd: toDouble(marketCapMap?['usd']),
-        totalSupply: toDouble(marketData['total_supply']),
-        circulatingSupply: toDouble(marketData['circulating_supply']),
-        genesisDate: data['genesis_date'] as String?,
-      );
-    }
-
-    TokenMarketData? parseTokenMarketFromMarkets(List<dynamic> list) {
-      if (list.isEmpty || list.first is! Map<String, dynamic>) return null;
-      final market = list.first as Map<String, dynamic>;
-
-      double? toDouble(dynamic value) {
-        if (value == null) return null;
-        if (value is num) return value.toDouble();
-        if (value is String && value.isNotEmpty) return double.tryParse(value);
-        return null;
-      }
-
-      return TokenMarketData(
-        priceUsd: toDouble(market['current_price']),
-        marketCapUsd: toDouble(market['market_cap']),
-        totalSupply: toDouble(market['total_supply']),
-        circulatingSupply: toDouble(market['circulating_supply']),
-        genesisDate: null,
-      );
-    }
-
-    try {
-      final coinUrl =
-          '$priceApiBase/coins/$coinId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
-      for (int attempt = 0; attempt < 2; attempt++) {
-        final response = await http
-            .get(Uri.parse(coinUrl))
-            .timeout(const Duration(seconds: 12));
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final parsed = parseTokenMarketFromCoin(data);
-          if (parsed != null) {
-            _tokenMarketDataCache[coinId] = _CachedMarketData(
-              value: parsed,
-              fetchedAt: now,
-            );
-            return parsed;
-          }
-        } else {
-          debugPrint(
-            'Token market (coin endpoint) failed for $coinId: ${response.statusCode}',
-          );
-        }
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-
-      final fallbackUrl =
-          '$priceApiBase/coins/markets?vs_currency=usd&ids=$coinId&sparkline=false&price_change_percentage=24h';
-      final fallbackResponse = await http
-          .get(Uri.parse(fallbackUrl))
-          .timeout(const Duration(seconds: 12));
-      if (fallbackResponse.statusCode == 200) {
-        final list = jsonDecode(fallbackResponse.body) as List<dynamic>;
-        final parsed = parseTokenMarketFromMarkets(list);
-        if (parsed != null) {
-          _tokenMarketDataCache[coinId] = _CachedMarketData(
-            value: parsed,
-            fetchedAt: now,
-          );
-          return parsed;
-        }
-      } else {
-        debugPrint(
-          'Token market (markets fallback) failed for $coinId: ${fallbackResponse.statusCode}',
-        );
-      }
-    } catch (e) {
-      debugPrint('Error fetching token market data: $e');
-    }
-    return null;
+    if (_priceService == null) return null;
+    final data = await _priceService!.getTokenMarketData(coinId);
+    if (data == null) return null;
+    return TokenMarketData(
+      priceUsd: data.priceUsd,
+      marketCapUsd: data.marketCapUsd,
+      totalSupply: data.totalSupply,
+      circulatingSupply: data.circulatingSupply,
+      genesisDate: data.genesisDate,
+    );
   }
 
   // ─── BALANCE FETCHING ────────────────────────────
@@ -781,10 +354,7 @@ class BlockchainService extends ChangeNotifier {
   Future<double> getNativeBalance(String address) async {
     final result = await _rpcCall('eth_getBalance', [address, 'latest']);
     if (result != null) {
-      final balanceWei = BigInt.parse(
-        (result as String).substring(2),
-        radix: 16,
-      );
+      final balanceWei = BigInt.parse((result as String).substring(2), radix: 16);
       return balanceWei.toDouble() / 1e18;
     }
     return 0.0;
@@ -792,11 +362,7 @@ class BlockchainService extends ChangeNotifier {
 
   Future<double> getEthBalance(String address) => getNativeBalance(address);
 
-  Future<double> getTokenBalance(
-    String walletAddress,
-    String tokenAddress,
-    int decimals,
-  ) async {
+  Future<double> getTokenBalance(String walletAddress, String tokenAddress, int decimals) async {
     final data = '0x70a08231${_padAddress(walletAddress)}';
     final result = await _rpcCall('eth_call', [
       {'to': tokenAddress, 'data': data},
@@ -811,20 +377,88 @@ class BlockchainService extends ChangeNotifier {
     return 0.0;
   }
 
-  Future<int> getTransactionCount(String address) async {
-    final result = await _rpcCall('eth_getTransactionCount', [
-      address,
-      'latest',
-    ]);
-    if (result != null) {
-      return int.parse((result as String).substring(2), radix: 16);
-    }
-    return 0;
+  Future<CustomTokenDefinition?> detectTokenByContract(String contractAddress) async {
+    final normalized = contractAddress.trim();
+    final addressRegex = RegExp(r'^0x[a-fA-F0-9]{40}$');
+    if (!addressRegex.hasMatch(normalized)) return null;
+
+    final symbol = await _ethCallString(normalized, '0x95d89b41');
+    final name = await _ethCallString(normalized, '0x06fdde03');
+    final decimalsRaw = await _ethCallUint(normalized, '0x313ce567');
+    final decimals = decimalsRaw?.toInt();
+
+    if (symbol == null || symbol.isEmpty || decimals == null) return null;
+
+    return CustomTokenDefinition(
+      symbol: symbol.toUpperCase(),
+      name: (name == null || name.isEmpty) ? symbol.toUpperCase() : name,
+      address: normalized,
+      decimals: decimals,
+      coinGeckoId: null,
+    );
   }
 
-  Future<String?> sendRawTransaction(String signedTxHex) async {
-    final result = await _rpcCall('eth_sendRawTransaction', [signedTxHex]);
-    return result as String?;
+  Future<String?> _ethCallString(String contractAddress, String methodId) async {
+    final result = await _rpcCall('eth_call', [
+      {'to': contractAddress, 'data': methodId},
+      'latest',
+    ]);
+    if (result is! String || !result.startsWith('0x') || result.length <= 2) return null;
+    return _decodeStringResult(result);
+  }
+
+  Future<BigInt?> _ethCallUint(String contractAddress, String methodId) async {
+    final result = await _rpcCall('eth_call', [
+      {'to': contractAddress, 'data': methodId},
+      'latest',
+    ]);
+    if (result is! String || !result.startsWith('0x') || result.length <= 2) return null;
+    final hex = result.substring(2);
+    if (hex.isEmpty) return null;
+    try {
+      return BigInt.parse(hex, radix: 16);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _decodeStringResult(String rawHexResult) {
+    final hex = rawHexResult.startsWith('0x') ? rawHexResult.substring(2) : rawHexResult;
+    if (hex.isEmpty) return null;
+
+    if (hex.length >= 192) {
+      try {
+        final offset = int.parse(hex.substring(0, 64), radix: 16);
+        final lengthPos = offset * 2;
+        if (lengthPos + 64 <= hex.length) {
+          final strLen = int.parse(hex.substring(lengthPos, lengthPos + 64), radix: 16);
+          final dataStart = lengthPos + 64;
+          final dataEnd = dataStart + (strLen * 2);
+          if (strLen > 0 && dataEnd <= hex.length) {
+            return _hexToUtf8(hex.substring(dataStart, dataEnd));
+          }
+        }
+      } catch (_) {}
+    }
+
+    final bytes32 = hex.substring(0, hex.length >= 64 ? 64 : hex.length);
+    return _hexToUtf8(bytes32);
+  }
+
+  String? _hexToUtf8(String hex) {
+    if (hex.isEmpty) return null;
+    final bytes = <int>[];
+    for (var i = 0; i + 1 < hex.length; i += 2) {
+      final byte = int.tryParse(hex.substring(i, i + 2), radix: 16);
+      if (byte == null || byte == 0) continue;
+      bytes.add(byte);
+    }
+    if (bytes.isEmpty) return null;
+    try {
+      return utf8.decode(bytes).trim();
+    } catch (_) {
+      return String.fromCharCodes(bytes).trim();
+    }
   }
 
   // ─── TOKEN LIST ──────────────────────────────────
@@ -838,82 +472,52 @@ class BlockchainService extends ChangeNotifier {
     }
 
     final tokens = <Token>[];
-    final chain = _activeChain;
-
     try {
       final nativeBalance = await getNativeBalance(walletAddress);
-      final priceIds = <String>{};
-      if (chain.coinGeckoId.isNotEmpty) priceIds.add(chain.coinGeckoId);
-      final wellKnownTokens = _getWellKnownTokens(chain.chainId);
-      for (final tokenDef in wellKnownTokens) {
-        final id = tokenDef['coinGeckoId'];
-        if (id != null && id.isNotEmpty) {
-          priceIds.add(id);
+      final priceIds = <String>[];
+      if (_activeChain.coinGeckoId.isNotEmpty) priceIds.add(_activeChain.coinGeckoId);
+      
+      final wellKnown = _getWellKnownTokens(_activeChain.chainId);
+      for (var t in wellKnown) {
+        if (t['coinGeckoId'] != null && t['coinGeckoId']!.isNotEmpty) {
+          priceIds.add(t['coinGeckoId']!);
         }
       }
-      final prices = await getTokenPrices(priceIds.toList());
 
-      final nativePrice = prices[chain.coinGeckoId] ?? 0;
-      final nativeChange = prices['${chain.coinGeckoId}_change'] ?? 0;
+      final prices = await getTokenPrices(priceIds);
+      final nativePrice = prices[_activeChain.coinGeckoId] ?? 0;
 
-      tokens.add(
-        Token(
-          symbol: chain.symbol,
-          name: chain.name,
-          balance: nativeBalance,
-          valueUsd: nativeBalance * nativePrice,
-          priceUsd: nativePrice,
-          changePercent24h: nativeChange,
-          imageUrl: _getIconUrl(chain.symbol),
-          coinGeckoId: chain.coinGeckoId.isNotEmpty ? chain.coinGeckoId : null,
-        ),
-      );
+      tokens.add(Token(
+        symbol: _activeChain.symbol,
+        name: _activeChain.name,
+        balance: nativeBalance,
+        valueUsd: nativeBalance * nativePrice,
+        priceUsd: nativePrice,
+        changePercent24h: prices['${_activeChain.coinGeckoId}_change'] ?? 0,
+        imageUrl: _getIconUrl(_activeChain.symbol),
+        coinGeckoId: _activeChain.coinGeckoId,
+      ));
 
-      final tokenFutures = wellKnownTokens.map((tokenDef) async {
-        try {
-          final balance = await getTokenBalance(
-            walletAddress,
-            tokenDef['address']!,
-            int.parse(tokenDef['decimals']!),
-          );
-          if (balance >= 0) {
-            final price = prices[tokenDef['coinGeckoId']] ?? 0.0;
-            final change = prices['${tokenDef['coinGeckoId']}_change'] ?? 0.0;
-            return Token(
-              symbol: tokenDef['symbol']!,
-              name: tokenDef['name']!,
-              contractAddress: tokenDef['address'],
-              balance: balance,
-              valueUsd: balance * price,
-              priceUsd: price,
-              changePercent24h: change,
-              decimals: int.parse(tokenDef['decimals']!),
-              imageUrl: _getIconUrl(tokenDef['symbol']!),
-              coinGeckoId: tokenDef['coinGeckoId'],
-            );
-          }
-        } catch (e) {
-          debugPrint('Error fetching ${tokenDef['symbol']} balance: $e');
+      for (var tDef in wellKnown) {
+        final bal = await getTokenBalance(walletAddress, tDef['address']!, int.parse(tDef['decimals']!));
+        if (bal > 0) {
+          final p = prices[tDef['coinGeckoId']] ?? 0;
+          tokens.add(Token(
+            symbol: tDef['symbol']!,
+            name: tDef['name']!,
+            contractAddress: tDef['address'],
+            balance: bal,
+            valueUsd: bal * p,
+            priceUsd: p,
+            changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
+            decimals: int.parse(tDef['decimals']!),
+            imageUrl: _getIconUrl(tDef['symbol']!),
+            coinGeckoId: tDef['coinGeckoId'],
+          ));
         }
-        return null;
-      });
-
-      final fetchedTokens = await Future.wait(tokenFutures);
-      for (final t in fetchedTokens) {
-        if (t != null) tokens.add(t);
       }
     } catch (e) {
-      debugPrint('Error fetching wallet tokens: $e');
-      tokens.add(
-        Token(
-          symbol: chain.symbol,
-          name: chain.name,
-          balance: 0,
-          valueUsd: 0,
-          changePercent24h: 0,
-          coinGeckoId: chain.coinGeckoId.isNotEmpty ? chain.coinGeckoId : null,
-        ),
-      );
+      debugPrint('Error fetching tokens: $e');
     }
 
     _walletTokens = tokens;
@@ -921,214 +525,111 @@ class BlockchainService extends ChangeNotifier {
     return tokens;
   }
 
-  Future<List<Token>?> _fetchWalletTokensFromBackend(
-    String walletAddress,
-  ) async {
-    final now = DateTime.now();
-    final errors = <String>[];
+  Future<List<Token>> searchTokensFromBackend(String query, {int limit = 30}) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return const [];
+    final safeLimit = limit.clamp(1, 100);
+    final parsed = <Token>[];
 
     for (final base in _backendDiscoveryBases) {
-      final cooldownUntil = _backendDiscoveryBackoffUntil[base];
-      if (cooldownUntil != null && now.isBefore(cooldownUntil)) {
-        continue;
-      }
-
-      final url = Uri.parse(
-        '$base/${_activeChain.chainId}/wallet-tokens/$walletAddress',
+      final url = Uri.parse('$base/${_activeChain.chainId}/token-search').replace(
+        queryParameters: {'q': trimmed, 'limit': '$safeLimit'},
       );
-      for (var attempt = 0; attempt < 2; attempt++) {
-        try {
-          final response = await http
-              .get(url)
-              .timeout(_backendDiscoveryTimeout);
-          if (response.statusCode != 200) {
-            errors.add('HTTP ${response.statusCode} from $base');
-            break;
-          }
 
-          final parsedTokens = _parseBackendDiscoveredTokens(response.body);
-          if (parsedTokens == null || parsedTokens.isEmpty) {
-            return null;
-          }
-          return parsedTokens;
-        } catch (e) {
-          final errorText = e.toString();
-          errors.add('$base: $errorText');
-          if (_isTlsHandshakeError(errorText)) {
-            _backendDiscoveryBackoffUntil[base] = DateTime.now().add(
-              _backendDiscoveryBaseCooldown,
-            );
-            break;
-          }
-          if (attempt == 0) {
-            await Future.delayed(const Duration(milliseconds: 250));
-          }
+      try {
+        final response = await http.get(url).timeout(_backendDiscoveryTimeout);
+        if (response.statusCode != 200) continue;
+
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = data['tokens'] as List<dynamic>? ?? const [];
+        for (final entry in list) {
+          if (entry is! Map<String, dynamic>) continue;
+          final symbol = (entry['symbol'] as String?)?.trim() ?? '';
+          final name = (entry['name'] as String?)?.trim() ?? '';
+          final contractAddress = (entry['contractAddress'] as String?)?.trim();
+          if (symbol.isEmpty || name.isEmpty || contractAddress == null) continue;
+
+          parsed.add(Token(
+            symbol: symbol,
+            name: name,
+            contractAddress: contractAddress,
+            balance: 0,
+            valueUsd: 0,
+            priceUsd: _toDouble(entry['priceUsd']),
+            changePercent24h: _toDouble(entry['changePercent24h']),
+            decimals: 18,
+            coinGeckoId: (entry['id'] as String?)?.trim(),
+          ));
         }
-      }
+        if (parsed.isNotEmpty) return parsed;
+      } catch (_) { continue; }
     }
+    return parsed;
+  }
 
-    if (errors.isNotEmpty) {
-      debugPrint(
-        'Wallet token discovery unavailable, using RPC fallback: '
-        '${errors.first}',
-      );
-      if (errors.length > 1) {
-        debugPrint('Wallet token discovery attempts: ${errors.join(' | ')}');
+  // ─── BACKEND DISCOVERY (Kept here for simplicity) ──
+
+  Future<List<Token>?> _fetchWalletTokensFromBackend(String walletAddress) async {
+    final now = DateTime.now();
+    for (final base in _backendDiscoveryBases) {
+      final backoff = _backendDiscoveryBackoffUntil[base];
+      if (backoff != null && now.isBefore(backoff)) continue;
+
+      final url = Uri.parse('$base/${_activeChain.chainId}/wallet-tokens/$walletAddress');
+      try {
+        final response = await http.get(url).timeout(_backendDiscoveryTimeout);
+        if (response.statusCode == 200) {
+          return _parseBackendDiscoveredTokens(response.body);
+        }
+      } catch (e) {
+        debugPrint('Backend discovery failed for $base: $e');
       }
     }
     return null;
   }
 
-  List<Token>? _parseBackendDiscoveredTokens(String responseBody) {
-    final data = jsonDecode(responseBody) as Map<String, dynamic>;
-    final tokenList = data['tokens'] as List<dynamic>? ?? const [];
-    if (tokenList.isEmpty) {
-      return null;
-    }
-
-    final parsedTokens = tokenList
-        .map<Token?>((entry) {
-          if (entry is! Map<String, dynamic>) return null;
-          final symbol = (entry['symbol'] as String?)?.trim() ?? '';
-          final name = (entry['name'] as String?)?.trim() ?? '';
-          if (symbol.isEmpty || name.isEmpty) return null;
-
-          final contractAddress = entry['contractAddress'] as String?;
-          final coinGeckoId = entry['coinGeckoId'] as String?;
-          final imageUrl = entry['imageUrl'] as String?;
-
-          return Token(
-            symbol: symbol,
-            name: name,
-            contractAddress:
-                (contractAddress == null || contractAddress.isEmpty)
-                ? null
-                : contractAddress,
-            balance: _toDouble(entry['balance']),
-            valueUsd: _toDouble(entry['valueUsd']),
-            priceUsd: _toDouble(entry['priceUsd']),
-            changePercent24h: _toDouble(entry['changePercent24h']),
-            decimals: (entry['decimals'] is num)
-                ? (entry['decimals'] as num).toInt()
-                : 18,
-            imageUrl: (imageUrl == null || imageUrl.isEmpty) ? null : imageUrl,
-            coinGeckoId: (coinGeckoId == null || coinGeckoId.isEmpty)
-                ? null
-                : coinGeckoId,
-          );
-        })
-        .whereType<Token>()
-        .toList();
-
-    return parsedTokens.isEmpty ? null : parsedTokens;
+  List<Token>? _parseBackendDiscoveredTokens(String body) {
+    try {
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final list = data['tokens'] as List<dynamic>? ?? [];
+      return list.map((e) => Token(
+        symbol: e['symbol'] ?? '',
+        name: e['name'] ?? '',
+        contractAddress: e['contractAddress'],
+        balance: _toDouble(e['balance']),
+        valueUsd: _toDouble(e['valueUsd']),
+        priceUsd: _toDouble(e['priceUsd']),
+        changePercent24h: _toDouble(e['changePercent24h']),
+        decimals: e['decimals'] ?? 18,
+        imageUrl: e['imageUrl'],
+        coinGeckoId: e['coinGeckoId'],
+      )).toList();
+    } catch (_) { return null; }
   }
 
-  bool _isTlsHandshakeError(String errorText) {
-    final lower = errorText.toLowerCase();
-    return lower.contains('handshakeexception') ||
-        lower.contains('tlsv1_alert_unrecognized_name') ||
-        lower.contains('certificate');
+  // ─── HELPERS ─────────────────────────────────────
+
+  Future<void> _loadCustomTokens() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString(_keyCustomTokens);
+      if (jsonStr == null) return;
+      final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+      data.forEach((k, v) {
+        final chainId = int.tryParse(k);
+        if (chainId != null) {
+          _customTokens[chainId] = (v as List).map((e) => CustomTokenDefinition.fromJson(e)).toList();
+        }
+      });
+    } catch (e) { debugPrint('Error loading custom tokens: $e'); }
   }
 
-  double _toDouble(dynamic value) {
-    if (value == null) return 0;
-    if (value is num) return value.toDouble();
-    if (value is String) {
-      return double.tryParse(value) ?? 0;
-    }
-    return 0;
-  }
-
-  List<Map<String, String>> _getWellKnownTokens(int chainId) {
-    List<Map<String, String>> tokens;
-    switch (chainId) {
-      case 1:
-        tokens = [
-          {
-            'symbol': 'USDC',
-            'name': 'USD Coin',
-            'address': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-            'decimals': '6',
-            'coinGeckoId': 'usd-coin',
-          },
-          {
-            'symbol': 'USDT',
-            'name': 'Tether',
-            'address': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-            'decimals': '6',
-            'coinGeckoId': 'tether',
-          },
-        ];
-        break;
-      case 56:
-        tokens = [
-          {
-            'symbol': 'USDC',
-            'name': 'USD Coin',
-            'address': '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
-            'decimals': '18',
-            'coinGeckoId': 'usd-coin',
-          },
-          {
-            'symbol': 'USDT',
-            'name': 'Tether',
-            'address': '0x55d398326f99059fF775485246999027B3197955',
-            'decimals': '18',
-            'coinGeckoId': 'tether',
-          },
-        ];
-        break;
-      case 137:
-        tokens = [
-          {
-            'symbol': 'USDC',
-            'name': 'USD Coin',
-            'address': '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-            'decimals': '6',
-            'coinGeckoId': 'usd-coin',
-          },
-          {
-            'symbol': 'USDT',
-            'name': 'Tether',
-            'address': '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
-            'decimals': '6',
-            'coinGeckoId': 'tether',
-          },
-        ];
-        break;
-      case 42161:
-        tokens = [
-          {
-            'symbol': 'USDC',
-            'name': 'USD Coin',
-            'address': '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-            'decimals': '6',
-            'coinGeckoId': 'usd-coin',
-          },
-          {
-            'symbol': 'USDT',
-            'name': 'Tether',
-            'address': '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
-            'decimals': '6',
-            'coinGeckoId': 'tether',
-          },
-        ];
-      default:
-        tokens = [];
-    }
-    final custom = _customTokens[chainId] ?? [];
-    tokens.addAll(
-      custom.map(
-        (t) => {
-          'symbol': t.symbol,
-          'name': t.name,
-          'address': t.address,
-          'decimals': t.decimals.toString(),
-          'coinGeckoId': t.coinGeckoId ?? '',
-        },
-      ),
-    );
-    return tokens;
+  Future<void> _saveCustomTokens() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final data = _customTokens.map((k, v) => MapEntry(k.toString(), v.map((t) => t.toJson()).toList()));
+      await prefs.setString(_keyCustomTokens, jsonEncode(data));
+    } catch (e) { debugPrint('Error saving custom tokens: $e'); }
   }
 
   Future<bool> addCustomToken({
@@ -1155,93 +656,51 @@ class BlockchainService extends ChangeNotifier {
     notifyListeners();
   }
 
+  List<Map<String, String>> _getWellKnownTokens(int chainId) {
+    final List<Map<String, String>> tokens = [];
+    if (chainId == 1) {
+      tokens.addAll([
+        {'symbol': 'USDC', 'name': 'USD Coin', 'address': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'decimals': '6', 'coinGeckoId': 'usd-coin'},
+        {'symbol': 'USDT', 'name': 'Tether', 'address': '0xdAC17F958D2ee523a2206206994597C13D831ec7', 'decimals': '6', 'coinGeckoId': 'tether'},
+      ]);
+    }
+    final custom = _customTokens[chainId] ?? [];
+    tokens.addAll(custom.map((t) => {'symbol': t.symbol, 'name': t.name, 'address': t.address, 'decimals': t.decimals.toString(), 'coinGeckoId': t.coinGeckoId ?? ''}));
+    return tokens;
+  }
+
   String? _getIconUrl(String symbol) {
     switch (symbol.toUpperCase()) {
-      case 'ETH':
-        return 'https://cryptologos.cc/logos/ethereum-eth-logo.png';
-      case 'BNB':
-        return 'https://cryptologos.cc/logos/bnb-bnb-logo.png';
-      case 'MATIC':
-        return 'https://cryptologos.cc/logos/polygon-matic-logo.png';
-      case 'AVAX':
-        return 'https://cryptologos.cc/logos/avalanche-avax-logo.png';
-      case 'FTM':
-        return 'https://cryptologos.cc/logos/fantom-ftm-logo.png';
-      case 'USDC':
-        return 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png';
-      case 'USDT':
-        return 'https://cryptologos.cc/logos/tether-usdt-logo.png';
-      default:
-        return null;
+      case 'ETH': return 'https://cryptologos.cc/logos/ethereum-eth-logo.png';
+      case 'BNB': return 'https://cryptologos.cc/logos/bnb-bnb-logo.png';
+      case 'MATIC': return 'https://cryptologos.cc/logos/polygon-matic-logo.png';
+      case 'USDC': return 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png';
+      case 'USDT': return 'https://cryptologos.cc/logos/tether-usdt-logo.png';
+      default: return null;
     }
   }
 
-  String _padAddress(String address) {
-    final addr = address.startsWith('0x') ? address.substring(2) : address;
-    return addr.padLeft(64, '0');
+  double _toDouble(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  String _padAddress(String addr) => addr.startsWith('0x') ? addr.substring(2).padLeft(64, '0') : addr.padLeft(64, '0');
+
+  // Necessary for backward compatibility with some screens
+  Future<String?> sendRawTransaction(String signedTxHex) async {
+    final res = await _rpcCall('eth_sendRawTransaction', [signedTxHex]);
+    return res as String?;
   }
 }
 
-class _CachedChartData {
-  final List<double> values;
-  final DateTime fetchedAt;
-
-  const _CachedChartData({required this.values, required this.fetchedAt});
-}
-
-class _CachedMarketData {
-  final TokenMarketData value;
-  final DateTime fetchedAt;
-
-  const _CachedMarketData({required this.value, required this.fetchedAt});
-}
-
+// Local models for TokenPriceData to keep compatibility
 class TokenMarketData {
   final double? priceUsd;
   final double? marketCapUsd;
   final double? totalSupply;
   final double? circulatingSupply;
   final String? genesisDate;
-
-  const TokenMarketData({
-    this.priceUsd,
-    this.marketCapUsd,
-    this.totalSupply,
-    this.circulatingSupply,
-    this.genesisDate,
-  });
-}
-
-class CustomTokenDefinition {
-  final String symbol;
-  final String name;
-  final String address;
-  final int decimals;
-  final String? coinGeckoId;
-
-  const CustomTokenDefinition({
-    required this.symbol,
-    required this.name,
-    required this.address,
-    required this.decimals,
-    this.coinGeckoId,
-  });
-
-  factory CustomTokenDefinition.fromJson(Map<String, dynamic> json) {
-    return CustomTokenDefinition(
-      symbol: json['symbol'] as String,
-      name: json['name'] as String,
-      address: json['address'] as String,
-      decimals: json['decimals'] as int,
-      coinGeckoId: json['coinGeckoId'] as String?,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-    'symbol': symbol,
-    'name': name,
-    'address': address,
-    'decimals': decimals,
-    'coinGeckoId': coinGeckoId,
-  };
+  const TokenMarketData({this.priceUsd, this.marketCapUsd, this.totalSupply, this.circulatingSupply, this.genesisDate});
 }

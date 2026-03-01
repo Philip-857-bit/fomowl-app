@@ -149,6 +149,10 @@ class WalletService {
     await _storage.setActiveWallet(address);
   }
 
+  Future<void> removeWalletAccount(String address) async {
+    await _storage.removeWalletAccount(address);
+  }
+
   Future<Map<String, String>> createAdditionalWallet({String? walletName}) async {
     final mnemonic = await _storage.getMnemonic();
     if (mnemonic == null || mnemonic.isEmpty) {

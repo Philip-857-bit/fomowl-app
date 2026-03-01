@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../models/token.dart';
+import 'token_icon.dart';
 
 class TokenSelectorDialog extends StatelessWidget {
   final List<Token> tokens;
@@ -87,14 +88,15 @@ class TokenSelectorDialog extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 32, height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.accentRed,
-                shape: BoxShape.circle,
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: TokenIcon(
+                tokenSymbol: token.symbol,
+                tokenAddress: token.contractAddress,
+                tokenImageUrl: token.imageUrl,
+                size: 32,
               ),
-              child: token.imageUrl != null
-                  ? ClipOval(child: Image.network(token.imageUrl!, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => _defaultIcon(token)))
-                  : _defaultIcon(token),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -133,12 +135,4 @@ class TokenSelectorDialog extends StatelessWidget {
     );
   }
 
-  Widget _defaultIcon(Token token) {
-    return Center(
-      child: Text(
-        token.symbol.isNotEmpty ? token.symbol[0] : '?',
-        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
-      ),
-    );
-  }
 }

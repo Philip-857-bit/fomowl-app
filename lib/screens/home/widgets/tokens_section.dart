@@ -14,6 +14,7 @@ class TokensSection extends StatefulWidget {
   final bool isLoading;
   final bool isLoadingNfts;
   final List<NftAsset> nftPreview;
+  final bool hasMoreNfts;
   final AppLocalizations localization;
   final VoidCallback onManageTokens;
   final VoidCallback onOpenNfts;
@@ -26,6 +27,7 @@ class TokensSection extends StatefulWidget {
     required this.isLoading,
     required this.isLoadingNfts,
     required this.nftPreview,
+    required this.hasMoreNfts,
     required this.localization,
     required this.onManageTokens,
     required this.onOpenNfts,
@@ -98,7 +100,7 @@ class _TokensSectionState extends State<TokensSection> {
                     minHeight: 36,
                   ),
                 )
-              else
+              else if (widget.hasMoreNfts)
                 GestureDetector(
                   onTap: widget.onOpenNfts,
                   child: Text(
@@ -241,6 +243,7 @@ class _TokensSectionState extends State<TokensSection> {
       children: [
         _NftPreviewStrip(
           nfts: widget.nftPreview,
+          hasMoreNfts: widget.hasMoreNfts,
           onOpenNfts: widget.onOpenNfts,
         ),
         const SizedBox(height: 10),
@@ -251,9 +254,14 @@ class _TokensSectionState extends State<TokensSection> {
 
 class _NftPreviewStrip extends StatelessWidget {
   final List<NftAsset> nfts;
+  final bool hasMoreNfts;
   final VoidCallback onOpenNfts;
 
-  const _NftPreviewStrip({required this.nfts, required this.onOpenNfts});
+  const _NftPreviewStrip({
+    required this.nfts,
+    required this.hasMoreNfts,
+    required this.onOpenNfts,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -274,17 +282,18 @@ class _NftPreviewStrip extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                GestureDetector(
-                  onTap: onOpenNfts,
-                  child: Text(
-                    'View all',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: AppColors.accentRed,
-                      fontWeight: FontWeight.w600,
+                if (hasMoreNfts)
+                  GestureDetector(
+                    onTap: onOpenNfts,
+                    child: Text(
+                      'View all',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: AppColors.accentRed,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

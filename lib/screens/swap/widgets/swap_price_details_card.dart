@@ -6,8 +6,9 @@ import '../../../constants/app_colors.dart';
 class SwapPriceDetailsCard extends StatelessWidget {
   final String priceText;
   final double slippage;
-  final double feeAmount;
-  final String feeSymbol;
+  final double feeAmountUsd;
+  final double feeAmountNative;
+  final String nativeFeeSymbol;
   final String receiveText;
   final String priceSeparator;
 
@@ -15,8 +16,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
     super.key,
     required this.priceText,
     required this.slippage,
-    required this.feeAmount,
-    required this.feeSymbol,
+    required this.feeAmountUsd,
+    required this.feeAmountNative,
+    required this.nativeFeeSymbol,
     required this.receiveText,
     this.priceSeparator = '->',
   });
@@ -29,7 +31,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
         const SizedBox(height: 12),
         _buildDetailRow('Slippage', '${slippage.toStringAsFixed(1)}%'),
         const SizedBox(height: 12),
-        _buildDetailRow('Network Fee', '~\$${feeAmount.toStringAsFixed(2)}'),
+        _buildDetailRow(
+          'Network Fee',
+          '~\$${feeAmountUsd.toStringAsFixed(2)} (${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol)',
+        ),
         const SizedBox(height: 12),
         _buildDetailRow('To Receive', receiveText),
       ],

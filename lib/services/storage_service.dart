@@ -28,9 +28,12 @@ class StorageService {
   static const String _keyFaceIdEnabled = 'face_id_enabled';
   static const String _keyFingerprintEnabled = 'fingerprint_enabled';
   static const String _keyLanguage = 'app_language';
+  static const String _keyCurrency = 'preferred_currency';
   static const String _keyFirstLaunch = 'first_launch';
   static const String _keyFailedAttempts = 'failed_attempts';
   static const String _keyLockoutUntil = 'lockout_until';
+  static const String _keyTwoFactorEnabled = 'two_factor_enabled';
+  static const String _keyAutoLockMinutes = 'auto_lock_minutes';
 
   // Brute-force protection constants
   static const int maxFailedAttempts = 5;
@@ -138,6 +141,39 @@ class StorageService {
     final activeAddress = await getWalletAddress();
     if (activeAddress != null && activeAddress.toLowerCase() == address.toLowerCase()) {
       await _secureStorage.write(key: _keyWalletName, value: newName);
+    }
+  }
+
+  Future<void> removeWalletAccount(String address) async {
+    final accounts = await getWalletAccounts();
+    final normalized = address.toLowerCase();
+    final index = accounts.indexWhere((a) => a.address.toLowerCase() == normalized);
+    if (index < 0) {
+      throw Exception('Wallet not found');
+    }
+    if (accounts.length <= 1) {
+      throw Exception('You must keep at least one wallet');
+    }
+
+    final wasActive = (await getWalletAddress())?.toLowerCase() == normalized;
+    accounts.removeAt(index);
+    await _saveWalletAccounts(accounts);
+    await _secureStorage.delete(key: _walletPrivateKeyKey(address));
+
+    if (wasActive) {
+      final replacement = accounts.first;
+      final replacementPk = await _secureStorage.read(
+        key: _walletPrivateKeyKey(replacement.address),
+      );
+      if (replacementPk == null) {
+        throw Exception('Replacement wallet private key is missing');
+      }
+      await _secureStorage.write(key: _keyAddress, value: replacement.address);
+      await _secureStorage.write(key: _keyPrivateKey, value: replacementPk);
+      await _secureStorage.write(key: _keyWalletName, value: replacement.name);
+      if (replacement.derivationIndex != null) {
+        await _setCurrentDerivationIndex(replacement.derivationIndex!);
+      }
     }
   }
 
@@ -332,6 +368,30 @@ class StorageService {
     return prefs.getBool(_keyFingerprintEnabled) ?? false;
   }
 
+  /// Save 2FA preference
+  Future<void> setTwoFactorEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyTwoFactorEnabled, enabled);
+  }
+
+  /// Get 2FA preference
+  Future<bool> isTwoFactorEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyTwoFactorEnabled) ?? false;
+  }
+
+  /// Save auto-lock timer in minutes
+  Future<void> setAutoLockMinutes(int minutes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyAutoLockMinutes, minutes);
+  }
+
+  /// Get auto-lock timer in minutes
+  Future<int> getAutoLockMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyAutoLockMinutes) ?? 1;
+  }
+
   /// Save language preference
   Future<void> setLanguage(String languageCode) async {
     final prefs = await SharedPreferences.getInstance();
@@ -342,6 +402,18 @@ class StorageService {
   Future<String?> getLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyLanguage);
+  }
+
+  /// Save preferred display currency (e.g., USD)
+  Future<void> setCurrency(String currencyCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyCurrency, currencyCode);
+  }
+
+  /// Get preferred display currency
+  Future<String> getCurrency() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyCurrency) ?? 'USD';
   }
 
   /// Check if first launch

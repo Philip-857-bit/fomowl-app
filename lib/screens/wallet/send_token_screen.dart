@@ -5,10 +5,8 @@ import '../../models/token.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
-import '../profile/coming_soon_overlay.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
-import 'widgets/send/transfer_type_toggle.dart';
 import 'widgets/send/address_input_field.dart';
 import 'widgets/send/amount_input_field.dart';
 import 'widgets/send/send_primary_button.dart';
@@ -30,7 +28,6 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   Token? _selectedToken;
 
   double _availableBalance = 0.0;
-  final bool _isInterTransfer = false;
 
   @override
   void initState() {
@@ -140,19 +137,13 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
 
     if (destination.isEmpty) {
-      _showError(
-        _isInterTransfer
-            ? 'Please enter a Fomowl email or username'
-            : 'Please enter a receiving address',
-      );
+      _showError('Please enter a receiving address');
       return;
     }
 
-    if (!_isInterTransfer) {
-      if (!destination.startsWith('0x') || destination.length != 42) {
-        _showError('Invalid Ethereum address');
-        return;
-      }
+    if (!destination.startsWith('0x') || destination.length != 42) {
+      _showError('Invalid Ethereum address');
+      return;
     }
 
     if (amount == null || amount <= 0) {
@@ -176,7 +167,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           context,
           listen: false,
         ).activeChain.name,
-        'isInterTransfer': _isInterTransfer,
+        'isInterTransfer': false,
       },
     );
   }
@@ -204,31 +195,21 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 18),
 
                     TokenSelectorCard(
                       token: _selectedToken,
                       onTap: _openTokenSelector,
                       blockchain: blockchain,
                     ),
-                    const SizedBox(height: 28),
-
-                    TransferTypeToggle(
-                      isInterTransfer: _isInterTransfer,
-                      onExternalTap: () {},
-                      onInterTransferTap: () => ComingSoonOverlay.show(
-                        context,
-                        title: 'Inter-Transfer',
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 26),
 
                     AddressInputField(
                       controller: _addressController,
-                      isInterTransfer: _isInterTransfer,
+                      isInterTransfer: false,
                       onQrTap: _openQrScanner,
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 26),
 
                     AmountInputField(
                       controller: _amountController,
@@ -243,7 +224,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
             // Send button
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
               child: SendPrimaryButton(onPressed: _onSend),
             ),
           ],

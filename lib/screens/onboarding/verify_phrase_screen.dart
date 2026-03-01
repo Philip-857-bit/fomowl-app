@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
+import '../../services/blockchain_service.dart';
+import 'package:provider/provider.dart';
 import '../../utils/toast_utils.dart';
 
 /// Verify Phrase Screen
@@ -104,6 +106,11 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       final mnemonic = _originalPhrase!.join(' ');
       
       await _walletService.createWalletFromMnemonic(mnemonic, walletName: 'Main Wallet');
+      
+      // Refresh blockchain service to clear any cached data from previous wallet
+      if (mounted) {
+        Provider.of<BlockchainService>(context, listen: false).refresh();
+      }
       
       if (mounted) {
         Navigator.pushNamed(context, '/create-passcode');

@@ -44,24 +44,24 @@ class AmountInputField extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+            style: GoogleFonts.outfit(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               hintText: '0.00',
-              hintStyle: GoogleFonts.outfit(fontSize: 16, color: Colors.white.withValues(alpha: 0.3)),
+              hintStyle: GoogleFonts.outfit(fontSize: 34, color: Colors.white.withValues(alpha: 0.3), fontWeight: FontWeight.w600),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     tokenSymbol,
-                    style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.5)),
+                    style: GoogleFonts.outfit(fontSize: 24, color: Colors.white.withValues(alpha: 0.45), fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
@@ -69,13 +69,13 @@ class AmountInputField extends StatelessWidget {
                     child: Text(
                       'MAX',
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: 24,
                         fontWeight: FontWeight.w600,
                         color: AppColors.accentRed,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                 ],
               ),
             ),

@@ -1,0 +1,217 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../../constants/app_colors.dart';
+import '../../services/storage_service.dart';
+import '../../widgets/bottom_navigation.dart';
+import 'widgets/settings_group_card.dart';
+import 'widgets/settings_item_tile.dart';
+import 'widgets/settings_section_header.dart';
+
+class PasswordSecurityScreen extends StatefulWidget {
+  const PasswordSecurityScreen({super.key});
+
+  @override
+  State<PasswordSecurityScreen> createState() => _PasswordSecurityScreenState();
+}
+
+class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
+  final StorageService _storage = StorageService();
+
+  bool _biometricEnabled = false;
+  bool _twoFactorEnabled = false;
+  int _autoLockMinutes = 1;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final biometric = await _storage.isBiometricEnabled();
+    final twoFactor = await _storage.isTwoFactorEnabled();
+    final autoLock = await _storage.getAutoLockMinutes();
+    if (!mounted) return;
+    setState(() {
+      _biometricEnabled = biometric;
+      _twoFactorEnabled = twoFactor;
+      _autoLockMinutes = autoLock;
+      _loading = false;
+    });
+  }
+
+  Future<void> _setBiometric(bool enabled) async {
+    setState(() => _biometricEnabled = enabled);
+    await _storage.setBiometricEnabled(enabled);
+  }
+
+  Future<void> _setTwoFactor(bool enabled) async {
+    setState(() => _twoFactorEnabled = enabled);
+    await _storage.setTwoFactorEnabled(enabled);
+  }
+
+  Future<void> _showAutoLockPicker() async {
+    final options = <int>[1, 2, 5, 10, 30];
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Auto-Lock Timer',
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final minutes in options)
+              ListTile(
+                title: Text(
+                  '$minutes minute${minutes > 1 ? 's' : ''}',
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
+                trailing: _autoLockMinutes == minutes
+                    ? const Icon(Icons.check_circle, color: AppColors.accentRed)
+                    : null,
+                onTap: () => Navigator.pop(ctx, minutes),
+              ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+    if (selected == null) return;
+    setState(() => _autoLockMinutes = selected);
+    await _storage.setAutoLockMinutes(selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 4,
+        onTap: (index) => BottomNavBar.handleNavigation(context, index, 4),
+      ),
+      body: SafeArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+            : SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                          ),
+                          Text(
+                            'Password & Security',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 27,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const SettingsSectionHeader(title: 'Access Control'),
+                    SettingsGroupCard(
+                      children: [
+                        SettingsItemTile(
+                          icon: Icons.lock_outline_rounded,
+                          title: 'Change Password',
+                          subtitle: 'Passcode unlock',
+                          onTap: () => Navigator.pushNamed(context, '/create-passcode'),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.fingerprint_rounded,
+                          title: 'Biometrics / Face ID',
+                          trailing: Switch(
+                            value: _biometricEnabled,
+                            activeThumbColor: Colors.white,
+                            activeTrackColor: AppColors.accentRed,
+                            inactiveThumbColor: Colors.white,
+                            inactiveTrackColor: Colors.white24,
+                            onChanged: _setBiometric,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const SettingsSectionHeader(title: 'Advanced Security'),
+                    SettingsGroupCard(
+                      children: [
+                        SettingsItemTile(
+                          icon: Icons.verified_user_outlined,
+                          title: 'Two-Factor Authentication (2FA)',
+                          subtitle: _twoFactorEnabled ? 'On' : 'Off',
+                          trailing: Switch(
+                            value: _twoFactorEnabled,
+                            activeThumbColor: Colors.white,
+                            activeTrackColor: AppColors.accentRed,
+                            inactiveThumbColor: Colors.white,
+                            inactiveTrackColor: Colors.white24,
+                            onChanged: _setTwoFactor,
+                          ),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.timer_outlined,
+                          title: 'Auto-Lock Timer',
+                          subtitle: '$_autoLockMinutes minute${_autoLockMinutes > 1 ? 's' : ''}',
+                          onTap: _showAutoLockPicker,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        color: AppColors.cardBackground,
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      child: Text(
+                        'Enable additional security measures to protect your digital assets from unauthorized access.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF7B88A6),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}

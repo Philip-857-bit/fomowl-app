@@ -1,14 +1,21 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../models/token.dart';
+import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
+import 'widgets/token_management/contract_import_card.dart';
+import 'widgets/token_management/managed_token_tile.dart';
+import 'widgets/token_management/token_management_search_bar.dart';
 
 /// Full-screen token manager that lets users hide tokens or add/remove custom ones.
 class TokenManagementScreen extends StatefulWidget {
@@ -21,16 +28,33 @@ class TokenManagementScreen extends StatefulWidget {
 class _TokenManagementScreenState extends State<TokenManagementScreen> {
   final WalletService _walletService = WalletService();
   final TokenVisibilityService _visibilityService = TokenVisibilityService();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   List<Token> _tokens = [];
+  List<Token> _searchResults = [];
   Set<String> _hiddenKeys = {};
   bool _isLoading = true;
   bool _hasChanges = false;
+  bool _isResolvingContract = false;
+  bool _isSearchingRemote = false;
+  bool _hasCheckedClipboard = false;
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_handleSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController
+      ..removeListener(_handleSearchChanged)
+      ..dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -55,6 +79,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       _hiddenKeys = hidden;
       _isLoading = false;
     });
+
+    _checkClipboardForTokenSuggestion();
   }
 
   bool _isTokenHidden(Token token) {
@@ -84,103 +110,238 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     ToastUtils.showSuccess('Token removed');
   }
 
-  Future<void> _showAddTokenDialog() async {
-    final blockchain = context.read<BlockchainService>();
-    final nameController = TextEditingController();
-    final symbolController = TextEditingController();
-    final addressController = TextEditingController();
-    final decimalsController = TextEditingController();
-    final coinGeckoController = TextEditingController();
-
-    final shouldAdd = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Add Custom Token', style: GoogleFonts.outfit(color: Colors.white)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(symbolController, 'Symbol'),
-              const SizedBox(height: 12),
-              _buildTextField(nameController, 'Name'),
-              const SizedBox(height: 12),
-              _buildTextField(addressController, 'Contract Address'),
-              const SizedBox(height: 12),
-              _buildTextField(decimalsController, 'Decimals', keyboardType: TextInputType.number),
-              const SizedBox(height: 12),
-              _buildTextField(coinGeckoController, 'CoinGecko ID (optional)'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white54)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text('Add', style: GoogleFonts.outfit(color: AppColors.accentRed)),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldAdd != true) return;
-
-    final symbol = symbolController.text.trim();
-    final name = nameController.text.trim();
-    final address = addressController.text.trim();
-    final decimals = int.tryParse(decimalsController.text.trim());
-    if (symbol.isEmpty || name.isEmpty || address.isEmpty || decimals == null) {
-      ToastUtils.showError('All fields except CoinGecko ID are required');
-      return;
-    }
-
-    final added = await blockchain.addCustomToken(
-      chainId: blockchain.activeChain.chainId,
-      token: CustomTokenDefinition(
-        symbol: symbol.toUpperCase(),
-        name: name,
-        address: address,
-        decimals: decimals,
-        coinGeckoId: coinGeckoController.text.trim().isEmpty ? null : coinGeckoController.text.trim(),
-      ),
-    );
-
-    if (!added) {
-      ToastUtils.showError('Token already exists on this network');
-      return;
-    }
-
-    await _loadData();
-    setState(() => _hasChanges = true);
-    ToastUtils.showSuccess('Token added');
+  bool _isContractAddress(String value) {
+    return RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(value.trim());
   }
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label, {
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      style: GoogleFonts.outfit(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: GoogleFonts.outfit(color: Colors.white54),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.divider),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accentRed),
-        ),
-      ),
+  void _handleSearchChanged() {
+    if (!mounted) return;
+    final nextQuery = _searchController.text.trim();
+    setState(() => _query = nextQuery);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      _runRemoteSearch(nextQuery);
+    });
+  }
+
+  bool _tokenExistsForAddress(String contractAddress) {
+    final normalized = contractAddress.toLowerCase();
+    return _tokens.any(
+      (t) => (t.contractAddress ?? '').toLowerCase() == normalized,
     );
+  }
+
+  Future<void> _importTokenFromContract() async {
+    if (!_isContractAddress(_query)) return;
+    final blockchain = context.read<BlockchainService>();
+    if (_tokenExistsForAddress(_query)) {
+      ToastUtils.showInfo('Token already available in your list');
+      return;
+    }
+
+    setState(() => _isResolvingContract = true);
+    try {
+      final token = await blockchain.detectTokenByContract(_query);
+      if (token == null) {
+        ToastUtils.showError(
+          'Could not detect token metadata from this contract on the selected network',
+        );
+        return;
+      }
+      final added = await blockchain.addCustomToken(
+        chainId: blockchain.activeChain.chainId,
+        token: token,
+      );
+      if (!added) {
+        ToastUtils.showInfo('Token already exists on this network');
+        return;
+      }
+      await _loadData();
+      if (!mounted) return;
+      setState(() {
+        _hasChanges = true;
+        _searchController.clear();
+      });
+      ToastUtils.showSuccess('${token.symbol} added');
+    } catch (e) {
+      ToastUtils.showError('Failed to add token: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isResolvingContract = false);
+      }
+    }
+  }
+
+  Future<void> _runRemoteSearch(String query) async {
+    final trimmed = query.trim();
+    if (!mounted) return;
+    if (trimmed.isEmpty || _isContractAddress(trimmed)) {
+      setState(() {
+        _isSearchingRemote = false;
+        _searchResults = [];
+      });
+      return;
+    }
+
+    setState(() => _isSearchingRemote = true);
+    final blockchain = context.read<BlockchainService>();
+    try {
+      final results = await blockchain.searchTokensFromBackend(trimmed, limit: 60);
+      if (!mounted || trimmed != _query.trim()) return;
+      setState(() {
+        _searchResults = results;
+        _isSearchingRemote = false;
+      });
+    } catch (_) {
+      if (!mounted || trimmed != _query.trim()) return;
+      setState(() => _isSearchingRemote = false);
+    }
+  }
+
+  Future<void> _addSearchResultToken(Token token) async {
+    final blockchain = context.read<BlockchainService>();
+    final contract = token.contractAddress;
+    if (contract == null || contract.isEmpty) {
+      ToastUtils.showError('Missing token contract address');
+      return;
+    }
+    if (_tokenExistsForAddress(contract)) {
+      ToastUtils.showInfo('Token already available in your list');
+      return;
+    }
+
+    setState(() => _isResolvingContract = true);
+    try {
+      final detected = await blockchain.detectTokenByContract(contract);
+      final tokenToAdd =
+          detected ??
+          CustomTokenDefinition(
+            symbol: token.symbol.toUpperCase(),
+            name: token.name,
+            address: contract,
+            decimals: 18,
+            coinGeckoId: token.coinGeckoId,
+          );
+
+      final added = await blockchain.addCustomToken(
+        chainId: blockchain.activeChain.chainId,
+        token: tokenToAdd,
+      );
+      if (!added) {
+        ToastUtils.showInfo('Token already exists on this network');
+        return;
+      }
+
+      await _loadData();
+      if (!mounted) return;
+      setState(() => _hasChanges = true);
+      ToastUtils.showSuccess('${tokenToAdd.symbol} added');
+    } catch (e) {
+      ToastUtils.showError('Failed to add token: $e');
+    } finally {
+      if (mounted) setState(() => _isResolvingContract = false);
+    }
+  }
+
+  Future<void> _checkClipboardForTokenSuggestion() async {
+    if (_hasCheckedClipboard || !mounted) return;
+    _hasCheckedClipboard = true;
+
+    try {
+      final data = await Clipboard.getData('text/plain');
+      if (!mounted) return;
+      final clipboardText = data?.text?.trim() ?? '';
+      if (!_isContractAddress(clipboardText)) return;
+      if (_tokenExistsForAddress(clipboardText)) return;
+
+      final blockchain = context.read<BlockchainService>();
+      final detected = await blockchain.detectTokenByContract(clipboardText);
+      if (detected == null || !mounted) return;
+
+      final shouldAdd = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Token Detected',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Contract Address',
+                      style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      clipboardText,
+                      style: GoogleFonts.outfit(fontSize: 13, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${detected.name}\n${detected.symbol}',
+                      style: GoogleFonts.outfit(color: Colors.white, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text('Ignore', style: GoogleFonts.outfit(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.background,
+              ),
+              child: Text('Add Token', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldAdd != true || !mounted) return;
+      final added = await blockchain.addCustomToken(
+        chainId: blockchain.activeChain.chainId,
+        token: detected,
+      );
+      if (!added) {
+        ToastUtils.showInfo('Token already exists on this network');
+        return;
+      }
+      await _loadData();
+      if (!mounted) return;
+      setState(() => _hasChanges = true);
+      ToastUtils.showSuccess('${detected.symbol} added');
+    } catch (_) {}
   }
 
   void _closeScreen() {
@@ -191,6 +352,18 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Widget build(BuildContext context) {
     final blockchain = context.watch<BlockchainService>();
     final customTokens = blockchain.customTokensForActiveChain;
+    final query = _query.toLowerCase();
+    final filteredTokens = _tokens
+        .where(
+          (token) =>
+              query.isEmpty ||
+              token.name.toLowerCase().contains(query) ||
+              token.symbol.toLowerCase().contains(query) ||
+              (token.contractAddress ?? '').toLowerCase().contains(query),
+        )
+        .toList();
+    final canImportByContract = _isContractAddress(_query);
+    final hasRemoteResults = _query.isNotEmpty && !canImportByContract;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -216,12 +389,120 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
                 children: [
-                  Text(
-                    'Visible Tokens',
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                  TokenManagementSearchBar(
+                    controller: _searchController,
+                    query: _query,
                   ),
                   const SizedBox(height: 12),
-                  if (_tokens.isEmpty)
+                  if (canImportByContract)
+                    ContractImportCard(
+                      isLoading: _isResolvingContract,
+                      onAdd: _importTokenFromContract,
+                    ),
+                  if (hasRemoteResults) ...[
+                    Row(
+                      children: [
+                        Text(
+                          'Search Results',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (_isSearchingRemote)
+                          const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.accentRed,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    if (!_isSearchingRemote && _searchResults.isEmpty)
+                      Text(
+                        'No remote tokens found.',
+                        style: GoogleFonts.outfit(color: Colors.white54),
+                      )
+                    else
+                      ..._searchResults.map((token) {
+                        final exists = _tokenExistsForAddress(
+                          token.contractAddress ?? '',
+                        );
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardDark,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      token.name,
+                                      style: GoogleFonts.outfit(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      token.symbol,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 12,
+                                        color: Colors.white54,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (exists)
+                                Text(
+                                  'Added',
+                                  style: GoogleFonts.outfit(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                )
+                              else
+                                TextButton(
+                                  onPressed: _isResolvingContract
+                                      ? null
+                                      : () => _addSearchResultToken(token),
+                                  child: Text(
+                                    'Add',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.accentRed,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
+                    const SizedBox(height: 18),
+                  ],
+                  Text(
+                    'Visible Tokens',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (filteredTokens.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -229,22 +510,19 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
-                        'No tokens detected for this wallet yet.',
+                        _query.isEmpty
+                            ? 'No tokens detected for this wallet yet.'
+                            : 'No matching tokens found.',
                         style: GoogleFonts.outfit(color: Colors.white54),
                       ),
                     )
                   else
-                    ..._tokens.map(
-                      (token) => SwitchListTile.adaptive(
-                        value: !_isTokenHidden(token),
-                        onChanged: (value) => _toggleToken(token, !value),
-                        contentPadding: EdgeInsets.zero,
-                        activeTrackColor: AppColors.accentRed.withValues(alpha: 0.4),
-                        title: Text(token.name, style: GoogleFonts.outfit(color: Colors.white)),
-                        subtitle: Text(
-                          token.symbol,
-                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
-                        ),
+                    ...filteredTokens.map(
+                      (token) => ManagedTokenTile(
+                        token: token,
+                        isVisible: !_isTokenHidden(token),
+                        onVisibilityChanged: (value) =>
+                            _toggleToken(token, !value),
                       ),
                     ),
                   const SizedBox(height: 32),
@@ -253,18 +531,20 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     children: [
                       Text(
                         'Custom Tokens',
-                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
-                      ),
-                      TextButton.icon(
-                        onPressed: _showAddTokenDialog,
-                        icon: const Icon(Icons.add, color: AppColors.accentRed),
-                        label: Text('Add', style: GoogleFonts.outfit(color: AppColors.accentRed)),
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   if (customTokens.isEmpty)
-                    Text('No custom tokens yet.', style: GoogleFonts.outfit(color: Colors.white54))
+                    Text(
+                      'Paste a contract address above to add a custom token instantly.',
+                      style: GoogleFonts.outfit(color: Colors.white54),
+                    )
                   else
                     ...customTokens.map(
                       (custom) => Container(

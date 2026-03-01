@@ -29,6 +29,14 @@ class BalanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppColors.balanceGradient,
         borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66E30B14),
+            blurRadius: 28,
+            spreadRadius: 2,
+            offset: Offset(0, 14),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -68,15 +76,35 @@ class BalanceCard extends StatelessWidget {
                     const Spacer(),
                     GestureDetector(
                       onTap: onHistoryTap,
-                      child: Row(
-                        children: [
-                          Text(
-                            'History',
-                            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.9)),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.18),
                           ),
-                          const SizedBox(width: 2),
-                          Icon(Icons.arrow_forward_ios, size: 10, color: Colors.white.withValues(alpha: 0.9)),
-                        ],
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              'History',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.95),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 10,
+                              color: Colors.white.withValues(alpha: 0.95),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

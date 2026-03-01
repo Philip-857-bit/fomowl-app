@@ -5,6 +5,8 @@ import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/blockchain_service.dart';
+import 'package:provider/provider.dart';
 import '../../utils/toast_utils.dart';
 
 /// Import Secret Phrase Screen
@@ -69,6 +71,11 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
         walletName: walletName,
       );
 
+      // Refresh blockchain service to clear any cached data from previous wallet
+      if (mounted) {
+        Provider.of<BlockchainService>(context, listen: false).refresh();
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -81,7 +88,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
         final storage = StorageService();
         final passcode = await storage.getPasscode();
         if (passcode != null && passcode.isNotEmpty) {
-          if (mounted) Navigator.pop(context);
+          if (mounted) Navigator.pop(context, true);
         } else {
           // Navigate to passcode setup
           if (mounted) Navigator.pushNamed(context, '/create-passcode');

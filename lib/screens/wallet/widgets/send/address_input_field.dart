@@ -33,7 +33,7 @@ class AddressInputField extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: TextField(
@@ -43,10 +43,10 @@ class AddressInputField extends StatelessWidget {
               hintText: isInterTransfer ? 'Fomowl Email or Username' : 'Receiving address',
               hintStyle: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.3)),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(14),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               suffixIcon: !isInterTransfer && onQrTap != null
                   ? IconButton(
-                      icon: const Icon(Icons.qr_code_scanner, color: AppColors.accentRed, size: 22),
+                      icon: const Icon(Icons.qr_code_scanner, color: Color(0xFFE00000), size: 22),
                       onPressed: onQrTap,
                     )
                   : null,

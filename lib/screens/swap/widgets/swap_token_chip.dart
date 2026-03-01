@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../models/token.dart';
+import '../../../widgets/token_icon.dart';
 
 class SwapTokenChip extends StatelessWidget {
   final Token? token;
@@ -30,19 +30,13 @@ class SwapTokenChip extends StatelessWidget {
             Container(
               width: 24,
               height: 24,
-              decoration: const BoxDecoration(
-                color: AppColors.accentRed,
-                shape: BoxShape.circle,
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: TokenIcon(
+                tokenSymbol: symbol,
+                tokenAddress: token?.contractAddress,
+                tokenImageUrl: token?.imageUrl,
+                size: 24,
               ),
-              child: token?.imageUrl != null
-                  ? ClipOval(
-                      child: Image.network(
-                        token!.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _defaultIcon(symbol),
-                      ),
-                    )
-                  : _defaultIcon(symbol),
             ),
             const SizedBox(width: 6),
             Text(
@@ -53,15 +47,6 @@ class SwapTokenChip extends StatelessWidget {
             Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.white.withValues(alpha: 0.7)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _defaultIcon(String symbol) {
-    return Center(
-      child: Text(
-        symbol.isNotEmpty ? symbol[0] : '?',
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white),
       ),
     );
   }

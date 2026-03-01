@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/storage_service.dart';
+import '../../services/language_bridge_service.dart';
+import '../../services/wallet_service.dart';
+import '../../utils/toast_utils.dart';
 
 /// Language Selection Screen
 /// Allows users to choose their preferred language
@@ -15,10 +21,12 @@ class LanguageSelectionScreen extends StatefulWidget {
 
 class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   final StorageService _storage = StorageService();
+  final WalletService _walletService = WalletService();
+  final LanguageBridgeService _languageBridge = LanguageBridgeService();
   String selectedLanguage = 'English';
   String selectedLanguageCode = 'en';
 
-  final Map<String, String> languages = {
+  Map<String, String> _languages = {
     'English': 'en',
     'Español': 'es',
     'Français': 'fr',
@@ -29,16 +37,34 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentLanguage();
+    _loadCurrentLanguageAndProviderOptions();
   }
 
-  Future<void> _loadCurrentLanguage() async {
+  Future<void> _loadCurrentLanguageAndProviderOptions() async {
+    try {
+      final providerLanguages = await _languageBridge.getSupportedLanguages();
+      final supportedCodes = AppLocalizations.supportedLocales
+          .map((locale) => locale.languageCode)
+          .toSet();
+      final filtered = <String, String>{};
+      providerLanguages.forEach((name, code) {
+        if (supportedCodes.contains(code)) {
+          filtered[name] = code;
+        }
+      });
+      if (filtered.isNotEmpty && mounted) {
+        setState(() {
+          _languages = filtered;
+        });
+      }
+    } catch (_) {}
+
     final languageCode = await _storage.getLanguage();
     if (languageCode != null) {
       setState(() {
         selectedLanguageCode = languageCode;
         // Find the language name from code
-        selectedLanguage = languages.entries
+        selectedLanguage = _languages.entries
             .firstWhere(
               (entry) => entry.value == languageCode,
               orElse: () => const MapEntry('English', 'en'),
@@ -60,6 +86,22 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
     if (mounted) {
       // Return the language code so the app can update
       Navigator.pop(context, languageCode);
+    }
+
+    // Sync to backend in background so UI localization is instant.
+    unawaited(_syncLanguageToBackend(languageCode));
+  }
+
+  Future<void> _syncLanguageToBackend(String languageCode) async {
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (walletAddress == null || walletAddress.isEmpty) return;
+    try {
+      await _languageBridge.syncLanguagePreference(
+        walletAddress: walletAddress,
+        languageCode: languageCode,
+      );
+    } catch (_) {
+      ToastUtils.showInfo('Language saved locally. Backend sync will retry later.');
     }
   }
 
@@ -113,14 +155,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
             Expanded(
               child: ListView.separated(
                 padding: EdgeInsets.zero,
-                itemCount: languages.length,
+                itemCount: _languages.length,
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
                   thickness: 2,
                   color: const Color(0xFF605F5F).withValues(alpha: 0.27),
                 ),
                 itemBuilder: (context, index) {
-                  final entry = languages.entries.elementAt(index);
+                  final entry = _languages.entries.elementAt(index);
                   final languageName = entry.key;
                   final languageCode = entry.value;
                   final isSelected = languageName == selectedLanguage;

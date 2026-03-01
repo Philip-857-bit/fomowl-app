@@ -54,6 +54,8 @@ class _SwapScreenState extends State<SwapScreen> {
       _quoteRequestId++;
       _pricing = '';
       _currentQuote = null;
+      _feeUsd = 0.0;
+      _feeNative = 0.0;
       _toController.clear();
       _fromController.clear();
       _selectedPercentage = -1;
@@ -70,7 +72,8 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _isCalculating = false;
   String _pricing = '';
   final double _slippage = 0.5;
-  double _fees = 0.0;
+  double _feeUsd = 0.0;
+  double _feeNative = 0.0;
   String? _walletAddress;
   SwapQuote? _currentQuote;
   int _selectedPercentage = -1; // -1 = none selected
@@ -101,6 +104,10 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Future<void> _loadWalletBalance() async {
     final address = await _walletService.getCurrentWalletAddress();
+    if (!mounted) return;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    // Always sync with whatever token set we currently have so selectors never look empty.
+    _syncSelectedTokens(blockchain.tokens);
     if (mounted) {
       setState(() => _walletAddress = address);
     }
@@ -108,7 +115,6 @@ class _SwapScreenState extends State<SwapScreen> {
     if (address != null && address.isNotEmpty) {
       if (!mounted) return;
       try {
-        final blockchain = Provider.of<BlockchainService>(context, listen: false);
         await blockchain.fetchWalletTokens(address);
         if (mounted) {
           setState(() {
@@ -117,7 +123,16 @@ class _SwapScreenState extends State<SwapScreen> {
         }
       } catch (e) {
         debugPrint('Error fetching balance for swap: $e');
+        if (mounted) {
+          setState(() {
+            _syncSelectedTokens(blockchain.tokens);
+          });
+        }
       }
+    } else if (mounted) {
+      setState(() {
+        _syncSelectedTokens(blockchain.tokens);
+      });
     }
   }
 
@@ -176,6 +191,8 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         _pricing = '';
         _toController.clear();
+        _feeUsd = 0.0;
+        _feeNative = 0.0;
       });
       _getQuote();
     }
@@ -341,6 +358,8 @@ class _SwapScreenState extends State<SwapScreen> {
         _pricing = '';
         _toController.clear();
         _currentQuote = null;
+        _feeUsd = 0.0;
+        _feeNative = 0.0;
       });
       return;
     }
@@ -351,6 +370,8 @@ class _SwapScreenState extends State<SwapScreen> {
         _pricing = '';
         _toController.clear();
         _currentQuote = null;
+        _feeUsd = 0.0;
+        _feeNative = 0.0;
       });
       return;
     }
@@ -387,6 +408,8 @@ class _SwapScreenState extends State<SwapScreen> {
             _pricing = 'Invalid amount';
             _toController.clear();
             _currentQuote = null;
+            _feeUsd = 0.0;
+            _feeNative = 0.0;
           });
         }
         return;
@@ -409,7 +432,8 @@ class _SwapScreenState extends State<SwapScreen> {
           _pricing = quote.amountOutFormatted;
           _toController.text = quote.amountOutFormatted;
           _currentQuote = quote;
-          _fees = quote.estimatedGasUsd;
+          _feeUsd = quote.networkFeeUsd;
+          _feeNative = quote.networkFeeNative;
         });
       } else {
         final mapped = _mapErrorMessage(_swapService.lastError);
@@ -417,6 +441,8 @@ class _SwapScreenState extends State<SwapScreen> {
           _pricing = mapped;
           _toController.clear();
           _currentQuote = null;
+          _feeUsd = 0.0;
+          _feeNative = 0.0;
         });
       }
     } catch (e) {
@@ -425,6 +451,8 @@ class _SwapScreenState extends State<SwapScreen> {
           _pricing = _mapErrorMessage(e.toString());
           _toController.clear();
           _currentQuote = null;
+          _feeUsd = 0.0;
+          _feeNative = 0.0;
         });
       }
     } finally {
@@ -442,6 +470,8 @@ class _SwapScreenState extends State<SwapScreen> {
       _toController.clear();
       _pricing = '';
       _currentQuote = null;
+      _feeUsd = 0.0;
+      _feeNative = 0.0;
       _selectedPercentage = -1;
       if (_isGasless && _isGaslessSourceUnsupported()) {
         _isGasless = false;
@@ -599,6 +629,8 @@ class _SwapScreenState extends State<SwapScreen> {
           setState(() {
             _currentQuote = null;
             _pricing = '';
+            _feeUsd = 0.0;
+            _feeNative = 0.0;
             _selectedPercentage = -1;
           });
           await _refreshWalletState();
@@ -615,6 +647,8 @@ class _SwapScreenState extends State<SwapScreen> {
         setState(() {
           _currentQuote = null;
           _pricing = '';
+          _feeUsd = 0.0;
+          _feeNative = 0.0;
           _selectedPercentage = -1;
         });
         await _refreshWalletState();
@@ -627,6 +661,8 @@ class _SwapScreenState extends State<SwapScreen> {
       setState(() {
         _currentQuote = null;
         _pricing = '';
+        _feeUsd = 0.0;
+        _feeNative = 0.0;
         _selectedPercentage = -1;
       });
       _waitForTxConfirmation(result.transactionHash!, successMessage: 'Swap confirmed');
@@ -707,8 +743,9 @@ class _SwapScreenState extends State<SwapScreen> {
                     SwapPriceDetailsCard(
                       priceText: priceText,
                       slippage: _slippage,
-                      feeAmount: _fees,
-                      feeSymbol: _fromToken?.symbol ?? '',
+                      feeAmountUsd: _feeUsd,
+                      feeAmountNative: _feeNative,
+                      nativeFeeSymbol: blockchain.activeChain.symbol,
                       receiveText: receiveText,
                       priceSeparator: _priceSeparator,
                     ),
