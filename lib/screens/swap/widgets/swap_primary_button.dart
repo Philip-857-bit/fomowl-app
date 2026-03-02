@@ -33,7 +33,9 @@ class SwapPrimaryButton extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: enabled ? Colors.white : Colors.white.withValues(alpha: 0.4),
+              color: enabled
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.4),
             ),
           ),
         ),

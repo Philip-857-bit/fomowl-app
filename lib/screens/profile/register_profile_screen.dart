@@ -43,7 +43,10 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
     final password = _passwordController.text;
     final xSecret = _xSecretController.text;
 
-    if (email.isEmpty || username.isEmpty || password.isEmpty || xSecret.isEmpty) {
+    if (email.isEmpty ||
+        username.isEmpty ||
+        password.isEmpty ||
+        xSecret.isEmpty) {
       _showError('All fields are required');
       return;
     }
@@ -68,7 +71,7 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
       setState(() => _isLoading = false);
       if (result['success']) {
         // Registration success, go to profile tab root
-        Navigator.pop(context, true); 
+        Navigator.pop(context, true);
       } else {
         _showError(result['error']);
       }
@@ -102,26 +105,49 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
                     const SizedBox(height: 20),
                     Text(
                       'Create Profile',
-                      style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Sync your wallet and secure your identity natively.',
-                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6)),
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
                     ),
                     const SizedBox(height: 32),
-                    
-                    _buildTextField('Email Address', _emailController, keyboardType: TextInputType.emailAddress),
+
+                    _buildTextField(
+                      'Email Address',
+                      _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                    ),
                     const SizedBox(height: 20),
                     _buildTextField('Username', _usernameController),
                     const SizedBox(height: 20),
-                    _buildPasswordField('Password', _passwordController, _obscurePassword, () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    }),
+                    _buildPasswordField(
+                      'Password',
+                      _passwordController,
+                      _obscurePassword,
+                      () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                    ),
                     const SizedBox(height: 20),
-                    _buildPasswordField('High Security X-Secret', _xSecretController, _obscureSecret, () {
-                      setState(() => _obscureSecret = !_obscureSecret);
-                    }, helperText: 'Used to authorize sensitive changes (like swapping linked wallets).'),
+                    _buildPasswordField(
+                      'High Security X-Secret',
+                      _xSecretController,
+                      _obscureSecret,
+                      () {
+                        setState(() => _obscureSecret = !_obscureSecret);
+                      },
+                      helperText:
+                          'Used to authorize sensitive changes (like swapping linked wallets).',
+                    ),
                     const SizedBox(height: 48),
 
                     GestureDetector(
@@ -134,12 +160,23 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Center(
-                          child: _isLoading 
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : Text(
-                                'Register',
-                                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-                              ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  'Register',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -154,11 +191,21 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {TextInputType? keyboardType}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    TextInputType? keyboardType,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.8))),
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -178,11 +225,23 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
     );
   }
 
-  Widget _buildPasswordField(String label, TextEditingController controller, bool obscureText, VoidCallback onToggle, {String? helperText}) {
+  Widget _buildPasswordField(
+    String label,
+    TextEditingController controller,
+    bool obscureText,
+    VoidCallback onToggle, {
+    String? helperText,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.8))),
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.8),
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.only(left: 16, right: 4),
@@ -198,7 +257,11 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
             decoration: InputDecoration(
               border: InputBorder.none,
               suffixIcon: IconButton(
-                icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility, color: Colors.white.withValues(alpha: 0.5), size: 18),
+                icon: Icon(
+                  obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  size: 18,
+                ),
                 onPressed: onToggle,
               ),
             ),
@@ -206,8 +269,11 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
         ),
         if (helperText != null) ...[
           const SizedBox(height: 6),
-          Text(helperText, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.warning)),
-        ]
+          Text(
+            helperText,
+            style: GoogleFonts.outfit(fontSize: 12, color: AppColors.warning),
+          ),
+        ],
       ],
     );
   }

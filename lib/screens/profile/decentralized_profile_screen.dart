@@ -21,10 +21,12 @@ class DecentralizedProfileScreen extends StatefulWidget {
   const DecentralizedProfileScreen({super.key});
 
   @override
-  State<DecentralizedProfileScreen> createState() => _DecentralizedProfileScreenState();
+  State<DecentralizedProfileScreen> createState() =>
+      _DecentralizedProfileScreenState();
 }
 
-class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen> {
+class _DecentralizedProfileScreenState
+    extends State<DecentralizedProfileScreen> {
   final WalletService _walletService = WalletService();
   final StorageService _storageService = StorageService();
 
@@ -77,17 +79,27 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
             Container(
               width: 42,
               height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             const SizedBox(height: 14),
             Text(
               l.currency,
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             for (final item in options)
               ListTile(
-                title: Text(item, style: GoogleFonts.outfit(color: Colors.white)),
+                title: Text(
+                  item,
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
                 trailing: _currency == item
                     ? const Icon(Icons.check_circle, color: AppColors.accentRed)
                     : null,
@@ -134,7 +146,13 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('${l.resetApp}?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+        title: Text(
+          '${l.resetApp}?',
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         content: Text(
           l.confirmClearLocalData,
           style: GoogleFonts.outfit(color: Colors.white70),
@@ -142,11 +160,17 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.cancel, style: GoogleFonts.outfit(color: Colors.white54)),
+            child: Text(
+              l.cancel,
+              style: GoogleFonts.outfit(color: Colors.white54),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l.resetApp, style: GoogleFonts.outfit(color: AppColors.accentRed)),
+            child: Text(
+              l.resetApp,
+              style: GoogleFonts.outfit(color: AppColors.accentRed),
+            ),
           ),
         ],
       ),
@@ -160,8 +184,16 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.cardDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(l.resetApp, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            l.resetApp,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           content: Text(
             l.resetFailed,
             style: GoogleFonts.outfit(color: Colors.white70),
@@ -169,7 +201,10 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(l.continue_, style: GoogleFonts.outfit(color: AppColors.accentRed)),
+              child: Text(
+                l.continue_,
+                style: GoogleFonts.outfit(color: AppColors.accentRed),
+              ),
             ),
           ],
         ),
@@ -184,7 +219,9 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
-    final localeName = AppLocalizations.languageNames[l.locale.languageCode] ?? AppLocalizations.languageNames['en']!;
+    final localeName =
+        AppLocalizations.languageNames[l.locale.languageCode] ??
+        AppLocalizations.languageNames['en']!;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -194,7 +231,9 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.accentRed),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 26),
                 child: Column(
@@ -246,11 +285,16 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                           onTap: () async {
                             final languageCode = await Navigator.push<String>(
                               context,
-                              MaterialPageRoute(builder: (_) => const LanguageSelectionScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const LanguageSelectionScreen(),
+                              ),
                             );
                             if (!mounted) return;
                             if (languageCode != null) {
-                              FOMOwlWalletApp.setLocale(this.context, languageCode);
+                              FOMOwlWalletApp.setLocale(
+                                this.context,
+                                languageCode,
+                              );
                               await _load();
                             }
                           },
@@ -258,7 +302,8 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         SettingsItemTile(
                           icon: Icons.card_giftcard_rounded,
                           title: l.referrals,
-                          onTap: () => Navigator.pushNamed(context, '/referrals'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/referrals'),
                         ),
                       ],
                     ),
@@ -271,12 +316,18 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                           title: l.seedPhraseBackup,
                           subtitle: l.actionRequired,
                           attention: true,
-                          onTap: () => Navigator.pushNamed(context, '/backup-seed-phrase'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/backup-seed-phrase',
+                          ),
                         ),
                         SettingsItemTile(
                           icon: Icons.shield_outlined,
                           title: l.passwordSecurity,
-                          onTap: () => Navigator.pushNamed(context, '/password-security'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/password-security',
+                          ),
                         ),
                       ],
                     ),
@@ -287,22 +338,28 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         SettingsItemTile(
                           icon: Icons.privacy_tip_outlined,
                           title: l.privacyPolicy,
-                          onTap: () => Navigator.pushNamed(context, '/privacy-policy'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/privacy-policy'),
                         ),
                         SettingsItemTile(
                           icon: Icons.description_outlined,
                           title: l.termsOfService,
-                          onTap: () => Navigator.pushNamed(context, '/terms-and-conditions'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/terms-and-conditions',
+                          ),
                         ),
                         SettingsItemTile(
                           icon: Icons.chat_bubble_outline_rounded,
                           title: l.feedback,
-                          onTap: () => Navigator.pushNamed(context, '/feedback'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/feedback'),
                         ),
                         SettingsItemTile(
                           icon: Icons.groups_2_outlined,
                           title: l.joinOurCommunity,
-                          onTap: () => Navigator.pushNamed(context, '/community'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/community'),
                         ),
                       ],
                     ),
@@ -323,13 +380,19 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         icon: const Icon(Icons.refresh_rounded),
                         label: Text(
                           l.resetApp,
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.accentRed,
-                          side: BorderSide(color: AppColors.accentRed.withValues(alpha: 0.7)),
+                          side: BorderSide(
+                            color: AppColors.accentRed.withValues(alpha: 0.7),
+                          ),
                           minimumSize: const Size(160, 46),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
                         ),
                       ),
                     ),

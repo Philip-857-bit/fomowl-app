@@ -11,10 +11,12 @@ class FingerprintVerificationScreen extends StatefulWidget {
   const FingerprintVerificationScreen({super.key});
 
   @override
-  State<FingerprintVerificationScreen> createState() => _FingerprintVerificationScreenState();
+  State<FingerprintVerificationScreen> createState() =>
+      _FingerprintVerificationScreenState();
 }
 
-class _FingerprintVerificationScreenState extends State<FingerprintVerificationScreen> {
+class _FingerprintVerificationScreenState
+    extends State<FingerprintVerificationScreen> {
   final BiometricService _biometricService = BiometricService();
   bool _isVerifying = false;
 
@@ -44,7 +46,9 @@ class _FingerprintVerificationScreenState extends State<FingerprintVerificationS
           Navigator.pushReplacementNamed(context, '/congratulations');
         } else {
           // Failed - show error
-          ToastUtils.showError('Fingerprint verification failed. Please try again.');
+          ToastUtils.showError(
+            'Fingerprint verification failed. Please try again.',
+          );
           setState(() {
             _isVerifying = false;
           });
@@ -52,7 +56,9 @@ class _FingerprintVerificationScreenState extends State<FingerprintVerificationS
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError('Biometric authentication not available on this device');
+        ToastUtils.showError(
+          'Biometric authentication not available on this device',
+        );
         setState(() {
           _isVerifying = false;
         });
@@ -82,18 +88,14 @@ class _FingerprintVerificationScreenState extends State<FingerprintVerificationS
                 },
               ),
             ),
-            
+
             const Spacer(flex: 2),
-            
+
             // Fingerprint icon
-            Icon(
-              Icons.fingerprint,
-              size: 200,
-              color: const Color(0xFFEB3F3F),
-            ),
-            
+            Icon(Icons.fingerprint, size: 200, color: const Color(0xFFEB3F3F)),
+
             const SizedBox(height: 60),
-            
+
             // Instruction text
             Text(
               _isVerifying ? 'Verifying...' : 'Fingerprint Verification',
@@ -104,11 +106,11 @@ class _FingerprintVerificationScreenState extends State<FingerprintVerificationS
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Text(
-              _isVerifying 
+              _isVerifying
                   ? 'Please authenticate using your device biometric'
                   : 'Tap the button below to verify your fingerprint',
               style: GoogleFonts.outfit(
@@ -118,9 +120,9 @@ class _FingerprintVerificationScreenState extends State<FingerprintVerificationS
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const Spacer(flex: 3),
-            
+
             // Verify button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -170,7 +172,7 @@ class _FingerprintVerificationScreenState extends State<FingerprintVerificationS
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
           ],
         ),

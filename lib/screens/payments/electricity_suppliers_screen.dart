@@ -101,7 +101,7 @@ class ElectricitySuppliersScreen extends StatelessWidget {
                         context: context,
                         builder: (context) => const ElectricityTypeDialog(),
                       );
-                      
+
                       if (type != null && context.mounted) {
                         Navigator.pushNamed(
                           context,

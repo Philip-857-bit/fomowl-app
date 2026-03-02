@@ -46,15 +46,27 @@ class HomeTopBar extends StatelessWidget {
                       color: AppColors.accentRed,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.account_balance_wallet, size: 12, color: Colors.white),
+                    child: const Icon(
+                      Icons.account_balance_wallet,
+                      size: 12,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     walletName,
-                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 18),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ],
               ),
             ),
@@ -72,10 +84,18 @@ class HomeTopBar extends StatelessWidget {
                 children: [
                   Text(
                     chainSymbol,
-                    style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, size: 14, color: Colors.white),
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 14,
+                    color: Colors.white,
+                  ),
                 ],
               ),
             ),
@@ -84,7 +104,11 @@ class HomeTopBar extends StatelessWidget {
           Stack(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
                 onPressed: onNotificationsTap,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -96,7 +120,10 @@ class HomeTopBar extends StatelessWidget {
                   child: Container(
                     width: 7,
                     height: 7,
-                    decoration: const BoxDecoration(color: AppColors.accentRed, shape: BoxShape.circle),
+                    decoration: const BoxDecoration(
+                      color: AppColors.accentRed,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
             ],

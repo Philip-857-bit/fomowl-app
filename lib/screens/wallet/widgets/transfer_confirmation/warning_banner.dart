@@ -19,13 +19,20 @@ class WarningBanner extends StatelessWidget {
             color: AppColors.accentRed.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.shield_outlined, color: AppColors.accentRed, size: 16),
+          child: const Icon(
+            Icons.shield_outlined,
+            color: AppColors.accentRed,
+            size: 16,
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             message,
-            style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
           ),
         ),
       ],

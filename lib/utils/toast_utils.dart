@@ -13,10 +13,18 @@ class ToastUtils {
   }
 
   static void showInfo(String message) {
-    _show(message, Colors.white.withValues(alpha: 0.9), textColor: Colors.black);
+    _show(
+      message,
+      Colors.white.withValues(alpha: 0.9),
+      textColor: Colors.black,
+    );
   }
 
-  static void _show(String message, Color background, {Color textColor = Colors.white}) {
+  static void _show(
+    String message,
+    Color background, {
+    Color textColor = Colors.white,
+  }) {
     Fluttertoast.cancel();
     Fluttertoast.showToast(
       msg: message,

@@ -18,17 +18,24 @@ class QrScannerScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.camera_alt_outlined, color: Colors.white54, size: 64),
+                  const Icon(
+                    Icons.camera_alt_outlined,
+                    color: Colors.white54,
+                    size: 64,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Camera View Placeholder',
-                    style: GoogleFonts.outfit(color: Colors.white54, fontSize: 16),
-                  )
+                    style: GoogleFonts.outfit(
+                      color: Colors.white54,
+                      fontSize: 16,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          
+
           // QR Scanner Overlay
           SafeArea(
             child: Column(
@@ -54,15 +61,18 @@ class QrScannerScreen extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.photo_library_outlined, color: Colors.white),
+                        icon: const Icon(
+                          Icons.photo_library_outlined,
+                          color: Colors.white,
+                        ),
                         onPressed: () {},
                       ),
                     ],
                   ),
                 ),
-                
+
                 const Spacer(),
-                
+
                 // Scanner Frame
                 Container(
                   width: 280,
@@ -84,7 +94,9 @@ class QrScannerScreen extends StatelessWidget {
                             color: AppColors.accentRed,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.accentRed.withValues(alpha: 0.5),
+                                color: AppColors.accentRed.withValues(
+                                  alpha: 0.5,
+                                ),
                                 blurRadius: 10,
                                 spreadRadius: 2,
                               ),
@@ -96,7 +108,7 @@ class QrScannerScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                
+
                 Text(
                   'Align QR code within frame to scan',
                   style: GoogleFonts.outfit(
@@ -105,15 +117,19 @@ class QrScannerScreen extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                
+
                 const Spacer(flex: 2),
-                
+
                 // My Code button
                 GestureDetector(
-                  onTap: () => Navigator.pushReplacementNamed(context, '/receive-token'),
+                  onTap: () =>
+                      Navigator.pushReplacementNamed(context, '/receive-token'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 32),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(24),
@@ -121,7 +137,11 @@ class QrScannerScreen extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.qr_code_2, color: Colors.white, size: 18),
+                        const Icon(
+                          Icons.qr_code_2,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'My QR Code',

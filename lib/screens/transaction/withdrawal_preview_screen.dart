@@ -51,7 +51,11 @@ class WithdrawalPreviewDialog extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.05),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, color: Colors.white54, size: 18),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white54,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -91,7 +95,9 @@ class WithdrawalPreviewDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +199,8 @@ class WithdrawalPreviewDialog extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
-                          color: AppColors.accentRed, // Solid red, slightly darker
+                          color:
+                              AppColors.accentRed, // Solid red, slightly darker
                           borderRadius: BorderRadius.circular(16),
                         ),
                         alignment: Alignment.center,
@@ -217,7 +224,11 @@ class WithdrawalPreviewDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isValueBold = false}) {
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    bool isValueBold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

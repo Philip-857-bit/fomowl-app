@@ -31,7 +31,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
       setState(() {
         _passcode += number;
       });
-      
+
       // Auto-verify when passcode is complete
       if (_passcode.length == _passcodeLength) {
         Future.delayed(const Duration(milliseconds: 300), () {
@@ -94,9 +94,9 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             // Title
             Text(
               'Confirm Passcode',
@@ -106,9 +106,9 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
                 color: Colors.white,
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             // PIN dots
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -131,19 +131,16 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
                     child: index < _passcode.length
                         ? const Text(
                             '●',
-                            style: TextStyle(
-                              fontSize: 22,
-                              color: Colors.white,
-                            ),
+                            style: TextStyle(fontSize: 22, color: Colors.white),
                           )
                         : null,
                   ),
                 );
               }),
             ),
-            
+
             const SizedBox(height: 30),
-            
+
             // Instruction text
             Text(
               'Confirm the digits you entered if they are\ncorrect',
@@ -154,16 +151,14 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const Spacer(),
-            
+
             // Number pad
             _buildNumberPad(),
-            
-            const SizedBox(height: 40),
-            
 
-            
+            const SizedBox(height: 40),
+
             const SizedBox(height: 12),
           ],
         ),
@@ -205,7 +200,11 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
                 onPressed: () => _onNumberPressed('0'),
               ),
               _buildNumberButton(
-                child: const Icon(Icons.arrow_forward, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 onPressed: _passcode.length == _passcodeLength
                     ? _verifyPasscode
                     : null,

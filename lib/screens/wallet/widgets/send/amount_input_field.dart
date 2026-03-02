@@ -36,7 +36,11 @@ class AmountInputField extends StatelessWidget {
             ),
             Text(
               'Available: ${availableBalance.toStringAsFixed(2)} $tokenSymbol',
-              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.white),
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
             ),
           ],
         ),
@@ -50,18 +54,33 @@ class AmountInputField extends StatelessWidget {
           child: TextField(
             controller: controller,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: GoogleFonts.outfit(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w600),
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 34,
+              fontWeight: FontWeight.w600,
+            ),
             decoration: InputDecoration(
               hintText: '0.00',
-              hintStyle: GoogleFonts.outfit(fontSize: 34, color: Colors.white.withValues(alpha: 0.3), fontWeight: FontWeight.w600),
+              hintStyle: GoogleFonts.outfit(
+                fontSize: 34,
+                color: Colors.white.withValues(alpha: 0.3),
+                fontWeight: FontWeight.w600,
+              ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     tokenSymbol,
-                    style: GoogleFonts.outfit(fontSize: 24, color: Colors.white.withValues(alpha: 0.45), fontWeight: FontWeight.w500),
+                    style: GoogleFonts.outfit(
+                      fontSize: 24,
+                      color: Colors.white.withValues(alpha: 0.45),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(

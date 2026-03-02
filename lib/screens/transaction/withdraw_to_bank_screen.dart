@@ -13,7 +13,8 @@ class WithdrawToBankScreen extends StatefulWidget {
 class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
   final TextEditingController _tokenAmountController = TextEditingController();
   final TextEditingController _fiatAmountController = TextEditingController();
-  final TextEditingController _accountNumberController = TextEditingController();
+  final TextEditingController _accountNumberController =
+      TextEditingController();
 
   final String _selectedToken = 'USDT (USDC)';
   final String _selectedFiat = 'NGN (NAIRA)';
@@ -162,16 +163,21 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: AppColors.cardDark,
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(14),
+                                ),
                                 border: Border(
-                                  bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05)),
+                                  bottom: BorderSide(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                  ),
                                 ),
                               ),
                               child: Row(
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -183,7 +189,11 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                                 color: Colors.white,
                                               ),
                                             ),
-                                            const Icon(Icons.keyboard_arrow_down, color: Colors.white54, size: 20),
+                                            const Icon(
+                                              Icons.keyboard_arrow_down,
+                                              color: Colors.white54,
+                                              size: 20,
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 4),
@@ -191,7 +201,9 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                           'Balance: \$1,401.77',
                                           style: GoogleFonts.outfit(
                                             fontSize: 12,
-                                            color: Colors.white.withValues(alpha: 0.5),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.5,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -203,13 +215,25 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                     child: TextField(
                                       controller: _tokenAmountController,
                                       onChanged: _onTokenAmountChanged,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
                                       textAlign: TextAlign.right,
-                                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
                                         hintText: '0',
-                                        hintStyle: GoogleFonts.outfit(fontSize: 18, color: Colors.white.withValues(alpha: 0.3)),
+                                        hintStyle: GoogleFonts.outfit(
+                                          fontSize: 18,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                        ),
                                         isDense: true,
                                       ),
                                     ),
@@ -223,19 +247,22 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                 ],
                               ),
                             ),
-                            
+
                             // Bottom Card (Fiat)
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: const BoxDecoration(
                                 color: AppColors.cardDark,
-                                borderRadius: BorderRadius.vertical(bottom: Radius.circular(14)),
+                                borderRadius: BorderRadius.vertical(
+                                  bottom: Radius.circular(14),
+                                ),
                               ),
                               child: Row(
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
@@ -247,7 +274,11 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                                 color: Colors.white,
                                               ),
                                             ),
-                                            const Icon(Icons.keyboard_arrow_down, color: Colors.white54, size: 20),
+                                            const Icon(
+                                              Icons.keyboard_arrow_down,
+                                              color: Colors.white54,
+                                              size: 20,
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 4),
@@ -255,7 +286,9 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                           'Balance: \$2,102,655',
                                           style: GoogleFonts.outfit(
                                             fontSize: 12,
-                                            color: Colors.white.withValues(alpha: 0.5),
+                                            color: Colors.white.withValues(
+                                              alpha: 0.5,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -267,13 +300,25 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                     child: TextField(
                                       controller: _fiatAmountController,
                                       onChanged: _onFiatAmountChanged,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            decimal: true,
+                                          ),
                                       textAlign: TextAlign.right,
-                                      style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
                                       decoration: InputDecoration(
                                         border: InputBorder.none,
                                         hintText: '0',
-                                        hintStyle: GoogleFonts.outfit(fontSize: 18, color: Colors.white.withValues(alpha: 0.3)),
+                                        hintStyle: GoogleFonts.outfit(
+                                          fontSize: 18,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                        ),
                                         isDense: true,
                                       ),
                                     ),
@@ -302,13 +347,22 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                   color: AppColors.accentRed,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.swap_vert, color: Colors.white, size: 16),
+                                child: const Icon(
+                                  Icons.swap_vert,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
                               ),
                               const SizedBox(width: 40),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentRed.withValues(alpha: 0.2),
+                                  color: AppColors.accentRed.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -340,7 +394,10 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                     GestureDetector(
                       onTap: _showSelectBankBottomSheet,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.cardDark,
                           borderRadius: BorderRadius.circular(14),
@@ -353,11 +410,16 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                                 style: GoogleFonts.outfit(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: _selectedBank != null ? Colors.white : Colors.white.withValues(alpha: 0.7),
+                                  color: _selectedBank != null
+                                      ? Colors.white
+                                      : Colors.white.withValues(alpha: 0.7),
                                 ),
                               ),
                             ),
-                            const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                            const Icon(
+                              Icons.keyboard_arrow_down,
+                              color: Colors.white,
+                            ),
                           ],
                         ),
                       ),
@@ -382,7 +444,10 @@ class _WithdrawToBankScreenState extends State<WithdrawToBankScreen> {
                       child: TextField(
                         controller: _accountNumberController,
                         keyboardType: TextInputType.number,
-                        style: GoogleFonts.outfit(color: Colors.white, fontSize: 15),
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.all(16),
@@ -445,7 +510,9 @@ class _SelectBankBottomSheetState extends State<_SelectBankBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredBanks = _banks.where((b) => b.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    final filteredBanks = _banks
+        .where((b) => b.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -479,12 +546,19 @@ class _SelectBankBottomSheetState extends State<_SelectBankBottomSheet> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5), size: 20),
+                  Icon(
+                    Icons.search,
+                    color: Colors.white.withValues(alpha: 0.5),
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       onChanged: (val) => setState(() => _searchQuery = val),
-                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 15),
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 15,
+                      ),
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: 'Search bank name',
@@ -529,12 +603,17 @@ class _SelectBankBottomSheetState extends State<_SelectBankBottomSheet> {
               children: [
                 Expanded(
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
                     itemCount: filteredBanks.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 32),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 32),
                     itemBuilder: (context, index) {
                       return GestureDetector(
-                        onTap: () => Navigator.pop(context, filteredBanks[index]),
+                        onTap: () =>
+                            Navigator.pop(context, filteredBanks[index]),
                         child: Text(
                           filteredBanks[index],
                           style: GoogleFonts.outfit(

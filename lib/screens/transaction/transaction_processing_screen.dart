@@ -28,7 +28,11 @@ class TransactionProcessingScreen extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),

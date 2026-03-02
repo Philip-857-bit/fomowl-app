@@ -39,7 +39,10 @@ class TokenActionsRow extends StatelessWidget {
                 child: Icon(action.icon, color: AppColors.accentRed, size: 26),
               ),
               const SizedBox(height: 6),
-              Text(action.label, style: GoogleFonts.outfit(color: Colors.white70)),
+              Text(
+                action.label,
+                style: GoogleFonts.outfit(color: Colors.white70),
+              ),
             ],
           ),
         );

@@ -22,7 +22,14 @@ class PriceOverview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(priceText, style: GoogleFonts.outfit(fontSize: 46, fontWeight: FontWeight.w700, color: Colors.white)),
+        Text(
+          priceText,
+          style: GoogleFonts.outfit(
+            fontSize: 46,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -34,10 +41,15 @@ class PriceOverview extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               changeText,
-              style: GoogleFonts.outfit(color: isPositiveChange ? AppColors.success : AppColors.error),
+              style: GoogleFonts.outfit(
+                color: isPositiveChange ? AppColors.success : AppColors.error,
+              ),
             ),
             const SizedBox(width: 12),
-            Text('Holdings: $holdingsText', style: GoogleFonts.outfit(color: Colors.white70)),
+            Text(
+              'Holdings: $holdingsText',
+              style: GoogleFonts.outfit(color: Colors.white70),
+            ),
           ],
         ),
       ],

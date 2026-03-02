@@ -183,7 +183,7 @@ class StorageService {
     }
 
     final wasActive = (await getWalletAddress())?.toLowerCase() == normalized;
-    
+
     if (wasActive) {
       final replacement = accounts.firstWhere(
         (a) => a.address.toLowerCase() != normalized,
@@ -194,7 +194,7 @@ class StorageService {
       if (replacementPk == null) {
         throw Exception('Replacement wallet private key is missing');
       }
-      
+
       // Update active pointers FIRST
       await _secureStorage.write(key: _keyAddress, value: replacement.address);
       await _secureStorage.write(key: _keyPrivateKey, value: replacementPk);

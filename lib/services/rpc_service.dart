@@ -32,24 +32,26 @@ class RpcService extends BaseService {
   }) async {
     final candidates = [primaryRpcUrl, ...(_publicRpcFallbacks[chainId] ?? [])];
     final requestId = _nextRequestId++;
-    
+
     for (final rpcUrl in candidates) {
       try {
-        final response = await http.post(
-          Uri.parse(rpcUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'jsonrpc': '2.0',
-            'method': method,
-            'params': params,
-            'id': requestId,
-          }),
-        ).timeout(timeout);
+        final response = await http
+            .post(
+              Uri.parse(rpcUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'jsonrpc': '2.0',
+                'method': method,
+                'params': params,
+                'id': requestId,
+              }),
+            )
+            .timeout(timeout);
 
         if (response.statusCode != 200) continue;
 
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        
+
         // Correlation check
         if (data['id'] != requestId) {
           debugPrint('RPC ID mismatch: expected $requestId, got ${data['id']}');
@@ -60,7 +62,7 @@ class RpcService extends BaseService {
           debugPrint('RPC error ($method @ $rpcUrl): ${data['error']}');
           continue;
         }
-        
+
         return data['result'];
       } catch (e) {
         debugPrint('RPC call failed ($method @ $rpcUrl): $e');
@@ -73,28 +75,30 @@ class RpcService extends BaseService {
   Future<bool> testRpcUrl(String rpcUrl) async {
     final requestId = _nextRequestId++;
     try {
-      final response = await http.post(
-        Uri.parse(rpcUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'jsonrpc': '2.0',
-          'method': 'eth_chainId',
-          'params': [],
-          'id': requestId,
-        }),
-      ).timeout(const Duration(seconds: 8));
-      
+      final response = await http
+          .post(
+            Uri.parse(rpcUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'jsonrpc': '2.0',
+              'method': 'eth_chainId',
+              'params': [],
+              'id': requestId,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+
       if (response.statusCode != 200) return false;
-      
+
       try {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         if (data['jsonrpc'] != '2.0') return false;
         if (data['id'] != requestId) return false;
         if (data['error'] != null) return false;
-        
+
         final result = data['result'] as String?;
         if (result == null || !result.startsWith('0x')) return false;
-        
+
         return true;
       } catch (_) {
         return false;

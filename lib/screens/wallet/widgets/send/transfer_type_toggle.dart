@@ -31,7 +31,11 @@ class TransferTypeToggle extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 'External Wallet',
-                style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -42,14 +46,22 @@ class TransferTypeToggle extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: isInterTransfer ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+                color: isInterTransfer
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.flash_on, size: 14, color: isInterTransfer ? AppColors.accentRed : Colors.white54),
+                  Icon(
+                    Icons.flash_on,
+                    size: 14,
+                    color: isInterTransfer
+                        ? AppColors.accentRed
+                        : Colors.white54,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     'Inter-Transfer',

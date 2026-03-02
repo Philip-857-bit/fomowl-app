@@ -68,7 +68,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     // Validate hex characters
     final hexRegex = RegExp(r'^[0-9a-fA-F]+$');
     if (!hexRegex.hasMatch(cleanKey)) {
-      _showError('Invalid private key. Must contain only hexadecimal characters (0-9, a-f).');
+      _showError(
+        'Invalid private key. Must contain only hexadecimal characters (0-9, a-f).',
+      );
       return;
     }
 
@@ -142,9 +144,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     Navigator.pop(context);
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Wallet name label
                 Text(
                   'Wallet name',
@@ -154,16 +156,13 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     color: Colors.white,
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Wallet name input
                 TextField(
                   controller: _walletNameController,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                  style: GoogleFonts.outfit(fontSize: 16, color: Colors.white),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFF2C2B2B),
@@ -182,9 +181,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Private key label
                 Text(
                   'Private key',
@@ -194,9 +193,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     color: Colors.white,
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Private key input
                 Container(
                   decoration: BoxDecoration(
@@ -246,9 +245,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Helper text
                 Center(
                   child: Text(
@@ -261,9 +260,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Import wallet button
                 SizedBox(
                   width: double.infinity,
@@ -313,11 +312,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 40),
-                
 
-                
+                const SizedBox(height: 40),
+
                 const SizedBox(height: 12),
               ],
             ),

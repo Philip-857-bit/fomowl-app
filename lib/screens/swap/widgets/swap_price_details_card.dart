@@ -49,7 +49,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
           flex: 3,
           child: Text(
             label,
-            style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6)),
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -64,7 +67,11 @@ class SwapPriceDetailsCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end,
-                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
           ),
         ),
@@ -80,11 +87,19 @@ class SwapPriceDetailsCard extends StatelessWidget {
           children: [
             TextSpan(
               text: '${parts[0]}$priceSeparator ',
-              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
             ),
             TextSpan(
               text: parts[1].trim(),
-              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.success),
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.success,
+              ),
             ),
           ],
         ),
@@ -98,7 +113,11 @@ class SwapPriceDetailsCard extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.end,
-      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white),
+      style: GoogleFonts.outfit(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: Colors.white,
+      ),
     );
   }
 }

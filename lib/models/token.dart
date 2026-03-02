@@ -5,8 +5,10 @@ class Token {
   final String name;
   final String? contractAddress;
   final double balance;
+
   /// Stores the total USD value of holdings when known.
   final double valueUsd;
+
   /// Per-token USD price, used for swap math and detail screens.
   final double priceUsd;
   final double changePercent24h;

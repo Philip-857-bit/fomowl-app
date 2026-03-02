@@ -28,7 +28,11 @@ class SendPrimaryButton extends StatelessWidget {
         child: Center(
           child: Text(
             'Send',
-            style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.white),
+            style: GoogleFonts.outfit(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ),
       ),

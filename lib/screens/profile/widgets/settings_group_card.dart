@@ -5,10 +5,7 @@ import '../../../constants/app_colors.dart';
 class SettingsGroupCard extends StatelessWidget {
   final List<Widget> children;
 
-  const SettingsGroupCard({
-    super.key,
-    required this.children,
-  });
+  const SettingsGroupCard({super.key, required this.children});
 
   @override
   Widget build(BuildContext context) {

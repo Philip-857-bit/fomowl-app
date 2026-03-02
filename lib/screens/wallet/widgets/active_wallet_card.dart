@@ -39,7 +39,11 @@ class ActiveWalletCard extends StatelessWidget {
                   color: AppColors.accentRed,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.account_balance_wallet, color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.account_balance_wallet,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -48,26 +52,40 @@ class ActiveWalletCard extends StatelessWidget {
                   children: [
                     Text(
                       walletName,
-                      style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
                       displayAddress ?? '--',
-                      style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.45)),
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.45),
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.accentRed.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   'Active',
-                  style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.accentRed),
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentRed,
+                  ),
                 ),
               ),
             ],
@@ -118,7 +136,10 @@ class _InfoButton extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.white.withValues(alpha: 0.4)),
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.4),
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

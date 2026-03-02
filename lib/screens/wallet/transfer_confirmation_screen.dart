@@ -55,7 +55,7 @@ class _TransferConfirmationScreenState
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       // Fetch native price for USD conversion
       final effectiveCoinId = blockchain.activeChain.coinGeckoId;
-      
+
       double nativePrice = 0;
       if (effectiveCoinId != null && effectiveCoinId.isNotEmpty) {
         final prices = await blockchain.getTokenPrices([effectiveCoinId]);

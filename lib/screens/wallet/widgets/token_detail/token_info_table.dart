@@ -25,7 +25,14 @@ class TokenInfoTable extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('TOKEN INFO', style: GoogleFonts.outfit(fontSize: 12, letterSpacing: 1, color: Colors.white60)),
+        Text(
+          'TOKEN INFO',
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            letterSpacing: 1,
+            color: Colors.white60,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -38,7 +45,10 @@ class TokenInfoTable extends StatelessWidget {
               for (int i = 0; i < rows.length; i++) ...[
                 _TokenInfoRow(data: rows[i]),
                 if (i != rows.length - 1)
-                  Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
+                  Divider(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
               ],
             ],
           ),
@@ -57,11 +67,21 @@ class _TokenInfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final children = <Widget>[
       Expanded(
-        child: Text(data.label, style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+        child: Text(
+          data.label,
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            color: Colors.white.withValues(alpha: 0.6),
+          ),
+        ),
       ),
       Text(
         data.value,
-        style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+        style: GoogleFonts.outfit(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
     ];
     if (data.trailing != null) {

@@ -47,8 +47,8 @@ class BiometricService {
     // On Android 11+, face/fingerprint are reported as strong/weak
     // Check for fingerprint type OR strong/weak (which includes fingerprint)
     return biometrics.contains(BiometricType.fingerprint) ||
-           biometrics.contains(BiometricType.strong) ||
-           biometrics.contains(BiometricType.weak);
+        biometrics.contains(BiometricType.strong) ||
+        biometrics.contains(BiometricType.weak);
   }
 
   /// Authenticate with biometrics
@@ -61,9 +61,7 @@ class BiometricService {
         return false;
       }
 
-      return await _localAuth.authenticate(
-        localizedReason: localizedReason,
-      );
+      return await _localAuth.authenticate(localizedReason: localizedReason);
     } on PlatformException {
       return false;
     }

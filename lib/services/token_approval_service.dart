@@ -43,9 +43,12 @@ class TokenApprovalService {
       // Native token (ETH/MATIC) doesn't need ERC20 approval
       return const TokenApprovalResult(approvalSatisfied: true);
     }
-    
+
     if (allowanceTarget.isEmpty) {
-      return const TokenApprovalResult(approvalSatisfied: false, error: 'Missing allowance target from DEX provider');
+      return const TokenApprovalResult(
+        approvalSatisfied: false,
+        error: 'Missing allowance target from DEX provider',
+      );
     }
 
     final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
@@ -92,18 +95,18 @@ class TokenApprovalService {
       final allowanceRes = await client.call(
         contract: contract,
         function: allowanceFunc,
-        params: [ownerAddr, spenderAddr]
+        params: [ownerAddr, spenderAddr],
       );
 
       final currentAllowance = allowanceRes.first as BigInt;
 
       if (currentAllowance >= requiredAmount) {
-         return const TokenApprovalResult(approvalSatisfied: true);
+        return const TokenApprovalResult(approvalSatisfied: true);
       }
 
       // 3. Needs additional approval
       final credentials = await _walletService.getCredentials();
-      
+
       final tx = Transaction.callContract(
         contract: contract,
         function: approveFunc,
@@ -122,12 +125,8 @@ class TokenApprovalService {
         approvalSubmitted: true,
         transactionHash: txHash,
       );
-
     } catch (e) {
-      return TokenApprovalResult(
-        approvalSatisfied: false,
-        error: e.toString(),
-      );
+      return TokenApprovalResult(approvalSatisfied: false, error: e.toString());
     } finally {
       client.dispose();
     }

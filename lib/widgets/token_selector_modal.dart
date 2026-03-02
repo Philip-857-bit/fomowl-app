@@ -30,7 +30,7 @@ class TokenSelectorDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Search Bar
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -46,28 +46,36 @@ class TokenSelectorDialog extends StatelessWidget {
                   hintStyle: GoogleFonts.outfit(
                     color: Colors.white.withValues(alpha: 0.5),
                   ),
-                  icon: Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5)),
+                  icon: Icon(
+                    Icons.search,
+                    color: Colors.white.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            
+
             // Token Options
             ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
-              child: tokens.isEmpty 
-                ? Center(
-                    child: Text('No tokens found', style: GoogleFonts.outfit(color: Colors.white54)),
-                  )
-                : ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: tokens.length,
-                    itemBuilder: (context, index) {
-                      final token = tokens[index];
-                      // Use cached network images or default icons
-                      return _buildTokenOption(context, token);
-                    },
-                  ),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              child: tokens.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No tokens found',
+                        style: GoogleFonts.outfit(color: Colors.white54),
+                      ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: tokens.length,
+                      itemBuilder: (context, index) {
+                        final token = tokens[index];
+                        // Use cached network images or default icons
+                        return _buildTokenOption(context, token);
+                      },
+                    ),
             ),
           ],
         ),
@@ -134,5 +142,4 @@ class TokenSelectorDialog extends StatelessWidget {
       ),
     );
   }
-
 }

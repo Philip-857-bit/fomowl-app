@@ -24,7 +24,11 @@ class SwapGaslessToggle extends StatelessWidget {
       child: SwitchListTile(
         title: Row(
           children: [
-            Icon(Icons.bolt, color: value ? AppColors.accentRed : Colors.white54, size: 20),
+            Icon(
+              Icons.bolt,
+              color: value ? AppColors.accentRed : Colors.white54,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -47,7 +51,11 @@ class SwapGaslessToggle extends StatelessWidget {
               ),
               child: Text(
                 'BETA',
-                style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.primaryAccent),
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primaryAccent,
+                ),
               ),
             ),
           ],

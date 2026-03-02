@@ -5,7 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class AuthService {
   // Using localhost for Android emulator (10.0.2.2) or iOS simulator (127.0.0.1)
   // For production, this should be the deployed backend URL
-  static const String _baseUrl = 'https://fomowl-backend.onrender.com/api/profile';
+  static const String _baseUrl =
+      'https://fomowl-backend.onrender.com/api/profile';
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   static const String _tokenKey = 'auth_jwt_token';
 
@@ -54,7 +55,10 @@ class AuthService {
         await saveToken(token);
         return {'success': true, 'profile': data['data']['profile']};
       } else {
-        return {'success': false, 'error': data['message'] ?? 'Failed to register'};
+        return {
+          'success': false,
+          'error': data['message'] ?? 'Failed to register',
+        };
       }
     } catch (e) {
       return {'success': false, 'error': 'Network error: $e'};
@@ -70,10 +74,7 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$_baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       final data = jsonDecode(response.body);
@@ -83,7 +84,10 @@ class AuthService {
         await saveToken(token);
         return {'success': true, 'profile': data['data']['profile']};
       } else {
-        return {'success': false, 'error': data['message'] ?? 'Invalid credentials'};
+        return {
+          'success': false,
+          'error': data['message'] ?? 'Invalid credentials',
+        };
       }
     } catch (e) {
       return {'success': false, 'error': 'Network error: $e'};

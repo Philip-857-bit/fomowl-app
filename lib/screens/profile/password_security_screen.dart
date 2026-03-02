@@ -149,7 +149,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       ),
     );
     if (selected == null || selected == _autoLockMinutes) return;
-    
+
     final previous = _autoLockMinutes;
     setState(() => _autoLockMinutes = selected);
     try {
@@ -225,7 +225,9 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
                             inactiveTrackColor: Colors.white24,
-                            onChanged: _preferencesLoadFailed ? null : _setBiometric,
+                            onChanged: _preferencesLoadFailed
+                                ? null
+                                : _setBiometric,
                           ),
                         ),
                       ],
@@ -244,7 +246,9 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
                             inactiveTrackColor: Colors.white24,
-                            onChanged: _preferencesLoadFailed ? null : _setTwoFactor,
+                            onChanged: _preferencesLoadFailed
+                                ? null
+                                : _setTwoFactor,
                           ),
                         ),
                         SettingsItemTile(

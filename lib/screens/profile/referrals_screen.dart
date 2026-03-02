@@ -113,7 +113,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.accentRed),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 28),
                 child: Column(
@@ -125,7 +127,10 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         children: [
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                            ),
                           ),
                           Text(
                             'Referrals',
@@ -175,7 +180,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AppColors.accentRed.withValues(alpha: 0.8)),
+                        border: Border.all(
+                          color: AppColors.accentRed.withValues(alpha: 0.8),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +210,10 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               ),
                               IconButton(
                                 onPressed: _copyMyCode,
-                                icon: const Icon(Icons.copy_rounded, color: AppColors.accentRed),
+                                icon: const Icon(
+                                  Icons.copy_rounded,
+                                  color: AppColors.accentRed,
+                                ),
                               ),
                             ],
                           ),
@@ -227,7 +237,8 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         SettingsItemTile(
                           icon: Icons.account_balance_wallet_outlined,
                           title: 'Rewards Earned',
-                          subtitle: '\$${(_profile?.totalRewardsUsd ?? 0).toStringAsFixed(2)}',
+                          subtitle:
+                              '\$${(_profile?.totalRewardsUsd ?? 0).toStringAsFixed(2)}',
                         ),
                         SettingsItemTile(
                           icon: Icons.link_outlined,
@@ -243,7 +254,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,16 +276,22 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             style: GoogleFonts.outfit(color: Colors.white),
                             decoration: InputDecoration(
                               hintText: 'Enter referral code',
-                              hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                              hintStyle: GoogleFonts.outfit(
+                                color: Colors.white38,
+                              ),
                               filled: true,
                               fillColor: Colors.white.withValues(alpha: 0.03),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                borderSide: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+                                borderSide: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
                               ),
                             ),
                           ),
@@ -286,8 +305,13 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         onPressed: _loadProfile,
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(56),
-                          side: const BorderSide(color: Colors.white, width: 1.5),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          side: const BorderSide(
+                            color: Colors.white,
+                            width: 1.5,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         child: Text(
                           'Refresh',
@@ -308,17 +332,25 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           minimumSize: const Size.fromHeight(56),
                           backgroundColor: AppColors.accentRed,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                         child: _submitting
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               )
                             : Text(
                                 'Add Referral',
-                                style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.w600),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                       ),
                     ),

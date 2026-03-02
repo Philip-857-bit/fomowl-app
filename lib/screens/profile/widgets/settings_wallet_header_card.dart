@@ -56,9 +56,15 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       color: Colors.white.withValues(alpha: 0.14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                      ),
                     ),
-                    child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 30),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -98,9 +104,13 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                                     await Clipboard.setData(
                                       ClipboardData(text: walletAddress),
                                     );
-                                    ToastUtils.showSuccess('Wallet address copied');
+                                    ToastUtils.showSuccess(
+                                      'Wallet address copied',
+                                    );
                                   } catch (_) {
-                                    ToastUtils.showError('Failed to copy wallet address');
+                                    ToastUtils.showError(
+                                      'Failed to copy wallet address',
+                                    );
                                   }
                                 },
                                 child: Padding(
@@ -119,7 +129,11 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
                 ],
               ),
             ),

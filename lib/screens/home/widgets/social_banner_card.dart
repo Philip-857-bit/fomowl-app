@@ -28,7 +28,11 @@ class SocialBannerCard extends StatelessWidget {
                 color: AppColors.accentRed.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.rocket_launch, color: AppColors.accentRed, size: 22),
+              child: const Icon(
+                Icons.rocket_launch,
+                color: AppColors.accentRed,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -37,17 +41,29 @@ class SocialBannerCard extends StatelessWidget {
                 children: [
                   Text(
                     'Follow @fomowlhq on X for live updates',
-                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'x.com/fomowlhq',
-                    style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.warning),
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.warning,
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.open_in_new, color: Colors.white.withValues(alpha: 0.5), size: 20),
+            Icon(
+              Icons.open_in_new,
+              color: Colors.white.withValues(alpha: 0.5),
+              size: 20,
+            ),
           ],
         ),
       ),

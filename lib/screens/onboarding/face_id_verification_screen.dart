@@ -11,7 +11,8 @@ class FaceIdVerificationScreen extends StatefulWidget {
   const FaceIdVerificationScreen({super.key});
 
   @override
-  State<FaceIdVerificationScreen> createState() => _FaceIdVerificationScreenState();
+  State<FaceIdVerificationScreen> createState() =>
+      _FaceIdVerificationScreenState();
 }
 
 class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
@@ -23,7 +24,8 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _biometricSettings ??= ModalRoute.of(context)?.settings.arguments as Map<String, bool>?;
+    _biometricSettings ??=
+        ModalRoute.of(context)?.settings.arguments as Map<String, bool>?;
   }
 
   @override
@@ -38,7 +40,8 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
 
   Future<void> _detectBiometricType() async {
     try {
-      final availableBiometrics = await _biometricService.getAvailableBiometrics();
+      final availableBiometrics = await _biometricService
+          .getAvailableBiometrics();
       if (mounted) {
         setState(() {
           _isFaceAvailable = availableBiometrics.contains(BiometricType.face);
@@ -53,8 +56,9 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
     });
 
     try {
-      final fingerprintEnabled = _biometricSettings?['fingerprintEnabled'] ?? false;
-      
+      final fingerprintEnabled =
+          _biometricSettings?['fingerprintEnabled'] ?? false;
+
       // Use system biometric prompt directly
       final authenticated = await _biometricService.authenticate(
         localizedReason: 'Verify your identity to secure your wallet',
@@ -68,13 +72,18 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
         if (authenticated) {
           // Success - check if fingerprint verification is also needed
           if (fingerprintEnabled) {
-            Navigator.pushReplacementNamed(context, '/fingerprint-verification');
+            Navigator.pushReplacementNamed(
+              context,
+              '/fingerprint-verification',
+            );
           } else {
             Navigator.pushReplacementNamed(context, '/congratulations');
           }
         } else {
           // Failed - show error
-          ToastUtils.showError('Biometric verification failed. Please try again.');
+          ToastUtils.showError(
+            'Biometric verification failed. Please try again.',
+          );
         }
       }
     } catch (e) {
@@ -82,7 +91,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
         setState(() {
           _isVerifying = false;
         });
-        
+
         ToastUtils.showError('Biometric authentication error: ${e.toString()}');
       }
     }
@@ -110,12 +119,14 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
                 },
               ),
             ),
-            
+
             const Spacer(flex: 2),
-            
+
             // Title — adapts to available biometric type
             Text(
-              _isFaceAvailable ? 'Face ID Verification' : 'Biometric Verification',
+              _isFaceAvailable
+                  ? 'Face ID Verification'
+                  : 'Biometric Verification',
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
@@ -123,19 +134,16 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 60),
-            
+
             // Biometric icon — shows face or fingerprint based on device
             Container(
               width: 200,
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppColors.accentRed,
-                  width: 3,
-                ),
+                border: Border.all(color: AppColors.accentRed, width: 3),
               ),
               child: Icon(
                 _isFaceAvailable ? Icons.face : Icons.fingerprint,
@@ -143,12 +151,12 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
                 color: AppColors.accentRed,
               ),
             ),
-            
+
             const SizedBox(height: 60),
-            
+
             // Instruction text
             Text(
-              _isVerifying 
+              _isVerifying
                   ? 'Please authenticate using your device biometric'
                   : 'Tap the button below to verify',
               style: GoogleFonts.outfit(
@@ -158,9 +166,9 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const Spacer(flex: 3),
-            
+
             // Start verification button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -210,7 +218,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
           ],
         ),

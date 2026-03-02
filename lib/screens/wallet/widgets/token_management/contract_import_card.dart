@@ -47,7 +47,10 @@ class ContractImportCard extends StatelessWidget {
                       color: Colors.white,
                     ),
                   )
-                : Text('Add', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                : Text(
+                    'Add',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
           ),
         ],
       ),

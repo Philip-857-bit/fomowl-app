@@ -20,13 +20,13 @@ class UnlockScreen extends StatefulWidget {
 class _UnlockScreenState extends State<UnlockScreen> {
   final StorageService _storage = StorageService();
   final BiometricService _biometric = BiometricService();
-  
+
   String _passcode = '';
   final int _passcodeLength = 6;
   bool _isError = false;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
-  
+
   // Brute-force protection
   bool _isLockedOut = false;
   int _failedAttempts = 0;
@@ -49,7 +49,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
     // Check lockout status first
     final lockoutTime = await _storage.getLockoutUntil();
     final failedAttempts = await _storage.getFailedAttempts();
-    
+
     if (lockoutTime != null) {
       _startLockoutCountdown(lockoutTime);
     }
@@ -61,7 +61,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
     // Check biometric
     final available = await _biometric.canCheckBiometrics();
     final enabled = await _storage.isBiometricEnabled();
-    
+
     setState(() {
       _biometricAvailable = available;
       _biometricEnabled = enabled;
@@ -76,7 +76,9 @@ class _UnlockScreenState extends State<UnlockScreen> {
   void _startLockoutCountdown(DateTime lockoutUntil) {
     setState(() {
       _isLockedOut = true;
-      _lockoutSecondsRemaining = lockoutUntil.difference(DateTime.now()).inSeconds;
+      _lockoutSecondsRemaining = lockoutUntil
+          .difference(DateTime.now())
+          .inSeconds;
     });
 
     _lockoutTimer?.cancel();
@@ -118,7 +120,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
 
   void _onNumberPressed(String number) {
     if (_isLockedOut) return;
-    
+
     if (_passcode.length < _passcodeLength) {
       setState(() {
         _passcode += number;
@@ -153,7 +155,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
       // Wrong passcode
       await _storage.incrementFailedAttempts();
       final attempts = await _storage.getFailedAttempts();
-      
+
       setState(() {
         _isError = true;
         _passcode = '';
@@ -167,14 +169,18 @@ class _UnlockScreenState extends State<UnlockScreen> {
         if (lockoutUntil != null) {
           _startLockoutCountdown(lockoutUntil);
         }
-        
+
         if (mounted) {
-          ToastUtils.showError('Too many failed attempts. Locked for ${StorageService.lockoutDurationSeconds} seconds.');
+          ToastUtils.showError(
+            'Too many failed attempts. Locked for ${StorageService.lockoutDurationSeconds} seconds.',
+          );
         }
       } else {
         final remaining = StorageService.maxFailedAttempts - attempts;
         if (mounted) {
-          ToastUtils.showError('Incorrect passcode. $remaining attempt${remaining == 1 ? '' : 's'} remaining.');
+          ToastUtils.showError(
+            'Incorrect passcode. $remaining attempt${remaining == 1 ? '' : 's'} remaining.',
+          );
         }
       }
     }
@@ -188,16 +194,12 @@ class _UnlockScreenState extends State<UnlockScreen> {
         child: Column(
           children: [
             const SizedBox(height: 60),
-            
+
             // Logo
-            Image.asset(
-              'assets/images/logo.png',
-              width: 80,
-              height: 80,
-            ),
-            
+            Image.asset('assets/images/logo.png', width: 80, height: 80),
+
             const SizedBox(height: 20),
-            
+
             // Title
             Text(
               'Owllet',
@@ -207,9 +209,9 @@ class _UnlockScreenState extends State<UnlockScreen> {
                 color: Colors.white,
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             // Instruction or lockout message
             // Show remaining attempts if failed but not locked
             if (_failedAttempts > 0 && !_isLockedOut)
@@ -261,9 +263,9 @@ class _UnlockScreenState extends State<UnlockScreen> {
                   color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
-            
+
             const SizedBox(height: 30),
-            
+
             // Passcode dots
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -282,17 +284,17 @@ class _UnlockScreenState extends State<UnlockScreen> {
                       color: _isError
                           ? AppColors.error
                           : (index < _passcode.length
-                              ? AppColors.primaryAccent
-                              : Colors.white.withValues(alpha: 0.5)),
+                                ? AppColors.primaryAccent
+                                : Colors.white.withValues(alpha: 0.5)),
                       width: 2,
                     ),
                   ),
                 ),
               ),
             ),
-            
+
             const Spacer(),
-            
+
             // Number pad
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -312,7 +314,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Row 2: 4, 5, 6
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -323,7 +325,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Row 3: 7, 8, 9
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -334,7 +336,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      
+
                       // Row 4: Biometric, 0, Backspace
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -346,10 +348,10 @@ class _UnlockScreenState extends State<UnlockScreen> {
                                   _authenticateWithBiometric,
                                 )
                               : const SizedBox(width: 70, height: 70),
-                          
+
                           // 0
                           _buildNumberButton('0'),
-                          
+
                           // Backspace
                           _buildIconButton(
                             Icons.backspace_outlined,
@@ -362,7 +364,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 60),
           ],
         ),
@@ -406,13 +408,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
           shape: BoxShape.circle,
           color: Colors.white.withValues(alpha: 0.1),
         ),
-        child: Center(
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 28,
-          ),
-        ),
+        child: Center(child: Icon(icon, color: Colors.white, size: 28)),
       ),
     );
   }

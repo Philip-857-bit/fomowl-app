@@ -45,7 +45,9 @@ class ReferralService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return ReferralProfile.fromJson(data);
     } on TimeoutException {
-      throw Exception('Request timed out. Please check your internet connection.');
+      throw Exception(
+        'Request timed out. Please check your internet connection.',
+      );
     } on FormatException catch (e) {
       throw Exception('Invalid response from server: $e');
     } catch (e) {
@@ -86,7 +88,9 @@ class ReferralService {
         throw Exception(message);
       }
     } on TimeoutException {
-      throw Exception('Request timed out. Please check your internet connection.');
+      throw Exception(
+        'Request timed out. Please check your internet connection.',
+      );
     } on FormatException catch (e) {
       throw Exception('Invalid response format: $e');
     } catch (e) {

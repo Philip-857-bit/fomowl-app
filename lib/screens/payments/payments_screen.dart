@@ -18,22 +18,54 @@ class _PaymentsScreenState extends State<PaymentsScreen>
 
   // Provider categories for Pay Bills tab
   final List<_BillProvider> _airtimeProviders = [
-    _BillProvider(name: 'MTN', color: const Color(0xFFFFCC00), textColor: Colors.black),
-    _BillProvider(name: '9mobile', color: const Color(0xFF006B3F), textColor: Colors.white),
-    _BillProvider(name: 'Airtel', color: const Color(0xFFED1C24), textColor: Colors.white),
-    _BillProvider(name: 'Glo', color: const Color(0xFF50B848), textColor: Colors.white),
+    _BillProvider(
+      name: 'MTN',
+      color: const Color(0xFFFFCC00),
+      textColor: Colors.black,
+    ),
+    _BillProvider(
+      name: '9mobile',
+      color: const Color(0xFF006B3F),
+      textColor: Colors.white,
+    ),
+    _BillProvider(
+      name: 'Airtel',
+      color: const Color(0xFFED1C24),
+      textColor: Colors.white,
+    ),
+    _BillProvider(
+      name: 'Glo',
+      color: const Color(0xFF50B848),
+      textColor: Colors.white,
+    ),
   ];
 
   final List<_BillProvider> _tvProviders = [
     _BillProvider(name: 'GOtv', color: Colors.white, textColor: Colors.black),
-    _BillProvider(name: 'DStv', color: const Color(0xFF003087), textColor: Colors.white),
-    _BillProvider(name: 'StarTimes', color: const Color(0xFFFF6600), textColor: Colors.white),
+    _BillProvider(
+      name: 'DStv',
+      color: const Color(0xFF003087),
+      textColor: Colors.white,
+    ),
+    _BillProvider(
+      name: 'StarTimes',
+      color: const Color(0xFFFF6600),
+      textColor: Colors.white,
+    ),
   ];
 
   final List<_BillProvider> _electricityProviders = [
     _BillProvider(name: 'Kaduna', color: Colors.white, textColor: Colors.black),
-    _BillProvider(name: 'IKEDC', color: const Color(0xFF00529F), textColor: Colors.white),
-    _BillProvider(name: 'Eko', color: const Color(0xFF009639), textColor: Colors.white),
+    _BillProvider(
+      name: 'IKEDC',
+      color: const Color(0xFF00529F),
+      textColor: Colors.white,
+    ),
+    _BillProvider(
+      name: 'Eko',
+      color: const Color(0xFF009639),
+      textColor: Colors.white,
+    ),
   ];
 
   // Mock recent payment transactions
@@ -135,10 +167,7 @@ class _PaymentsScreenState extends State<PaymentsScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  _buildPayBillsTab(),
-                  _buildTransactionsTab(),
-                ],
+                children: [_buildPayBillsTab(), _buildTransactionsTab()],
               ),
             ),
           ],
@@ -158,7 +187,11 @@ class _PaymentsScreenState extends State<PaymentsScreen>
           const SizedBox(height: 28),
           _buildCategorySection('TV Subscription', _tvProviders, 'tv'),
           const SizedBox(height: 28),
-          _buildCategorySection('Electricity', _electricityProviders, 'electricity'),
+          _buildCategorySection(
+            'Electricity',
+            _electricityProviders,
+            'electricity',
+          ),
           const SizedBox(height: 20),
         ],
       ),
@@ -257,10 +290,8 @@ class _PaymentsScreenState extends State<PaymentsScreen>
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 0),
-            separatorBuilder: (_, a) => Divider(
-              height: 1,
-              color: Colors.white.withValues(alpha: 0.06),
-            ),
+            separatorBuilder: (_, a) =>
+                Divider(height: 1, color: Colors.white.withValues(alpha: 0.06)),
             itemCount: _recentPayments.length,
             itemBuilder: (context, index) {
               return _buildPaymentItem(_recentPayments[index]);

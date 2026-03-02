@@ -40,9 +40,20 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 28),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.warning,
+              size: 28,
+            ),
             const SizedBox(width: 10),
-            Text('Security Warning', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(
+              'Security Warning',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -51,27 +62,46 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
           children: [
             Text(
               'Your seed phrase is the MASTER KEY to your wallet. Anyone with it can steal all your funds.',
-              style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.8), height: 1.5),
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.8),
+                height: 1.5,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
               '• Never share it with anyone\n• Never enter it on websites\n• Write it down on paper and store safely',
-              style: GoogleFonts.outfit(fontSize: 13, color: AppColors.warning, height: 1.6),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: AppColors.warning,
+                height: 1.6,
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white54)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: Colors.white54),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentRed,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('I Understand, Show Me', style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: Colors.white)),
+            child: Text(
+              'I Understand, Show Me',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
@@ -184,9 +214,9 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                   padding: EdgeInsets.zero,
                   alignment: Alignment.centerLeft,
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Title
                 Text(
                   'Backup Seed Phrase',
@@ -196,9 +226,9 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                     color: Colors.white,
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Description
                 Text(
                   'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.',
@@ -209,9 +239,9 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                     height: 1.5,
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Seed Phrase Area
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -219,8 +249,8 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                     color: AppColors.cardDark,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: _seedPhraseRevealed 
-                          ? AppColors.warning.withValues(alpha: 0.5) 
+                      color: _seedPhraseRevealed
+                          ? AppColors.warning.withValues(alpha: 0.5)
                           : Colors.white.withValues(alpha: 0.1),
                       width: _seedPhraseRevealed ? 2 : 1,
                     ),
@@ -242,15 +272,17 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                             decoration: BoxDecoration(
                               color: AppColors.warning.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: AppColors.warning.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Center(
                               child: Text(
                                 'Tap to Reveal',
                                 style: GoogleFonts.outfit(
-                                  fontSize: 16, 
-                                  fontWeight: FontWeight.w600, 
-                                  color: AppColors.warning
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.warning,
                                 ),
                               ),
                             ),
@@ -264,13 +296,21 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.timer, size: 16, color: AppColors.warning.withValues(alpha: 0.8)),
+                                Icon(
+                                  Icons.timer,
+                                  size: 16,
+                                  color: AppColors.warning.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Auto-hides in 60s',
                                   style: GoogleFonts.outfit(
-                                    fontSize: 13, 
-                                    color: AppColors.warning.withValues(alpha: 0.8)
+                                    fontSize: 13,
+                                    color: AppColors.warning.withValues(
+                                      alpha: 0.8,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -278,12 +318,24 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                             GestureDetector(
                               onTap: _hideSeedPhrase,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentRed.withValues(alpha: 0.2),
+                                  color: AppColors.accentRed.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Text('Hide', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.accentRed)),
+                                child: Text(
+                                  'Hide',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.accentRed,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -292,15 +344,19 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                         Text(
                           'No seed phrase available.\nThis wallet was imported via private key.',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(fontSize: 14, color: Colors.white54, height: 1.5),
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            color: Colors.white54,
+                            height: 1.5,
+                          ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 if (_seedPhraseRevealed && _seedPhrase != null)
                   Center(
                     child: TextButton.icon(

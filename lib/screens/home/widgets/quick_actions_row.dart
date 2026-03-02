@@ -66,7 +66,9 @@ class _QuickActionButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.cardDark,
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.darkRed.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: AppColors.darkRed.withValues(alpha: 0.4),
+              ),
             ),
             child: Icon(icon, color: AppColors.accentRed, size: 24),
           ),

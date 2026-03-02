@@ -18,10 +18,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     // Constrain width for web/desktop to mobile size
     final maxWidth = screenWidth > 600 ? 430.0 : screenWidth;
-    
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
@@ -33,7 +33,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               builder: (context, constraints) {
                 // Adjust spacing based on available height
                 final isShortScreen = constraints.maxHeight < 700;
-                
+
                 return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
@@ -50,9 +50,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ),
                             child: _buildLanguageSelector(context),
                           ),
-                          
+
                           SizedBox(height: isShortScreen ? 20 : 30),
-                          
+
                           // 3D Owl wallet illustration
                           Image.asset(
                             'assets/images/owl_wallet.png',
@@ -76,9 +76,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               );
                             },
                           ),
-                          
+
                           SizedBox(height: isShortScreen ? 20 : 30),
-                          
+
                           // Welcome heading
                           Text(
                             AppLocalizations.of(context).welcomeTitle,
@@ -89,9 +89,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          
+
                           const SizedBox(height: 10),
-                          
+
                           // Description text
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 42),
@@ -106,25 +106,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               textAlign: TextAlign.center,
                             ),
                           ),
-                          
+
                           const Spacer(),
-                          
+
                           // Create wallet button
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 38),
                             child: _buildCreateWalletButton(context),
                           ),
-                          
+
                           const SizedBox(height: 23),
-                          
+
                           // Add existing wallet button
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 38),
                             child: _buildAddExistingWalletButton(context),
                           ),
-                          
+
                           SizedBox(height: isShortScreen ? 20 : 30),
-                          
+
                           // Terms of use text
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 46),
@@ -137,18 +137,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                   color: Colors.white.withValues(alpha: 0.6),
                                 ),
                                 children: [
-                                  const TextSpan(text: 'By continuing, you agree to the '),
+                                  const TextSpan(
+                                    text: 'By continuing, you agree to the ',
+                                  ),
                                   WidgetSpan(
                                     child: GestureDetector(
                                       onTap: () {
-                                        Navigator.pushNamed(context, '/terms-and-conditions');
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/terms-and-conditions',
+                                        );
                                       },
                                       child: Text(
                                         'terms of use',
                                         style: GoogleFonts.outfit(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white.withValues(alpha: 0.8),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
                                           decoration: TextDecoration.underline,
                                         ),
                                       ),
@@ -159,11 +166,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               ),
                             ),
                           ),
-                          
-                          const SizedBox(height: 20),
-                          
 
-                          
+                          const SizedBox(height: 20),
+
                           const SizedBox(height: 12),
                         ],
                       ),
@@ -199,7 +204,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 builder: (context) => const LanguageSelectionScreen(),
               ),
             );
-            
+
             // If language was changed, update the app locale
             if (languageCode != null && mounted) {
               if (!context.mounted) return;
@@ -213,15 +218,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.language,
-                  color: Colors.white,
-                  size: 29,
-                ),
+                const Icon(Icons.language, color: Colors.white, size: 29),
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(
-                    AppLocalizations.languageNames[AppLocalizations.of(context).locale.languageCode] ?? 'Choose your language',
+                    AppLocalizations.languageNames[AppLocalizations.of(
+                          context,
+                        ).locale.languageCode] ??
+                        'Choose your language',
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
@@ -288,10 +292,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Container(
       height: 53,
       decoration: BoxDecoration(
-        border: Border.all(
-          color: const Color(0xFFC03F2E),
-          width: 2,
-        ),
+        border: Border.all(color: const Color(0xFFC03F2E), width: 2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Material(

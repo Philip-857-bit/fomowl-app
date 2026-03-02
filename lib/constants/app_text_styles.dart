@@ -11,45 +11,45 @@ class AppTextStyles {
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
-  
+
   static TextStyle heading2 = GoogleFonts.outfit(
     fontSize: 24,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
-  
+
   static TextStyle heading3 = GoogleFonts.outfit(
     fontSize: 20,
     fontWeight: FontWeight.w500,
     color: AppColors.textPrimary,
   );
-  
+
   // Body Text - Fredoka
   static TextStyle bodyLarge = GoogleFonts.outfit(
     fontSize: 16,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
   );
-  
+
   static TextStyle bodyMedium = GoogleFonts.outfit(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
   );
-  
+
   static TextStyle bodySmall = GoogleFonts.outfit(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
   );
-  
+
   // Button Text
   static TextStyle button = GoogleFonts.outfit(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
-  
+
   // Caption - Inter
   static TextStyle caption = GoogleFonts.inter(
     fontSize: 12,

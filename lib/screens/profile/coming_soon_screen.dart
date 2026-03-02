@@ -8,7 +8,8 @@ class ComingSoonScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Check if a title was passed in arguments
-    final String title = ModalRoute.of(context)?.settings.arguments as String? ?? 'Feature';
+    final String title =
+        ModalRoute.of(context)?.settings.arguments as String? ?? 'Feature';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -39,9 +40,9 @@ class ComingSoonScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const Spacer(),
-            
+
             // Icon
             Container(
               padding: const EdgeInsets.all(32),
@@ -56,7 +57,7 @@ class ComingSoonScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            
+
             // Text
             Text(
               'Coming Soon',
@@ -79,9 +80,9 @@ class ComingSoonScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
-            
+
             const Spacer(flex: 2),
-            
+
             // Go Back Button
             Padding(
               padding: const EdgeInsets.all(24),

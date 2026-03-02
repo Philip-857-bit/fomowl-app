@@ -39,20 +39,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return;
       }
 
-      final url = Uri.parse('https://fomowl-backend.onrender.com/api/notifications/$address');
+      final url = Uri.parse(
+        'https://fomowl-backend.onrender.com/api/notifications/$address',
+      );
       final response = await http.get(url).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final notifList = data['notifications'] as List<dynamic>? ?? [];
-        
+
         final parsed = notifList.map((j) {
           final dtStr = j['created_at'] as String? ?? '';
           DateTime? dt;
           try {
             dt = DateTime.parse(dtStr);
           } catch (_) {}
-          final formatted = dt != null ? DateFormat('MM.dd.yyyy HH:mm').format(dt) : dtStr;
+          final formatted = dt != null
+              ? DateFormat('MM.dd.yyyy HH:mm').format(dt)
+              : dtStr;
 
           return _Notification(
             id: j['id'] ?? '',
@@ -86,7 +90,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -121,97 +125,121 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             // List State
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
                   : _errorMessage != null
-                      ? Center(
-                          child: Text(
-                            _errorMessage!,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: AppColors.accentRed,
+                  ? Center(
+                      child: Text(
+                        _errorMessage!,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: AppColors.accentRed,
+                        ),
+                      ),
+                    )
+                  : _notifications.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.04),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.notifications_off_outlined,
+                                size: 48,
+                                color: Colors.white.withValues(alpha: 0.15),
+                              ),
                             ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'No notifications yet',
+                              style: GoogleFonts.outfit(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Updates about transactions, security,\nand news will appear here.',
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: Colors.white54,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      separatorBuilder: (_, a) => const SizedBox(height: 10),
+                      itemCount: _notifications.length,
+                      itemBuilder: (context, index) {
+                        final n = _notifications[index];
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: n.isRead
+                                ? Colors.transparent
+                                : AppColors.cardDark,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        )
-                      : _notifications.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(40),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 100, height: 100,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.04),
-                                        shape: BoxShape.circle,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    n.title,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: n.isRead
+                                          ? FontWeight.w500
+                                          : FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    n.date,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: Colors.white.withValues(
+                                        alpha: n.isRead ? 0.4 : 0.7,
                                       ),
-                                      child: Icon(Icons.notifications_off_outlined, size: 48, color: Colors.white.withValues(alpha: 0.15)),
                                     ),
-                                    const SizedBox(height: 24),
-                                    Text(
-                                      'No notifications yet',
-                                      style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Updates about transactions, security,\nand news will appear here.',
-                                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white54, height: 1.5),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                n.message,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: Colors.white.withValues(alpha: 0.6),
+                                  height: 1.4,
                                 ),
                               ),
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              separatorBuilder: (_, a) => const SizedBox(height: 10),
-                              itemCount: _notifications.length,
-                              itemBuilder: (context, index) {
-                                final n = _notifications[index];
-                                return Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: n.isRead ? Colors.transparent : AppColors.cardDark,
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            n.title,
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 16,
-                                              fontWeight: n.isRead ? FontWeight.w500 : FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          Text(
-                                            n.date,
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 12,
-                                              color: Colors.white.withValues(alpha: n.isRead ? 0.4 : 0.7),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        n.message,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 14,
-                                          color: Colors.white.withValues(alpha: 0.6),
-                                          height: 1.4,
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

@@ -3,22 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
 
-enum WalletCreateMode {
-  create,
-  importSeedPhrase,
-  importPrivateKey,
-}
+enum WalletCreateMode { create, importSeedPhrase, importPrivateKey }
 
 class CreateWalletActionSheet extends StatefulWidget {
   final ValueChanged<WalletCreateMode> onConfirm;
 
-  const CreateWalletActionSheet({
-    super.key,
-    required this.onConfirm,
-  });
+  const CreateWalletActionSheet({super.key, required this.onConfirm});
 
   @override
-  State<CreateWalletActionSheet> createState() => _CreateWalletActionSheetState();
+  State<CreateWalletActionSheet> createState() =>
+      _CreateWalletActionSheetState();
 }
 
 class _CreateWalletActionSheetState extends State<CreateWalletActionSheet> {
@@ -35,12 +29,19 @@ class _CreateWalletActionSheetState extends State<CreateWalletActionSheet> {
             Container(
               width: 46,
               height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               'Create / Add Wallet',
-              style: GoogleFonts.outfit(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w600),
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 16),
             _optionTile(
@@ -67,11 +68,16 @@ class _CreateWalletActionSheetState extends State<CreateWalletActionSheet> {
                 minimumSize: const Size.fromHeight(54),
                 backgroundColor: AppColors.accentRed,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: Text(
                 'Confirm',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 17),
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                ),
               ),
             ),
           ],
@@ -95,7 +101,9 @@ class _CreateWalletActionSheetState extends State<CreateWalletActionSheet> {
           color: Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppColors.accentRed.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.1),
+            color: selected
+                ? AppColors.accentRed.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         child: Row(
@@ -117,7 +125,9 @@ class _CreateWalletActionSheetState extends State<CreateWalletActionSheet> {
               ),
             ),
             Icon(
-              selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+              selected
+                  ? Icons.radio_button_checked_rounded
+                  : Icons.radio_button_off_rounded,
               color: selected ? AppColors.accentRed : Colors.white38,
             ),
           ],

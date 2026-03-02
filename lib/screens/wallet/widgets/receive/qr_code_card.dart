@@ -5,11 +5,7 @@ class QrCodeCard extends StatelessWidget {
   final String data;
   final double size;
 
-  const QrCodeCard({
-    super.key,
-    required this.data,
-    this.size = 200,
-  });
+  const QrCodeCard({super.key, required this.data, this.size = 200});
 
   @override
   Widget build(BuildContext context) {

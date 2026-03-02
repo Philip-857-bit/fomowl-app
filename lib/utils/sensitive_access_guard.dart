@@ -47,7 +47,10 @@ class SensitiveAccessGuard {
             return StatefulBuilder(
               builder: (context, setState) => AlertDialog(
                 backgroundColor: AppColors.cardDark,
-                title: Text('Enter Passcode', style: GoogleFonts.outfit(color: Colors.white)),
+                title: Text(
+                  'Enter Passcode',
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
                 content: TextField(
                   controller: controller,
                   obscureText: true,
@@ -62,11 +65,16 @@ class SensitiveAccessGuard {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white54)),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.outfit(color: Colors.white54),
+                    ),
                   ),
                   TextButton(
                     onPressed: () async {
-                      final isValid = await _storage.verifyPasscode(controller.text.trim());
+                      final isValid = await _storage.verifyPasscode(
+                        controller.text.trim(),
+                      );
                       if (!context.mounted) return;
                       if (isValid) {
                         Navigator.pop(context, true);
@@ -74,7 +82,10 @@ class SensitiveAccessGuard {
                         setState(() => hasError = true);
                       }
                     },
-                    child: Text('Confirm', style: GoogleFonts.outfit(color: AppColors.accentRed)),
+                    child: Text(
+                      'Confirm',
+                      style: GoogleFonts.outfit(color: AppColors.accentRed),
+                    ),
                   ),
                 ],
               ),

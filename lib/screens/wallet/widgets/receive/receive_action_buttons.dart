@@ -29,7 +29,11 @@ class ReceiveActionButtons extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 'Share',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -47,7 +51,11 @@ class ReceiveActionButtons extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 'Copy',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),

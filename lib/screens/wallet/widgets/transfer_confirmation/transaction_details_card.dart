@@ -46,19 +46,35 @@ class TransactionDetailsCard extends StatelessWidget {
           _buildNetworkRow(network),
           _buildDivider(),
           const SizedBox(height: 8),
-          isLoadingGas 
-            ? _buildGasLoading() 
-            : _buildFeeRow(gasLabel, gasValue, gasValueUsd, gasEstimationFailed),
+          isLoadingGas
+              ? _buildGasLoading()
+              : _buildFeeRow(
+                  gasLabel,
+                  gasValue,
+                  gasValueUsd,
+                  gasEstimationFailed,
+                ),
           const SizedBox(height: 16),
           _buildDivider(),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(totalLabel, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+              Text(
+                totalLabel,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
               Text(
                 maxTotalDisplay,
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -73,8 +89,21 @@ class TransactionDetailsCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6))),
-          Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
+          ),
         ],
       ),
     );
@@ -86,17 +115,33 @@ class TransactionDetailsCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Network', style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6))),
+          Text(
+            'Network',
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+          ),
           Row(
             children: [
               Container(
                 width: 18,
                 height: 18,
-                decoration: const BoxDecoration(color: AppColors.warning, shape: BoxShape.circle),
+                decoration: const BoxDecoration(
+                  color: AppColors.warning,
+                  shape: BoxShape.circle,
+                ),
                 child: const Icon(Icons.circle, size: 8, color: Colors.white),
               ),
               const SizedBox(width: 6),
-              Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
+              Text(
+                value,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
             ],
           ),
         ],
@@ -109,43 +154,84 @@ class TransactionDetailsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text('Gas Fee', style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60)),
+          Text(
+            'Gas Fee',
+            style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60),
+          ),
           const Spacer(),
-          const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accentRed)),
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.accentRed,
+            ),
+          ),
           const SizedBox(width: 8),
-          Text('Estimating...', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38)),
+          Text(
+            'Estimating...',
+            style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildFeeRow(String label, String value, String usdValue, bool isError) {
+  Widget _buildFeeRow(
+    String label,
+    String value,
+    String usdValue,
+    bool isError,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            Text(label, style: GoogleFonts.outfit(fontSize: 14, color: isError ? AppColors.accentRed : Colors.white.withValues(alpha: 0.6))),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: isError
+                    ? AppColors.accentRed
+                    : Colors.white.withValues(alpha: 0.6),
+              ),
+            ),
             const SizedBox(width: 4),
-            Icon(isError ? Icons.warning_amber_rounded : Icons.help_outline, 
-                 size: 14, 
-                 color: isError ? AppColors.accentRed : Colors.white.withValues(alpha: 0.3)),
+            Icon(
+              isError ? Icons.warning_amber_rounded : Icons.help_outline,
+              size: 14,
+              color: isError
+                  ? AppColors.accentRed
+                  : Colors.white.withValues(alpha: 0.3),
+            ),
           ],
         ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(value, style: GoogleFonts.outfit(
-              fontSize: 14, 
-              fontWeight: FontWeight.w500, 
-              color: isError ? AppColors.accentRed : Colors.white
-            )),
-            if (!isError) Text(usdValue, style: GoogleFonts.outfit(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: isError ? AppColors.accentRed : Colors.white,
+              ),
+            ),
+            if (!isError)
+              Text(
+                usdValue,
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.4),
+                ),
+              ),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildDivider() => Divider(height: 1, color: Colors.white.withValues(alpha: 0.08));
+  Widget _buildDivider() =>
+      Divider(height: 1, color: Colors.white.withValues(alpha: 0.08));
 }

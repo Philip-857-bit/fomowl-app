@@ -21,7 +21,8 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _args ??= ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _args ??=
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (_selectedBillType.isEmpty) {
       _selectedBillType = _billTypes.isNotEmpty ? _billTypes.first : '';
     }
@@ -36,8 +37,10 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
 
   String get _providerName => _args?['providerName'] as String? ?? 'Provider';
   String get _category => _args?['category'] as String? ?? 'airtime';
-  Color get _providerColor => _args?['providerColor'] as Color? ?? AppColors.accentRed;
-  Color get _providerTextColor => _args?['providerTextColor'] as Color? ?? Colors.white;
+  Color get _providerColor =>
+      _args?['providerColor'] as Color? ?? AppColors.accentRed;
+  Color get _providerTextColor =>
+      _args?['providerTextColor'] as Color? ?? Colors.white;
 
   // Dynamic labels & options based on category
   String get _numberLabel {
@@ -74,7 +77,13 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
   List<String> get _billTypes {
     switch (_category) {
       case 'tv':
-        return ['Select Plan', 'GOtv Max', 'GOtv Jolli', 'GOtv Jinja', 'GOtv Smallie'];
+        return [
+          'Select Plan',
+          'GOtv Max',
+          'GOtv Jolli',
+          'GOtv Jinja',
+          'GOtv Smallie',
+        ];
       case 'electricity':
         return ['Pre-paid', 'Post-paid'];
       default:
@@ -214,16 +223,18 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
                           context: context,
                           isScrollControlled: true,
                           backgroundColor: Colors.transparent,
-                          builder: (context) => _SelectBillTypeBottomSheet(
-                            billTypes: _billTypes,
-                          ),
+                          builder: (context) =>
+                              _SelectBillTypeBottomSheet(billTypes: _billTypes),
                         );
                         if (selected != null) {
                           setState(() => _selectedBillType = selected);
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.cardDark,
                           borderRadius: BorderRadius.circular(14),
@@ -232,7 +243,9 @@ class _BillPaymentScreenState extends State<BillPaymentScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              _selectedBillType.isNotEmpty ? _selectedBillType : 'Select Bill Type',
+                              _selectedBillType.isNotEmpty
+                                  ? _selectedBillType
+                                  : 'Select Bill Type',
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
                                 color: Colors.white,
@@ -364,7 +377,10 @@ class _SelectBillTypeBottomSheet extends StatelessWidget {
             return InkWell(
               onTap: () => Navigator.pop(context, type),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
                     Expanded(

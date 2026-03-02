@@ -30,7 +30,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
     final canCheck = await biometricService.canCheckBiometrics();
     final isSupported = await biometricService.isDeviceSupported();
     final hasFingerprint = await biometricService.hasFingerprint();
-    
+
     if (mounted) {
       setState(() {
         _biometricsAvailable = canCheck && isSupported && hasFingerprint;
@@ -50,7 +50,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
     // Save biometric preferences
     if (_fingerprintEnabled) {
       await _storage.setFingerprintEnabled(true);
-      
+
       // Go directly to fingerprint verification
       if (mounted) {
         Navigator.pushNamed(context, '/fingerprint-verification');
@@ -74,7 +74,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
           child: Column(
             children: [
               const Spacer(flex: 2),
-              
+
               // Owl padlock illustration
               Container(
                 width: 200,
@@ -99,9 +99,9 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Title
               Text(
                 'Shield Your Wallet',
@@ -112,9 +112,9 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Description
               Text(
                 'Adding biometric security will ensure you are\nthe only one that can access your wallet',
@@ -125,9 +125,9 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Biometrics not available message
               if (!_biometricsAvailable)
                 Padding(
@@ -162,10 +162,9 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                     ),
                   ),
                 ),
-              
-              if (!_biometricsAvailable)
-                const SizedBox(height: 20),
-              
+
+              if (!_biometricsAvailable) const SizedBox(height: 20),
+
               // Fingerprint option
               _buildBiometricOption(
                 icon: Icons.fingerprint,
@@ -181,9 +180,9 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                   }
                 },
               ),
-              
+
               const SizedBox(height: 40),
-              
+
               // Next button
               SizedBox(
                 width: double.infinity,
@@ -221,7 +220,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
             ],
           ),
@@ -255,11 +254,7 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
               color: const Color(0xFFEB3F3F).withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFFEB3F3F),
-              size: 24,
-            ),
+            child: Icon(icon, color: const Color(0xFFEB3F3F), size: 24),
           ),
           title: Text(
             title,
@@ -279,7 +274,10 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
           ),
           activeTrackColor: const Color(0xFFEB3F3F),
           activeThumbColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
         ),
       ),
     );

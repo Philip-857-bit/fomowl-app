@@ -16,7 +16,7 @@ class KycSuccessScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
-              
+
               // 3 Owls Illustration
               // Mocking it with emojis/text if the image asset isn't available,
               // but assuming proper structure for a future asset
@@ -26,9 +26,16 @@ class KycSuccessScreen extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Image.asset('assets/images/dancing_owls.png', height: 160, errorBuilder: (context, error, stackTrace) {
-                        return const Text('🦉 🦉 🦉', style: TextStyle(fontSize: 80));
-                      }),
+                      Image.asset(
+                        'assets/images/dancing_owls.png',
+                        height: 160,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Text(
+                            '🦉 🦉 🦉',
+                            style: TextStyle(fontSize: 80),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -65,7 +72,11 @@ class KycSuccessScreen extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   // E.g., go to home or pop
-                  Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/home',
+                    (route) => false,
+                  );
                 },
                 child: Container(
                   width: double.infinity,

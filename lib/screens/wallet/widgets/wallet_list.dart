@@ -50,7 +50,9 @@ class WalletList extends StatelessWidget {
                 color: AppColors.cardDark,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isActive ? AppColors.accentRed.withValues(alpha: 0.2) : Colors.transparent,
+                  color: isActive
+                      ? AppColors.accentRed.withValues(alpha: 0.2)
+                      : Colors.transparent,
                 ),
               ),
               child: Row(
@@ -61,12 +63,19 @@ class WalletList extends StatelessWidget {
                       children: [
                         Text(
                           account.name,
-                          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(height: 3),
                         Text(
                           shortenAddress(account.address),
-                          style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.45)),
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.45),
+                          ),
                         ),
                       ],
                     ),
@@ -78,14 +87,22 @@ class WalletList extends StatelessWidget {
                         onTap: () => onRename(account),
                         child: const Padding(
                           padding: EdgeInsets.all(8.0),
-                          child: Icon(Icons.edit, color: Colors.white54, size: 18),
+                          child: Icon(
+                            Icons.edit,
+                            color: Colors.white54,
+                            size: 18,
+                          ),
                         ),
                       ),
                       GestureDetector(
                         onTap: () => onDelete(account),
                         child: const Padding(
                           padding: EdgeInsets.all(8.0),
-                          child: Icon(Icons.delete_outline, color: Color(0xFFFF6B6B), size: 19),
+                          child: Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFFF6B6B),
+                            size: 19,
+                          ),
                         ),
                       ),
                     ],

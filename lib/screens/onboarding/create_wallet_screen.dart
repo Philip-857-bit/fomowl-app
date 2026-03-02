@@ -71,9 +71,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     Navigator.pop(context);
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Title
                 Center(
                   child: Text(
@@ -86,9 +86,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Warning text
                 Center(
                   child: Text(
@@ -101,9 +101,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Mnemonic words grid with blur overlay
                 GestureDetector(
                   onTap: _isRevealed ? null : _toggleReveal,
@@ -113,12 +113,13 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 2.5,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 2.5,
+                            ),
                         itemCount: _mnemonicWords.length,
                         itemBuilder: (context, index) {
                           return Container(
@@ -160,7 +161,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                           );
                         },
                       ),
-                      
+
                       // Blur overlay when not revealed
                       if (!_isRevealed)
                         Positioned.fill(
@@ -172,7 +173,10 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                                 backgroundBlendMode: BlendMode.darken,
                               ),
                               child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+                                filter: ImageFilter.blur(
+                                  sigmaX: 10.0,
+                                  sigmaY: 10.0,
+                                ),
                                 child: Container(
                                   color: Colors.black.withValues(alpha: 0.3),
                                   child: Center(
@@ -204,9 +208,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Copy to clipboard button
                 Center(
                   child: TextButton.icon(
@@ -221,16 +225,16 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: _isRevealed 
+                        color: _isRevealed
                             ? const Color(0xFFEB3F3F)
                             : Colors.white.withValues(alpha: 0.3),
                       ),
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 60),
-                
+
                 // Warning text
                 Center(
                   child: Text(
@@ -243,9 +247,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Continue button
                 SizedBox(
                   width: double.infinity,
@@ -269,7 +273,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                                 end: Alignment.bottomRight,
                               )
                             : null,
-                        color: _isRevealed ? null : Colors.grey.withValues(alpha: 0.3),
+                        color: _isRevealed
+                            ? null
+                            : Colors.grey.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Container(
@@ -286,7 +292,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
               ],
             ),

@@ -36,7 +36,11 @@ class NetworkSelectorSheet extends StatelessWidget {
         Center(
           child: Text(
             'Select Network',
-            style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -45,9 +49,16 @@ class NetworkSelectorSheet extends StatelessWidget {
           return ListTile(
             leading: CircleAvatar(
               radius: 18,
-              backgroundColor: isActive ? AppColors.accentRed.withValues(alpha: 0.2) : Colors.white12,
+              backgroundColor: isActive
+                  ? AppColors.accentRed.withValues(alpha: 0.2)
+                  : Colors.white12,
               child: Text(
-                chain.symbol.isEmpty ? '?' : chain.symbol.substring(0, chain.symbol.length > 3 ? 3 : chain.symbol.length),
+                chain.symbol.isEmpty
+                    ? '?'
+                    : chain.symbol.substring(
+                        0,
+                        chain.symbol.length > 3 ? 3 : chain.symbol.length,
+                      ),
                 style: GoogleFonts.outfit(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -55,9 +66,17 @@ class NetworkSelectorSheet extends StatelessWidget {
                 ),
               ),
             ),
-            title: Text(chain.name, style: GoogleFonts.outfit(color: Colors.white)),
-            subtitle: Text('Chain ID: ${chain.chainId}', style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54)),
-            trailing: isActive ? const Icon(Icons.check_circle, color: AppColors.accentRed) : null,
+            title: Text(
+              chain.name,
+              style: GoogleFonts.outfit(color: Colors.white),
+            ),
+            subtitle: Text(
+              'Chain ID: ${chain.chainId}',
+              style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+            ),
+            trailing: isActive
+                ? const Icon(Icons.check_circle, color: AppColors.accentRed)
+                : null,
             onTap: () => onSelect(chain),
           );
         }),

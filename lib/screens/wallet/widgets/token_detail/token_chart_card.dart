@@ -26,16 +26,28 @@ class TokenChartCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(16),
       child: isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed, strokeWidth: 2))
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: AppColors.accentRed,
+                strokeWidth: 2,
+              ),
+            )
           : chartData.isEmpty
-              ? const Center(child: Text('No chart data', style: TextStyle(color: Colors.white38)))
-              : CustomPaint(
-                  size: const Size(double.infinity, double.infinity),
-                  painter: _ChartPainter(
-                    data: chartData,
-                    lineColor: chartData.last >= chartData.first ? AppColors.success : AppColors.error,
-                  ),
-                ),
+          ? const Center(
+              child: Text(
+                'No chart data',
+                style: TextStyle(color: Colors.white38),
+              ),
+            )
+          : CustomPaint(
+              size: const Size(double.infinity, double.infinity),
+              painter: _ChartPainter(
+                data: chartData,
+                lineColor: chartData.last >= chartData.first
+                    ? AppColors.success
+                    : AppColors.error,
+              ),
+            ),
     );
   }
 }
@@ -91,7 +103,10 @@ class _ChartPainter extends CustomPainter {
     final points = <Offset>[];
     for (int i = 0; i < data.length; i++) {
       final x = i * step;
-      final y = size.height - ((data[i] - minVal) / range * size.height * 0.85 + size.height * 0.05);
+      final y =
+          size.height -
+          ((data[i] - minVal) / range * size.height * 0.85 +
+              size.height * 0.05);
       points.add(Offset(x, y));
     }
 
@@ -128,5 +143,6 @@ class _ChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter oldDelegate) => oldDelegate.data != data;
+  bool shouldRepaint(covariant _ChartPainter oldDelegate) =>
+      oldDelegate.data != data;
 }

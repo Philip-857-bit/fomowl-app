@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class FeedbackService {
-  static const String _baseUrl = 'https://fomowl-backend.onrender.com/api/feedback';
+  static const String _baseUrl =
+      'https://fomowl-backend.onrender.com/api/feedback';
 
   Future<void> submitFeedback({
     required String walletAddress,

@@ -32,7 +32,11 @@ class AddWalletButton extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
-                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

@@ -419,7 +419,7 @@ class BlockchainService extends ChangeNotifier {
     final symbol = await _ethCallString(normalized, '0x95d89b41');
     final name = await _ethCallString(normalized, '0x06fdde03');
     final decimalsRaw = await _ethCallUint(normalized, '0x313ce567');
-    
+
     int? decimals;
     if (decimalsRaw != null) {
       if (decimalsRaw >= BigInt.zero && decimalsRaw <= BigInt.from(255)) {

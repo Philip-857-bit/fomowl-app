@@ -43,7 +43,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     final url = _rpcUrlController.text.trim();
     if (url.isEmpty) return;
 
-    setState(() { _isTesting = true; _rpcValid = null; });
+    setState(() {
+      _isTesting = true;
+      _rpcValid = null;
+    });
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final valid = await blockchain.testRpcUrl(url);
@@ -58,11 +61,11 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
 
   Future<void> _saveNetwork() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() => _isSaving = true);
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    
+
     final chain = EvmChain(
       name: _nameController.text.trim(),
       symbol: _symbolController.text.trim().toUpperCase(),
@@ -70,20 +73,22 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       rpcUrl: _rpcUrlController.text.trim(),
       coinGeckoId: _coinGeckoIdController.text.trim(),
       explorerUrl: _explorerController.text.trim().isNotEmpty
-        ? _explorerController.text.trim()
-        : null,
+          ? _explorerController.text.trim()
+          : null,
       isCustom: true,
     );
 
     final added = await blockchain.addCustomChain(chain);
-    
+
     if (mounted) {
       setState(() => _isSaving = false);
       if (added) {
         ToastUtils.showSuccess('${chain.name} added successfully!');
         Navigator.pop(context, true);
       } else {
-        ToastUtils.showError('A network with Chain ID ${chain.chainId} already exists.');
+        ToastUtils.showError(
+          'A network with Chain ID ${chain.chainId} already exists.',
+        );
       }
     }
   }
@@ -106,7 +111,11 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                   ),
                   Text(
                     'Add Custom Network',
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -126,7 +135,8 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                       _buildTextField(
                         controller: _nameController,
                         hint: 'e.g. Cronos, zkSync Era',
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),
 
@@ -134,7 +144,8 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                       _buildTextField(
                         controller: _symbolController,
                         hint: 'e.g. CRO, ETH',
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.trim().isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),
 
@@ -145,7 +156,8 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         keyboardType: TextInputType.number,
                         validator: (v) {
                           if (v == null || v.trim().isEmpty) return 'Required';
-                          if (int.tryParse(v.trim()) == null) return 'Must be a number';
+                          if (int.tryParse(v.trim()) == null)
+                            return 'Must be a number';
                           return null;
                         },
                       ),
@@ -160,8 +172,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                               controller: _rpcUrlController,
                               hint: 'https://rpc.example.com',
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty) return 'Required';
-                                if (!v.trim().startsWith('http')) return 'Must be a valid URL';
+                                if (v == null || v.trim().isEmpty)
+                                  return 'Required';
+                                if (!v.trim().startsWith('http'))
+                                  return 'Must be a valid URL';
                                 return null;
                               },
                             ),
@@ -170,22 +184,38 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                           GestureDetector(
                             onTap: _isTesting ? null : _testRpc,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
                                 color: _rpcValid == null
-                                  ? AppColors.accentRed.withValues(alpha: 0.2)
-                                  : _rpcValid! ? const Color(0xFF1B5E20).withValues(alpha: 0.3)
-                                  : AppColors.error.withValues(alpha: 0.3),
+                                    ? AppColors.accentRed.withValues(alpha: 0.2)
+                                    : _rpcValid!
+                                    ? const Color(
+                                        0xFF1B5E20,
+                                      ).withValues(alpha: 0.3)
+                                    : AppColors.error.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: _isTesting
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : Icon(
-                                    _rpcValid == null ? Icons.wifi_find
-                                    : _rpcValid! ? Icons.check_circle
-                                    : Icons.error,
-                                    color: Colors.white, size: 20,
-                                  ),
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Icon(
+                                      _rpcValid == null
+                                          ? Icons.wifi_find
+                                          : _rpcValid!
+                                          ? Icons.check_circle
+                                          : Icons.error,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
                             ),
                           ),
                         ],
@@ -194,10 +224,14 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            _rpcValid! ? '✅ RPC is reachable' : '❌ RPC unreachable — check URL',
+                            _rpcValid!
+                                ? '✅ RPC is reachable'
+                                : '❌ RPC unreachable — check URL',
                             style: GoogleFonts.outfit(
                               fontSize: 12,
-                              color: _rpcValid! ? AppColors.success : AppColors.error,
+                              color: _rpcValid!
+                                  ? AppColors.success
+                                  : AppColors.error,
                             ),
                           ),
                         ),
@@ -225,12 +259,20 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, size: 16, color: Colors.white.withValues(alpha: 0.4)),
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Colors.white.withValues(alpha: 0.4),
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Your wallet address works on all EVM chains. Only add networks you trust — malicious RPCs can show fake data.',
-                                style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  height: 1.4,
+                                ),
                               ),
                             ),
                           ],
@@ -245,17 +287,30 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
-                            gradient: _isSaving ? null : AppColors.primaryGradient,
+                            gradient: _isSaving
+                                ? null
+                                : AppColors.primaryGradient,
                             color: _isSaving ? Colors.grey : null,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Center(
                             child: _isSaving
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : Text(
-                                  'Add Network',
-                                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-                                ),
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'Add Network',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),
@@ -276,7 +331,11 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white.withValues(alpha: 0.7)),
+        style: GoogleFonts.outfit(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: Colors.white.withValues(alpha: 0.7),
+        ),
       ),
     );
   }
@@ -294,7 +353,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       style: GoogleFonts.outfit(fontSize: 15, color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.25)),
+        hintStyle: GoogleFonts.outfit(
+          fontSize: 14,
+          color: Colors.white.withValues(alpha: 0.25),
+        ),
         filled: true,
         fillColor: AppColors.cardDark,
         border: OutlineInputBorder(
@@ -309,7 +371,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.error, width: 1),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
     );
   }

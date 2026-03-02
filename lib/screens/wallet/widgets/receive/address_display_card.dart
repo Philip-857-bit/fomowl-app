@@ -47,7 +47,11 @@ class AddressDisplayCard extends StatelessWidget {
                 color: AppColors.accentRed.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.copy, color: AppColors.accentRed, size: 18),
+              child: const Icon(
+                Icons.copy,
+                color: AppColors.accentRed,
+                size: 18,
+              ),
             ),
           ),
         ],

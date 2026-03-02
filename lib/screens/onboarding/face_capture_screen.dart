@@ -22,7 +22,8 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _biometricSettings ??= ModalRoute.of(context)?.settings.arguments as Map<String, bool>?;
+    _biometricSettings ??=
+        ModalRoute.of(context)?.settings.arguments as Map<String, bool>?;
   }
 
   @override
@@ -48,11 +49,15 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       if (mounted) {
         if (authenticated) {
           // Success - check if fingerprint is also needed
-          final fingerprintEnabled = _biometricSettings?['fingerprintEnabled'] ?? false;
-          
+          final fingerprintEnabled =
+              _biometricSettings?['fingerprintEnabled'] ?? false;
+
           if (fingerprintEnabled) {
             // Navigate to fingerprint verification
-            Navigator.pushReplacementNamed(context, '/fingerprint-verification');
+            Navigator.pushReplacementNamed(
+              context,
+              '/fingerprint-verification',
+            );
           } else {
             // Go directly to congratulations
             Navigator.pushReplacementNamed(context, '/congratulations');
@@ -67,7 +72,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError('Biometric authentication not available on this device');
+        ToastUtils.showError(
+          'Biometric authentication not available on this device',
+        );
         setState(() {
           _isVerifying = false;
         });
@@ -96,18 +103,14 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                 },
               ),
             ),
-            
+
             const Spacer(flex: 2),
-            
+
             // Face icon
-            Icon(
-              Icons.face,
-              size: 200,
-              color: const Color(0xFFEB3F3F),
-            ),
-            
+            Icon(Icons.face, size: 200, color: const Color(0xFFEB3F3F)),
+
             const SizedBox(height: 60),
-            
+
             // Instruction text
             Text(
               _isVerifying ? 'Verifying...' : 'Face Verification',
@@ -118,11 +121,11 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             Text(
-              _isVerifying 
+              _isVerifying
                   ? 'Please authenticate using your device biometric'
                   : 'Tap the button below to verify your face',
               style: GoogleFonts.outfit(
@@ -132,9 +135,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const Spacer(flex: 3),
-            
+
             // Verify button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -184,7 +187,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
           ],
         ),

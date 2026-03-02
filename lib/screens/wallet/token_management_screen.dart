@@ -89,7 +89,11 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   Future<void> _toggleToken(Token token, bool hideToken) async {
     final blockchain = context.read<BlockchainService>();
-    await _visibilityService.setTokenHidden(blockchain.activeChain.chainId, token, hideToken);
+    await _visibilityService.setTokenHidden(
+      blockchain.activeChain.chainId,
+      token,
+      hideToken,
+    );
     if (!mounted) return;
     setState(() {
       final key = TokenVisibilityUtils.identifier(token);
@@ -104,7 +108,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   Future<void> _removeCustomToken(CustomTokenDefinition token) async {
     final blockchain = context.read<BlockchainService>();
-    await blockchain.removeCustomToken(blockchain.activeChain.chainId, token.address);
+    await blockchain.removeCustomToken(
+      blockchain.activeChain.chainId,
+      token.address,
+    );
     await _loadData();
     setState(() => _hasChanges = true);
     ToastUtils.showSuccess('Token removed');
@@ -186,7 +193,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     setState(() => _isSearchingRemote = true);
     final blockchain = context.read<BlockchainService>();
     try {
-      final results = await blockchain.searchTokensFromBackend(trimmed, limit: 60);
+      final results = await blockchain.searchTokensFromBackend(
+        trimmed,
+        limit: 60,
+      );
       if (!mounted || trimmed != _query.trim()) return;
       setState(() {
         _searchResults = results;
@@ -262,7 +272,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         context: context,
         builder: (dialogContext) => AlertDialog(
           backgroundColor: AppColors.cardDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Text(
             'Token Detected',
             style: GoogleFonts.outfit(
@@ -288,12 +300,18 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                   children: [
                     Text(
                       'Contract Address',
-                      style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.white54,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       clipboardText,
-                      style: GoogleFonts.outfit(fontSize: 13, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -304,7 +322,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                   Expanded(
                     child: Text(
                       '${detected.name}\n${detected.symbol}',
-                      style: GoogleFonts.outfit(color: Colors.white, height: 1.4),
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -314,7 +335,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text('Ignore', style: GoogleFonts.outfit(color: Colors.white54)),
+              child: Text(
+                'Ignore',
+                style: GoogleFonts.outfit(color: Colors.white54),
+              ),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(dialogContext, true),
@@ -322,7 +346,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.background,
               ),
-              child: Text('Add Token', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+              child: Text(
+                'Add Token',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
             ),
           ],
         ),
@@ -379,12 +406,18 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ),
         title: Text(
           'Manage Tokens',
-          style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.outfit(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         centerTitle: false,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.accentRed),
+            )
           : RefreshIndicator(
               color: AppColors.accentRed,
               onRefresh: _loadData,
@@ -552,7 +585,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     ...customTokens.map(
                       (custom) => Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.cardDark,
                           borderRadius: BorderRadius.circular(14),
@@ -563,17 +599,28 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(custom.name, style: GoogleFonts.outfit(color: Colors.white)),
+                                  Text(
+                                    custom.name,
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
                                   Text(
                                     custom.address,
-                                    style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: Colors.white54,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.white54),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.white54,
+                              ),
                               onPressed: () => _removeCustomToken(custom),
                             ),
                           ],

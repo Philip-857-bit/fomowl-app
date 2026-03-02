@@ -149,16 +149,15 @@ class WalletService {
     await _storage.setActiveWallet(address);
   }
 
-
   Future<void> removeWalletAccount(String address) async {
     final current = await getCurrentWalletAddress();
-    
-    // Perform storage removal first. 
+
+    // Perform storage removal first.
     // This will handle active wallet replacement internally in StorageService.
     await _storage.removeWalletAccount(address);
-    
-    // We don't need to manually setActiveWallet here anymore because 
-    // StorageService.removeWalletAccount handles the active wallet swap 
+
+    // We don't need to manually setActiveWallet here anymore because
+    // StorageService.removeWalletAccount handles the active wallet swap
     // if the removed account was the active one.
   }
 

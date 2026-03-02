@@ -22,11 +22,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
     12,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(
-    12,
-    (index) => FocusNode(),
-  );
-  
+  final List<FocusNode> _focusNodes = List.generate(12, (index) => FocusNode());
+
   List<String>? _originalPhrase;
   bool _isLoading = false;
   final WalletService _walletService = WalletService();
@@ -35,7 +32,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Get the original phrase passed from previous screen
-    _originalPhrase ??= ModalRoute.of(context)?.settings.arguments as List<String>?;
+    _originalPhrase ??=
+        ModalRoute.of(context)?.settings.arguments as List<String>?;
   }
 
   @override
@@ -65,53 +63,62 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   void _verifyAndContinue() {
     // Get entered words
-    final enteredWords = _controllers.map((c) => c.text.trim().toLowerCase()).toList();
-    
+    final enteredWords = _controllers
+        .map((c) => c.text.trim().toLowerCase())
+        .toList();
+
     // Check if all fields are filled
     if (enteredWords.any((word) => word.isEmpty)) {
       ToastUtils.showError('Please fill in all 12 words');
       return;
     }
-    
+
     // Verify against original phrase
     if (_originalPhrase != null) {
-      final originalLower = _originalPhrase!.map((w) => w.toLowerCase()).toList();
+      final originalLower = _originalPhrase!
+          .map((w) => w.toLowerCase())
+          .toList();
       bool isCorrect = true;
-      
+
       for (int i = 0; i < 12; i++) {
         if (enteredWords[i] != originalLower[i]) {
           isCorrect = false;
           break;
         }
       }
-      
+
       if (!isCorrect) {
-        ToastUtils.showError('The seed phrase does not match. Please try again.');
+        ToastUtils.showError(
+          'The seed phrase does not match. Please try again.',
+        );
         return;
       }
     }
-    
+
     // Save the wallet now that phrase is verified
     _saveWalletAndContinue();
   }
 
   Future<void> _saveWalletAndContinue() async {
     if (_originalPhrase == null) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       final mnemonic = _originalPhrase!.join(' ');
-      
-      await _walletService.createWalletFromMnemonic(mnemonic, walletName: 'Main Wallet');
-      
+
+      await _walletService.createWalletFromMnemonic(
+        mnemonic,
+        walletName: 'Main Wallet',
+      );
+
       // Refresh blockchain service to clear any cached data from previous wallet
       if (mounted) {
         Provider.of<BlockchainService>(context, listen: false).refresh();
       }
-      
+
       if (mounted) {
         Navigator.pushNamed(context, '/create-passcode');
       }
@@ -150,9 +157,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     Navigator.pop(context);
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Title
                 Center(
                   child: Text(
@@ -165,9 +172,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Warning text
                 Center(
                   child: Text(
@@ -180,9 +187,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Input fields grid
                 GridView.builder(
                   shrinkWrap: true,
@@ -230,8 +237,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 contentPadding: EdgeInsets.zero,
                                 isDense: true,
                               ),
-                              textInputAction: index < 11 
-                                  ? TextInputAction.next 
+                              textInputAction: index < 11
+                                  ? TextInputAction.next
                                   : TextInputAction.done,
                               onSubmitted: (_) {
                                 if (index < 11) {
@@ -247,9 +254,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Paste from clipboard button
                 Center(
                   child: TextButton.icon(
@@ -269,9 +276,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 60),
-                
+
                 // Instruction text
                 Center(
                   child: Text(
@@ -284,9 +291,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Continue button
                 SizedBox(
                   width: double.infinity,
@@ -303,12 +310,16 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     ),
                     child: Ink(
                       decoration: BoxDecoration(
-                        gradient: _isLoading ? null : const LinearGradient(
-                          colors: [Color(0xFFC03F2E), Color(0xFF640C0B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        color: _isLoading ? Colors.grey.withValues(alpha: 0.3) : null,
+                        gradient: _isLoading
+                            ? null
+                            : const LinearGradient(
+                                colors: [Color(0xFFC03F2E), Color(0xFF640C0B)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        color: _isLoading
+                            ? Colors.grey.withValues(alpha: 0.3)
+                            : null,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Container(
@@ -334,11 +345,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 40),
-                
 
-                
+                const SizedBox(height: 40),
+
                 const SizedBox(height: 12),
               ],
             ),

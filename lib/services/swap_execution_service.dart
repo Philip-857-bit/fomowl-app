@@ -29,12 +29,13 @@ class SwapExecutionService {
     SwapService? swapService, // Kept constructor sig for compatibility
   }) : _walletService = walletService ?? WalletService();
 
-  static const String _backendApiBase = 'https://fomowl-backend.onrender.com/api/swap';
-
+  static const String _backendApiBase =
+      'https://fomowl-backend.onrender.com/api/swap';
 
   /// Builds calldata via backend and broadcasts the swap transaction.
   Future<SwapExecutionResult> execute({
-    required SwapQuote quote, // Keep signature compatibility, despite us re-querying 1inch for calldata
+    required SwapQuote
+    quote, // Keep signature compatibility, despite us re-querying 1inch for calldata
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
@@ -70,45 +71,57 @@ class SwapExecutionService {
   }
 
   Future<SwapExecutionResult> _executeStandard({
-     required Token fromToken,
-     required Token toToken,
-     required String fromAmountWei,
-     required double slippagePercent,
-     required BlockchainService blockchain,
-     required String walletAddress,
+    required Token fromToken,
+    required Token toToken,
+    required String fromAmountWei,
+    required double slippagePercent,
+    required BlockchainService blockchain,
+    required String walletAddress,
   }) async {
     final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
     try {
-      // 1. Fetch swap transaction payload from Backend 
-      final src = fromToken.contractAddress?.isNotEmpty == true ? fromToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-      final dst = toToken.contractAddress?.isNotEmpty == true ? toToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-      
+      // 1. Fetch swap transaction payload from Backend
+      final src = fromToken.contractAddress?.isNotEmpty == true
+          ? fromToken.contractAddress!
+          : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+      final dst = toToken.contractAddress?.isNotEmpty == true
+          ? toToken.contractAddress!
+          : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+
       final rawAmountStr = fromAmountWei;
 
-      final url = Uri.parse('$_backendApiBase/transaction'
-          '?chainId=${blockchain.activeChain.chainId}'
-          '&src=$src'
-          '&dst=$dst'
-          '&amount=$rawAmountStr'
-          '&from=$walletAddress'
-          '&slippage=$slippagePercent');
+      final url = Uri.parse(
+        '$_backendApiBase/transaction'
+        '?chainId=${blockchain.activeChain.chainId}'
+        '&src=$src'
+        '&dst=$dst'
+        '&amount=$rawAmountStr'
+        '&from=$walletAddress'
+        '&slippage=$slippagePercent',
+      );
 
       final response = await http.get(url).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
-         throw Exception('Backend returned swap compilation error: ${response.body}');
+        throw Exception(
+          'Backend returned swap compilation error: ${response.body}',
+        );
       }
 
       final data = jsonDecode(response.body);
       final txData = data['transaction'];
       if (txData == null) {
-          throw Exception('Backend returned null tx object');
+        throw Exception('Backend returned null tx object');
       }
 
       // 2. Prepare Web3 Transaction
       final toAddress = EthereumAddress.fromHex(txData['to']);
-      final gasPrice = BigInt.tryParse(txData['gasPrice']?.toString() ?? '0') ?? BigInt.zero;
-      final dataBytes = hexToBytes(txData['data'].toString().replaceFirst('0x', ''));
-      final valueWei = BigInt.tryParse(txData['value']?.toString() ?? '0') ?? BigInt.zero;
+      final gasPrice =
+          BigInt.tryParse(txData['gasPrice']?.toString() ?? '0') ?? BigInt.zero;
+      final dataBytes = hexToBytes(
+        txData['data'].toString().replaceFirst('0x', ''),
+      );
+      final valueWei =
+          BigInt.tryParse(txData['value']?.toString() ?? '0') ?? BigInt.zero;
 
       final tx = Transaction(
         to: toAddress,
@@ -135,45 +148,58 @@ class SwapExecutionService {
   }
 
   Future<SwapExecutionResult> _executeFusion({
-     required Token fromToken,
-     required Token toToken,
-     required String fromAmountWei,
-     required BlockchainService blockchain,
-     required String walletAddress,
+    required Token fromToken,
+    required Token toToken,
+    required String fromAmountWei,
+    required BlockchainService blockchain,
+    required String walletAddress,
   }) async {
     try {
-      final src = fromToken.contractAddress?.isNotEmpty == true ? fromToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-      final dst = toToken.contractAddress?.isNotEmpty == true ? toToken.contractAddress! : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-      
+      final src = fromToken.contractAddress?.isNotEmpty == true
+          ? fromToken.contractAddress!
+          : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+      final dst = toToken.contractAddress?.isNotEmpty == true
+          ? toToken.contractAddress!
+          : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+
       final rawAmountStr = fromAmountWei;
 
       // 1. Get Gasless Quote
-      final quoteUrl = Uri.parse('$_backendApiBase/fusion/quote'
-          '?chainId=${blockchain.activeChain.chainId}'
-          '&fromTokenAddress=$src'
-          '&toTokenAddress=$dst'
-          '&amount=$rawAmountStr'
-          '&walletAddress=$walletAddress');
+      final quoteUrl = Uri.parse(
+        '$_backendApiBase/fusion/quote'
+        '?chainId=${blockchain.activeChain.chainId}'
+        '&fromTokenAddress=$src'
+        '&toTokenAddress=$dst'
+        '&amount=$rawAmountStr'
+        '&walletAddress=$walletAddress',
+      );
 
-      final quoteResponse = await http.get(quoteUrl).timeout(const Duration(seconds: 15));
+      final quoteResponse = await http
+          .get(quoteUrl)
+          .timeout(const Duration(seconds: 15));
       if (quoteResponse.statusCode != 200) {
-         throw Exception('Backend returned gasless quote error: ${quoteResponse.body}');
+        throw Exception(
+          'Backend returned gasless quote error: ${quoteResponse.body}',
+        );
       }
 
       final quoteData = jsonDecode(quoteResponse.body);
-      
+
       // 0x Gasless Payload Extraction
       Map<String, dynamic>? eip712Data;
       if (quoteData['trade'] != null && quoteData['trade']['eip712'] != null) {
         eip712Data = quoteData['trade']['eip712'];
-      } else if (quoteData['permit2'] != null && quoteData['permit2']['eip712'] != null) {
+      } else if (quoteData['permit2'] != null &&
+          quoteData['permit2']['eip712'] != null) {
         eip712Data = quoteData['permit2']['eip712'];
       } else if (quoteData['eip712'] != null) {
         eip712Data = quoteData['eip712'];
       }
 
       if (eip712Data == null) {
-          throw Exception('Backend quote did not contain an EIP-712 signature payload. Check 0x Permit2 response schemas.');
+        throw Exception(
+          'Backend quote did not contain an EIP-712 signature payload. Check 0x Permit2 response schemas.',
+        );
       }
 
       // 2. Sign EIP-712 Payload
@@ -182,32 +208,42 @@ class SwapExecutionService {
         final eip712JsonString = jsonEncode(eip712Data);
         signature = await _walletService.signTypedData(eip712JsonString);
       } catch (e) {
-         throw Exception('Failed to sign gasless Permit2 payload: $e');
+        throw Exception('Failed to sign gasless Permit2 payload: $e');
       }
 
       // 3. Submit Signed Order
-      final submitUrl = Uri.parse('$_backendApiBase/fusion/order/submit/${blockchain.activeChain.chainId}');
-      
+      final submitUrl = Uri.parse(
+        '$_backendApiBase/fusion/order/submit/${blockchain.activeChain.chainId}',
+      );
+
       final submitPayload = Map<String, dynamic>.from(quoteData);
       submitPayload['signature'] = signature;
 
-      final submitResponse = await http.post(
-        submitUrl,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(submitPayload),
-      ).timeout(const Duration(seconds: 15));
+      final submitResponse = await http
+          .post(
+            submitUrl,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(submitPayload),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (submitResponse.statusCode != 200) {
-         throw Exception('Backend relative order submission failed: ${submitResponse.body}');
+        throw Exception(
+          'Backend relative order submission failed: ${submitResponse.body}',
+        );
       }
 
       final submitData = jsonDecode(submitResponse.body);
-      final transactionHash = submitData['transactionHash'] ??
+      final transactionHash =
+          submitData['transactionHash'] ??
           submitData['hash'] ??
           submitData['orderHash'] ??
           submitData['orderId'];
 
-      return SwapExecutionResult(success: true, transactionHash: transactionHash);
+      return SwapExecutionResult(
+        success: true,
+        transactionHash: transactionHash,
+      );
     } catch (e) {
       debugPrint('Fusion execution failed: $e');
       return SwapExecutionResult(success: false, error: e.toString());

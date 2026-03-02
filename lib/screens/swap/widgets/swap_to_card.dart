@@ -35,7 +35,13 @@ class SwapToCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Swapping To:', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.6))),
+          Text(
+            'Swapping To:',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -43,14 +49,31 @@ class SwapToCard extends StatelessWidget {
                 child: isCalculating
                     ? Row(
                         children: [
-                          const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: AppColors.accentRed, strokeWidth: 2)),
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: AppColors.accentRed,
+                              strokeWidth: 2,
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Text('Calculating...', style: GoogleFonts.outfit(fontSize: 16, color: Colors.white54)),
+                          Text(
+                            'Calculating...',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              color: Colors.white54,
+                            ),
+                          ),
                         ],
                       )
                     : Text(
                         amountText.isEmpty ? '0' : amountText,
-                        style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w600, color: Colors.white),
+                        style: GoogleFonts.outfit(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
               ),
               SwapTokenChip(token: token, onTap: onSelectToken),
@@ -60,15 +83,28 @@ class SwapToCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('\$${usdValue.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.5))),
+              Text(
+                '\$${usdValue.toStringAsFixed(2)}',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
+              ),
               Row(
                 children: [
                   Text(
                     '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
-                    style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.account_balance_wallet_outlined, size: 14, color: Colors.white.withValues(alpha: 0.4)),
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 14,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
                 ],
               ),
             ],

@@ -8,7 +8,8 @@ import '../utils/token_visibility_utils.dart';
 class TokenVisibilityService {
   TokenVisibilityService._internal();
 
-  static final TokenVisibilityService _instance = TokenVisibilityService._internal();
+  static final TokenVisibilityService _instance =
+      TokenVisibilityService._internal();
 
   factory TokenVisibilityService() => _instance;
 

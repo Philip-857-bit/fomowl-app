@@ -30,9 +30,9 @@ class ImportWalletScreen extends StatelessWidget {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Title
             Center(
               child: Text(
@@ -45,9 +45,9 @@ class ImportWalletScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
-            
+
             const SizedBox(height: 40),
-            
+
             // "Most popular" label
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 23),
@@ -60,9 +60,9 @@ class ImportWalletScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 23),
-            
+
             // Secret phrase option
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 21),
@@ -76,9 +76,9 @@ class ImportWalletScreen extends StatelessWidget {
                 },
               ),
             ),
-            
+
             const SizedBox(height: 22),
-            
+
             // Private key option
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 21),
@@ -92,11 +92,9 @@ class ImportWalletScreen extends StatelessWidget {
                 },
               ),
             ),
-            
-            const Spacer(),
-            
 
-            
+            const Spacer(),
+
             const SizedBox(height: 12),
           ],
         ),
@@ -141,15 +139,11 @@ class ImportWalletScreen extends StatelessWidget {
                     color: iconColor.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    icon,
-                    color: iconColor,
-                    size: 20,
-                  ),
+                  child: Icon(icon, color: iconColor, size: 20),
                 ),
-                
+
                 const SizedBox(width: 23),
-                
+
                 // Title
                 Expanded(
                   child: Text(
@@ -162,7 +156,7 @@ class ImportWalletScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                
+
                 // Arrow
                 const Icon(
                   Icons.arrow_forward_ios,

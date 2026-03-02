@@ -46,7 +46,9 @@ class SettingsItemTile extends StatelessWidget {
               ),
               child: Icon(
                 icon,
-                color: attention ? AppColors.accentRed : const Color(0xFFA7B1C4),
+                color: attention
+                    ? AppColors.accentRed
+                    : const Color(0xFFA7B1C4),
                 size: 20,
               ),
             ),

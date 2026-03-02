@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 class WalletOptionCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -43,17 +44,28 @@ class WalletOptionCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.white.withValues(alpha: 0.5)),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
           ],
         ),
       ),

@@ -34,16 +34,35 @@ class CurrencyBottomSheet extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            _buildCurrencyOption(context, 'NGN', Icons.flag_circle, Colors.green),
-            _buildCurrencyOption(context, 'GBP', Icons.currency_pound, Colors.tealAccent),
+            _buildCurrencyOption(
+              context,
+              'NGN',
+              Icons.flag_circle,
+              Colors.green,
+            ),
+            _buildCurrencyOption(
+              context,
+              'GBP',
+              Icons.currency_pound,
+              Colors.tealAccent,
+            ),
             _buildCurrencyOption(context, 'Euro', Icons.euro, Colors.blue),
-            _buildCurrencyOption(context, 'USDT', Icons.currency_bitcoin, Colors.teal),
+            _buildCurrencyOption(
+              context,
+              'USDT',
+              Icons.currency_bitcoin,
+              Colors.teal,
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -51,7 +70,12 @@ class CurrencyBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildCurrencyOption(BuildContext context, String title, IconData icon, Color iconColor) {
+  Widget _buildCurrencyOption(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color iconColor,
+  ) {
     return InkWell(
       onTap: () => Navigator.pop(context, title),
       child: Container(
@@ -64,7 +88,8 @@ class CurrencyBottomSheet extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 24, height: 24,
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
                 color: iconColor,
                 shape: BoxShape.circle,
@@ -119,15 +144,34 @@ class ServiceProviderBottomSheet extends StatelessWidget {
                   ),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.close, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            _buildProviderOption(context, 'Alchemy Pay', Icons.rocket_launch, Colors.white),
-            _buildProviderOption(context, 'Google Pay', Icons.g_mobiledata, Colors.white),
-            _buildProviderOption(context, 'Binance Pay', Icons.currency_bitcoin, Colors.amber),
+            _buildProviderOption(
+              context,
+              'Alchemy Pay',
+              Icons.rocket_launch,
+              Colors.white,
+            ),
+            _buildProviderOption(
+              context,
+              'Google Pay',
+              Icons.g_mobiledata,
+              Colors.white,
+            ),
+            _buildProviderOption(
+              context,
+              'Binance Pay',
+              Icons.currency_bitcoin,
+              Colors.amber,
+            ),
             const SizedBox(height: 24),
           ],
         ),
@@ -135,7 +179,12 @@ class ServiceProviderBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildProviderOption(BuildContext context, String title, IconData icon, Color iconColor) {
+  Widget _buildProviderOption(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color iconColor,
+  ) {
     return InkWell(
       onTap: () => Navigator.pop(context, title),
       child: Container(
@@ -148,7 +197,8 @@ class ServiceProviderBottomSheet extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 24, height: 24,
+              width: 24,
+              height: 24,
               decoration: BoxDecoration(
                 color: AppColors.cardDark,
                 shape: BoxShape.circle,

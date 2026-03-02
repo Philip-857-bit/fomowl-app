@@ -16,14 +16,15 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
   bool _check1 = false;
   bool _check2 = false;
   bool _check3 = false;
-  
+
   List<String>? _mnemonicWords;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Get the mnemonic words passed from previous screen
-    _mnemonicWords ??= ModalRoute.of(context)?.settings.arguments as List<String>?;
+    _mnemonicWords ??=
+        ModalRoute.of(context)?.settings.arguments as List<String>?;
   }
 
   bool get _allChecked => _check1 && _check2 && _check3;
@@ -59,9 +60,9 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                     },
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Owl padlock illustration
                 Image.asset(
                   'assets/images/owl_lock.png',
@@ -84,9 +85,9 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Title
                 Text(
                   'Confirm your secret phrase',
@@ -97,9 +98,9 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Checkbox 1
                 _buildCheckbox(
                   value: _check1,
@@ -110,9 +111,9 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                     });
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Checkbox 2
                 _buildCheckbox(
                   value: _check2,
@@ -123,22 +124,23 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                     });
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Checkbox 3
                 _buildCheckbox(
                   value: _check3,
-                  text: 'My funds can be stolen if someone else sees my key phrase.',
+                  text:
+                      'My funds can be stolen if someone else sees my key phrase.',
                   onChanged: (value) {
                     setState(() {
                       _check3 = value ?? false;
                     });
                   },
                 ),
-                
+
                 const SizedBox(height: 60),
-                
+
                 // Continue button
                 SizedBox(
                   width: double.infinity,
@@ -162,7 +164,9 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                                 end: Alignment.bottomRight,
                               )
                             : null,
-                        color: _allChecked ? null : Colors.grey.withValues(alpha: 0.3),
+                        color: _allChecked
+                            ? null
+                            : Colors.grey.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Container(
@@ -179,7 +183,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
               ],
             ),
@@ -213,13 +217,8 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
         controlAffinity: ListTileControlAffinity.leading,
         checkColor: Colors.white,
         activeColor: const Color(0xFF6B6B6B),
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: 0.3),
-          width: 1,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.3), width: 1),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );

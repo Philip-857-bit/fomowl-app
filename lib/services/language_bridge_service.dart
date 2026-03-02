@@ -130,13 +130,17 @@ class LanguageBridgeService {
         .timeout(const Duration(seconds: 15));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Translation request failed (HTTP ${response.statusCode})');
+      throw Exception(
+        'Translation request failed (HTTP ${response.statusCode})',
+      );
     }
     try {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return data['translatedText']?.toString() ?? text;
     } catch (e) {
-      debugPrint('Failed to parse translation response: $e. Body: ${response.body}');
+      debugPrint(
+        'Failed to parse translation response: $e. Body: ${response.body}',
+      );
       return text;
     }
   }

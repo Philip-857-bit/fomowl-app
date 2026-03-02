@@ -262,7 +262,8 @@ class AppLocalizations {
     'wallet_imported': 'Your wallet has been imported successfully',
     'go_to_wallet': 'Go to Wallet',
     'reset_failed': 'Failed to reset app data. Please try again.',
-    'confirm_clear_local_data': 'This clears local wallet data on this device. Ensure your seed phrase is backed up.',
+    'confirm_clear_local_data':
+        'This clears local wallet data on this device. Ensure your seed phrase is backed up.',
     'cancel': 'Cancel',
     'action_required': 'Action Required',
   };
@@ -363,8 +364,10 @@ class AppLocalizations {
     'wallet_created': 'Tu billetera ha sido creada exitosamente',
     'wallet_imported': 'Tu billetera ha sido importada exitosamente',
     'go_to_wallet': 'Ir a Billetera',
-    'reset_failed': 'Error al restablecer los datos de la aplicación. Por favor, inténtalo de nuevo.',
-    'confirm_clear_local_data': 'Esto borra los datos de la billetera local en este dispositivo. Asegúrese de que su frase de recuperación esté respaldada.',
+    'reset_failed':
+        'Error al restablecer los datos de la aplicación. Por favor, inténtalo de nuevo.',
+    'confirm_clear_local_data':
+        'Esto borra los datos de la billetera local en este dispositivo. Asegúrese de que su frase de recuperación esté respaldada.',
     'cancel': 'Cancelar',
     'action_required': 'Acción requerida',
   };
@@ -465,8 +468,10 @@ class AppLocalizations {
     'wallet_created': 'Votre portefeuille a été créé avec succès',
     'wallet_imported': 'Votre portefeuille a été importé avec succès',
     'go_to_wallet': 'Aller au Portefeuille',
-    'reset_failed': 'Échec de la réinitialisation des données de l\'application. Veuillez réessayer.',
-    'confirm_clear_local_data': 'Cela efface les données du portefeuille local sur cet appareil. Assurez-vous que votre phrase de récupération est sauvegardée.',
+    'reset_failed':
+        'Échec de la réinitialisation des données de l\'application. Veuillez réessayer.',
+    'confirm_clear_local_data':
+        'Cela efface les données du portefeuille local sur cet appareil. Assurez-vous que votre phrase de récupération est sauvegardée.',
     'cancel': 'Annuler',
     'action_required': 'Action requise',
   };
@@ -610,7 +615,8 @@ class AppLocalizations {
     'nft_preview': 'معاينة NFT',
     'view_all': 'عرض الكل',
     'no_nfts_found': 'لم يتم العثور على NFTs',
-    'nft_preview_description': 'ستظهر معاينة NFT الخاصة بك هنا على الشبكات المدعومة.',
+    'nft_preview_description':
+        'ستظهر معاينة NFT الخاصة بك هنا على الشبكات المدعومة.',
     'send': 'إرسال',
     'receive': 'استقبال',
     'buy': 'شراء',
@@ -652,7 +658,8 @@ class AppLocalizations {
     'confirm_transfer': 'تأكيد التحويل',
     'gas_fee': 'رسوم الغاز',
     'transaction_details': 'تفاصيل المعاملة',
-    'transfer_warning_message': 'تحقق من عنوان المستلم بعناية. المعاملات دائمة ولا يمكن التراجع عنها.',
+    'transfer_warning_message':
+        'تحقق من عنوان المستلم بعناية. المعاملات دائمة ولا يمكن التراجع عنها.',
     'max_total': 'المجموع الأقصى',
     'amount': 'المبلغ',
     'estimation_failed': 'فشل التقدير',
@@ -664,8 +671,10 @@ class AppLocalizations {
     'wallet_created': 'تم إنشاء محفظتك بنجاح',
     'wallet_imported': 'تم استيراد محفظتك بنجاح',
     'go_to_wallet': 'الذهاب إلى المحفظة',
-    'reset_failed': 'فشل في إعادة تعيين بيانات التطبيق. يرجى المحاولة مرة أخرى.',
-    'confirm_clear_local_data': 'سيؤدي هذا إلى مسح بيانات المحفظة المحلية على هذا الجهاز. تأكد من الاحتفاظ بنسخة احتياطية من العبارة السرية.',
+    'reset_failed':
+        'فشل في إعادة تعيين بيانات التطبيق. يرجى المحاولة مرة أخرى.',
+    'confirm_clear_local_data':
+        'سيؤدي هذا إلى مسح بيانات المحفظة المحلية على هذا الجهاز. تأكد من الاحتفاظ بنسخة احتياطية من العبارة السرية.',
     'cancel': 'إلغاء',
     'action_required': 'مطلوب اتخاذ إجراء',
   };

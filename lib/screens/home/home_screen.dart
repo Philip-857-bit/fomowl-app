@@ -181,7 +181,9 @@ class _HomeScreenState extends State<HomeScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.cardDark,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text(
             'Token Detected',
             textAlign: TextAlign.center,
@@ -198,9 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 4),
               Text(
                 detected.symbol,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
               ),
               const SizedBox(height: 10),
               Text(
@@ -557,7 +557,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 if (_nftPreview.isEmpty) {
                                   ToastUtils.showInfo('No NFTs to display');
                                 } else {
-                                  ToastUtils.showInfo('NFTs are already shown on home');
+                                  ToastUtils.showInfo(
+                                    'NFTs are already shown on home',
+                                  );
                                 }
                               },
                               isTokenHidden: _isTokenHidden,

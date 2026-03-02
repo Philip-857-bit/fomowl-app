@@ -25,7 +25,9 @@ class TimeframeSelector extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+              color: isSelected
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Colors.white12),
             ),
@@ -34,7 +36,9 @@ class TimeframeSelector extends StatelessWidget {
               style: GoogleFonts.outfit(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.6),
+                color: isSelected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.6),
               ),
             ),
           ),

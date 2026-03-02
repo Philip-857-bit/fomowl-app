@@ -35,11 +35,19 @@ class AmountSummary extends StatelessWidget {
             children: [
               TextSpan(
                 text: amountText,
-                style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white),
+                style: GoogleFonts.outfit(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
               TextSpan(
                 text: ' $symbol',
-                style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w600, color: AppColors.accentRed),
+                style: GoogleFonts.outfit(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accentRed,
+                ),
               ),
             ],
           ),

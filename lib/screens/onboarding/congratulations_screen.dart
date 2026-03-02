@@ -16,7 +16,7 @@ class CongratulationsScreen extends StatelessWidget {
         child: Column(
           children: [
             const Spacer(flex: 2),
-            
+
             // Dancing owls illustration
             Image.asset(
               'assets/images/dancing_owls.png',
@@ -32,7 +32,11 @@ class CongratulationsScreen extends StatelessWidget {
                     children: [
                       Icon(Icons.celebration, size: 80, color: Colors.grey),
                       SizedBox(width: 20),
-                      Icon(Icons.celebration, size: 80, color: Color(0xFFEB3F3F)),
+                      Icon(
+                        Icons.celebration,
+                        size: 80,
+                        color: Color(0xFFEB3F3F),
+                      ),
                       SizedBox(width: 20),
                       Icon(Icons.celebration, size: 80, color: Colors.brown),
                     ],
@@ -40,9 +44,9 @@ class CongratulationsScreen extends StatelessWidget {
                 );
               },
             ),
-            
+
             const SizedBox(height: 60),
-            
+
             // Title
             Text(
               'Congratulation',
@@ -53,9 +57,9 @@ class CongratulationsScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Subtitle
             Text(
               'You are now an official Owlian',
@@ -66,9 +70,9 @@ class CongratulationsScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const Spacer(flex: 3),
-            
+
             // Enter wallet button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -116,11 +120,9 @@ class CongratulationsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
-            const SizedBox(height: 40),
-            
 
-            
+            const SizedBox(height: 40),
+
             const SizedBox(height: 12),
           ],
         ),

@@ -60,7 +60,9 @@ class BalanceCard extends StatelessWidget {
                     GestureDetector(
                       onTap: onToggleVisibility,
                       child: Icon(
-                        isBalanceVisible ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        isBalanceVisible
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                         size: 16,
                         color: Colors.white.withValues(alpha: 0.7),
                       ),
@@ -70,7 +72,10 @@ class BalanceCard extends StatelessWidget {
                       const SizedBox(
                         width: 12,
                         height: 12,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       ),
                     ],
                     const Spacer(),
@@ -112,7 +117,11 @@ class BalanceCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   formattedBalance,
-                  style: GoogleFonts.outfit(fontSize: 36, fontWeight: FontWeight.w600, color: Colors.white),
+                  style: GoogleFonts.outfit(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -145,11 +154,19 @@ class BalanceCard extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_circle_outline, size: 18, color: AppColors.background),
+                  Icon(
+                    Icons.add_circle_outline,
+                    size: 18,
+                    color: AppColors.background,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Deposit Funds',
-                    style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.background),
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.background,
+                    ),
                   ),
                 ],
               ),

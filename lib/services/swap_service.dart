@@ -23,10 +23,30 @@ class SwapQuote {
 /// Swap Service
 /// Routes all swap intents through the secure Rust backend aggregating 1inch V5.2 and Fusion.
 class SwapService {
-  static const String _backendApiBase = 'https://fomowl-backend.onrender.com/api/swap';
+  static const String _backendApiBase =
+      'https://fomowl-backend.onrender.com/api/swap';
   static const Set<int> supportedQuoteChainIds = {
-    1, 10, 56, 137, 8453, 42161, 43114, 59144, 534352, 5000,
-    81457, 34443, 480, 10143, 130, 80094, 57073, 9745, 143, 146, 2741,
+    1,
+    10,
+    56,
+    137,
+    8453,
+    42161,
+    43114,
+    59144,
+    534352,
+    5000,
+    81457,
+    34443,
+    480,
+    10143,
+    130,
+    80094,
+    57073,
+    9745,
+    143,
+    146,
+    2741,
   };
   static const Set<int> supportedGaslessChainIds = {1, 10, 137, 8453, 42161};
   String? _lastError;
@@ -63,10 +83,14 @@ class SwapService {
 
     try {
       final endpoint = isGasless ? 'fusion/quote' : 'quote';
-      
+
       // Native ETH/token addresses for 0x (uses WETH/WBNB address implicitly or 0xeeee...)
-      final src = fromTokenAddress.isEmpty ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : fromTokenAddress;
-      final dst = toTokenAddress.isEmpty ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' : toTokenAddress;
+      final src = fromTokenAddress.isEmpty
+          ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+          : fromTokenAddress;
+      final dst = toTokenAddress.isEmpty
+          ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+          : toTokenAddress;
 
       final queryParams = <String, String>{
         'chainId': '$chainId',
@@ -81,9 +105,9 @@ class SwapService {
         queryParams['dst'] = dst;
       }
 
-      final url = Uri.parse('$_backendApiBase/$endpoint').replace(
-        queryParameters: queryParams,
-      );
+      final url = Uri.parse(
+        '$_backendApiBase/$endpoint',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(url).timeout(const Duration(seconds: 15));
 
@@ -91,32 +115,37 @@ class SwapService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final liquidityAvailable = data['liquidityAvailable'] == true;
         if (!liquidityAvailable) {
-          _lastError = 'No route found for this token pair on the selected network.';
+          _lastError =
+              'No route found for this token pair on the selected network.';
           return null;
         }
-        
+
         // 0x response
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';
         final dstAmount = BigInt.tryParse(dstAmountWei) ?? BigInt.zero;
         if (dstAmount <= BigInt.zero) {
-          _lastError = 'No route found for this token pair on the selected network.';
+          _lastError =
+              'No route found for this token pair on the selected network.';
           return null;
         }
         final allowanceTarget = data['allowanceTarget']?.toString() ?? '';
-        
+
         // Convert wei to simple formatted string for UI
         final estimate = dstAmount.toDouble();
         final rawDecimals = data['tokenMetadata']?['buyToken']?['decimals'];
         final decimals = rawDecimals is int
             ? rawDecimals
             : int.tryParse(rawDecimals?.toString() ?? '') ?? buyTokenDecimals;
-        final formatted = (estimate / math.pow(10, decimals)).toStringAsFixed(6);
-        
+        final formatted = (estimate / math.pow(10, decimals)).toStringAsFixed(
+          6,
+        );
+
         return SwapQuote(
           amountOutWei: dstAmountWei,
           amountOutFormatted: formatted,
           networkFeeUsd: (data['networkFeeUsd'] as num?)?.toDouble() ?? 0.0,
-          networkFeeNative: (data['networkFeeNative'] as num?)?.toDouble() ?? 0.0,
+          networkFeeNative:
+              (data['networkFeeNative'] as num?)?.toDouble() ?? 0.0,
           allowanceTarget: allowanceTarget,
         );
       } else {

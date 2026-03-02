@@ -17,12 +17,20 @@ class SecurityNoticeCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.shield_outlined, size: 20, color: AppColors.accentRed.withValues(alpha: 0.6)),
+          Icon(
+            Icons.shield_outlined,
+            size: 20,
+            color: AppColors.accentRed.withValues(alpha: 0.6),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Your wallet keys are stored securely on this device. Never share your seed phrase or private key.',
-              style: GoogleFonts.outfit(fontSize: 12, color: Colors.white.withValues(alpha: 0.4), height: 1.4),
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.4),
+                height: 1.4,
+              ),
             ),
           ),
         ],

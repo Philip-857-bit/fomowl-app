@@ -7,11 +7,7 @@ class SwapTokenChip extends StatelessWidget {
   final Token? token;
   final VoidCallback onTap;
 
-  const SwapTokenChip({
-    super.key,
-    required this.token,
-    required this.onTap,
-  });
+  const SwapTokenChip({super.key, required this.token, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +37,18 @@ class SwapTokenChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               symbol,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.white.withValues(alpha: 0.7)),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 16,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
           ],
         ),
       ),

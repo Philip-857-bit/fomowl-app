@@ -17,7 +17,8 @@ class ImportSecretPhraseScreen extends StatefulWidget {
   const ImportSecretPhraseScreen({super.key});
 
   @override
-  State<ImportSecretPhraseScreen> createState() => _ImportSecretPhraseScreenState();
+  State<ImportSecretPhraseScreen> createState() =>
+      _ImportSecretPhraseScreenState();
 }
 
 class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
@@ -136,9 +137,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     Navigator.pop(context);
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Wallet name label
                 Text(
                   'Wallet name',
@@ -148,16 +149,13 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     color: Colors.white,
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Wallet name input
                 TextField(
                   controller: _walletNameController,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                  style: GoogleFonts.outfit(fontSize: 16, color: Colors.white),
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: const Color(0xFF2C2B2B),
@@ -176,9 +174,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Secret phrase label
                 Text(
                   'Secret phrase',
@@ -188,9 +186,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     color: Colors.white,
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Secret phrase input
                 Container(
                   decoration: BoxDecoration(
@@ -240,9 +238,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Helper text
                 Center(
                   child: Text(
@@ -255,9 +253,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Import wallet button
                 SizedBox(
                   width: double.infinity,
@@ -307,11 +305,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 40),
-                
 
-                
+                const SizedBox(height: 40),
+
                 const SizedBox(height: 12),
               ],
             ),

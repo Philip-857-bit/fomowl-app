@@ -12,7 +12,10 @@ class CommunityLinksScreen extends StatelessWidget {
   static const List<_CommunityLink> _links = [
     _CommunityLink(label: 'YouTube', url: 'https://www.youtube.com/@fomowlhq'),
     _CommunityLink(label: 'X (Twitter)', url: 'https://x.com/fomowlhq'),
-    _CommunityLink(label: 'Instagram', url: 'https://www.instagram.com/fomowlhq'),
+    _CommunityLink(
+      label: 'Instagram',
+      url: 'https://www.instagram.com/fomowlhq',
+    ),
     _CommunityLink(label: 'TikTok', url: 'https://www.tiktok.com/@fomowlhq'),
     _CommunityLink(label: 'Discord', url: 'https://discord.gg/bZzqXw6ub2'),
     _CommunityLink(label: 'Telegram', url: 'https://t.me/FOMOWL'),
@@ -36,7 +39,10 @@ class CommunityLinksScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                    ),
                   ),
                   Text(
                     'Join Our Community',
@@ -61,7 +67,9 @@ class CommunityLinksScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.cardDark,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
                     ),
                     child: ListTile(
                       onTap: () => _open(item.url),
@@ -80,7 +88,11 @@ class CommunityLinksScreen extends StatelessWidget {
                           fontSize: 12,
                         ),
                       ),
-                      trailing: const Icon(Icons.open_in_new_rounded, color: Color(0xFF98A7C5), size: 18),
+                      trailing: const Icon(
+                        Icons.open_in_new_rounded,
+                        color: Color(0xFF98A7C5),
+                        size: 18,
+                      ),
                     ),
                   );
                 },
@@ -105,8 +117,5 @@ class _CommunityLink {
   final String label;
   final String url;
 
-  const _CommunityLink({
-    required this.label,
-    required this.url,
-  });
+  const _CommunityLink({required this.label, required this.url});
 }

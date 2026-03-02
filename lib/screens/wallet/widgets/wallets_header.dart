@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
+
 class WalletsHeader extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
 
-  const WalletsHeader({
-    super.key,
-    required this.title,
-    required this.onBack,
-  });
+  const WalletsHeader({super.key, required this.title, required this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +18,11 @@ class WalletsHeader extends StatelessWidget {
           ),
           Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ],
       ),

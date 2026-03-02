@@ -13,7 +13,10 @@ class TransferHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.accentRed.withValues(alpha: 0.2), AppColors.background],
+          colors: [
+            AppColors.accentRed.withValues(alpha: 0.2),
+            AppColors.background,
+          ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),

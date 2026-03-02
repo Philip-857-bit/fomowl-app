@@ -21,12 +21,16 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
       setState(() {
         _passcode += number;
       });
-      
+
       // Auto-navigate when passcode is complete
       if (_passcode.length == _passcodeLength) {
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) {
-            Navigator.pushNamed(context, '/confirm-passcode', arguments: _passcode);
+            Navigator.pushNamed(
+              context,
+              '/confirm-passcode',
+              arguments: _passcode,
+            );
           }
         });
       }
@@ -49,7 +53,10 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
         child: SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+              minHeight:
+                  MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.top -
+                  MediaQuery.of(context).padding.bottom,
             ),
             child: IntrinsicHeight(
               child: Column(
@@ -68,9 +75,9 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
                       },
                     ),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Title
                   Text(
                     'Create Passcode',
@@ -80,9 +87,9 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
                       color: Colors.white,
                     ),
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   // PIN dots
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -115,9 +122,9 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
                       );
                     }),
                   ),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Instruction text
                   Text(
                     'Enter a 6 digit code that only you can\nremember',
@@ -128,16 +135,14 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   const Spacer(),
-                  
+
                   // Number pad
                   _buildNumberPad(),
-                  
-                  const SizedBox(height: 20),
-                  
 
-                  
+                  const SizedBox(height: 20),
+
                   const SizedBox(height: 12),
                 ],
               ),
@@ -182,9 +187,17 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
                 onPressed: () => _onNumberPressed('0'),
               ),
               _buildNumberButton(
-                child: const Icon(Icons.arrow_forward, color: Colors.white, size: 28),
+                child: const Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 28,
+                ),
                 onPressed: _passcode.length == _passcodeLength
-                    ? () => Navigator.pushNamed(context, '/confirm-passcode', arguments: _passcode)
+                    ? () => Navigator.pushNamed(
+                        context,
+                        '/confirm-passcode',
+                        arguments: _passcode,
+                      )
                     : null,
               ),
             ],

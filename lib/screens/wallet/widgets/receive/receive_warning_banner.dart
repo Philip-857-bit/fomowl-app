@@ -33,7 +33,11 @@ class ReceiveWarningBanner extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: GoogleFonts.outfit(fontSize: 13, color: Colors.white.withValues(alpha: 0.8), height: 1.4),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: Colors.white.withValues(alpha: 0.8),
+                height: 1.4,
+              ),
             ),
           ),
         ],

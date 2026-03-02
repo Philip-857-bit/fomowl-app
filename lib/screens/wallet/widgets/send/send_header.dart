@@ -5,11 +5,7 @@ class SendHeader extends StatelessWidget {
   final String title;
   final VoidCallback onBack;
 
-  const SendHeader({
-    super.key,
-    required this.title,
-    required this.onBack,
-  });
+  const SendHeader({super.key, required this.title, required this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +20,11 @@ class SendHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
               textAlign: TextAlign.center,
             ),
           ),

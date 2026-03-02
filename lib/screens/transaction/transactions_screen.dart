@@ -41,13 +41,15 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         return;
       }
 
-      final url = Uri.parse('https://fomowl-backend.onrender.com/api/history/$address');
+      final url = Uri.parse(
+        'https://fomowl-backend.onrender.com/api/history/$address',
+      );
       final response = await http.get(url).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final historyList = data['history'] as List<dynamic>? ?? [];
-        
+
         final parsedTx = historyList.map((jsonTx) {
           // Parse date
           final dateStr = jsonTx['created_at'] as String? ?? '';
@@ -55,7 +57,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           try {
             dt = DateTime.parse(dateStr);
           } catch (_) {}
-          final formattedDate = dt != null ? DateFormat('MM.dd.yyyy').format(dt) : dateStr;
+          final formattedDate = dt != null
+              ? DateFormat('MM.dd.yyyy').format(dt)
+              : dateStr;
 
           // Parse Type
           final rawType = jsonTx['tx_type'] as String? ?? 'receive';
@@ -157,9 +161,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           vertical: 9,
                         ),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.white
-                              : Colors.transparent,
+                          color: isSelected ? Colors.white : Colors.transparent,
                           borderRadius: BorderRadius.circular(20),
                           border: isSelected
                               ? null
@@ -188,37 +190,39 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             // Transaction list
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
                   : _errorMessage != null
-                      ? Center(
-                          child: Text(
-                            _errorMessage!,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              color: AppColors.accentRed,
-                            ),
-                          ),
-                        )
-                      : _filteredTransactions.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No transactions yet',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              separatorBuilder: (_, a) => const SizedBox(height: 10),
-                              itemCount: _filteredTransactions.length,
-                              itemBuilder: (context, index) {
-                                return _buildTransactionItem(
-                                  _filteredTransactions[index],
-                                );
-                              },
-                            ),
+                  ? Center(
+                      child: Text(
+                        _errorMessage!,
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: AppColors.accentRed,
+                        ),
+                      ),
+                    )
+                  : _filteredTransactions.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No transactions yet',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: Colors.white54,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      separatorBuilder: (_, a) => const SizedBox(height: 10),
+                      itemCount: _filteredTransactions.length,
+                      itemBuilder: (context, index) {
+                        return _buildTransactionItem(
+                          _filteredTransactions[index],
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -247,8 +251,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               tx.type == _TxType.receive
                   ? Icons.arrow_downward
                   : tx.type == _TxType.send
-                      ? Icons.arrow_upward
-                      : Icons.compare_arrows,
+                  ? Icons.arrow_upward
+                  : Icons.compare_arrows,
               color: tx.type == _TxType.receive
                   ? AppColors.success
                   : AppColors.accentRed,
@@ -291,7 +295,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 style: GoogleFonts.outfit(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: tx.isIncoming ? AppColors.success : AppColors.accentRed,
+                  color: tx.isIncoming
+                      ? AppColors.success
+                      : AppColors.accentRed,
                 ),
               ),
               const SizedBox(height: 3),

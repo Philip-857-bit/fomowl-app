@@ -7,13 +7,18 @@ class ThirdPartyDepositScreen extends StatefulWidget {
   const ThirdPartyDepositScreen({super.key});
 
   @override
-  State<ThirdPartyDepositScreen> createState() => _ThirdPartyDepositScreenState();
+  State<ThirdPartyDepositScreen> createState() =>
+      _ThirdPartyDepositScreenState();
 }
 
 class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
-  final TextEditingController _payController = TextEditingController(text: '5,000');
-  final TextEditingController _receiveController = TextEditingController(text: '3.5');
-  
+  final TextEditingController _payController = TextEditingController(
+    text: '5,000',
+  );
+  final TextEditingController _receiveController = TextEditingController(
+    text: '3.5',
+  );
+
   String _selectedPayCurrency = 'NGN';
   String _selectedReceiveCurrency = 'USDT';
   String _selectedProvider = 'Alchemy Pay';
@@ -113,7 +118,7 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
                 isFiat: true,
                 onCurrencyTap: () => _showCurrencySheet(true),
               ),
-              
+
               const SizedBox(height: 24),
 
               // Receive Section
@@ -148,7 +153,10 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
               GestureDetector(
                 onTap: _showServiceProviderSheet,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
@@ -156,15 +164,16 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
                   child: Row(
                     children: [
                       Container(
-                        width: 28, height: 28,
+                        width: 28,
+                        height: 28,
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          _getProviderIcon(_selectedProvider), 
-                          color: AppColors.background, 
-                          size: 18
+                          _getProviderIcon(_selectedProvider),
+                          color: AppColors.background,
+                          size: 18,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -191,7 +200,11 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: Colors.white54, size: 20),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: Colors.white54,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),
@@ -250,7 +263,9 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
           Expanded(
             child: TextField(
               controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -271,14 +286,19 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 20, height: 20,
+                    width: 20,
+                    height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: isFiat ? Colors.green : Colors.teal,
                     ),
-                    child: isFiat 
-                        ? null 
-                        : const Icon(Icons.currency_bitcoin, size: 12, color: Colors.white),
+                    child: isFiat
+                        ? null
+                        : const Icon(
+                            Icons.currency_bitcoin,
+                            size: 12,
+                            color: Colors.white,
+                          ),
                   ),
                   const SizedBox(width: 8),
                   Text(

@@ -46,7 +46,7 @@ class _LoginProfileScreenState extends State<LoginProfileScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success']) {
-        Navigator.pop(context, true); 
+        Navigator.pop(context, true);
       } else {
         _showError(result['error']);
       }
@@ -80,52 +80,82 @@ class _LoginProfileScreenState extends State<LoginProfileScreen> {
                     const SizedBox(height: 40),
                     Center(
                       child: Container(
-                        width: 80, height: 80,
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
                           color: AppColors.cardDark,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.person_outline, size: 40, color: AppColors.accentRed),
+                        child: const Icon(
+                          Icons.person_outline,
+                          size: 40,
+                          color: AppColors.accentRed,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
                     Text(
                       'Welcome Back',
-                      style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.w600, color: Colors.white),
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Log in to sync your profile features.',
-                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6)),
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
                     ),
                     const SizedBox(height: 40),
-                    
-                    Text('Email Address', style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.8))),
+
+                    Text(
+                      'Email Address',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
                       ),
                       child: TextField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         style: GoogleFonts.outfit(color: Colors.white),
-                        decoration: const InputDecoration(border: InputBorder.none),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
-                    Text('Password', style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.8))),
+
+                    Text(
+                      'Password',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.only(left: 16, right: 4),
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
                       ),
                       child: TextField(
                         controller: _passwordController,
@@ -134,8 +164,16 @@ class _LoginProfileScreenState extends State<LoginProfileScreen> {
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           suffixIcon: IconButton(
-                            icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.white.withValues(alpha: 0.5), size: 18),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.white.withValues(alpha: 0.5),
+                              size: 18,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
                       ),
@@ -152,12 +190,23 @@ class _LoginProfileScreenState extends State<LoginProfileScreen> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Center(
-                          child: _isLoading 
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : Text(
-                                'Log In',
-                                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
-                              ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  'Log In',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
