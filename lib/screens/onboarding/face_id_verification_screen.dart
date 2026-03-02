@@ -87,12 +87,15 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
         }
       }
     } catch (e) {
+      debugPrint('Biometric authentication error: $e');
       if (mounted) {
         setState(() {
           _isVerifying = false;
         });
 
-        ToastUtils.showError('Biometric authentication error: ${e.toString()}');
+        ToastUtils.showError(
+          'Biometric authentication failed. Please try again or use your passcode.',
+        );
       }
     }
   }

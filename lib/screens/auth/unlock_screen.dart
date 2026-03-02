@@ -32,6 +32,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
   int _failedAttempts = 0;
   int _lockoutSecondsRemaining = 0;
   Timer? _lockoutTimer;
+  bool _navigated = false;
 
   @override
   void initState() {
@@ -107,7 +108,8 @@ class _UnlockScreenState extends State<UnlockScreen> {
         localizedReason: 'Unlock your wallet',
       );
 
-      if (authenticated && mounted) {
+      if (authenticated && mounted && !_navigated) {
+        _navigated = true;
         await _storage.resetFailedAttempts();
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
@@ -145,8 +147,9 @@ class _UnlockScreenState extends State<UnlockScreen> {
   Future<void> _verifyPasscode() async {
     final isValid = await _storage.verifyPasscode(_passcode);
 
-    if (isValid && mounted) {
+    if (isValid && mounted && !_navigated) {
       // Correct passcode — reset attempts and navigate
+      _navigated = true;
       await _storage.resetFailedAttempts();
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');

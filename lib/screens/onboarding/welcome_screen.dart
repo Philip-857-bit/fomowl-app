@@ -225,7 +225,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     AppLocalizations.languageNames[AppLocalizations.of(
                           context,
                         ).locale.languageCode] ??
-                        'Choose your language',
+                        AppLocalizations.of(context).chooseLanguage,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,

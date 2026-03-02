@@ -114,14 +114,28 @@ class SwapExecutionService {
       }
 
       // 2. Prepare Web3 Transaction
-      final toAddress = EthereumAddress.fromHex(txData['to']);
-      final gasPrice =
-          BigInt.tryParse(txData['gasPrice']?.toString() ?? '0') ?? BigInt.zero;
-      final dataBytes = hexToBytes(
-        txData['data'].toString().replaceFirst('0x', ''),
-      );
-      final valueWei =
-          BigInt.tryParse(txData['value']?.toString() ?? '0') ?? BigInt.zero;
+      if (txData['to'] == null) {
+        throw Exception('Backend returned tx object with missing "to" field');
+      }
+      final toAddress = EthereumAddress.fromHex(txData['to'].toString());
+
+      final gasPriceStr = txData['gasPrice']?.toString();
+      final gasPrice = gasPriceStr != null ? BigInt.tryParse(gasPriceStr) : null;
+      if (gasPrice == null) {
+        throw Exception('Invalid or missing gasPrice in txData: $gasPriceStr');
+      }
+
+      final dataStr = txData['data']?.toString();
+      if (dataStr == null) {
+        throw Exception('Missing "data" field in txData');
+      }
+      final dataBytes = hexToBytes(dataStr.replaceFirst('0x', ''));
+
+      final valueStr = txData['value']?.toString();
+      final valueWei = valueStr != null ? BigInt.tryParse(valueStr) : null;
+      if (valueWei == null) {
+        throw Exception('Invalid or missing value in txData: $valueStr');
+      }
 
       final tx = Transaction(
         to: toAddress,
@@ -234,11 +248,16 @@ class SwapExecutionService {
       }
 
       final submitData = jsonDecode(submitResponse.body);
-      final transactionHash =
-          submitData['transactionHash'] ??
-          submitData['hash'] ??
-          submitData['orderHash'] ??
-          submitData['orderId'];
+      final String? transactionHash = submitData['transactionHash']?.toString() ??
+          submitData['hash']?.toString() ??
+          submitData['orderHash']?.toString() ??
+          submitData['orderId']?.toString();
+
+      if (transactionHash == null) {
+        throw Exception(
+          'Backend submission response did not contain a recognizable hash or ID. Response: ${submitResponse.body}',
+        );
+      }
 
       return SwapExecutionResult(
         success: true,

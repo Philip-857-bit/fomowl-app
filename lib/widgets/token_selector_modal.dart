@@ -4,9 +4,46 @@ import '../../constants/app_colors.dart';
 import '../../models/token.dart';
 import 'token_icon.dart';
 
-class TokenSelectorDialog extends StatelessWidget {
+class TokenSelectorDialog extends StatefulWidget {
   final List<Token> tokens;
   const TokenSelectorDialog({super.key, required this.tokens});
+
+  @override
+  State<TokenSelectorDialog> createState() => _TokenSelectorDialogState();
+}
+
+class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
+  late List<Token> _filteredTokens;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredTokens = widget.tokens;
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredTokens = widget.tokens;
+      } else {
+        _filteredTokens = widget.tokens
+            .where((token) =>
+                token.name.toLowerCase().contains(query) ||
+                token.symbol.toLowerCase().contains(query))
+            .toList();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +76,7 @@ class TokenSelectorDialog extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: TextField(
+                controller: _searchController,
                 style: GoogleFonts.outfit(color: Colors.white),
                 decoration: InputDecoration(
                   border: InputBorder.none,
@@ -60,18 +98,20 @@ class TokenSelectorDialog extends StatelessWidget {
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.4,
               ),
-              child: tokens.isEmpty
+              child: _filteredTokens.isEmpty
                   ? Center(
                       child: Text(
-                        'No tokens found',
+                        _searchController.text.isEmpty
+                            ? 'No tokens found'
+                            : 'No matching tokens found',
                         style: GoogleFonts.outfit(color: Colors.white54),
                       ),
                     )
                   : ListView.builder(
                       shrinkWrap: true,
-                      itemCount: tokens.length,
+                      itemCount: _filteredTokens.length,
                       itemBuilder: (context, index) {
-                        final token = tokens[index];
+                        final token = _filteredTokens[index];
                         // Use cached network images or default icons
                         return _buildTokenOption(context, token);
                       },

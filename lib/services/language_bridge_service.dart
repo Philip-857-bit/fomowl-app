@@ -139,7 +139,7 @@ class LanguageBridgeService {
       return data['translatedText']?.toString() ?? text;
     } catch (e) {
       debugPrint(
-        'Failed to parse translation response: $e. Body: ${response.body}',
+        'Failed to parse translation response: $e. Status: ${response.statusCode}',
       );
       return text;
     }

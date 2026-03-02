@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -36,17 +37,19 @@ class AuthService {
     String? walletAddress,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'username': username,
-          'password': password,
-          'x_secret': xSecret,
-          'primary_wallet_address': walletAddress,
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/register'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email,
+              'username': username,
+              'password': password,
+              'x_secret': xSecret,
+              'primary_wallet_address': walletAddress,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);
 
@@ -60,6 +63,11 @@ class AuthService {
           'error': data['message'] ?? 'Failed to register',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'error': 'Connection timed out. Please try again.',
+      };
     } catch (e) {
       return {'success': false, 'error': 'Network error: $e'};
     }
@@ -71,11 +79,13 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 15));
 
       final data = jsonDecode(response.body);
 
@@ -89,6 +99,11 @@ class AuthService {
           'error': data['message'] ?? 'Invalid credentials',
         };
       }
+    } on TimeoutException {
+      return {
+        'success': false,
+        'error': 'Connection timed out. Please try again.',
+      };
     } catch (e) {
       return {'success': false, 'error': 'Network error: $e'};
     }

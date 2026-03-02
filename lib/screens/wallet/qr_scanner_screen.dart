@@ -65,7 +65,7 @@ class QrScannerScreen extends StatelessWidget {
                           Icons.photo_library_outlined,
                           color: Colors.white,
                         ),
-                        onPressed: () {},
+                        onPressed: null,
                       ),
                     ],
                   ),
@@ -123,7 +123,7 @@ class QrScannerScreen extends StatelessWidget {
                 // My Code button
                 GestureDetector(
                   onTap: () =>
-                      Navigator.pushReplacementNamed(context, '/receive-token'),
+                      Navigator.pushNamed(context, '/receive-token'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 32),
                     padding: const EdgeInsets.symmetric(

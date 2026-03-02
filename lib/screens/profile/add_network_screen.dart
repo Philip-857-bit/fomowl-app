@@ -174,8 +174,8 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                               validator: (v) {
                                 if (v == null || v.trim().isEmpty)
                                   return 'Required';
-                                if (!v.trim().startsWith('http'))
-                                  return 'Must be a valid URL';
+                                if (!v.trim().startsWith('https'))
+                                  return 'Must be a secure (https) URL';
                                 return null;
                               },
                             ),
