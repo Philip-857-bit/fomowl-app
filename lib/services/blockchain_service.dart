@@ -608,8 +608,9 @@ class BlockchainService extends ChangeNotifier {
     final parsed = <Token>[];
 
     for (final base in _backendDiscoveryBases) {
+      final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
       final url = Uri.parse(
-        '$base/${_activeChain.chainId}/token-search',
+        '$normalizedBase/${_activeChain.chainId}/token-search',
       ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
 
       try {
@@ -660,8 +661,9 @@ class BlockchainService extends ChangeNotifier {
       final backoff = _backendDiscoveryBackoffUntil[base];
       if (backoff != null && now.isBefore(backoff)) continue;
 
+      final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
       final url = Uri.parse(
-        '$base/${_activeChain.chainId}/wallet-tokens/$walletAddress',
+        '$normalizedBase/${_activeChain.chainId}/wallet-tokens/$walletAddress',
       );
       try {
         final response = await http.get(url).timeout(_backendDiscoveryTimeout);
