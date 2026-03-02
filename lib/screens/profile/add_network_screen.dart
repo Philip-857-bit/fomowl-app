@@ -135,8 +135,12 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                       _buildTextField(
                         controller: _nameController,
                         hint: 'e.g. Cronos, zkSync Era',
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Required';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -144,8 +148,12 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                       _buildTextField(
                         controller: _symbolController,
                         hint: 'e.g. CRO, ETH',
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Required';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 16),
 
@@ -155,9 +163,12 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         hint: 'e.g. 25, 324',
                         keyboardType: TextInputType.number,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Required';
-                          if (int.tryParse(v.trim()) == null)
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Required';
+                          }
+                          if (int.tryParse(v.trim()) == null) {
                             return 'Must be a number';
+                          }
                           return null;
                         },
                       ),
@@ -172,10 +183,12 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                               controller: _rpcUrlController,
                               hint: 'https://rpc.example.com',
                               validator: (v) {
-                                if (v == null || v.trim().isEmpty)
+                                if (v == null || v.trim().isEmpty) {
                                   return 'Required';
-                                if (!v.trim().startsWith('https'))
+                                }
+                                if (!v.trim().startsWith('https')) {
                                   return 'Must be a secure (https) URL';
+                                }
                                 return null;
                               },
                             ),

@@ -251,9 +251,12 @@ class _SwapScreenState extends State<SwapScreen> {
     final whole = parts.first.isEmpty ? '0' : parts.first;
     final fractionalRaw = parts.length == 2 ? parts[1] : '';
     final digitRegex = RegExp(r'^\d+$');
-    if (!digitRegex.hasMatch(whole)) return null;
-    if (fractionalRaw.isNotEmpty && !digitRegex.hasMatch(fractionalRaw))
+    if (!digitRegex.hasMatch(whole)) {
       return null;
+    }
+    if (fractionalRaw.isNotEmpty && !digitRegex.hasMatch(fractionalRaw)) {
+      return null;
+    }
 
     final fractional = fractionalRaw.length > decimals
         ? fractionalRaw.substring(0, decimals)

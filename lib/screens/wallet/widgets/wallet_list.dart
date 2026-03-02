@@ -96,11 +96,11 @@ class WalletList extends StatelessWidget {
                       ),
                       GestureDetector(
                         onTap: () => onDelete(account),
-                        child: const Padding(
-                          padding: EdgeInsets.all(8.0),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
                           child: Semantics(
                             label: 'Delete account',
-                            child: Icon(
+                            child: const Icon(
                               Icons.delete_outline,
                               color: AppColors.error,
                               size: 19,

@@ -157,7 +157,7 @@ class AppLocalizations {
   String get networkError => translate('network_error');
   String get connectionFailed => translate('connection_failed');
   String get tryAgain => translate('try_again');
-  String get coming_soon => translate('coming_soon');
+  String get comingSoon => translate('coming_soon');
   String get resetFailed => translate('reset_failed');
   String get confirmClearLocalData => translate('confirm_clear_local_data');
   String get cancel => translate('cancel');
