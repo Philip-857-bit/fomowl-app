@@ -17,7 +17,7 @@ class TokenPriceService extends BaseService {
   Future<Map<String, double>> getTokenPrices(List<String> tokenIds) async {
     if (tokenIds.isEmpty) return {};
     try {
-      final ids = tokenIds.join(',');
+      final ids = tokenIds.map((id) => Uri.encodeComponent(id)).join(',');
       final url =
           '$priceApiBase/simple/price?ids=$ids&vs_currencies=usd&include_24hr_change=true';
       final response = await http
@@ -57,8 +57,9 @@ class TokenPriceService extends BaseService {
     }
 
     try {
+      final encodedId = Uri.encodeComponent(coinId);
       final url =
-          '$priceApiBase/coins/$coinId/market_chart?vs_currency=usd&days=$days';
+          '$priceApiBase/coins/$encodedId/market_chart?vs_currency=usd&days=$days';
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 12));
@@ -95,10 +96,11 @@ class TokenPriceService extends BaseService {
     }
 
     try {
+      final encodedId = Uri.encodeComponent(coinId);
       final fromSec = (from.millisecondsSinceEpoch / 1000).floor();
       final toSec = (now.millisecondsSinceEpoch / 1000).floor();
       final url =
-          '$priceApiBase/coins/$coinId/market_chart/range?vs_currency=usd&from=$fromSec&to=$toSec';
+          '$priceApiBase/coins/$encodedId/market_chart/range?vs_currency=usd&from=$fromSec&to=$toSec';
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 12));
@@ -131,8 +133,9 @@ class TokenPriceService extends BaseService {
     }
 
     try {
+      final encodedId = Uri.encodeComponent(coinId);
       final url =
-          '$priceApiBase/coins/$coinId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
+          '$priceApiBase/coins/$encodedId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 12));

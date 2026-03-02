@@ -244,7 +244,10 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadWalletData();
       if (!mounted) return;
       ToastUtils.showSuccess('${detected.symbol} added from clipboard');
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      debugPrint('Clipboard check error: $e');
+      debugPrint(stackTrace.toString());
+    }
   }
 
   Future<void> _fetchRealBalances(String address) async {

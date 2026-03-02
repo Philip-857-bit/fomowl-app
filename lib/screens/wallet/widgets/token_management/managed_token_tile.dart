@@ -59,10 +59,15 @@ class ManagedTokenTile extends StatelessWidget {
               ],
             ),
           ),
-          Switch.adaptive(
-            value: isVisible,
-            onChanged: onVisibilityChanged,
-            activeTrackColor: AppColors.accentRed.withValues(alpha: 0.4),
+          Semantics(
+            label: 'Toggle visibility for ${token.name}',
+            checked: isVisible,
+            onTap: () => onVisibilityChanged(!isVisible),
+            child: Switch.adaptive(
+              value: isVisible,
+              onChanged: onVisibilityChanged,
+              activeTrackColor: AppColors.accentRed.withValues(alpha: 0.4),
+            ),
           ),
         ],
       ),

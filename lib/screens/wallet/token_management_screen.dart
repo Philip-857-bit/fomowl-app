@@ -219,7 +219,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
             symbol: token.symbol.toUpperCase(),
             name: token.name,
             address: contract,
-            decimals: token.decimals > 0 ? token.decimals : 18,
+            decimals: token.decimals >= 0 ? token.decimals : 18,
             coinGeckoId: token.coinGeckoId,
           );
 
@@ -341,7 +341,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       if (!mounted) return;
       setState(() => _hasChanges = true);
       ToastUtils.showSuccess('${detected.symbol} added');
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      debugPrint('Token clipboard suggestion error: $e');
+      debugPrint(stackTrace.toString());
+    }
   }
 
   void _closeScreen() {

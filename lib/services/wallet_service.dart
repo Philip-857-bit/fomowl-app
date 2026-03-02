@@ -151,18 +151,14 @@ class WalletService {
 
   Future<void> removeWalletAccount(String address) async {
     final current = await getCurrentWalletAddress();
-    if (current != null && current.toLowerCase() == address.toLowerCase()) {
-      final accounts = await _storage.getWalletAccounts();
-      final remaining = accounts
-          .where((a) => a.address.toLowerCase() != address.toLowerCase())
-          .toList();
-      if (remaining.isNotEmpty) {
-        await _storage.setActiveWallet(remaining.first.address);
-      } else {
-        await _storage.clearActiveWallet();
-      }
-    }
+    
+    // Perform storage removal first. 
+    // This will handle active wallet replacement internally in StorageService.
     await _storage.removeWalletAccount(address);
+    
+    // We don't need to manually setActiveWallet here anymore because 
+    // StorageService.removeWalletAccount handles the active wallet swap 
+    // if the removed account was the active one.
   }
 
   Future<Map<String, String>> createAdditionalWallet({

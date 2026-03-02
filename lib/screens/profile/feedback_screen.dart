@@ -118,7 +118,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               _buildLabel('Category'),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                initialValue: _category,
+                value: _category,
                 dropdownColor: AppColors.cardDark,
                 decoration: _inputDecoration(),
                 items: const [

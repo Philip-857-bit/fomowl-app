@@ -84,14 +84,18 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
       selectedLanguageCode = normalizedCode;
     });
 
+    // Sync to backend in background so UI localization is instant.
+    unawaited(
+      _syncLanguageToBackend(normalizedCode).catchError((e) {
+        debugPrint('Language sync failed: $e');
+      }),
+    );
+
     // Navigate back after selection
     if (mounted) {
       // Return the language code so the app can update
       Navigator.pop(context, normalizedCode);
     }
-
-    // Sync to backend in background so UI localization is instant.
-    unawaited(_syncLanguageToBackend(normalizedCode));
   }
 
   Future<void> _syncLanguageToBackend(String languageCode) async {

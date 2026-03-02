@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 class ReferralProfile {
   final String referralCode;
@@ -30,38 +32,66 @@ class ReferralService {
       'https://fomowl-backend.onrender.com/api/referrals';
 
   Future<ReferralProfile> getProfile(String walletAddress) async {
-    final encodedAddress = Uri.encodeComponent(walletAddress);
-    final uri = Uri.parse('$_baseUrl/$encodedAddress');
-    final response = await http.get(uri).timeout(const Duration(seconds: 15));
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Failed to load referral profile (HTTP ${response.statusCode})',
-      );
-    }
+    try {
+      final encodedAddress = Uri.encodeComponent(walletAddress);
+      final uri = Uri.parse('$_baseUrl/$encodedAddress');
+      final response = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to load referral profile (HTTP ${response.statusCode})',
+        );
+      }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return ReferralProfile.fromJson(data);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return ReferralProfile.fromJson(data);
+    } on TimeoutException {
+      throw Exception('Request timed out. Please check your internet connection.');
+    } on FormatException catch (e) {
+      throw Exception('Invalid response from server: $e');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('An unexpected error occurred: $e');
+    }
   }
 
   Future<void> bindReferralCode({
     required String walletAddress,
     required String referralCode,
   }) async {
-    final uri = Uri.parse('$_baseUrl/bind');
-    final response = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'walletAddress': walletAddress,
-            'referralCode': referralCode,
-          }),
-        )
-        .timeout(const Duration(seconds: 15));
+    try {
+      final uri = Uri.parse('$_baseUrl/bind');
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'referralCode': referralCode,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final body = response.body;
-      throw Exception(body.isEmpty ? 'Unable to add referral code' : body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        String message = 'Unable to add referral code';
+        try {
+          final body = jsonDecode(response.body);
+          if (body is Map && body.containsKey('message')) {
+            message = body['message'].toString();
+          } else if (body is Map && body.containsKey('error')) {
+            message = body['error'].toString();
+          }
+        } catch (_) {
+          // If body is not JSON or doesn't have expected fields, use default.
+        }
+        throw Exception(message);
+      }
+    } on TimeoutException {
+      throw Exception('Request timed out. Please check your internet connection.');
+    } on FormatException catch (e) {
+      throw Exception('Invalid response format: $e');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to bind referral: $e');
     }
   }
 }

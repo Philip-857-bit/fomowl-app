@@ -5,6 +5,8 @@ import 'base_service.dart';
 
 /// Service for handling JSON-RPC calls to various chains
 class RpcService extends BaseService {
+  int _nextRequestId = 1;
+
   final Map<int, List<String>> _publicRpcFallbacks = {
     1: ['https://cloudflare-eth.com'],
     56: ['https://bsc-dataseed.binance.org'],
@@ -29,6 +31,7 @@ class RpcService extends BaseService {
     Duration timeout = const Duration(seconds: 10),
   }) async {
     final candidates = [primaryRpcUrl, ...(_publicRpcFallbacks[chainId] ?? [])];
+    final requestId = _nextRequestId++;
     
     for (final rpcUrl in candidates) {
       try {
@@ -39,13 +42,20 @@ class RpcService extends BaseService {
             'jsonrpc': '2.0',
             'method': method,
             'params': params,
-            'id': 1,
+            'id': requestId,
           }),
         ).timeout(timeout);
 
         if (response.statusCode != 200) continue;
 
         final data = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        // Correlation check
+        if (data['id'] != requestId) {
+          debugPrint('RPC ID mismatch: expected $requestId, got ${data['id']}');
+          continue;
+        }
+
         if (data['error'] != null) {
           debugPrint('RPC error ($method @ $rpcUrl): ${data['error']}');
           continue;
@@ -61,6 +71,7 @@ class RpcService extends BaseService {
 
   /// Test an RPC URL for connectivity
   Future<bool> testRpcUrl(String rpcUrl) async {
+    final requestId = _nextRequestId++;
     try {
       final response = await http.post(
         Uri.parse(rpcUrl),
@@ -69,10 +80,25 @@ class RpcService extends BaseService {
           'jsonrpc': '2.0',
           'method': 'eth_chainId',
           'params': [],
-          'id': 1,
+          'id': requestId,
         }),
       ).timeout(const Duration(seconds: 8));
-      return response.statusCode == 200;
+      
+      if (response.statusCode != 200) return false;
+      
+      try {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (data['jsonrpc'] != '2.0') return false;
+        if (data['id'] != requestId) return false;
+        if (data['error'] != null) return false;
+        
+        final result = data['result'] as String?;
+        if (result == null || !result.startsWith('0x')) return false;
+        
+        return true;
+      } catch (_) {
+        return false;
+      }
     } catch (e) {
       return false;
     }

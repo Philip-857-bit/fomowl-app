@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -266,7 +268,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    await _hydrateLanguageFromBackend();
+    unawaited(_hydrateLanguageFromBackend());
     final hasWallet = await _walletService.hasWallet();
     if (!mounted) return;
 

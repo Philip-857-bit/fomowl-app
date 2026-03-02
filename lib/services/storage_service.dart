@@ -183,25 +183,19 @@ class StorageService {
     }
 
     final wasActive = (await getWalletAddress())?.toLowerCase() == normalized;
-    WalletAccount? replacement;
-    String? replacementPk;
+    
     if (wasActive) {
-      replacement = accounts.firstWhere(
+      final replacement = accounts.firstWhere(
         (a) => a.address.toLowerCase() != normalized,
       );
-      replacementPk = await _secureStorage.read(
+      final replacementPk = await _secureStorage.read(
         key: _walletPrivateKeyKey(replacement.address),
       );
       if (replacementPk == null) {
         throw Exception('Replacement wallet private key is missing');
       }
-    }
-
-    accounts.removeAt(index);
-    await _saveWalletAccounts(accounts);
-    await _secureStorage.delete(key: _walletPrivateKeyKey(address));
-
-    if (wasActive && replacement != null && replacementPk != null) {
+      
+      // Update active pointers FIRST
       await _secureStorage.write(key: _keyAddress, value: replacement.address);
       await _secureStorage.write(key: _keyPrivateKey, value: replacementPk);
       await _secureStorage.write(key: _keyWalletName, value: replacement.name);
@@ -209,6 +203,11 @@ class StorageService {
         await _setCurrentDerivationIndex(replacement.derivationIndex!);
       }
     }
+
+    // Now safe to remove from list and delete specific key
+    accounts.removeAt(index);
+    await _saveWalletAccounts(accounts);
+    await _secureStorage.delete(key: _walletPrivateKeyKey(address));
   }
 
   Future<List<WalletAccount>> getWalletAccounts() async {

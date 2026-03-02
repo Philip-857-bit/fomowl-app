@@ -99,7 +99,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
       await _loadWallets();
       ToastUtils.showSuccess('${account.name} set as active');
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
       ToastUtils.showError('Unable to switch wallet: $e');
     }
   }

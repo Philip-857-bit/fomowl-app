@@ -167,10 +167,15 @@ class BlockchainService extends ChangeNotifier {
   /// Initialize — load persisted chains and active chain from storage
   Future<void> init() async {
     if (_initialized) return;
-    _initialized = true;
-    await _loadCustomChains();
-    await _loadActiveChain();
-    await _loadCustomTokens();
+    try {
+      await _loadCustomChains();
+      await _loadActiveChain();
+      await _loadCustomTokens();
+      _initialized = true;
+    } catch (e) {
+      debugPrint('BlockchainService initialization failed: $e');
+      _initialized = false;
+    }
   }
 
   void refresh() {
@@ -414,7 +419,16 @@ class BlockchainService extends ChangeNotifier {
     final symbol = await _ethCallString(normalized, '0x95d89b41');
     final name = await _ethCallString(normalized, '0x06fdde03');
     final decimalsRaw = await _ethCallUint(normalized, '0x313ce567');
-    final decimals = decimalsRaw?.toInt();
+    
+    int? decimals;
+    if (decimalsRaw != null) {
+      if (decimalsRaw >= BigInt.zero && decimalsRaw <= BigInt.from(255)) {
+        decimals = decimalsRaw.toInt();
+      } else {
+        debugPrint('Invalid decimals value: $decimalsRaw');
+        return null;
+      }
+    }
 
     if (symbol == null || symbol.isEmpty || decimals == null) return null;
 
@@ -551,10 +565,11 @@ class BlockchainService extends ChangeNotifier {
       );
 
       for (var tDef in wellKnown) {
+        final parsedDecimals = int.tryParse(tDef['decimals'] ?? '') ?? 18;
         final bal = await getTokenBalance(
           walletAddress,
           tDef['address']!,
-          int.parse(tDef['decimals']!),
+          parsedDecimals,
         );
         if (bal > 0) {
           final p = prices[tDef['coinGeckoId']] ?? 0;
@@ -567,7 +582,7 @@ class BlockchainService extends ChangeNotifier {
               valueUsd: bal * p,
               priceUsd: p,
               changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
-              decimals: int.parse(tDef['decimals']!),
+              decimals: parsedDecimals,
               imageUrl: _getIconUrl(tDef['symbol']!),
               coinGeckoId: tDef['coinGeckoId'],
             ),

@@ -136,13 +136,13 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('${l.resetApp}?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
         content: Text(
-          'This clears local wallet data on this device. Ensure your seed phrase is backed up.',
+          l.confirmClearLocalData,
           style: GoogleFonts.outfit(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l.skip, style: GoogleFonts.outfit(color: Colors.white54)),
+            child: Text(l.cancel, style: GoogleFonts.outfit(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -163,7 +163,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(l.resetApp, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
           content: Text(
-            'Failed to reset app data. Please try again.',
+            l.resetFailed,
             style: GoogleFonts.outfit(color: Colors.white70),
           ),
           actions: [
@@ -269,7 +269,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         SettingsItemTile(
                           icon: Icons.vpn_key_rounded,
                           title: l.seedPhraseBackup,
-                          subtitle: 'Action Required',
+                          subtitle: l.actionRequired,
                           attention: true,
                           onTap: () => Navigator.pushNamed(context, '/backup-seed-phrase'),
                         ),

@@ -54,12 +54,13 @@ class _TransferConfirmationScreenState
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       // Fetch native price for USD conversion
-      final coinGeckoId = blockchain.activeChain.coinGeckoId;
-      final effectiveCoinId = (coinGeckoId == null || coinGeckoId.isEmpty)
-          ? 'ethereum'
-          : coinGeckoId;
-      final prices = await blockchain.getTokenPrices([effectiveCoinId]);
-      final nativePrice = prices[effectiveCoinId] ?? 0;
+      final effectiveCoinId = blockchain.activeChain.coinGeckoId;
+      
+      double nativePrice = 0;
+      if (effectiveCoinId != null && effectiveCoinId.isNotEmpty) {
+        final prices = await blockchain.getTokenPrices([effectiveCoinId]);
+        nativePrice = prices[effectiveCoinId] ?? 0;
+      }
 
       final gasData = await blockchain.estimateGasFee(
         nativePriceUsd: nativePrice,
@@ -148,7 +149,7 @@ class _TransferConfirmationScreenState
     final maxTotal = isNative ? (amount + _gasFeeEth) : amount;
 
     final gasLabel = _gasEstimationFailed
-        ? '${l.gasFee} (Estimation Failed)'
+        ? '${l.gasFee} (${l.estimationFailed})'
         : '${l.gasFee} (${_gasPriceGwei.toStringAsFixed(1)} Gwei)';
 
     final gasValue = _gasEstimationFailed

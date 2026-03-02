@@ -22,6 +22,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   bool _twoFactorEnabled = false;
   int _autoLockMinutes = 1;
   bool _loading = true;
+  bool _preferencesLoadFailed = false;
 
   @override
   void initState() {
@@ -30,6 +31,10 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   }
 
   Future<void> _loadState() async {
+    setState(() {
+      _loading = true;
+      _preferencesLoadFailed = false;
+    });
     try {
       final biometric = await _storage.isBiometricEnabled();
       final twoFactor = await _storage.isTwoFactorEnabled();
@@ -39,9 +44,19 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
         _biometricEnabled = biometric;
         _twoFactorEnabled = twoFactor;
         _autoLockMinutes = autoLock;
+        _preferencesLoadFailed = false;
       });
     } catch (e) {
       debugPrint('Failed to load security preferences: $e');
+      if (mounted) {
+        setState(() => _preferencesLoadFailed = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to load security preferences'),
+            action: SnackBarAction(label: 'Retry', onPressed: _loadState),
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -86,6 +101,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   }
 
   Future<void> _showAutoLockPicker() async {
+    if (_preferencesLoadFailed) return;
     final options = <int>[1, 2, 5, 10, 30];
     final selected = await showModalBottomSheet<int>(
       context: context,
@@ -132,10 +148,21 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
         ),
       ),
     );
-    if (selected == null) return;
-    if (!mounted) return;
+    if (selected == null || selected == _autoLockMinutes) return;
+    
+    final previous = _autoLockMinutes;
     setState(() => _autoLockMinutes = selected);
-    await _storage.setAutoLockMinutes(selected);
+    try {
+      await _storage.setAutoLockMinutes(selected);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _autoLockMinutes = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update auto-lock setting')),
+        );
+      }
+      debugPrint('Failed to persist auto-lock setting: $e');
+    }
   }
 
   @override
@@ -198,7 +225,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
                             inactiveTrackColor: Colors.white24,
-                            onChanged: _setBiometric,
+                            onChanged: _preferencesLoadFailed ? null : _setBiometric,
                           ),
                         ),
                       ],
@@ -217,7 +244,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
                             inactiveTrackColor: Colors.white24,
-                            onChanged: _setTwoFactor,
+                            onChanged: _preferencesLoadFailed ? null : _setTwoFactor,
                           ),
                         ),
                         SettingsItemTile(
