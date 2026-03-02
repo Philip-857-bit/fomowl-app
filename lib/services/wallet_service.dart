@@ -149,6 +149,7 @@ class WalletService {
     await _storage.setActiveWallet(address);
   }
 
+
   Future<void> removeWalletAccount(String address) async {
     final current = await getCurrentWalletAddress();
     
