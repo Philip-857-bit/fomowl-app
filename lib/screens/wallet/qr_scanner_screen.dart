@@ -122,8 +122,7 @@ class QrScannerScreen extends StatelessWidget {
 
                 // My Code button
                 GestureDetector(
-                  onTap: () =>
-                      Navigator.pushNamed(context, '/receive-token'),
+                  onTap: () => Navigator.pushNamed(context, '/receive-token'),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 32),
                     padding: const EdgeInsets.symmetric(

@@ -37,9 +37,11 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
         _filteredTokens = widget.tokens;
       } else {
         _filteredTokens = widget.tokens
-            .where((token) =>
-                token.name.toLowerCase().contains(query) ||
-                token.symbol.toLowerCase().contains(query))
+            .where(
+              (token) =>
+                  token.name.toLowerCase().contains(query) ||
+                  token.symbol.toLowerCase().contains(query),
+            )
             .toList();
       }
     });
