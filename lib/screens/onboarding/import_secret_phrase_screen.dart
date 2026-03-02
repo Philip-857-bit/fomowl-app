@@ -71,9 +71,13 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
         walletName: walletName,
       );
 
-      // Refresh blockchain service to clear any cached data from previous wallet
+      // Refresh blockchain cache independently so refresh failures do not fail import.
       if (mounted) {
-        Provider.of<BlockchainService>(context, listen: false).refresh();
+        try {
+          Provider.of<BlockchainService>(context, listen: false).refresh();
+        } catch (refreshError) {
+          debugPrint('Blockchain refresh failed after import: $refreshError');
+        }
       }
 
       if (mounted) {

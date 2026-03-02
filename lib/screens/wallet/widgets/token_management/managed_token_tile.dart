@@ -41,6 +41,9 @@ class ManagedTokenTile extends StatelessWidget {
               children: [
                 Text(
                   token.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
                   style: GoogleFonts.outfit(
                     color: Colors.white,
                     fontWeight: FontWeight.w500,
@@ -48,7 +51,10 @@ class ManagedTokenTile extends StatelessWidget {
                 ),
                 Text(
                   token.symbol,
-                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: Colors.white54,
+                  ),
                 ),
               ],
             ),

@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
-import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/storage_service.dart';
 import '../../services/language_bridge_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
+import '../../utils/language_utils.dart';
 
 /// Language Selection Screen
 /// Allows users to choose their preferred language
@@ -16,7 +16,8 @@ class LanguageSelectionScreen extends StatefulWidget {
   const LanguageSelectionScreen({super.key});
 
   @override
-  State<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
+  State<LanguageSelectionScreen> createState() =>
+      _LanguageSelectionScreenState();
 }
 
 class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
@@ -43,13 +44,12 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   Future<void> _loadCurrentLanguageAndProviderOptions() async {
     try {
       final providerLanguages = await _languageBridge.getSupportedLanguages();
-      final supportedCodes = AppLocalizations.supportedLocales
-          .map((locale) => locale.languageCode)
-          .toSet();
+      final supportedCodes = LanguageUtils.supportedLanguageCodes;
       final filtered = <String, String>{};
       providerLanguages.forEach((name, code) {
-        if (supportedCodes.contains(code)) {
-          filtered[name] = code;
+        final normalized = LanguageUtils.normalizeLanguageCode(code);
+        if (supportedCodes.contains(normalized)) {
+          filtered[name] = normalized;
         }
       });
       if (filtered.isNotEmpty && mounted) {
@@ -61,12 +61,13 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
     final languageCode = await _storage.getLanguage();
     if (languageCode != null) {
+      final normalizedCode = LanguageUtils.normalizeLanguageCode(languageCode);
       setState(() {
-        selectedLanguageCode = languageCode;
+        selectedLanguageCode = normalizedCode;
         // Find the language name from code
         selectedLanguage = _languages.entries
             .firstWhere(
-              (entry) => entry.value == languageCode,
+              (entry) => entry.value == normalizedCode,
               orElse: () => const MapEntry('English', 'en'),
             )
             .key;
@@ -75,21 +76,22 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   }
 
   Future<void> _saveLanguage(String languageName, String languageCode) async {
-    await _storage.setLanguage(languageCode);
-    
+    final normalizedCode = LanguageUtils.normalizeLanguageCode(languageCode);
+    await _storage.setLanguage(normalizedCode);
+
     setState(() {
       selectedLanguage = languageName;
-      selectedLanguageCode = languageCode;
+      selectedLanguageCode = normalizedCode;
     });
 
     // Navigate back after selection
     if (mounted) {
       // Return the language code so the app can update
-      Navigator.pop(context, languageCode);
+      Navigator.pop(context, normalizedCode);
     }
 
     // Sync to backend in background so UI localization is instant.
-    unawaited(_syncLanguageToBackend(languageCode));
+    unawaited(_syncLanguageToBackend(normalizedCode));
   }
 
   Future<void> _syncLanguageToBackend(String languageCode) async {
@@ -101,7 +103,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
         languageCode: languageCode,
       );
     } catch (_) {
-      ToastUtils.showInfo('Language saved locally. Backend sync will retry later.');
+      ToastUtils.showInfo(
+        'Language saved locally. Backend sync will retry later.',
+      );
     }
   }
 
@@ -127,17 +131,13 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                 },
               ),
             ),
-            
+
             // Title with globe icon
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.language,
-                    color: Colors.white,
-                    size: 29,
-                  ),
+                  const Icon(Icons.language, color: Colors.white, size: 29),
                   const SizedBox(width: 12),
                   Text(
                     'Choose your desired language',
@@ -150,7 +150,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                 ],
               ),
             ),
-            
+
             // Language list
             Expanded(
               child: ListView.separated(
@@ -166,7 +166,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                   final languageName = entry.key;
                   final languageCode = entry.value;
                   final isSelected = languageName == selectedLanguage;
-                  
+
                   return InkWell(
                     onTap: () async {
                       await _saveLanguage(languageName, languageCode);

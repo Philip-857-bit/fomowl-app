@@ -101,10 +101,7 @@ class WalletService {
         origin: WalletOrigin.imported,
       );
 
-      return {
-        'address': address,
-        'privateKey': privateKey,
-      };
+      return {'address': address, 'privateKey': privateKey};
     } catch (e) {
       throw Exception('Failed to import wallet: ${e.toString()}');
     }
@@ -116,8 +113,11 @@ class WalletService {
   }
 
   /// Get wallet private key (use with caution!)
-  Future<String?> getPrivateKey() async {
-    return await _storage.getPrivateKey();
+  Future<String?> getPrivateKey([String? address]) async {
+    if (address == null || address.isEmpty) {
+      return await _storage.getPrivateKey();
+    }
+    return await _storage.getPrivateKeyForAddress(address);
   }
 
   /// Get wallet mnemonic (if available)
@@ -150,13 +150,29 @@ class WalletService {
   }
 
   Future<void> removeWalletAccount(String address) async {
+    final current = await getCurrentWalletAddress();
+    if (current != null && current.toLowerCase() == address.toLowerCase()) {
+      final accounts = await _storage.getWalletAccounts();
+      final remaining = accounts
+          .where((a) => a.address.toLowerCase() != address.toLowerCase())
+          .toList();
+      if (remaining.isNotEmpty) {
+        await _storage.setActiveWallet(remaining.first.address);
+      } else {
+        await _storage.clearActiveWallet();
+      }
+    }
     await _storage.removeWalletAccount(address);
   }
 
-  Future<Map<String, String>> createAdditionalWallet({String? walletName}) async {
+  Future<Map<String, String>> createAdditionalWallet({
+    String? walletName,
+  }) async {
     final mnemonic = await _storage.getMnemonic();
     if (mnemonic == null || mnemonic.isEmpty) {
-      throw Exception('Original seed phrase not available. Unable to derive new wallet.');
+      throw Exception(
+        'Original seed phrase not available. Unable to derive new wallet.',
+      );
     }
     final index = await _storage.getNextDerivationIndex();
     return await createWalletFromMnemonic(
@@ -188,7 +204,9 @@ class WalletService {
       throw Exception('No wallet found');
     }
 
-    final pk = privateKeyHex.startsWith('0x') ? privateKeyHex.substring(2) : privateKeyHex;
+    final pk = privateKeyHex.startsWith('0x')
+        ? privateKeyHex.substring(2)
+        : privateKeyHex;
 
     final signature = EthSigUtil.signTypedData(
       privateKey: pk,

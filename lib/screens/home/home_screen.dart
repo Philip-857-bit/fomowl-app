@@ -280,9 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 balance: 0,
                 valueUsd: 0,
                 changePercent24h: 0,
-                coinGeckoId: chain.coinGeckoId.isNotEmpty
-                    ? chain.coinGeckoId
-                    : null,
+                coinGeckoId: chain.coinGeckoId,
               ),
             ];
           }
@@ -553,7 +551,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Navigator.pushNamed(context, '/nft-gallery');
                                   return;
                                 }
-                                ToastUtils.showInfo('NFTs are already shown on home');
+                                if (_nftPreview.isEmpty) {
+                                  ToastUtils.showInfo('No NFTs to display');
+                                } else {
+                                  ToastUtils.showInfo('NFTs are already shown on home');
+                                }
                               },
                               isTokenHidden: _isTokenHidden,
                               onSelectToken: (token) {

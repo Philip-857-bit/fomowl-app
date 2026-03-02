@@ -6,10 +6,10 @@ import 'base_service.dart';
 /// Service for fetching token prices and market data from CoinGecko
 class TokenPriceService extends BaseService {
   static const String priceApiBase = 'https://api.coingecko.com/api/v3';
-  
+
   final Map<String, _CachedChartData> _priceHistoryCache = {};
   final Map<String, _CachedMarketData> _tokenMarketDataCache = {};
-  
+
   static const Duration _priceHistoryCacheTtl = Duration(minutes: 2);
   static const Duration _tokenMarketDataCacheTtl = Duration(minutes: 2);
 
@@ -18,8 +18,11 @@ class TokenPriceService extends BaseService {
     if (tokenIds.isEmpty) return {};
     try {
       final ids = tokenIds.join(',');
-      final url = '$priceApiBase/simple/price?ids=$ids&vs_currencies=usd&include_24hr_change=true';
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      final url =
+          '$priceApiBase/simple/price?ids=$ids&vs_currencies=usd&include_24hr_change=true';
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -28,7 +31,8 @@ class TokenPriceService extends BaseService {
           if (value is Map && value['usd'] != null) {
             prices[key] = (value['usd'] as num).toDouble();
             if (value['usd_24h_change'] != null) {
-              prices['${key}_change'] = (value['usd_24h_change'] as num).toDouble();
+              prices['${key}_change'] = (value['usd_24h_change'] as num)
+                  .toDouble();
             }
           }
         });
@@ -46,19 +50,26 @@ class TokenPriceService extends BaseService {
     final cacheKey = '$coinId:$days';
     final cached = _priceHistoryCache[cacheKey];
     final now = DateTime.now();
-    
-    if (cached != null && now.difference(cached.fetchedAt) < _priceHistoryCacheTtl) {
+
+    if (cached != null &&
+        now.difference(cached.fetchedAt) < _priceHistoryCacheTtl) {
       return cached.values;
     }
 
     try {
-      final url = '$priceApiBase/coins/$coinId/market_chart?vs_currency=usd&days=$days';
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
-      
+      final url =
+          '$priceApiBase/coins/$coinId/market_chart?vs_currency=usd&days=$days';
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 12));
+
       if (response.statusCode == 200) {
         final data = await compute(_parsePriceHistory, response.body);
         if (data.isNotEmpty) {
-          _priceHistoryCache[cacheKey] = _CachedChartData(values: data, fetchedAt: now);
+          _priceHistoryCache[cacheKey] = _CachedChartData(
+            values: data,
+            fetchedAt: now,
+          );
           return data;
         }
       }
@@ -88,12 +99,17 @@ class TokenPriceService extends BaseService {
       final toSec = (now.millisecondsSinceEpoch / 1000).floor();
       final url =
           '$priceApiBase/coins/$coinId/market_chart/range?vs_currency=usd&from=$fromSec&to=$toSec';
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = await compute(_parsePriceHistory, response.body);
         if (data.isNotEmpty) {
-          _priceHistoryCache[cacheKey] = _CachedChartData(values: data, fetchedAt: now);
+          _priceHistoryCache[cacheKey] = _CachedChartData(
+            values: data,
+            fetchedAt: now,
+          );
           return data;
         }
       }
@@ -108,19 +124,23 @@ class TokenPriceService extends BaseService {
     if (coinId.isEmpty) return null;
     final now = DateTime.now();
     final cached = _tokenMarketDataCache[coinId];
-    
-    if (cached != null && now.difference(cached.fetchedAt) < _tokenMarketDataCacheTtl) {
+
+    if (cached != null &&
+        now.difference(cached.fetchedAt) < _tokenMarketDataCacheTtl) {
       return cached.value;
     }
 
     try {
-      final url = '$priceApiBase/coins/$coinId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
-      
+      final url =
+          '$priceApiBase/coins/$coinId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(seconds: 12));
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final marketData = data['market_data'] as Map<String, dynamic>?;
-        
+
         if (marketData != null) {
           final result = TokenMarketData(
             priceUsd: _toDouble(marketData['current_price']?['usd']),
@@ -129,7 +149,10 @@ class TokenPriceService extends BaseService {
             circulatingSupply: _toDouble(marketData['circulating_supply']),
             genesisDate: data['genesis_date'] as String?,
           );
-          _tokenMarketDataCache[coinId] = _CachedMarketData(value: result, fetchedAt: now);
+          _tokenMarketDataCache[coinId] = _CachedMarketData(
+            value: result,
+            fetchedAt: now,
+          );
           return result;
         }
       }
@@ -145,7 +168,10 @@ class TokenPriceService extends BaseService {
       final prices = data['prices'] as List? ?? const [];
       return prices
           .whereType<List>()
-          .map<double>((p) => (p.length > 1 && p[1] is num) ? (p[1] as num).toDouble() : 0.0)
+          .map<double>(
+            (p) =>
+                (p.length > 1 && p[1] is num) ? (p[1] as num).toDouble() : 0.0,
+          )
           .where((v) => v.isFinite && v > 0)
           .toList();
     } catch (e) {
@@ -153,11 +179,11 @@ class TokenPriceService extends BaseService {
     }
   }
 
-  double _toDouble(dynamic value) {
-    if (value == null) return 0;
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
     if (value is num) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0;
-    return 0;
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 }
 

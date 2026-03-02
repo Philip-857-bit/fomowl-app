@@ -219,7 +219,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
             symbol: token.symbol.toUpperCase(),
             name: token.name,
             address: contract,
-            decimals: 18,
+            decimals: token.decimals > 0 ? token.decimals : 18,
             coinGeckoId: token.coinGeckoId,
           );
 

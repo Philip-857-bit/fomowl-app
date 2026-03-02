@@ -8,9 +8,11 @@ class TransactionDetailsCard extends StatelessWidget {
   final String toAddress;
   final String network;
   final bool isLoadingGas;
+  final bool gasEstimationFailed;
   final String gasLabel;
   final String gasValue;
   final String gasValueUsd;
+  final String totalLabel;
   final String maxTotalDisplay;
 
   const TransactionDetailsCard({
@@ -19,9 +21,11 @@ class TransactionDetailsCard extends StatelessWidget {
     required this.toAddress,
     required this.network,
     required this.isLoadingGas,
+    this.gasEstimationFailed = false,
     required this.gasLabel,
     required this.gasValue,
     required this.gasValueUsd,
+    required this.totalLabel,
     required this.maxTotalDisplay,
   });
 
@@ -42,14 +46,16 @@ class TransactionDetailsCard extends StatelessWidget {
           _buildNetworkRow(network),
           _buildDivider(),
           const SizedBox(height: 8),
-          isLoadingGas ? _buildGasLoading() : _buildFeeRow(gasLabel, gasValue, gasValueUsd),
+          isLoadingGas 
+            ? _buildGasLoading() 
+            : _buildFeeRow(gasLabel, gasValue, gasValueUsd, gasEstimationFailed),
           const SizedBox(height: 16),
           _buildDivider(),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('MAX TOTAL', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+              Text(totalLabel, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
               Text(
                 maxTotalDisplay,
                 style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
@@ -113,22 +119,28 @@ class TransactionDetailsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFeeRow(String label, String value, String usdValue) {
+  Widget _buildFeeRow(String label, String value, String usdValue, bool isError) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            Text(label, style: GoogleFonts.outfit(fontSize: 14, color: Colors.white.withValues(alpha: 0.6))),
+            Text(label, style: GoogleFonts.outfit(fontSize: 14, color: isError ? AppColors.accentRed : Colors.white.withValues(alpha: 0.6))),
             const SizedBox(width: 4),
-            Icon(Icons.help_outline, size: 14, color: Colors.white.withValues(alpha: 0.3)),
+            Icon(isError ? Icons.warning_amber_rounded : Icons.help_outline, 
+                 size: 14, 
+                 color: isError ? AppColors.accentRed : Colors.white.withValues(alpha: 0.3)),
           ],
         ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(value, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.white)),
-            Text(usdValue, style: GoogleFonts.outfit(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
+            Text(value, style: GoogleFonts.outfit(
+              fontSize: 14, 
+              fontWeight: FontWeight.w500, 
+              color: isError ? AppColors.accentRed : Colors.white
+            )),
+            if (!isError) Text(usdValue, style: GoogleFonts.outfit(fontSize: 11, color: Colors.white.withValues(alpha: 0.4))),
           ],
         ),
       ],

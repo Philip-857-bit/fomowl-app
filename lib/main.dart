@@ -60,6 +60,7 @@ import 'services/rpc_service.dart';
 import 'services/token_price_service.dart';
 import 'services/language_bridge_service.dart';
 import 'package:provider/provider.dart';
+import 'utils/language_utils.dart';
 
 void main() {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -80,10 +81,14 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => RpcService()),
         ChangeNotifierProvider(create: (_) => TokenPriceService()),
-        ChangeNotifierProxyProvider2<RpcService, TokenPriceService, BlockchainService>(
-          create: (_) => BlockchainService(),
+        ChangeNotifierProxyProvider2<
+          RpcService,
+          TokenPriceService,
+          BlockchainService
+        >(
+          create: (_) => BlockchainService()..init(),
           update: (_, rpc, price, blockchain) =>
-              blockchain!..updateDependencies(rpc, price)..init(),
+              blockchain!..updateDependencies(rpc, price),
         ),
       ],
       child: const FOMOwlWalletApp(),
@@ -106,8 +111,6 @@ class FOMOwlWalletApp extends StatefulWidget {
 
 class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
   final StorageService _storage = StorageService();
-  final WalletService _walletService = WalletService();
-  final LanguageBridgeService _languageBridgeService = LanguageBridgeService();
   Locale _locale = const Locale('en', '');
 
   @override
@@ -120,38 +123,16 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
     final languageCode = await _storage.getLanguage();
     if (languageCode != null && mounted) {
       setState(() {
-        _locale = Locale(languageCode, '');
+        _locale = LanguageUtils.toLocale(languageCode);
       });
-    }
-    _reconcileLanguageWithBackend(languageCode);
-  }
-
-  Future<void> _reconcileLanguageWithBackend(String? localLanguageCode) async {
-    final walletAddress = await _walletService.getCurrentWalletAddress();
-    if (walletAddress == null || walletAddress.isEmpty) return;
-
-    try {
-      final backendLanguageCode = await _languageBridgeService
-          .getLanguagePreference(walletAddress: walletAddress)
-          .timeout(const Duration(seconds: 2));
-
-      if (backendLanguageCode == null || backendLanguageCode.isEmpty) return;
-      if (backendLanguageCode == localLanguageCode) return;
-      if (!mounted) return;
-
-      await _storage.setLanguage(backendLanguageCode);
-      setState(() {
-        _locale = Locale(backendLanguageCode, '');
-      });
-    } catch (_) {
-      // Silent fail: app continues with local language for instant UX.
     }
   }
 
   void updateLocale(String languageCode) {
+    final normalizedCode = LanguageUtils.normalizeLanguageCode(languageCode);
     if (mounted) {
       setState(() {
-        _locale = Locale(languageCode, '');
+        _locale = LanguageUtils.toLocale(normalizedCode);
       });
     }
   }
@@ -164,6 +145,20 @@ class FOMOwlWalletAppState extends State<FOMOwlWalletApp> {
 
       // Localization
       locale: _locale,
+      localeResolutionCallback: (deviceLocale, supportedLocales) {
+        if (supportedLocales.any(
+          (l) => l.languageCode == _locale.languageCode,
+        )) {
+          return _locale;
+        }
+        if (deviceLocale != null) {
+          final normalized = LanguageUtils.normalizeLanguageCode(
+            deviceLocale.toLanguageTag(),
+          );
+          return Locale(normalized, '');
+        }
+        return const Locale(LanguageUtils.fallbackLanguageCode, '');
+      },
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -309,13 +304,12 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   Future<void> _hydrateLanguageFromBackend() async {
     try {
       final walletAddress = await _walletService.getCurrentWalletAddress();
-      if (walletAddress == null || walletAddress.isEmpty) return;
       final localLanguage = await _storage.getLanguage();
-      final backendLanguage = await _languageBridgeService
-          .getLanguagePreference(walletAddress: walletAddress)
-          .timeout(const Duration(seconds: 2));
-      if (backendLanguage == null || backendLanguage.isEmpty) return;
-      if (backendLanguage == localLanguage) return;
+      final backendLanguage = await _languageBridgeService.reconcileLanguage(
+        walletAddress: walletAddress,
+        localLanguageCode: localLanguage,
+      );
+      if (backendLanguage == null) return;
 
       await _storage.setLanguage(backendLanguage);
       if (!mounted) return;

@@ -28,11 +28,16 @@ class ManageWalletTile extends StatelessWidget {
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isActive ? AppColors.accentRed.withValues(alpha: 0.7) : Colors.white.withValues(alpha: 0.06),
+          color: isActive
+              ? AppColors.accentRed.withValues(alpha: 0.7)
+              : Colors.white.withValues(alpha: 0.06),
         ),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 10,
+        ),
         onTap: onTap,
         leading: Container(
           width: 44,
@@ -48,7 +53,10 @@ class ManageWalletTile extends StatelessWidget {
               ],
             ),
           ),
-          child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFAFC2E8)),
+          child: const Icon(
+            Icons.account_balance_wallet_rounded,
+            color: Color(0xFFAFC2E8),
+          ),
         ),
         title: Row(
           children: [
@@ -65,16 +73,28 @@ class ManageWalletTile extends StatelessWidget {
               ),
             ),
             if (isActive)
-              const Icon(Icons.check_circle, size: 18, color: AppColors.accentRed),
+              const Icon(
+                Icons.check_circle,
+                size: 18,
+                color: AppColors.accentRed,
+              ),
           ],
         ),
         subtitle: Text(
           balanceLabel,
-          style: GoogleFonts.outfit(color: const Color(0xFF9AA7C0), fontSize: 14),
+          style: GoogleFonts.outfit(
+            color: const Color(0xFF9AA7C0),
+            fontSize: 14,
+          ),
         ),
         trailing: IconButton(
           onPressed: onEdit,
-          icon: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7081A3), size: 16),
+          tooltip: 'Edit wallet',
+          icon: const Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: Color(0xFF7081A3),
+            size: 16,
+          ),
         ),
       ),
     );

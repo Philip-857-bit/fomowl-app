@@ -17,7 +17,8 @@ class BlockchainService extends ChangeNotifier {
   TokenPriceService? _priceService;
 
   // Configuration Constants
-  static const String _backendRpcBase = 'https://fomowl-backend.onrender.com/api/blockchain';
+  static const String _backendRpcBase =
+      'https://fomowl-backend.onrender.com/api/blockchain';
   static const List<String> _backendDiscoveryBases = [
     'https://fomowl-backend.onrender.com/api/blockchain',
   ];
@@ -133,6 +134,7 @@ class BlockchainService extends ChangeNotifier {
   final Map<int, List<CustomTokenDefinition>> _customTokens = {};
   List<Token> _walletTokens = [];
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
+  bool _initialized = false;
 
   // Getters
   List<EvmChain> get allChains => [...builtInChains, ..._customChains];
@@ -151,7 +153,7 @@ class BlockchainService extends ChangeNotifier {
         valueUsd: 0.0,
         changePercent24h: 0.0,
         imageUrl: _getIconUrl(activeChain.symbol),
-        coinGeckoId: activeChain.coinGeckoId.isNotEmpty ? activeChain.coinGeckoId : null,
+        coinGeckoId: activeChain.coinGeckoId,
       ),
     ];
   }
@@ -164,6 +166,8 @@ class BlockchainService extends ChangeNotifier {
 
   /// Initialize — load persisted chains and active chain from storage
   Future<void> init() async {
+    if (_initialized) return;
+    _initialized = true;
     await _loadCustomChains();
     await _loadActiveChain();
     await _loadCustomTokens();
@@ -280,13 +284,18 @@ class BlockchainService extends ChangeNotifier {
   Future<double> getGasPrice() async {
     final result = await _rpcCall('eth_gasPrice', []);
     if (result != null) {
-      final gasPriceWei = BigInt.parse((result as String).substring(2), radix: 16);
-      return gasPriceWei.toDouble() / 1e9;
+      final gasPriceWei = BigInt.parse(
+        (result as String).substring(2),
+        radix: 16,
+      );
+      return _scaledBigIntToDouble(gasPriceWei, 9);
     }
     return 20.0;
   }
 
-  Future<Map<String, double>> estimateGasFee({double nativePriceUsd = 0}) async {
+  Future<Map<String, double>> estimateGasFee({
+    double nativePriceUsd = 0,
+  }) async {
     final gasPriceGwei = await getGasPrice();
     const gasLimit = 21000;
     final totalFeeWei = gasPriceGwei * 1e9 * gasLimit;
@@ -306,7 +315,10 @@ class BlockchainService extends ChangeNotifier {
     return _priceService!.getPriceHistory(coinId, days: days);
   }
 
-  Future<List<double>> getPriceHistoryForTimeframe(String coinId, String timeframe) async {
+  Future<List<double>> getPriceHistoryForTimeframe(
+    String coinId,
+    String timeframe,
+  ) async {
     if (_priceService == null) return [];
     if (timeframe == '5M') {
       return _priceService!.getPriceHistoryRange(
@@ -323,10 +335,18 @@ class BlockchainService extends ChangeNotifier {
 
     int days = 7;
     switch (timeframe) {
-      case '1D': days = 1; break;
-      case '1W': days = 7; break;
-      case '1M': days = 30; break;
-      case '1Y': days = 365; break;
+      case '1D':
+        days = 1;
+        break;
+      case '1W':
+        days = 7;
+        break;
+      case '1M':
+        days = 30;
+        break;
+      case '1Y':
+        days = 365;
+        break;
     }
     return getPriceHistory(coinId, days: days);
   }
@@ -354,15 +374,22 @@ class BlockchainService extends ChangeNotifier {
   Future<double> getNativeBalance(String address) async {
     final result = await _rpcCall('eth_getBalance', [address, 'latest']);
     if (result != null) {
-      final balanceWei = BigInt.parse((result as String).substring(2), radix: 16);
-      return balanceWei.toDouble() / 1e18;
+      final balanceWei = BigInt.parse(
+        (result as String).substring(2),
+        radix: 16,
+      );
+      return _scaledBigIntToDouble(balanceWei, 18);
     }
     return 0.0;
   }
 
   Future<double> getEthBalance(String address) => getNativeBalance(address);
 
-  Future<double> getTokenBalance(String walletAddress, String tokenAddress, int decimals) async {
+  Future<double> getTokenBalance(
+    String walletAddress,
+    String tokenAddress,
+    int decimals,
+  ) async {
     final data = '0x70a08231${_padAddress(walletAddress)}';
     final result = await _rpcCall('eth_call', [
       {'to': tokenAddress, 'data': data},
@@ -372,12 +399,14 @@ class BlockchainService extends ChangeNotifier {
       final hexStr = (result as String).substring(2);
       if (hexStr.isEmpty) return 0.0;
       final balance = BigInt.parse(hexStr, radix: 16);
-      return balance.toDouble() / pow(10, decimals);
+      return _scaledBigIntToDouble(balance, decimals);
     }
     return 0.0;
   }
 
-  Future<CustomTokenDefinition?> detectTokenByContract(String contractAddress) async {
+  Future<CustomTokenDefinition?> detectTokenByContract(
+    String contractAddress,
+  ) async {
     final normalized = contractAddress.trim();
     final addressRegex = RegExp(r'^0x[a-fA-F0-9]{40}$');
     if (!addressRegex.hasMatch(normalized)) return null;
@@ -398,12 +427,17 @@ class BlockchainService extends ChangeNotifier {
     );
   }
 
-  Future<String?> _ethCallString(String contractAddress, String methodId) async {
+  Future<String?> _ethCallString(
+    String contractAddress,
+    String methodId,
+  ) async {
     final result = await _rpcCall('eth_call', [
       {'to': contractAddress, 'data': methodId},
       'latest',
     ]);
-    if (result is! String || !result.startsWith('0x') || result.length <= 2) return null;
+    if (result is! String || !result.startsWith('0x') || result.length <= 2) {
+      return null;
+    }
     return _decodeStringResult(result);
   }
 
@@ -412,7 +446,9 @@ class BlockchainService extends ChangeNotifier {
       {'to': contractAddress, 'data': methodId},
       'latest',
     ]);
-    if (result is! String || !result.startsWith('0x') || result.length <= 2) return null;
+    if (result is! String || !result.startsWith('0x') || result.length <= 2) {
+      return null;
+    }
     final hex = result.substring(2);
     if (hex.isEmpty) return null;
     try {
@@ -423,7 +459,9 @@ class BlockchainService extends ChangeNotifier {
   }
 
   String? _decodeStringResult(String rawHexResult) {
-    final hex = rawHexResult.startsWith('0x') ? rawHexResult.substring(2) : rawHexResult;
+    final hex = rawHexResult.startsWith('0x')
+        ? rawHexResult.substring(2)
+        : rawHexResult;
     if (hex.isEmpty) return null;
 
     if (hex.length >= 192) {
@@ -431,7 +469,10 @@ class BlockchainService extends ChangeNotifier {
         final offset = int.parse(hex.substring(0, 64), radix: 16);
         final lengthPos = offset * 2;
         if (lengthPos + 64 <= hex.length) {
-          final strLen = int.parse(hex.substring(lengthPos, lengthPos + 64), radix: 16);
+          final strLen = int.parse(
+            hex.substring(lengthPos, lengthPos + 64),
+            radix: 16,
+          );
           final dataStart = lengthPos + 64;
           final dataEnd = dataStart + (strLen * 2);
           if (strLen > 0 && dataEnd <= hex.length) {
@@ -475,8 +516,11 @@ class BlockchainService extends ChangeNotifier {
     try {
       final nativeBalance = await getNativeBalance(walletAddress);
       final priceIds = <String>[];
-      if (_activeChain.coinGeckoId.isNotEmpty) priceIds.add(_activeChain.coinGeckoId);
-      
+      final activeCoinGeckoId = _activeChain.coinGeckoId;
+      if (activeCoinGeckoId != null && activeCoinGeckoId.isNotEmpty) {
+        priceIds.add(activeCoinGeckoId);
+      }
+
       final wellKnown = _getWellKnownTokens(_activeChain.chainId);
       for (var t in wellKnown) {
         if (t['coinGeckoId'] != null && t['coinGeckoId']!.isNotEmpty) {
@@ -485,35 +529,49 @@ class BlockchainService extends ChangeNotifier {
       }
 
       final prices = await getTokenPrices(priceIds);
-      final nativePrice = prices[_activeChain.coinGeckoId] ?? 0;
+      final nativePrice =
+          (activeCoinGeckoId == null || activeCoinGeckoId.isEmpty)
+          ? 0.0
+          : (prices[activeCoinGeckoId] ?? 0.0);
 
-      tokens.add(Token(
-        symbol: _activeChain.symbol,
-        name: _activeChain.name,
-        balance: nativeBalance,
-        valueUsd: nativeBalance * nativePrice,
-        priceUsd: nativePrice,
-        changePercent24h: prices['${_activeChain.coinGeckoId}_change'] ?? 0,
-        imageUrl: _getIconUrl(_activeChain.symbol),
-        coinGeckoId: _activeChain.coinGeckoId,
-      ));
+      tokens.add(
+        Token(
+          symbol: _activeChain.symbol,
+          name: _activeChain.name,
+          balance: nativeBalance,
+          valueUsd: nativeBalance * nativePrice,
+          priceUsd: nativePrice,
+          changePercent24h:
+              (activeCoinGeckoId == null || activeCoinGeckoId.isEmpty)
+              ? 0.0
+              : (prices['${activeCoinGeckoId}_change'] ?? 0.0),
+          imageUrl: _getIconUrl(_activeChain.symbol),
+          coinGeckoId: activeCoinGeckoId,
+        ),
+      );
 
       for (var tDef in wellKnown) {
-        final bal = await getTokenBalance(walletAddress, tDef['address']!, int.parse(tDef['decimals']!));
+        final bal = await getTokenBalance(
+          walletAddress,
+          tDef['address']!,
+          int.parse(tDef['decimals']!),
+        );
         if (bal > 0) {
           final p = prices[tDef['coinGeckoId']] ?? 0;
-          tokens.add(Token(
-            symbol: tDef['symbol']!,
-            name: tDef['name']!,
-            contractAddress: tDef['address'],
-            balance: bal,
-            valueUsd: bal * p,
-            priceUsd: p,
-            changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
-            decimals: int.parse(tDef['decimals']!),
-            imageUrl: _getIconUrl(tDef['symbol']!),
-            coinGeckoId: tDef['coinGeckoId'],
-          ));
+          tokens.add(
+            Token(
+              symbol: tDef['symbol']!,
+              name: tDef['name']!,
+              contractAddress: tDef['address'],
+              balance: bal,
+              valueUsd: bal * p,
+              priceUsd: p,
+              changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
+              decimals: int.parse(tDef['decimals']!),
+              imageUrl: _getIconUrl(tDef['symbol']!),
+              coinGeckoId: tDef['coinGeckoId'],
+            ),
+          );
         }
       }
     } catch (e) {
@@ -525,16 +583,19 @@ class BlockchainService extends ChangeNotifier {
     return tokens;
   }
 
-  Future<List<Token>> searchTokensFromBackend(String query, {int limit = 30}) async {
+  Future<List<Token>> searchTokensFromBackend(
+    String query, {
+    int limit = 30,
+  }) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return const [];
     final safeLimit = limit.clamp(1, 100);
     final parsed = <Token>[];
 
     for (final base in _backendDiscoveryBases) {
-      final url = Uri.parse('$base/${_activeChain.chainId}/token-search').replace(
-        queryParameters: {'q': trimmed, 'limit': '$safeLimit'},
-      );
+      final url = Uri.parse(
+        '$base/${_activeChain.chainId}/token-search',
+      ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
 
       try {
         final response = await http.get(url).timeout(_backendDiscoveryTimeout);
@@ -547,42 +608,60 @@ class BlockchainService extends ChangeNotifier {
           final symbol = (entry['symbol'] as String?)?.trim() ?? '';
           final name = (entry['name'] as String?)?.trim() ?? '';
           final contractAddress = (entry['contractAddress'] as String?)?.trim();
-          if (symbol.isEmpty || name.isEmpty || contractAddress == null) continue;
+          if (symbol.isEmpty || name.isEmpty || contractAddress == null) {
+            continue;
+          }
 
-          parsed.add(Token(
-            symbol: symbol,
-            name: name,
-            contractAddress: contractAddress,
-            balance: 0,
-            valueUsd: 0,
-            priceUsd: _toDouble(entry['priceUsd']),
-            changePercent24h: _toDouble(entry['changePercent24h']),
-            decimals: 18,
-            coinGeckoId: (entry['id'] as String?)?.trim(),
-          ));
+          parsed.add(
+            Token(
+              symbol: symbol,
+              name: name,
+              contractAddress: contractAddress,
+              balance: 0,
+              valueUsd: 0,
+              priceUsd: _toDouble(entry['priceUsd']),
+              changePercent24h: _toDouble(entry['changePercent24h']),
+              // Prefer backend decimals when available to avoid display errors.
+              decimals: _toInt(entry['decimals']) ?? 18,
+              coinGeckoId: (entry['id'] as String?)?.trim(),
+            ),
+          );
         }
         if (parsed.isNotEmpty) return parsed;
-      } catch (_) { continue; }
+      } catch (_) {
+        continue;
+      }
     }
     return parsed;
   }
 
   // ─── BACKEND DISCOVERY (Kept here for simplicity) ──
 
-  Future<List<Token>?> _fetchWalletTokensFromBackend(String walletAddress) async {
+  Future<List<Token>?> _fetchWalletTokensFromBackend(
+    String walletAddress,
+  ) async {
     final now = DateTime.now();
     for (final base in _backendDiscoveryBases) {
       final backoff = _backendDiscoveryBackoffUntil[base];
       if (backoff != null && now.isBefore(backoff)) continue;
 
-      final url = Uri.parse('$base/${_activeChain.chainId}/wallet-tokens/$walletAddress');
+      final url = Uri.parse(
+        '$base/${_activeChain.chainId}/wallet-tokens/$walletAddress',
+      );
       try {
         final response = await http.get(url).timeout(_backendDiscoveryTimeout);
         if (response.statusCode == 200) {
+          _backendDiscoveryBackoffUntil.remove(base);
           return _parseBackendDiscoveredTokens(response.body);
         }
+        _backendDiscoveryBackoffUntil[base] = DateTime.now().add(
+          const Duration(seconds: 30),
+        );
       } catch (e) {
         debugPrint('Backend discovery failed for $base: $e');
+        _backendDiscoveryBackoffUntil[base] = DateTime.now().add(
+          const Duration(seconds: 45),
+        );
       }
     }
     return null;
@@ -592,19 +671,25 @@ class BlockchainService extends ChangeNotifier {
     try {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final list = data['tokens'] as List<dynamic>? ?? [];
-      return list.map((e) => Token(
-        symbol: e['symbol'] ?? '',
-        name: e['name'] ?? '',
-        contractAddress: e['contractAddress'],
-        balance: _toDouble(e['balance']),
-        valueUsd: _toDouble(e['valueUsd']),
-        priceUsd: _toDouble(e['priceUsd']),
-        changePercent24h: _toDouble(e['changePercent24h']),
-        decimals: e['decimals'] ?? 18,
-        imageUrl: e['imageUrl'],
-        coinGeckoId: e['coinGeckoId'],
-      )).toList();
-    } catch (_) { return null; }
+      return list
+          .map(
+            (e) => Token(
+              symbol: e['symbol'] ?? '',
+              name: e['name'] ?? '',
+              contractAddress: e['contractAddress'],
+              balance: _toDouble(e['balance']),
+              valueUsd: _toDouble(e['valueUsd']),
+              priceUsd: _toDouble(e['priceUsd']),
+              changePercent24h: _toDouble(e['changePercent24h']),
+              decimals: _toInt(e['decimals']) ?? 18,
+              imageUrl: e['imageUrl'],
+              coinGeckoId: e['coinGeckoId'],
+            ),
+          )
+          .toList();
+    } catch (_) {
+      return null;
+    }
   }
 
   // ─── HELPERS ─────────────────────────────────────
@@ -618,18 +703,26 @@ class BlockchainService extends ChangeNotifier {
       data.forEach((k, v) {
         final chainId = int.tryParse(k);
         if (chainId != null) {
-          _customTokens[chainId] = (v as List).map((e) => CustomTokenDefinition.fromJson(e)).toList();
+          _customTokens[chainId] = (v as List)
+              .map((e) => CustomTokenDefinition.fromJson(e))
+              .toList();
         }
       });
-    } catch (e) { debugPrint('Error loading custom tokens: $e'); }
+    } catch (e) {
+      debugPrint('Error loading custom tokens: $e');
+    }
   }
 
   Future<void> _saveCustomTokens() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final data = _customTokens.map((k, v) => MapEntry(k.toString(), v.map((t) => t.toJson()).toList()));
+      final data = _customTokens.map(
+        (k, v) => MapEntry(k.toString(), v.map((t) => t.toJson()).toList()),
+      );
       await prefs.setString(_keyCustomTokens, jsonEncode(data));
-    } catch (e) { debugPrint('Error saving custom tokens: $e'); }
+    } catch (e) {
+      debugPrint('Error saving custom tokens: $e');
+    }
   }
 
   Future<bool> addCustomToken({
@@ -660,23 +753,51 @@ class BlockchainService extends ChangeNotifier {
     final List<Map<String, String>> tokens = [];
     if (chainId == 1) {
       tokens.addAll([
-        {'symbol': 'USDC', 'name': 'USD Coin', 'address': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'decimals': '6', 'coinGeckoId': 'usd-coin'},
-        {'symbol': 'USDT', 'name': 'Tether', 'address': '0xdAC17F958D2ee523a2206206994597C13D831ec7', 'decimals': '6', 'coinGeckoId': 'tether'},
+        {
+          'symbol': 'USDC',
+          'name': 'USD Coin',
+          'address': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+          'decimals': '6',
+          'coinGeckoId': 'usd-coin',
+        },
+        {
+          'symbol': 'USDT',
+          'name': 'Tether',
+          'address': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+          'decimals': '6',
+          'coinGeckoId': 'tether',
+        },
       ]);
     }
     final custom = _customTokens[chainId] ?? [];
-    tokens.addAll(custom.map((t) => {'symbol': t.symbol, 'name': t.name, 'address': t.address, 'decimals': t.decimals.toString(), 'coinGeckoId': t.coinGeckoId ?? ''}));
+    tokens.addAll(
+      custom.map(
+        (t) => {
+          'symbol': t.symbol,
+          'name': t.name,
+          'address': t.address,
+          'decimals': t.decimals.toString(),
+          'coinGeckoId': t.coinGeckoId ?? '',
+        },
+      ),
+    );
     return tokens;
   }
 
   String? _getIconUrl(String symbol) {
     switch (symbol.toUpperCase()) {
-      case 'ETH': return 'https://cryptologos.cc/logos/ethereum-eth-logo.png';
-      case 'BNB': return 'https://cryptologos.cc/logos/bnb-bnb-logo.png';
-      case 'MATIC': return 'https://cryptologos.cc/logos/polygon-matic-logo.png';
-      case 'USDC': return 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png';
-      case 'USDT': return 'https://cryptologos.cc/logos/tether-usdt-logo.png';
-      default: return null;
+      case 'ETH':
+        return 'https://cryptologos.cc/logos/ethereum-eth-logo.png';
+      case 'BNB':
+        return 'https://cryptologos.cc/logos/bnb-bnb-logo.png';
+      case 'MATIC':
+        return 'https://cryptologos.cc/logos/polygon-matic-logo.png';
+      case 'USDC':
+        return 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png';
+      case 'USDT':
+        return 'https://cryptologos.cc/logos/tether-usdt-logo.png';
+      default:
+        return null;
     }
   }
 
@@ -686,7 +807,37 @@ class BlockchainService extends ChangeNotifier {
     return 0;
   }
 
-  String _padAddress(String addr) => addr.startsWith('0x') ? addr.substring(2).padLeft(64, '0') : addr.padLeft(64, '0');
+  int? _toInt(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v);
+    return null;
+  }
+
+  double _scaledBigIntToDouble(BigInt value, int decimals) {
+    if (value == BigInt.zero) return 0.0;
+    final negative = value.isNegative;
+    final abs = value.abs().toString();
+    if (decimals <= 0) {
+      return double.tryParse('${negative ? '-' : ''}$abs') ?? 0.0;
+    }
+    if (abs.length <= decimals) {
+      final frac = abs.padLeft(decimals, '0').substring(0, min(decimals, 12));
+      final s = '${negative ? '-' : ''}0.$frac';
+      return double.tryParse(s) ?? 0.0;
+    }
+    final intPart = abs.substring(0, abs.length - decimals);
+    final fracRaw = abs.substring(abs.length - decimals);
+    final frac = fracRaw.substring(0, min(fracRaw.length, 12));
+    final s = frac.isEmpty
+        ? '${negative ? '-' : ''}$intPart'
+        : '${negative ? '-' : ''}$intPart.$frac';
+    return double.tryParse(s) ?? 0.0;
+  }
+
+  String _padAddress(String addr) => addr.startsWith('0x')
+      ? addr.substring(2).padLeft(64, '0')
+      : addr.padLeft(64, '0');
 
   // Necessary for backward compatibility with some screens
   Future<String?> sendRawTransaction(String signedTxHex) async {
@@ -702,5 +853,11 @@ class TokenMarketData {
   final double? totalSupply;
   final double? circulatingSupply;
   final String? genesisDate;
-  const TokenMarketData({this.priceUsd, this.marketCapUsd, this.totalSupply, this.circulatingSupply, this.genesisDate});
+  const TokenMarketData({
+    this.priceUsd,
+    this.marketCapUsd,
+    this.totalSupply,
+    this.circulatingSupply,
+    this.genesisDate,
+  });
 }

@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/wallet_account.dart';
+import '../utils/language_utils.dart';
 
 /// Storage Service
 /// Handles secure storage of sensitive data and preferences
@@ -51,12 +52,15 @@ class StorageService {
   }) async {
     await _secureStorage.write(key: _keyAddress, value: address);
     await _secureStorage.write(key: _keyPrivateKey, value: privateKey);
-    await _secureStorage.write(key: _walletPrivateKeyKey(address), value: privateKey);
-    
+    await _secureStorage.write(
+      key: _walletPrivateKeyKey(address),
+      value: privateKey,
+    );
+
     if (mnemonic != null) {
       await _secureStorage.write(key: _keyMnemonic, value: mnemonic);
     }
-    
+
     if (walletName != null) {
       await _secureStorage.write(key: _keyWalletName, value: walletName);
     }
@@ -88,10 +92,16 @@ class StorageService {
   Future<String?> getPrivateKey() async {
     final address = await getWalletAddress();
     if (address != null) {
-      final existing = await _secureStorage.read(key: _walletPrivateKeyKey(address));
+      final existing = await _secureStorage.read(
+        key: _walletPrivateKeyKey(address),
+      );
       if (existing != null) return existing;
     }
     return await _secureStorage.read(key: _keyPrivateKey);
+  }
+
+  Future<String?> getPrivateKeyForAddress(String address) async {
+    return await _secureStorage.read(key: _walletPrivateKeyKey(address));
   }
 
   /// Get mnemonic
@@ -112,10 +122,16 @@ class StorageService {
     await _secureStorage.delete(key: _keyWalletName);
   }
 
-  Future<void> setActiveWallet(String address) async {
+  Future<void> setActiveWallet(String? address) async {
+    if (address == null) {
+      await clearActiveWallet();
+      return;
+    }
     final wallet = await _findWallet(address);
     if (wallet == null) throw Exception('Wallet not found');
-    final privateKey = await _secureStorage.read(key: _walletPrivateKeyKey(address));
+    final privateKey = await _secureStorage.read(
+      key: _walletPrivateKeyKey(address),
+    );
     if (privateKey == null) throw Exception('Missing private key for wallet');
     await _secureStorage.write(key: _keyAddress, value: address);
     await _secureStorage.write(key: _keyPrivateKey, value: privateKey);
@@ -125,9 +141,17 @@ class StorageService {
     }
   }
 
+  Future<void> clearActiveWallet() async {
+    await _secureStorage.delete(key: _keyAddress);
+    await _secureStorage.delete(key: _keyPrivateKey);
+    await _secureStorage.delete(key: _keyWalletName);
+  }
+
   Future<void> renameWallet(String address, String newName) async {
     final accounts = await getWalletAccounts();
-    final index = accounts.indexWhere((a) => a.address.toLowerCase() == address.toLowerCase());
+    final index = accounts.indexWhere(
+      (a) => a.address.toLowerCase() == address.toLowerCase(),
+    );
     if (index < 0) return;
     final account = accounts[index];
     accounts[index] = WalletAccount(
@@ -139,7 +163,8 @@ class StorageService {
     );
     await _saveWalletAccounts(accounts);
     final activeAddress = await getWalletAddress();
-    if (activeAddress != null && activeAddress.toLowerCase() == address.toLowerCase()) {
+    if (activeAddress != null &&
+        activeAddress.toLowerCase() == address.toLowerCase()) {
       await _secureStorage.write(key: _keyWalletName, value: newName);
     }
   }
@@ -147,7 +172,9 @@ class StorageService {
   Future<void> removeWalletAccount(String address) async {
     final accounts = await getWalletAccounts();
     final normalized = address.toLowerCase();
-    final index = accounts.indexWhere((a) => a.address.toLowerCase() == normalized);
+    final index = accounts.indexWhere(
+      (a) => a.address.toLowerCase() == normalized,
+    );
     if (index < 0) {
       throw Exception('Wallet not found');
     }
@@ -156,18 +183,25 @@ class StorageService {
     }
 
     final wasActive = (await getWalletAddress())?.toLowerCase() == normalized;
-    accounts.removeAt(index);
-    await _saveWalletAccounts(accounts);
-    await _secureStorage.delete(key: _walletPrivateKeyKey(address));
-
+    WalletAccount? replacement;
+    String? replacementPk;
     if (wasActive) {
-      final replacement = accounts.first;
-      final replacementPk = await _secureStorage.read(
+      replacement = accounts.firstWhere(
+        (a) => a.address.toLowerCase() != normalized,
+      );
+      replacementPk = await _secureStorage.read(
         key: _walletPrivateKeyKey(replacement.address),
       );
       if (replacementPk == null) {
         throw Exception('Replacement wallet private key is missing');
       }
+    }
+
+    accounts.removeAt(index);
+    await _saveWalletAccounts(accounts);
+    await _secureStorage.delete(key: _walletPrivateKeyKey(address));
+
+    if (wasActive && replacement != null && replacementPk != null) {
       await _secureStorage.write(key: _keyAddress, value: replacement.address);
       await _secureStorage.write(key: _keyPrivateKey, value: replacementPk);
       await _secureStorage.write(key: _keyWalletName, value: replacement.name);
@@ -196,7 +230,9 @@ class StorageService {
       ];
     }
     final List<dynamic> data = jsonDecode(jsonStr) as List<dynamic>;
-    return data.map((e) => WalletAccount.fromJson(e as Map<String, dynamic>)).toList();
+    return data
+        .map((e) => WalletAccount.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<int> getNextDerivationIndex() async {
@@ -227,7 +263,9 @@ class StorageService {
 
   Future<void> _upsertWalletAccount(WalletAccount account) async {
     final accounts = await getWalletAccounts();
-    final index = accounts.indexWhere((a) => a.address.toLowerCase() == account.address.toLowerCase());
+    final index = accounts.indexWhere(
+      (a) => a.address.toLowerCase() == account.address.toLowerCase(),
+    );
     if (index >= 0) {
       accounts[index] = account;
     } else {
@@ -239,13 +277,16 @@ class StorageService {
   Future<WalletAccount?> _findWallet(String address) async {
     final accounts = await getWalletAccounts();
     try {
-      return accounts.firstWhere((a) => a.address.toLowerCase() == address.toLowerCase());
+      return accounts.firstWhere(
+        (a) => a.address.toLowerCase() == address.toLowerCase(),
+      );
     } catch (_) {
       return null;
     }
   }
 
-  String _walletPrivateKeyKey(String address) => 'wallet_private_key_${address.toLowerCase()}';
+  String _walletPrivateKeyKey(String address) =>
+      'wallet_private_key_${address.toLowerCase()}';
 
   /// Save passcode
   Future<void> savePasscode(String passcode) async {
@@ -336,9 +377,9 @@ class StorageService {
   /// Get biometric enabled status
   Future<bool> isBiometricEnabled() async {
     final prefs = await SharedPreferences.getInstance();
-    return (prefs.getBool(_keyBiometricEnabled) ?? false) || 
-           (prefs.getBool(_keyFingerprintEnabled) ?? false) ||
-           (prefs.getBool(_keyFaceIdEnabled) ?? false);
+    return (prefs.getBool(_keyBiometricEnabled) ?? false) ||
+        (prefs.getBool(_keyFingerprintEnabled) ?? false) ||
+        (prefs.getBool(_keyFaceIdEnabled) ?? false);
   }
 
   /// Save Face ID setting
@@ -395,13 +436,16 @@ class StorageService {
   /// Save language preference
   Future<void> setLanguage(String languageCode) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyLanguage, languageCode);
+    final normalized = LanguageUtils.normalizeLanguageCode(languageCode);
+    await prefs.setString(_keyLanguage, normalized);
   }
 
   /// Get language preference
   Future<String?> getLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyLanguage);
+    final stored = prefs.getString(_keyLanguage);
+    if (stored == null || stored.isEmpty) return null;
+    return LanguageUtils.normalizeLanguageCode(stored);
   }
 
   /// Save preferred display currency (e.g., USD)

@@ -32,6 +32,7 @@ class TokenManagementSearchBar extends StatelessWidget {
               ? null
               : IconButton(
                   onPressed: controller.clear,
+                  tooltip: 'Clear search',
                   icon: const Icon(Icons.close, color: Colors.white54),
                 ),
           border: InputBorder.none,

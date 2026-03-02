@@ -56,7 +56,8 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ToastUtils.showError('Unable to load referrals: $e');
+      debugPrint('Unable to load referrals: $e');
+      ToastUtils.showError('Unable to load referrals');
     }
   }
 
@@ -81,9 +82,13 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       );
       ToastUtils.showSuccess('Referral added');
       _referralInput.clear();
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
       await _loadProfile();
     } catch (e) {
-      ToastUtils.showError('Unable to add referral: $e');
+      debugPrint('Unable to add referral: $e');
+      ToastUtils.showError('Unable to add referral');
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -285,7 +290,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         child: Text(
-                          'View Referral Stats',
+                          'Refresh',
                           style: GoogleFonts.outfit(
                             color: Colors.white,
                             fontSize: 17,

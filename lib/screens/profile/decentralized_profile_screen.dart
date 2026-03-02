@@ -61,6 +61,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
   }
 
   Future<void> _pickCurrency() async {
+    final l = AppLocalizations.of(context);
     final options = <String>['USD', 'EUR', 'GBP', 'NGN'];
     final selected = await showModalBottomSheet<String>(
       context: context,
@@ -80,7 +81,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
             ),
             const SizedBox(height: 14),
             Text(
-              'Select Currency',
+              l.currency,
               style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -127,12 +128,13 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
   }
 
   Future<void> _confirmReset() async {
+    final l = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reset App?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+        title: Text('${l.resetApp}?', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
         content: Text(
           'This clears local wallet data on this device. Ensure your seed phrase is backed up.',
           style: GoogleFonts.outfit(color: Colors.white70),
@@ -140,17 +142,40 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.white54)),
+            child: Text(l.skip, style: GoogleFonts.outfit(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Reset', style: GoogleFonts.outfit(color: AppColors.accentRed)),
+            child: Text(l.resetApp, style: GoogleFonts.outfit(color: AppColors.accentRed)),
           ),
         ],
       ),
     );
     if (confirm != true) return;
-    await _walletService.deleteWallet();
+    try {
+      await _walletService.deleteWallet();
+    } catch (e) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(l.resetApp, style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600)),
+          content: Text(
+            'Failed to reset app data. Please try again.',
+            style: GoogleFonts.outfit(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l.continue_, style: GoogleFonts.outfit(color: AppColors.accentRed)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
   }
@@ -159,7 +184,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
-    final localeName = AppLocalizations.languageNames[l.locale.languageCode] ?? 'English';
+    final localeName = AppLocalizations.languageNames[l.locale.languageCode] ?? AppLocalizations.languageNames['en']!;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -179,7 +204,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
                       child: Center(
                         child: Text(
-                          'Profile',
+                          l.profile,
                           style: GoogleFonts.outfit(
                             color: Colors.white,
                             fontSize: 34,
@@ -194,29 +219,29 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                       onTap: () => Navigator.pushNamed(context, '/wallets'),
                     ),
                     const SizedBox(height: 16),
-                    const SettingsSectionHeader(title: 'General'),
+                    SettingsSectionHeader(title: l.general),
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
                           icon: Icons.wallet_outlined,
-                          title: 'Manage Wallets',
+                          title: l.manageWallets,
                           onTap: () => Navigator.pushNamed(context, '/wallets'),
                         ),
                         SettingsItemTile(
                           icon: Icons.hub_outlined,
-                          title: 'Switch Network',
+                          title: l.switchNetwork,
                           subtitle: blockchain.activeChain.name,
                           onTap: _showNetworkSheet,
                         ),
                         SettingsItemTile(
                           icon: Icons.attach_money_rounded,
-                          title: 'Currency',
+                          title: l.currency,
                           subtitle: _currency,
                           onTap: _pickCurrency,
                         ),
                         SettingsItemTile(
                           icon: Icons.language_rounded,
-                          title: 'Choose Your Language',
+                          title: l.chooseYourLanguage,
                           subtitle: localeName,
                           onTap: () async {
                             final languageCode = await Navigator.push<String>(
@@ -232,51 +257,51 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         ),
                         SettingsItemTile(
                           icon: Icons.card_giftcard_rounded,
-                          title: 'Referrals',
+                          title: l.referrals,
                           onTap: () => Navigator.pushNamed(context, '/referrals'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    const SettingsSectionHeader(title: 'Security'),
+                    SettingsSectionHeader(title: l.security),
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
                           icon: Icons.vpn_key_rounded,
-                          title: 'Backup Seed Phrase',
+                          title: l.seedPhraseBackup,
                           subtitle: 'Action Required',
                           attention: true,
                           onTap: () => Navigator.pushNamed(context, '/backup-seed-phrase'),
                         ),
                         SettingsItemTile(
                           icon: Icons.shield_outlined,
-                          title: 'Password & Security',
+                          title: l.passwordSecurity,
                           onTap: () => Navigator.pushNamed(context, '/password-security'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
-                    const SettingsSectionHeader(title: 'Others'),
+                    SettingsSectionHeader(title: l.others),
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
                           icon: Icons.privacy_tip_outlined,
-                          title: 'Privacy Policy',
+                          title: l.privacyPolicy,
                           onTap: () => Navigator.pushNamed(context, '/privacy-policy'),
                         ),
                         SettingsItemTile(
                           icon: Icons.description_outlined,
-                          title: 'Terms of Service',
+                          title: l.termsOfService,
                           onTap: () => Navigator.pushNamed(context, '/terms-and-conditions'),
                         ),
                         SettingsItemTile(
                           icon: Icons.chat_bubble_outline_rounded,
-                          title: 'Feedback',
+                          title: l.feedback,
                           onTap: () => Navigator.pushNamed(context, '/feedback'),
                         ),
                         SettingsItemTile(
                           icon: Icons.groups_2_outlined,
-                          title: 'Join Our Community',
+                          title: l.joinOurCommunity,
                           onTap: () => Navigator.pushNamed(context, '/community'),
                         ),
                       ],
@@ -297,7 +322,7 @@ class _DecentralizedProfileScreenState extends State<DecentralizedProfileScreen>
                         onPressed: _confirmReset,
                         icon: const Icon(Icons.refresh_rounded),
                         label: Text(
-                          'Reset App',
+                          l.resetApp,
                           style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                         ),
                         style: OutlinedButton.styleFrom(

@@ -104,7 +104,7 @@ class _TokensSectionState extends State<TokensSection> {
                 GestureDetector(
                   onTap: widget.onOpenNfts,
                   child: Text(
-                    'View all',
+                    widget.localization.viewAll,
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       color: AppColors.accentRed,
@@ -220,7 +220,7 @@ class _TokensSectionState extends State<TokensSection> {
               ),
               const SizedBox(height: 16),
               Text(
-                'No NFTs found',
+                widget.localization.noNftsFound,
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -229,7 +229,7 @@ class _TokensSectionState extends State<TokensSection> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Your NFT preview will appear here on supported networks.',
+                widget.localization.nftPreviewDescription,
                 style: GoogleFonts.outfit(fontSize: 14, color: Colors.white54),
                 textAlign: TextAlign.center,
               ),
@@ -245,6 +245,7 @@ class _TokensSectionState extends State<TokensSection> {
           nfts: widget.nftPreview,
           hasMoreNfts: widget.hasMoreNfts,
           onOpenNfts: widget.onOpenNfts,
+          localization: widget.localization,
         ),
         const SizedBox(height: 10),
       ],
@@ -256,11 +257,13 @@ class _NftPreviewStrip extends StatelessWidget {
   final List<NftAsset> nfts;
   final bool hasMoreNfts;
   final VoidCallback onOpenNfts;
+  final AppLocalizations localization;
 
   const _NftPreviewStrip({
     required this.nfts,
     required this.hasMoreNfts,
     required this.onOpenNfts,
+    required this.localization,
   });
 
   @override
@@ -274,7 +277,7 @@ class _NftPreviewStrip extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'NFT Preview',
+                  localization.nftPreview,
                   style: GoogleFonts.outfit(
                     fontSize: 13,
                     color: Colors.white70,
@@ -286,7 +289,7 @@ class _NftPreviewStrip extends StatelessWidget {
                   GestureDetector(
                     onTap: onOpenNfts,
                     child: Text(
-                      'View all',
+                      localization.viewAll,
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         color: AppColors.accentRed,

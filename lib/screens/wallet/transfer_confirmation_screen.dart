@@ -18,10 +18,12 @@ class TransferConfirmationScreen extends StatefulWidget {
   const TransferConfirmationScreen({super.key});
 
   @override
-  State<TransferConfirmationScreen> createState() => _TransferConfirmationScreenState();
+  State<TransferConfirmationScreen> createState() =>
+      _TransferConfirmationScreenState();
 }
 
-class _TransferConfirmationScreenState extends State<TransferConfirmationScreen> {
+class _TransferConfirmationScreenState
+    extends State<TransferConfirmationScreen> {
   final WalletService _walletService = WalletService();
   Map<String, dynamic>? _args;
   String? _fromAddress;
@@ -32,11 +34,13 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
   double _gasFeeEth = 0;
   double _gasFeeUsd = 0;
   bool _isLoadingGas = true;
+  bool _gasEstimationFailed = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _args ??= ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _args ??=
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (_fromAddress == null) _loadFromAddress();
   }
 
@@ -51,21 +55,31 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       // Fetch native price for USD conversion
       final coinGeckoId = blockchain.activeChain.coinGeckoId;
-      final prices = await blockchain.getTokenPrices([coinGeckoId.isNotEmpty ? coinGeckoId : 'ethereum']);
-      final nativePrice = prices[coinGeckoId.isNotEmpty ? coinGeckoId : 'ethereum'] ?? 0;
+      final effectiveCoinId = (coinGeckoId == null || coinGeckoId.isEmpty)
+          ? 'ethereum'
+          : coinGeckoId;
+      final prices = await blockchain.getTokenPrices([effectiveCoinId]);
+      final nativePrice = prices[effectiveCoinId] ?? 0;
 
-      final gasData = await blockchain.estimateGasFee(nativePriceUsd: nativePrice);
+      final gasData = await blockchain.estimateGasFee(
+        nativePriceUsd: nativePrice,
+      );
       if (mounted) {
         setState(() {
           _gasPriceGwei = gasData['gasGwei'] ?? 20;
           _gasFeeEth = gasData['totalFeeEth'] ?? 0;
           _gasFeeUsd = gasData['totalFeeUsd'] ?? 0;
           _isLoadingGas = false;
+          _gasEstimationFailed = false;
         });
       }
     } catch (e) {
+      debugPrint('Gas estimation failed: $e');
       if (mounted) {
-        setState(() => _isLoadingGas = false);
+        setState(() {
+          _isLoadingGas = false;
+          _gasEstimationFailed = true;
+        });
       }
     }
   }
@@ -83,7 +97,10 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
     final amount = _args?['amount'] as double? ?? 0;
 
     try {
-      final chain = Provider.of<BlockchainService>(context, listen: false).activeChain;
+      final chain = Provider.of<BlockchainService>(
+        context,
+        listen: false,
+      ).activeChain;
 
       // Sign and broadcast the real transaction
       final txHash = await _walletService.sendNativeTransaction(
@@ -99,7 +116,11 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
         );
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/home',
+              (route) => false,
+            );
           }
         });
       }
@@ -123,11 +144,24 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
     final l = AppLocalizations.of(context);
 
     // Use real gas fees
-    final maxTotal = amount + _gasFeeEth;
-    final gasLabel = '${l.gasFee} (${_gasPriceGwei.toStringAsFixed(1)} Gwei)';
-    final gasValue = '${_gasFeeEth.toStringAsFixed(6)} ${blockchain.activeChain.symbol}';
-    final gasValueUsd = '≈\$${_gasFeeUsd.toStringAsFixed(2)}';
-    final maxTotalDisplay = '${_formatAmount(maxTotal)} $symbol';
+    final isNative = token?.contractAddress == null;
+    final maxTotal = isNative ? (amount + _gasFeeEth) : amount;
+
+    final gasLabel = _gasEstimationFailed
+        ? '${l.gasFee} (Estimation Failed)'
+        : '${l.gasFee} (${_gasPriceGwei.toStringAsFixed(1)} Gwei)';
+
+    final gasValue = _gasEstimationFailed
+        ? 'Error'
+        : '${_gasFeeEth.toStringAsFixed(6)} ${blockchain.activeChain.symbol}';
+
+    final gasValueUsd = _gasEstimationFailed
+        ? ''
+        : '≈\$${_gasFeeUsd.toStringAsFixed(2)}';
+
+    final maxTotalDisplay = isNative
+        ? '${_formatAmount(maxTotal)} $symbol'
+        : '${_formatAmount(amount)} $symbol';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -135,7 +169,7 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
         child: Column(
           children: [
             TransferHeader(onBack: () => Navigator.pop(context)),
-            
+
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -156,18 +190,27 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
                               GestureDetector(
                                 onTap: () => Navigator.pop(context),
                                 child: Container(
-                                  width: 32, height: 32,
+                                  width: 32,
+                                  height: 32,
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.close, color: Colors.white, size: 16),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Text(
                                 l.confirmTransfer,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
                             ],
                           ),
@@ -178,12 +221,12 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
                             symbol: symbol,
                           ),
                           const SizedBox(height: 28),
-                          
+
                           // TRANSACTION DETAILS
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              'TRANSACTION DETAILS',
+                              l.transactionDetails,
                               style: TextStyle(
                                 fontSize: 11,
                                 letterSpacing: 1,
@@ -199,29 +242,29 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
                             toAddress: _shortenAddress(toAddress),
                             network: network,
                             isLoadingGas: _isLoadingGas,
+                            gasEstimationFailed: _gasEstimationFailed,
                             gasLabel: gasLabel,
                             gasValue: gasValue,
                             gasValueUsd: gasValueUsd,
+                            totalLabel: isNative ? l.maxTotal : l.amount,
                             maxTotalDisplay: maxTotalDisplay,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Warning
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 20),
-                      child: WarningBanner(
-                        message: 'Verify the recipient address carefully. Transactions are permanent and cannot be reversed.',
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: WarningBanner(message: l.transferWarningMessage),
                     ),
                     const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-            
+
             // Confirm button
             Padding(
               padding: const EdgeInsets.all(16),
@@ -240,11 +283,13 @@ class _TransferConfirmationScreenState extends State<TransferConfirmationScreen>
   String _formatAmount(double amount) {
     if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(0)}M';
     if (amount >= 1000) {
-      return amount.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},',
-      );
+      return amount
+          .toStringAsFixed(0)
+          .replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (m) => '${m[1]},',
+          );
     }
     return amount.toStringAsFixed(amount < 1 ? 6 : 2);
   }
-
 }

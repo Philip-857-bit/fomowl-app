@@ -69,7 +69,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       ToastUtils.showSuccess('Feedback submitted. Thank you.');
       Navigator.pop(context);
     } catch (e) {
-      ToastUtils.showError('Unable to submit feedback: $e');
+      debugPrint('Unable to submit feedback: $e');
+      ToastUtils.showError('Unable to submit feedback. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -93,7 +94,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                    ),
                   ),
                   Text(
                     'Feedback',
@@ -120,10 +124,17 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 items: const [
                   DropdownMenuItem(value: 'general', child: Text('General')),
                   DropdownMenuItem(value: 'bug', child: Text('Bug Report')),
-                  DropdownMenuItem(value: 'feature', child: Text('Feature Request')),
-                  DropdownMenuItem(value: 'design', child: Text('Design Feedback')),
+                  DropdownMenuItem(
+                    value: 'feature',
+                    child: Text('Feature Request'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'design',
+                    child: Text('Design Feedback'),
+                  ),
                 ],
-                onChanged: (value) => setState(() => _category = value ?? 'general'),
+                onChanged: (value) =>
+                    setState(() => _category = value ?? 'general'),
                 style: GoogleFonts.outfit(color: Colors.white),
               ),
               const SizedBox(height: 14),
@@ -142,7 +153,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 style: GoogleFonts.outfit(color: Colors.white),
                 minLines: 5,
                 maxLines: 8,
-                decoration: _inputDecoration(hint: 'Tell us what happened or what you need'),
+                decoration: _inputDecoration(
+                  hint: 'Tell us what happened or what you need',
+                ),
               ),
               const SizedBox(height: 14),
               _buildLabel('Contact Email (Optional)'),
@@ -160,17 +173,25 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   minimumSize: const Size.fromHeight(52),
                   backgroundColor: AppColors.accentRed,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
                 child: _submitting
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
                     : Text(
                         'Submit Feedback',
-                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
               ),
             ],

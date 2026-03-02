@@ -26,13 +26,17 @@ class ReferralProfile {
 }
 
 class ReferralService {
-  static const String _baseUrl = 'https://fomowl-backend.onrender.com/api/referrals';
+  static const String _baseUrl =
+      'https://fomowl-backend.onrender.com/api/referrals';
 
   Future<ReferralProfile> getProfile(String walletAddress) async {
-    final uri = Uri.parse('$_baseUrl/$walletAddress');
+    final encodedAddress = Uri.encodeComponent(walletAddress);
+    final uri = Uri.parse('$_baseUrl/$encodedAddress');
     final response = await http.get(uri).timeout(const Duration(seconds: 15));
     if (response.statusCode != 200) {
-      throw Exception('Failed to load referral profile');
+      throw Exception(
+        'Failed to load referral profile (HTTP ${response.statusCode})',
+      );
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;

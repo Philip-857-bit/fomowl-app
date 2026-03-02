@@ -62,9 +62,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
               changePercent24h: 0,
               contractAddress: '',
               decimals: 18,
-              coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty
-                  ? blockchain.activeChain.coinGeckoId
-                  : null,
+              coinGeckoId: blockchain.activeChain.coinGeckoId,
             );
             _availableBalance = balance;
           });
@@ -84,9 +82,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
             changePercent24h: 0,
             contractAddress: '',
             decimals: 18,
-            coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty
-                ? blockchain.activeChain.coinGeckoId
-                : null,
+            coinGeckoId: blockchain.activeChain.coinGeckoId,
           );
         });
       }
@@ -102,9 +98,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           changePercent24h: 0,
           contractAddress: '',
           decimals: 18,
-          coinGeckoId: blockchain.activeChain.coinGeckoId.isNotEmpty
-              ? blockchain.activeChain.coinGeckoId
-              : null,
+          coinGeckoId: blockchain.activeChain.coinGeckoId,
         );
       });
     }
@@ -141,7 +135,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       return;
     }
 
-    if (!destination.startsWith('0x') || destination.length != 42) {
+    final isValidEvmAddress = RegExp(
+      r'^0x[0-9a-fA-F]{40}$',
+    ).hasMatch(destination);
+    if (!isValidEvmAddress) {
       _showError('Invalid Ethereum address');
       return;
     }

@@ -4,7 +4,7 @@ class EvmChain {
   final String symbol;
   final int chainId;
   final String rpcUrl;
-  final String coinGeckoId;
+  final String? coinGeckoId;
   final String? explorerUrl;
   final bool isCustom;
 
@@ -13,7 +13,7 @@ class EvmChain {
     required this.symbol,
     required this.chainId,
     required this.rpcUrl,
-    required this.coinGeckoId,
+    this.coinGeckoId,
     this.explorerUrl,
     this.isCustom = false,
   });
@@ -33,9 +33,9 @@ class EvmChain {
     symbol: json['symbol'] as String,
     chainId: json['chainId'] as int,
     rpcUrl: json['rpcUrl'] as String,
-    coinGeckoId: json['coinGeckoId'] as String? ?? '',
+    coinGeckoId: json['coinGeckoId'] as String?,
     explorerUrl: json['explorerUrl'] as String?,
-    isCustom: json['isCustom'] as bool? ?? true,
+    isCustom: json['isCustom'] as bool? ?? false,
   );
 }
 

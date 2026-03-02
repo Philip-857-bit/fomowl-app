@@ -30,26 +30,59 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   }
 
   Future<void> _loadState() async {
-    final biometric = await _storage.isBiometricEnabled();
-    final twoFactor = await _storage.isTwoFactorEnabled();
-    final autoLock = await _storage.getAutoLockMinutes();
-    if (!mounted) return;
-    setState(() {
-      _biometricEnabled = biometric;
-      _twoFactorEnabled = twoFactor;
-      _autoLockMinutes = autoLock;
-      _loading = false;
-    });
+    try {
+      final biometric = await _storage.isBiometricEnabled();
+      final twoFactor = await _storage.isTwoFactorEnabled();
+      final autoLock = await _storage.getAutoLockMinutes();
+      if (!mounted) return;
+      setState(() {
+        _biometricEnabled = biometric;
+        _twoFactorEnabled = twoFactor;
+        _autoLockMinutes = autoLock;
+      });
+    } catch (e) {
+      debugPrint('Failed to load security preferences: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   Future<void> _setBiometric(bool enabled) async {
+    final previous = _biometricEnabled;
     setState(() => _biometricEnabled = enabled);
-    await _storage.setBiometricEnabled(enabled);
+    try {
+      await _storage.setBiometricEnabled(enabled);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _biometricEnabled = previous);
+      }
+      debugPrint('Failed to persist biometric setting: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update biometric setting')),
+        );
+      }
+    }
   }
 
   Future<void> _setTwoFactor(bool enabled) async {
+    final previous = _twoFactorEnabled;
     setState(() => _twoFactorEnabled = enabled);
-    await _storage.setTwoFactorEnabled(enabled);
+    try {
+      await _storage.setTwoFactorEnabled(enabled);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _twoFactorEnabled = previous);
+      }
+      debugPrint('Failed to persist 2FA setting: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to update 2FA setting')),
+        );
+      }
+    }
   }
 
   Future<void> _showAutoLockPicker() async {
@@ -100,6 +133,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       ),
     );
     if (selected == null) return;
+    if (!mounted) return;
     setState(() => _autoLockMinutes = selected);
     await _storage.setAutoLockMinutes(selected);
   }
@@ -114,7 +148,9 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       ),
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.accentRed),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Column(
@@ -126,7 +162,10 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                         children: [
                           IconButton(
                             onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                            ),
                           ),
                           Text(
                             'Password & Security',
@@ -147,7 +186,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           icon: Icons.lock_outline_rounded,
                           title: 'Change Password',
                           subtitle: 'Passcode unlock',
-                          onTap: () => Navigator.pushNamed(context, '/create-passcode'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/create-passcode'),
                         ),
                         SettingsItemTile(
                           icon: Icons.fingerprint_rounded,
@@ -183,7 +223,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                         SettingsItemTile(
                           icon: Icons.timer_outlined,
                           title: 'Auto-Lock Timer',
-                          subtitle: '$_autoLockMinutes minute${_autoLockMinutes > 1 ? 's' : ''}',
+                          subtitle:
+                              '$_autoLockMinutes minute${_autoLockMinutes > 1 ? 's' : ''}',
                           onTap: _showAutoLockPicker,
                         ),
                       ],
@@ -191,11 +232,16 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                     const SizedBox(height: 18),
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
                         color: AppColors.cardBackground,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
                       ),
                       child: Text(
                         'Enable additional security measures to protect your digital assets from unauthorized access.',
