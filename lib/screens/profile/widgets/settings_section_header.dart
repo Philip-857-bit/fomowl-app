@@ -9,14 +9,14 @@ class SettingsSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 10),
       child: Text(
         title.toUpperCase(),
         style: GoogleFonts.outfit(
-          fontSize: 14,
-          letterSpacing: 2.0,
-          fontWeight: FontWeight.w500,
-          color: const Color(0xFF6C7A99),
+          fontSize: 13,
+          letterSpacing: 1.8,
+          fontWeight: FontWeight.w600,
+          color: const Color(0xFF5F7396),
         ),
       ),
     );

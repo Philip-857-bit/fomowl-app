@@ -122,28 +122,32 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-                      child: Row(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              color: Colors.white,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                           Text(
                             'Referrals',
                             style: GoogleFonts.outfit(
                               color: Colors.white,
-                              fontSize: 30,
+                              fontSize: 34,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Center(
@@ -154,7 +158,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 color: Colors.white,
-                                fontSize: 20,
+                                fontSize: 22,
                                 fontWeight: FontWeight.w600,
                                 height: 1.2,
                               ),
@@ -165,7 +169,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 color: const Color(0xFF9AA7C0),
-                                fontSize: 14,
+                                fontSize: 15,
                                 height: 1.3,
                               ),
                             ),
@@ -176,9 +180,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                     const SizedBox(height: 20),
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.cardDark,
+                        color: const Color(0xFF151619),
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: AppColors.accentRed.withValues(alpha: 0.8),
@@ -192,7 +196,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             style: GoogleFonts.outfit(
                               color: const Color(0xFF8794AF),
                               letterSpacing: 1.5,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -203,8 +207,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                                   _profile?.referralCode ?? '------',
                                   style: GoogleFonts.outfit(
                                     color: Colors.white,
-                                    fontSize: 30,
+                                    fontSize: 54,
                                     fontWeight: FontWeight.w700,
+                                    height: 1,
                                   ),
                                 ),
                               ),
@@ -224,15 +229,15 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
-                          icon: Icons.badge_outlined,
+                          icon: Icons.numbers_outlined,
                           title: 'My Code',
                           subtitle: _profile?.referralCode ?? '--',
                           onTap: _copyMyCode,
                         ),
                         SettingsItemTile(
-                          icon: Icons.group_outlined,
-                          title: 'My Referrals',
-                          subtitle: '${_profile?.totalReferrals ?? 0} users',
+                          icon: Icons.person_add_alt_1_outlined,
+                          title: 'My Referral',
+                          subtitle: _profile?.referredByCode ?? 'No referral',
                         ),
                         SettingsItemTile(
                           icon: Icons.account_balance_wallet_outlined,
@@ -241,9 +246,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               '\$${(_profile?.totalRewardsUsd ?? 0).toStringAsFixed(2)}',
                         ),
                         SettingsItemTile(
-                          icon: Icons.link_outlined,
-                          title: 'My Referral',
-                          subtitle: _profile?.referredByCode ?? 'No referral',
+                          icon: Icons.groups_2_outlined,
+                          title: 'Referred Users',
+                          subtitle: '${_profile?.totalReferrals ?? 0} users',
                         ),
                       ],
                     ),
@@ -252,7 +257,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.cardDark,
+                        color: const Color(0xFF151619),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.08),
@@ -266,7 +271,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             style: GoogleFonts.outfit(
                               color: const Color(0xFF8794AF),
                               letterSpacing: 1.2,
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -314,7 +319,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           ),
                         ),
                         child: Text(
-                          'Refresh',
+                          'View Referral Stats',
                           style: GoogleFonts.outfit(
                             color: Colors.white,
                             fontSize: 17,

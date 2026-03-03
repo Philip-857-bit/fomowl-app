@@ -77,6 +77,9 @@ class _SwapScreenState extends State<SwapScreen> {
   String? _walletAddress;
   SwapQuote? _currentQuote;
   int _selectedPercentage = -1; // -1 = none selected
+  /// Cached per-token USD prices fetched from CoinGecko.
+  /// Used as fallback when token.priceUsd is 0 (common for native tokens).
+  final Map<String, double> _tokenPriceCache = {};
   bool _isApproving = false;
   bool _isSwapping = false;
   bool _isGasless = false;
@@ -137,6 +140,37 @@ class _SwapScreenState extends State<SwapScreen> {
         _syncSelectedTokens(blockchain.tokens);
       });
     }
+
+    // Fetch live prices for all tokens with coinGeckoId to fill price gaps.
+    await _refreshTokenPrices();
+  }
+
+  /// Fetches live prices from CoinGecko for tokens whose priceUsd is 0.
+  Future<void> _refreshTokenPrices() async {
+    if (!mounted) return;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final priceIds = <String>{};
+    for (final t in blockchain.tokens) {
+      if (t.coinGeckoId != null && t.coinGeckoId!.isNotEmpty) {
+        priceIds.add(t.coinGeckoId!);
+      }
+    }
+    // Also include the active chain's native token CoinGecko ID for fee estimation.
+    final nativeCoinGeckoId = blockchain.activeChain.coinGeckoId;
+    if (nativeCoinGeckoId != null && nativeCoinGeckoId.isNotEmpty) {
+      priceIds.add(nativeCoinGeckoId);
+    }
+    if (priceIds.isEmpty) return;
+    try {
+      final prices = await blockchain.getTokenPrices(priceIds.toList());
+      if (mounted) {
+        setState(() {
+          _tokenPriceCache.addAll(prices);
+        });
+      }
+    } catch (_) {
+      // Non-fatal: USD values will just show $0.00
+    }
   }
 
   void _syncSelectedTokens(List<Token> tokens) {
@@ -177,13 +211,14 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Future<void> _showTokenSelector(bool isFrom) async {
-    final tokens = Provider.of<BlockchainService>(
+    final blockchain = Provider.of<BlockchainService>(
       context,
       listen: false,
-    ).tokens;
+    );
+    final tokens = blockchain.tokens;
     final selectedToken = await showDialog<Token>(
       context: context,
-      builder: (ctx) => TokenSelectorDialog(tokens: tokens),
+      builder: (ctx) => TokenSelectorDialog(tokens: tokens, chainId: blockchain.activeChain.chainId),
     );
 
     if (selectedToken != null) {
@@ -268,7 +303,28 @@ class _SwapScreenState extends State<SwapScreen> {
 
   double _usdValueFor(Token? token, double amount) {
     if (token == null) return 0.0;
-    return amount * token.unitPriceUsd;
+    double price = token.unitPriceUsd;
+    // Fallback: use cached CoinGecko price when the token model has no price.
+    if (price <= 0 && token.coinGeckoId != null && token.coinGeckoId!.isNotEmpty) {
+      price = _tokenPriceCache[token.coinGeckoId] ?? 0.0;
+    }
+    return amount * price;
+  }
+
+  /// Returns the native token's USD price from the cache or token model.
+  double get _nativeTokenPriceUsd {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final nativeId = blockchain.activeChain.coinGeckoId;
+    if (nativeId != null && nativeId.isNotEmpty) {
+      final cached = _tokenPriceCache[nativeId];
+      if (cached != null && cached > 0) return cached;
+    }
+    // Fallback: check the first token (native) in the list.
+    final tokens = blockchain.tokens;
+    if (tokens.isNotEmpty && tokens.first.unitPriceUsd > 0) {
+      return tokens.first.unitPriceUsd;
+    }
+    return 0.0;
   }
 
   bool _tokensAreIdentical(Token? a, Token? b) {
@@ -460,8 +516,10 @@ class _SwapScreenState extends State<SwapScreen> {
           _pricing = quote.amountOutFormatted;
           _toController.text = quote.amountOutFormatted;
           _currentQuote = quote;
-          _feeUsd = quote.networkFeeUsd;
           _feeNative = quote.networkFeeNative;
+          _feeUsd = quote.networkFeeUsd > 0
+              ? quote.networkFeeUsd
+              : quote.networkFeeNative * _nativeTokenPriceUsd;
         });
       } else {
         final mapped = _mapErrorMessage(_swapService.lastError);
@@ -800,6 +858,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       onAmountChanged: _onFromAmountChanged,
                       onSelectToken: () => _showTokenSelector(true),
                       onPercentSelected: _setPercentage,
+                      chainId: blockchain.activeChain.chainId,
                     ),
                     const SizedBox(height: 4),
                     SwapDirectionButton(onPressed: _swapTokens),
@@ -811,6 +870,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       balance: _toToken?.balance ?? 0,
                       isCalculating: _isCalculating,
                       onSelectToken: () => _showTokenSelector(false),
+                      chainId: blockchain.activeChain.chainId,
                     ),
                     const SizedBox(height: 24),
                     SwapPriceDetailsCard(

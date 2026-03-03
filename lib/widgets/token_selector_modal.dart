@@ -6,7 +6,8 @@ import 'token_icon.dart';
 
 class TokenSelectorDialog extends StatefulWidget {
   final List<Token> tokens;
-  const TokenSelectorDialog({super.key, required this.tokens});
+  final int? chainId;
+  const TokenSelectorDialog({super.key, required this.tokens, this.chainId});
 
   @override
   State<TokenSelectorDialog> createState() => _TokenSelectorDialogState();
@@ -146,6 +147,7 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
                 tokenAddress: token.contractAddress,
                 tokenImageUrl: token.imageUrl,
                 size: 32,
+                chainId: widget.chainId,
               ),
             ),
             const SizedBox(width: 16),

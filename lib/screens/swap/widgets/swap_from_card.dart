@@ -14,6 +14,7 @@ class SwapFromCard extends StatelessWidget {
   final void Function(String) onAmountChanged;
   final VoidCallback onSelectToken;
   final void Function(int) onPercentSelected;
+  final int? chainId;
 
   const SwapFromCard({
     super.key,
@@ -25,6 +26,7 @@ class SwapFromCard extends StatelessWidget {
     required this.onAmountChanged,
     required this.onSelectToken,
     required this.onPercentSelected,
+    this.chainId,
   });
 
   @override
@@ -90,7 +92,7 @@ class SwapFromCard extends StatelessWidget {
                   ),
                 ),
               ),
-              SwapTokenChip(token: token, onTap: onSelectToken),
+              SwapTokenChip(token: token, onTap: onSelectToken, chainId: chainId),
             ],
           ),
           const SizedBox(height: 8),

@@ -13,6 +13,7 @@ import '../../services/token_visibility_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
+import '../../widgets/token_icon.dart';
 import 'widgets/token_management/contract_import_card.dart';
 import 'widgets/token_management/managed_token_tile.dart';
 import 'widgets/token_management/token_management_search_bar.dart';
@@ -33,6 +34,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   List<Token> _tokens = [];
   List<Token> _searchResults = [];
+  List<Token> _suggestedTokens = [];
   Set<String> _hiddenKeys = {};
   bool _isLoading = true;
   bool _hasChanges = false;
@@ -57,10 +59,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool showSpinner = true}) async {
     final blockchain = context.read<BlockchainService>();
     final chainId = blockchain.activeChain.chainId;
-    setState(() => _isLoading = true);
+    if (showSpinner) {
+      setState(() => _isLoading = true);
+    }
 
     final hidden = await _visibilityService.loadHiddenTokens(chainId);
     final address = await _walletService.getCurrentWalletAddress();
@@ -77,10 +81,27 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     setState(() {
       _tokens = fetched;
       _hiddenKeys = hidden;
-      _isLoading = false;
+      if (showSpinner) {
+        _isLoading = false;
+      }
     });
+    await _loadSuggestedTokens();
 
     _checkClipboardForTokenSuggestion();
+  }
+
+  Future<void> _loadSuggestedTokens() async {
+    final blockchain = context.read<BlockchainService>();
+    try {
+      final results = await blockchain.searchTokensFromBackend('', limit: 60);
+      if (!mounted) return;
+      setState(() {
+        _suggestedTokens = results;
+        if (_query.trim().isEmpty) {
+          _searchResults = results;
+        }
+      });
+    } catch (_) {}
   }
 
   bool _isTokenHidden(Token token) {
@@ -112,7 +133,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       blockchain.activeChain.chainId,
       token.address,
     );
-    await _loadData();
+    await _loadData(showSpinner: false);
     setState(() => _hasChanges = true);
     ToastUtils.showSuccess('Token removed');
   }
@@ -163,7 +184,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ToastUtils.showInfo('Token already exists on this network');
         return;
       }
-      await _loadData();
+      await _loadData(showSpinner: false);
       if (!mounted) return;
       setState(() {
         _hasChanges = true;
@@ -182,10 +203,17 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Future<void> _runRemoteSearch(String query) async {
     final trimmed = query.trim();
     if (!mounted) return;
-    if (trimmed.isEmpty || _isContractAddress(trimmed)) {
+    if (trimmed.isEmpty) {
       setState(() {
         _isSearchingRemote = false;
-        _searchResults = [];
+        _searchResults = _suggestedTokens;
+      });
+      return;
+    }
+    if (_isContractAddress(trimmed)) {
+      setState(() {
+        _isSearchingRemote = false;
+        _searchResults = _suggestedTokens;
       });
       return;
     }
@@ -223,15 +251,16 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     setState(() => _isResolvingContract = true);
     try {
       final detected = await blockchain.detectTokenByContract(contract);
-      final tokenToAdd =
-          detected ??
-          CustomTokenDefinition(
-            symbol: token.symbol.toUpperCase(),
-            name: token.name,
-            address: contract,
-            decimals: token.decimals >= 0 ? token.decimals : 18,
-            coinGeckoId: token.coinGeckoId,
-          );
+      final tokenToAdd = CustomTokenDefinition(
+        symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
+        name: detected?.name ?? token.name,
+        address: detected?.address ?? contract,
+        decimals: (detected?.decimals ?? token.decimals) > 0
+            ? (detected?.decimals ?? token.decimals)
+            : 18,
+        coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
+        imageUrl: token.imageUrl ?? detected?.imageUrl,
+      );
 
       final added = await blockchain.addCustomToken(
         chainId: blockchain.activeChain.chainId,
@@ -242,7 +271,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         return;
       }
 
-      await _loadData();
+      await _loadData(showSpinner: false);
       if (!mounted) return;
       setState(() => _hasChanges = true);
       ToastUtils.showSuccess('${tokenToAdd.symbol} added');
@@ -364,7 +393,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ToastUtils.showInfo('Token already exists on this network');
         return;
       }
-      await _loadData();
+      await _loadData(showSpinner: false);
       if (!mounted) return;
       setState(() => _hasChanges = true);
       ToastUtils.showSuccess('${detected.symbol} added');
@@ -393,7 +422,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         )
         .toList();
     final canImportByContract = _isContractAddress(_query);
-    final hasRemoteResults = _query.isNotEmpty && !canImportByContract;
+    final hasRemoteResults =
+        _isSearchingRemote || _searchResults.isNotEmpty || _query.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -439,7 +469,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     Row(
                       children: [
                         Text(
-                          'Search Results',
+                          _query.isEmpty
+                              ? 'Suggested Tokens'
+                              : 'Search Results',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -461,7 +493,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     const SizedBox(height: 10),
                     if (!_isSearchingRemote && _searchResults.isEmpty)
                       Text(
-                        'No remote tokens found.',
+                        _query.isEmpty
+                            ? 'No suggested tokens available yet.'
+                            : 'No remote tokens found.',
                         style: GoogleFonts.outfit(color: Colors.white54),
                       )
                     else
@@ -481,6 +515,14 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                           ),
                           child: Row(
                             children: [
+                              TokenIcon(
+                                tokenSymbol: token.symbol,
+                                tokenAddress: token.contractAddress,
+                                tokenImageUrl: token.imageUrl,
+                                size: 36,
+                                chainId: blockchain.activeChain.chainId,
+                              ),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -559,6 +601,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                         isVisible: !_isTokenHidden(token),
                         onVisibilityChanged: (value) =>
                             _toggleToken(token, !value),
+                        chainId: blockchain.activeChain.chainId,
                       ),
                     ),
                   const SizedBox(height: 32),
@@ -566,7 +609,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Custom Tokens',
+                        'Added Tokens',
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -578,7 +621,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                   const SizedBox(height: 12),
                   if (customTokens.isEmpty)
                     Text(
-                      'Paste a contract address above to add a custom token instantly.',
+                      'Paste a contract address above to add a token instantly.',
                       style: GoogleFonts.outfit(color: Colors.white54),
                     )
                   else

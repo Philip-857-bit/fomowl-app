@@ -20,6 +20,7 @@ class TokensSection extends StatefulWidget {
   final VoidCallback onOpenNfts;
   final bool Function(Token token) isTokenHidden;
   final void Function(Token token) onSelectToken;
+  final int? chainId;
 
   const TokensSection({
     super.key,
@@ -33,6 +34,7 @@ class TokensSection extends StatefulWidget {
     required this.onOpenNfts,
     required this.isTokenHidden,
     required this.onSelectToken,
+    this.chainId,
   });
 
   @override
@@ -190,6 +192,7 @@ class _TokensSectionState extends State<TokensSection> {
           (token) => _TokenListItem(
             token: token,
             onTap: () => widget.onSelectToken(token),
+            chainId: widget.chainId,
           ),
         )
         .toList();
@@ -382,8 +385,9 @@ class _NftPreviewStrip extends StatelessWidget {
 class _TokenListItem extends StatelessWidget {
   final Token token;
   final VoidCallback onTap;
+  final int? chainId;
 
-  const _TokenListItem({required this.token, required this.onTap});
+  const _TokenListItem({required this.token, required this.onTap, this.chainId});
 
   @override
   Widget build(BuildContext context) {
@@ -403,6 +407,7 @@ class _TokenListItem extends StatelessWidget {
               tokenAddress: token.contractAddress,
               tokenImageUrl: token.imageUrl,
               size: 40,
+              chainId: chainId,
             ),
             const SizedBox(width: 12),
             Expanded(

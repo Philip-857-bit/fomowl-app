@@ -90,20 +90,24 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Stack(
+                alignment: Alignment.center,
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      color: Colors.white,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   Text(
                     'Feedback',
                     style: GoogleFonts.outfit(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 34,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

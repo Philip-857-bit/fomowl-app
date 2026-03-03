@@ -6,6 +6,7 @@ class EvmChain {
   final String rpcUrl;
   final String? coinGeckoId;
   final String? explorerUrl;
+  final String? logoUrl;
   final bool isCustom;
 
   const EvmChain({
@@ -15,6 +16,7 @@ class EvmChain {
     required this.rpcUrl,
     this.coinGeckoId,
     this.explorerUrl,
+    this.logoUrl,
     this.isCustom = false,
   });
 
@@ -25,6 +27,7 @@ class EvmChain {
     'rpcUrl': rpcUrl,
     'coinGeckoId': coinGeckoId,
     'explorerUrl': explorerUrl,
+    'logoUrl': logoUrl,
     'isCustom': isCustom,
   };
 
@@ -35,6 +38,7 @@ class EvmChain {
     rpcUrl: json['rpcUrl'] as String,
     coinGeckoId: json['coinGeckoId'] as String?,
     explorerUrl: json['explorerUrl'] as String?,
+    logoUrl: json['logoUrl'] as String?,
     isCustom: json['isCustom'] as bool? ?? false,
   );
 }
@@ -45,6 +49,7 @@ class CustomTokenDefinition {
   final String address;
   final int decimals;
   final String? coinGeckoId;
+  final String? imageUrl;
 
   const CustomTokenDefinition({
     required this.symbol,
@@ -52,6 +57,7 @@ class CustomTokenDefinition {
     required this.address,
     required this.decimals,
     this.coinGeckoId,
+    this.imageUrl,
   });
 
   factory CustomTokenDefinition.fromJson(Map<String, dynamic> json) {
@@ -61,6 +67,7 @@ class CustomTokenDefinition {
       address: json['address'] as String,
       decimals: json['decimals'] as int,
       coinGeckoId: json['coinGeckoId'] as String?,
+      imageUrl: json['imageUrl'] as String?,
     );
   }
 
@@ -70,5 +77,6 @@ class CustomTokenDefinition {
     'address': address,
     'decimals': decimals,
     'coinGeckoId': coinGeckoId,
+    'imageUrl': imageUrl,
   };
 }

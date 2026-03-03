@@ -252,6 +252,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
               tokenAddress: token.contractAddress,
               tokenImageUrl: token.imageUrl,
               size: 42,
+              chainId: Provider.of<BlockchainService>(context, listen: false).activeChain.chainId,
             ),
             const SizedBox(width: 12),
             Expanded(

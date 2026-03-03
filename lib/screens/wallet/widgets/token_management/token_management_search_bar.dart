@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../constants/app_colors.dart';
-
 class TokenManagementSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String query;
@@ -17,9 +15,9 @@ class TokenManagementSearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
       ),
       child: TextField(
         controller: controller,

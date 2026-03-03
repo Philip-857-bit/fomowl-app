@@ -6,8 +6,9 @@ import '../../../widgets/token_icon.dart';
 class SwapTokenChip extends StatelessWidget {
   final Token? token;
   final VoidCallback onTap;
+  final int? chainId;
 
-  const SwapTokenChip({super.key, required this.token, required this.onTap});
+  const SwapTokenChip({super.key, required this.token, required this.onTap, this.chainId});
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +33,7 @@ class SwapTokenChip extends StatelessWidget {
                 tokenAddress: token?.contractAddress,
                 tokenImageUrl: token?.imageUrl,
                 size: 24,
+                chainId: chainId,
               ),
             ),
             const SizedBox(width: 6),

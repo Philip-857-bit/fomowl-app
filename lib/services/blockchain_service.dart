@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/token.dart';
 import '../models/chain.dart';
 import 'rpc_service.dart';
 import 'token_price_service.dart';
+import 'storage_service.dart';
 
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
@@ -23,6 +25,9 @@ class BlockchainService extends ChangeNotifier {
     'https://fomowl-backend.onrender.com/api/blockchain',
   ];
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 8);
+  static const String _backendSettingsBase =
+      'https://fomowl-backend.onrender.com/api/settings/networks';
+  final StorageService _storageService = StorageService();
 
   static const List<EvmChain> builtInChains = [
     EvmChain(
@@ -32,6 +37,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/1/rpc',
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://etherscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
     ),
     EvmChain(
       name: 'BNB Smart Chain',
@@ -40,6 +47,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/56/rpc',
       coinGeckoId: 'binancecoin',
       explorerUrl: 'https://bscscan.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
     ),
     EvmChain(
       name: 'Polygon',
@@ -48,6 +57,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/137/rpc',
       coinGeckoId: 'matic-network',
       explorerUrl: 'https://polygonscan.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
     ),
     EvmChain(
       name: 'Arbitrum One',
@@ -56,6 +67,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/42161/rpc',
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://arbiscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
     ),
     EvmChain(
       name: 'Optimism',
@@ -64,6 +77,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/10/rpc',
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://optimistic.etherscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
     ),
     EvmChain(
       name: 'Base',
@@ -72,6 +87,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/8453/rpc',
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://basescan.org',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
     ),
     EvmChain(
       name: 'ZkSync Era',
@@ -80,6 +97,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/324/rpc',
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://explorer.zksync.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zksync/info/logo.png',
     ),
     EvmChain(
       name: 'Avalanche C-Chain',
@@ -88,6 +107,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/43114/rpc',
       coinGeckoId: 'avalanche-2',
       explorerUrl: 'https://snowtrace.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
     ),
     EvmChain(
       name: 'Fantom',
@@ -96,6 +117,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/250/rpc',
       coinGeckoId: 'fantom',
       explorerUrl: 'https://ftmscan.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png',
     ),
     EvmChain(
       name: 'Gnosis',
@@ -104,6 +127,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/100/rpc',
       coinGeckoId: 'xdai',
       explorerUrl: 'https://gnosisscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
     ),
     EvmChain(
       name: 'Klaytn',
@@ -112,6 +137,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/8217/rpc',
       coinGeckoId: 'klay-token',
       explorerUrl: 'https://scope.klaytn.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
     ),
     EvmChain(
       name: 'Aurora',
@@ -120,6 +147,8 @@ class BlockchainService extends ChangeNotifier {
       rpcUrl: '$_backendRpcBase/1313161554/rpc',
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://explorer.mainnet.aurora.dev',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png',
     ),
   ];
 
@@ -152,7 +181,7 @@ class BlockchainService extends ChangeNotifier {
         balance: 0.0,
         valueUsd: 0.0,
         changePercent24h: 0.0,
-        imageUrl: _getIconUrl(activeChain.symbol),
+        imageUrl: activeChain.logoUrl ?? _getIconUrl(activeChain.symbol),
         coinGeckoId: activeChain.coinGeckoId,
       ),
     ];
@@ -171,6 +200,7 @@ class BlockchainService extends ChangeNotifier {
       await _loadCustomChains();
       await _loadActiveChain();
       await _loadCustomTokens();
+      await _hydrateNetworkSettingsFromBackend();
       _initialized = true;
     } catch (e) {
       debugPrint('BlockchainService initialization failed: $e');
@@ -238,6 +268,7 @@ class BlockchainService extends ChangeNotifier {
     _activeChain = chain;
     refresh();
     _saveActiveChain();
+    unawaited(_syncNetworkSettingsToBackend());
   }
 
   void setActiveChainByChainId(int chainId) {
@@ -247,12 +278,14 @@ class BlockchainService extends ChangeNotifier {
     );
     refresh();
     _saveActiveChain();
+    unawaited(_syncNetworkSettingsToBackend());
   }
 
   Future<bool> addCustomChain(EvmChain chain) async {
     if (allChains.any((c) => c.chainId == chain.chainId)) return false;
     _customChains.add(chain);
     await _saveCustomChains();
+    unawaited(_syncNetworkSettingsToBackend());
     notifyListeners();
     return true;
   }
@@ -264,6 +297,7 @@ class BlockchainService extends ChangeNotifier {
       await _saveActiveChain();
     }
     await _saveCustomChains();
+    unawaited(_syncNetworkSettingsToBackend());
     notifyListeners();
   }
 
@@ -438,6 +472,7 @@ class BlockchainService extends ChangeNotifier {
       address: normalized,
       decimals: decimals,
       coinGeckoId: null,
+      imageUrl: null,
     );
   }
 
@@ -521,9 +556,53 @@ class BlockchainService extends ChangeNotifier {
   Future<List<Token>> fetchWalletTokens(String walletAddress) async {
     final discoveredTokens = await _fetchWalletTokensFromBackend(walletAddress);
     if (discoveredTokens != null && discoveredTokens.isNotEmpty) {
-      _walletTokens = discoveredTokens;
+      // Merge custom tokens that weren't discovered by the backend.
+      final customTokens = _customTokens[_activeChain.chainId] ?? const [];
+      final merged = List<Token>.from(discoveredTokens);
+      for (final custom in customTokens) {
+        final alreadyInList = merged.any(
+          (t) =>
+              (t.contractAddress ?? '').toLowerCase() ==
+              custom.address.toLowerCase(),
+        );
+        if (alreadyInList) continue;
+        final bal = await getTokenBalance(
+          walletAddress,
+          custom.address,
+          custom.decimals,
+        );
+        final priceIds = <String>[];
+        if (custom.coinGeckoId != null && custom.coinGeckoId!.isNotEmpty) {
+          priceIds.add(custom.coinGeckoId!);
+        }
+        final prices =
+            priceIds.isNotEmpty ? await getTokenPrices(priceIds) : <String, double>{};
+        final price =
+            (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
+                ? 0.0
+                : (prices[custom.coinGeckoId] ?? 0.0);
+        final change =
+            (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
+                ? 0.0
+                : (prices['${custom.coinGeckoId}_change'] ?? 0.0);
+        merged.add(
+          Token(
+            symbol: custom.symbol,
+            name: custom.name,
+            contractAddress: custom.address,
+            balance: bal,
+            valueUsd: bal * price,
+            priceUsd: price,
+            changePercent24h: change,
+            decimals: custom.decimals,
+            imageUrl: custom.imageUrl ?? _getIconUrl(custom.symbol),
+            coinGeckoId: custom.coinGeckoId,
+          ),
+        );
+      }
+      _walletTokens = merged;
       notifyListeners();
-      return discoveredTokens;
+      return merged;
     }
 
     final tokens = <Token>[];
@@ -535,10 +614,16 @@ class BlockchainService extends ChangeNotifier {
         priceIds.add(activeCoinGeckoId);
       }
 
-      final wellKnown = _getWellKnownTokens(_activeChain.chainId);
-      for (var t in wellKnown) {
+      final builtInTokens = _getWellKnownTokens(_activeChain.chainId);
+      final customTokens = _customTokens[_activeChain.chainId] ?? const [];
+      for (var t in builtInTokens) {
         if (t['coinGeckoId'] != null && t['coinGeckoId']!.isNotEmpty) {
           priceIds.add(t['coinGeckoId']!);
+        }
+      }
+      for (final t in customTokens) {
+        if (t.coinGeckoId != null && t.coinGeckoId!.isNotEmpty) {
+          priceIds.add(t.coinGeckoId!);
         }
       }
 
@@ -559,12 +644,12 @@ class BlockchainService extends ChangeNotifier {
               (activeCoinGeckoId == null || activeCoinGeckoId.isEmpty)
               ? 0.0
               : (prices['${activeCoinGeckoId}_change'] ?? 0.0),
-          imageUrl: _getIconUrl(_activeChain.symbol),
+          imageUrl: _activeChain.logoUrl ?? _getIconUrl(_activeChain.symbol),
           coinGeckoId: activeCoinGeckoId,
         ),
       );
 
-      for (var tDef in wellKnown) {
+      for (var tDef in builtInTokens) {
         final parsedDecimals = int.tryParse(tDef['decimals'] ?? '') ?? 18;
         final bal = await getTokenBalance(
           walletAddress,
@@ -583,11 +668,48 @@ class BlockchainService extends ChangeNotifier {
               priceUsd: p,
               changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
               decimals: parsedDecimals,
-              imageUrl: _getIconUrl(tDef['symbol']!),
+              imageUrl: tDef['imageUrl'] ?? _getIconUrl(tDef['symbol']!),
               coinGeckoId: tDef['coinGeckoId'],
             ),
           );
         }
+      }
+
+      // Added tokens should appear in wallet/home even when balance is zero.
+      for (final custom in customTokens) {
+        final address = custom.address;
+        final alreadyAdded = tokens.any(
+          (t) =>
+              (t.contractAddress ?? '').toLowerCase() == address.toLowerCase(),
+        );
+        if (alreadyAdded) continue;
+        final bal = await getTokenBalance(
+          walletAddress,
+          address,
+          custom.decimals,
+        );
+        final price =
+            (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
+            ? 0.0
+            : (prices[custom.coinGeckoId] ?? 0.0);
+        final change =
+            (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
+            ? 0.0
+            : (prices['${custom.coinGeckoId}_change'] ?? 0.0);
+        tokens.add(
+          Token(
+            symbol: custom.symbol,
+            name: custom.name,
+            contractAddress: custom.address,
+            balance: bal,
+            valueUsd: bal * price,
+            priceUsd: price,
+            changePercent24h: change,
+            decimals: custom.decimals,
+            imageUrl: custom.imageUrl ?? _getIconUrl(custom.symbol),
+            coinGeckoId: custom.coinGeckoId,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Error fetching tokens: $e');
@@ -603,12 +725,13 @@ class BlockchainService extends ChangeNotifier {
     int limit = 30,
   }) async {
     final trimmed = query.trim();
-    if (trimmed.isEmpty) return const [];
     final safeLimit = limit.clamp(1, 100);
     final parsed = <Token>[];
 
     for (final base in _backendDiscoveryBases) {
-      final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+      final normalizedBase = base.endsWith('/')
+          ? base.substring(0, base.length - 1)
+          : base;
       final url = Uri.parse(
         '$normalizedBase/${_activeChain.chainId}/token-search',
       ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
@@ -640,6 +763,7 @@ class BlockchainService extends ChangeNotifier {
               // Prefer backend decimals when available to avoid display errors.
               decimals: _toInt(entry['decimals']) ?? 18,
               coinGeckoId: (entry['id'] as String?)?.trim(),
+              imageUrl: (entry['imageUrl'] as String?)?.trim(),
             ),
           );
         }
@@ -661,7 +785,9 @@ class BlockchainService extends ChangeNotifier {
       final backoff = _backendDiscoveryBackoffUntil[base];
       if (backoff != null && now.isBefore(backoff)) continue;
 
-      final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+      final normalizedBase = base.endsWith('/')
+          ? base.substring(0, base.length - 1)
+          : base;
       final url = Uri.parse(
         '$normalizedBase/${_activeChain.chainId}/wallet-tokens/$walletAddress',
       );
@@ -776,6 +902,7 @@ class BlockchainService extends ChangeNotifier {
           'address': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
           'decimals': '6',
           'coinGeckoId': 'usd-coin',
+          'imageUrl': 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
         },
         {
           'symbol': 'USDT',
@@ -783,21 +910,10 @@ class BlockchainService extends ChangeNotifier {
           'address': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
           'decimals': '6',
           'coinGeckoId': 'tether',
+          'imageUrl': 'https://cryptologos.cc/logos/tether-usdt-logo.png',
         },
       ]);
     }
-    final custom = _customTokens[chainId] ?? [];
-    tokens.addAll(
-      custom.map(
-        (t) => {
-          'symbol': t.symbol,
-          'name': t.name,
-          'address': t.address,
-          'decimals': t.decimals.toString(),
-          'coinGeckoId': t.coinGeckoId ?? '',
-        },
-      ),
-    );
     return tokens;
   }
 
@@ -815,6 +931,63 @@ class BlockchainService extends ChangeNotifier {
         return 'https://cryptologos.cc/logos/tether-usdt-logo.png';
       default:
         return null;
+    }
+  }
+
+  Future<void> _syncNetworkSettingsToBackend() async {
+    try {
+      final walletAddress = await _storageService.getWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) return;
+      final payload = {
+        'walletAddress': walletAddress,
+        'selectedChainId': _activeChain.chainId,
+        'customNetworks': _customChains.map((c) => c.toJson()).toList(),
+      };
+      await http
+          .post(
+            Uri.parse(_backendSettingsBase),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(payload),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // best effort sync
+    }
+  }
+
+  Future<void> _hydrateNetworkSettingsFromBackend() async {
+    try {
+      final walletAddress = await _storageService.getWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) return;
+      final encoded = Uri.encodeComponent(walletAddress);
+      final response = await http
+          .get(Uri.parse('$_backendSettingsBase/$encoded'))
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode != 200) return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final custom = data['customNetworks'] as List<dynamic>? ?? const [];
+      final selected = _toInt(data['selectedChainId']);
+
+      final parsedCustom = custom
+          .whereType<Map<String, dynamic>>()
+          .map(EvmChain.fromJson)
+          .where((c) => c.isCustom)
+          .toList();
+
+      if (parsedCustom.isNotEmpty) {
+        _customChains = parsedCustom;
+        await _saveCustomChains();
+      }
+
+      if (selected != null) {
+        _activeChain = allChains.firstWhere(
+          (c) => c.chainId == selected,
+          orElse: () => _activeChain,
+        );
+        await _saveActiveChain();
+      }
+    } catch (_) {
+      // keep local settings on backend errors
     }
   }
 

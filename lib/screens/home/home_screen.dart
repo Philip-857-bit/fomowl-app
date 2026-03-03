@@ -490,6 +490,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     chainSymbol: Provider.of<BlockchainService>(
                       context,
                     ).activeChain.symbol,
+                    chainLogoUrl: Provider.of<BlockchainService>(
+                      context,
+                    ).activeChain.logoUrl,
                     onChainTap: _showNetworkSelector,
                     showNotificationDot: _hasUnreadNotifications,
                     onNotificationsTap: () async {
@@ -563,6 +566,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 }
                               },
                               isTokenHidden: _isTokenHidden,
+                              chainId: _lastChainId,
                               onSelectToken: (token) {
                                 Navigator.pushNamed(
                                   context,

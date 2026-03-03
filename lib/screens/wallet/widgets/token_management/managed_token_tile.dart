@@ -9,12 +9,14 @@ class ManagedTokenTile extends StatelessWidget {
   final Token token;
   final bool isVisible;
   final ValueChanged<bool> onVisibilityChanged;
+  final int? chainId;
 
   const ManagedTokenTile({
     super.key,
     required this.token,
     required this.isVisible,
     required this.onVisibilityChanged,
+    this.chainId,
   });
 
   @override
@@ -33,6 +35,7 @@ class ManagedTokenTile extends StatelessWidget {
             tokenAddress: token.contractAddress,
             tokenImageUrl: token.imageUrl,
             size: 36,
+            chainId: chainId,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -63,10 +66,19 @@ class ManagedTokenTile extends StatelessWidget {
             label: 'Toggle visibility for ${token.name}',
             checked: isVisible,
             onTap: () => onVisibilityChanged(!isVisible),
-            child: Switch.adaptive(
+            child: Switch(
               value: isVisible,
               onChanged: onVisibilityChanged,
-              activeTrackColor: AppColors.accentRed.withValues(alpha: 0.4),
+              activeThumbColor: Colors.white,
+              activeTrackColor: Colors.transparent,
+              inactiveThumbColor: Colors.white54,
+              inactiveTrackColor: Colors.transparent,
+              trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return Colors.white24;
+              }),
             ),
           ),
         ],

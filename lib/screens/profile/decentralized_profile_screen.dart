@@ -240,13 +240,13 @@ class _DecentralizedProfileScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
                       child: Center(
                         child: Text(
                           l.profile,
                           style: GoogleFonts.outfit(
                             color: Colors.white,
-                            fontSize: 34,
+                            fontSize: 42,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -257,7 +257,7 @@ class _DecentralizedProfileScreenState
                       walletAddress: _walletAddress,
                       onTap: () => Navigator.pushNamed(context, '/wallets'),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     SettingsSectionHeader(title: l.general),
                     SettingsGroupCard(
                       children: [
@@ -271,6 +271,15 @@ class _DecentralizedProfileScreenState
                           title: l.switchNetwork,
                           subtitle: blockchain.activeChain.name,
                           onTap: _showNetworkSheet,
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.add_link_rounded,
+                          title: l.addCustomNetwork,
+                          onTap: () async {
+                            await Navigator.pushNamed(context, '/add-network');
+                            if (!mounted) return;
+                            setState(() {});
+                          },
                         ),
                         SettingsItemTile(
                           icon: Icons.attach_money_rounded,
@@ -307,7 +316,7 @@ class _DecentralizedProfileScreenState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     SettingsSectionHeader(title: l.security),
                     SettingsGroupCard(
                       children: [
@@ -331,7 +340,7 @@ class _DecentralizedProfileScreenState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     SettingsSectionHeader(title: l.others),
                     SettingsGroupCard(
                       children: [
@@ -363,17 +372,17 @@ class _DecentralizedProfileScreenState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
                     Center(
                       child: Text(
                         _versionLabel,
                         style: GoogleFonts.outfit(
-                          color: const Color(0xFF5C6A87),
-                          fontSize: 16,
+                          color: const Color(0xFF5B6C8A),
+                          fontSize: 15,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     Center(
                       child: OutlinedButton.icon(
                         onPressed: _confirmReset,
@@ -389,7 +398,7 @@ class _DecentralizedProfileScreenState
                           side: BorderSide(
                             color: AppColors.accentRed.withValues(alpha: 0.7),
                           ),
-                          minimumSize: const Size(160, 46),
+                          minimumSize: const Size(168, 44),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),

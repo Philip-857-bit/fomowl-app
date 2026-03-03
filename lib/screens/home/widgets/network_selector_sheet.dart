@@ -52,18 +52,17 @@ class NetworkSelectorSheet extends StatelessWidget {
               backgroundColor: isActive
                   ? AppColors.accentRed.withValues(alpha: 0.2)
                   : Colors.white12,
-              child: Text(
-                chain.symbol.isEmpty
-                    ? '?'
-                    : chain.symbol.substring(
-                        0,
-                        chain.symbol.length > 3 ? 3 : chain.symbol.length,
-                      ),
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isActive ? AppColors.accentRed : Colors.white,
-                ),
+              child: ClipOval(
+                child: chain.logoUrl != null && chain.logoUrl!.isNotEmpty
+                    ? Image.network(
+                        chain.logoUrl!,
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            _fallbackSymbol(chain, isActive),
+                      )
+                    : _fallbackSymbol(chain, isActive),
               ),
             ),
             title: Text(
@@ -82,6 +81,22 @@ class NetworkSelectorSheet extends StatelessWidget {
         }),
         const SizedBox(height: 20),
       ],
+    );
+  }
+
+  Widget _fallbackSymbol(EvmChain chain, bool isActive) {
+    return Text(
+      chain.symbol.isEmpty
+          ? '?'
+          : chain.symbol.substring(
+              0,
+              chain.symbol.length > 3 ? 3 : chain.symbol.length,
+            ),
+      style: GoogleFonts.outfit(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: isActive ? AppColors.accentRed : Colors.white,
+      ),
     );
   }
 }

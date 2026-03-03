@@ -184,28 +184,32 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-                      child: Row(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+                      child: Stack(
+                        alignment: Alignment.center,
                         children: [
-                          IconButton(
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              color: Colors.white,
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                           Text(
                             'Password & Security',
                             style: GoogleFonts.outfit(
                               color: Colors.white,
-                              fontSize: 27,
+                              fontSize: 34,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     const SettingsSectionHeader(title: 'Access Control'),
                     SettingsGroupCard(
                       children: [
@@ -221,10 +225,12 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           title: 'Biometrics / Face ID',
                           trailing: Switch(
                             value: _biometricEnabled,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                             activeThumbColor: Colors.white,
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
-                            inactiveTrackColor: Colors.white24,
+                            inactiveTrackColor: const Color(0xFF3A3D46),
                             onChanged: _preferencesLoadFailed
                                 ? null
                                 : _setBiometric,
@@ -242,10 +248,12 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           subtitle: _twoFactorEnabled ? 'On' : 'Off',
                           trailing: Switch(
                             value: _twoFactorEnabled,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
                             activeThumbColor: Colors.white,
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
-                            inactiveTrackColor: Colors.white24,
+                            inactiveTrackColor: const Color(0xFF3A3D46),
                             onChanged: _preferencesLoadFailed
                                 ? null
                                 : _setTwoFactor,
@@ -278,8 +286,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                         'Enable additional security measures to protect your digital assets from unauthorized access.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
-                          color: const Color(0xFF7B88A6),
-                          fontSize: 15,
+                          color: const Color(0xFF6D7D9C),
+                          fontSize: 14,
                           fontWeight: FontWeight.w400,
                           height: 1.35,
                         ),

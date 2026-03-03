@@ -8,6 +8,7 @@ class HomeTopBar extends StatelessWidget {
   final String walletName;
   final VoidCallback onWalletTap;
   final String chainSymbol;
+  final String? chainLogoUrl;
   final VoidCallback onChainTap;
   final VoidCallback onNotificationsTap;
   final bool showNotificationDot;
@@ -17,6 +18,7 @@ class HomeTopBar extends StatelessWidget {
     required this.walletName,
     required this.onWalletTap,
     required this.chainSymbol,
+    this.chainLogoUrl,
     required this.onChainTap,
     required this.onNotificationsTap,
     this.showNotificationDot = false,
@@ -82,13 +84,18 @@ class HomeTopBar extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Text(
-                    chainSymbol,
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: const BoxDecoration(shape: BoxShape.circle),
+                    clipBehavior: Clip.antiAlias,
+                    child: chainLogoUrl != null && chainLogoUrl!.isNotEmpty
+                        ? Image.network(
+                            chainLogoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => _symbolFallback(),
+                          )
+                        : _symbolFallback(),
                   ),
                   const SizedBox(width: 4),
                   const Icon(
@@ -129,6 +136,19 @@ class HomeTopBar extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _symbolFallback() {
+    return Center(
+      child: Text(
+        chainSymbol.isEmpty ? '?' : chainSymbol.substring(0, 1),
+        style: GoogleFonts.outfit(
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
       ),
     );
   }

@@ -12,6 +12,7 @@ class SwapToCard extends StatelessWidget {
   final double balance;
   final bool isCalculating;
   final VoidCallback onSelectToken;
+  final int? chainId;
 
   const SwapToCard({
     super.key,
@@ -21,6 +22,7 @@ class SwapToCard extends StatelessWidget {
     required this.balance,
     required this.isCalculating,
     required this.onSelectToken,
+    this.chainId,
   });
 
   @override
@@ -76,7 +78,7 @@ class SwapToCard extends StatelessWidget {
                         ),
                       ),
               ),
-              SwapTokenChip(token: token, onTap: onSelectToken),
+              SwapTokenChip(token: token, onTap: onSelectToken, chainId: chainId),
             ],
           ),
           const SizedBox(height: 8),
