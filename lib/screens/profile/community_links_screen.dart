@@ -78,8 +78,8 @@ class CommunityLinksScreen extends StatelessWidget {
                   Text(
                     'Join Our Community',
                     style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 34,
+                      color: AppColors.textPrimary,
+                      fontSize: 26,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -96,10 +96,10 @@ class CommunityLinksScreen extends StatelessWidget {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF121315),
+                      color: AppColors.cardDark,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.07),
+                        color: AppColors.divider.withValues(alpha: 0.4),
                       ),
                     ),
                     child: ListTile(
@@ -124,14 +124,14 @@ class CommunityLinksScreen extends StatelessWidget {
                         ),
                         child: Icon(
                           item.icon,
-                          color: const Color(0xFF91A0BB),
+                          color: AppColors.textSecondary,
                           size: 20,
                         ),
                       ),
                       title: Text(
                         item.label,
                         style: GoogleFonts.outfit(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
@@ -139,13 +139,13 @@ class CommunityLinksScreen extends StatelessWidget {
                       subtitle: Text(
                         item.subtitle,
                         style: GoogleFonts.outfit(
-                          color: const Color(0xFF7D8DAA),
+                          color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
                       ),
                       trailing: const Icon(
                         Icons.open_in_new_rounded,
-                        color: Color(0xFF7D8DAA),
+                        color: AppColors.textSecondary,
                         size: 17,
                       ),
                     ),

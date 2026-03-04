@@ -31,9 +31,9 @@ class TermsAndConditionsScreen extends StatelessWidget {
                   Text(
                     'Terms of Service',
                     style: GoogleFonts.outfit(
-                      fontSize: 34,
+                      fontSize: 26,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -98,7 +98,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
                         'Effective date: February 2026',
                         style: GoogleFonts.outfit(
                           fontSize: 12,
-                          color: const Color(0xFF5B6C8A),
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ),
@@ -118,9 +118,9 @@ class TermsAndConditionsScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF121315),
+        color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,7 +138,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
             content,
             style: GoogleFonts.outfit(
               fontSize: 13,
-              color: const Color(0xFFBCC7DB),
+              color: AppColors.textSecondary,
               height: 1.55,
             ),
           ),

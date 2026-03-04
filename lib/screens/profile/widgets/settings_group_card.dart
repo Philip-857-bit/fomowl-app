@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../constants/app_colors.dart';
 
 class SettingsGroupCard extends StatelessWidget {
   final List<Widget> children;
@@ -10,9 +11,9 @@ class SettingsGroupCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF121315),
+        color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -20,7 +21,7 @@ class SettingsGroupCard extends StatelessWidget {
             children[i],
             if (i != children.length - 1)
               Divider(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: AppColors.divider.withValues(alpha: 0.3),
                 height: 1,
                 indent: 68,
                 endIndent: 12,

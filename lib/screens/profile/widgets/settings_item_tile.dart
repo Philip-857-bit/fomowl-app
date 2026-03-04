@@ -48,7 +48,7 @@ class SettingsItemTile extends StatelessWidget {
                 icon,
                 color: attention
                     ? AppColors.accentRed
-                    : const Color(0xFF91A0BB),
+                    : AppColors.textSecondary,
                 size: 20,
               ),
             ),
@@ -60,7 +60,7 @@ class SettingsItemTile extends StatelessWidget {
                   Text(
                     title,
                     style: GoogleFonts.outfit(
-                      color: const Color(0xFFEAF0FF),
+                      color: AppColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
@@ -74,7 +74,7 @@ class SettingsItemTile extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         color: attention
                             ? AppColors.accentRed
-                            : const Color(0xFF7D8DAA),
+                            : AppColors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                       ),
@@ -86,7 +86,7 @@ class SettingsItemTile extends StatelessWidget {
             trailing ??
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: const Color(0xFF7D8DAA).withValues(alpha: 0.9),
+                  color: AppColors.textSecondary.withValues(alpha: 0.9),
                   size: 14,
                 ),
           ],

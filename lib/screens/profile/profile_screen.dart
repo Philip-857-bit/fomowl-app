@@ -301,7 +301,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1B5E20),
+                  color: AppColors.success.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(

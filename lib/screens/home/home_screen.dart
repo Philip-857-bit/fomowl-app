@@ -465,6 +465,10 @@ class _HomeScreenState extends State<HomeScreen> {
           blockchain.setActiveChain(chain);
           Navigator.pop(ctx);
         },
+        onAddCustomNetwork: () async {
+          Navigator.pop(ctx);
+          await Navigator.pushNamed(context, '/add-network');
+        },
       ),
     );
   }

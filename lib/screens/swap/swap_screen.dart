@@ -84,6 +84,15 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _isSwapping = false;
   bool _isGasless = false;
 
+  String _formatRateText(double outAmount) {
+    final from = _fromToken?.symbol ?? '';
+    final to = _toToken?.symbol ?? '';
+    if (from.isEmpty || to.isEmpty) {
+      return outAmount.toStringAsFixed(6);
+    }
+    return '1 $from $_priceSeparator ${outAmount.toStringAsFixed(6)} $to';
+  }
+
   bool get _isGaslessSupported {
     final chainId = Provider.of<BlockchainService>(
       context,
@@ -211,14 +220,14 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Future<void> _showTokenSelector(bool isFrom) async {
-    final blockchain = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    );
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final tokens = blockchain.tokens;
     final selectedToken = await showDialog<Token>(
       context: context,
-      builder: (ctx) => TokenSelectorDialog(tokens: tokens, chainId: blockchain.activeChain.chainId),
+      builder: (ctx) => TokenSelectorDialog(
+        tokens: tokens,
+        chainId: blockchain.activeChain.chainId,
+      ),
     );
 
     if (selectedToken != null) {
@@ -305,7 +314,9 @@ class _SwapScreenState extends State<SwapScreen> {
     if (token == null) return 0.0;
     double price = token.unitPriceUsd;
     // Fallback: use cached CoinGecko price when the token model has no price.
-    if (price <= 0 && token.coinGeckoId != null && token.coinGeckoId!.isNotEmpty) {
+    if (price <= 0 &&
+        token.coinGeckoId != null &&
+        token.coinGeckoId!.isNotEmpty) {
       price = _tokenPriceCache[token.coinGeckoId] ?? 0.0;
     }
     return amount * price;
@@ -378,6 +389,12 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     if (lower.contains('invalid chain id')) {
       return 'Swap is not available on this network yet.';
+    }
+    if (lower.contains('connection refused') ||
+        lower.contains('socketexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('timed out')) {
+      return 'Swap service is temporarily unavailable. Please try again shortly.';
     }
     if (lower.contains(
       'selling native token is not supported for gasless trades',
@@ -512,14 +529,33 @@ class _SwapScreenState extends State<SwapScreen> {
       if (!mounted || requestId != _quoteRequestId) return;
 
       if (quote != null) {
+        final outAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
+        double feeNative = quote.networkFeeNative;
+        double feeUsd = quote.networkFeeUsd > 0
+            ? quote.networkFeeUsd
+            : quote.networkFeeNative * _nativeTokenPriceUsd;
+
+        // Fallback: estimate gas fee if backend did not return fee fields.
+        if (feeNative <= 0 && feeUsd <= 0) {
+          var nativePrice = _nativeTokenPriceUsd;
+          if (nativePrice <= 0) {
+            await _refreshTokenPrices();
+            nativePrice = _nativeTokenPriceUsd;
+          }
+          final estimate = await blockchain.estimateGasFee(
+            nativePriceUsd: nativePrice,
+          );
+          feeNative = estimate['totalFeeEth'] ?? 0.0;
+          feeUsd = estimate['totalFeeUsd'] ?? 0.0;
+        }
+
+        if (!mounted || requestId != _quoteRequestId) return;
         setState(() {
-          _pricing = quote.amountOutFormatted;
+          _pricing = _formatRateText(outAmount > 0 ? outAmount : 0.0);
           _toController.text = quote.amountOutFormatted;
           _currentQuote = quote;
-          _feeNative = quote.networkFeeNative;
-          _feeUsd = quote.networkFeeUsd > 0
-              ? quote.networkFeeUsd
-              : quote.networkFeeNative * _nativeTokenPriceUsd;
+          _feeNative = feeNative;
+          _feeUsd = feeUsd;
         });
       } else {
         final mapped = _mapErrorMessage(_swapService.lastError);

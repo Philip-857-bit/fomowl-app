@@ -106,8 +106,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   Text(
                     'Feedback',
                     style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 34,
+                      color: AppColors.textPrimary,
+                      fontSize: 26,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -116,7 +116,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               const SizedBox(height: 16),
               Text(
                 'Help us improve Owllet by sharing your thoughts.',
-                style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14),
+                style: GoogleFonts.outfit(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 18),
               _buildLabel('Category'),
@@ -209,7 +212,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     return Text(
       text,
       style: GoogleFonts.outfit(
-        color: Colors.white,
+        color: AppColors.textPrimary,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),

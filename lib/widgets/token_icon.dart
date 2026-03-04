@@ -36,37 +36,47 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildIcon() {
-    // Try local asset first
-    final localPath = 'assets/images/tokens/${tokenSymbol.toLowerCase()}.png';
+    // Try local asset first only if we know it exists in the bundle.
+    final symbolKey = tokenSymbol.toLowerCase();
+    if (_bundledTokenIcons.contains(symbolKey)) {
+      final localPath = 'assets/images/tokens/$symbolKey.png';
+      return Image.asset(
+        localPath,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+      );
+    }
 
-    return Image.asset(
-      localPath,
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        // If local asset fails, try backend-provided image URL.
-        if (tokenImageUrl != null && tokenImageUrl!.isNotEmpty) {
-          return Image.network(
-            tokenImageUrl!,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return _buildTrustWalletIcon();
-            },
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return _buildPlaceholder();
-            },
-          );
-        }
+    // Then try backend-provided image URL.
+    if (tokenImageUrl != null && tokenImageUrl!.isNotEmpty) {
+      return Image.network(
+        tokenImageUrl!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _buildTrustWalletIcon(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildPlaceholder();
+        },
+      );
+    }
 
-        // If image URL is not available, fallback to Trust Wallet.
-        return _buildTrustWalletIcon();
-      },
-    );
+    // If image URL is not available, fallback to Trust Wallet.
+    return _buildTrustWalletIcon();
   }
+
+  static const Set<String> _bundledTokenIcons = {
+    'bnb',
+    'btc',
+    'dai',
+    'eth',
+    'link',
+    'matic',
+    'usdc',
+    'usdt',
+  };
 
   Widget _buildTrustWalletIcon() {
     // Try network (Trust Wallet) with chain-aware path
@@ -141,7 +151,11 @@ class TokenIcon extends StatelessWidget {
       height: size,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
-        return _buildTrustWalletCandidate(blockchainName, candidates, index + 1);
+        return _buildTrustWalletCandidate(
+          blockchainName,
+          candidates,
+          index + 1,
+        );
       },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;

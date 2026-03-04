@@ -323,10 +323,10 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Blank `#131313` backdrop mimicking the native splash
+    // Blank backdrop mimicking the native splash
     // before the dissolve triggers off the framework.
     return Scaffold(
-      backgroundColor: const Color(0xFF131313),
+      backgroundColor: AppColors.background,
       body: const SizedBox.expand(),
     );
   }

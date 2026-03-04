@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'dart:async';
+import 'dart:convert';
 
 import '../../constants/app_colors.dart';
 import '../../models/chain.dart';
@@ -21,11 +24,14 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   final _rpcUrlController = TextEditingController();
   final _chainIdController = TextEditingController();
   final _explorerController = TextEditingController();
-  final _coinGeckoIdController = TextEditingController();
 
   bool _isTesting = false;
   bool _isSaving = false;
+  bool _isAutofilling = false;
   bool? _rpcValid;
+  Timer? _chainIdDebounce;
+  static List<dynamic>? _chainRegistryCache;
+  int? _lastAutofilledChainId;
 
   @override
   void dispose() {
@@ -34,8 +40,23 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     _rpcUrlController.dispose();
     _chainIdController.dispose();
     _explorerController.dispose();
-    _coinGeckoIdController.dispose();
+    _chainIdDebounce?.cancel();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _chainIdController.addListener(_onChainIdChanged);
+  }
+
+  void _onChainIdChanged() {
+    _chainIdDebounce?.cancel();
+    _chainIdDebounce = Timer(const Duration(milliseconds: 500), () {
+      final chainId = int.tryParse(_chainIdController.text.trim());
+      if (chainId == null || chainId == _lastAutofilledChainId) return;
+      unawaited(_autofillFromChainId(chainId));
+    });
   }
 
   Future<void> _testRpc() async {
@@ -68,7 +89,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       symbol: _symbolController.text.trim().toUpperCase(),
       chainId: int.parse(_chainIdController.text.trim()),
       rpcUrl: _rpcUrlController.text.trim(),
-      coinGeckoId: _coinGeckoIdController.text.trim(),
+      coinGeckoId: null,
       explorerUrl: _explorerController.text.trim().isNotEmpty
           ? _explorerController.text.trim()
           : null,
@@ -89,6 +110,77 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     }
   }
 
+  Future<void> _autofillFromChainId(int chainId) async {
+    if (_isAutofilling) return;
+    setState(() => _isAutofilling = true);
+    try {
+      final registry = await _loadChainRegistry();
+      final match = registry.cast<Map<String, dynamic>?>().firstWhere(
+        (item) => item != null && item['chainId'] == chainId,
+        orElse: () => null,
+      );
+      if (match == null) return;
+
+      final name = (match['name'] as String?)?.trim();
+      final nativeCurrency =
+          match['nativeCurrency'] as Map<String, dynamic>? ?? const {};
+      final symbol = (nativeCurrency['symbol'] as String?)?.trim();
+      final rpcList = (match['rpc'] as List?)?.cast<dynamic>() ?? const [];
+      final explorers =
+          (match['explorers'] as List?)?.cast<Map<String, dynamic>>() ??
+          const [];
+
+      final rpcCandidate = rpcList
+          .map((e) => e.toString().trim())
+          .where((e) => e.startsWith('https://') && !e.contains(r'${'))
+          .cast<String?>()
+          .firstWhere((e) => e != null && e.isNotEmpty, orElse: () => null);
+      final explorerCandidate = explorers
+          .map((e) => (e['url'] as String?)?.trim())
+          .firstWhere((e) => e != null && e.isNotEmpty, orElse: () => null);
+
+      if (_nameController.text.trim().isEmpty &&
+          name != null &&
+          name.isNotEmpty) {
+        _nameController.text = name;
+      }
+      if (_symbolController.text.trim().isEmpty &&
+          symbol != null &&
+          symbol.isNotEmpty) {
+        _symbolController.text = symbol.toUpperCase();
+      }
+      if (_rpcUrlController.text.trim().isEmpty && rpcCandidate != null) {
+        _rpcUrlController.text = rpcCandidate;
+      }
+      if (_explorerController.text.trim().isEmpty &&
+          explorerCandidate != null) {
+        _explorerController.text = explorerCandidate;
+      }
+      _lastAutofilledChainId = chainId;
+    } catch (_) {
+      // Best effort only.
+    } finally {
+      if (mounted) {
+        setState(() => _isAutofilling = false);
+      }
+    }
+  }
+
+  Future<List<dynamic>> _loadChainRegistry() async {
+    if (_chainRegistryCache != null) return _chainRegistryCache!;
+    final uri = Uri.parse('https://chainid.network/chains.json');
+    final response = await http.get(uri).timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch chain registry');
+    }
+    final body = jsonDecode(response.body);
+    if (body is! List<dynamic>) {
+      throw Exception('Invalid chain registry response');
+    }
+    _chainRegistryCache = body;
+    return body;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,10 +198,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF121315),
+                      color: AppColors.cardDark,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.07),
+                        color: AppColors.divider.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Column(
@@ -140,19 +232,79 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         ),
                         const SizedBox(height: 14),
                         _buildSectionLabel('Chain ID *'),
-                        _buildTextField(
-                          controller: _chainIdController,
-                          hint: 'e.g. 25, 324',
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Required';
-                            }
-                            if (int.tryParse(value.trim()) == null) {
-                              return 'Must be a number';
-                            }
-                            return null;
-                          },
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildTextField(
+                                controller: _chainIdController,
+                                hint: 'e.g. 25, 324',
+                                keyboardType: TextInputType.number,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Required';
+                                  }
+                                  if (int.tryParse(value.trim()) == null) {
+                                    return 'Must be a number';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              margin: const EdgeInsets.only(top: 2),
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: AppColors.accentRed.withValues(
+                                  alpha: 0.18,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.divider.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              child: IconButton(
+                                onPressed: _isAutofilling
+                                    ? null
+                                    : () {
+                                        final chainId = int.tryParse(
+                                          _chainIdController.text.trim(),
+                                        );
+                                        if (chainId == null) return;
+                                        unawaited(
+                                          _autofillFromChainId(chainId),
+                                        );
+                                      },
+                                tooltip: 'Auto-fill from chain ID',
+                                icon: _isAutofilling
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.auto_awesome_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Enter Chain ID to auto-fill network details when available.',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 14),
                         _buildSectionLabel('RPC URL *'),
@@ -187,13 +339,15 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                                           alpha: 0.18,
                                         )
                                       : _rpcValid!
-                                      ? const Color(
-                                          0xFF1B5E20,
-                                        ).withValues(alpha: 0.3)
+                                      ? AppColors.success.withValues(
+                                          alpha: 0.22,
+                                        )
                                       : AppColors.error.withValues(alpha: 0.25),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.08),
+                                    color: AppColors.divider.withValues(
+                                      alpha: 0.5,
+                                    ),
                                   ),
                                 ),
                                 child: Center(
@@ -241,20 +395,16 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                           controller: _explorerController,
                           hint: 'https://explorer.example.com',
                         ),
-                        const SizedBox(height: 14),
-                        _buildSectionLabel('CoinGecko ID (optional)'),
-                        _buildTextField(
-                          controller: _coinGeckoIdController,
-                          hint: 'e.g. crypto-com-chain',
-                        ),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.03),
+                            color: AppColors.inputBackground.withValues(
+                              alpha: 0.5,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.06),
+                              color: AppColors.divider.withValues(alpha: 0.45),
                             ),
                           ),
                           child: Row(
@@ -271,7 +421,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                                   'Your wallet address works on all EVM chains. Only add networks you trust because malicious RPCs can show fake data.',
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
-                                    color: const Color(0xFF9CA9C1),
+                                    color: AppColors.textSecondary,
                                     height: 1.4,
                                   ),
                                 ),
@@ -289,7 +439,11 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                               gradient: _isSaving
                                   ? null
                                   : AppColors.primaryGradient,
-                              color: _isSaving ? const Color(0xFF4B4B4B) : null,
+                              color: _isSaving
+                                  ? AppColors.textSecondary.withValues(
+                                      alpha: 0.35,
+                                    )
+                                  : null,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: Center(
@@ -344,7 +498,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
           Text(
             'Add Custom Network',
             style: GoogleFonts.outfit(
-              fontSize: 34,
+              fontSize: 26,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
@@ -363,7 +517,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
           fontSize: 13,
           letterSpacing: 0.4,
           fontWeight: FontWeight.w500,
-          color: const Color(0xFF7D8DAA),
+          color: AppColors.textSecondary,
         ),
       ),
     );
@@ -384,17 +538,21 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
         hintText: hint,
         hintStyle: GoogleFonts.outfit(
           fontSize: 14,
-          color: Colors.white.withValues(alpha: 0.3),
+          color: AppColors.textSecondary.withValues(alpha: 0.45),
         ),
         filled: true,
-        fillColor: const Color(0xFF181A1F),
+        fillColor: AppColors.inputBackground,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          borderSide: BorderSide(
+            color: AppColors.divider.withValues(alpha: 0.5),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          borderSide: BorderSide(
+            color: AppColors.divider.withValues(alpha: 0.5),
+          ),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),

@@ -8,12 +8,14 @@ class NetworkSelectorSheet extends StatelessWidget {
   final List<EvmChain> chains;
   final int activeChainId;
   final ValueChanged<EvmChain> onSelect;
+  final VoidCallback? onAddCustomNetwork;
 
   const NetworkSelectorSheet({
     super.key,
     required this.chains,
     required this.activeChainId,
     required this.onSelect,
+    this.onAddCustomNetwork,
   });
 
   @override
@@ -79,6 +81,31 @@ class NetworkSelectorSheet extends StatelessWidget {
             onTap: () => onSelect(chain),
           );
         }),
+        if (onAddCustomNetwork != null) ...[
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: ElevatedButton.icon(
+              onPressed: onAddCustomNetwork,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                backgroundColor: AppColors.accentRed,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+              label: Text(
+                'Add Custom Network',
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
       ],
     );

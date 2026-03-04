@@ -42,6 +42,28 @@ class _DecentralizedProfileScreenState
     _load();
   }
 
+  Widget _valueTrailing(String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.outfit(
+            color: AppColors.textSecondary,
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Icon(
+          Icons.arrow_forward_ios_rounded,
+          color: AppColors.textSecondary.withValues(alpha: 0.9),
+          size: 13,
+        ),
+      ],
+    );
+  }
+
   Future<void> _load() async {
     final walletName = await _storageService.getWalletName();
     final walletAddress = await _walletService.getCurrentWalletAddress();
@@ -133,6 +155,13 @@ class _DecentralizedProfileScreenState
             blockchain.setActiveChain(chain);
             Navigator.pop(ctx);
             if (mounted) setState(() {});
+          },
+          onAddCustomNetwork: () async {
+            Navigator.pop(ctx);
+            await Navigator.pushNamed(context, '/add-network');
+            if (mounted) {
+              setState(() {});
+            }
           },
         ),
       ),
@@ -239,25 +268,13 @@ class _DecentralizedProfileScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-                      child: Center(
-                        child: Text(
-                          l.profile,
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 42,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 12),
                     SettingsWalletHeaderCard(
                       walletName: _walletName,
                       walletAddress: _walletAddress,
                       onTap: () => Navigator.pushNamed(context, '/wallets'),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
                     SettingsSectionHeader(title: l.general),
                     SettingsGroupCard(
                       children: [
@@ -269,28 +286,19 @@ class _DecentralizedProfileScreenState
                         SettingsItemTile(
                           icon: Icons.hub_outlined,
                           title: l.switchNetwork,
-                          subtitle: blockchain.activeChain.name,
+                          trailing: _valueTrailing(blockchain.activeChain.name),
                           onTap: _showNetworkSheet,
-                        ),
-                        SettingsItemTile(
-                          icon: Icons.add_link_rounded,
-                          title: l.addCustomNetwork,
-                          onTap: () async {
-                            await Navigator.pushNamed(context, '/add-network');
-                            if (!mounted) return;
-                            setState(() {});
-                          },
                         ),
                         SettingsItemTile(
                           icon: Icons.attach_money_rounded,
                           title: l.currency,
-                          subtitle: _currency,
+                          trailing: _valueTrailing(_currency),
                           onTap: _pickCurrency,
                         ),
                         SettingsItemTile(
                           icon: Icons.language_rounded,
                           title: l.chooseYourLanguage,
-                          subtitle: localeName,
+                          trailing: _valueTrailing(localeName),
                           onTap: () async {
                             final languageCode = await Navigator.push<String>(
                               context,
@@ -308,15 +316,9 @@ class _DecentralizedProfileScreenState
                             }
                           },
                         ),
-                        SettingsItemTile(
-                          icon: Icons.card_giftcard_rounded,
-                          title: l.referrals,
-                          onTap: () =>
-                              Navigator.pushNamed(context, '/referrals'),
-                        ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     SettingsSectionHeader(title: l.security),
                     SettingsGroupCard(
                       children: [
@@ -330,17 +332,9 @@ class _DecentralizedProfileScreenState
                             '/backup-seed-phrase',
                           ),
                         ),
-                        SettingsItemTile(
-                          icon: Icons.shield_outlined,
-                          title: l.passwordSecurity,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/password-security',
-                          ),
-                        ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     SettingsSectionHeader(title: l.others),
                     SettingsGroupCard(
                       children: [
@@ -377,7 +371,7 @@ class _DecentralizedProfileScreenState
                       child: Text(
                         _versionLabel,
                         style: GoogleFonts.outfit(
-                          color: const Color(0xFF5B6C8A),
+                          color: AppColors.textSecondary,
                           fontSize: 15,
                         ),
                       ),

@@ -104,6 +104,17 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         return 'tether';
       case 'MATIC':
         return 'matic-network';
+      case 'AVAX':
+        return 'avalanche-2';
+      case 'FTM':
+        return 'fantom';
+      case 'CRO':
+        return 'crypto-com-chain';
+      case 'XDAI':
+      case 'DAI':
+        return 'xdai';
+      case 'KLAY':
+        return 'klay-token';
       default:
         return '';
     }
@@ -251,10 +262,20 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
 
   String? _resolveCoinGeckoId() {
     final token = _token;
+    final blockchain = _blockchain;
     if (token != null &&
         token.coinGeckoId != null &&
         token.coinGeckoId!.isNotEmpty) {
       return token.coinGeckoId!;
+    }
+    final isNative =
+        token != null &&
+        (token.contractAddress == null || token.contractAddress!.isEmpty);
+    if (isNative &&
+        blockchain != null &&
+        blockchain.activeChain.coinGeckoId != null &&
+        blockchain.activeChain.coinGeckoId!.isNotEmpty) {
+      return blockchain.activeChain.coinGeckoId!;
     }
     final mapped = _tokenToCoinGeckoId(token?.symbol ?? '');
     if (mapped.isEmpty) return null;

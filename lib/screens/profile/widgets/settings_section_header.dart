@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../constants/app_colors.dart';
 
 class SettingsSectionHeader extends StatelessWidget {
   final String title;
@@ -16,7 +17,7 @@ class SettingsSectionHeader extends StatelessWidget {
           fontSize: 13,
           letterSpacing: 1.8,
           fontWeight: FontWeight.w600,
-          color: const Color(0xFF5F7396),
+          color: AppColors.textSecondary.withValues(alpha: 0.8),
         ),
       ),
     );

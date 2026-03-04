@@ -88,9 +88,9 @@ class _ComingSoonPanel extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 420),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
       decoration: BoxDecoration(
-        color: const Color(0xFF131313),
+        color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+        border: Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

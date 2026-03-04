@@ -170,7 +170,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                 '${index + 1}.',
                 style: GoogleFonts.outfit(
                   fontSize: 13,
-                  color: const Color(0xFF7D8DAA),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(width: 5),
@@ -221,7 +221,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                     Text(
                       'Backup Seed Phrase',
                       style: GoogleFonts.outfit(
-                        fontSize: 34,
+                        fontSize: 26,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -233,10 +233,10 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF121315),
+                  color: AppColors.cardDark,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.07),
+                    color: AppColors.divider.withValues(alpha: 0.4),
                   ),
                 ),
                 child: Column(
@@ -246,7 +246,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                       'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.',
                       style: GoogleFonts.outfit(
                         fontSize: 14,
-                        color: const Color(0xFFBCC7DB),
+                        color: AppColors.textSecondary,
                         height: 1.45,
                       ),
                     ),
@@ -256,7 +256,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                       decoration: BoxDecoration(
                         color: _seedPhraseRevealed
                             ? AppColors.warning.withValues(alpha: 0.08)
-                            : const Color(0xFF181A1F),
+                            : AppColors.inputBackground,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: _seedPhraseRevealed
@@ -269,7 +269,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                           if (!_seedPhraseRevealed) ...[
                             const Icon(
                               Icons.visibility_off_rounded,
-                              color: Color(0xFF7D8DAA),
+                              color: AppColors.textSecondary,
                               size: 42,
                             ),
                             const SizedBox(height: 12),
@@ -361,7 +361,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
-                                color: const Color(0xFF7D8DAA),
+                                color: AppColors.textSecondary,
                                 height: 1.45,
                               ),
                             ),

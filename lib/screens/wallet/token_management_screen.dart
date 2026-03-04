@@ -14,6 +14,7 @@ import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../widgets/token_icon.dart';
+import 'helpers/token_management_query_helper.dart';
 import 'widgets/token_management/contract_import_card.dart';
 import 'widgets/token_management/managed_token_tile.dart';
 import 'widgets/token_management/token_management_search_bar.dart';
@@ -96,12 +97,22 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       final results = await blockchain.searchTokensFromBackend('', limit: 60);
       if (!mounted) return;
       setState(() {
-        _suggestedTokens = results;
+        _suggestedTokens = results.isNotEmpty
+            ? results
+            : List<Token>.from(_tokens);
         if (_query.trim().isEmpty) {
-          _searchResults = results;
+          _searchResults = _suggestedTokens;
         }
       });
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _suggestedTokens = List<Token>.from(_tokens);
+        if (_query.trim().isEmpty) {
+          _searchResults = _suggestedTokens;
+        }
+      });
+    }
   }
 
   bool _isTokenHidden(Token token) {
@@ -138,10 +149,6 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     ToastUtils.showSuccess('Token removed');
   }
 
-  bool _isContractAddress(String value) {
-    return RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(value.trim());
-  }
-
   void _handleSearchChanged() {
     if (!mounted) return;
     final nextQuery = _searchController.text.trim();
@@ -160,7 +167,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   }
 
   Future<void> _importTokenFromContract() async {
-    if (!_isContractAddress(_query)) return;
+    if (!TokenManagementQueryHelper.isContractAddress(_query)) return;
     final blockchain = context.read<BlockchainService>();
     if (_tokenExistsForAddress(_query)) {
       ToastUtils.showInfo('Token already available in your list');
@@ -210,7 +217,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       });
       return;
     }
-    if (_isContractAddress(trimmed)) {
+    if (TokenManagementQueryHelper.isContractAddress(trimmed)) {
       setState(() {
         _isSearchingRemote = false;
         _searchResults = _suggestedTokens;
@@ -226,13 +233,24 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         limit: 60,
       );
       if (!mounted || trimmed != _query.trim()) return;
+      final fallbackLocal = TokenManagementQueryHelper.filterLocalTokens(
+        _tokens,
+        trimmed,
+      );
       setState(() {
-        _searchResults = results;
+        _searchResults = results.isNotEmpty ? results : fallbackLocal;
         _isSearchingRemote = false;
       });
     } catch (_) {
       if (!mounted || trimmed != _query.trim()) return;
-      setState(() => _isSearchingRemote = false);
+      final fallbackLocal = TokenManagementQueryHelper.filterLocalTokens(
+        _tokens,
+        trimmed,
+      );
+      setState(() {
+        _searchResults = fallbackLocal;
+        _isSearchingRemote = false;
+      });
     }
   }
 
@@ -290,7 +308,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       final data = await Clipboard.getData('text/plain');
       if (!mounted) return;
       final clipboardText = data?.text?.trim() ?? '';
-      if (!_isContractAddress(clipboardText)) return;
+      if (!TokenManagementQueryHelper.isContractAddress(clipboardText)) return;
       if (_tokenExistsForAddress(clipboardText)) return;
 
       final blockchain = context.read<BlockchainService>();
@@ -412,16 +430,13 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final blockchain = context.watch<BlockchainService>();
     final customTokens = blockchain.customTokensForActiveChain;
     final query = _query.toLowerCase();
-    final filteredTokens = _tokens
-        .where(
-          (token) =>
-              query.isEmpty ||
-              token.name.toLowerCase().contains(query) ||
-              token.symbol.toLowerCase().contains(query) ||
-              (token.contractAddress ?? '').toLowerCase().contains(query),
-        )
-        .toList();
-    final canImportByContract = _isContractAddress(_query);
+    final filteredTokens = TokenManagementQueryHelper.filterLocalTokens(
+      _tokens,
+      query,
+    );
+    final canImportByContract = TokenManagementQueryHelper.isContractAddress(
+      _query,
+    );
     final hasRemoteResults =
         _isSearchingRemote || _searchResults.isNotEmpty || _query.isNotEmpty;
 

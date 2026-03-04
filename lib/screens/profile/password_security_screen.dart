@@ -201,8 +201,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           Text(
                             'Password & Security',
                             style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 34,
+                              color: AppColors.textPrimary,
+                              fontSize: 26,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -230,7 +230,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             activeThumbColor: Colors.white,
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
-                            inactiveTrackColor: const Color(0xFF3A3D46),
+                            inactiveTrackColor: AppColors.divider,
                             onChanged: _preferencesLoadFailed
                                 ? null
                                 : _setBiometric,
@@ -253,7 +253,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             activeThumbColor: Colors.white,
                             activeTrackColor: AppColors.accentRed,
                             inactiveThumbColor: Colors.white,
-                            inactiveTrackColor: const Color(0xFF3A3D46),
+                            inactiveTrackColor: AppColors.divider,
                             onChanged: _preferencesLoadFailed
                                 ? null
                                 : _setTwoFactor,
@@ -286,7 +286,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                         'Enable additional security measures to protect your digital assets from unauthorized access.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
-                          color: const Color(0xFF6D7D9C),
+                          color: AppColors.textSecondary,
                           fontSize: 14,
                           fontWeight: FontWeight.w400,
                           height: 1.35,

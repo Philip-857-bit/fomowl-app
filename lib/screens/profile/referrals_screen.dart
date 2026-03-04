@@ -139,8 +139,8 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           Text(
                             'Referrals',
                             style: GoogleFonts.outfit(
-                              color: Colors.white,
-                              fontSize: 34,
+                              color: AppColors.textPrimary,
+                              fontSize: 26,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -168,7 +168,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               'Earn up to \$0.5 for every user you refer using your referral code.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
-                                color: const Color(0xFF9AA7C0),
+                                color: AppColors.textSecondary,
                                 fontSize: 15,
                                 height: 1.3,
                               ),
@@ -182,7 +182,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF151619),
+                        color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(
                           color: AppColors.accentRed.withValues(alpha: 0.8),
@@ -194,7 +194,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           Text(
                             'YOUR REFERRAL CODE',
                             style: GoogleFonts.outfit(
-                              color: const Color(0xFF8794AF),
+                              color: AppColors.textSecondary,
                               letterSpacing: 1.5,
                               fontSize: 12,
                             ),
@@ -257,10 +257,10 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF151619),
+                        color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
+                          color: AppColors.divider.withValues(alpha: 0.45),
                         ),
                       ),
                       child: Column(
@@ -269,7 +269,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           Text(
                             'Add Referral',
                             style: GoogleFonts.outfit(
-                              color: const Color(0xFF8794AF),
+                              color: AppColors.textSecondary,
                               letterSpacing: 1.2,
                               fontSize: 12,
                             ),
@@ -282,20 +282,26 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             decoration: InputDecoration(
                               hintText: 'Enter referral code',
                               hintStyle: GoogleFonts.outfit(
-                                color: Colors.white38,
+                                color: AppColors.textSecondary.withValues(
+                                  alpha: 0.45,
+                                ),
                               ),
                               filled: true,
-                              fillColor: Colors.white.withValues(alpha: 0.03),
+                              fillColor: AppColors.inputBackground,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.1),
+                                  color: AppColors.divider.withValues(
+                                    alpha: 0.45,
+                                  ),
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.white.withValues(alpha: 0.1),
+                                  color: AppColors.divider.withValues(
+                                    alpha: 0.45,
+                                  ),
                                 ),
                               ),
                             ),
@@ -319,7 +325,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           ),
                         ),
                         child: Text(
-                          'View Referral Stats',
+                          'Refresh',
                           style: GoogleFonts.outfit(
                             color: Colors.white,
                             fontSize: 17,

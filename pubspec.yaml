@@ -123,8 +123,8 @@ flutter:
 
 # Flutter Native Splash Configuration
 flutter_native_splash:
-  color: "#131313"
-  image: assets/images/splash_logo.png
+  color: "#060606"
+  image: assets/images/splash_icon_padded.png
   android: true
   ios: true
   web: false
@@ -132,9 +132,9 @@ flutter_native_splash:
   
   # Android 12+ specific (logo must fit within ~240dp circular window)
   android_12:
-    image: assets/images/splash_logo.png
-    color: "#131313"
-    icon_background_color: "#131313"
+    image: assets/images/splash_icon_padded.png
+    color: "#060606"
+    icon_background_color: "#060606"
   
   # iOS specific  
   ios_content_mode: center

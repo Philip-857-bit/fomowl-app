@@ -24,7 +24,7 @@ class SettingsWalletHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(24);
+    final borderRadius = BorderRadius.circular(22);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Material(
@@ -37,9 +37,9 @@ class SettingsWalletHeaderCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: AppColors.accentRed.withValues(alpha: 0.35),
-                blurRadius: 20,
-                spreadRadius: 1,
-                offset: const Offset(0, 8),
+                blurRadius: 14,
+                spreadRadius: 0,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -47,14 +47,14 @@ class SettingsWalletHeaderCard extends StatelessWidget {
             onTap: onTap,
             borderRadius: borderRadius,
             child: Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
                   Container(
-                    width: 72,
-                    height: 72,
+                    width: 62,
+                    height: 62,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(14),
                       color: Colors.white.withValues(alpha: 0.14),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.25),
@@ -75,7 +75,7 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                           walletName,
                           style: GoogleFonts.outfit(
                             color: Colors.white,
-                            fontSize: 34,
+                            fontSize: 16,
                             fontWeight: FontWeight.w600,
                             height: 1.1,
                           ),
@@ -88,7 +88,7 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                                 _shorten(walletAddress),
                                 style: GoogleFonts.outfit(
                                   color: Colors.white.withValues(alpha: 0.85),
-                                  fontSize: 16,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w400,
                                 ),
                               ),
@@ -118,7 +118,7 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                                   child: Icon(
                                     Icons.copy_rounded,
                                     color: Colors.white.withValues(alpha: 0.9),
-                                    size: 18,
+                                    size: 15,
                                   ),
                                 ),
                               ),
