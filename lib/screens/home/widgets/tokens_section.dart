@@ -387,7 +387,11 @@ class _TokenListItem extends StatelessWidget {
   final VoidCallback onTap;
   final int? chainId;
 
-  const _TokenListItem({required this.token, required this.onTap, this.chainId});
+  const _TokenListItem({
+    required this.token,
+    required this.onTap,
+    this.chainId,
+  });
 
   @override
   Widget build(BuildContext context) {

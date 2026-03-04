@@ -78,7 +78,11 @@ class SwapToCard extends StatelessWidget {
                         ),
                       ),
               ),
-              SwapTokenChip(token: token, onTap: onSelectToken, chainId: chainId),
+              SwapTokenChip(
+                token: token,
+                onTap: onSelectToken,
+                chainId: chainId,
+              ),
             ],
           ),
           const SizedBox(height: 8),

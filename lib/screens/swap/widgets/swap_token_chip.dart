@@ -8,7 +8,12 @@ class SwapTokenChip extends StatelessWidget {
   final VoidCallback onTap;
   final int? chainId;
 
-  const SwapTokenChip({super.key, required this.token, required this.onTap, this.chainId});
+  const SwapTokenChip({
+    super.key,
+    required this.token,
+    required this.onTap,
+    this.chainId,
+  });
 
   @override
   Widget build(BuildContext context) {
