@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../utils/toast_utils.dart';
 
@@ -33,9 +34,10 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   }
 
   void _copyToClipboard() {
+    final l = AppLocalizations.of(context);
     final phrase = _mnemonicWords.join(' ');
     Clipboard.setData(ClipboardData(text: phrase));
-    ToastUtils.showSuccess('Secret phrase copied to clipboard');
+    ToastUtils.showSuccess(l.createWalletCopiedSeed);
   }
 
   void _toggleReveal() {
@@ -51,6 +53,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -77,7 +80,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                 // Title
                 Center(
                   child: Text(
-                    'Secret recovery phrase',
+                    l.secretRecoveryPhrase,
                     style: GoogleFonts.outfit(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -92,7 +95,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                 // Warning text
                 Center(
                   child: Text(
-                    'Never share your seed phrase with anybody\neven your family members.',
+                    l.seedPhraseShareWarning,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -190,7 +193,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                                         ),
                                         const SizedBox(height: 12),
                                         Text(
-                                          'Tap to reveal',
+                                          l.tapToReveal,
                                           style: GoogleFonts.outfit(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
@@ -221,7 +224,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                       size: 20,
                     ),
                     label: Text(
-                      'Copy to clipboard',
+                      l.copyToClipboard,
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -238,7 +241,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                 // Warning text
                 Center(
                   child: Text(
-                    'Be sure no one is watching',
+                    l.beSureNoOneWatching,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,

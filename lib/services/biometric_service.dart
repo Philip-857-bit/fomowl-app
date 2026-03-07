@@ -37,8 +37,8 @@ class BiometricService {
 
   /// Check if Face ID is available
   Future<bool> hasFaceId() async {
-    // Face ID has been disabled per user request
-    return false;
+    final biometrics = await getAvailableBiometrics();
+    return biometrics.contains(BiometricType.face);
   }
 
   /// Check if Fingerprint is available

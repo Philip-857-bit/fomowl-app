@@ -1,20 +1,25 @@
 import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
 
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:argon2/argon2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/wallet_account.dart';
 import '../utils/language_utils.dart';
+import 'secure_store.dart';
 
-/// Storage Service
-/// Handles secure storage of sensitive data and preferences
+/// Handles secure storage of sensitive data and preferences.
 class StorageService {
-  // Secure storage for sensitive data (encrypted)
-  static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(),
-  );
+  StorageService({
+    SecureStore? secureStore,
+    SharedPreferences? sharedPreferences,
+  }) : _secureStore = secureStore ?? const FlutterSecureStoreAdapter(),
+       _sharedPreferences = sharedPreferences;
 
-  // Keys for secure storage
+  final SecureStore _secureStore;
+  final SharedPreferences? _sharedPreferences;
+
   static const String _keyPrivateKey = 'wallet_private_key';
   static const String _keyMnemonic = 'wallet_mnemonic';
   static const String _keyAddress = 'wallet_address';
@@ -24,7 +29,6 @@ class StorageService {
   static const String _keyNextDerivationIndex = 'next_derivation_index';
   static const String _keyCurrentDerivationIndex = 'current_derivation_index';
 
-  // Keys for shared preferences (non-sensitive)
   static const String _keyBiometricEnabled = 'biometric_enabled';
   static const String _keyFaceIdEnabled = 'face_id_enabled';
   static const String _keyFingerprintEnabled = 'fingerprint_enabled';
@@ -36,11 +40,17 @@ class StorageService {
   static const String _keyTwoFactorEnabled = 'two_factor_enabled';
   static const String _keyAutoLockMinutes = 'auto_lock_minutes';
 
-  // Brute-force protection constants
   static const int maxFailedAttempts = 5;
   static const int lockoutDurationSeconds = 30;
+  static const int _passcodeHashVersion = 2;
+  static const int _passcodeHashIterations = 3;
+  static const int _passcodeSaltLength = 16;
+  static const int _passcodeHashBytes = 32;
+  static const int _passcodeMemoryPowerOf2 = 16;
 
-  /// Save wallet data securely
+  Future<SharedPreferences> get _prefs async =>
+      _sharedPreferences ?? SharedPreferences.getInstance();
+
   Future<void> saveWallet({
     required String address,
     required String privateKey,
@@ -50,19 +60,19 @@ class StorageService {
     int? derivationIndex,
     DateTime? createdAt,
   }) async {
-    await _secureStorage.write(key: _keyAddress, value: address);
-    await _secureStorage.write(key: _keyPrivateKey, value: privateKey);
-    await _secureStorage.write(
+    await _secureStore.write(key: _keyAddress, value: address);
+    await _secureStore.write(key: _keyPrivateKey, value: privateKey);
+    await _secureStore.write(
       key: _walletPrivateKeyKey(address),
       value: privateKey,
     );
 
     if (mnemonic != null) {
-      await _secureStorage.write(key: _keyMnemonic, value: mnemonic);
+      await _secureStore.write(key: _keyMnemonic, value: mnemonic);
     }
 
     if (walletName != null) {
-      await _secureStorage.write(key: _keyWalletName, value: walletName);
+      await _secureStore.write(key: _keyWalletName, value: walletName);
     }
 
     final account = WalletAccount(
@@ -83,43 +93,32 @@ class StorageService {
     }
   }
 
-  /// Get wallet address
-  Future<String?> getWalletAddress() async {
-    return await _secureStorage.read(key: _keyAddress);
-  }
+  Future<String?> getWalletAddress() => _secureStore.read(key: _keyAddress);
 
-  /// Get private key
   Future<String?> getPrivateKey() async {
     final address = await getWalletAddress();
     if (address != null) {
-      final existing = await _secureStorage.read(
+      final existing = await _secureStore.read(
         key: _walletPrivateKeyKey(address),
       );
       if (existing != null) return existing;
     }
-    return await _secureStorage.read(key: _keyPrivateKey);
+    return _secureStore.read(key: _keyPrivateKey);
   }
 
-  Future<String?> getPrivateKeyForAddress(String address) async {
-    return await _secureStorage.read(key: _walletPrivateKeyKey(address));
+  Future<String?> getPrivateKeyForAddress(String address) {
+    return _secureStore.read(key: _walletPrivateKeyKey(address));
   }
 
-  /// Get mnemonic
-  Future<String?> getMnemonic() async {
-    return await _secureStorage.read(key: _keyMnemonic);
-  }
+  Future<String?> getMnemonic() => _secureStore.read(key: _keyMnemonic);
 
-  /// Get wallet name
-  Future<String?> getWalletName() async {
-    return await _secureStorage.read(key: _keyWalletName);
-  }
+  Future<String?> getWalletName() => _secureStore.read(key: _keyWalletName);
 
-  /// Delete wallet data
   Future<void> deleteWallet() async {
-    await _secureStorage.delete(key: _keyAddress);
-    await _secureStorage.delete(key: _keyPrivateKey);
-    await _secureStorage.delete(key: _keyMnemonic);
-    await _secureStorage.delete(key: _keyWalletName);
+    await _secureStore.delete(key: _keyAddress);
+    await _secureStore.delete(key: _keyPrivateKey);
+    await _secureStore.delete(key: _keyMnemonic);
+    await _secureStore.delete(key: _keyWalletName);
   }
 
   Future<void> setActiveWallet(String? address) async {
@@ -129,22 +128,22 @@ class StorageService {
     }
     final wallet = await _findWallet(address);
     if (wallet == null) throw Exception('Wallet not found');
-    final privateKey = await _secureStorage.read(
+    final privateKey = await _secureStore.read(
       key: _walletPrivateKeyKey(address),
     );
     if (privateKey == null) throw Exception('Missing private key for wallet');
-    await _secureStorage.write(key: _keyAddress, value: address);
-    await _secureStorage.write(key: _keyPrivateKey, value: privateKey);
-    await _secureStorage.write(key: _keyWalletName, value: wallet.name);
+    await _secureStore.write(key: _keyAddress, value: address);
+    await _secureStore.write(key: _keyPrivateKey, value: privateKey);
+    await _secureStore.write(key: _keyWalletName, value: wallet.name);
     if (wallet.derivationIndex != null) {
       await _setCurrentDerivationIndex(wallet.derivationIndex!);
     }
   }
 
   Future<void> clearActiveWallet() async {
-    await _secureStorage.delete(key: _keyAddress);
-    await _secureStorage.delete(key: _keyPrivateKey);
-    await _secureStorage.delete(key: _keyWalletName);
+    await _secureStore.delete(key: _keyAddress);
+    await _secureStore.delete(key: _keyPrivateKey);
+    await _secureStore.delete(key: _keyWalletName);
   }
 
   Future<void> renameWallet(String address, String newName) async {
@@ -165,7 +164,7 @@ class StorageService {
     final activeAddress = await getWalletAddress();
     if (activeAddress != null &&
         activeAddress.toLowerCase() == address.toLowerCase()) {
-      await _secureStorage.write(key: _keyWalletName, value: newName);
+      await _secureStore.write(key: _keyWalletName, value: newName);
     }
   }
 
@@ -188,30 +187,28 @@ class StorageService {
       final replacement = accounts.firstWhere(
         (a) => a.address.toLowerCase() != normalized,
       );
-      final replacementPk = await _secureStorage.read(
+      final replacementPk = await _secureStore.read(
         key: _walletPrivateKeyKey(replacement.address),
       );
       if (replacementPk == null) {
         throw Exception('Replacement wallet private key is missing');
       }
 
-      // Update active pointers FIRST
-      await _secureStorage.write(key: _keyAddress, value: replacement.address);
-      await _secureStorage.write(key: _keyPrivateKey, value: replacementPk);
-      await _secureStorage.write(key: _keyWalletName, value: replacement.name);
+      await _secureStore.write(key: _keyAddress, value: replacement.address);
+      await _secureStore.write(key: _keyPrivateKey, value: replacementPk);
+      await _secureStore.write(key: _keyWalletName, value: replacement.name);
       if (replacement.derivationIndex != null) {
         await _setCurrentDerivationIndex(replacement.derivationIndex!);
       }
     }
 
-    // Now safe to remove from list and delete specific key
     accounts.removeAt(index);
     await _saveWalletAccounts(accounts);
-    await _secureStorage.delete(key: _walletPrivateKeyKey(address));
+    await _secureStore.delete(key: _walletPrivateKeyKey(address));
   }
 
   Future<List<WalletAccount>> getWalletAccounts() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final jsonStr = prefs.getString(_keyWalletList);
     if (jsonStr == null) {
       final address = await getWalletAddress();
@@ -235,27 +232,27 @@ class StorageService {
   }
 
   Future<int> getNextDerivationIndex() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getInt(_keyNextDerivationIndex) ?? 1;
   }
 
   Future<void> setNextDerivationIndex(int index) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setInt(_keyNextDerivationIndex, index);
   }
 
   Future<int?> getCurrentDerivationIndex() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getInt(_keyCurrentDerivationIndex);
   }
 
   Future<void> _setCurrentDerivationIndex(int index) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setInt(_keyCurrentDerivationIndex, index);
   }
 
   Future<void> _saveWalletAccounts(List<WalletAccount> accounts) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final jsonStr = jsonEncode(accounts.map((a) => a.toJson()).toList());
     await prefs.setString(_keyWalletList, jsonStr);
   }
@@ -287,66 +284,73 @@ class StorageService {
   String _walletPrivateKeyKey(String address) =>
       'wallet_private_key_${address.toLowerCase()}';
 
-  /// Save passcode
   Future<void> savePasscode(String passcode) async {
-    await _secureStorage.write(key: _keyPasscode, value: passcode);
+    await _secureStore.write(
+      key: _keyPasscode,
+      value: jsonEncode(_buildPasscodeRecord(passcode)),
+    );
   }
 
-  /// Get passcode
-  Future<String?> getPasscode() async {
-    return await _secureStorage.read(key: _keyPasscode);
+  Future<bool> hasPasscode() async {
+    final stored = await _secureStore.read(key: _keyPasscode);
+    return stored != null && stored.isNotEmpty;
   }
 
-  /// Verify passcode
   Future<bool> verifyPasscode(String passcode) async {
-    final stored = await getPasscode();
-    return stored == passcode;
+    final stored = await _secureStore.read(key: _keyPasscode);
+    if (stored == null || stored.isEmpty) return false;
+
+    final record = _decodePasscodeRecord(stored);
+    if (record == null) {
+      final isLegacyMatch = stored == passcode;
+      if (isLegacyMatch) {
+        await savePasscode(passcode);
+      }
+      return isLegacyMatch;
+    }
+
+    final derivedHash = _derivePasscodeHash(
+      passcode: passcode,
+      salt: record.salt,
+      iterations: record.iterations,
+      memoryPowerOf2: record.memoryPowerOf2,
+    );
+    return _constantTimeEquals(record.hash, derivedHash);
   }
 
-  /// Delete passcode
-  Future<void> deletePasscode() async {
-    await _secureStorage.delete(key: _keyPasscode);
-  }
+  Future<void> deletePasscode() => _secureStore.delete(key: _keyPasscode);
 
-  // --- Brute-force protection ---
-
-  /// Get the number of failed passcode attempts
   Future<int> getFailedAttempts() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getInt(_keyFailedAttempts) ?? 0;
   }
 
-  /// Increment failed attempt counter
   Future<void> incrementFailedAttempts() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final current = prefs.getInt(_keyFailedAttempts) ?? 0;
     await prefs.setInt(_keyFailedAttempts, current + 1);
   }
 
-  /// Reset failed attempt counter (on successful login)
   Future<void> resetFailedAttempts() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setInt(_keyFailedAttempts, 0);
     await prefs.remove(_keyLockoutUntil);
   }
 
-  /// Set a lockout time (current time + duration)
   Future<void> setLockout() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final lockoutTime = DateTime.now()
         .add(const Duration(seconds: lockoutDurationSeconds))
         .millisecondsSinceEpoch;
     await prefs.setInt(_keyLockoutUntil, lockoutTime);
   }
 
-  /// Get the lockout end time (or null if not locked out)
   Future<DateTime?> getLockoutUntil() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final lockoutMs = prefs.getInt(_keyLockoutUntil);
     if (lockoutMs == null) return null;
     final lockoutTime = DateTime.fromMillisecondsSinceEpoch(lockoutMs);
     if (DateTime.now().isAfter(lockoutTime)) {
-      // Lockout expired — clear it
       await prefs.remove(_keyLockoutUntil);
       await prefs.setInt(_keyFailedAttempts, 0);
       return null;
@@ -354,127 +358,203 @@ class StorageService {
     return lockoutTime;
   }
 
-  /// Check if the user is currently locked out
-  Future<bool> isLockedOut() async {
-    final lockoutTime = await getLockoutUntil();
-    return lockoutTime != null;
-  }
+  Future<bool> isLockedOut() async => await getLockoutUntil() != null;
 
-  // --- Biometric settings ---
-
-  /// Save biometric settings
   Future<void> setBiometricEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setBool(_keyBiometricEnabled, enabled);
-    // If disabling generally, also disable specific types
     if (!enabled) {
       await prefs.setBool(_keyFaceIdEnabled, false);
       await prefs.setBool(_keyFingerprintEnabled, false);
     }
   }
 
-  /// Get biometric enabled status
   Future<bool> isBiometricEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return (prefs.getBool(_keyBiometricEnabled) ?? false) ||
         (prefs.getBool(_keyFingerprintEnabled) ?? false) ||
         (prefs.getBool(_keyFaceIdEnabled) ?? false);
   }
 
-  /// Save Face ID setting
   Future<void> setFaceIdEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setBool(_keyFaceIdEnabled, enabled);
+    if (enabled) {
+      await prefs.setBool(_keyBiometricEnabled, true);
+    }
   }
 
-  /// Get Face ID enabled status
   Future<bool> isFaceIdEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getBool(_keyFaceIdEnabled) ?? false;
   }
 
-  /// Save Fingerprint setting
   Future<void> setFingerprintEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setBool(_keyFingerprintEnabled, enabled);
     if (enabled) {
       await prefs.setBool(_keyBiometricEnabled, true);
     }
   }
 
-  /// Get Fingerprint enabled status
   Future<bool> isFingerprintEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getBool(_keyFingerprintEnabled) ?? false;
   }
 
-  /// Save 2FA preference
   Future<void> setTwoFactorEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setBool(_keyTwoFactorEnabled, enabled);
   }
 
-  /// Get 2FA preference
   Future<bool> isTwoFactorEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getBool(_keyTwoFactorEnabled) ?? false;
   }
 
-  /// Save auto-lock timer in minutes
   Future<void> setAutoLockMinutes(int minutes) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setInt(_keyAutoLockMinutes, minutes);
   }
 
-  /// Get auto-lock timer in minutes
   Future<int> getAutoLockMinutes() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getInt(_keyAutoLockMinutes) ?? 1;
   }
 
-  /// Save language preference
   Future<void> setLanguage(String languageCode) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final normalized = LanguageUtils.normalizeLanguageCode(languageCode);
     await prefs.setString(_keyLanguage, normalized);
   }
 
-  /// Get language preference
   Future<String?> getLanguage() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     final stored = prefs.getString(_keyLanguage);
     if (stored == null || stored.isEmpty) return null;
     return LanguageUtils.normalizeLanguageCode(stored);
   }
 
-  /// Save preferred display currency (e.g., USD)
   Future<void> setCurrency(String currencyCode) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setString(_keyCurrency, currencyCode);
   }
 
-  /// Get preferred display currency
   Future<String> getCurrency() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getString(_keyCurrency) ?? 'USD';
   }
 
-  /// Check if first launch
   Future<bool> isFirstLaunch() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     return prefs.getBool(_keyFirstLaunch) ?? true;
   }
 
-  /// Set first launch completed
   Future<void> setFirstLaunchCompleted() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _prefs;
     await prefs.setBool(_keyFirstLaunch, false);
   }
 
-  /// Clear all data (for testing/reset)
   Future<void> clearAll() async {
-    await _secureStorage.deleteAll();
-    final prefs = await SharedPreferences.getInstance();
+    await _secureStore.deleteAll();
+    final prefs = await _prefs;
     await prefs.clear();
   }
+
+  Map<String, dynamic> _buildPasscodeRecord(String passcode) {
+    final saltBytes = List<int>.generate(
+      _passcodeSaltLength,
+      (_) => Random.secure().nextInt(256),
+    );
+    final salt = base64Encode(saltBytes);
+    return {
+      'version': _passcodeHashVersion,
+      'algorithm': 'argon2id',
+      'iterations': _passcodeHashIterations,
+      'memoryPowerOf2': _passcodeMemoryPowerOf2,
+      'salt': salt,
+      'hash': _derivePasscodeHash(
+        passcode: passcode,
+        salt: salt,
+        iterations: _passcodeHashIterations,
+        memoryPowerOf2: _passcodeMemoryPowerOf2,
+      ),
+    };
+  }
+
+  _PasscodeRecord? _decodePasscodeRecord(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final version = decoded['version'];
+      final iterations = decoded['iterations'];
+      final memoryPowerOf2 = decoded['memoryPowerOf2'];
+      final salt = decoded['salt'];
+      final hash = decoded['hash'];
+      if (version != _passcodeHashVersion ||
+          iterations is! int ||
+          memoryPowerOf2 is! int ||
+          salt is! String ||
+          hash is! String) {
+        return null;
+      }
+      return _PasscodeRecord(
+        iterations: iterations,
+        memoryPowerOf2: memoryPowerOf2,
+        salt: salt,
+        hash: hash,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _derivePasscodeHash({
+    required String passcode,
+    required String salt,
+    required int iterations,
+    required int memoryPowerOf2,
+  }) {
+    final parameters = Argon2Parameters(
+      Argon2Parameters.ARGON2_id,
+      Uint8List.fromList(base64Decode(salt)),
+      version: Argon2Parameters.ARGON2_VERSION_13,
+      iterations: iterations,
+      memoryPowerOf2: memoryPowerOf2,
+    );
+    final generator = Argon2BytesGenerator()..init(parameters);
+    final result = Uint8List(_passcodeHashBytes);
+    generator.generateBytes(
+      Uint8List.fromList(parameters.converter.convert(passcode)),
+      result,
+      0,
+      result.length,
+    );
+    return base64Encode(result);
+  }
+
+  bool _constantTimeEquals(String a, String b) {
+    final aBytes = utf8.encode(a);
+    final bBytes = utf8.encode(b);
+    if (aBytes.length != bBytes.length) return false;
+    var diff = 0;
+    for (var i = 0; i < aBytes.length; i++) {
+      diff |= aBytes[i] ^ bBytes[i];
+    }
+    return diff == 0;
+  }
+}
+
+class _PasscodeRecord {
+  const _PasscodeRecord({
+    required this.iterations,
+    required this.memoryPowerOf2,
+    required this.salt,
+    required this.hash,
+  });
+
+  final int iterations;
+  final int memoryPowerOf2;
+  final String salt;
+  final String hash;
 }

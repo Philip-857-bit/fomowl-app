@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
@@ -62,6 +63,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   }
 
   void _verifyAndContinue() {
+    final l = AppLocalizations.of(context);
     // Get entered words
     final enteredWords = _controllers
         .map((c) => c.text.trim().toLowerCase())
@@ -69,7 +71,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
     // Check if all fields are filled
     if (enteredWords.any((word) => word.isEmpty)) {
-      ToastUtils.showError('Please fill in all 12 words');
+      ToastUtils.showError(l.verifyAllWords);
       return;
     }
 
@@ -88,9 +90,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       }
 
       if (!isCorrect) {
-        ToastUtils.showError(
-          'The seed phrase does not match. Please try again.',
-        );
+        ToastUtils.showError(l.seedPhraseMismatch);
         return;
       }
     }
@@ -100,6 +100,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   }
 
   Future<void> _saveWalletAndContinue() async {
+    final l = AppLocalizations.of(context);
     if (_originalPhrase == null) return;
 
     setState(() {
@@ -124,7 +125,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError('Error creating wallet: $e');
+        ToastUtils.showError(l.walletCreationError(e.toString()));
       }
     } finally {
       if (mounted) {

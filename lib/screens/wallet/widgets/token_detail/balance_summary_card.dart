@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../models/token.dart';
 import '../../../../widgets/token_icon.dart';
 
@@ -12,11 +13,12 @@ class BalanceSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'MY BALANCE',
+          l.myBalance,
           style: GoogleFonts.outfit(
             fontSize: 12,
             letterSpacing: 1,

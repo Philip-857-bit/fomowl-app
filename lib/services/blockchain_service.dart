@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/token.dart';
 import '../models/chain.dart';
+import '../models/token_market_data.dart';
 import 'blockchain/blockchain_catalog.dart';
 import 'rpc_service.dart';
 import 'token_price_service.dart';
@@ -213,18 +214,22 @@ class BlockchainService extends ChangeNotifier {
     return 20.0;
   }
 
-  Future<Map<String, double>> estimateGasFee({
+  Future<Map<String, dynamic>> estimateGasFee({
     double nativePriceUsd = 0,
   }) async {
     final gasPriceGwei = await getGasPrice();
     const gasLimit = 21000;
-    final totalFeeWei = gasPriceGwei * 1e9 * gasLimit;
-    final totalFeeNative = totalFeeWei / 1e18;
+    final gasPriceWei = BigInt.parse(
+      (gasPriceGwei * 1000000000).round().toString(),
+    );
+    final totalFeeWei = gasPriceWei * BigInt.from(gasLimit);
+    final totalFeeNative = _scaledBigIntToDouble(totalFeeWei, 18);
     return {
       'gasGwei': gasPriceGwei,
       'gasLimitUnits': gasLimit.toDouble(),
       'totalFeeEth': totalFeeNative,
       'totalFeeUsd': totalFeeNative * nativePriceUsd,
+      'totalFeeWei': totalFeeWei,
     };
   }
 
@@ -292,15 +297,16 @@ class BlockchainService extends ChangeNotifier {
   // ─── BALANCE FETCHING ────────────────────────────
 
   Future<double> getNativeBalance(String address) async {
+    final balanceWei = await getNativeBalanceBaseUnits(address);
+    return _scaledBigIntToDouble(balanceWei, 18);
+  }
+
+  Future<BigInt> getNativeBalanceBaseUnits(String address) async {
     final result = await _rpcCall('eth_getBalance', [address, 'latest']);
     if (result != null) {
-      final balanceWei = BigInt.parse(
-        (result as String).substring(2),
-        radix: 16,
-      );
-      return _scaledBigIntToDouble(balanceWei, 18);
+      return BigInt.parse((result as String).substring(2), radix: 16);
     }
-    return 0.0;
+    return BigInt.zero;
   }
 
   Future<double> getEthBalance(String address) => getNativeBalance(address);
@@ -437,9 +443,12 @@ class BlockchainService extends ChangeNotifier {
   Future<List<Token>> fetchWalletTokens(String walletAddress) async {
     final discoveredTokens = await _fetchWalletTokensFromBackend(walletAddress);
     if (discoveredTokens != null && discoveredTokens.isNotEmpty) {
+      // --- Enrich discovered tokens with CoinGecko prices when backend omits them ---
+      final enriched = await _enrichTokensWithPrices(discoveredTokens);
+
       // Merge custom tokens that weren't discovered by the backend.
       final customTokens = _customTokens[_activeChain.chainId] ?? const [];
-      final merged = List<Token>.from(discoveredTokens);
+      final merged = List<Token>.from(enriched);
       for (final custom in customTokens) {
         final alreadyInList = merged.any(
           (t) =>
@@ -721,6 +730,55 @@ class BlockchainService extends ChangeNotifier {
     }
   }
 
+  /// Batch-fetches CoinGecko prices for tokens missing price data and
+  /// returns a new list with enriched price/value fields.
+  Future<List<Token>> _enrichTokensWithPrices(List<Token> tokens) async {
+    // Collect coinGeckoIds that need pricing
+    final priceIds = <String>{};
+    final nativeCgId = _activeChain.coinGeckoId;
+    if (nativeCgId != null && nativeCgId.isNotEmpty) {
+      priceIds.add(nativeCgId);
+    }
+    for (final t in tokens) {
+      if (t.priceUsd > 0 && t.valueUsd > 0) continue; // already has price
+      final cgId = t.coinGeckoId;
+      if (cgId != null && cgId.isNotEmpty) {
+        priceIds.add(cgId);
+      }
+    }
+    if (priceIds.isEmpty) return tokens;
+
+    final prices = await getTokenPrices(priceIds.toList());
+
+    return tokens.map((t) {
+      if (t.priceUsd > 0 && t.valueUsd > 0) return t; // already priced
+      // Derive coinGeckoId — use token's own or fallback to chain native
+      final cgId = (t.coinGeckoId != null && t.coinGeckoId!.isNotEmpty)
+          ? t.coinGeckoId!
+          : (t.contractAddress == null && nativeCgId != null
+                ? nativeCgId
+                : null);
+      if (cgId == null) return t;
+
+      final price = prices[cgId] ?? 0.0;
+      final change = prices['${cgId}_change'] ?? t.changePercent24h;
+      if (price == 0) return t;
+
+      return Token(
+        symbol: t.symbol,
+        name: t.name,
+        contractAddress: t.contractAddress,
+        balance: t.balance,
+        valueUsd: t.balance * price,
+        priceUsd: price,
+        changePercent24h: change,
+        decimals: t.decimals,
+        imageUrl: t.imageUrl,
+        coinGeckoId: t.coinGeckoId,
+      );
+    }).toList();
+  }
+
   // ─── HELPERS ─────────────────────────────────────
 
   Future<void> _loadCustomTokens() async {
@@ -924,20 +982,4 @@ class BlockchainService extends ChangeNotifier {
     final res = await _rpcCall('eth_sendRawTransaction', [signedTxHex]);
     return res as String?;
   }
-}
-
-// Local models for TokenPriceData to keep compatibility
-class TokenMarketData {
-  final double? priceUsd;
-  final double? marketCapUsd;
-  final double? totalSupply;
-  final double? circulatingSupply;
-  final String? genesisDate;
-  const TokenMarketData({
-    this.priceUsd,
-    this.marketCapUsd,
-    this.totalSupply,
-    this.circulatingSupply,
-    this.genesisDate,
-  });
 }

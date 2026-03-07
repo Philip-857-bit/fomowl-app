@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../l10n/app_localizations.dart';
+
 class TokenManagementSearchBar extends StatelessWidget {
   final TextEditingController controller;
   final String query;
@@ -13,6 +15,7 @@ class TokenManagementSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: Colors.transparent,
@@ -23,14 +26,14 @@ class TokenManagementSearchBar extends StatelessWidget {
         controller: controller,
         style: GoogleFonts.outfit(color: Colors.white),
         decoration: InputDecoration(
-          hintText: 'Search token or paste contract address',
+          hintText: l.searchTokenOrPasteContract,
           hintStyle: GoogleFonts.outfit(color: Colors.white54),
           prefixIcon: const Icon(Icons.search, color: Colors.white54),
           suffixIcon: query.isEmpty
               ? null
               : IconButton(
                   onPressed: controller.clear,
-                  tooltip: 'Clear search',
+                  tooltip: l.clearSearch,
                   icon: const Icon(Icons.close, color: Colors.white54),
                 ),
           border: InputBorder.none,

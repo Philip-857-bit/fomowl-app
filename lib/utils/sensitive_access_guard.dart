@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
+import '../l10n/app_localizations.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 
@@ -14,22 +15,19 @@ class SensitiveAccessGuard {
   static final StorageService _storage = StorageService();
 
   /// Returns true if the user successfully authenticates (or no auth is required).
-  static Future<bool> verify(
-    BuildContext context, {
-    String reason = 'Authenticate to continue',
-  }) async {
+  static Future<bool> verify(BuildContext context, {String? reason}) async {
+    final l = AppLocalizations.of(context);
     // Prefer biometrics when the user has opted in.
     final biometricEnabled = await _biometricService.isBiometricEnabled();
     if (biometricEnabled) {
       final success = await _biometricService.authenticate(
-        localizedReason: reason,
+        localizedReason: reason ?? l.unlockWalletReason,
       );
       if (success) return true;
     }
 
     // Fall back to passcode if configured. When no passcode is set, allow access.
-    final passcode = await _storage.getPasscode();
-    if (passcode == null || passcode.isEmpty) {
+    if (!await _storage.hasPasscode()) {
       return true;
     }
 
@@ -38,6 +36,7 @@ class SensitiveAccessGuard {
   }
 
   static Future<bool> _promptForPasscode(BuildContext context) async {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController();
     return await showDialog<bool>(
           context: context,
@@ -48,7 +47,7 @@ class SensitiveAccessGuard {
               builder: (context, setState) => AlertDialog(
                 backgroundColor: AppColors.cardDark,
                 title: Text(
-                  'Enter Passcode',
+                  l.enterPasscodeTitle,
                   style: GoogleFonts.outfit(color: Colors.white),
                 ),
                 content: TextField(
@@ -56,9 +55,9 @@ class SensitiveAccessGuard {
                   obscureText: true,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    hintText: 'Passcode',
+                    hintText: l.passcodeHint,
                     hintStyle: GoogleFonts.outfit(color: Colors.white38),
-                    errorText: hasError ? 'Incorrect passcode' : null,
+                    errorText: hasError ? l.incorrectPasscode : null,
                   ),
                   style: GoogleFonts.outfit(color: Colors.white),
                 ),
@@ -66,7 +65,7 @@ class SensitiveAccessGuard {
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
                     child: Text(
-                      'Cancel',
+                      l.cancel,
                       style: GoogleFonts.outfit(color: Colors.white54),
                     ),
                   ),
@@ -83,7 +82,7 @@ class SensitiveAccessGuard {
                       }
                     },
                     child: Text(
-                      'Confirm',
+                      l.confirm,
                       style: GoogleFonts.outfit(color: AppColors.accentRed),
                     ),
                   ),

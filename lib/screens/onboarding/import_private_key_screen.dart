@@ -8,6 +8,7 @@ import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
 import '../../utils/toast_utils.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Import Private Key Screen
 /// Allows users to import wallet using private key
@@ -41,16 +42,17 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   }
 
   Future<void> _importWallet() async {
+    final l = AppLocalizations.of(context);
     final privateKey = _privateKeyController.text.trim();
     final walletName = _walletNameController.text.trim();
 
     if (privateKey.isEmpty) {
-      _showError('Please enter your private key');
+      _showError(l.enterPrivateKeyPrompt);
       return;
     }
 
     if (walletName.isEmpty) {
-      _showError('Please enter a wallet name');
+      _showError(l.enterWalletNamePrompt);
       return;
     }
 
@@ -61,16 +63,14 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     }
 
     if (cleanKey.length != 64) {
-      _showError('Invalid private key. Must be 64 hexadecimal characters.');
+      _showError(l.invalidPrivateKeyLength);
       return;
     }
 
     // Validate hex characters
     final hexRegex = RegExp(r'^[0-9a-fA-F]+$');
     if (!hexRegex.hasMatch(cleanKey)) {
-      _showError(
-        'Invalid private key. Must contain only hexadecimal characters (0-9, a-f).',
-      );
+      _showError(l.invalidPrivateKeyCharacters);
       return;
     }
 
@@ -96,15 +96,12 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
         });
 
         // Show success message
-        ToastUtils.showSuccess('Wallet imported successfully!');
+        ToastUtils.showSuccess(l.walletImportedSuccessfully);
 
-        // If user already has a passcode (they are adding from inside the app), just pop
         final storage = StorageService();
-        final passcode = await storage.getPasscode();
-        if (passcode != null && passcode.isNotEmpty) {
+        if (await storage.hasPasscode()) {
           if (mounted) Navigator.pop(context, true);
         } else {
-          // Navigate to passcode setup
           if (mounted) Navigator.pushNamed(context, '/create-passcode');
         }
       }
@@ -113,7 +110,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
         setState(() {
           _isLoading = false;
         });
-        _showError('Failed to import wallet: ${e.toString()}');
+        _showError(l.importWalletFailed(e.toString()));
       }
     }
   }
@@ -124,6 +121,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -149,7 +147,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
 
                 // Wallet name label
                 Text(
-                  'Wallet name',
+                  l.walletNameLabel,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
@@ -174,7 +172,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                       horizontal: 20,
                       vertical: 18,
                     ),
-                    hintText: 'Enter wallet name',
+                    hintText: l.enterWalletNameHint,
                     hintStyle: GoogleFonts.outfit(
                       fontSize: 16,
                       color: Colors.white.withValues(alpha: 0.3),
@@ -186,7 +184,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
 
                 // Private key label
                 Text(
-                  'Private key',
+                  l.privateKey,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
@@ -219,7 +217,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.all(20),
-                          hintText: 'Enter your private key',
+                          hintText: l.enterPrivateKeyHint,
                           hintStyle: GoogleFonts.outfit(
                             fontSize: 16,
                             color: Colors.white.withValues(alpha: 0.3),
@@ -233,7 +231,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                         child: TextButton(
                           onPressed: _pasteFromClipboard,
                           child: Text(
-                            'Paste',
+                            l.paste,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -251,7 +249,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                 // Helper text
                 Center(
                   child: Text(
-                    'Your private key comprises of 64 alphanumeric\ncharacters',
+                    l.privateKeyHelperText,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -301,7 +299,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                                 ),
                               )
                             : Text(
-                                'Import wallet',
+                                l.importWallet,
                                 style: GoogleFonts.outfit(
                                   fontSize: 21,
                                   fontWeight: FontWeight.w600,

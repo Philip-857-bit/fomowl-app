@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/feedback_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
@@ -36,15 +37,16 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context);
     final message = _messageController.text.trim();
     if (message.isEmpty) {
-      ToastUtils.showError('Please enter your feedback message');
+      ToastUtils.showError(l.enterFeedbackMessage);
       return;
     }
 
     final walletAddress = await _walletService.getCurrentWalletAddress();
     if (walletAddress == null || walletAddress.isEmpty) {
-      ToastUtils.showError('No active wallet found');
+      ToastUtils.showError(l.noActiveWalletFound);
       return;
     }
 
@@ -66,11 +68,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         languageCode: languageCode,
       );
       if (!mounted) return;
-      ToastUtils.showSuccess('Feedback submitted. Thank you.');
+      ToastUtils.showSuccess(l.feedbackSubmitted);
       Navigator.pop(context);
     } catch (e) {
       debugPrint('Unable to submit feedback: $e');
-      ToastUtils.showError('Unable to submit feedback. Please try again.');
+      ToastUtils.showError(l.feedbackSubmitFailed);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -78,6 +80,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: BottomNavBar(
@@ -104,7 +107,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     ),
                   ),
                   Text(
-                    'Feedback',
+                    l.feedbackTitle,
                     style: GoogleFonts.outfit(
                       color: AppColors.textPrimary,
                       fontSize: 26,
@@ -115,29 +118,35 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Help us improve Owllet by sharing your thoughts.',
+                l.feedbackSubtitle,
                 style: GoogleFonts.outfit(
                   color: AppColors.textSecondary,
                   fontSize: 14,
                 ),
               ),
               const SizedBox(height: 18),
-              _buildLabel('Category'),
+              _buildLabel(l.feedbackCategory),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _category,
                 dropdownColor: AppColors.cardDark,
                 decoration: _inputDecoration(),
-                items: const [
-                  DropdownMenuItem(value: 'general', child: Text('General')),
-                  DropdownMenuItem(value: 'bug', child: Text('Bug Report')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'general',
+                    child: Text(l.feedbackCategoryGeneral),
+                  ),
+                  DropdownMenuItem(
+                    value: 'bug',
+                    child: Text(l.feedbackCategoryBug),
+                  ),
                   DropdownMenuItem(
                     value: 'feature',
-                    child: Text('Feature Request'),
+                    child: Text(l.feedbackCategoryFeature),
                   ),
                   DropdownMenuItem(
                     value: 'design',
-                    child: Text('Design Feedback'),
+                    child: Text(l.feedbackCategoryDesign),
                   ),
                 ],
                 onChanged: (value) =>
@@ -145,33 +154,31 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 style: GoogleFonts.outfit(color: Colors.white),
               ),
               const SizedBox(height: 14),
-              _buildLabel('Subject (Optional)'),
+              _buildLabel(l.feedbackSubjectOptional),
               const SizedBox(height: 8),
               TextField(
                 controller: _subjectController,
                 style: GoogleFonts.outfit(color: Colors.white),
-                decoration: _inputDecoration(hint: 'Short summary'),
+                decoration: _inputDecoration(hint: l.feedbackSubjectHint),
               ),
               const SizedBox(height: 14),
-              _buildLabel('Message'),
+              _buildLabel(l.feedbackMessage),
               const SizedBox(height: 8),
               TextField(
                 controller: _messageController,
                 style: GoogleFonts.outfit(color: Colors.white),
                 minLines: 5,
                 maxLines: 8,
-                decoration: _inputDecoration(
-                  hint: 'Tell us what happened or what you need',
-                ),
+                decoration: _inputDecoration(hint: l.feedbackMessageHint),
               ),
               const SizedBox(height: 14),
-              _buildLabel('Contact Email (Optional)'),
+              _buildLabel(l.feedbackContactEmailOptional),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
                 style: GoogleFonts.outfit(color: Colors.white),
                 keyboardType: TextInputType.emailAddress,
-                decoration: _inputDecoration(hint: 'you@example.com'),
+                decoration: _inputDecoration(hint: l.feedbackEmailHint),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -194,7 +201,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         ),
                       )
                     : Text(
-                        'Submit Feedback',
+                        l.submitFeedback,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

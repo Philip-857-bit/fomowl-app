@@ -10,6 +10,7 @@ import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
 import '../../utils/toast_utils.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Import Secret Phrase Screen
 /// Allows users to import wallet using 12 or 24-word secret phrase
@@ -44,22 +45,23 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   }
 
   Future<void> _importWallet() async {
+    final l = AppLocalizations.of(context);
     final phrase = _secretPhraseController.text.trim();
     final walletName = _walletNameController.text.trim();
 
     if (phrase.isEmpty) {
-      _showError('Please enter your secret phrase');
+      _showError(l.enterSecretPhrasePrompt);
       return;
     }
 
     if (walletName.isEmpty) {
-      _showError('Please enter a wallet name');
+      _showError(l.enterWalletNamePrompt);
       return;
     }
 
     // Validate mnemonic
     if (!_walletService.validateMnemonic(phrase)) {
-      _showError('Invalid secret phrase. Please check and try again.');
+      _showError(l.invalidSecretPhrasePrompt);
       return;
     }
 
@@ -89,15 +91,12 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
         });
 
         // Show success message
-        ToastUtils.showSuccess('Wallet imported successfully!');
+        ToastUtils.showSuccess(l.walletImportedSuccessfully);
 
-        // If user already has a passcode (they are adding from inside the app), just pop
         final storage = StorageService();
-        final passcode = await storage.getPasscode();
-        if (passcode != null && passcode.isNotEmpty) {
+        if (await storage.hasPasscode()) {
           if (mounted) Navigator.pop(context, true);
         } else {
-          // Navigate to passcode setup
           if (mounted) Navigator.pushNamed(context, '/create-passcode');
         }
       }
@@ -106,7 +105,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
         setState(() {
           _isLoading = false;
         });
-        _showError('Failed to import wallet: ${e.toString()}');
+        _showError(l.importWalletFailed(e.toString()));
       }
     }
   }
@@ -117,6 +116,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -142,7 +142,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
 
                 // Wallet name label
                 Text(
-                  'Wallet name',
+                  l.walletNameLabel,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
@@ -167,7 +167,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                       horizontal: 20,
                       vertical: 18,
                     ),
-                    hintText: 'Enter wallet name',
+                    hintText: l.enterWalletNameHint,
                     hintStyle: GoogleFonts.outfit(
                       fontSize: 16,
                       color: Colors.white.withValues(alpha: 0.3),
@@ -179,7 +179,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
 
                 // Secret phrase label
                 Text(
-                  'Secret phrase',
+                  l.secretPhrase,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
@@ -212,7 +212,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                             borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.all(20),
-                          hintText: 'Enter your 12 or 24-word secret phrase',
+                          hintText: l.enterSecretPhraseHint,
                           hintStyle: GoogleFonts.outfit(
                             fontSize: 16,
                             color: Colors.white.withValues(alpha: 0.3),
@@ -226,7 +226,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                         child: TextButton(
                           onPressed: _pasteFromClipboard,
                           child: Text(
-                            'Paste',
+                            l.paste,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -244,7 +244,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                 // Helper text
                 Center(
                   child: Text(
-                    'Your secret phrase is 12 or 24 words separated by\nsingle spaces',
+                    l.secretPhraseHelperText,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -294,7 +294,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                                 ),
                               )
                             : Text(
-                                'Import wallet',
+                                l.importWallet,
                                 style: GoogleFonts.outfit(
                                   fontSize: 21,
                                   fontWeight: FontWeight.w600,

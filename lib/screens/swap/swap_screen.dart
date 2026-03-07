@@ -311,13 +311,34 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   double _usdValueFor(Token? token, double amount) {
-    if (token == null) return 0.0;
+    if (token == null || amount <= 0) return 0.0;
     double price = token.unitPriceUsd;
     // Fallback: use cached CoinGecko price when the token model has no price.
     if (price <= 0 &&
         token.coinGeckoId != null &&
         token.coinGeckoId!.isNotEmpty) {
       price = _tokenPriceCache[token.coinGeckoId] ?? 0.0;
+    }
+    // Fallback: infer from the counterpart token via quote rate.
+    if (price <= 0 && _currentQuote != null) {
+      final fromAmt = _parseAmount(_fromController);
+      final toAmt = _parseAmount(_toController);
+      if (fromAmt > 0 && toAmt > 0) {
+        final isFrom = _tokensAreIdentical(token, _fromToken);
+        final other = isFrom ? _toToken : _fromToken;
+        double otherPrice = other?.unitPriceUsd ?? 0.0;
+        if (otherPrice <= 0 &&
+            other?.coinGeckoId != null &&
+            other!.coinGeckoId!.isNotEmpty) {
+          otherPrice = _tokenPriceCache[other.coinGeckoId] ?? 0.0;
+        }
+        if (otherPrice > 0) {
+          // Total USD of the counterpart side
+          final otherUsd = (isFrom ? toAmt : fromAmt) * otherPrice;
+          final thisAmt = isFrom ? fromAmt : toAmt;
+          price = otherUsd / thisAmt;
+        }
+      }
     }
     return amount * price;
   }
@@ -917,6 +938,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       nativeFeeSymbol: blockchain.activeChain.symbol,
                       receiveText: receiveText,
                       priceSeparator: _priceSeparator,
+                      swapAmountUsd: fromUsdValue,
                     ),
                     const SizedBox(height: 24),
                     SwapPrimaryButton(

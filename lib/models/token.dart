@@ -1,3 +1,7 @@
+import 'package:decimal/decimal.dart';
+
+import '../utils/value_formatter.dart';
+
 /// Token Model
 /// Represents a cryptocurrency token with its details
 class Token {
@@ -29,65 +33,54 @@ class Token {
     this.coinGeckoId,
   });
 
+  Decimal get balanceDecimal => ValueFormatter.decimalFromNum(balance);
+  Decimal get valueUsdDecimal => ValueFormatter.decimalFromNum(valueUsd);
+  Decimal get priceUsdDecimal => ValueFormatter.decimalFromNum(priceUsd);
+
   /// Best-effort per-token USD price.
   double get unitPriceUsd {
-    if (priceUsd > 0) return priceUsd;
-    if (balance > 0 && valueUsd > 0) {
-      return valueUsd / balance;
+    return ValueFormatter.doubleFromDecimal(unitPriceUsdDecimal);
+  }
+
+  Decimal get unitPriceUsdDecimal {
+    if (priceUsdDecimal > Decimal.zero) return priceUsdDecimal;
+    if (balanceDecimal > Decimal.zero && valueUsdDecimal > Decimal.zero) {
+      return ValueFormatter.divide(valueUsdDecimal, balanceDecimal);
     }
-    return 0.0;
+    return Decimal.zero;
   }
 
   /// Total USD value of the holdings.
   double get totalValueUsd {
-    final inferredValue = balance * priceUsd;
-    if (valueUsd > 0) return valueUsd;
-    if (inferredValue > 0) return inferredValue;
-    if (balance > 0 && unitPriceUsd > 0) {
-      return balance * unitPriceUsd;
+    return ValueFormatter.doubleFromDecimal(totalValueUsdDecimal);
+  }
+
+  Decimal get totalValueUsdDecimal {
+    final inferredValue = balanceDecimal * priceUsdDecimal;
+    if (valueUsdDecimal > Decimal.zero) return valueUsdDecimal;
+    if (inferredValue > Decimal.zero) return inferredValue;
+    if (balanceDecimal > Decimal.zero && unitPriceUsdDecimal > Decimal.zero) {
+      return balanceDecimal * unitPriceUsdDecimal;
     }
-    return 0.0;
+    return Decimal.zero;
   }
 
   /// Format balance with appropriate decimals
   String get formattedBalance {
-    if (balance >= 1000000000) {
-      return '${(balance / 1000000000).toStringAsFixed(2)}B $symbol';
-    } else if (balance >= 1000000) {
-      return '${(balance / 1000000).toStringAsFixed(2)}M $symbol';
-    } else if (balance >= 1000) {
-      return '${(balance / 1000).toStringAsFixed(2)}K $symbol';
-    } else if (balance >= 1) {
-      return '${balance.toStringAsFixed(2)} $symbol';
-    } else {
-      return '${balance.toStringAsFixed(6)} $symbol';
-    }
+    return ValueFormatter.formatCompactTokenAmount(
+      balanceDecimal,
+      symbol: symbol,
+    );
   }
 
   /// Format USD value
   String get formattedValue {
-    final usd = totalValueUsd;
-    if (usd >= 1000000) {
-      return '\$${(usd / 1000000).toStringAsFixed(2)}M';
-    } else if (usd >= 1000) {
-      return '\$${(usd / 1000).toStringAsFixed(2)}K';
-    } else {
-      return '\$${usd.toStringAsFixed(2)}';
-    }
+    return ValueFormatter.formatUsdValue(totalValueUsdDecimal);
   }
 
   /// Format per-token price for UI
   String get formattedPrice {
-    final price = unitPriceUsd;
-    if (price >= 1000) {
-      return '\$${price.toStringAsFixed(0)}';
-    } else if (price >= 1) {
-      return '\$${price.toStringAsFixed(2)}';
-    } else if (price == 0) {
-      return '\$0.00';
-    } else {
-      return '\$${price.toStringAsFixed(6)}';
-    }
+    return ValueFormatter.formatUsdPrice(unitPriceUsdDecimal);
   }
 
   /// Format percentage change

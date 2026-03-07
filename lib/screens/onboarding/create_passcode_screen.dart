@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 
 /// Create Passcode Screen
@@ -47,6 +48,7 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -80,7 +82,7 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
 
                   // Title
                   Text(
-                    'Create Passcode',
+                    l.createPasscodeTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -127,7 +129,7 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
 
                   // Instruction text
                   Text(
-                    'Enter a 6 digit code that only you can\nremember',
+                    l.createPasscodeDescription,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/referral_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
@@ -40,6 +41,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   }
 
   Future<void> _loadProfile() async {
+    final l = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       final walletAddress = await _walletService.getCurrentWalletAddress();
@@ -57,20 +59,21 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       debugPrint('Unable to load referrals: $e');
-      ToastUtils.showError('Unable to load referrals');
+      ToastUtils.showError(l.unableToLoadReferrals);
     }
   }
 
   Future<void> _bindReferral() async {
+    final l = AppLocalizations.of(context);
     final walletAddress = _walletAddress;
     final code = _referralInput.text.trim().toUpperCase();
     if (walletAddress == null || walletAddress.isEmpty) return;
     if (code.isEmpty) {
-      ToastUtils.showInfo('Enter a referral code');
+      ToastUtils.showInfo(l.enterReferralCodePrompt);
       return;
     }
     if (_profile != null && _profile!.referralCode == code) {
-      ToastUtils.showError('You cannot use your own referral code');
+      ToastUtils.showError(l.ownReferralCodeError);
       return;
     }
 
@@ -80,7 +83,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
         walletAddress: walletAddress,
         referralCode: code,
       );
-      ToastUtils.showSuccess('Referral added');
+      ToastUtils.showSuccess(l.referralAdded);
       _referralInput.clear();
       if (mounted) {
         setState(() => _submitting = false);
@@ -88,7 +91,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       await _loadProfile();
     } catch (e) {
       debugPrint('Unable to add referral: $e');
-      ToastUtils.showError('Unable to add referral');
+      ToastUtils.showError(l.unableToAddReferral);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -97,14 +100,16 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   }
 
   Future<void> _copyMyCode() async {
+    final l = AppLocalizations.of(context);
     final code = _profile?.referralCode;
     if (code == null || code.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: code));
-    ToastUtils.showSuccess('Referral code copied');
+    ToastUtils.showSuccess(l.referralCodeCopied);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: BottomNavBar(
@@ -137,7 +142,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             ),
                           ),
                           Text(
-                            'Referrals',
+                            l.referrals,
                             style: GoogleFonts.outfit(
                               color: AppColors.textPrimary,
                               fontSize: 26,
@@ -154,7 +159,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'Invite Friends and Earn\nRewards Together',
+                              l.referralsHeadline,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 color: Colors.white,
@@ -165,7 +170,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'Earn up to \$0.5 for every user you refer using your referral code.',
+                              l.referralsSubtitle,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 color: AppColors.textSecondary,
@@ -192,7 +197,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'YOUR REFERRAL CODE',
+                            l.yourReferralCode,
                             style: GoogleFonts.outfit(
                               color: AppColors.textSecondary,
                               letterSpacing: 1.5,
@@ -230,25 +235,27 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       children: [
                         SettingsItemTile(
                           icon: Icons.numbers_outlined,
-                          title: 'My Code',
+                          title: l.myCode,
                           subtitle: _profile?.referralCode ?? '--',
                           onTap: _copyMyCode,
                         ),
                         SettingsItemTile(
                           icon: Icons.person_add_alt_1_outlined,
-                          title: 'My Referral',
-                          subtitle: _profile?.referredByCode ?? 'No referral',
+                          title: l.myReferral,
+                          subtitle: _profile?.referredByCode ?? l.noReferral,
                         ),
                         SettingsItemTile(
                           icon: Icons.account_balance_wallet_outlined,
-                          title: 'Rewards Earned',
+                          title: l.rewardsEarned,
                           subtitle:
                               '\$${(_profile?.totalRewardsUsd ?? 0).toStringAsFixed(2)}',
                         ),
                         SettingsItemTile(
                           icon: Icons.groups_2_outlined,
-                          title: 'Referred Users',
-                          subtitle: '${_profile?.totalReferrals ?? 0} users',
+                          title: l.referredUsers,
+                          subtitle: l.referredUsersCount(
+                            _profile?.totalReferrals ?? 0,
+                          ),
                         ),
                       ],
                     ),
@@ -267,7 +274,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Add Referral',
+                            l.addReferral,
                             style: GoogleFonts.outfit(
                               color: AppColors.textSecondary,
                               letterSpacing: 1.2,
@@ -280,7 +287,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                             textCapitalization: TextCapitalization.characters,
                             style: GoogleFonts.outfit(color: Colors.white),
                             decoration: InputDecoration(
-                              hintText: 'Enter referral code',
+                              hintText: l.enterReferralCode,
                               hintStyle: GoogleFonts.outfit(
                                 color: AppColors.textSecondary.withValues(
                                   alpha: 0.45,
@@ -325,7 +332,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           ),
                         ),
                         child: Text(
-                          'Refresh',
+                          l.refresh,
                           style: GoogleFonts.outfit(
                             color: Colors.white,
                             fontSize: 17,
@@ -357,7 +364,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                                 ),
                               )
                             : Text(
-                                'Add Referral',
+                                l.addReferral,
                                 style: GoogleFonts.outfit(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,

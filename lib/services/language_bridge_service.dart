@@ -29,7 +29,7 @@ class LanguageBridgeService {
         }
         final normalized = LanguageUtils.normalizeLanguageCode(code);
         if (LanguageUtils.supportedLanguageCodes.contains(normalized)) {
-          result[name] = normalized;
+          result[normalized] = name;
         }
       }
       return result;
@@ -63,32 +63,6 @@ class LanguageBridgeService {
     }
   }
 
-  Future<String?> reconcileLanguage({
-    required String? walletAddress,
-    required String? localLanguageCode,
-    Duration timeout = const Duration(seconds: 2),
-  }) async {
-    if (walletAddress == null || walletAddress.isEmpty) return null;
-    try {
-      final backendLanguageCode = await getLanguagePreference(
-        walletAddress: walletAddress,
-      ).timeout(timeout);
-      if (backendLanguageCode == null || backendLanguageCode.isEmpty) {
-        return null;
-      }
-      final normalizedBackend = LanguageUtils.normalizeLanguageCode(
-        backendLanguageCode,
-      );
-      final normalizedLocal = LanguageUtils.normalizeLanguageCode(
-        localLanguageCode,
-      );
-      if (normalizedBackend == normalizedLocal) return null;
-      return normalizedBackend;
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<void> syncLanguagePreference({
     required String walletAddress,
     required String languageCode,
@@ -100,7 +74,7 @@ class LanguageBridgeService {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'walletAddress': walletAddress,
-            'languageCode': languageCode,
+            'languageCode': LanguageUtils.normalizeLanguageCode(languageCode),
             'provider': 'deepl',
           }),
         )

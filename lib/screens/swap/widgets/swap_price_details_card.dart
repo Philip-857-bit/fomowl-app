@@ -11,6 +11,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
   final String nativeFeeSymbol;
   final String receiveText;
   final String priceSeparator;
+  final double swapAmountUsd;
 
   const SwapPriceDetailsCard({
     super.key,
@@ -21,7 +22,15 @@ class SwapPriceDetailsCard extends StatelessWidget {
     required this.nativeFeeSymbol,
     required this.receiveText,
     this.priceSeparator = '->',
+    this.swapAmountUsd = 0.0,
   });
+
+  String _formatFeeDisplay() {
+    if (swapAmountUsd > 0 && swapAmountUsd < 100) {
+      return '\$0.50';
+    }
+    return '${slippage.toStringAsFixed(1)}%';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +38,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
       children: [
         _buildDetailRow('Price', priceText),
         const SizedBox(height: 12),
-        _buildDetailRow('Slippage', '${slippage.toStringAsFixed(1)}%'),
+        _buildDetailRow('Fee', _formatFeeDisplay()),
         const SizedBox(height: 12),
         _buildDetailRow(
           'Network Fee',

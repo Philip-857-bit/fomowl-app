@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/bottom_navigation.dart';
 import 'widgets/settings_group_card.dart';
@@ -31,6 +32,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   }
 
   Future<void> _loadState() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       _preferencesLoadFailed = false;
@@ -52,8 +54,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
         setState(() => _preferencesLoadFailed = true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to load security preferences'),
-            action: SnackBarAction(label: 'Retry', onPressed: _loadState),
+            content: Text(l.securityPreferencesLoadFailed),
+            action: SnackBarAction(label: l.retry, onPressed: _loadState),
           ),
         );
       }
@@ -65,6 +67,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   }
 
   Future<void> _setBiometric(bool enabled) async {
+    final l = AppLocalizations.of(context);
     final previous = _biometricEnabled;
     setState(() => _biometricEnabled = enabled);
     try {
@@ -75,14 +78,15 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       }
       debugPrint('Failed to persist biometric setting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to update biometric setting')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateBiometric)));
       }
     }
   }
 
   Future<void> _setTwoFactor(bool enabled) async {
+    final l = AppLocalizations.of(context);
     final previous = _twoFactorEnabled;
     setState(() => _twoFactorEnabled = enabled);
     try {
@@ -93,14 +97,15 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       }
       debugPrint('Failed to persist 2FA setting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to update 2FA setting')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateTwoFactor)));
       }
     }
   }
 
   Future<void> _showAutoLockPicker() async {
+    final l = AppLocalizations.of(context);
     if (_preferencesLoadFailed) return;
     final options = <int>[1, 2, 5, 10, 30];
     final selected = await showModalBottomSheet<int>(
@@ -124,7 +129,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
             ),
             const SizedBox(height: 14),
             Text(
-              'Auto-Lock Timer',
+              l.autoLockTimer,
               style: GoogleFonts.outfit(
                 color: Colors.white,
                 fontSize: 18,
@@ -135,7 +140,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
             for (final minutes in options)
               ListTile(
                 title: Text(
-                  '$minutes minute${minutes > 1 ? 's' : ''}',
+                  l.autoLockMinutesLabel(minutes),
                   style: GoogleFonts.outfit(color: Colors.white),
                 ),
                 trailing: _autoLockMinutes == minutes
@@ -157,9 +162,9 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _autoLockMinutes = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to update auto-lock setting')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateAutoLock)));
       }
       debugPrint('Failed to persist auto-lock setting: $e');
     }
@@ -167,6 +172,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: BottomNavBar(
@@ -199,7 +205,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             ),
                           ),
                           Text(
-                            'Password & Security',
+                            l.passwordSecurityTitle,
                             style: GoogleFonts.outfit(
                               color: AppColors.textPrimary,
                               fontSize: 26,
@@ -210,19 +216,19 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const SettingsSectionHeader(title: 'Access Control'),
+                    SettingsSectionHeader(title: l.accessControl),
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
                           icon: Icons.lock_outline_rounded,
-                          title: 'Change Password',
-                          subtitle: 'Passcode unlock',
+                          title: l.changePassword,
+                          subtitle: l.passcodeUnlock,
                           onTap: () =>
                               Navigator.pushNamed(context, '/create-passcode'),
                         ),
                         SettingsItemTile(
                           icon: Icons.fingerprint_rounded,
-                          title: 'Biometrics / Face ID',
+                          title: l.biometricsFaceId,
                           trailing: Switch(
                             value: _biometricEnabled,
                             materialTapTargetSize:
@@ -239,13 +245,13 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const SettingsSectionHeader(title: 'Advanced Security'),
+                    SettingsSectionHeader(title: l.advancedSecurity),
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
                           icon: Icons.verified_user_outlined,
-                          title: 'Two-Factor Authentication (2FA)',
-                          subtitle: _twoFactorEnabled ? 'On' : 'Off',
+                          title: l.twoFactorAuth,
+                          subtitle: _twoFactorEnabled ? l.onLabel : l.offLabel,
                           trailing: Switch(
                             value: _twoFactorEnabled,
                             materialTapTargetSize:
@@ -261,9 +267,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                         ),
                         SettingsItemTile(
                           icon: Icons.timer_outlined,
-                          title: 'Auto-Lock Timer',
-                          subtitle:
-                              '$_autoLockMinutes minute${_autoLockMinutes > 1 ? 's' : ''}',
+                          title: l.autoLockTimer,
+                          subtitle: l.autoLockMinutesLabel(_autoLockMinutes),
                           onTap: _showAutoLockPicker,
                         ),
                       ],
@@ -283,7 +288,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                         ),
                       ),
                       child: Text(
-                        'Enable additional security measures to protect your digital assets from unauthorized access.',
+                        l.securitySummary,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
                           color: AppColors.textSecondary,

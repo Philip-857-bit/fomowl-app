@@ -3,15 +3,17 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
+import '../../models/token_market_data.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
+import '../../utils/value_formatter.dart';
 import 'widgets/token_detail/token_detail_header.dart';
 import 'widgets/token_detail/price_overview.dart';
 import 'widgets/token_detail/token_chart_card.dart';
 import 'widgets/token_detail/timeframe_selector.dart';
 import 'widgets/token_detail/token_actions_row.dart';
-import 'widgets/token_detail/balance_summary_card.dart';
 import 'widgets/token_detail/token_info_table.dart';
 
 /// Token Detail Screen
@@ -80,8 +82,9 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   void _copyText(String value) {
+    final l = AppLocalizations.of(context);
     Clipboard.setData(ClipboardData(text: value));
-    ToastUtils.showSuccess('Copied to clipboard');
+    ToastUtils.showSuccess(l.copiedToClipboard);
   }
 
   String _shortenAddress(String address) {
@@ -230,34 +233,24 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   String _formatFiatValue(double? value) {
-    if (value == null || value <= 0) return '\$0.00';
-    if (value >= 1e12) return '\$${(value / 1e12).toStringAsFixed(2)}T';
-    if (value >= 1e9) return '\$${(value / 1e9).toStringAsFixed(2)}B';
-    if (value >= 1e6) return '\$${(value / 1e6).toStringAsFixed(2)}M';
-    if (value >= 1e3) return '\$${(value / 1e3).toStringAsFixed(2)}K';
-    return '\$${value.toStringAsFixed(2)}';
+    return ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(value));
   }
 
   String _formatSupplyValue(double? value) {
-    if (value == null || value <= 0) return '0';
-    if (value >= 1e12) return '${(value / 1e12).toStringAsFixed(2)}T';
-    if (value >= 1e9) return '${(value / 1e9).toStringAsFixed(2)}B';
-    if (value >= 1e6) return '${(value / 1e6).toStringAsFixed(2)}M';
-    if (value >= 1e3) return '${(value / 1e3).toStringAsFixed(2)}K';
-    return value.toStringAsFixed(0);
+    return ValueFormatter.formatCompactNumber(
+      ValueFormatter.decimalFromNum(value),
+    );
   }
 
   String _formatPriceLabel(double? price) {
-    if (price == null || price <= 0) return '\$0.00';
-    if (price >= 1000) return '\$${price.toStringAsFixed(0)}';
-    if (price >= 1) return '\$${price.toStringAsFixed(2)}';
-    return '\$${price.toStringAsFixed(6)}';
+    return ValueFormatter.formatUsdPrice(ValueFormatter.decimalFromNum(price));
   }
 
   String _formatHoldingsValue(Token token, double? priceUsd) {
     if (priceUsd == null || priceUsd <= 0) return token.formattedValue;
-    final usdValue = token.balance * priceUsd;
-    return _formatFiatValue(usdValue);
+    return ValueFormatter.formatUsdValue(
+      token.balanceDecimal * ValueFormatter.decimalFromNum(priceUsd),
+    );
   }
 
   String? _resolveCoinGeckoId() {
@@ -297,25 +290,29 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final token = _token;
     if (token == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: const Center(
-          child: Text('Token not found', style: TextStyle(color: Colors.white)),
+        body: Center(
+          child: Text(
+            l.tokenNotFound,
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
       );
     }
     final blockchain = Provider.of<BlockchainService>(context);
     final networkName = blockchain.activeChain.name;
     final marketCapText = _isLoadingInfo
-        ? 'Loading...'
+        ? l.loading
         : _formatFiatValue(_marketData?.marketCapUsd);
     final totalSupplyText = _isLoadingInfo
-        ? 'Loading...'
+        ? l.loading
         : _formatSupplyValue(_marketData?.totalSupply);
     final circulatingSupplyText = _isLoadingInfo
-        ? 'Loading...'
+        ? l.loading
         : _formatSupplyValue(_marketData?.circulatingSupply);
     final livePriceUsd = _marketData?.priceUsd ?? token.unitPriceUsd;
     final priceDisplay = _formatPriceLabel(livePriceUsd);
@@ -404,8 +401,6 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 24),
-                        BalanceSummaryCard(token: token),
                         const SizedBox(height: 24),
                         TokenInfoTable(
                           rows: _buildTokenInfoRows(

@@ -47,14 +47,14 @@ class SettingsWalletHeaderCard extends StatelessWidget {
             onTap: onTap,
             borderRadius: borderRadius,
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
                   Container(
-                    width: 62,
-                    height: 62,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                       color: Colors.white.withValues(alpha: 0.14),
                       border: Border.all(
                         color: Colors.white.withValues(alpha: 0.25),
@@ -63,10 +63,10 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                     child: const Icon(
                       Icons.account_balance_wallet_rounded,
                       color: Colors.white,
-                      size: 30,
+                      size: 20,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

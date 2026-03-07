@@ -4,6 +4,7 @@ import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/storage_service.dart';
 import '../../utils/toast_utils.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Confirm Passcode Screen
 /// User re-enters the 6-digit PIN to confirm
@@ -52,6 +53,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   }
 
   void _verifyPasscode() async {
+    final l = AppLocalizations.of(context);
     if (_passcode == _originalPasscode) {
       // Success - save passcode securely
       try {
@@ -61,12 +63,12 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ToastUtils.showError('Failed to save passcode');
+          ToastUtils.showError(l.failedToSavePasscode);
         }
       }
     } else {
       // Error - passcodes don't match
-      ToastUtils.showError('Passcodes do not match. Please try again.');
+      ToastUtils.showError(l.passcodesDoNotMatch);
       setState(() {
         _passcode = '';
       });
@@ -75,6 +77,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -99,7 +102,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
 
             // Title
             Text(
-              'Confirm Passcode',
+              l.confirmPasscodeTitle,
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
@@ -143,7 +146,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
 
             // Instruction text
             Text(
-              'Confirm the digits you entered if they are\ncorrect',
+              l.confirmPasscodeDescription,
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,

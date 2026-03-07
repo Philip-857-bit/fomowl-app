@@ -6,6 +6,9 @@ import 'base_service.dart';
 /// Service for handling JSON-RPC calls to various chains
 class RpcService extends BaseService {
   int _nextRequestId = 1;
+  RpcCallException? _lastError;
+
+  RpcCallException? get lastError => _lastError;
 
   final Map<int, List<String>> _publicRpcFallbacks = {
     1: ['https://cloudflare-eth.com'],
@@ -32,6 +35,7 @@ class RpcService extends BaseService {
   }) async {
     final candidates = [primaryRpcUrl, ...(_publicRpcFallbacks[chainId] ?? [])];
     final requestId = _nextRequestId++;
+    _lastError = null;
 
     for (final rpcUrl in candidates) {
       try {
@@ -48,24 +52,48 @@ class RpcService extends BaseService {
             )
             .timeout(timeout);
 
-        if (response.statusCode != 200) continue;
+        if (response.statusCode != 200) {
+          _lastError = RpcCallException(
+            method: method,
+            rpcUrl: rpcUrl,
+            message: 'Unexpected HTTP ${response.statusCode}',
+          );
+          continue;
+        }
 
         final data = jsonDecode(response.body) as Map<String, dynamic>;
 
         // Correlation check
         if (data['id'] != requestId) {
-          debugPrint('RPC ID mismatch: expected $requestId, got ${data['id']}');
+          _lastError = RpcCallException(
+            method: method,
+            rpcUrl: rpcUrl,
+            message: 'RPC ID mismatch: expected $requestId, got ${data['id']}',
+          );
+          debugPrint(_lastError.toString());
           continue;
         }
 
         if (data['error'] != null) {
-          debugPrint('RPC error ($method @ $rpcUrl): ${data['error']}');
+          final error = data['error'] as Map<String, dynamic>?;
+          _lastError = RpcCallException(
+            method: method,
+            rpcUrl: rpcUrl,
+            code: error?['code'] as int?,
+            message: error?['message']?.toString() ?? 'Unknown RPC error',
+          );
+          debugPrint(_lastError.toString());
           continue;
         }
 
         return data['result'];
       } catch (e) {
-        debugPrint('RPC call failed ($method @ $rpcUrl): $e');
+        _lastError = RpcCallException(
+          method: method,
+          rpcUrl: rpcUrl,
+          message: e.toString(),
+        );
+        debugPrint(_lastError.toString());
       }
     }
     return null;
@@ -104,7 +132,32 @@ class RpcService extends BaseService {
         return false;
       }
     } catch (e) {
+      _lastError = RpcCallException(
+        method: 'eth_chainId',
+        rpcUrl: rpcUrl,
+        message: e.toString(),
+      );
       return false;
     }
+  }
+}
+
+class RpcCallException implements Exception {
+  const RpcCallException({
+    required this.method,
+    required this.rpcUrl,
+    required this.message,
+    this.code,
+  });
+
+  final String method;
+  final String rpcUrl;
+  final String message;
+  final int? code;
+
+  @override
+  String toString() {
+    final codeText = code == null ? '' : ' code=$code';
+    return 'RpcCallException(method: $method, rpcUrl: $rpcUrl,$codeText message: $message)';
   }
 }

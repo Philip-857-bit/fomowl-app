@@ -37,13 +37,8 @@ class AppColors {
   );
 
   static const LinearGradient balanceGradient = LinearGradient(
-    colors: [
-      Color(0xFFFF5B5B),
-      Color(0xFFB20D12),
-      Color(0xFF530307),
-      Color(0xFF0A0A0B),
-    ],
-    stops: [0.0, 0.35, 0.72, 1.0],
+    colors: [Color(0xFF2A0808), Color(0xFF1A0505), Color(0xFF0A0A0B)],
+    stops: [0.0, 0.5, 1.0],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

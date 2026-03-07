@@ -15,6 +15,7 @@ import '../../services/nft_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
+import '../../utils/value_formatter.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/home_top_bar.dart';
@@ -226,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 foregroundColor: AppColors.background,
               ),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Add Token'),
+              child: Text(AppLocalizations.of(context).addToken),
             ),
           ],
         ),
@@ -307,12 +308,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _calculateTotalBalance() {
-    double total = 0.0;
-    for (var token in _tokens) {
-      total += token.totalValueUsd;
+    var total = ValueFormatter.decimalFromNum(0);
+    for (final token in _tokens) {
+      total += token.totalValueUsdDecimal;
     }
     if (mounted) {
-      setState(() => _totalBalance = total);
+      setState(() => _totalBalance = ValueFormatter.doubleFromDecimal(total));
     }
   }
 
@@ -426,7 +427,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String get _formattedTotalBalance {
     if (!_balanceVisible) return '******';
-    return '\$${_totalBalance.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
+    return ValueFormatter.formatCurrencyWithGrouping(
+      ValueFormatter.decimalFromNum(_totalBalance),
+    );
   }
 
   Future<void> _openSocialLink() async {

@@ -6,6 +6,7 @@ import '../../services/storage_service.dart';
 import '../../services/biometric_service.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../utils/toast_utils.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Unlock Screen
 /// Shows when app is reopened - requires passcode or biometric to unlock
@@ -103,9 +104,10 @@ class _UnlockScreenState extends State<UnlockScreen> {
   }
 
   Future<void> _authenticateWithBiometric() async {
+    final l = AppLocalizations.of(context);
     try {
       final authenticated = await _biometric.authenticate(
-        localizedReason: 'Unlock your wallet',
+        localizedReason: l.unlockWalletReason,
       );
 
       if (authenticated && mounted && !_navigated) {
@@ -145,6 +147,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
   }
 
   Future<void> _verifyPasscode() async {
+    final l = AppLocalizations.of(context);
     final isValid = await _storage.verifyPasscode(_passcode);
 
     if (isValid && mounted && !_navigated) {
@@ -175,15 +178,13 @@ class _UnlockScreenState extends State<UnlockScreen> {
 
         if (mounted) {
           ToastUtils.showError(
-            'Too many failed attempts. Locked for ${StorageService.lockoutDurationSeconds} seconds.',
+            l.tooManyAttemptsLocked(StorageService.lockoutDurationSeconds),
           );
         }
       } else {
         final remaining = StorageService.maxFailedAttempts - attempts;
         if (mounted) {
-          ToastUtils.showError(
-            'Incorrect passcode. $remaining attempt${remaining == 1 ? '' : 's'} remaining.',
-          );
+          ToastUtils.showError(l.incorrectPasscodeRemaining(remaining));
         }
       }
     }
@@ -191,6 +192,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -221,7 +223,9 @@ class _UnlockScreenState extends State<UnlockScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  '${StorageService.maxFailedAttempts - _failedAttempts} attempt${StorageService.maxFailedAttempts - _failedAttempts == 1 ? '' : 's'} remaining',
+                  l.attemptsRemaining(
+                    StorageService.maxFailedAttempts - _failedAttempts,
+                  ),
                   style: GoogleFonts.outfit(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
@@ -239,7 +243,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Locked out',
+                    l.lockedOutTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
@@ -248,7 +252,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try again in ${_lockoutSecondsRemaining}s',
+                    l.unlockTryAgainIn(_lockoutSecondsRemaining),
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
@@ -259,7 +263,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
               )
             else
               Text(
-                'Enter your passcode',
+                l.unlockEnterPasscode,
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.w500,

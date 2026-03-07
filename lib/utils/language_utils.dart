@@ -4,12 +4,20 @@ class LanguageUtils {
   LanguageUtils._();
 
   static const String fallbackLanguageCode = 'en';
+  static const Locale defaultLocale = Locale(fallbackLanguageCode, '');
   static const Set<String> supportedLanguageCodes = {
     'en',
     'es',
     'fr',
     'zh',
     'ar',
+  };
+  static const Map<String, String> languageNamesByCode = {
+    'en': 'English',
+    'es': 'Español',
+    'fr': 'Français',
+    'zh': 'Chinese',
+    'ar': 'Arabic',
   };
 
   static String normalizeLanguageCode(String? raw) {

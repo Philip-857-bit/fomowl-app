@@ -7,6 +7,7 @@ import 'package:eth_sig_util/eth_sig_util.dart';
 import 'dart:typed_data';
 import '../models/wallet_account.dart';
 import 'storage_service.dart';
+import '../utils/amount_utils.dart';
 
 /// Wallet Service
 /// Handles wallet creation, import, and key management
@@ -225,7 +226,7 @@ class WalletService {
   /// Returns the transaction hash if successful
   Future<String> sendNativeTransaction({
     required String toAddress,
-    required double amount,
+    required BigInt amountInBaseUnits,
     required String rpcUrl,
     required int chainId,
   }) async {
@@ -233,13 +234,11 @@ class WalletService {
     final client = Web3Client(rpcUrl, http.Client());
 
     try {
-      final amountInWei = BigInt.from(amount * 1e18);
-
       final txHash = await client.sendTransaction(
         credentials,
         Transaction(
           to: EthereumAddress.fromHex(toAddress),
-          value: EtherAmount.inWei(amountInWei),
+          value: EtherAmount.inWei(amountInBaseUnits),
           gasPrice: await client.getGasPrice(),
           maxGas: 21000,
         ),
@@ -250,5 +249,9 @@ class WalletService {
     } finally {
       client.dispose();
     }
+  }
+
+  BigInt parseAmountToBaseUnits(String amount, {int decimals = 18}) {
+    return AmountUtils.parseDecimalToBaseUnits(amount, decimals);
   }
 }

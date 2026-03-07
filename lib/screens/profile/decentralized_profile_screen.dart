@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
-import '../../main.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
@@ -268,7 +267,20 @@ class _DecentralizedProfileScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                      child: Center(
+                        child: Text(
+                          l.profile,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     SettingsWalletHeaderCard(
                       walletName: _walletName,
                       walletAddress: _walletAddress,
@@ -308,10 +320,6 @@ class _DecentralizedProfileScreenState
                             );
                             if (!mounted) return;
                             if (languageCode != null) {
-                              FOMOwlWalletApp.setLocale(
-                                this.context,
-                                languageCode,
-                              );
                               await _load();
                             }
                           },

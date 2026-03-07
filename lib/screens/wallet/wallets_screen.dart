@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/wallet_account.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
@@ -32,6 +33,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
   }
 
   Future<void> _loadWallets() async {
+    final l = AppLocalizations.of(context);
     try {
       final accounts = await _walletService.getWalletAccounts();
       final active = await _walletService.getCurrentWalletAddress();
@@ -45,7 +47,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
       debugPrint('Failed to load wallets: $e');
       if (!mounted) return;
       setState(() => _loading = false);
-      ToastUtils.showError('Unable to load wallets');
+      ToastUtils.showError(l.unableToLoadWallets);
     }
   }
 
@@ -82,29 +84,32 @@ class _WalletsScreenState extends State<WalletsScreen> {
   }
 
   Future<void> _createWallet() async {
+    final l = AppLocalizations.of(context);
     try {
       await _walletService.createAdditionalWallet();
       await _loadWallets();
-      ToastUtils.showSuccess('New wallet created');
+      ToastUtils.showSuccess(l.newWalletCreated);
     } catch (e) {
-      ToastUtils.showError('Unable to create wallet: $e');
+      ToastUtils.showError(l.unableToCreateWallet(e.toString()));
     }
   }
 
   Future<void> _switchWallet(WalletAccount account) async {
+    final l = AppLocalizations.of(context);
     if (_activeAddress?.toLowerCase() == account.address.toLowerCase()) return;
     setState(() => _loading = true);
     try {
       await _walletService.setActiveWallet(account.address);
       await _loadWallets();
-      ToastUtils.showSuccess('${account.name} set as active');
+      ToastUtils.showSuccess(l.walletSetAsActive(account.name));
     } catch (e) {
       if (mounted) setState(() => _loading = false);
-      ToastUtils.showError('Unable to switch wallet: $e');
+      ToastUtils.showError(l.unableToSwitchWallet(e.toString()));
     }
   }
 
   Future<void> _showWalletActions(WalletAccount account) async {
+    final l = AppLocalizations.of(context);
     final selected = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: AppColors.cardDark,
@@ -128,7 +133,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
             ListTile(
               leading: const Icon(Icons.edit_rounded, color: Colors.white70),
               title: Text(
-                'Rename Wallet',
+                l.renameWallet,
                 style: GoogleFonts.outfit(color: Colors.white),
               ),
               onTap: () => Navigator.pop(ctx, 'rename'),
@@ -136,7 +141,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
             ListTile(
               leading: const Icon(Icons.key_rounded, color: Colors.white70),
               title: Text(
-                'View Private Key',
+                l.viewPrivateKey,
                 style: GoogleFonts.outfit(color: Colors.white),
               ),
               onTap: () => Navigator.pop(ctx, 'privateKey'),
@@ -147,7 +152,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 color: AppColors.error,
               ),
               title: Text(
-                'Remove Wallet',
+                l.removeWallet,
                 style: GoogleFonts.outfit(color: AppColors.error),
               ),
               onTap: () => Navigator.pop(ctx, 'remove'),
@@ -172,20 +177,21 @@ class _WalletsScreenState extends State<WalletsScreen> {
   }
 
   Future<void> _promptRenameWallet(WalletAccount account) async {
+    final l = AppLocalizations.of(context);
     final controller = TextEditingController(text: account.name);
     final newName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text(
-          'Rename Wallet',
+          l.renameWallet,
           style: GoogleFonts.outfit(color: Colors.white),
         ),
         content: TextField(
           controller: controller,
           style: GoogleFonts.outfit(color: Colors.white),
           decoration: InputDecoration(
-            hintText: 'Enter wallet name',
+            hintText: l.enterWalletNameHint,
             hintStyle: GoogleFonts.outfit(color: Colors.white54),
           ),
         ),
@@ -193,14 +199,14 @@ class _WalletsScreenState extends State<WalletsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              'Cancel',
+              l.cancel,
               style: GoogleFonts.outfit(color: Colors.white54),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: Text(
-              'Save',
+              l.save,
               style: GoogleFonts.outfit(color: AppColors.accentRed),
             ),
           ),
@@ -211,16 +217,17 @@ class _WalletsScreenState extends State<WalletsScreen> {
     try {
       await _storage.renameWallet(account.address, newName);
       await _loadWallets();
-      ToastUtils.showSuccess('Wallet renamed');
+      ToastUtils.showSuccess(l.walletRenamed);
     } catch (e) {
-      ToastUtils.showError('Unable to rename wallet: $e');
+      ToastUtils.showError(l.unableToRenameWallet(e.toString()));
     }
   }
 
   Future<void> _confirmDeleteWallet(WalletAccount account) async {
+    final l = AppLocalizations.of(context);
     final canDelete = _walletAccounts.length > 1;
     if (!canDelete) {
-      ToastUtils.showError('You must keep at least one wallet');
+      ToastUtils.showError(l.mustKeepOneWallet);
       return;
     }
     final confirm = await showDialog<bool>(
@@ -228,25 +235,25 @@ class _WalletsScreenState extends State<WalletsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text(
-          'Remove Wallet',
+          l.removeWallet,
           style: GoogleFonts.outfit(color: Colors.white),
         ),
         content: Text(
-          'Remove "${account.name}" from this device? This does not delete the wallet onchain.',
+          l.removeWalletWarning,
           style: GoogleFonts.outfit(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              'Cancel',
+              l.cancel,
               style: GoogleFonts.outfit(color: Colors.white54),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(
-              'Remove',
+              l.removeWallet,
               style: GoogleFonts.outfit(color: AppColors.error),
             ),
           ),
@@ -258,26 +265,27 @@ class _WalletsScreenState extends State<WalletsScreen> {
     try {
       await _walletService.removeWalletAccount(account.address);
       await _loadWallets();
-      ToastUtils.showSuccess('Wallet removed');
+      ToastUtils.showSuccess(l.walletRemoved);
     } catch (e) {
-      ToastUtils.showError('Unable to remove wallet: $e');
+      ToastUtils.showError(l.unableToRemoveWallet(e.toString()));
     }
   }
 
   Future<void> _showPrivateKey(WalletAccount account) async {
+    final l = AppLocalizations.of(context);
     final authenticated = await SensitiveAccessGuard.verify(
       context,
-      reason: 'Authenticate to view your private key',
+      reason: l.authenticateToViewPrivateKey,
     );
     if (!authenticated) {
-      ToastUtils.showError('Authentication required');
+      ToastUtils.showError(l.authenticationRequired);
       return;
     }
     try {
       final privateKey = await _walletService.getPrivateKey(account.address);
       if (!mounted) return;
       if (privateKey == null || privateKey.isEmpty) {
-        ToastUtils.showError('No private key found');
+        ToastUtils.showError(l.noPrivateKeyFound);
         return;
       }
       await showModalBottomSheet<void>(
@@ -294,7 +302,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Private Key',
+                  l.privateKey,
                   style: GoogleFonts.outfit(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -308,7 +316,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Never share this with anyone. Anyone with this key can access your funds.',
+                  l.privateKeySecurityWarning,
                   style: GoogleFonts.outfit(
                     color: Colors.white38,
                     fontSize: 12,
@@ -320,19 +328,20 @@ class _WalletsScreenState extends State<WalletsScreen> {
         ),
       );
     } catch (e) {
-      ToastUtils.showError('Unable to load private key: $e');
+      ToastUtils.showError(l.unableToLoadPrivateKey(e.toString()));
     }
   }
 
   String _walletValueLabel(WalletAccount account) {
     if (account.address.toLowerCase() == (_activeAddress ?? '').toLowerCase()) {
-      return 'Active wallet';
+      return AppLocalizations.of(context).activeWalletLabel;
     }
     return '\$0.00';
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -352,7 +361,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        'Manage Wallets',
+                        l.manageWalletsTitle,
                         style: GoogleFonts.outfit(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -410,7 +419,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   ),
                 ),
                 child: Text(
-                  'Create / Add Wallet',
+                  l.createAddWallet,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,

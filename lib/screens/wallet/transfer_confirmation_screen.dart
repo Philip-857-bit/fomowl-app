@@ -6,6 +6,7 @@ import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
+import '../../utils/amount_utils.dart';
 import 'widgets/transfer_confirmation/transfer_header.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/transaction_details_card.dart';
@@ -33,6 +34,7 @@ class _TransferConfirmationScreenState
   double _gasPriceGwei = 0;
   double _gasFeeEth = 0;
   double _gasFeeUsd = 0;
+  BigInt _gasFeeWei = BigInt.zero;
   bool _isLoadingGas = true;
   bool _gasEstimationFailed = false;
 
@@ -70,6 +72,7 @@ class _TransferConfirmationScreenState
           _gasPriceGwei = gasData['gasGwei'] ?? 20;
           _gasFeeEth = gasData['totalFeeEth'] ?? 0;
           _gasFeeUsd = gasData['totalFeeUsd'] ?? 0;
+          _gasFeeWei = gasData['totalFeeWei'] as BigInt? ?? BigInt.zero;
           _isLoadingGas = false;
           _gasEstimationFailed = false;
         });
@@ -95,7 +98,8 @@ class _TransferConfirmationScreenState
     setState(() => _isConfirming = true);
 
     final toAddress = _args?['toAddress'] as String? ?? '';
-    final amount = _args?['amount'] as double? ?? 0;
+    final amountInBaseUnits =
+        _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
 
     try {
       final chain = Provider.of<BlockchainService>(
@@ -106,7 +110,7 @@ class _TransferConfirmationScreenState
       // Sign and broadcast the real transaction
       final txHash = await _walletService.sendNativeTransaction(
         toAddress: toAddress,
-        amount: amount,
+        amountInBaseUnits: amountInBaseUnits,
         rpcUrl: chain.rpcUrl,
         chainId: chain.chainId,
       );
@@ -138,7 +142,9 @@ class _TransferConfirmationScreenState
   Widget build(BuildContext context) {
     final token = _args?['token'] as Token?;
     final toAddress = _args?['toAddress'] as String? ?? '';
-    final amount = _args?['amount'] as double? ?? 0;
+    final amountText = _args?['amount'] as String? ?? '0';
+    final amountInBaseUnits =
+        _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
     final network = _args?['network'] as String? ?? 'Ethereum';
     final symbol = token?.symbol ?? 'ETH';
     final blockchain = Provider.of<BlockchainService>(context);
@@ -146,7 +152,13 @@ class _TransferConfirmationScreenState
 
     // Use real gas fees
     final isNative = token?.contractAddress == null;
-    final maxTotal = isNative ? (amount + _gasFeeEth) : amount;
+    final parsedAmount = AmountUtils.formatBaseUnits(
+      amountInBaseUnits,
+      token?.decimals ?? 18,
+    );
+    final maxTotalDisplay = isNative
+        ? '${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? 18)} $symbol'
+        : '$amountText $symbol';
 
     final gasLabel = _gasEstimationFailed
         ? '${l.gasFee} (${l.estimationFailed})'
@@ -159,10 +171,6 @@ class _TransferConfirmationScreenState
     final gasValueUsd = _gasEstimationFailed
         ? ''
         : '≈\$${_gasFeeUsd.toStringAsFixed(2)}';
-
-    final maxTotalDisplay = isNative
-        ? '${_formatAmount(maxTotal)} $symbol'
-        : '${_formatAmount(amount)} $symbol';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -218,7 +226,7 @@ class _TransferConfirmationScreenState
                           const SizedBox(height: 32),
 
                           AmountSummary(
-                            amountText: _formatAmount(amount),
+                            amountText: parsedAmount,
                             symbol: symbol,
                           ),
                           const SizedBox(height: 28),
@@ -279,18 +287,5 @@ class _TransferConfirmationScreenState
         ),
       ),
     );
-  }
-
-  String _formatAmount(double amount) {
-    if (amount >= 1000000) return '${(amount / 1000000).toStringAsFixed(0)}M';
-    if (amount >= 1000) {
-      return amount
-          .toStringAsFixed(0)
-          .replaceAllMapped(
-            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-            (m) => '${m[1]},',
-          );
-    }
-    return amount.toStringAsFixed(amount < 1 ? 6 : 2);
   }
 }

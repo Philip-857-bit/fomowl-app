@@ -27,14 +27,14 @@ class SettingsItemTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(9),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -49,10 +49,10 @@ class SettingsItemTile extends StatelessWidget {
                 color: attention
                     ? AppColors.accentRed
                     : AppColors.textSecondary,
-                size: 20,
+                size: 17,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +61,7 @@ class SettingsItemTile extends StatelessWidget {
                     title,
                     style: GoogleFonts.outfit(
                       color: AppColors.textPrimary,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

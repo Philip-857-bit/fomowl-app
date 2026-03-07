@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
-import '../../main.dart';
 import 'language_selection_screen.dart';
 
 /// Welcome Screen - Onboarding page after splash
@@ -205,12 +204,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             );
 
-            // If language was changed, update the app locale
-            if (languageCode != null && mounted) {
-              if (!context.mounted) return;
-              // Update the app locale using the static method
-              FOMOwlWalletApp.setLocale(context, languageCode);
-            }
+            if (languageCode != null && mounted) {}
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 19),

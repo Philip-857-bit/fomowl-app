@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
+import '../../utils/amount_utils.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/address_input_field.dart';
@@ -28,6 +30,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   Token? _selectedToken;
 
   double _availableBalance = 0.0;
+  BigInt _availableBalanceBaseUnits = BigInt.zero;
 
   @override
   void initState() {
@@ -52,6 +55,9 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           listen: false,
         );
         final balance = await blockchain.getEthBalance(address);
+        final balanceBaseUnits = await blockchain.getNativeBalanceBaseUnits(
+          address,
+        );
         if (mounted) {
           setState(() {
             _selectedToken = Token(
@@ -65,6 +71,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
               coinGeckoId: blockchain.activeChain.coinGeckoId,
             );
             _availableBalance = balance;
+            _availableBalanceBaseUnits = balanceBaseUnits;
           });
         }
       } catch (e) {
@@ -84,6 +91,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
             decimals: 18,
             coinGeckoId: blockchain.activeChain.coinGeckoId,
           );
+          _availableBalanceBaseUnits = BigInt.zero;
         });
       }
     } else {
@@ -110,6 +118,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       setState(() {
         _selectedToken = token;
         _availableBalance = token.balance;
+        _availableBalanceBaseUnits = AmountUtils.parseDecimalToBaseUnits(
+          token.balance.toString(),
+          token.decimals,
+        );
       });
     }
   }
@@ -127,11 +139,12 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   }
 
   void _onSend() {
+    final l = AppLocalizations.of(context);
     final destination = _addressController.text.trim();
-    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
+    final amountText = _amountController.text.trim();
 
     if (destination.isEmpty) {
-      _showError('Please enter a receiving address');
+      _showError(l.enterReceivingAddress);
       return;
     }
 
@@ -139,27 +152,38 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       r'^0x[0-9a-fA-F]{40}$',
     ).hasMatch(destination);
     if (!isValidEvmAddress) {
-      _showError('Invalid Ethereum address');
+      _showError(l.invalidEthereumAddress);
       return;
     }
 
-    if (amount == null || amount <= 0) {
-      _showError('Please enter a valid amount');
-      return;
-    }
-    if (amount > _availableBalance) {
-      _showError('Insufficient balance');
+    BigInt amountInBaseUnits;
+    try {
+      amountInBaseUnits = _walletService.parseAmountToBaseUnits(
+        amountText,
+        decimals: _selectedToken?.decimals ?? 18,
+      );
+    } on FormatException catch (e) {
+      _showError(e.message.isEmpty ? l.enterValidAmount : e.message);
       return;
     }
 
-    // Navigate to confirmation screen
+    if (amountInBaseUnits <= BigInt.zero) {
+      _showError(l.enterValidAmount);
+      return;
+    }
+    if (amountInBaseUnits > _availableBalanceBaseUnits) {
+      _showError(l.insufficientBalance);
+      return;
+    }
+
     Navigator.pushNamed(
       context,
       '/transfer-confirmation',
       arguments: {
         'token': _selectedToken,
         'toAddress': destination,
-        'amount': amount,
+        'amount': amountText,
+        'amountBaseUnits': amountInBaseUnits,
         'network': Provider.of<BlockchainService>(
           context,
           listen: false,
@@ -175,6 +199,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -182,7 +207,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         child: Column(
           children: [
             SendHeader(
-              title: 'Send Token',
+              title: l.sendToken,
               onBack: () => Navigator.pop(context),
             ),
 

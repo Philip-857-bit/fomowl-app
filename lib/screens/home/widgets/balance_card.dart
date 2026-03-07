@@ -29,14 +29,6 @@ class BalanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppColors.balanceGradient,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66E30B14),
-            blurRadius: 28,
-            spreadRadius: 2,
-            offset: Offset(0, 14),
-          ),
-        ],
       ),
       child: Column(
         children: [

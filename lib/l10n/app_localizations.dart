@@ -46,7 +46,7 @@ class AppLocalizations {
   }
 
   String translate(String key) {
-    return _localizedStrings[key] ?? key;
+    return _localizedStrings[key] ?? _englishStrings[key] ?? key;
   }
 
   // --- Onboarding ---
@@ -162,6 +162,203 @@ class AppLocalizations {
   String get confirmClearLocalData => translate('confirm_clear_local_data');
   String get cancel => translate('cancel');
   String get actionRequired => translate('action_required');
+  String get sendToken => translate('send_token');
+  String get enterReceivingAddress => translate('enter_receiving_address');
+  String get invalidEthereumAddress => translate('invalid_ethereum_address');
+  String get enterValidAmount => translate('enter_valid_amount');
+  String get insufficientBalance => translate('insufficient_balance');
+  String get createPasscodeTitle => translate('create_passcode_title');
+  String get createPasscodeDescription =>
+      translate('create_passcode_description');
+  String get confirmPasscodeTitle => translate('confirm_passcode_title');
+  String get confirmPasscodeDescription =>
+      translate('confirm_passcode_description');
+  String get failedToSavePasscode => translate('failed_to_save_passcode');
+  String get passcodesDoNotMatch => translate('passcodes_do_not_match');
+  String get unlockWalletReason => translate('unlock_wallet_reason');
+  String get unlockEnterPasscode => translate('unlock_enter_passcode');
+  String get lockedOutTitle => translate('locked_out_title');
+  String unlockTryAgainIn(int seconds) =>
+      translate('unlock_try_again_in').replaceFirst('{seconds}', '$seconds');
+  String attemptsRemaining(int count) =>
+      translate('attempts_remaining').replaceFirst('{count}', '$count');
+  String incorrectPasscodeRemaining(int count) => translate(
+    'incorrect_passcode_remaining',
+  ).replaceFirst('{count}', '$count');
+  String tooManyAttemptsLocked(int seconds) => translate(
+    'too_many_attempts_locked',
+  ).replaceFirst('{seconds}', '$seconds');
+  String get enterPasscodeTitle => translate('enter_passcode_title');
+  String get passcodeHint => translate('passcode_hint');
+  String get walletNameLabel => translate('wallet_name_label');
+  String get enterWalletNameHint => translate('enter_wallet_name_hint');
+  String get enterSecretPhraseHint => translate('enter_secret_phrase_hint');
+  String get secretPhraseHelperText => translate('secret_phrase_helper_text');
+  String get paste => translate('paste');
+  String get walletImportedSuccessfully =>
+      translate('wallet_imported_successfully');
+  String get enterSecretPhrasePrompt => translate('enter_secret_phrase_prompt');
+  String get enterWalletNamePrompt => translate('enter_wallet_name_prompt');
+  String get invalidSecretPhrasePrompt =>
+      translate('invalid_secret_phrase_prompt');
+  String importWalletFailed(String error) =>
+      translate('import_wallet_failed').replaceFirst('{error}', error);
+  String get enterPrivateKeyPrompt => translate('enter_private_key_prompt');
+  String get invalidPrivateKeyLength => translate('invalid_private_key_length');
+  String get invalidPrivateKeyCharacters =>
+      translate('invalid_private_key_characters');
+  String get enterPrivateKeyHint => translate('enter_private_key_hint');
+  String get privateKeyHelperText => translate('private_key_helper_text');
+  String get incorrectPasscode => translate('incorrect_passcode');
+  String get confirm => translate('confirm');
+  String get feedbackTitle => translate('feedback_title');
+  String get feedbackSubtitle => translate('feedback_subtitle');
+  String get feedbackCategory => translate('feedback_category');
+  String get feedbackSubjectOptional => translate('feedback_subject_optional');
+  String get feedbackMessage => translate('feedback_message');
+  String get feedbackContactEmailOptional =>
+      translate('feedback_contact_email_optional');
+  String get feedbackCategoryGeneral => translate('feedback_category_general');
+  String get feedbackCategoryBug => translate('feedback_category_bug');
+  String get feedbackCategoryFeature => translate('feedback_category_feature');
+  String get feedbackCategoryDesign => translate('feedback_category_design');
+  String get feedbackSubjectHint => translate('feedback_subject_hint');
+  String get feedbackMessageHint => translate('feedback_message_hint');
+  String get feedbackEmailHint => translate('feedback_email_hint');
+  String get submitFeedback => translate('submit_feedback');
+  String get enterFeedbackMessage => translate('enter_feedback_message');
+  String get noActiveWalletFound => translate('no_active_wallet_found');
+  String get feedbackSubmitted => translate('feedback_submitted');
+  String get feedbackSubmitFailed => translate('feedback_submit_failed');
+  String get manageWalletsTitle => translate('manage_wallets_title');
+  String get createAddWallet => translate('create_add_wallet');
+  String get renameWallet => translate('rename_wallet');
+  String get viewPrivateKey => translate('view_private_key');
+  String get removeWallet => translate('remove_wallet');
+  String get save => translate('save');
+  String get walletRenamed => translate('wallet_renamed');
+  String get walletRemoved => translate('wallet_removed');
+  String get unableToLoadWallets => translate('unable_to_load_wallets');
+  String get newWalletCreated => translate('new_wallet_created');
+  String unableToCreateWallet(String error) =>
+      translate('unable_to_create_wallet').replaceFirst('{error}', error);
+  String walletSetAsActive(String name) =>
+      translate('wallet_set_as_active').replaceFirst('{name}', name);
+  String unableToSwitchWallet(String error) =>
+      translate('unable_to_switch_wallet').replaceFirst('{error}', error);
+  String unableToRenameWallet(String error) =>
+      translate('unable_to_rename_wallet').replaceFirst('{error}', error);
+  String unableToRemoveWallet(String error) =>
+      translate('unable_to_remove_wallet').replaceFirst('{error}', error);
+  String get mustKeepOneWallet => translate('must_keep_one_wallet');
+  String get removeWalletWarning => translate('remove_wallet_warning');
+  String get authenticationRequired => translate('authentication_required');
+  String get noPrivateKeyFound => translate('no_private_key_found');
+  String get privateKeySecurityWarning =>
+      translate('private_key_security_warning');
+  String get activeWalletLabel => translate('active_wallet_label');
+  String get addToken => translate('add_token');
+  String get authenticateToViewPrivateKey =>
+      translate('authenticate_to_view_private_key');
+  String unableToLoadPrivateKey(String error) =>
+      translate('unable_to_load_private_key').replaceFirst('{error}', error);
+  String get manageTokens => translate('manage_tokens');
+  String get visibleTokens => translate('visible_tokens');
+  String get addedTokens => translate('added_tokens');
+  String get suggestedTokens => translate('suggested_tokens');
+  String get searchResults => translate('search_results');
+  String get noTokensDetectedYet => translate('no_tokens_detected_yet');
+  String get noMatchingTokensFound => translate('no_matching_tokens_found');
+  String get pasteContractToAddToken =>
+      translate('paste_contract_to_add_token');
+  String get noSuggestedTokensYet => translate('no_suggested_tokens_yet');
+  String get noRemoteTokensFound => translate('no_remote_tokens_found');
+  String get tokenRemoved => translate('token_removed');
+  String get tokenAlreadyAvailable => translate('token_already_available');
+  String get tokenAlreadyExistsOnNetwork =>
+      translate('token_already_exists_on_network');
+  String tokenAdded(String symbol) =>
+      translate('token_added').replaceFirst('{symbol}', symbol);
+  String tokenAddFailed(String error) =>
+      translate('token_add_failed').replaceFirst('{error}', error);
+  String get missingTokenContractAddress =>
+      translate('missing_token_contract_address');
+  String get tokenDetected => translate('token_detected');
+  String get contractAddressLabel => translate('contract_address_label');
+  String get ignore => translate('ignore');
+  String get added => translate('added');
+  String get couldNotDetectTokenMetadata =>
+      translate('could_not_detect_token_metadata');
+  String get myBalance => translate('my_balance');
+  String get tokenNotFound => translate('token_not_found');
+  String get loading => translate('loading');
+  String get copiedToClipboard => translate('copied_to_clipboard');
+  String get passwordSecurityTitle => translate('password_security_title');
+  String get accessControl => translate('access_control');
+  String get changePassword => translate('change_password');
+  String get passcodeUnlock => translate('passcode_unlock');
+  String get biometricsFaceId => translate('biometrics_face_id');
+  String get advancedSecurity => translate('advanced_security');
+  String get twoFactorAuth => translate('two_factor_auth');
+  String get onLabel => translate('on_label');
+  String get offLabel => translate('off_label');
+  String get autoLockTimer => translate('auto_lock_timer');
+  String autoLockMinutesLabel(int minutes) => translate(
+    'auto_lock_minutes_label',
+  ).replaceFirst('{minutes}', '$minutes');
+  String get securityPreferencesLoadFailed =>
+      translate('security_preferences_load_failed');
+  String get retry => translate('retry');
+  String get unableToUpdateBiometric => translate('unable_to_update_biometric');
+  String get unableToUpdateTwoFactor =>
+      translate('unable_to_update_two_factor');
+  String get unableToUpdateAutoLock => translate('unable_to_update_auto_lock');
+  String get securitySummary => translate('security_summary');
+  String get searchTokenOrPasteContract =>
+      translate('search_token_or_paste_contract');
+  String get clearSearch => translate('clear_search');
+  String get createWalletCopiedSeed => translate('create_wallet_copied_seed');
+  String get secretRecoveryPhrase => translate('secret_recovery_phrase');
+  String get seedPhraseShareWarning => translate('seed_phrase_share_warning');
+  String get tapToReveal => translate('tap_to_reveal');
+  String get copyToClipboard => translate('copy_to_clipboard');
+  String get beSureNoOneWatching => translate('be_sure_no_one_watching');
+  String get verifyAllWords => translate('verify_all_words');
+  String get seedPhraseMismatch => translate('seed_phrase_mismatch');
+  String walletCreationError(String error) =>
+      translate('wallet_creation_error').replaceFirst('{error}', error);
+  String get referralsHeadline => translate('referrals_headline');
+  String get referralsSubtitle => translate('referrals_subtitle');
+  String get yourReferralCode => translate('your_referral_code');
+  String get myCode => translate('my_code');
+  String get myReferral => translate('my_referral');
+  String get noReferral => translate('no_referral');
+  String get rewardsEarned => translate('rewards_earned');
+  String get referredUsers => translate('referred_users');
+  String referredUsersCount(int count) =>
+      translate('referred_users_count').replaceFirst('{count}', '$count');
+  String get addReferral => translate('add_referral');
+  String get enterReferralCode => translate('enter_referral_code');
+  String get unableToLoadReferrals => translate('unable_to_load_referrals');
+  String get enterReferralCodePrompt => translate('enter_referral_code_prompt');
+  String get ownReferralCodeError => translate('own_referral_code_error');
+  String get referralAdded => translate('referral_added');
+  String get unableToAddReferral => translate('unable_to_add_referral');
+  String get referralCodeCopied => translate('referral_code_copied');
+  String get refresh => translate('refresh');
+  String get backupSeedPhraseTitle => translate('backup_seed_phrase_title');
+  String get authenticateToViewSeedPhrase =>
+      translate('authenticate_to_view_seed_phrase');
+  String get authenticationRequiredSeedPhrase =>
+      translate('authentication_required_seed_phrase');
+  String get securityWarning => translate('security_warning');
+  String get seedPhraseMasterKeyWarning =>
+      translate('seed_phrase_master_key_warning');
+  String get seedPhraseSafetyBullets => translate('seed_phrase_safety_bullets');
+  String get iUnderstand => translate('i_understand');
+  String get noSeedPhraseStored => translate('no_seed_phrase_stored');
+  String get seedPhraseCopied => translate('seed_phrase_copied');
+  String get backupSeedPhraseIntro => translate('backup_seed_phrase_intro');
 
   // --- LANGUAGE STRINGS ---
 
@@ -266,6 +463,186 @@ class AppLocalizations {
         'This clears local wallet data on this device. Ensure your seed phrase is backed up.',
     'cancel': 'Cancel',
     'action_required': 'Action Required',
+    'send_token': 'Send Token',
+    'enter_receiving_address': 'Please enter a receiving address',
+    'invalid_ethereum_address': 'Invalid Ethereum address',
+    'enter_valid_amount': 'Please enter a valid amount',
+    'insufficient_balance': 'Insufficient balance',
+    'create_passcode_title': 'Create Passcode',
+    'create_passcode_description':
+        'Enter a 6 digit code that only you can remember',
+    'confirm_passcode_title': 'Confirm Passcode',
+    'confirm_passcode_description':
+        'Confirm the digits you entered if they are correct',
+    'failed_to_save_passcode': 'Failed to save passcode',
+    'passcodes_do_not_match': 'Passcodes do not match. Please try again.',
+    'unlock_wallet_reason': 'Unlock your wallet',
+    'unlock_enter_passcode': 'Enter your passcode',
+    'locked_out_title': 'Locked out',
+    'unlock_try_again_in': 'Try again in {seconds}s',
+    'attempts_remaining': '{count} attempts remaining',
+    'incorrect_passcode_remaining':
+        'Incorrect passcode. {count} attempts remaining.',
+    'too_many_attempts_locked':
+        'Too many failed attempts. Locked for {seconds} seconds.',
+    'enter_passcode_title': 'Enter Passcode',
+    'passcode_hint': 'Passcode',
+    'wallet_name_label': 'Wallet name',
+    'enter_wallet_name_hint': 'Enter wallet name',
+    'enter_secret_phrase_hint': 'Enter your 12 or 24-word secret phrase',
+    'secret_phrase_helper_text':
+        'Your secret phrase is 12 or 24 words separated by single spaces',
+    'paste': 'Paste',
+    'wallet_imported_successfully': 'Wallet imported successfully!',
+    'enter_secret_phrase_prompt': 'Please enter your secret phrase',
+    'enter_wallet_name_prompt': 'Please enter a wallet name',
+    'invalid_secret_phrase_prompt':
+        'Invalid secret phrase. Please check and try again.',
+    'import_wallet_failed': 'Failed to import wallet: {error}',
+    'enter_private_key_prompt': 'Please enter your private key',
+    'invalid_private_key_length':
+        'Invalid private key. Must be 64 hexadecimal characters.',
+    'invalid_private_key_characters':
+        'Invalid private key. Must contain only hexadecimal characters (0-9, a-f).',
+    'enter_private_key_hint': 'Enter your private key',
+    'private_key_helper_text':
+        'Your private key comprises of 64 alphanumeric characters',
+    'incorrect_passcode': 'Incorrect passcode',
+    'confirm': 'Confirm',
+    'feedback_title': 'Feedback',
+    'feedback_subtitle': 'Help us improve Owllet by sharing your thoughts.',
+    'feedback_category': 'Category',
+    'feedback_subject_optional': 'Subject (Optional)',
+    'feedback_message': 'Message',
+    'feedback_contact_email_optional': 'Contact Email (Optional)',
+    'feedback_category_general': 'General',
+    'feedback_category_bug': 'Bug Report',
+    'feedback_category_feature': 'Feature Request',
+    'feedback_category_design': 'Design Feedback',
+    'feedback_subject_hint': 'Short summary',
+    'feedback_message_hint': 'Tell us what happened or what you need',
+    'feedback_email_hint': 'you@example.com',
+    'submit_feedback': 'Submit Feedback',
+    'enter_feedback_message': 'Please enter your feedback message',
+    'no_active_wallet_found': 'No active wallet found',
+    'feedback_submitted': 'Feedback submitted. Thank you.',
+    'feedback_submit_failed': 'Unable to submit feedback. Please try again.',
+    'manage_wallets_title': 'Manage Wallets',
+    'create_add_wallet': 'Create / Add Wallet',
+    'rename_wallet': 'Rename Wallet',
+    'view_private_key': 'View Private Key',
+    'remove_wallet': 'Remove Wallet',
+    'save': 'Save',
+    'wallet_renamed': 'Wallet renamed',
+    'wallet_removed': 'Wallet removed',
+    'unable_to_load_wallets': 'Unable to load wallets',
+    'new_wallet_created': 'New wallet created',
+    'unable_to_create_wallet': 'Unable to create wallet: {error}',
+    'wallet_set_as_active': '{name} set as active',
+    'unable_to_switch_wallet': 'Unable to switch wallet: {error}',
+    'unable_to_rename_wallet': 'Unable to rename wallet: {error}',
+    'unable_to_remove_wallet': 'Unable to remove wallet: {error}',
+    'must_keep_one_wallet': 'You must keep at least one wallet',
+    'remove_wallet_warning':
+        'Remove this wallet from this device? This does not delete the wallet onchain.',
+    'authentication_required': 'Authentication required',
+    'no_private_key_found': 'No private key found',
+    'private_key_security_warning':
+        'Never share this with anyone. Anyone with this key can access your funds.',
+    'active_wallet_label': 'Active wallet',
+    'add_token': 'Add Token',
+    'authenticate_to_view_private_key': 'Authenticate to view your private key',
+    'unable_to_load_private_key': 'Unable to load private key: {error}',
+    'manage_tokens': 'Manage Tokens',
+    'visible_tokens': 'Visible Tokens',
+    'added_tokens': 'Added Tokens',
+    'suggested_tokens': 'Suggested Tokens',
+    'search_results': 'Search Results',
+    'no_tokens_detected_yet': 'No tokens detected for this wallet yet.',
+    'no_matching_tokens_found': 'No matching tokens found.',
+    'paste_contract_to_add_token':
+        'Paste a contract address above to add a token instantly.',
+    'no_suggested_tokens_yet': 'No suggested tokens available yet.',
+    'no_remote_tokens_found': 'No remote tokens found.',
+    'token_removed': 'Token removed',
+    'token_already_available': 'Token already available in your list',
+    'token_already_exists_on_network': 'Token already exists on this network',
+    'token_added': '{symbol} added',
+    'token_add_failed': 'Failed to add token: {error}',
+    'missing_token_contract_address': 'Missing token contract address',
+    'token_detected': 'Token Detected',
+    'contract_address_label': 'Contract Address',
+    'ignore': 'Ignore',
+    'added': 'Added',
+    'could_not_detect_token_metadata':
+        'Could not detect token metadata from this contract on the selected network',
+    'my_balance': 'MY BALANCE',
+    'token_not_found': 'Token not found',
+    'loading': 'Loading...',
+    'copied_to_clipboard': 'Copied to clipboard',
+    'password_security_title': 'Password & Security',
+    'access_control': 'Access Control',
+    'change_password': 'Change Password',
+    'passcode_unlock': 'Passcode unlock',
+    'biometrics_face_id': 'Biometrics / Face ID',
+    'advanced_security': 'Advanced Security',
+    'two_factor_auth': 'Two-Factor Authentication (2FA)',
+    'on_label': 'On',
+    'off_label': 'Off',
+    'auto_lock_timer': 'Auto-Lock Timer',
+    'auto_lock_minutes_label': '{minutes} minute(s)',
+    'security_preferences_load_failed': 'Failed to load security preferences',
+    'retry': 'Retry',
+    'unable_to_update_biometric': 'Unable to update biometric setting',
+    'unable_to_update_two_factor': 'Unable to update 2FA setting',
+    'unable_to_update_auto_lock': 'Unable to update auto-lock setting',
+    'security_summary':
+        'Enable additional security measures to protect your digital assets from unauthorized access.',
+    'search_token_or_paste_contract': 'Search token or paste contract address',
+    'clear_search': 'Clear search',
+    'create_wallet_copied_seed': 'Secret phrase copied to clipboard',
+    'secret_recovery_phrase': 'Secret recovery phrase',
+    'seed_phrase_share_warning':
+        'Never share your seed phrase with anybody even your family members.',
+    'tap_to_reveal': 'Tap to reveal',
+    'copy_to_clipboard': 'Copy to clipboard',
+    'be_sure_no_one_watching': 'Be sure no one is watching',
+    'verify_all_words': 'Please fill in all 12 words',
+    'seed_phrase_mismatch': 'The seed phrase does not match. Please try again.',
+    'wallet_creation_error': 'Error creating wallet: {error}',
+    'referrals_headline': 'Invite Friends and Earn Rewards Together',
+    'referrals_subtitle':
+        'Earn up to \$0.5 for every user you refer using your referral code.',
+    'your_referral_code': 'YOUR REFERRAL CODE',
+    'my_code': 'My Code',
+    'my_referral': 'My Referral',
+    'no_referral': 'No referral',
+    'rewards_earned': 'Rewards Earned',
+    'referred_users': 'Referred Users',
+    'referred_users_count': '{count} users',
+    'add_referral': 'Add Referral',
+    'enter_referral_code': 'Enter referral code',
+    'unable_to_load_referrals': 'Unable to load referrals',
+    'enter_referral_code_prompt': 'Enter a referral code',
+    'own_referral_code_error': 'You cannot use your own referral code',
+    'referral_added': 'Referral added',
+    'unable_to_add_referral': 'Unable to add referral',
+    'referral_code_copied': 'Referral code copied',
+    'refresh': 'Refresh',
+    'backup_seed_phrase_title': 'Backup Seed Phrase',
+    'authenticate_to_view_seed_phrase': 'Authenticate to view your seed phrase',
+    'authentication_required_seed_phrase':
+        'Authentication required to view seed phrase',
+    'security_warning': 'Security Warning',
+    'seed_phrase_master_key_warning':
+        'Your seed phrase is the master key to your wallet. Anyone with it can move all your funds.',
+    'seed_phrase_safety_bullets':
+        '• Never share it with anyone\n• Never enter it on websites\n• Write it down and store it offline',
+    'i_understand': 'I Understand',
+    'no_seed_phrase_stored': 'No seed phrase stored for this wallet',
+    'seed_phrase_copied': 'Seed phrase copied to clipboard',
+    'backup_seed_phrase_intro':
+        'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.',
   };
 
   static const Map<String, String> _spanishStrings = {

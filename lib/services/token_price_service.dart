@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'base_service.dart';
+import '../models/token_market_data.dart';
 
 /// Service for fetching token prices and market data from CoinGecko
 class TokenPriceService extends BaseService {
@@ -200,20 +201,4 @@ class _CachedMarketData {
   final TokenMarketData value;
   final DateTime fetchedAt;
   const _CachedMarketData({required this.value, required this.fetchedAt});
-}
-
-class TokenMarketData {
-  final double? priceUsd;
-  final double? marketCapUsd;
-  final double? totalSupply;
-  final double? circulatingSupply;
-  final String? genesisDate;
-
-  const TokenMarketData({
-    this.priceUsd,
-    this.marketCapUsd,
-    this.totalSupply,
-    this.circulatingSupply,
-    this.genesisDate,
-  });
 }
