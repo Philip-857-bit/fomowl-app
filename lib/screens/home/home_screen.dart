@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
@@ -352,9 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final url = Uri.parse(
-        'https://fomowl-backend.onrender.com/api/notifications/$walletAddress',
-      );
+      final url = AppEnvironment.notifications('/$walletAddress');
       final response = await http.get(url).timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         if (mounted) {

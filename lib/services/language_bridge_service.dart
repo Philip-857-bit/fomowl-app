@@ -4,15 +4,13 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../config/app_environment.dart';
 import '../utils/language_utils.dart';
 
 class LanguageBridgeService {
-  static const String _baseUrl =
-      'https://fomowl-backend.onrender.com/api/language';
-
   Future<Map<String, String>> getSupportedLanguages() async {
     try {
-      final uri = Uri.parse('$_baseUrl/supported');
+      final uri = AppEnvironment.language('/supported');
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
         return const {};
@@ -48,7 +46,7 @@ class LanguageBridgeService {
   Future<String?> getLanguagePreference({required String walletAddress}) async {
     try {
       final encodedWallet = Uri.encodeComponent(walletAddress);
-      final uri = Uri.parse('$_baseUrl/preference/$encodedWallet');
+      final uri = AppEnvironment.language('/preference/$encodedWallet');
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
         return null;
@@ -67,7 +65,7 @@ class LanguageBridgeService {
     required String walletAddress,
     required String languageCode,
   }) async {
-    final uri = Uri.parse('$_baseUrl/preference');
+    final uri = AppEnvironment.language('/preference');
     final response = await http
         .post(
           uri,
@@ -90,7 +88,7 @@ class LanguageBridgeService {
     required String sourceCode,
     required String targetCode,
   }) async {
-    final uri = Uri.parse('$_baseUrl/translate');
+    final uri = AppEnvironment.language('/translate');
     final response = await http
         .post(
           uri,

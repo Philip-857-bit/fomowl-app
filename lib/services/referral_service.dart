@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/app_environment.dart';
+
 class ReferralProfile {
   final String referralCode;
   final String? referredByCode;
@@ -27,13 +29,10 @@ class ReferralProfile {
 }
 
 class ReferralService {
-  static const String _baseUrl =
-      'https://fomowl-backend.onrender.com/api/referrals';
-
   Future<ReferralProfile> getProfile(String walletAddress) async {
     try {
       final encodedAddress = Uri.encodeComponent(walletAddress);
-      final uri = Uri.parse('$_baseUrl/$encodedAddress');
+      final uri = AppEnvironment.referrals('/$encodedAddress');
       final response = await http.get(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
         throw Exception(
@@ -60,7 +59,7 @@ class ReferralService {
     required String referralCode,
   }) async {
     try {
-      final uri = Uri.parse('$_baseUrl/bind');
+      final uri = AppEnvironment.referrals('/bind');
       final response = await http
           .post(
             uri,

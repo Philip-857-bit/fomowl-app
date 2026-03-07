@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../config/app_environment.dart';
 import '../utils/amount_utils.dart';
 
 /// Swap Quote Model
@@ -25,8 +26,6 @@ class SwapQuote {
 /// Swap Service
 /// Routes all swap intents through the secure Rust backend aggregating 1inch V5.2 and Fusion.
 class SwapService {
-  static const String _backendApiBase =
-      'https://fomowl-backend.onrender.com/api/swap';
   static const Set<int> supportedQuoteChainIds = {
     1,
     10,
@@ -107,9 +106,7 @@ class SwapService {
         queryParams['dst'] = dst;
       }
 
-      final url = Uri.parse(
-        '$_backendApiBase/$endpoint',
-      ).replace(queryParameters: queryParams);
+      final url = AppEnvironment.swap('/$endpoint', queryParams);
 
       final response = await http.get(url).timeout(const Duration(seconds: 15));
 
@@ -152,7 +149,10 @@ class SwapService {
           allowanceTarget: allowanceTarget,
         );
       } else {
-        _lastError = response.body;
+        _lastError = _extractBackendMessage(
+          response.body,
+          fallback: 'Unable to fetch a swap quote right now.',
+        );
         debugPrint('Backend Swap Quote Error: ${response.body}');
         return null;
       }
@@ -161,5 +161,18 @@ class SwapService {
       debugPrint('SwapService Exception: $e');
       return null;
     }
+  }
+
+  String _extractBackendMessage(String body, {required String fallback}) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString();
+        if (message != null && message.isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {}
+    return fallback;
   }
 }

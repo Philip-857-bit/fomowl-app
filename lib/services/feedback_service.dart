@@ -2,10 +2,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-class FeedbackService {
-  static const String _baseUrl =
-      'https://fomowl-backend.onrender.com/api/feedback';
+import '../config/app_environment.dart';
 
+class FeedbackService {
   Future<void> submitFeedback({
     required String walletAddress,
     required String category,
@@ -15,7 +14,7 @@ class FeedbackService {
     String? appVersion,
     String? languageCode,
   }) async {
-    final uri = Uri.parse('$_baseUrl/submit');
+    final uri = AppEnvironment.feedback('/submit');
     final response = await http
         .post(
           uri,

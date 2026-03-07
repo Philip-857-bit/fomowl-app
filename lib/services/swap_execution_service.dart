@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:web3dart/web3dart.dart';
 import 'package:web3dart/crypto.dart';
 
+import '../config/app_environment.dart';
 import '../models/token.dart';
 import 'blockchain_service.dart';
 import 'swap_service.dart'; // Still needed for SwapQuote
@@ -28,9 +29,6 @@ class SwapExecutionService {
     WalletService? walletService,
     SwapService? swapService, // Kept constructor sig for compatibility
   }) : _walletService = walletService ?? WalletService();
-
-  static const String _backendApiBase =
-      'https://fomowl-backend.onrender.com/api/swap';
 
   /// Builds calldata via backend and broadcasts the swap transaction.
   Future<SwapExecutionResult> execute({
@@ -90,20 +88,22 @@ class SwapExecutionService {
 
       final rawAmountStr = fromAmountWei;
 
-      final url = Uri.parse(
-        '$_backendApiBase/transaction'
-        '?chainId=${blockchain.activeChain.chainId}'
-        '&src=$src'
-        '&dst=$dst'
-        '&amount=$rawAmountStr'
-        '&from=$walletAddress'
-        '&slippage=$slippagePercent',
-      );
+      final url = AppEnvironment.swap('/transaction', {
+        'chainId': '${blockchain.activeChain.chainId}',
+        'src': src,
+        'dst': dst,
+        'amount': rawAmountStr,
+        'from': walletAddress,
+        'slippage': '$slippagePercent',
+      });
 
       final response = await http.get(url).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
         throw Exception(
-          'Backend returned swap compilation error: ${response.body}',
+          _extractBackendMessage(
+            response.body,
+            'Swap execution could not be prepared.',
+          ),
         );
       }
 
@@ -181,21 +181,23 @@ class SwapExecutionService {
       final rawAmountStr = fromAmountWei;
 
       // 1. Get Gasless Quote
-      final quoteUrl = Uri.parse(
-        '$_backendApiBase/fusion/quote'
-        '?chainId=${blockchain.activeChain.chainId}'
-        '&fromTokenAddress=$src'
-        '&toTokenAddress=$dst'
-        '&amount=$rawAmountStr'
-        '&walletAddress=$walletAddress',
-      );
+      final quoteUrl = AppEnvironment.swap('/fusion/quote', {
+        'chainId': '${blockchain.activeChain.chainId}',
+        'fromTokenAddress': src,
+        'toTokenAddress': dst,
+        'amount': rawAmountStr,
+        'walletAddress': walletAddress,
+      });
 
       final quoteResponse = await http
           .get(quoteUrl)
           .timeout(const Duration(seconds: 15));
       if (quoteResponse.statusCode != 200) {
         throw Exception(
-          'Backend returned gasless quote error: ${quoteResponse.body}',
+          _extractBackendMessage(
+            quoteResponse.body,
+            'Gasless quote request failed.',
+          ),
         );
       }
 
@@ -228,8 +230,8 @@ class SwapExecutionService {
       }
 
       // 3. Submit Signed Order
-      final submitUrl = Uri.parse(
-        '$_backendApiBase/fusion/order/submit/${blockchain.activeChain.chainId}',
+      final submitUrl = AppEnvironment.swap(
+        '/fusion/order/submit/${blockchain.activeChain.chainId}',
       );
 
       final submitPayload = Map<String, dynamic>.from(quoteData);
@@ -245,7 +247,10 @@ class SwapExecutionService {
 
       if (submitResponse.statusCode != 200) {
         throw Exception(
-          'Backend relative order submission failed: ${submitResponse.body}',
+          _extractBackendMessage(
+            submitResponse.body,
+            'Gasless order submission failed.',
+          ),
         );
       }
 
@@ -270,5 +275,18 @@ class SwapExecutionService {
       debugPrint('Fusion execution failed: $e');
       return SwapExecutionResult(success: false, error: e.toString());
     }
+  }
+
+  String _extractBackendMessage(String body, String fallback) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString();
+        if (message != null && message.isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {}
+    return fallback;
   }
 }

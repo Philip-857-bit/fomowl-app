@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/wallet_service.dart';
@@ -39,9 +40,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return;
       }
 
-      final url = Uri.parse(
-        'https://fomowl-backend.onrender.com/api/notifications/$address',
-      );
+      final url = AppEnvironment.notifications('/$address');
       final response = await http.get(url).timeout(const Duration(seconds: 60));
 
       if (response.statusCode == 200) {

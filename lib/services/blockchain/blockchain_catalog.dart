@@ -1,16 +1,14 @@
+import '../../config/app_environment.dart';
 import '../../models/chain.dart';
 
 /// Canonical EVM chain metadata and symbol/logo mapping helpers.
 class BlockchainCatalog {
-  static const String backendRpcBase =
-      'https://fomowl-backend.onrender.com/api/blockchain';
-
-  static const List<EvmChain> builtInChains = [
+  static List<EvmChain> get builtInChains => [
     EvmChain(
       name: 'Ethereum',
       symbol: 'ETH',
       chainId: 1,
-      rpcUrl: '$backendRpcBase/1/rpc',
+      rpcUrl: AppEnvironment.blockchain('/1/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://etherscan.io',
       logoUrl:
@@ -20,7 +18,7 @@ class BlockchainCatalog {
       name: 'BNB Smart Chain',
       symbol: 'BNB',
       chainId: 56,
-      rpcUrl: '$backendRpcBase/56/rpc',
+      rpcUrl: AppEnvironment.blockchain('/56/rpc').toString(),
       coinGeckoId: 'binancecoin',
       explorerUrl: 'https://bscscan.com',
       logoUrl:
@@ -30,7 +28,7 @@ class BlockchainCatalog {
       name: 'Polygon',
       symbol: 'MATIC',
       chainId: 137,
-      rpcUrl: '$backendRpcBase/137/rpc',
+      rpcUrl: AppEnvironment.blockchain('/137/rpc').toString(),
       coinGeckoId: 'matic-network',
       explorerUrl: 'https://polygonscan.com',
       logoUrl:
@@ -40,7 +38,7 @@ class BlockchainCatalog {
       name: 'Arbitrum One',
       symbol: 'ETH',
       chainId: 42161,
-      rpcUrl: '$backendRpcBase/42161/rpc',
+      rpcUrl: AppEnvironment.blockchain('/42161/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://arbiscan.io',
       logoUrl:
@@ -50,7 +48,7 @@ class BlockchainCatalog {
       name: 'Optimism',
       symbol: 'ETH',
       chainId: 10,
-      rpcUrl: '$backendRpcBase/10/rpc',
+      rpcUrl: AppEnvironment.blockchain('/10/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://optimistic.etherscan.io',
       logoUrl:
@@ -60,7 +58,7 @@ class BlockchainCatalog {
       name: 'Base',
       symbol: 'ETH',
       chainId: 8453,
-      rpcUrl: '$backendRpcBase/8453/rpc',
+      rpcUrl: AppEnvironment.blockchain('/8453/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://basescan.org',
       logoUrl:
@@ -70,7 +68,7 @@ class BlockchainCatalog {
       name: 'ZkSync Era',
       symbol: 'ETH',
       chainId: 324,
-      rpcUrl: '$backendRpcBase/324/rpc',
+      rpcUrl: AppEnvironment.blockchain('/324/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://explorer.zksync.io',
       logoUrl:
@@ -80,7 +78,7 @@ class BlockchainCatalog {
       name: 'Avalanche C-Chain',
       symbol: 'AVAX',
       chainId: 43114,
-      rpcUrl: '$backendRpcBase/43114/rpc',
+      rpcUrl: AppEnvironment.blockchain('/43114/rpc').toString(),
       coinGeckoId: 'avalanche-2',
       explorerUrl: 'https://snowtrace.io',
       logoUrl:
@@ -90,7 +88,7 @@ class BlockchainCatalog {
       name: 'Fantom',
       symbol: 'FTM',
       chainId: 250,
-      rpcUrl: '$backendRpcBase/250/rpc',
+      rpcUrl: AppEnvironment.blockchain('/250/rpc').toString(),
       coinGeckoId: 'fantom',
       explorerUrl: 'https://ftmscan.com',
       logoUrl:
@@ -100,7 +98,7 @@ class BlockchainCatalog {
       name: 'Gnosis',
       symbol: 'XDAI',
       chainId: 100,
-      rpcUrl: '$backendRpcBase/100/rpc',
+      rpcUrl: AppEnvironment.blockchain('/100/rpc').toString(),
       coinGeckoId: 'xdai',
       explorerUrl: 'https://gnosisscan.io',
       logoUrl:
@@ -110,7 +108,7 @@ class BlockchainCatalog {
       name: 'Klaytn',
       symbol: 'KLAY',
       chainId: 8217,
-      rpcUrl: '$backendRpcBase/8217/rpc',
+      rpcUrl: AppEnvironment.blockchain('/8217/rpc').toString(),
       coinGeckoId: 'klay-token',
       explorerUrl: 'https://scope.klaytn.com',
       logoUrl:
@@ -120,7 +118,7 @@ class BlockchainCatalog {
       name: 'Aurora',
       symbol: 'ETH',
       chainId: 1313161554,
-      rpcUrl: '$backendRpcBase/1313161554/rpc',
+      rpcUrl: AppEnvironment.blockchain('/1313161554/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://explorer.mainnet.aurora.dev',
       logoUrl:

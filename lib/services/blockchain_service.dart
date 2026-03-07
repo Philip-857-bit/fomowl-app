@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_environment.dart';
 import '../models/token.dart';
 import '../models/chain.dart';
 import '../models/token_market_data.dart';
@@ -11,6 +12,7 @@ import 'blockchain/blockchain_catalog.dart';
 import 'rpc_service.dart';
 import 'token_price_service.dart';
 import 'storage_service.dart';
+import 'wallet_backend_auth_service.dart';
 
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
@@ -21,15 +23,12 @@ class BlockchainService extends ChangeNotifier {
   TokenPriceService? _priceService;
 
   // Configuration Constants
-  static const List<String> _backendDiscoveryBases = [
-    'https://fomowl-backend.onrender.com/api/blockchain',
-  ];
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 8);
-  static const String _backendSettingsBase =
-      'https://fomowl-backend.onrender.com/api/settings/networks';
   final StorageService _storageService = StorageService();
+  final WalletBackendAuthService _walletBackendAuthService =
+      WalletBackendAuthService();
 
-  static const List<EvmChain> builtInChains = BlockchainCatalog.builtInChains;
+  static List<EvmChain> get builtInChains => BlockchainCatalog.builtInChains;
 
   // Storage keys
   static const String _keyCustomChains = 'custom_evm_chains';
@@ -623,7 +622,8 @@ class BlockchainService extends ChangeNotifier {
     final safeLimit = limit.clamp(1, 100);
     final parsed = <Token>[];
 
-    for (final base in _backendDiscoveryBases) {
+    final discoveryBases = [AppEnvironment.blockchain('').toString()];
+    for (final base in discoveryBases) {
       final normalizedBase = base.endsWith('/')
           ? base.substring(0, base.length - 1)
           : base;
@@ -676,7 +676,8 @@ class BlockchainService extends ChangeNotifier {
     String walletAddress,
   ) async {
     final now = DateTime.now();
-    for (final base in _backendDiscoveryBases) {
+    final discoveryBases = [AppEnvironment.blockchain('').toString()];
+    for (final base in discoveryBases) {
       final backoff = _backendDiscoveryBackoffUntil[base];
       if (backoff != null && now.isBefore(backoff)) continue;
 
@@ -885,6 +886,9 @@ class BlockchainService extends ChangeNotifier {
     try {
       final walletAddress = await _storageService.getWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) return;
+      final sessionToken = await _walletBackendAuthService.ensureWalletSession(
+        walletAddress,
+      );
       final payload = {
         'walletAddress': walletAddress,
         'selectedChainId': _activeChain.chainId,
@@ -892,8 +896,11 @@ class BlockchainService extends ChangeNotifier {
       };
       await http
           .post(
-            Uri.parse(_backendSettingsBase),
-            headers: {'Content-Type': 'application/json'},
+            AppEnvironment.settings('/networks'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $sessionToken',
+            },
             body: jsonEncode(payload),
           )
           .timeout(const Duration(seconds: 8));
@@ -906,9 +913,15 @@ class BlockchainService extends ChangeNotifier {
     try {
       final walletAddress = await _storageService.getWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) return;
+      final sessionToken = await _walletBackendAuthService.ensureWalletSession(
+        walletAddress,
+      );
       final encoded = Uri.encodeComponent(walletAddress);
       final response = await http
-          .get(Uri.parse('$_backendSettingsBase/$encoded'))
+          .get(
+            AppEnvironment.settings('/networks/$encoded'),
+            headers: {'Authorization': 'Bearer $sessionToken'},
+          )
           .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) return;
       final data = jsonDecode(response.body) as Map<String, dynamic>;

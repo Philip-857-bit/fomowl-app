@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/app_environment.dart';
+
 class NftAsset {
   final String name;
   final String collection;
@@ -21,8 +23,6 @@ class NftAsset {
 }
 
 class NftService {
-  static const String _baseUrl =
-      'https://fomowl-backend.onrender.com/api/blockchain';
   static const String _projectNftAddress =
       '0x09A3Dc6ceB95D741E6445B0227B0939C27E5Dd52';
   static const Set<int> supportedChainIds = {1, 137, 10, 42161, 8453};
@@ -38,7 +38,7 @@ class NftService {
       return const [];
     }
 
-    final url = Uri.parse('$_baseUrl/$chainId/nfts/$walletAddress');
+    final url = AppEnvironment.blockchain('/$chainId/nfts/$walletAddress');
     final response = await http.get(url).timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) {
       throw Exception('NFT API error: ${response.statusCode}');

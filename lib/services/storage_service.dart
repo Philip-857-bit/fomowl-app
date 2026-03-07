@@ -39,6 +39,7 @@ class StorageService {
   static const String _keyLockoutUntil = 'lockout_until';
   static const String _keyTwoFactorEnabled = 'two_factor_enabled';
   static const String _keyAutoLockMinutes = 'auto_lock_minutes';
+  static const String _keyBackendSessionPrefix = 'backend_session_';
 
   static const int maxFailedAttempts = 5;
   static const int lockoutDurationSeconds = 30;
@@ -113,6 +114,41 @@ class StorageService {
   Future<String?> getMnemonic() => _secureStore.read(key: _keyMnemonic);
 
   Future<String?> getWalletName() => _secureStore.read(key: _keyWalletName);
+
+  Future<void> saveBackendSession({
+    required String walletAddress,
+    required String token,
+    required String expiresAt,
+  }) {
+    return _secureStore.write(
+      key: _backendSessionKey(walletAddress),
+      value: jsonEncode({'token': token, 'expiresAt': expiresAt}),
+    );
+  }
+
+  Future<Map<String, String>?> getBackendSession(String walletAddress) async {
+    final raw = await _secureStore.read(key: _backendSessionKey(walletAddress));
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final token = decoded['token']?.toString();
+      final expiresAt = decoded['expiresAt']?.toString();
+      if (token == null ||
+          token.isEmpty ||
+          expiresAt == null ||
+          expiresAt.isEmpty) {
+        return null;
+      }
+      return {'token': token, 'expiresAt': expiresAt};
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearBackendSession(String walletAddress) {
+    return _secureStore.delete(key: _backendSessionKey(walletAddress));
+  }
 
   Future<void> deleteWallet() async {
     await _secureStore.delete(key: _keyAddress);
@@ -283,6 +319,9 @@ class StorageService {
 
   String _walletPrivateKeyKey(String address) =>
       'wallet_private_key_${address.toLowerCase()}';
+
+  String _backendSessionKey(String address) =>
+      '$_keyBackendSessionPrefix${address.toLowerCase()}';
 
   Future<void> savePasscode(String passcode) async {
     await _secureStore.write(

@@ -45,6 +45,23 @@ void main() {
       expect(migrated, isNotNull);
       expect(migrated, isNot('123456'));
     });
+
+    test('persists backend wallet sessions by wallet address', () async {
+      const walletAddress = '0x1234567890123456789012345678901234567890';
+      await storage.saveBackendSession(
+        walletAddress: walletAddress,
+        token: 'session-token',
+        expiresAt: '2026-03-08T12:00:00Z',
+      );
+
+      final session = await storage.getBackendSession(walletAddress);
+      expect(session, isNotNull);
+      expect(session!['token'], 'session-token');
+      expect(session['expiresAt'], '2026-03-08T12:00:00Z');
+
+      await storage.clearBackendSession(walletAddress);
+      expect(await storage.getBackendSession(walletAddress), isNull);
+    });
   });
 }
 

@@ -114,6 +114,7 @@ class WalletService {
   }
 
   /// Get wallet private key (use with caution!)
+  /// Prefer signing helpers for transactional/auth flows.
   Future<String?> getPrivateKey([String? address]) async {
     if (address == null || address.isEmpty) {
       return await _storage.getPrivateKey();
@@ -177,9 +178,14 @@ class WalletService {
     );
   }
 
-  /// Sign a message
-  Future<String> signMessage(String message) async {
-    final privateKeyHex = await getPrivateKey();
+  /// Sign a message with the active wallet.
+  Future<String> signMessage(String message) {
+    return signMessageForAddress(null, message);
+  }
+
+  /// Sign a message with a specific wallet when available.
+  Future<String> signMessageForAddress(String? address, String message) async {
+    final privateKeyHex = await getPrivateKey(address);
     if (privateKeyHex == null) {
       throw Exception('No wallet found');
     }
@@ -192,9 +198,16 @@ class WalletService {
     return HEX.encode(signature);
   }
 
-  /// Sign EIP-712 Typed Data
-  Future<String> signTypedData(String jsonData) async {
-    final privateKeyHex = await getPrivateKey();
+  /// Sign EIP-712 typed data with the active wallet.
+  Future<String> signTypedData(String jsonData) {
+    return signTypedDataForAddress(null, jsonData);
+  }
+
+  Future<String> signTypedDataForAddress(
+    String? address,
+    String jsonData,
+  ) async {
+    final privateKeyHex = await getPrivateKey(address);
     if (privateKeyHex == null) {
       throw Exception('No wallet found');
     }
