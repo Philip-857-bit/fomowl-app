@@ -13,6 +13,8 @@ import '../utils/amount_utils.dart';
 /// Handles wallet creation, import, and key management
 class WalletService {
   final StorageService _storage = StorageService();
+  final http.Client _httpClient = http.Client();
+  final Map<String, Web3Client> _web3Clients = {};
 
   /// Generate a new 12-word mnemonic phrase
   String generateMnemonic() {
@@ -78,6 +80,8 @@ class WalletService {
     String? walletName,
   }) async {
     try {
+      privateKey = privateKey.trim();
+
       // Remove 0x prefix if present
       if (privateKey.startsWith('0x')) {
         privateKey = privateKey.substring(2);
@@ -244,24 +248,29 @@ class WalletService {
     required int chainId,
   }) async {
     final credentials = await getCredentials();
-    final client = Web3Client(rpcUrl, http.Client());
+    final client = _web3Clients.putIfAbsent(
+      rpcUrl,
+      () => Web3Client(rpcUrl, _httpClient),
+    );
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final gasPrice = await client.getGasPrice();
+    final estimatedGas = await client.estimateGas(
+      sender: credentials.address,
+      to: recipient,
+      value: EtherAmount.inWei(amountInBaseUnits),
+    );
+    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
 
-    try {
-      final txHash = await client.sendTransaction(
-        credentials,
-        Transaction(
-          to: EthereumAddress.fromHex(toAddress),
-          value: EtherAmount.inWei(amountInBaseUnits),
-          gasPrice: await client.getGasPrice(),
-          maxGas: 21000,
-        ),
-        chainId: chainId,
-      );
-
-      return txHash;
-    } finally {
-      client.dispose();
-    }
+    return client.sendTransaction(
+      credentials,
+      Transaction(
+        to: recipient,
+        value: EtherAmount.inWei(amountInBaseUnits),
+        gasPrice: gasPrice,
+        maxGas: bufferedGas.toInt(),
+      ),
+      chainId: chainId,
+    );
   }
 
   BigInt parseAmountToBaseUnits(String amount, {int decimals = 18}) {
