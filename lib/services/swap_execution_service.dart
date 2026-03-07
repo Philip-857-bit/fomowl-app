@@ -202,6 +202,9 @@ class SwapExecutionService {
       }
 
       final quoteData = jsonDecode(quoteResponse.body);
+      if (quoteData is! Map<String, dynamic>) {
+        throw Exception('Backend gasless quote response was malformed.');
+      }
 
       // 0x Gasless Payload Extraction
       Map<String, dynamic>? eip712Data;
@@ -235,6 +238,7 @@ class SwapExecutionService {
       );
 
       final submitPayload = Map<String, dynamic>.from(quoteData);
+      submitPayload['chainId'] = blockchain.activeChain.chainId;
       submitPayload['signature'] = signature;
 
       final submitResponse = await http

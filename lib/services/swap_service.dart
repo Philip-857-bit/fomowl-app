@@ -24,8 +24,13 @@ class SwapQuote {
 }
 
 /// Swap Service
-/// Routes all swap intents through the secure Rust backend aggregating 1inch V5.2 and Fusion.
+/// Routes all swap intents through the secure Rust backend for 0x swap and gasless flows.
 class SwapService {
+  SwapService({http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
+
+  final http.Client _httpClient;
+
   static const Set<int> supportedQuoteChainIds = {
     1,
     10,
@@ -108,23 +113,16 @@ class SwapService {
 
       final url = AppEnvironment.swap('/$endpoint', queryParams);
 
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      final response = await _httpClient
+          .get(url)
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final liquidityAvailable = data['liquidityAvailable'] == true;
-        if (!liquidityAvailable) {
-          _lastError =
-              'No route found for this token pair on the selected network.';
-          return null;
-        }
-
-        // 0x response
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';
         final dstAmount = BigInt.tryParse(dstAmountWei) ?? BigInt.zero;
         if (dstAmount <= BigInt.zero) {
-          _lastError =
-              'No route found for this token pair on the selected network.';
+          _lastError = _extractProviderError(data);
           return null;
         }
         final allowanceTarget = data['allowanceTarget']?.toString() ?? '';
@@ -161,6 +159,39 @@ class SwapService {
       debugPrint('SwapService Exception: $e');
       return null;
     }
+  }
+
+  String _extractProviderError(Map<String, dynamic> data) {
+    final message = data['message']?.toString();
+    if (message != null && message.isNotEmpty) {
+      return message;
+    }
+    final reason = data['reason']?.toString();
+    if (reason != null && reason.isNotEmpty) {
+      return reason;
+    }
+    final issues = data['issues'];
+    if (issues is Map<String, dynamic>) {
+      final balance = issues['balance'];
+      if (balance is Map<String, dynamic>) {
+        final balanceMessage = balance['description']?.toString();
+        if (balanceMessage != null && balanceMessage.isNotEmpty) {
+          return balanceMessage;
+        }
+      }
+      final allowance = issues['allowance'];
+      if (allowance is Map<String, dynamic>) {
+        final allowanceMessage = allowance['description']?.toString();
+        if (allowanceMessage != null && allowanceMessage.isNotEmpty) {
+          return allowanceMessage;
+        }
+      }
+      final simulationIncomplete = issues['simulationIncomplete'] == true;
+      if (simulationIncomplete) {
+        return 'Quote validation is incomplete. Please try again.';
+      }
+    }
+    return 'No route found for this token pair on the selected network.';
   }
 
   String _extractBackendMessage(String body, {required String fallback}) {

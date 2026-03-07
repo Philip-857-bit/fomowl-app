@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:decimal/decimal.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
@@ -9,6 +10,7 @@ import '../../services/blockchain_service.dart';
 import '../../services/token_approval_service.dart';
 import '../../services/swap_execution_service.dart';
 import '../../services/transaction_monitor.dart';
+import '../../utils/amount_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/token_selector_modal.dart';
 import 'dart:async';
@@ -261,17 +263,17 @@ class _SwapScreenState extends State<SwapScreen> {
 
   void _setPercentage(int percent) {
     if (_fromToken == null) return;
-    final balance = _fromToken!.balance;
-    final amount = balance * (percent / 100.0);
+    final balance =
+        Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero;
+    final amount = balance * Decimal.parse((percent / 100).toStringAsFixed(2));
+    final displayDecimals = _fromToken!.decimals > 6 ? 6 : _fromToken!.decimals;
     setState(() {
       _selectedPercentage = percent;
-      _fromController.text = amount > 0
-          ? amount.toStringAsFixed(
-              _fromToken!.decimals > 6 ? 6 : _fromToken!.decimals,
-            )
+      _fromController.text = amount > Decimal.zero
+          ? _formatDecimalInput(amount, displayDecimals)
           : '0';
     });
-    if (amount > 0) _getQuote();
+    if (amount > Decimal.zero) _getQuote();
   }
 
   void _onFromAmountChanged(String value) {
@@ -286,28 +288,32 @@ class _SwapScreenState extends State<SwapScreen> {
     return double.tryParse(controller.text.replaceAll(',', '')) ?? 0.0;
   }
 
+  Decimal _parseDecimalAmount(String rawValue) {
+    final cleaned = rawValue.trim().replaceAll(',', '');
+    if (cleaned.isEmpty) return Decimal.zero;
+    return Decimal.tryParse(cleaned) ?? Decimal.zero;
+  }
+
   String? _toWeiAmount(String amountText, int decimals) {
     final cleaned = amountText.trim().replaceAll(',', '');
     if (cleaned.isEmpty) return null;
-    final parts = cleaned.split('.');
-    if (parts.length > 2) return null;
-
-    final whole = parts.first.isEmpty ? '0' : parts.first;
-    final fractionalRaw = parts.length == 2 ? parts[1] : '';
-    final digitRegex = RegExp(r'^\d+$');
-    if (!digitRegex.hasMatch(whole)) {
+    try {
+      return AmountUtils.parseDecimalToBaseUnits(cleaned, decimals).toString();
+    } on FormatException {
       return null;
     }
-    if (fractionalRaw.isNotEmpty && !digitRegex.hasMatch(fractionalRaw)) {
-      return null;
-    }
+  }
 
-    final fractional = fractionalRaw.length > decimals
-        ? fractionalRaw.substring(0, decimals)
-        : fractionalRaw.padRight(decimals, '0');
-    final combined = '$whole$fractional';
-    final normalized = combined.replaceFirst(RegExp(r'^0+'), '');
-    return normalized.isEmpty ? '0' : normalized;
+  String _formatDecimalInput(Decimal value, int fractionDigits) {
+    final raw = value.toString();
+    if (!raw.contains('.')) return raw;
+    final parts = raw.split('.');
+    var fraction = parts[1];
+    if (fraction.length > fractionDigits) {
+      fraction = fraction.substring(0, fractionDigits);
+    }
+    fraction = fraction.replaceFirst(RegExp(r'0+$'), '');
+    return fraction.isEmpty ? parts[0] : '${parts[0]}.$fraction';
   }
 
   double _usdValueFor(Token? token, double amount) {
@@ -480,8 +486,8 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
     final amountText = _fromController.text;
-    final amount = double.tryParse(amountText.replaceAll(',', '')) ?? 0.0;
-    if (amount <= 0) {
+    final amount = _parseDecimalAmount(amountText);
+    if (amount <= Decimal.zero) {
       setState(() {
         _pricing = '';
         _toController.clear();
@@ -550,7 +556,8 @@ class _SwapScreenState extends State<SwapScreen> {
       if (!mounted || requestId != _quoteRequestId) return;
 
       if (quote != null) {
-        final outAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
+        final outAmount =
+            Decimal.tryParse(quote.amountOutFormatted) ?? Decimal.zero;
         double feeNative = quote.networkFeeNative;
         double feeUsd = quote.networkFeeUsd > 0
             ? quote.networkFeeUsd
@@ -572,7 +579,11 @@ class _SwapScreenState extends State<SwapScreen> {
 
         if (!mounted || requestId != _quoteRequestId) return;
         setState(() {
-          _pricing = _formatRateText(outAmount > 0 ? outAmount : 0.0);
+          _pricing = _formatRateText(
+            outAmount > Decimal.zero
+                ? (double.tryParse(outAmount.toString()) ?? 0.0)
+                : 0.0,
+          );
           _toController.text = quote.amountOutFormatted;
           _currentQuote = quote;
           _feeNative = feeNative;
@@ -628,10 +639,8 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError('Wallet not connected');
       return;
     }
-    final fromAmount = double.tryParse(
-      _fromController.text.replaceAll(',', ''),
-    );
-    if (fromAmount == null || fromAmount <= 0) {
+    final fromAmount = _parseDecimalAmount(_fromController.text);
+    if (fromAmount <= Decimal.zero) {
       _showError('Invalid amount');
       return;
     }

@@ -655,8 +655,9 @@ class BlockchainService extends ChangeNotifier {
               valueUsd: 0,
               priceUsd: _toDouble(entry['priceUsd']),
               changePercent24h: _toDouble(entry['changePercent24h']),
-              // Prefer backend decimals when available to avoid display errors.
-              decimals: _toInt(entry['decimals']) ?? 18,
+              // Do not silently assume 18 for search results when the backend
+              // could not determine token decimals yet.
+              decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
               coinGeckoId: (entry['id'] as String?)?.trim(),
               imageUrl: (entry['imageUrl'] as String?)?.trim(),
             ),
@@ -886,22 +887,20 @@ class BlockchainService extends ChangeNotifier {
     try {
       final walletAddress = await _storageService.getWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) return;
-      final sessionToken = await _walletBackendAuthService.ensureWalletSession(
-        walletAddress,
-      );
       final payload = {
         'walletAddress': walletAddress,
         'selectedChainId': _activeChain.chainId,
         'customNetworks': _customChains.map((c) => c.toJson()).toList(),
       };
-      await http
-          .post(
-            AppEnvironment.settings('/networks'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $sessionToken',
-            },
-            body: jsonEncode(payload),
+      await _walletBackendAuthService
+          .sendAuthorized(
+            walletAddress,
+            (headers) => http.post(
+              AppEnvironment.settings('/networks'),
+              headers: headers,
+              body: jsonEncode(payload),
+            ),
+            {'Content-Type': 'application/json'},
           )
           .timeout(const Duration(seconds: 8));
     } catch (_) {
@@ -913,14 +912,15 @@ class BlockchainService extends ChangeNotifier {
     try {
       final walletAddress = await _storageService.getWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) return;
-      final sessionToken = await _walletBackendAuthService.ensureWalletSession(
-        walletAddress,
-      );
       final encoded = Uri.encodeComponent(walletAddress);
-      final response = await http
-          .get(
-            AppEnvironment.settings('/networks/$encoded'),
-            headers: {'Authorization': 'Bearer $sessionToken'},
+      final response = await _walletBackendAuthService
+          .sendAuthorized(
+            walletAddress,
+            (headers) => http.get(
+              AppEnvironment.settings('/networks/$encoded'),
+              headers: headers,
+            ),
+            const {},
           )
           .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200) return;

@@ -6,12 +6,25 @@ import 'package:http/http.dart' as http;
 
 import '../config/app_environment.dart';
 import '../utils/language_utils.dart';
+import 'wallet_backend_auth_service.dart';
 
 class LanguageBridgeService {
+  LanguageBridgeService({
+    WalletBackendAuthService? walletBackendAuthService,
+    http.Client? httpClient,
+  }) : _walletBackendAuthService =
+           walletBackendAuthService ?? WalletBackendAuthService(),
+       _httpClient = httpClient ?? http.Client();
+
+  final WalletBackendAuthService _walletBackendAuthService;
+  final http.Client _httpClient;
+
   Future<Map<String, String>> getSupportedLanguages() async {
     try {
       final uri = AppEnvironment.language('/supported');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await _httpClient
+          .get(uri)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
         return const {};
       }
@@ -47,7 +60,13 @@ class LanguageBridgeService {
     try {
       final encodedWallet = Uri.encodeComponent(walletAddress);
       final uri = AppEnvironment.language('/preference/$encodedWallet');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      final response = await _walletBackendAuthService
+          .sendAuthorized(
+            walletAddress,
+            (headers) => _httpClient.get(uri, headers: headers),
+            const {},
+          )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
         return null;
       }
@@ -66,15 +85,19 @@ class LanguageBridgeService {
     required String languageCode,
   }) async {
     final uri = AppEnvironment.language('/preference');
-    final response = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'walletAddress': walletAddress,
-            'languageCode': LanguageUtils.normalizeLanguageCode(languageCode),
-            'provider': 'deepl',
-          }),
+    final response = await _walletBackendAuthService
+        .sendAuthorized(
+          walletAddress,
+          (headers) => _httpClient.post(
+            uri,
+            headers: headers,
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'languageCode': LanguageUtils.normalizeLanguageCode(languageCode),
+              'provider': 'deepl',
+            }),
+          ),
+          {'Content-Type': 'application/json'},
         )
         .timeout(const Duration(seconds: 12));
 
@@ -89,7 +112,7 @@ class LanguageBridgeService {
     required String targetCode,
   }) async {
     final uri = AppEnvironment.language('/translate');
-    final response = await http
+    final response = await _httpClient
         .post(
           uri,
           headers: {'Content-Type': 'application/json'},

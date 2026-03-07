@@ -103,6 +103,34 @@ class WalletBackendAuthService {
     return token;
   }
 
+  Future<void> invalidateSession(String walletAddress) {
+    return _storageService.clearBackendSession(walletAddress);
+  }
+
+  Future<http.Response> sendAuthorized(
+    String walletAddress,
+    Future<http.Response> Function(Map<String, String> headers) send,
+    Map<String, String> headers,
+  ) async {
+    final initialHeaders = await _buildAuthHeaders(walletAddress, headers);
+    final firstResponse = await send(initialHeaders);
+    if (firstResponse.statusCode != 401) {
+      return firstResponse;
+    }
+
+    await invalidateSession(walletAddress);
+    final retryHeaders = await _buildAuthHeaders(walletAddress, headers);
+    return send(retryHeaders);
+  }
+
+  Future<Map<String, String>> _buildAuthHeaders(
+    String walletAddress,
+    Map<String, String> headers,
+  ) async {
+    final token = await ensureWalletSession(walletAddress);
+    return {...headers, 'Authorization': 'Bearer $token'};
+  }
+
   String _extractError(String body, String fallback) {
     try {
       final decoded = jsonDecode(body);
