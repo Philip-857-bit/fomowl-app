@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
-  String _connectivityStatus = 'Checking...';
+  String _connectivityStatus = '';
   int? _lastChainId;
   Set<String> _hiddenTokenKeys = {};
   List<NftAsset> _nftPreview = [];
@@ -67,6 +67,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final l = AppLocalizations.of(context);
+    if (_connectivityStatus.isEmpty) {
+      _connectivityStatus = l.checkingStatus;
+    }
     final newService = Provider.of<BlockchainService>(context);
     if (!identical(_blockchain, newService)) {
       _blockchain?.removeListener(_handleBlockchainChange);
@@ -88,17 +92,19 @@ class _HomeScreenState extends State<HomeScreen> {
           .get(Uri.parse('https://www.google.com'))
           .timeout(const Duration(seconds: 5));
       if (mounted) {
+        final l = AppLocalizations.of(context);
         setState(() {
           _hasInternet =
               response.statusCode == 200 || response.statusCode == 429;
-          _connectivityStatus = _hasInternet! ? 'Connected' : 'No connection';
+          _connectivityStatus = _hasInternet! ? l.connected : l.noConnection;
         });
       }
     } catch (e) {
       if (mounted) {
+        final l = AppLocalizations.of(context);
         setState(() {
           _hasInternet = false;
-          _connectivityStatus = 'No Internet Connection';
+          _connectivityStatus = l.noInternetConnection;
         });
       }
     }
@@ -115,8 +121,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final name = await _storage.getWalletName();
 
       if (mounted) {
+        final l = AppLocalizations.of(context);
         setState(() {
-          _walletName = name ?? 'Main Wallet';
+          _walletName = name ?? l.mainWallet;
           _isLoading = false;
         });
       }
@@ -175,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_tokenExistsForAddress(copied)) return;
 
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final l = AppLocalizations.of(context);
       final detected = await blockchain.detectTokenByContract(copied);
       if (detected == null || !mounted) return;
 
@@ -185,10 +193,13 @@ class _HomeScreenState extends State<HomeScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Text(
-            'Token Detected',
+          title: Text(
+            l.tokenDetected,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -217,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(
-                'Ignore',
+                l.ignore,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
               ),
             ),
@@ -239,12 +250,12 @@ class _HomeScreenState extends State<HomeScreen> {
         token: detected,
       );
       if (!added) {
-        ToastUtils.showInfo('Token already exists on this network');
+        ToastUtils.showInfo(l.tokenAlreadyExistsOnNetwork);
         return;
       }
       await _loadWalletData();
       if (!mounted) return;
-      ToastUtils.showSuccess('${detected.symbol} added from clipboard');
+      ToastUtils.showSuccess(l.tokenAddedFromClipboard(detected.symbol));
     } catch (e, stackTrace) {
       debugPrint('Clipboard check error: $e');
       debugPrint(stackTrace.toString());
@@ -434,8 +445,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openSocialLink() async {
     final uri = Uri.parse('https://x.com/fomowlhq');
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      ToastUtils.showError('Unable to open X right now');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted) return;
+    if (!opened) {
+      ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink('X'));
     }
   }
 
@@ -489,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 children: [
                   HomeTopBar(
-                    walletName: _walletName ?? 'Main Wallet',
+                    walletName: _walletName ?? l.mainWallet,
                     onWalletTap: () async {
                       await Navigator.pushNamed(context, '/wallets');
                       await _loadWalletData();
@@ -565,11 +578,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   return;
                                 }
                                 if (_nftPreview.isEmpty) {
-                                  ToastUtils.showInfo('No NFTs to display');
+                                  ToastUtils.showInfo(l.noNftsToDisplay);
                                 } else {
-                                  ToastUtils.showInfo(
-                                    'NFTs are already shown on home',
-                                  );
+                                  ToastUtils.showInfo(l.moreNftsAvailable);
                                 }
                               },
                               isTokenHidden: _isTokenHidden,

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/bottom_navigation.dart';
 
@@ -36,13 +37,13 @@ class CommunityLinksScreen extends StatelessWidget {
     ),
     _CommunityLink(
       label: 'Discord',
-      subtitle: 'Join server',
+      subtitleKey: 'discord',
       icon: Icons.forum_outlined,
       url: 'https://discord.gg/bZzqXw6ub2',
     ),
     _CommunityLink(
       label: 'Telegram',
-      subtitle: 'FOMOWL channel',
+      subtitleKey: 'telegram',
       icon: Icons.send_rounded,
       url: 'https://t.me/FOMOWL',
     ),
@@ -50,6 +51,7 @@ class CommunityLinksScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: BottomNavBar(
@@ -76,7 +78,7 @@ class CommunityLinksScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Join Our Community',
+                    l.joinOurCommunity,
                     style: GoogleFonts.outfit(
                       color: AppColors.textPrimary,
                       fontSize: 26,
@@ -103,7 +105,7 @@ class CommunityLinksScreen extends StatelessWidget {
                       ),
                     ),
                     child: ListTile(
-                      onTap: () => _open(item.url),
+                      onTap: () => _open(context, item.url),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
@@ -137,7 +139,7 @@ class CommunityLinksScreen extends StatelessWidget {
                         ),
                       ),
                       subtitle: Text(
-                        item.subtitle,
+                        item.localizedSubtitle(context),
                         style: GoogleFonts.outfit(
                           color: AppColors.textSecondary,
                           fontSize: 13,
@@ -159,25 +161,38 @@ class CommunityLinksScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _open(String url) async {
+  Future<void> _open(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!context.mounted) return;
     if (!ok) {
-      ToastUtils.showError('Unable to open $url');
+      ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink(url));
     }
   }
 }
 
 class _CommunityLink {
   final String label;
-  final String subtitle;
+  final String? subtitle;
+  final String subtitleKey;
   final IconData icon;
   final String url;
 
   const _CommunityLink({
     required this.label,
-    required this.subtitle,
+    this.subtitle,
+    this.subtitleKey = '',
     required this.icon,
     required this.url,
   });
+
+  String localizedSubtitle(BuildContext context) {
+    if (subtitle != null) return subtitle!;
+    final l = AppLocalizations.of(context);
+    return switch (subtitleKey) {
+      'discord' => l.communityDiscordSubtitle,
+      'telegram' => l.communityTelegramSubtitle,
+      _ => '',
+    };
+  }
 }

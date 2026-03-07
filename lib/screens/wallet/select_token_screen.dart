@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../widgets/token_icon.dart';
 
@@ -139,6 +140,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -156,7 +158,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                   ),
                   Expanded(
                     child: Text(
-                      'Select Token',
+                      l.selectTokenTitle,
                       style: GoogleFonts.outfit(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -192,7 +194,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                       Icons.search,
                       color: Colors.white.withValues(alpha: 0.5),
                     ),
-                    hintText: 'Search token or paste contract address',
+                    hintText: l.searchTokenOrPasteContract,
                     hintStyle: GoogleFonts.outfit(
                       fontSize: 14,
                       color: Colors.white.withValues(alpha: 0.4),
@@ -215,7 +217,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                   : _filteredTokens.isEmpty
                   ? Center(
                       child: Text(
-                        'No tokens found',
+                        l.noTokensYet,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           color: Colors.white54,

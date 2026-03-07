@@ -24,35 +24,44 @@ class AppLocalizations {
 
   static const Map<String, String> languageNames = {
     'en': 'English',
-    'es': 'Español',
-    'fr': 'Français',
+    'es': 'Spanish',
+    'fr': 'French',
     'zh': 'Chinese',
     'ar': 'Arabic',
   };
 
+  static const List<String> supportedLanguageCodes = [
+    'en',
+    'es',
+    'fr',
+    'zh',
+    'ar',
+  ];
+
   Map<String, String> get _localizedStrings {
     switch (locale.languageCode) {
       case 'es':
-        return _spanishStrings;
+        return {..._englishStrings, ..._spanishStrings};
       case 'fr':
-        return _frenchStrings;
+        return {..._englishStrings, ..._frenchStrings};
       case 'zh':
-        return _chineseStrings;
+        return {..._englishStrings, ..._chineseStrings};
       case 'ar':
-        return _arabicStrings;
+        return {..._englishStrings, ..._arabicStrings};
       default:
         return _englishStrings;
     }
   }
 
-  String translate(String key) {
-    return _localizedStrings[key] ?? _englishStrings[key] ?? key;
-  }
+  String translate(String key) => _localizedStrings[key] ?? key;
 
   // --- Onboarding ---
   String get appName => translate('app_name');
   String get welcomeTitle => translate('welcome_title');
   String get welcomeSubtitle => translate('welcome_subtitle');
+  String get continueAgreementPrefix => translate('continue_agreement_prefix');
+  String get termsOfUseLabel => translate('terms_of_use_label');
+  String get continueAgreementSuffix => translate('continue_agreement_suffix');
   String get createWallet => translate('create_wallet');
   String get importWallet => translate('import_wallet');
   String get chooseLanguage => translate('choose_language');
@@ -359,6 +368,99 @@ class AppLocalizations {
   String get noSeedPhraseStored => translate('no_seed_phrase_stored');
   String get seedPhraseCopied => translate('seed_phrase_copied');
   String get backupSeedPhraseIntro => translate('backup_seed_phrase_intro');
+  String get receiveTokenTitle => translate('receive_token_title');
+  String get interTransferTitle => translate('inter_transfer_title');
+  String get receiveInterTransferWarning =>
+      translate('receive_inter_transfer_warning');
+  String get receiveExternalWarning => translate('receive_external_warning');
+  String get usernameCopied => translate('username_copied');
+  String get faceVerificationTitle => translate('face_verification_title');
+  String get fingerprintVerificationTitle =>
+      translate('fingerprint_verification_title');
+  String get biometricVerificationTitle =>
+      translate('biometric_verification_title');
+  String get verifying => translate('verifying');
+  String get biometricPromptInstruction =>
+      translate('biometric_prompt_instruction');
+  String get fingerprintPromptInstruction =>
+      translate('fingerprint_prompt_instruction');
+  String get facePromptInstruction => translate('face_prompt_instruction');
+  String get verify => translate('verify');
+  String get verifyFace => translate('verify_face');
+  String get startVerification => translate('start_verification');
+  String get tapBelowToVerify => translate('tap_below_to_verify');
+  String get fingerprintVerifyReason => translate('fingerprint_verify_reason');
+  String get faceVerifyReason => translate('face_verify_reason');
+  String get identityVerifyReason => translate('identity_verify_reason');
+  String get fingerprintVerificationFailed =>
+      translate('fingerprint_verification_failed');
+  String get faceVerificationFailed => translate('face_verification_failed');
+  String get biometricUnavailable => translate('biometric_unavailable');
+  String get biometricVerificationFailed =>
+      translate('biometric_verification_failed');
+  String get biometricVerificationFailedWithPasscode =>
+      translate('biometric_verification_failed_with_passcode');
+  String unableToOpenLink(String value) =>
+      translate('unable_to_open_link').replaceFirst('{value}', value);
+  String get searchReceivingToken => translate('search_receiving_token');
+  String get selectTokenTitle => translate('select_token_title');
+  String get checkingStatus => translate('checking_status');
+  String get connected => translate('connected');
+  String get noConnection => translate('no_connection');
+  String get noInternetConnection => translate('no_internet_connection');
+  String tokenAddedFromClipboard(String symbol) =>
+      translate('token_added_from_clipboard').replaceFirst('{symbol}', symbol);
+  String networkAddedSuccessfully(String name) =>
+      translate('network_added_successfully').replaceFirst('{name}', name);
+  String networkChainIdExists(int chainId) => translate(
+    'network_chain_id_exists',
+  ).replaceFirst('{chainId}', '$chainId');
+  String get networkNameLabel => translate('network_name_label');
+  String get networkNameHint => translate('network_name_hint');
+  String get currencySymbolLabel => translate('currency_symbol_label');
+  String get currencySymbolHint => translate('currency_symbol_hint');
+  String get chainIdLabel => translate('chain_id_label');
+  String get chainIdHint => translate('chain_id_hint');
+  String get requiredField => translate('required_field');
+  String get mustBeNumber => translate('must_be_number');
+  String get autoFillFromChainId => translate('auto_fill_from_chain_id');
+  String get enterChainIdHelp => translate('enter_chain_id_help');
+  String get rpcUrlLabel => translate('rpc_url_label');
+  String get rpcUrlHint => translate('rpc_url_hint');
+  String get mustBeSecureHttps => translate('must_be_secure_https');
+  String get rpcReachable => translate('rpc_reachable');
+  String get rpcUnreachable => translate('rpc_unreachable');
+  String get blockExplorerOptionalLabel =>
+      translate('block_explorer_optional_label');
+  String get blockExplorerHint => translate('block_explorer_hint');
+  String get trustedNetworkWarning => translate('trusted_network_warning');
+  String get addNetworkAction => translate('add_network_action');
+  String autoHidesInSeconds(int seconds) =>
+      translate('auto_hides_in_seconds').replaceFirst('{seconds}', '$seconds');
+  String get hide => translate('hide');
+  String get noSeedPhraseAvailablePrivateKey =>
+      translate('no_seed_phrase_available_private_key');
+  String get communityDiscordSubtitle =>
+      translate('community_discord_subtitle');
+  String get communityTelegramSubtitle =>
+      translate('community_telegram_subtitle');
+  String get noNftsToDisplay => translate('no_nfts_to_display');
+  String get moreNftsAvailable => translate('more_nfts_available');
+
+  static Map<String, String> resolvedStringsForLanguage(String languageCode) {
+    switch (languageCode) {
+      case 'es':
+        return {..._englishStrings, ..._spanishStrings};
+      case 'fr':
+        return {..._englishStrings, ..._frenchStrings};
+      case 'zh':
+        return {..._englishStrings, ..._chineseStrings};
+      case 'ar':
+        return {..._englishStrings, ..._arabicStrings};
+      default:
+        return _englishStrings;
+    }
+  }
 
   // --- LANGUAGE STRINGS ---
 
@@ -643,6 +745,82 @@ class AppLocalizations {
     'seed_phrase_copied': 'Seed phrase copied to clipboard',
     'backup_seed_phrase_intro':
         'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.',
+    'continue_agreement_prefix': 'By continuing, you agree to our ',
+    'terms_of_use_label': 'Terms of Use',
+    'continue_agreement_suffix': '.',
+    'receive_token_title': 'Receive Token',
+    'inter_transfer_title': 'Inter-Transfer',
+    'receive_inter_transfer_warning':
+        'Receive instantly with zero gas fees from other Owllet wallet users using your email.',
+    'receive_external_warning':
+        'Only send supported tokens to this address. Sending unsupported tokens may result in permanent loss.',
+    'username_copied': 'Username copied',
+    'face_verification_title': 'Face Verification',
+    'fingerprint_verification_title': 'Fingerprint Verification',
+    'biometric_verification_title': 'Biometric Verification',
+    'verifying': 'Verifying...',
+    'biometric_prompt_instruction':
+        'Please authenticate using your device biometric',
+    'fingerprint_prompt_instruction':
+        'Tap the button below to verify your fingerprint',
+    'face_prompt_instruction': 'Tap the button below to verify your face',
+    'verify': 'Verify',
+    'verify_face': 'Verify Face',
+    'start_verification': 'Start verification',
+    'tap_below_to_verify': 'Tap the button below to verify',
+    'fingerprint_verify_reason':
+        'Verify your fingerprint to secure your wallet',
+    'face_verify_reason': 'Verify your face to secure your wallet',
+    'identity_verify_reason': 'Verify your identity to secure your wallet',
+    'fingerprint_verification_failed':
+        'Fingerprint verification failed. Please try again.',
+    'face_verification_failed': 'Face verification failed. Please try again.',
+    'biometric_unavailable':
+        'Biometric authentication not available on this device',
+    'biometric_verification_failed':
+        'Biometric verification failed. Please try again.',
+    'biometric_verification_failed_with_passcode':
+        'Biometric authentication failed. Please try again or use your passcode.',
+    'unable_to_open_link': 'Unable to open {value}',
+    'search_receiving_token': 'Search receiving token',
+    'select_token_title': 'Select Token',
+    'checking_status': 'Checking...',
+    'connected': 'Connected',
+    'no_connection': 'No connection',
+    'no_internet_connection': 'No Internet Connection',
+    'token_added_from_clipboard': '{symbol} added from clipboard',
+    'network_added_successfully': '{name} added successfully!',
+    'network_chain_id_exists':
+        'A network with Chain ID {chainId} already exists.',
+    'network_name_label': 'Network Name *',
+    'network_name_hint': 'e.g. Cronos, zkSync Era',
+    'currency_symbol_label': 'Currency Symbol *',
+    'currency_symbol_hint': 'e.g. CRO, ETH',
+    'chain_id_label': 'Chain ID *',
+    'chain_id_hint': 'e.g. 25, 324',
+    'required_field': 'Required',
+    'must_be_number': 'Must be a number',
+    'auto_fill_from_chain_id': 'Auto-fill from chain ID',
+    'enter_chain_id_help':
+        'Enter Chain ID to auto-fill network details when available.',
+    'rpc_url_label': 'RPC URL *',
+    'rpc_url_hint': 'https://rpc.example.com',
+    'must_be_secure_https': 'Must be a secure (https) URL',
+    'rpc_reachable': 'RPC is reachable',
+    'rpc_unreachable': 'RPC unreachable, check URL',
+    'block_explorer_optional_label': 'Block Explorer URL (optional)',
+    'block_explorer_hint': 'https://explorer.example.com',
+    'trusted_network_warning':
+        'Your wallet address works on all EVM chains. Only add networks you trust because malicious RPCs can show fake data.',
+    'add_network_action': 'Add Network',
+    'auto_hides_in_seconds': 'Auto-hides in {seconds}s',
+    'hide': 'Hide',
+    'no_seed_phrase_available_private_key':
+        'No seed phrase available.\nThis wallet was imported via private key.',
+    'community_discord_subtitle': 'Join server',
+    'community_telegram_subtitle': 'FOMOWL channel',
+    'no_nfts_to_display': 'No NFTs to display',
+    'more_nfts_available': 'NFTs are already shown on home',
   };
 
   static const Map<String, String> _spanishStrings = {
@@ -747,6 +925,85 @@ class AppLocalizations {
         'Esto borra los datos de la billetera local en este dispositivo. Asegúrese de que su frase de recuperación esté respaldada.',
     'cancel': 'Cancelar',
     'action_required': 'Acción requerida',
+    'continue_agreement_prefix': 'Al continuar, aceptas nuestros ',
+    'terms_of_use_label': 'Términos de uso',
+    'continue_agreement_suffix': '.',
+    'receive_token_title': 'Recibir token',
+    'inter_transfer_title': 'Transferencia interna',
+    'receive_inter_transfer_warning':
+        'Recibe al instante sin comisiones de gas de otros usuarios de Owllet usando tu correo electrónico.',
+    'receive_external_warning':
+        'Envía solo tokens compatibles a esta dirección. Enviar tokens no compatibles puede causar una pérdida permanente.',
+    'username_copied': 'Nombre de usuario copiado',
+    'face_verification_title': 'Verificación facial',
+    'fingerprint_verification_title': 'Verificación de huella',
+    'biometric_verification_title': 'Verificación biométrica',
+    'verifying': 'Verificando...',
+    'biometric_prompt_instruction':
+        'Autentícate con la biometría de tu dispositivo',
+    'fingerprint_prompt_instruction':
+        'Toca el botón de abajo para verificar tu huella',
+    'face_prompt_instruction':
+        'Toca el botón de abajo para verificar tu rostro',
+    'verify': 'Verificar',
+    'verify_face': 'Verificar rostro',
+    'start_verification': 'Iniciar verificación',
+    'tap_below_to_verify': 'Toca el botón de abajo para verificar',
+    'fingerprint_verify_reason':
+        'Verifica tu huella para proteger tu billetera',
+    'face_verify_reason': 'Verifica tu rostro para proteger tu billetera',
+    'identity_verify_reason':
+        'Verifica tu identidad para proteger tu billetera',
+    'fingerprint_verification_failed':
+        'La verificación de huella falló. Inténtalo de nuevo.',
+    'face_verification_failed':
+        'La verificación facial falló. Inténtalo de nuevo.',
+    'biometric_unavailable':
+        'La autenticación biométrica no está disponible en este dispositivo',
+    'biometric_verification_failed':
+        'La verificación biométrica falló. Inténtalo de nuevo.',
+    'biometric_verification_failed_with_passcode':
+        'La autenticación biométrica falló. Inténtalo de nuevo o usa tu código.',
+    'unable_to_open_link': 'No se pudo abrir {value}',
+    'search_receiving_token': 'Buscar token para recibir',
+    'select_token_title': 'Seleccionar token',
+    'checking_status': 'Comprobando...',
+    'connected': 'Conectado',
+    'no_connection': 'Sin conexión',
+    'no_internet_connection': 'Sin conexión a Internet',
+    'token_added_from_clipboard': '{symbol} se agregó desde el portapapeles',
+    'network_added_successfully': '¡{name} se agregó correctamente!',
+    'network_chain_id_exists':
+        'Ya existe una red con el ID de cadena {chainId}.',
+    'network_name_label': 'Nombre de la red *',
+    'network_name_hint': 'p. ej. Cronos, zkSync Era',
+    'currency_symbol_label': 'Símbolo de moneda *',
+    'currency_symbol_hint': 'p. ej. CRO, ETH',
+    'chain_id_label': 'ID de cadena *',
+    'chain_id_hint': 'p. ej. 25, 324',
+    'required_field': 'Obligatorio',
+    'must_be_number': 'Debe ser un número',
+    'auto_fill_from_chain_id': 'Completar desde Chain ID',
+    'enter_chain_id_help':
+        'Introduce el Chain ID para completar los detalles cuando estén disponibles.',
+    'rpc_url_label': 'URL de RPC *',
+    'rpc_url_hint': 'https://rpc.example.com',
+    'must_be_secure_https': 'Debe ser una URL segura (https)',
+    'rpc_reachable': 'La RPC es accesible',
+    'rpc_unreachable': 'RPC inalcanzable, revisa la URL',
+    'block_explorer_optional_label': 'URL del explorador de bloques (opcional)',
+    'block_explorer_hint': 'https://explorer.example.com',
+    'trusted_network_warning':
+        'La dirección de tu billetera funciona en todas las cadenas EVM. Agrega solo redes de confianza porque RPC maliciosas pueden mostrar datos falsos.',
+    'add_network_action': 'Agregar red',
+    'auto_hides_in_seconds': 'Se oculta automáticamente en {seconds}s',
+    'hide': 'Ocultar',
+    'no_seed_phrase_available_private_key':
+        'No hay frase semilla disponible.\nEsta billetera se importó con una clave privada.',
+    'community_discord_subtitle': 'Unirse al servidor',
+    'community_telegram_subtitle': 'Canal de FOMOWL',
+    'no_nfts_to_display': 'No hay NFTs para mostrar',
+    'more_nfts_available': 'Los NFTs ya se muestran en inicio',
   };
 
   static const Map<String, String> _frenchStrings = {
@@ -851,6 +1108,88 @@ class AppLocalizations {
         'Cela efface les données du portefeuille local sur cet appareil. Assurez-vous que votre phrase de récupération est sauvegardée.',
     'cancel': 'Annuler',
     'action_required': 'Action requise',
+    'continue_agreement_prefix': 'En continuant, vous acceptez nos ',
+    'terms_of_use_label': 'Conditions d\'utilisation',
+    'continue_agreement_suffix': '.',
+    'receive_token_title': 'Recevoir un token',
+    'inter_transfer_title': 'Transfert interne',
+    'receive_inter_transfer_warning':
+        'Recevez instantanément sans frais de gas depuis d\'autres utilisateurs Owllet avec votre e-mail.',
+    'receive_external_warning':
+        'N\'envoyez que des tokens pris en charge à cette adresse. L\'envoi de tokens non pris en charge peut entraîner une perte permanente.',
+    'username_copied': 'Nom d\'utilisateur copié',
+    'face_verification_title': 'Vérification faciale',
+    'fingerprint_verification_title': 'Vérification par empreinte',
+    'biometric_verification_title': 'Vérification biométrique',
+    'verifying': 'Vérification...',
+    'biometric_prompt_instruction':
+        'Veuillez vous authentifier avec la biométrie de votre appareil',
+    'fingerprint_prompt_instruction':
+        'Touchez le bouton ci-dessous pour vérifier votre empreinte',
+    'face_prompt_instruction':
+        'Touchez le bouton ci-dessous pour vérifier votre visage',
+    'verify': 'Vérifier',
+    'verify_face': 'Vérifier le visage',
+    'start_verification': 'Commencer la vérification',
+    'tap_below_to_verify': 'Touchez le bouton ci-dessous pour vérifier',
+    'fingerprint_verify_reason':
+        'Vérifiez votre empreinte pour sécuriser votre portefeuille',
+    'face_verify_reason':
+        'Vérifiez votre visage pour sécuriser votre portefeuille',
+    'identity_verify_reason':
+        'Vérifiez votre identité pour sécuriser votre portefeuille',
+    'fingerprint_verification_failed':
+        'La vérification de l\'empreinte a échoué. Veuillez réessayer.',
+    'face_verification_failed':
+        'La vérification faciale a échoué. Veuillez réessayer.',
+    'biometric_unavailable':
+        'L\'authentification biométrique n\'est pas disponible sur cet appareil',
+    'biometric_verification_failed':
+        'La vérification biométrique a échoué. Veuillez réessayer.',
+    'biometric_verification_failed_with_passcode':
+        'L\'authentification biométrique a échoué. Veuillez réessayer ou utiliser votre code.',
+    'unable_to_open_link': 'Impossible d\'ouvrir {value}',
+    'search_receiving_token': 'Rechercher le token à recevoir',
+    'select_token_title': 'Sélectionner un token',
+    'checking_status': 'Vérification...',
+    'connected': 'Connecté',
+    'no_connection': 'Pas de connexion',
+    'no_internet_connection': 'Pas de connexion Internet',
+    'token_added_from_clipboard':
+        '{symbol} a été ajouté depuis le presse-papiers',
+    'network_added_successfully': '{name} a été ajouté avec succès !',
+    'network_chain_id_exists':
+        'Un réseau avec l\'ID de chaîne {chainId} existe déjà.',
+    'network_name_label': 'Nom du réseau *',
+    'network_name_hint': 'ex. Cronos, zkSync Era',
+    'currency_symbol_label': 'Symbole monétaire *',
+    'currency_symbol_hint': 'ex. CRO, ETH',
+    'chain_id_label': 'ID de chaîne *',
+    'chain_id_hint': 'ex. 25, 324',
+    'required_field': 'Obligatoire',
+    'must_be_number': 'Doit être un nombre',
+    'auto_fill_from_chain_id': 'Remplir depuis l\'ID de chaîne',
+    'enter_chain_id_help':
+        'Entrez l\'ID de chaîne pour remplir les détails du réseau quand ils sont disponibles.',
+    'rpc_url_label': 'URL RPC *',
+    'rpc_url_hint': 'https://rpc.example.com',
+    'must_be_secure_https': 'Doit être une URL sécurisée (https)',
+    'rpc_reachable': 'Le RPC est accessible',
+    'rpc_unreachable': 'RPC inaccessible, vérifiez l\'URL',
+    'block_explorer_optional_label':
+        'URL de l\'explorateur de blocs (optionnel)',
+    'block_explorer_hint': 'https://explorer.example.com',
+    'trusted_network_warning':
+        'Votre adresse de portefeuille fonctionne sur toutes les chaînes EVM. Ajoutez uniquement des réseaux de confiance car des RPC malveillants peuvent afficher de fausses données.',
+    'add_network_action': 'Ajouter un réseau',
+    'auto_hides_in_seconds': 'Masquage automatique dans {seconds}s',
+    'hide': 'Masquer',
+    'no_seed_phrase_available_private_key':
+        'Aucune phrase secrète disponible.\nCe portefeuille a été importé via une clé privée.',
+    'community_discord_subtitle': 'Rejoindre le serveur',
+    'community_telegram_subtitle': 'Canal FOMOWL',
+    'no_nfts_to_display': 'Aucun NFT à afficher',
+    'more_nfts_available': 'Les NFT sont déjà affichés sur l\'accueil',
   };
 
   static const Map<String, String> _chineseStrings = {
@@ -950,6 +1289,69 @@ class AppLocalizations {
     'confirm_clear_local_data': '这将清除此设备上的本地钱包数据。请确保您的助记词已备份。',
     'cancel': '取消',
     'action_required': '需要操作',
+    'continue_agreement_prefix': '继续即表示您同意我们的',
+    'terms_of_use_label': '使用条款',
+    'continue_agreement_suffix': '。',
+    'receive_token_title': '接收代币',
+    'inter_transfer_title': '内部转账',
+    'receive_inter_transfer_warning': '通过电子邮件从其他 Owllet 用户即时接收，无需支付 gas 费。',
+    'receive_external_warning': '仅向此地址发送受支持的代币。发送不受支持的代币可能导致永久丢失。',
+    'username_copied': '用户名已复制',
+    'face_verification_title': '人脸验证',
+    'fingerprint_verification_title': '指纹验证',
+    'biometric_verification_title': '生物识别验证',
+    'verifying': '验证中...',
+    'biometric_prompt_instruction': '请使用设备生物识别进行验证',
+    'fingerprint_prompt_instruction': '点击下方按钮验证您的指纹',
+    'face_prompt_instruction': '点击下方按钮验证您的面容',
+    'verify': '验证',
+    'verify_face': '验证面容',
+    'start_verification': '开始验证',
+    'tap_below_to_verify': '点击下方按钮进行验证',
+    'fingerprint_verify_reason': '验证您的指纹以保护钱包',
+    'face_verify_reason': '验证您的面容以保护钱包',
+    'identity_verify_reason': '验证您的身份以保护钱包',
+    'fingerprint_verification_failed': '指纹验证失败。请重试。',
+    'face_verification_failed': '面容验证失败。请重试。',
+    'biometric_unavailable': '此设备不支持生物识别认证',
+    'biometric_verification_failed': '生物识别验证失败。请重试。',
+    'biometric_verification_failed_with_passcode': '生物识别认证失败。请重试或使用您的密码。',
+    'unable_to_open_link': '无法打开 {value}',
+    'search_receiving_token': '搜索要接收的代币',
+    'select_token_title': '选择代币',
+    'checking_status': '检查中...',
+    'connected': '已连接',
+    'no_connection': '未连接',
+    'no_internet_connection': '无网络连接',
+    'token_added_from_clipboard': '{symbol} 已从剪贴板添加',
+    'network_added_successfully': '{name} 添加成功！',
+    'network_chain_id_exists': '链 ID 为 {chainId} 的网络已存在。',
+    'network_name_label': '网络名称 *',
+    'network_name_hint': '例如：Cronos、zkSync Era',
+    'currency_symbol_label': '货币符号 *',
+    'currency_symbol_hint': '例如：CRO、ETH',
+    'chain_id_label': '链 ID *',
+    'chain_id_hint': '例如：25、324',
+    'required_field': '必填',
+    'must_be_number': '必须是数字',
+    'auto_fill_from_chain_id': '通过链 ID 自动填写',
+    'enter_chain_id_help': '输入链 ID 以在可用时自动填写网络详细信息。',
+    'rpc_url_label': 'RPC URL *',
+    'rpc_url_hint': 'https://rpc.example.com',
+    'must_be_secure_https': '必须是安全的 (https) URL',
+    'rpc_reachable': 'RPC 可访问',
+    'rpc_unreachable': 'RPC 不可访问，请检查 URL',
+    'block_explorer_optional_label': '区块浏览器 URL（可选）',
+    'block_explorer_hint': 'https://explorer.example.com',
+    'trusted_network_warning': '您的钱包地址可用于所有 EVM 链。只添加您信任的网络，因为恶意 RPC 可能显示虚假数据。',
+    'add_network_action': '添加网络',
+    'auto_hides_in_seconds': '{seconds} 秒后自动隐藏',
+    'hide': '隐藏',
+    'no_seed_phrase_available_private_key': '没有可用的助记词。\n该钱包是通过私钥导入的。',
+    'community_discord_subtitle': '加入服务器',
+    'community_telegram_subtitle': 'FOMOWL 频道',
+    'no_nfts_to_display': '没有可显示的 NFT',
+    'more_nfts_available': 'NFT 已显示在首页',
   };
 
   static const Map<String, String> _arabicStrings = {
@@ -1054,6 +1456,78 @@ class AppLocalizations {
         'سيؤدي هذا إلى مسح بيانات المحفظة المحلية على هذا الجهاز. تأكد من الاحتفاظ بنسخة احتياطية من العبارة السرية.',
     'cancel': 'إلغاء',
     'action_required': 'مطلوب اتخاذ إجراء',
+    'continue_agreement_prefix': 'بالمتابعة، فإنك توافق على ',
+    'terms_of_use_label': 'شروط الاستخدام',
+    'continue_agreement_suffix': '.',
+    'receive_token_title': 'استلام الرمز',
+    'inter_transfer_title': 'تحويل داخلي',
+    'receive_inter_transfer_warning':
+        'استلم فوراً دون رسوم غاز من مستخدمي Owllet الآخرين باستخدام بريدك الإلكتروني.',
+    'receive_external_warning':
+        'أرسل فقط الرموز المدعومة إلى هذا العنوان. إرسال رموز غير مدعومة قد يؤدي إلى خسارة دائمة.',
+    'username_copied': 'تم نسخ اسم المستخدم',
+    'face_verification_title': 'التحقق بالوجه',
+    'fingerprint_verification_title': 'التحقق بالبصمة',
+    'biometric_verification_title': 'التحقق البيومتري',
+    'verifying': 'جارٍ التحقق...',
+    'biometric_prompt_instruction':
+        'يرجى المصادقة باستخدام القياسات الحيوية في جهازك',
+    'fingerprint_prompt_instruction': 'اضغط الزر أدناه للتحقق من بصمتك',
+    'face_prompt_instruction': 'اضغط الزر أدناه للتحقق من وجهك',
+    'verify': 'تحقق',
+    'verify_face': 'تحقق من الوجه',
+    'start_verification': 'ابدأ التحقق',
+    'tap_below_to_verify': 'اضغط الزر أدناه للتحقق',
+    'fingerprint_verify_reason': 'تحقق من بصمتك لتأمين محفظتك',
+    'face_verify_reason': 'تحقق من وجهك لتأمين محفظتك',
+    'identity_verify_reason': 'تحقق من هويتك لتأمين محفظتك',
+    'fingerprint_verification_failed':
+        'فشل التحقق بالبصمة. يرجى المحاولة مرة أخرى.',
+    'face_verification_failed': 'فشل التحقق بالوجه. يرجى المحاولة مرة أخرى.',
+    'biometric_unavailable': 'المصادقة البيومترية غير متاحة على هذا الجهاز',
+    'biometric_verification_failed':
+        'فشل التحقق البيومتري. يرجى المحاولة مرة أخرى.',
+    'biometric_verification_failed_with_passcode':
+        'فشلت المصادقة البيومترية. يرجى المحاولة مرة أخرى أو استخدام رمز المرور.',
+    'unable_to_open_link': 'تعذر فتح {value}',
+    'search_receiving_token': 'ابحث عن الرمز المستلم',
+    'select_token_title': 'اختر الرمز',
+    'checking_status': 'جارٍ التحقق...',
+    'connected': 'متصل',
+    'no_connection': 'لا يوجد اتصال',
+    'no_internet_connection': 'لا يوجد اتصال بالإنترنت',
+    'token_added_from_clipboard': 'تمت إضافة {symbol} من الحافظة',
+    'network_added_successfully': 'تمت إضافة {name} بنجاح!',
+    'network_chain_id_exists': 'توجد شبكة بمعرّف السلسلة {chainId} بالفعل.',
+    'network_name_label': 'اسم الشبكة *',
+    'network_name_hint': 'مثال: Cronos، zkSync Era',
+    'currency_symbol_label': 'رمز العملة *',
+    'currency_symbol_hint': 'مثال: CRO، ETH',
+    'chain_id_label': 'معرّف السلسلة *',
+    'chain_id_hint': 'مثال: 25، 324',
+    'required_field': 'مطلوب',
+    'must_be_number': 'يجب أن يكون رقماً',
+    'auto_fill_from_chain_id': 'ملء تلقائي من معرّف السلسلة',
+    'enter_chain_id_help':
+        'أدخل معرّف السلسلة لملء تفاصيل الشبكة تلقائياً عند توفرها.',
+    'rpc_url_label': 'رابط RPC *',
+    'rpc_url_hint': 'https://rpc.example.com',
+    'must_be_secure_https': 'يجب أن يكون رابطاً آمناً (https)',
+    'rpc_reachable': 'يمكن الوصول إلى RPC',
+    'rpc_unreachable': 'تعذر الوصول إلى RPC، تحقق من الرابط',
+    'block_explorer_optional_label': 'رابط مستكشف الكتل (اختياري)',
+    'block_explorer_hint': 'https://explorer.example.com',
+    'trusted_network_warning':
+        'عنوان محفظتك يعمل على جميع سلاسل EVM. أضف فقط الشبكات التي تثق بها لأن RPC الخبيثة قد تعرض بيانات مزيفة.',
+    'add_network_action': 'إضافة شبكة',
+    'auto_hides_in_seconds': 'يختفي تلقائياً خلال {seconds}ث',
+    'hide': 'إخفاء',
+    'no_seed_phrase_available_private_key':
+        'لا توجد عبارة سرية متاحة.\nتم استيراد هذه المحفظة عبر مفتاح خاص.',
+    'community_discord_subtitle': 'الانضمام إلى الخادم',
+    'community_telegram_subtitle': 'قناة FOMOWL',
+    'no_nfts_to_display': 'لا توجد NFT للعرض',
+    'more_nfts_available': 'يتم عرض NFT بالفعل على الصفحة الرئيسية',
   };
 }
 

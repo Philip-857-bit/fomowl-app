@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
@@ -22,14 +23,15 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
   String? _seedPhrase;
 
   Future<void> _revealSeedPhrase() async {
+    final l = AppLocalizations.of(context);
     final authenticated = await SensitiveAccessGuard.verify(
       context,
-      reason: 'Authenticate to view your seed phrase',
+      reason: l.authenticateToViewSeedPhrase,
     );
     if (!mounted) return;
 
     if (!authenticated) {
-      ToastUtils.showError('Authentication required to view seed phrase');
+      ToastUtils.showError(l.authenticationRequiredSeedPhrase);
       return;
     }
 
@@ -47,7 +49,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
             ),
             const SizedBox(width: 10),
             Text(
-              'Security Warning',
+              l.securityWarning,
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -61,7 +63,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Your seed phrase is the master key to your wallet. Anyone with it can move all your funds.',
+              l.seedPhraseMasterKeyWarning,
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.82),
@@ -70,7 +72,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              '• Never share it with anyone\n• Never enter it on websites\n• Write it down and store it offline',
+              l.seedPhraseSafetyBullets,
               style: GoogleFonts.outfit(
                 fontSize: 13,
                 color: AppColors.warning,
@@ -83,7 +85,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              'Cancel',
+              l.cancel,
               style: GoogleFonts.outfit(color: Colors.white54),
             ),
           ),
@@ -96,7 +98,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
               ),
             ),
             child: Text(
-              'I Understand',
+              l.iUnderstand,
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -111,7 +113,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
 
     final mnemonic = await _walletService.getMnemonic();
     if (mnemonic == null || mnemonic.isEmpty) {
-      ToastUtils.showError('No seed phrase stored for this wallet');
+      ToastUtils.showError(l.noSeedPhraseStored);
       return;
     }
 
@@ -138,10 +140,11 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
   }
 
   void _copyToClipboard() {
+    final l = AppLocalizations.of(context);
     final phrase = _seedPhrase;
     if (phrase == null) return;
     Clipboard.setData(ClipboardData(text: phrase));
-    ToastUtils.showSuccess('Seed phrase copied to clipboard');
+    ToastUtils.showSuccess(l.seedPhraseCopied);
   }
 
   Widget _buildSeedPhraseGrid(String mnemonic) {
@@ -195,6 +198,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -219,7 +223,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                       ),
                     ),
                     Text(
-                      'Backup Seed Phrase',
+                      l.backupSeedPhraseTitle,
                       style: GoogleFonts.outfit(
                         fontSize: 26,
                         fontWeight: FontWeight.w600,
@@ -243,7 +247,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.',
+                      l.backupSeedPhraseIntro,
                       style: GoogleFonts.outfit(
                         fontSize: 14,
                         color: AppColors.textSecondary,
@@ -293,7 +297,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    'Tap to Reveal',
+                                    l.tapToReveal,
                                     style: GoogleFonts.outfit(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -320,7 +324,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'Auto-hides in 60s',
+                                      l.autoHidesInSeconds(60),
                                       style: GoogleFonts.outfit(
                                         fontSize: 12,
                                         color: AppColors.warning.withValues(
@@ -344,7 +348,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      'Hide',
+                                      l.hide,
                                       style: GoogleFonts.outfit(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
@@ -357,7 +361,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                             ),
                           ] else ...[
                             Text(
-                              'No seed phrase available.\nThis wallet was imported via private key.',
+                              l.noSeedPhraseAvailablePrivateKey,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.outfit(
                                 fontSize: 14,
@@ -380,7 +384,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
                             size: 18,
                           ),
                           label: Text(
-                            'Copy to clipboard',
+                            l.copyToClipboard,
                             style: GoogleFonts.outfit(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,

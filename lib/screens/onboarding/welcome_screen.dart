@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
-import 'language_selection_screen.dart';
 
 /// Welcome Screen - Onboarding page after splash
 /// Shows language selector, welcome message, and wallet options
@@ -16,6 +15,7 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
     // Constrain width for web/desktop to mobile size
@@ -80,7 +80,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                           // Welcome heading
                           Text(
-                            AppLocalizations.of(context).welcomeTitle,
+                            l.welcomeTitle,
                             style: GoogleFonts.outfit(
                               fontSize: 36,
                               fontWeight: FontWeight.w600,
@@ -95,7 +95,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 42),
                             child: Text(
-                              AppLocalizations.of(context).welcomeSubtitle,
+                              l.welcomeSubtitle,
                               style: GoogleFonts.outfit(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
@@ -136,9 +136,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                   color: Colors.white.withValues(alpha: 0.6),
                                 ),
                                 children: [
-                                  const TextSpan(
-                                    text: 'By continuing, you agree to the ',
-                                  ),
+                                  TextSpan(text: l.continueAgreementPrefix),
                                   WidgetSpan(
                                     child: GestureDetector(
                                       onTap: () {
@@ -148,7 +146,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                         );
                                       },
                                       child: Text(
-                                        'terms of use',
+                                        l.termsOfUseLabel,
                                         style: GoogleFonts.outfit(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -160,7 +158,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       ),
                                     ),
                                   ),
-                                  const TextSpan(text: ' of fomowl'),
+                                  TextSpan(text: l.continueAgreementSuffix),
                                 ],
                               ),
                             ),
@@ -197,14 +195,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(50),
           onTap: () async {
-            final languageCode = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const LanguageSelectionScreen(),
-              ),
-            );
-
-            if (languageCode != null && mounted) {}
+            await Navigator.pushNamed(context, '/language-selection');
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 19),
@@ -269,7 +260,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           },
           child: Center(
             child: Text(
-              'Create wallet',
+              AppLocalizations.of(context).createWallet,
               style: GoogleFonts.outfit(
                 fontSize: 21,
                 fontWeight: FontWeight.w600,
@@ -298,7 +289,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           },
           child: Center(
             child: Text(
-              'Add existing wallet',
+              AppLocalizations.of(context).importExistingWallet,
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,

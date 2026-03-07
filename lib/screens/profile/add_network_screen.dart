@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
@@ -79,6 +80,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   }
 
   Future<void> _saveNetwork() async {
+    final l = AppLocalizations.of(context);
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
@@ -101,12 +103,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     if (!mounted) return;
     setState(() => _isSaving = false);
     if (added) {
-      ToastUtils.showSuccess('${chain.name} added successfully!');
+      ToastUtils.showSuccess(l.networkAddedSuccessfully(chain.name));
       Navigator.pop(context, true);
     } else {
-      ToastUtils.showError(
-        'A network with Chain ID ${chain.chainId} already exists.',
-      );
+      ToastUtils.showError(l.networkChainIdExists(chain.chainId));
     }
   }
 
@@ -183,6 +183,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -207,45 +208,45 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildSectionLabel('Network Name *'),
+                        _buildSectionLabel(l.networkNameLabel),
                         _buildTextField(
                           controller: _nameController,
-                          hint: 'e.g. Cronos, zkSync Era',
+                          hint: l.networkNameHint,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Required';
+                              return l.requiredField;
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 14),
-                        _buildSectionLabel('Currency Symbol *'),
+                        _buildSectionLabel(l.currencySymbolLabel),
                         _buildTextField(
                           controller: _symbolController,
-                          hint: 'e.g. CRO, ETH',
+                          hint: l.currencySymbolHint,
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Required';
+                              return l.requiredField;
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 14),
-                        _buildSectionLabel('Chain ID *'),
+                        _buildSectionLabel(l.chainIdLabel),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _buildTextField(
                                 controller: _chainIdController,
-                                hint: 'e.g. 25, 324',
+                                hint: l.chainIdHint,
                                 keyboardType: TextInputType.number,
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Required';
+                                    return l.requiredField;
                                   }
                                   if (int.tryParse(value.trim()) == null) {
-                                    return 'Must be a number';
+                                    return l.mustBeNumber;
                                   }
                                   return null;
                                 },
@@ -279,7 +280,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                                           _autofillFromChainId(chainId),
                                         );
                                       },
-                                tooltip: 'Auto-fill from chain ID',
+                                tooltip: l.autoFillFromChainId,
                                 icon: _isAutofilling
                                     ? const SizedBox(
                                         width: 18,
@@ -300,27 +301,27 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Enter Chain ID to auto-fill network details when available.',
+                          l.enterChainIdHelp,
                           style: GoogleFonts.outfit(
                             fontSize: 12,
                             color: AppColors.textSecondary,
                           ),
                         ),
                         const SizedBox(height: 14),
-                        _buildSectionLabel('RPC URL *'),
+                        _buildSectionLabel(l.rpcUrlLabel),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
                               child: _buildTextField(
                                 controller: _rpcUrlController,
-                                hint: 'https://rpc.example.com',
+                                hint: l.rpcUrlHint,
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Required';
+                                    return l.requiredField;
                                   }
                                   if (!value.trim().startsWith('https://')) {
-                                    return 'Must be a secure (https) URL';
+                                    return l.mustBeSecureHttps;
                                   }
                                   return null;
                                 },
@@ -378,9 +379,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                           Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              _rpcValid!
-                                  ? 'RPC is reachable'
-                                  : 'RPC unreachable, check URL',
+                              _rpcValid! ? l.rpcReachable : l.rpcUnreachable,
                               style: GoogleFonts.outfit(
                                 fontSize: 12,
                                 color: _rpcValid!
@@ -390,10 +389,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                             ),
                           ),
                         const SizedBox(height: 14),
-                        _buildSectionLabel('Block Explorer URL (optional)'),
+                        _buildSectionLabel(l.blockExplorerOptionalLabel),
                         _buildTextField(
                           controller: _explorerController,
-                          hint: 'https://explorer.example.com',
+                          hint: l.blockExplorerHint,
                         ),
                         const SizedBox(height: 12),
                         Container(
@@ -418,7 +417,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Your wallet address works on all EVM chains. Only add networks you trust because malicious RPCs can show fake data.',
+                                  l.trustedNetworkWarning,
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
@@ -457,7 +456,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                                       ),
                                     )
                                   : Text(
-                                      'Add Network',
+                                      l.addNetworkAction,
                                       style: GoogleFonts.outfit(
                                         fontSize: 17,
                                         fontWeight: FontWeight.w600,
@@ -480,6 +479,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
       child: Stack(
@@ -496,7 +496,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
             ),
           ),
           Text(
-            'Add Custom Network',
+            l.addCustomNetwork,
             style: GoogleFonts.outfit(
               fontSize: 26,
               fontWeight: FontWeight.w600,

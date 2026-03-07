@@ -6,6 +6,7 @@ import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
 import '../../models/token.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../profile/coming_soon_overlay.dart';
 import 'widgets/send/send_header.dart';
@@ -75,6 +76,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   @override
   Widget build(BuildContext context) {
     final blockchain = Provider.of<BlockchainService>(context);
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -82,7 +84,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
           child: Column(
             children: [
               SendHeader(
-                title: 'Receive Token',
+                title: l.receiveTokenTitle,
                 onBack: () => Navigator.pop(context),
               ),
 
@@ -101,8 +103,10 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                 child: TransferTypeToggle(
                   isInterTransfer: _isInterTransfer,
                   onExternalTap: () {},
-                  onInterTransferTap: () =>
-                      ComingSoonOverlay.show(context, title: 'Inter-Transfer'),
+                  onInterTransferTap: () => ComingSoonOverlay.show(
+                    context,
+                    title: l.interTransferTitle,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -111,8 +115,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: ReceiveWarningBanner(
                   message: _isInterTransfer
-                      ? 'Receive instantly with zero gas fees from other Fomowl wallet users using your email.'
-                      : 'Only send supported tokens to this address. Sending unsupported tokens may result in permanent loss.',
+                      ? l.receiveInterTransferWarning
+                      : l.receiveExternalWarning,
                   icon: _isInterTransfer
                       ? Icons.info_outline
                       : Icons.warning_amber_rounded,
@@ -146,7 +150,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                         : _walletAddress;
                     Clipboard.setData(ClipboardData(text: copyData));
                     ToastUtils.showSuccess(
-                      _isInterTransfer ? 'Username copied' : 'Address copied',
+                      _isInterTransfer ? l.usernameCopied : l.addressCopied,
                     );
                   },
                 ),
@@ -167,7 +171,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                         : _walletAddress;
                     Clipboard.setData(ClipboardData(text: copyData));
                     ToastUtils.showSuccess(
-                      _isInterTransfer ? 'Username copied' : 'Address copied',
+                      _isInterTransfer ? l.usernameCopied : l.addressCopied,
                     );
                   },
                 ),

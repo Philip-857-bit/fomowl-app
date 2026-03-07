@@ -15,6 +15,7 @@ import '../screens/onboarding/fingerprint_verification_screen.dart';
 import '../screens/onboarding/import_private_key_screen.dart';
 import '../screens/onboarding/import_secret_phrase_screen.dart';
 import '../screens/onboarding/import_wallet_screen.dart';
+import '../screens/onboarding/language_selection_screen.dart';
 import '../screens/onboarding/verify_phrase_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/payments/bill_payment_screen.dart';
@@ -55,6 +56,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/unlock': (_) => const UnlockScreen(),
     '/welcome': (_) => const WelcomeScreen(),
     '/import-wallet': (_) => const ImportWalletScreen(),
+    '/language-selection': (_) => const LanguageSelectionScreen(),
     '/import-secret-phrase': (_) => const ImportSecretPhraseScreen(),
     '/import-private-key': (_) => const ImportPrivateKeyScreen(),
     '/create-wallet': (_) => const CreateWalletScreen(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../models/token.dart';
+import '../../l10n/app_localizations.dart';
 import 'token_icon.dart';
 
 class TokenSelectorDialog extends StatefulWidget {
@@ -50,6 +51,7 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Dialog(
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -83,7 +85,7 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
                 style: GoogleFonts.outfit(color: Colors.white),
                 decoration: InputDecoration(
                   border: InputBorder.none,
-                  hintText: 'Search receiving token',
+                  hintText: l.searchReceivingToken,
                   hintStyle: GoogleFonts.outfit(
                     color: Colors.white.withValues(alpha: 0.5),
                   ),
@@ -105,8 +107,8 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
                   ? Center(
                       child: Text(
                         _searchController.text.isEmpty
-                            ? 'No tokens found'
-                            : 'No matching tokens found',
+                            ? l.noTokensYet
+                            : l.noMatchingTokensFound,
                         style: GoogleFonts.outfit(color: Colors.white54),
                       ),
                     )

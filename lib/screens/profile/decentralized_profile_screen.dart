@@ -10,7 +10,6 @@ import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../home/widgets/network_selector_sheet.dart';
-import '../onboarding/language_selection_screen.dart';
 import 'widgets/settings_group_card.dart';
 import 'widgets/settings_item_tile.dart';
 import 'widgets/settings_section_header.dart';
@@ -312,12 +311,11 @@ class _DecentralizedProfileScreenState
                           title: l.chooseYourLanguage,
                           trailing: _valueTrailing(localeName),
                           onTap: () async {
-                            final languageCode = await Navigator.push<String>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LanguageSelectionScreen(),
-                              ),
-                            );
+                            final languageCode =
+                                await Navigator.pushNamed<String>(
+                                  context,
+                                  '/language-selection',
+                                );
                             if (!mounted) return;
                             if (languageCode != null) {
                               await _load();

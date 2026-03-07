@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/biometric_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 
 /// Face Capture Screen
@@ -36,6 +37,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   }
 
   Future<void> _startBiometricVerification() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _isVerifying = true;
     });
@@ -43,7 +45,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     try {
       // Use system biometric prompt
       final authenticated = await _biometricService.authenticate(
-        localizedReason: 'Verify your face to secure your wallet',
+        localizedReason: l.faceVerifyReason,
       );
 
       if (mounted) {
@@ -64,7 +66,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
           }
         } else {
           // Failed - show error and allow retry
-          ToastUtils.showError('Face verification failed. Please try again.');
+          ToastUtils.showError(l.faceVerificationFailed);
           setState(() {
             _isVerifying = false;
           });
@@ -72,9 +74,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError(
-          'Biometric authentication not available on this device',
-        );
+        ToastUtils.showError(l.biometricUnavailable);
         setState(() {
           _isVerifying = false;
         });
@@ -84,6 +84,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -113,7 +114,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
             // Instruction text
             Text(
-              _isVerifying ? 'Verifying...' : 'Face Verification',
+              _isVerifying ? l.verifying : l.faceVerificationTitle,
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
@@ -126,8 +127,8 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
             Text(
               _isVerifying
-                  ? 'Please authenticate using your device biometric'
-                  : 'Tap the button below to verify your face',
+                  ? l.biometricPromptInstruction
+                  : l.facePromptInstruction,
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -175,7 +176,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                               ),
                             )
                           : Text(
-                              'Verify Face',
+                              l.verifyFace,
                               style: GoogleFonts.outfit(
                                 fontSize: 21,
                                 fontWeight: FontWeight.w600,

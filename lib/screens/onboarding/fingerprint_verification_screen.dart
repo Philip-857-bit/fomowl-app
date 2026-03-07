@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/biometric_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 
 /// Fingerprint Verification Screen
@@ -30,6 +31,7 @@ class _FingerprintVerificationScreenState
   }
 
   Future<void> _verify() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _isVerifying = true;
     });
@@ -37,7 +39,7 @@ class _FingerprintVerificationScreenState
     try {
       // Attempt biometric authentication
       final authenticated = await _biometricService.authenticate(
-        localizedReason: 'Verify your fingerprint to secure your wallet',
+        localizedReason: l.fingerprintVerifyReason,
       );
 
       if (mounted) {
@@ -46,9 +48,7 @@ class _FingerprintVerificationScreenState
           Navigator.pushReplacementNamed(context, '/congratulations');
         } else {
           // Failed - show error
-          ToastUtils.showError(
-            'Fingerprint verification failed. Please try again.',
-          );
+          ToastUtils.showError(l.fingerprintVerificationFailed);
           setState(() {
             _isVerifying = false;
           });
@@ -56,9 +56,7 @@ class _FingerprintVerificationScreenState
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError(
-          'Biometric authentication not available on this device',
-        );
+        ToastUtils.showError(l.biometricUnavailable);
         setState(() {
           _isVerifying = false;
         });
@@ -68,6 +66,7 @@ class _FingerprintVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -98,7 +97,7 @@ class _FingerprintVerificationScreenState
 
             // Instruction text
             Text(
-              _isVerifying ? 'Verifying...' : 'Fingerprint Verification',
+              _isVerifying ? l.verifying : l.fingerprintVerificationTitle,
               style: GoogleFonts.outfit(
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
@@ -111,8 +110,8 @@ class _FingerprintVerificationScreenState
 
             Text(
               _isVerifying
-                  ? 'Please authenticate using your device biometric'
-                  : 'Tap the button below to verify your fingerprint',
+                  ? l.biometricPromptInstruction
+                  : l.fingerprintPromptInstruction,
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -160,7 +159,7 @@ class _FingerprintVerificationScreenState
                               ),
                             )
                           : Text(
-                              'Verify',
+                              l.verify,
                               style: GoogleFonts.outfit(
                                 fontSize: 21,
                                 fontWeight: FontWeight.w600,

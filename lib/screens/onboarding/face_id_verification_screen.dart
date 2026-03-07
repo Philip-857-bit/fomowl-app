@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/biometric_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 
 /// Face ID Verification Screen - Initial prompt
@@ -51,6 +52,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
   }
 
   Future<void> _startVerification() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _isVerifying = true;
     });
@@ -61,7 +63,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
 
       // Use system biometric prompt directly
       final authenticated = await _biometricService.authenticate(
-        localizedReason: 'Verify your identity to secure your wallet',
+        localizedReason: l.identityVerifyReason,
       );
 
       if (mounted) {
@@ -81,9 +83,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
           }
         } else {
           // Failed - show error
-          ToastUtils.showError(
-            'Biometric verification failed. Please try again.',
-          );
+          ToastUtils.showError(l.biometricVerificationFailed);
         }
       }
     } catch (e) {
@@ -93,15 +93,14 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
           _isVerifying = false;
         });
 
-        ToastUtils.showError(
-          'Biometric authentication failed. Please try again or use your passcode.',
-        );
+        ToastUtils.showError(l.biometricVerificationFailedWithPasscode);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -128,8 +127,8 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
             // Title — adapts to available biometric type
             Text(
               _isFaceAvailable
-                  ? 'Face ID Verification'
-                  : 'Biometric Verification',
+                  ? l.faceVerificationTitle
+                  : l.biometricVerificationTitle,
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
@@ -159,9 +158,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
 
             // Instruction text
             Text(
-              _isVerifying
-                  ? 'Please authenticate using your device biometric'
-                  : 'Tap the button below to verify',
+              _isVerifying ? l.biometricPromptInstruction : l.tapBelowToVerify,
               style: GoogleFonts.outfit(
                 fontSize: 16,
                 fontWeight: FontWeight.w400,
@@ -209,7 +206,7 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
                               ),
                             )
                           : Text(
-                              'Start verification',
+                              l.startVerification,
                               style: GoogleFonts.outfit(
                                 fontSize: 21,
                                 fontWeight: FontWeight.w600,
