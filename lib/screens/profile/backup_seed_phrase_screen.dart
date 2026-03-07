@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,6 +14,7 @@ import '../../widgets/mobile_scaffold.dart';
 
 typedef SensitiveAuthVerifier =
     Future<bool> Function(BuildContext context, {String? reason});
+typedef VerificationRandomFactory = Random Function();
 
 class BackupSeedPhraseScreen extends StatefulWidget {
   const BackupSeedPhraseScreen({
@@ -20,12 +22,14 @@ class BackupSeedPhraseScreen extends StatefulWidget {
     this.walletService,
     this.authVerifier,
     this.screenCaptureGuard,
+    this.randomFactory,
     this.revealDuration = const Duration(seconds: 60),
   });
 
   final WalletService? walletService;
   final SensitiveAuthVerifier? authVerifier;
   final ScreenCaptureGuard? screenCaptureGuard;
+  final VerificationRandomFactory? randomFactory;
   final Duration revealDuration;
 
   @override
@@ -40,6 +44,8 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       widget.authVerifier ?? SensitiveAccessGuard.verify;
   late final ScreenCaptureGuard _screenCaptureGuard =
       widget.screenCaptureGuard ?? ScreenCaptureGuard();
+  late final VerificationRandomFactory _randomFactory =
+      widget.randomFactory ?? Random.secure;
 
   Timer? _autoHideTimer;
   int _revealSession = 0;
@@ -48,6 +54,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   bool _backupVerified = false;
   List<String>? _revealedWords;
   List<String>? _verificationWords;
+  SeedPhraseVerificationChallenge? _verificationChallenge;
 
   bool get _hasRevealedPhrase => _revealedWords != null;
   bool get _isVerifyingBackup => _verificationWords != null;
@@ -83,17 +90,20 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   Future<void> _revealSeedPhrase() async {
     if (_isLoading) return;
     final l = AppLocalizations.of(context);
+    final sessionId = ++_revealSession;
+    _cancelAutoHideTimer();
 
     setState(() {
       _isLoading = true;
       _backupVerified = false;
+      _verificationChallenge = null;
     });
 
     final authenticated = await _authVerifier(
       context,
       reason: l.authenticateToViewSeedPhrase,
     );
-    if (!mounted) return;
+    if (!mounted || sessionId != _revealSession) return;
 
     if (!authenticated) {
       setState(() => _isLoading = false);
@@ -102,7 +112,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
     }
 
     final confirmed = await _showRevealWarningDialog(l);
-    if (!mounted) return;
+    if (!mounted || sessionId != _revealSession) return;
 
     if (confirmed != true) {
       setState(() => _isLoading = false);
@@ -110,7 +120,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
     }
 
     final mnemonic = await _walletService.getMnemonic();
-    if (!mounted) return;
+    if (!mounted || sessionId != _revealSession) return;
 
     if (mnemonic == null || mnemonic.trim().isEmpty) {
       setState(() {
@@ -121,15 +131,14 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       return;
     }
 
-    final words = mnemonic.trim().split(RegExp(r'\s+'));
-    final sessionId = ++_revealSession;
-    _cancelAutoHideTimer();
+    final words = List<String>.from(mnemonic.trim().split(RegExp(r'\s+')));
 
     setState(() {
       _isLoading = false;
       _seedPhraseUnavailable = false;
       _revealedWords = words;
       _verificationWords = null;
+      _verificationChallenge = null;
     });
 
     _autoHideTimer = Timer(widget.revealDuration, () {
@@ -219,10 +228,15 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   void _beginBackupVerification() {
     final revealedWords = _revealedWords;
     if (revealedWords == null) return;
+    final challenge = SeedPhraseVerificationChallenge.generate(
+      revealedWords,
+      random: _randomFactory(),
+    );
 
     _cancelAutoHideTimer();
     setState(() {
       _verificationWords = List<String>.from(revealedWords);
+      _verificationChallenge = challenge;
       _wipeWords(_revealedWords);
       _revealedWords = null;
     });
@@ -230,9 +244,9 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
 
   void _completeBackupVerification() {
     final l = AppLocalizations.of(context);
+    _clearSensitiveState(updateUi: false);
     setState(() {
       _backupVerified = true;
-      _clearSensitiveState(updateUi: false);
     });
     ToastUtils.showSuccess(l.seedPhraseBackupVerified);
   }
@@ -244,14 +258,18 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
     _wipeWords(_verificationWords);
 
     if (!updateUi || !mounted) {
+      _isLoading = false;
       _revealedWords = null;
       _verificationWords = null;
+      _verificationChallenge = null;
       return;
     }
 
     setState(() {
+      _isLoading = false;
       _revealedWords = null;
       _verificationWords = null;
+      _verificationChallenge = null;
     });
   }
 
@@ -390,6 +408,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
                       else if (_isVerifyingBackup)
                         SeedPhraseBackupVerificationCard(
                           words: _verificationWords!,
+                          challenge: _verificationChallenge!,
                           onVerified: _completeBackupVerification,
                         )
                       else
@@ -563,35 +582,13 @@ class SeedPhraseBackupVerificationCard extends StatefulWidget {
   const SeedPhraseBackupVerificationCard({
     super.key,
     required this.words,
+    required this.challenge,
     required this.onVerified,
   });
 
   final List<String> words;
+  final SeedPhraseVerificationChallenge challenge;
   final VoidCallback onVerified;
-
-  static List<int> requestedIndices(int wordCount) {
-    if (wordCount <= 3) {
-      return List<int>.generate(wordCount, (index) => index);
-    }
-    return [1, wordCount ~/ 2, wordCount - 2];
-  }
-
-  static List<String> buildOptions(List<String> words, int correctIndex) {
-    final correctWord = words[correctIndex];
-    final uniqueWords = <String>{correctWord};
-    final options = <String>[correctWord];
-
-    for (final candidate in words) {
-      if (uniqueWords.length == 4) break;
-      if (candidate == correctWord) continue;
-      if (uniqueWords.add(candidate)) {
-        options.add(candidate);
-      }
-    }
-
-    options.sort();
-    return options;
-  }
 
   @override
   State<SeedPhraseBackupVerificationCard> createState() =>
@@ -600,17 +597,11 @@ class SeedPhraseBackupVerificationCard extends StatefulWidget {
 
 class _SeedPhraseBackupVerificationCardState
     extends State<SeedPhraseBackupVerificationCard> {
-  late final List<int> _requestedIndices =
-      SeedPhraseBackupVerificationCard.requestedIndices(widget.words.length);
-  late final Map<int, List<String>> _options = {
-    for (final index in _requestedIndices)
-      index: SeedPhraseBackupVerificationCard.buildOptions(widget.words, index),
-  };
   final Map<int, String> _selectedAnswers = {};
   bool _showError = false;
 
   void _verifySelections() {
-    final isCorrect = _requestedIndices.every(
+    final isCorrect = widget.challenge.requestedIndices.every(
       (index) => _selectedAnswers[index] == widget.words[index],
     );
     if (isCorrect) {
@@ -656,7 +647,7 @@ class _SeedPhraseBackupVerificationCardState
             ),
           ),
           const SizedBox(height: 16),
-          for (final index in _requestedIndices) ...[
+          for (final index in widget.challenge.requestedIndices) ...[
             Text(
               l.selectSeedPhraseWord(index + 1),
               style: GoogleFonts.outfit(
@@ -669,7 +660,7 @@ class _SeedPhraseBackupVerificationCardState
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _options[index]!.map((word) {
+              children: widget.challenge.options[index]!.map((word) {
                 final isSelected = _selectedAnswers[index] == word;
                 return ChoiceChip(
                   key: ValueKey('seed-word-$index-$word'),
@@ -702,7 +693,9 @@ class _SeedPhraseBackupVerificationCardState
             width: double.infinity,
             child: ElevatedButton(
               key: const ValueKey('verify-backup-button'),
-              onPressed: _selectedAnswers.length == _requestedIndices.length
+              onPressed:
+                  _selectedAnswers.length ==
+                      widget.challenge.requestedIndices.length
                   ? _verifySelections
                   : null,
               style: ElevatedButton.styleFrom(
@@ -724,6 +717,59 @@ class _SeedPhraseBackupVerificationCardState
         ],
       ),
     );
+  }
+}
+
+class SeedPhraseVerificationChallenge {
+  const SeedPhraseVerificationChallenge({
+    required this.requestedIndices,
+    required this.options,
+  });
+
+  final List<int> requestedIndices;
+  final Map<int, List<String>> options;
+
+  static SeedPhraseVerificationChallenge generate(
+    List<String> words, {
+    required Random random,
+  }) {
+    final requestedCount = words.length <= 3 ? words.length : 3;
+    final indices = List<int>.generate(words.length, (index) => index)
+      ..shuffle(random);
+    final requestedIndices = (indices.take(requestedCount).toList()..sort());
+
+    final options = <int, List<String>>{};
+    for (final index in requestedIndices) {
+      options[index] = _buildOptions(
+        words,
+        correctIndex: index,
+        random: random,
+      );
+    }
+
+    return SeedPhraseVerificationChallenge(
+      requestedIndices: requestedIndices,
+      options: options,
+    );
+  }
+
+  static List<String> _buildOptions(
+    List<String> words, {
+    required int correctIndex,
+    required Random random,
+  }) {
+    final correctWord = words[correctIndex];
+    final distractorPool =
+        words.where((word) => word != correctWord).toSet().toList()
+          ..shuffle(random);
+    final optionCount = distractorPool.length >= 3
+        ? 4
+        : distractorPool.length + 1;
+    final options = <String>[
+      correctWord,
+      ...distractorPool.take(optionCount - 1),
+    ]..shuffle(random);
+    return options;
   }
 }
 

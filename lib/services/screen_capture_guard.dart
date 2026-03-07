@@ -31,6 +31,7 @@ class ScreenCaptureGuard {
   }
 
   bool get _supportsProtection {
+    // The plugin only provides meaningful protection on mobile platforms.
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;

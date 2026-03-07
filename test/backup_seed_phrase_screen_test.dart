@@ -9,6 +9,7 @@ import 'package:fomowl_wallet/screens/onboarding/verify_phrase_screen.dart';
 import 'package:fomowl_wallet/screens/profile/backup_seed_phrase_screen.dart';
 import 'package:fomowl_wallet/services/screen_capture_guard.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
+import 'dart:math';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -132,6 +133,30 @@ void main() {
       expect(find.text('alpha'), findsNothing);
     });
 
+    testWidgets('lifecycle pause clears revealed sensitive state', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          BackupSeedPhraseScreen(
+            walletService: _FakeWalletService(_mnemonic),
+            authVerifier: _allowAuth,
+            screenCaptureGuard: _FakeScreenCaptureGuard(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _revealPhrase(tester);
+      expect(find.text('I backed it up'), findsOneWidget);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pumpAndSettle();
+
+      expect(find.text('I backed it up'), findsNothing);
+      expect(find.text('Tap to reveal'), findsOneWidget);
+    });
+
     testWidgets(
       'backup flow transitions into verification without re-exposing full phrase',
       (tester) async {
@@ -161,6 +186,10 @@ void main() {
       tester,
     ) async {
       var verified = false;
+      final challenge = SeedPhraseVerificationChallenge.generate(
+        _mnemonic.split(' '),
+        random: Random(1),
+      );
       await tester.pumpWidget(
         _wrap(
           Scaffold(
@@ -168,6 +197,7 @@ void main() {
               child: Material(
                 child: SeedPhraseBackupVerificationCard(
                   words: _mnemonic.split(' '),
+                  challenge: challenge,
                   onVerified: () => verified = true,
                 ),
               ),
@@ -177,16 +207,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('seed-word-1-beta')),
-      );
-      await tester.tap(find.byKey(const ValueKey('seed-word-1-beta')));
-      await tester.ensureVisible(find.byKey(const ValueKey('seed-word-6-eta')));
-      await tester.tap(find.byKey(const ValueKey('seed-word-6-eta')));
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('seed-word-10-lambda')),
-      );
-      await tester.tap(find.byKey(const ValueKey('seed-word-10-lambda')));
+      final words = _mnemonic.split(' ');
+      for (final index in challenge.requestedIndices) {
+        final correctWord = words[index];
+        await tester.ensureVisible(
+          find.byKey(ValueKey('seed-word-$index-$correctWord')),
+        );
+        await tester.tap(find.byKey(ValueKey('seed-word-$index-$correctWord')));
+      }
       await tester.pumpAndSettle();
 
       await tester.ensureVisible(
@@ -196,6 +224,81 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(verified, isTrue);
+    });
+
+    testWidgets('verification card rejects incorrect answers', (tester) async {
+      var verified = false;
+      final words = _mnemonic.split(' ');
+      final challenge = SeedPhraseVerificationChallenge.generate(
+        words,
+        random: Random(3),
+      );
+      await tester.pumpWidget(
+        _wrap(
+          Scaffold(
+            body: SingleChildScrollView(
+              child: Material(
+                child: SeedPhraseBackupVerificationCard(
+                  words: words,
+                  challenge: challenge,
+                  onVerified: () => verified = true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (final index in challenge.requestedIndices) {
+        final wrongWord = challenge.options[index]!.firstWhere(
+          (option) => option != words[index],
+        );
+        await tester.ensureVisible(
+          find.byKey(ValueKey('seed-word-$index-$wrongWord')),
+        );
+        await tester.tap(find.byKey(ValueKey('seed-word-$index-$wrongWord')));
+      }
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('verify-backup-button')),
+      );
+      await tester.tap(find.byKey(const ValueKey('verify-backup-button')));
+      await tester.pumpAndSettle();
+
+      expect(verified, isFalse);
+      expect(
+        find.text('That backup check did not match. Try again.'),
+        findsOneWidget,
+      );
+    });
+
+    test('verification challenge randomizes requested indices by session', () {
+      final words = _mnemonic.split(' ');
+      final challengeA = SeedPhraseVerificationChallenge.generate(
+        words,
+        random: Random(1),
+      );
+      final challengeB = SeedPhraseVerificationChallenge.generate(
+        words,
+        random: Random(2),
+      );
+
+      expect(
+        challengeA.requestedIndices,
+        isNot(equals(challengeB.requestedIndices)),
+      );
+      expect(challengeA.requestedIndices.length, 3);
+      expect(challengeB.requestedIndices.length, 3);
+
+      for (final challenge in [challengeA, challengeB]) {
+        for (final index in challenge.requestedIndices) {
+          final options = challenge.options[index]!;
+          expect(options, contains(words[index]));
+          expect(options.toSet().length, options.length);
+        }
+      }
     });
   });
 }
