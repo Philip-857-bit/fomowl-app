@@ -90,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkConnectivity() async {
     try {
       final response = await http
-          .get(Uri.parse('https://www.google.com'))
+          .get(Uri.parse(AppEnvironment.connectivityCheckUrl))
           .timeout(const Duration(seconds: 5));
       if (mounted) {
         final l = AppLocalizations.of(context);

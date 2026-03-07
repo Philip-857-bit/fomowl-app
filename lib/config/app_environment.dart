@@ -4,6 +4,14 @@ class AppEnvironment {
   AppEnvironment._();
 
   static final String backendBaseUrl = _resolveBackendBaseUrl();
+  static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(
+    key: 'COINGECKO_API_BASE_URL',
+    fallback: 'https://api.coingecko.com/api/v3',
+  );
+  static final String connectivityCheckUrl = _resolveConfiguredUrl(
+    key: 'CONNECTIVITY_CHECK_URL',
+    fallback: 'https://www.google.com',
+  );
 
   static Uri api(String path, [Map<String, String>? queryParameters]) {
     return _buildUri('/api$path', queryParameters);
@@ -63,13 +71,14 @@ class AppEnvironment {
   }
 
   static String _resolveBackendBaseUrl() {
-    const configured = String.fromEnvironment('BACKEND_BASE_URL');
-    if (configured.isNotEmpty) {
-      return configured.endsWith('/')
-          ? configured.substring(0, configured.length - 1)
-          : configured;
-    }
+    final configured = _resolveConfiguredUrl(
+      key: 'https://fomowl-backend.onrender.com',
+      fallback: _defaultBackendBaseUrl(),
+    );
+    return configured;
+  }
 
+  static String _defaultBackendBaseUrl() {
     if (kIsWeb) {
       return 'http://127.0.0.1:3000';
     }
@@ -85,5 +94,21 @@ class AppEnvironment {
       case TargetPlatform.fuchsia:
         return 'http://127.0.0.1:3000';
     }
+  }
+
+  static String _resolveConfiguredUrl({
+    required String key,
+    required String fallback,
+  }) {
+    final configured = String.fromEnvironment(key);
+    final normalized = configured.trim();
+    if (normalized.isEmpty) {
+      return _normalizeUrl(fallback);
+    }
+    return _normalizeUrl(normalized);
+  }
+
+  static String _normalizeUrl(String value) {
+    return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
   }
 }

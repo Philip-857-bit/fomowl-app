@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_environment.dart';
 import 'base_service.dart';
 import '../models/token_market_data.dart';
 
 /// Service for fetching token prices and market data from CoinGecko
 class TokenPriceService extends BaseService {
-  static const String priceApiBase = 'https://api.coingecko.com/api/v3';
+  static String get priceApiBase => AppEnvironment.coinGeckoApiBaseUrl;
 
   final Map<String, _CachedChartData> _priceHistoryCache = {};
   final Map<String, _CachedMarketData> _tokenMarketDataCache = {};
