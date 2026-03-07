@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/screen_capture_guard.dart';
 import 'package:provider/provider.dart';
 import '../../utils/toast_utils.dart';
 
@@ -28,6 +29,13 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   List<String>? _originalPhrase;
   bool _isLoading = false;
   final WalletService _walletService = WalletService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
 
   @override
   void didChangeDependencies() {
@@ -39,27 +47,24 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   @override
   void dispose() {
+    for (var i = 0; i < _controllers.length; i++) {
+      _controllers[i].text = '';
+    }
+    final words = _originalPhrase;
+    if (words != null) {
+      for (var i = 0; i < words.length; i++) {
+        words[i] = '';
+      }
+      _originalPhrase = null;
+    }
     for (var controller in _controllers) {
       controller.dispose();
     }
     for (var node in _focusNodes) {
       node.dispose();
     }
+    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
-  }
-
-  Future<void> _pasteFromClipboard() async {
-    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
-    if (clipboardData != null && clipboardData.text != null) {
-      final words = clipboardData.text!.trim().split(' ');
-      if (words.length == 12) {
-        setState(() {
-          for (int i = 0; i < 12 && i < words.length; i++) {
-            _controllers[i].text = words[i].trim();
-          }
-        });
-      }
-    }
   }
 
   void _verifyAndContinue() {
@@ -112,7 +117,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
       await _walletService.createWalletFromMnemonic(
         mnemonic,
-        walletName: 'Main Wallet',
+        walletName: l.mainWallet,
       );
 
       // Refresh blockchain service to clear any cached data from previous wallet
@@ -138,6 +143,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -164,7 +170,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                 // Title
                 Center(
                   child: Text(
-                    'Secret recovery phrase',
+                    l.secretRecoveryPhrase,
                     style: GoogleFonts.outfit(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -179,7 +185,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                 // Warning text
                 Center(
                   child: Text(
-                    'Never share your seed phrase with anybody\neven your family members.',
+                    l.seedPhraseShareWarning,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -258,32 +264,12 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
                 const SizedBox(height: 30),
 
-                // Paste from clipboard button
-                Center(
-                  child: TextButton.icon(
-                    onPressed: _pasteFromClipboard,
-                    icon: const Icon(
-                      Icons.content_paste,
-                      color: Color(0xFFEB3F3F),
-                      size: 20,
-                    ),
-                    label: Text(
-                      'Paste from clipboard',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFEB3F3F),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
 
                 // Instruction text
                 Center(
                   child: Text(
-                    'Confirm the seedphrase is correct',
+                    l.verifyAllWords,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
@@ -335,7 +321,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 ),
                               )
                             : Text(
-                                'Continue',
+                                l.continue_,
                                 style: GoogleFonts.outfit(
                                   fontSize: 21,
                                   fontWeight: FontWeight.w600,

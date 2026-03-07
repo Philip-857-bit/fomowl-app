@@ -8,6 +8,7 @@ import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/screen_capture_guard.dart';
 import 'package:provider/provider.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -26,12 +27,22 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   final TextEditingController _walletNameController = TextEditingController();
   final TextEditingController _secretPhraseController = TextEditingController();
   final WalletService _walletService = WalletService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
   void dispose() {
+    _walletNameController.text = '';
+    _secretPhraseController.text = '';
     _walletNameController.dispose();
     _secretPhraseController.dispose();
+    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 

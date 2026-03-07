@@ -1,41 +1,145 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/mobile_scaffold.dart';
 
+typedef SensitiveAuthVerifier =
+    Future<bool> Function(BuildContext context, {String? reason});
+
 class BackupSeedPhraseScreen extends StatefulWidget {
-  const BackupSeedPhraseScreen({super.key});
+  const BackupSeedPhraseScreen({
+    super.key,
+    this.walletService,
+    this.authVerifier,
+    this.screenCaptureGuard,
+    this.revealDuration = const Duration(seconds: 60),
+  });
+
+  final WalletService? walletService;
+  final SensitiveAuthVerifier? authVerifier;
+  final ScreenCaptureGuard? screenCaptureGuard;
+  final Duration revealDuration;
 
   @override
   State<BackupSeedPhraseScreen> createState() => _BackupSeedPhraseScreenState();
 }
 
-class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
-  final WalletService _walletService = WalletService();
+class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
+    with WidgetsBindingObserver {
+  late final WalletService _walletService =
+      widget.walletService ?? WalletService();
+  late final SensitiveAuthVerifier _authVerifier =
+      widget.authVerifier ?? SensitiveAccessGuard.verify;
+  late final ScreenCaptureGuard _screenCaptureGuard =
+      widget.screenCaptureGuard ?? ScreenCaptureGuard();
 
-  bool _seedPhraseRevealed = false;
-  String? _seedPhrase;
+  Timer? _autoHideTimer;
+  int _revealSession = 0;
+  bool _isLoading = false;
+  bool _seedPhraseUnavailable = false;
+  bool _backupVerified = false;
+  List<String>? _revealedWords;
+  List<String>? _verificationWords;
+
+  bool get _hasRevealedPhrase => _revealedWords != null;
+  bool get _isVerifyingBackup => _verificationWords != null;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _clearSensitiveState();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _clearSensitiveState(updateUi: false);
+    unawaited(_screenCaptureGuard.disableProtection());
+    super.dispose();
+  }
+
+  void _handleExit() {
+    _clearSensitiveState();
+  }
 
   Future<void> _revealSeedPhrase() async {
+    if (_isLoading) return;
     final l = AppLocalizations.of(context);
-    final authenticated = await SensitiveAccessGuard.verify(
+
+    setState(() {
+      _isLoading = true;
+      _backupVerified = false;
+    });
+
+    final authenticated = await _authVerifier(
       context,
       reason: l.authenticateToViewSeedPhrase,
     );
     if (!mounted) return;
 
     if (!authenticated) {
+      setState(() => _isLoading = false);
       ToastUtils.showError(l.authenticationRequiredSeedPhrase);
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await _showRevealWarningDialog(l);
+    if (!mounted) return;
+
+    if (confirmed != true) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final mnemonic = await _walletService.getMnemonic();
+    if (!mounted) return;
+
+    if (mnemonic == null || mnemonic.trim().isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _seedPhraseUnavailable = true;
+        _clearSensitiveState(updateUi: false);
+      });
+      return;
+    }
+
+    final words = mnemonic.trim().split(RegExp(r'\s+'));
+    final sessionId = ++_revealSession;
+    _cancelAutoHideTimer();
+
+    setState(() {
+      _isLoading = false;
+      _seedPhraseUnavailable = false;
+      _revealedWords = words;
+      _verificationWords = null;
+    });
+
+    _autoHideTimer = Timer(widget.revealDuration, () {
+      if (!mounted || sessionId != _revealSession) return;
+      _clearSensitiveState();
+    });
+  }
+
+  Future<bool?> _showRevealWarningDialog(AppLocalizations l) {
+    return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardDark,
@@ -48,12 +152,14 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
               size: 26,
             ),
             const SizedBox(width: 10),
-            Text(
-              l.securityWarning,
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            Expanded(
+              child: Text(
+                l.securityWarning,
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],
@@ -108,47 +214,60 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
         ],
       ),
     );
+  }
 
-    if (!mounted || confirmed != true) return;
+  void _beginBackupVerification() {
+    final revealedWords = _revealedWords;
+    if (revealedWords == null) return;
 
-    final mnemonic = await _walletService.getMnemonic();
-    if (mnemonic == null || mnemonic.isEmpty) {
-      ToastUtils.showError(l.noSeedPhraseStored);
+    _cancelAutoHideTimer();
+    setState(() {
+      _verificationWords = List<String>.from(revealedWords);
+      _wipeWords(_revealedWords);
+      _revealedWords = null;
+    });
+  }
+
+  void _completeBackupVerification() {
+    final l = AppLocalizations.of(context);
+    setState(() {
+      _backupVerified = true;
+      _clearSensitiveState(updateUi: false);
+    });
+    ToastUtils.showSuccess(l.seedPhraseBackupVerified);
+  }
+
+  void _clearSensitiveState({bool updateUi = true}) {
+    _cancelAutoHideTimer();
+    _revealSession++;
+    _wipeWords(_revealedWords);
+    _wipeWords(_verificationWords);
+
+    if (!updateUi || !mounted) {
+      _revealedWords = null;
+      _verificationWords = null;
       return;
     }
 
     setState(() {
-      _seedPhraseRevealed = true;
-      _seedPhrase = mnemonic;
-    });
-
-    Future.delayed(const Duration(seconds: 60), () {
-      if (mounted) {
-        setState(() {
-          _seedPhraseRevealed = false;
-          _seedPhrase = null;
-        });
-      }
+      _revealedWords = null;
+      _verificationWords = null;
     });
   }
 
-  void _hideSeedPhrase() {
-    setState(() {
-      _seedPhraseRevealed = false;
-      _seedPhrase = null;
-    });
+  void _cancelAutoHideTimer() {
+    _autoHideTimer?.cancel();
+    _autoHideTimer = null;
   }
 
-  void _copyToClipboard() {
-    final l = AppLocalizations.of(context);
-    final phrase = _seedPhrase;
-    if (phrase == null) return;
-    Clipboard.setData(ClipboardData(text: phrase));
-    ToastUtils.showSuccess(l.seedPhraseCopied);
+  void _wipeWords(List<String>? words) {
+    if (words == null) return;
+    for (var i = 0; i < words.length; i++) {
+      words[i] = '';
+    }
   }
 
-  Widget _buildSeedPhraseGrid(String mnemonic) {
-    final words = mnemonic.split(' ');
+  Widget _buildSeedPhraseGrid(List<String> words) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -199,206 +318,451 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return MobileScaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
+
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) => _handleExit(),
+      child: MobileScaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 12, 8, 6),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white,
+                          ),
+                          onPressed: () async {
+                            _handleExit();
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                          },
+                        ),
+                      ),
+                      Text(
+                        l.backupSeedPhraseTitle,
+                        style: GoogleFonts.outfit(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
-                        onPressed: () => Navigator.pop(context),
                       ),
-                    ),
-                    Text(
-                      l.backupSeedPhraseTitle,
-                      style: GoogleFonts.outfit(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.cardDark,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: AppColors.divider.withValues(alpha: 0.4),
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l.backupSeedPhraseIntro,
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        color: AppColors.textSecondary,
-                        height: 1.45,
-                      ),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardDark,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: AppColors.divider.withValues(alpha: 0.4),
                     ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: _seedPhraseRevealed
-                            ? AppColors.warning.withValues(alpha: 0.08)
-                            : AppColors.inputBackground,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _seedPhraseRevealed
-                              ? AppColors.warning.withValues(alpha: 0.55)
-                              : Colors.white.withValues(alpha: 0.1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.backupSeedPhraseIntro,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                          height: 1.45,
                         ),
                       ),
-                      child: Column(
-                        children: [
-                          if (!_seedPhraseRevealed) ...[
-                            const Icon(
-                              Icons.visibility_off_rounded,
-                              color: AppColors.textSecondary,
-                              size: 42,
-                            ),
-                            const SizedBox(height: 12),
-                            GestureDetector(
-                              onTap: _revealSeedPhrase,
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 13,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.warning.withValues(
-                                    alpha: 0.14,
-                                  ),
-                                  borderRadius: BorderRadius.circular(11),
-                                  border: Border.all(
-                                    color: AppColors.warning.withValues(
-                                      alpha: 0.35,
-                                    ),
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    l.tapToReveal,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.warning,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ] else if (_seedPhrase != null) ...[
-                            _buildSeedPhraseGrid(_seedPhrase!),
-                            const SizedBox(height: 14),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.timer,
-                                      size: 15,
-                                      color: AppColors.warning.withValues(
-                                        alpha: 0.82,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      l.autoHidesInSeconds(60),
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        color: AppColors.warning.withValues(
-                                          alpha: 0.82,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                GestureDetector(
-                                  onTap: _hideSeedPhrase,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 7,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.accentRed.withValues(
-                                        alpha: 0.18,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      l.hide,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.accentRed,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            Text(
-                              l.noSeedPhraseAvailablePrivateKey,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                                height: 1.45,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_seedPhraseRevealed && _seedPhrase != null)
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: _copyToClipboard,
-                          icon: const Icon(
-                            Icons.copy_rounded,
-                            color: AppColors.accentRed,
-                            size: 18,
-                          ),
-                          label: Text(
-                            l.copyToClipboard,
-                            style: GoogleFonts.outfit(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.accentRed,
-                            ),
-                          ),
+                      const SizedBox(height: 14),
+                      if (_seedPhraseUnavailable)
+                        _StatusCard(message: l.noSeedPhraseAvailablePrivateKey)
+                      else if (_hasRevealedPhrase)
+                        _buildRevealCard(l)
+                      else if (_isVerifyingBackup)
+                        SeedPhraseBackupVerificationCard(
+                          words: _verificationWords!,
+                          onVerified: _completeBackupVerification,
+                        )
+                      else
+                        _buildHiddenCard(l),
+                      if (_backupVerified) ...[
+                        const SizedBox(height: 16),
+                        _StatusCard(
+                          message: l.seedPhraseBackupVerificationComplete,
+                          accentColor: AppColors.success,
+                          icon: Icons.verified_user_rounded,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHiddenCard(AppLocalizations l) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.visibility_off_rounded,
+            color: AppColors.textSecondary,
+            size: 42,
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _isLoading ? null : _revealSeedPhrase,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.35),
+                ),
+              ),
+              child: Center(
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        l.tapToReveal,
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.warning,
                         ),
                       ),
-                  ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l.seedPhraseSecureScreenNotice,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRevealCard(AppLocalizations l) {
+    final revealedWords = _revealedWords!;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.55)),
+      ),
+      child: Column(
+        children: [
+          _buildSeedPhraseGrid(revealedWords),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.timer,
+                    size: 15,
+                    color: AppColors.warning.withValues(alpha: 0.82),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    l.autoHidesInSeconds(widget.revealDuration.inSeconds),
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppColors.warning.withValues(alpha: 0.82),
+                    ),
+                  ),
+                ],
+              ),
+              GestureDetector(
+                onTap: _clearSensitiveState,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRed.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    l.hide,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.accentRed,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _beginBackupVerification,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                l.iBackedItUp,
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SeedPhraseBackupVerificationCard extends StatefulWidget {
+  const SeedPhraseBackupVerificationCard({
+    super.key,
+    required this.words,
+    required this.onVerified,
+  });
+
+  final List<String> words;
+  final VoidCallback onVerified;
+
+  static List<int> requestedIndices(int wordCount) {
+    if (wordCount <= 3) {
+      return List<int>.generate(wordCount, (index) => index);
+    }
+    return [1, wordCount ~/ 2, wordCount - 2];
+  }
+
+  static List<String> buildOptions(List<String> words, int correctIndex) {
+    final correctWord = words[correctIndex];
+    final uniqueWords = <String>{correctWord};
+    final options = <String>[correctWord];
+
+    for (final candidate in words) {
+      if (uniqueWords.length == 4) break;
+      if (candidate == correctWord) continue;
+      if (uniqueWords.add(candidate)) {
+        options.add(candidate);
+      }
+    }
+
+    options.sort();
+    return options;
+  }
+
+  @override
+  State<SeedPhraseBackupVerificationCard> createState() =>
+      _SeedPhraseBackupVerificationCardState();
+}
+
+class _SeedPhraseBackupVerificationCardState
+    extends State<SeedPhraseBackupVerificationCard> {
+  late final List<int> _requestedIndices =
+      SeedPhraseBackupVerificationCard.requestedIndices(widget.words.length);
+  late final Map<int, List<String>> _options = {
+    for (final index in _requestedIndices)
+      index: SeedPhraseBackupVerificationCard.buildOptions(widget.words, index),
+  };
+  final Map<int, String> _selectedAnswers = {};
+  bool _showError = false;
+
+  void _verifySelections() {
+    final isCorrect = _requestedIndices.every(
+      (index) => _selectedAnswers[index] == widget.words[index],
+    );
+    if (isCorrect) {
+      widget.onVerified();
+      return;
+    }
+
+    setState(() {
+      _showError = true;
+      _selectedAnswers.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.seedPhraseVerificationTitle,
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l.seedPhraseVerificationSubtitle,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final index in _requestedIndices) ...[
+            Text(
+              l.selectSeedPhraseWord(index + 1),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _options[index]!.map((word) {
+                final isSelected = _selectedAnswers[index] == word;
+                return ChoiceChip(
+                  key: ValueKey('seed-word-$index-$word'),
+                  label: Text(word),
+                  selected: isSelected,
+                  onSelected: (_) {
+                    setState(() {
+                      _showError = false;
+                      _selectedAnswers[index] = word;
+                    });
+                  },
+                  selectedColor: AppColors.accentRed,
+                  backgroundColor: Colors.white.withValues(alpha: 0.06),
+                  labelStyle: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (_showError)
+            Text(
+              l.seedPhraseVerificationFailed,
+              style: GoogleFonts.outfit(fontSize: 13, color: AppColors.error),
+            ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              key: const ValueKey('verify-backup-button'),
+              onPressed: _selectedAnswers.length == _requestedIndices.length
+                  ? _verifySelections
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+                disabledBackgroundColor: Colors.white12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                l.verifyBackup,
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.message,
+    this.accentColor = AppColors.textSecondary,
+    this.icon = Icons.info_outline_rounded,
+  });
+
+  final String message;
+  final Color accentColor;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: accentColor, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Colors.white,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

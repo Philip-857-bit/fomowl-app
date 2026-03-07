@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 
 /// Confirm Phrase Screen
@@ -12,12 +15,21 @@ class ConfirmPhraseScreen extends StatefulWidget {
   State<ConfirmPhraseScreen> createState() => _ConfirmPhraseScreenState();
 }
 
-class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
+class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen>
+    with WidgetsBindingObserver {
   bool _check1 = false;
   bool _check2 = false;
   bool _check3 = false;
 
   List<String>? _mnemonicWords;
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
 
   @override
   void didChangeDependencies() {
@@ -27,7 +39,24 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
         ModalRoute.of(context)?.settings.arguments as List<String>?;
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _wipeMnemonic();
+    unawaited(_screenCaptureGuard.disableProtection());
+    super.dispose();
+  }
+
   bool get _allChecked => _check1 && _check2 && _check3;
+
+  void _wipeMnemonic() {
+    final words = _mnemonicWords;
+    if (words == null) return;
+    for (var i = 0; i < words.length; i++) {
+      words[i] = '';
+    }
+    _mnemonicWords = null;
+  }
 
   void _continue() {
     if (_allChecked) {
@@ -38,6 +67,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return MobileScaffold(
       backgroundColor: AppColors.background.withValues(alpha: 0.95),
       body: SafeArea(
@@ -90,7 +120,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
 
                 // Title
                 Text(
-                  'Confirm your secret phrase',
+                  l.confirmSecretPhraseTitle,
                   style: GoogleFonts.outfit(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
@@ -104,7 +134,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                 // Checkbox 1
                 _buildCheckbox(
                   value: _check1,
-                  text: 'I am the only one that knows it.',
+                  text: l.confirmSecretPhraseCheckOne,
                   onChanged: (value) {
                     setState(() {
                       _check1 = value ?? false;
@@ -117,7 +147,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                 // Checkbox 2
                 _buildCheckbox(
                   value: _check2,
-                  text: 'The secret phrase is not accessible to 3rd parties.',
+                  text: l.confirmSecretPhraseCheckTwo,
                   onChanged: (value) {
                     setState(() {
                       _check2 = value ?? false;
@@ -130,8 +160,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                 // Checkbox 3
                 _buildCheckbox(
                   value: _check3,
-                  text:
-                      'My funds can be stolen if someone else sees my key phrase.',
+                  text: l.confirmSecretPhraseCheckThree,
                   onChanged: (value) {
                     setState(() {
                       _check3 = value ?? false;
@@ -172,7 +201,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen> {
                       child: Container(
                         alignment: Alignment.center,
                         child: Text(
-                          'Continue',
+                          l.continue_,
                           style: GoogleFonts.outfit(
                             fontSize: 21,
                             fontWeight: FontWeight.w600,

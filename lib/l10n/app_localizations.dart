@@ -446,6 +446,30 @@ class AppLocalizations {
       translate('community_telegram_subtitle');
   String get noNftsToDisplay => translate('no_nfts_to_display');
   String get moreNftsAvailable => translate('more_nfts_available');
+  String get seedPhraseSecureScreenNotice =>
+      translate('seed_phrase_secure_screen_notice');
+  String get iBackedItUp => translate('i_backed_it_up');
+  String get seedPhraseVerificationTitle =>
+      translate('seed_phrase_verification_title');
+  String get seedPhraseVerificationSubtitle =>
+      translate('seed_phrase_verification_subtitle');
+  String selectSeedPhraseWord(int index) =>
+      translate('select_seed_phrase_word').replaceFirst('{index}', '$index');
+  String get verifyBackup => translate('verify_backup');
+  String get seedPhraseVerificationFailed =>
+      translate('seed_phrase_verification_failed');
+  String get seedPhraseBackupVerified =>
+      translate('seed_phrase_backup_verified');
+  String get seedPhraseBackupVerificationComplete =>
+      translate('seed_phrase_backup_verification_complete');
+  String get confirmSecretPhraseTitle =>
+      translate('confirm_secret_phrase_title');
+  String get confirmSecretPhraseCheckOne =>
+      translate('confirm_secret_phrase_check_one');
+  String get confirmSecretPhraseCheckTwo =>
+      translate('confirm_secret_phrase_check_two');
+  String get confirmSecretPhraseCheckThree =>
+      translate('confirm_secret_phrase_check_three');
 
   static Map<String, String> resolvedStringsForLanguage(String languageCode) {
     switch (languageCode) {
@@ -821,6 +845,25 @@ class AppLocalizations {
     'community_telegram_subtitle': 'FOMOWL channel',
     'no_nfts_to_display': 'No NFTs to display',
     'more_nfts_available': 'NFTs are already shown on home',
+    'seed_phrase_secure_screen_notice':
+        'Screen capture is blocked while this recovery phrase is visible where supported.',
+    'i_backed_it_up': 'I backed it up',
+    'seed_phrase_verification_title': 'Confirm your backup',
+    'seed_phrase_verification_subtitle':
+        'Select the requested words to confirm you stored the phrase offline.',
+    'select_seed_phrase_word': 'Select word #{index}',
+    'verify_backup': 'Verify backup',
+    'seed_phrase_verification_failed':
+        'That backup check did not match. Try again.',
+    'seed_phrase_backup_verified': 'Seed phrase backup verified',
+    'seed_phrase_backup_verification_complete':
+        'Your recovery phrase backup has been confirmed.',
+    'confirm_secret_phrase_title': 'Confirm your secret phrase',
+    'confirm_secret_phrase_check_one': 'I am the only one that knows it.',
+    'confirm_secret_phrase_check_two':
+        'The secret phrase is not accessible to third parties.',
+    'confirm_secret_phrase_check_three':
+        'My funds can be stolen if someone else sees my recovery phrase.',
   };
 
   static const Map<String, String> _spanishStrings = {
@@ -1004,6 +1047,25 @@ class AppLocalizations {
     'community_telegram_subtitle': 'Canal de FOMOWL',
     'no_nfts_to_display': 'No hay NFTs para mostrar',
     'more_nfts_available': 'Los NFTs ya se muestran en inicio',
+    'seed_phrase_secure_screen_notice':
+        'La captura de pantalla se bloquea mientras esta frase de recuperación está visible donde sea compatible.',
+    'i_backed_it_up': 'Ya la guardé',
+    'seed_phrase_verification_title': 'Confirma tu respaldo',
+    'seed_phrase_verification_subtitle':
+        'Selecciona las palabras solicitadas para confirmar que guardaste la frase sin conexión.',
+    'select_seed_phrase_word': 'Selecciona la palabra #{index}',
+    'verify_backup': 'Verificar respaldo',
+    'seed_phrase_verification_failed':
+        'La comprobación del respaldo no coincide. Inténtalo de nuevo.',
+    'seed_phrase_backup_verified': 'Respaldo de frase verificado',
+    'seed_phrase_backup_verification_complete':
+        'Se confirmó el respaldo de tu frase de recuperación.',
+    'confirm_secret_phrase_title': 'Confirma tu frase secreta',
+    'confirm_secret_phrase_check_one': 'Soy la única persona que la conoce.',
+    'confirm_secret_phrase_check_two':
+        'La frase secreta no es accesible para terceros.',
+    'confirm_secret_phrase_check_three':
+        'Mis fondos pueden ser robados si otra persona ve mi frase de recuperación.',
   };
 
   static const Map<String, String> _frenchStrings = {
@@ -1190,6 +1252,26 @@ class AppLocalizations {
     'community_telegram_subtitle': 'Canal FOMOWL',
     'no_nfts_to_display': 'Aucun NFT à afficher',
     'more_nfts_available': 'Les NFT sont déjà affichés sur l\'accueil',
+    'seed_phrase_secure_screen_notice':
+        'La capture d\'écran est bloquée pendant que cette phrase de récupération est visible lorsque la plateforme le permet.',
+    'i_backed_it_up': 'Je l\'ai sauvegardée',
+    'seed_phrase_verification_title': 'Confirmez votre sauvegarde',
+    'seed_phrase_verification_subtitle':
+        'Sélectionnez les mots demandés pour confirmer que vous avez conservé la phrase hors ligne.',
+    'select_seed_phrase_word': 'Sélectionnez le mot n°{index}',
+    'verify_backup': 'Vérifier la sauvegarde',
+    'seed_phrase_verification_failed':
+        'La vérification de sauvegarde ne correspond pas. Réessayez.',
+    'seed_phrase_backup_verified': 'Sauvegarde de phrase vérifiée',
+    'seed_phrase_backup_verification_complete':
+        'La sauvegarde de votre phrase de récupération a été confirmée.',
+    'confirm_secret_phrase_title': 'Confirmez votre phrase secrète',
+    'confirm_secret_phrase_check_one':
+        'Je suis la seule personne à la connaître.',
+    'confirm_secret_phrase_check_two':
+        'La phrase secrète n’est pas accessible à des tiers.',
+    'confirm_secret_phrase_check_three':
+        'Mes fonds peuvent être volés si quelqu’un voit ma phrase de récupération.',
   };
 
   static const Map<String, String> _chineseStrings = {
@@ -1352,6 +1434,19 @@ class AppLocalizations {
     'community_telegram_subtitle': 'FOMOWL 频道',
     'no_nfts_to_display': '没有可显示的 NFT',
     'more_nfts_available': 'NFT 已显示在首页',
+    'seed_phrase_secure_screen_notice': '在支持的平台上，此恢复短语可见时会阻止屏幕截图。',
+    'i_backed_it_up': '我已备份',
+    'seed_phrase_verification_title': '确认你的备份',
+    'seed_phrase_verification_subtitle': '选择指定的单词以确认你已离线保存该短语。',
+    'select_seed_phrase_word': '选择第 {index} 个单词',
+    'verify_backup': '验证备份',
+    'seed_phrase_verification_failed': '备份校验不匹配，请重试。',
+    'seed_phrase_backup_verified': '助记词备份已验证',
+    'seed_phrase_backup_verification_complete': '你的恢复短语备份已确认。',
+    'confirm_secret_phrase_title': '确认你的秘密短语',
+    'confirm_secret_phrase_check_one': '只有我自己知道它。',
+    'confirm_secret_phrase_check_two': '该秘密短语不会被第三方获取。',
+    'confirm_secret_phrase_check_three': '如果别人看到我的恢复短语，我的资金可能被盗。',
   };
 
   static const Map<String, String> _arabicStrings = {
@@ -1528,6 +1623,24 @@ class AppLocalizations {
     'community_telegram_subtitle': 'قناة FOMOWL',
     'no_nfts_to_display': 'لا توجد NFT للعرض',
     'more_nfts_available': 'يتم عرض NFT بالفعل على الصفحة الرئيسية',
+    'seed_phrase_secure_screen_notice':
+        'يتم حظر التقاط الشاشة أثناء ظهور عبارة الاسترداد هذه حيثما كان ذلك مدعوماً.',
+    'i_backed_it_up': 'لقد حفظتها',
+    'seed_phrase_verification_title': 'أكد النسخة الاحتياطية',
+    'seed_phrase_verification_subtitle':
+        'اختر الكلمات المطلوبة للتأكد من أنك خزنت العبارة دون اتصال.',
+    'select_seed_phrase_word': 'اختر الكلمة رقم {index}',
+    'verify_backup': 'تحقق من النسخة الاحتياطية',
+    'seed_phrase_verification_failed':
+        'فشل التحقق من النسخة الاحتياطية. حاول مرة أخرى.',
+    'seed_phrase_backup_verified': 'تم التحقق من نسخة العبارة الاحتياطية',
+    'seed_phrase_backup_verification_complete':
+        'تم تأكيد النسخة الاحتياطية لعبارة الاسترداد.',
+    'confirm_secret_phrase_title': 'أكد عبارتك السرية',
+    'confirm_secret_phrase_check_one': 'أنا الشخص الوحيد الذي يعرفها.',
+    'confirm_secret_phrase_check_two': 'العبارة السرية غير متاحة لأي طرف ثالث.',
+    'confirm_secret_phrase_check_three':
+        'يمكن سرقة أموالي إذا رأى شخص آخر عبارة الاسترداد الخاصة بي.',
   };
 }
 

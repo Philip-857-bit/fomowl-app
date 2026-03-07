@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
-import '../../utils/toast_utils.dart';
 
 /// Create Wallet Screen - Secret Recovery Phrase
 /// Displays generated 12-word mnemonic phrase for new wallet
@@ -17,14 +17,18 @@ class CreateWalletScreen extends StatefulWidget {
   State<CreateWalletScreen> createState() => _CreateWalletScreenState();
 }
 
-class _CreateWalletScreenState extends State<CreateWalletScreen> {
+class _CreateWalletScreenState extends State<CreateWalletScreen>
+    with WidgetsBindingObserver {
   late List<String> _mnemonicWords;
   bool _isRevealed = false;
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _generateMnemonic();
+    unawaited(_screenCaptureGuard.enableProtection());
   }
 
   void _generateMnemonic() {
@@ -33,11 +37,14 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
     _mnemonicWords = mnemonic.split(' ');
   }
 
-  void _copyToClipboard() {
-    final l = AppLocalizations.of(context);
-    final phrase = _mnemonicWords.join(' ');
-    Clipboard.setData(ClipboardData(text: phrase));
-    ToastUtils.showSuccess(l.createWalletCopiedSeed);
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    for (var i = 0; i < _mnemonicWords.length; i++) {
+      _mnemonicWords[i] = '';
+    }
+    unawaited(_screenCaptureGuard.disableProtection());
+    super.dispose();
   }
 
   void _toggleReveal() {
@@ -214,29 +221,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
 
                 const SizedBox(height: 30),
 
-                // Copy to clipboard button
-                Center(
-                  child: TextButton.icon(
-                    onPressed: _isRevealed ? _copyToClipboard : null,
-                    icon: const Icon(
-                      Icons.copy,
-                      color: Color(0xFFEB3F3F),
-                      size: 20,
-                    ),
-                    label: Text(
-                      l.copyToClipboard,
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: _isRevealed
-                            ? const Color(0xFFEB3F3F)
-                            : Colors.white.withValues(alpha: 0.3),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
 
                 // Warning text
                 Center(
@@ -284,7 +269,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                       child: Container(
                         alignment: Alignment.center,
                         child: Text(
-                          'Continue',
+                          l.continue_,
                           style: GoogleFonts.outfit(
                             fontSize: 21,
                             fontWeight: FontWeight.w600,
