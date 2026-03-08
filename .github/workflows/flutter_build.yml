@@ -22,6 +22,7 @@ jobs:
       FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
       FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
       FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || '' }}
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -74,15 +75,52 @@ jobs:
         run: |
           set -euo pipefail
           echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+
+      - name: Prepare Flutter dart-defines
+        id: dart_defines
+        shell: bash
+        run: |
+          set -euo pipefail
+          sanitize() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+
+          {
+            echo "args<<EOF"
+            echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
+            echo "--dart-define=COINGECKO_API_BASE_URL=$(sanitize "$COINGECKO_API_BASE_URL")"
+            echo "--dart-define=CONNECTIVITY_CHECK_URL=$(sanitize "$CONNECTIVITY_CHECK_URL")"
+            echo "--dart-define=PUSH_NOTIFICATIONS_ENABLED=$(sanitize "$PUSH_NOTIFICATIONS_ENABLED")"
+            echo "--dart-define=FIREBASE_API_KEY=$(sanitize "$FIREBASE_API_KEY")"
+            echo "--dart-define=FIREBASE_ANDROID_APP_ID=$(sanitize "$FIREBASE_ANDROID_APP_ID")"
+            echo "--dart-define=FIREBASE_IOS_APP_ID=$(sanitize "$FIREBASE_IOS_APP_ID")"
+            echo "--dart-define=FIREBASE_MESSAGING_SENDER_ID=$(sanitize "$FIREBASE_MESSAGING_SENDER_ID")"
+            echo "--dart-define=FIREBASE_PROJECT_ID=$(sanitize "$FIREBASE_PROJECT_ID")"
+            echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
+            echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
         
       - name: Build APK (Fat)
-        run: flutter build apk --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL --dart-define=COINGECKO_API_BASE_URL=$COINGECKO_API_BASE_URL --dart-define=CONNECTIVITY_CHECK_URL=$CONNECTIVITY_CHECK_URL --dart-define=PUSH_NOTIFICATIONS_ENABLED=$PUSH_NOTIFICATIONS_ENABLED --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_ANDROID_APP_ID=$FIREBASE_ANDROID_APP_ID --dart-define=FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET --dart-define=FIREBASE_IOS_BUNDLE_ID=$FIREBASE_IOS_BUNDLE_ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          flutter build apk --release "${DART_DEFINES[@]}"
         
       - name: Build APK (Split ABI)
-        run: flutter build apk --split-per-abi --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL --dart-define=COINGECKO_API_BASE_URL=$COINGECKO_API_BASE_URL --dart-define=CONNECTIVITY_CHECK_URL=$CONNECTIVITY_CHECK_URL --dart-define=PUSH_NOTIFICATIONS_ENABLED=$PUSH_NOTIFICATIONS_ENABLED --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_ANDROID_APP_ID=$FIREBASE_ANDROID_APP_ID --dart-define=FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET --dart-define=FIREBASE_IOS_BUNDLE_ID=$FIREBASE_IOS_BUNDLE_ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          flutter build apk --split-per-abi --release "${DART_DEFINES[@]}"
         
       - name: Build App Bundle (AAB)
-        run: flutter build appbundle --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL --dart-define=COINGECKO_API_BASE_URL=$COINGECKO_API_BASE_URL --dart-define=CONNECTIVITY_CHECK_URL=$CONNECTIVITY_CHECK_URL --dart-define=PUSH_NOTIFICATIONS_ENABLED=$PUSH_NOTIFICATIONS_ENABLED --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_ANDROID_APP_ID=$FIREBASE_ANDROID_APP_ID --dart-define=FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET --dart-define=FIREBASE_IOS_BUNDLE_ID=$FIREBASE_IOS_BUNDLE_ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          flutter build appbundle --release "${DART_DEFINES[@]}"
         
       - name: Upload APKs
         uses: actions/upload-artifact@v4
