@@ -20,7 +20,27 @@ fun signingValue(propertyKey: String, envKey: String): String? {
         ?.takeIf { it.isNotEmpty() }
 }
 
-val releaseStoreFile = signingValue("storeFile", "KEYSTORE_FILE")
+fun resolveSigningStoreFile(path: String?): File? {
+    val trimmed = path?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val direct = java.io.File(trimmed)
+    if (direct.isAbsolute) {
+        return direct
+    }
+
+    val androidRootRelative = rootProject.file(trimmed)
+    if (androidRootRelative.exists()) {
+        return androidRootRelative
+    }
+
+    val moduleRelative = project.file(trimmed)
+    if (moduleRelative.exists()) {
+        return moduleRelative
+    }
+
+    return androidRootRelative
+}
+
+val releaseStoreFile = resolveSigningStoreFile(signingValue("storeFile", "KEYSTORE_FILE"))
 val releaseStorePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
 val releaseKeyAlias = signingValue("keyAlias", "KEY_ALIAS")
 val releaseKeyPassword = signingValue("keyPassword", "KEY_PASSWORD")
@@ -55,7 +75,7 @@ android {
     signingConfigs {
         if (hasReleaseSigning) {
             create("release") {
-                storeFile = file(releaseStoreFile!!)
+                storeFile = releaseStoreFile
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
