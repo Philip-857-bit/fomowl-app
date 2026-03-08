@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://fomowl-backend.onrender.com' }}
     
     steps:
       - uses: actions/checkout@v3
@@ -36,13 +38,13 @@ jobs:
         run: flutter analyze
         
       - name: Build APK (Fat)
-        run: flutter build apk --release
+        run: flutter build apk --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL
         
       - name: Build APK (Split ABI)
-        run: flutter build apk --split-per-abi --release
+        run: flutter build apk --split-per-abi --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL
         
       - name: Build App Bundle (AAB)
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL
         
       - name: Upload APKs
         uses: actions/upload-artifact@v4

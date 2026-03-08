@@ -37,6 +37,8 @@ flutter run \
   --dart-define=CONNECTIVITY_CHECK_URL=https://www.google.com
 ```
 
+GitHub Actions release builds inject `BACKEND_BASE_URL` automatically. Set the repository variable `BACKEND_BASE_URL` to override the default hosted backend used by the pipeline.
+
 ## Quality checks
 
 ```bash

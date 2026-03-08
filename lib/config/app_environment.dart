@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 class AppEnvironment {
   AppEnvironment._();
 
+  static const String _productionBackendBaseUrl =
+      'https://fomowl-backend.onrender.com';
+
   static final String backendBaseUrl = _resolveBackendBaseUrl();
   static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(
     key: 'COINGECKO_API_BASE_URL',
@@ -72,8 +75,10 @@ class AppEnvironment {
 
   static String _resolveBackendBaseUrl() {
     final configured = _resolveConfiguredUrl(
-      key: 'https://fomowl-backend.onrender.com',
-      fallback: _defaultBackendBaseUrl(),
+      key: 'BACKEND_BASE_URL',
+      fallback: kReleaseMode
+          ? _productionBackendBaseUrl
+          : _defaultBackendBaseUrl(),
     );
     return configured;
   }

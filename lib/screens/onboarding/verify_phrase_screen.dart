@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:math';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
@@ -20,13 +21,14 @@ class VerifyPhraseScreen extends StatefulWidget {
 }
 
 class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
-  final List<TextEditingController> _controllers = List.generate(
-    12,
-    (index) => TextEditingController(),
-  );
-  final List<FocusNode> _focusNodes = List.generate(12, (index) => FocusNode());
+  static const int _challengeWordCount = 3;
+
+  final List<TextEditingController> _controllers = [];
+  final List<FocusNode> _focusNodes = [];
+  final Random _random = Random();
 
   List<String>? _originalPhrase;
+  List<int> _verificationIndexes = const [];
   bool _isLoading = false;
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
@@ -41,14 +43,17 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Get the original phrase passed from previous screen
-    _originalPhrase ??=
-        ModalRoute.of(context)?.settings.arguments as List<String>?;
+    if (_originalPhrase == null) {
+      _originalPhrase =
+          ModalRoute.of(context)?.settings.arguments as List<String>?;
+      _initializeVerificationChallenge();
+    }
   }
 
   @override
   void dispose() {
-    for (var i = 0; i < _controllers.length; i++) {
-      _controllers[i].text = '';
+    for (final controller in _controllers) {
+      controller.text = '';
     }
     final words = _originalPhrase;
     if (words != null) {
@@ -67,8 +72,29 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
     super.dispose();
   }
 
+  void _initializeVerificationChallenge() {
+    final words = _originalPhrase;
+    if (words == null || words.isEmpty || _controllers.isNotEmpty) {
+      return;
+    }
+
+    final requestedCount = min(_challengeWordCount, words.length);
+    final indexes = List<int>.generate(words.length, (index) => index)
+      ..shuffle(_random);
+    _verificationIndexes = (indexes.take(requestedCount).toList()..sort());
+    _controllers.addAll(
+      List.generate(requestedCount, (_) => TextEditingController()),
+    );
+    _focusNodes.addAll(List.generate(requestedCount, (_) => FocusNode()));
+  }
+
   void _verifyAndContinue() {
     final l = AppLocalizations.of(context);
+    if (_originalPhrase == null || _verificationIndexes.isEmpty) {
+      ToastUtils.showError(l.seedPhraseVerificationFailed);
+      return;
+    }
+
     // Get entered words
     final enteredWords = _controllers
         .map((c) => c.text.trim().toLowerCase())
@@ -81,21 +107,10 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
     }
 
     // Verify against original phrase
-    if (_originalPhrase != null) {
-      final originalLower = _originalPhrase!
-          .map((w) => w.toLowerCase())
-          .toList();
-      bool isCorrect = true;
-
-      for (int i = 0; i < 12; i++) {
-        if (enteredWords[i] != originalLower[i]) {
-          isCorrect = false;
-          break;
-        }
-      }
-
-      if (!isCorrect) {
-        ToastUtils.showError(l.seedPhraseMismatch);
+    final originalLower = _originalPhrase!.map((w) => w.toLowerCase()).toList();
+    for (var i = 0; i < _verificationIndexes.length; i++) {
+      if (enteredWords[i] != originalLower[_verificationIndexes[i]]) {
+        ToastUtils.showError(l.seedPhraseVerificationFailed);
         return;
       }
     }
@@ -144,6 +159,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final challengeReady =
+        _originalPhrase != null && _verificationIndexes.isNotEmpty;
     return MobileScaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -170,7 +187,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                 // Title
                 Center(
                   child: Text(
-                    l.secretRecoveryPhrase,
+                    l.seedPhraseVerificationTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 28,
                       fontWeight: FontWeight.w600,
@@ -185,7 +202,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                 // Warning text
                 Center(
                   child: Text(
-                    l.seedPhraseShareWarning,
+                    l.seedPhraseVerificationSubtitle,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
@@ -197,70 +214,88 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
                 const SizedBox(height: 30),
 
-                // Input fields grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 2.5,
-                  ),
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
-                          width: 1,
+                if (!challengeReady)
+                  Center(
+                    child: Text(
+                      l.seedPhraseVerificationFailed,
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  Column(
+                    children: List.generate(_verificationIndexes.length, (
+                      index,
+                    ) {
+                      final wordNumber = _verificationIndexes[index] + 1;
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == _verificationIndexes.length - 1
+                              ? 0
+                              : 16,
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        color: const Color(0xFF2C2B2B).withValues(alpha: 0.3),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Row(
-                        children: [
-                          Text(
-                            '${index + 1}.',
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.white.withValues(alpha: 0.5),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1,
                             ),
+                            borderRadius: BorderRadius.circular(16),
+                            color: const Color(
+                              0xFF2C2B2B,
+                            ).withValues(alpha: 0.3),
                           ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: TextField(
-                              controller: _controllers[index],
-                              focusNode: _focusNodes[index],
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
-                              decoration: const InputDecoration(
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                                isDense: true,
-                              ),
-                              textInputAction: index < 11
-                                  ? TextInputAction.next
-                                  : TextInputAction.done,
-                              onSubmitted: (_) {
-                                if (index < 11) {
-                                  _focusNodes[index + 1].requestFocus();
-                                } else {
-                                  _verifyAndContinue();
-                                }
-                              },
-                            ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l.selectSeedPhraseWord(wordNumber),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _controllers[index],
+                                focusNode: _focusNodes[index],
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                ),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                  isDense: true,
+                                ),
+                                textInputAction:
+                                    index < _verificationIndexes.length - 1
+                                    ? TextInputAction.next
+                                    : TextInputAction.done,
+                                onSubmitted: (_) {
+                                  if (index < _verificationIndexes.length - 1) {
+                                    _focusNodes[index + 1].requestFocus();
+                                  } else {
+                                    _verifyAndContinue();
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
 
                 const SizedBox(height: 30),
 
@@ -269,7 +304,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                 // Instruction text
                 Center(
                   child: Text(
-                    l.verifyAllWords,
+                    l.seedPhraseVerificationSubtitle,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
@@ -286,7 +321,9 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                   width: double.infinity,
                   height: 53,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verifyAndContinue,
+                    onPressed: _isLoading || !challengeReady
+                        ? null
+                        : _verifyAndContinue,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -321,7 +358,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 ),
                               )
                             : Text(
-                                l.continue_,
+                                l.verifyBackup,
                                 style: GoogleFonts.outfit(
                                   fontSize: 21,
                                   fontWeight: FontWeight.w600,
