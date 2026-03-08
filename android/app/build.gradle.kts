@@ -1,4 +1,6 @@
+import java.io.File
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
@@ -22,7 +24,7 @@ fun signingValue(propertyKey: String, envKey: String): String? {
 
 fun resolveSigningStoreFile(path: String?): File? {
     val trimmed = path?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-    val direct = java.io.File(trimmed)
+    val direct = File(trimmed)
     if (direct.isAbsolute) {
         return direct
     }
@@ -60,8 +62,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
 
     defaultConfig {
