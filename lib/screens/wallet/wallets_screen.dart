@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/wallet_account.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
 import 'widgets/manage_wallet/create_wallet_action_sheet.dart';
@@ -90,7 +91,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
       await _loadWallets();
       ToastUtils.showSuccess(l.newWalletCreated);
     } catch (e) {
-      ToastUtils.showError(l.unableToCreateWallet(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.unableToCreateWallet('Please try again.'),
+        ),
+      );
     }
   }
 
@@ -104,7 +110,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
       ToastUtils.showSuccess(l.walletSetAsActive(account.name));
     } catch (e) {
       if (mounted) setState(() => _loading = false);
-      ToastUtils.showError(l.unableToSwitchWallet(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.unableToSwitchWallet('Please try again.'),
+        ),
+      );
     }
   }
 
@@ -219,7 +230,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
       await _loadWallets();
       ToastUtils.showSuccess(l.walletRenamed);
     } catch (e) {
-      ToastUtils.showError(l.unableToRenameWallet(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.unableToRenameWallet('Please try again.'),
+        ),
+      );
     }
   }
 
@@ -267,7 +283,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
       await _loadWallets();
       ToastUtils.showSuccess(l.walletRemoved);
     } catch (e) {
-      ToastUtils.showError(l.unableToRemoveWallet(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.unableToRemoveWallet('Please try again.'),
+        ),
+      );
     }
   }
 
@@ -328,7 +349,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
         ),
       );
     } catch (e) {
-      ToastUtils.showError(l.unableToLoadPrivateKey(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.unableToLoadPrivateKey('Please try again.'),
+        ),
+      );
     }
   }
 

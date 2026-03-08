@@ -1,0 +1,4 @@
+storeFile=../keystore/owllet-release.jks
+storePassword=change_me
+keyAlias=owllet
+keyPassword=change_me

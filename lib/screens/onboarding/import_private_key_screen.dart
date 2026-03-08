@@ -7,6 +7,7 @@ import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -110,7 +111,12 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
         setState(() {
           _isLoading = false;
         });
-        _showError(l.importWalletFailed(e.toString()));
+        _showError(
+          AppErrorUtils.userMessage(
+            e,
+            fallback: l.importWalletFailed('Please try again.'),
+          ),
+        );
       }
     }
   }

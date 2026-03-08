@@ -9,6 +9,7 @@ import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/screen_capture_guard.dart';
 import 'package:provider/provider.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 
 /// Verify Phrase Screen
@@ -145,7 +146,12 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError(l.walletCreationError(e.toString()));
+        ToastUtils.showError(
+          AppErrorUtils.userMessage(
+            e,
+            fallback: l.walletCreationError('Please try again.'),
+          ),
+        );
       }
     } finally {
       if (mounted) {

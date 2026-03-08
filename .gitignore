@@ -52,3 +52,10 @@ app.*.map.json
 # API Keys and secrets
 secrets.dart
 api_keys.dart
+
+# Android release signing
+android/key.properties
+keystore/
+*.jks
+*.keystore
+*.p12

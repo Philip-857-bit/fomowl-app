@@ -1,12 +1,37 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
+fun signingValue(propertyKey: String, envKey: String): String? {
+    return (keystoreProperties.getProperty(propertyKey) ?: System.getenv(envKey))
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+}
+
+val releaseStoreFile = signingValue("storeFile", "KEYSTORE_FILE")
+val releaseStorePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "KEY_PASSWORD")
+val hasReleaseSigning =
+    releaseStoreFile != null &&
+    releaseStorePassword != null &&
+    releaseKeyAlias != null &&
+    releaseKeyPassword != null
+
 android {
-    namespace = "com.fomowl.fomowl_wallet"
+    namespace = "com.fomowl.owllet"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,21 +45,32 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.fomowl.fomowl_wallet"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.fomowl.owllet"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            if (!hasReleaseSigning) {
+                throw GradleException(
+                    "Release signing is not configured. Provide android/key.properties or KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD."
+                )
+            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.fomowl.fomowl_wallet
+package com.fomowl.owllet
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

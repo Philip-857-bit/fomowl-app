@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class AppEnvironment {
   AppEnvironment._();
@@ -15,6 +16,10 @@ class AppEnvironment {
     key: 'CONNECTIVITY_CHECK_URL',
     fallback: 'https://www.google.com',
   );
+  static final bool pushNotificationsEnabled =
+      _resolvePushNotificationsEnabled();
+  static final FirebaseOptions? firebaseOptions =
+      _resolveFirebaseOptionsForCurrentPlatform();
 
   static Uri api(String path, [Map<String, String>? queryParameters]) {
     return _buildUri('/api$path', queryParameters);
@@ -115,5 +120,57 @@ class AppEnvironment {
 
   static String _normalizeUrl(String value) {
     return value.endsWith('/') ? value.substring(0, value.length - 1) : value;
+  }
+
+  static bool _resolvePushNotificationsEnabled() {
+    final configured = const String.fromEnvironment(
+      'PUSH_NOTIFICATIONS_ENABLED',
+    ).trim();
+    if (configured.isNotEmpty) {
+      return configured.toLowerCase() == 'true';
+    }
+    return firebaseOptions != null;
+  }
+
+  static FirebaseOptions? _resolveFirebaseOptionsForCurrentPlatform() {
+    if (kIsWeb) {
+      return null;
+    }
+
+    final platformPrefix = switch (defaultTargetPlatform) {
+      TargetPlatform.android => 'ANDROID',
+      TargetPlatform.iOS => 'IOS',
+      _ => '',
+    };
+    if (platformPrefix.isEmpty) {
+      return null;
+    }
+
+    final apiKey = _optionalEnv('FIREBASE_API_KEY');
+    final appId = _optionalEnv('FIREBASE_${platformPrefix}_APP_ID');
+    final senderId = _optionalEnv('FIREBASE_MESSAGING_SENDER_ID');
+    final projectId = _optionalEnv('FIREBASE_PROJECT_ID');
+    if (apiKey == null ||
+        appId == null ||
+        senderId == null ||
+        projectId == null) {
+      return null;
+    }
+
+    return FirebaseOptions(
+      apiKey: apiKey,
+      appId: appId,
+      messagingSenderId: senderId,
+      projectId: projectId,
+      storageBucket: _optionalEnv('FIREBASE_STORAGE_BUCKET'),
+      iosBundleId: defaultTargetPlatform == TargetPlatform.iOS
+          ? _optionalEnv('FIREBASE_IOS_BUNDLE_ID')
+          : null,
+    );
+  }
+
+  static String? _optionalEnv(String key) {
+    final value = String.fromEnvironment(key).trim();
+    return value.isEmpty ? null : value;
   }
 }

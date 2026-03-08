@@ -12,6 +12,7 @@ import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../widgets/token_icon.dart';
@@ -231,7 +232,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       });
       ToastUtils.showSuccess(l.tokenAdded(token.symbol));
     } catch (e) {
-      ToastUtils.showError(l.tokenAddFailed(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.tokenAddFailed('Please try again.'),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isResolvingContract = false);
@@ -327,7 +333,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       setState(() => _hasChanges = true);
       ToastUtils.showSuccess(l.tokenAdded(tokenToAdd.symbol));
     } catch (e) {
-      ToastUtils.showError(l.tokenAddFailed(e.toString()));
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.tokenAddFailed('Please try again.'),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isResolvingContract = false);
     }

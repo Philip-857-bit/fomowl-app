@@ -8,10 +8,8 @@ import 'package:provider/provider.dart';
 import '../../models/token.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
-import '../profile/coming_soon_overlay.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
-import 'widgets/send/transfer_type_toggle.dart';
 import 'widgets/receive/receive_warning_banner.dart';
 import 'widgets/receive/qr_code_card.dart';
 import 'widgets/receive/address_display_card.dart';
@@ -38,7 +36,6 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
     }
   }
 
-  final bool _isInterTransfer = false;
   String _walletAddress = '';
   final WalletService _walletService = WalletService();
 
@@ -100,58 +97,21 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: TransferTypeToggle(
-                  isInterTransfer: _isInterTransfer,
-                  onExternalTap: () {},
-                  onInterTransferTap: () => ComingSoonOverlay.show(
-                    context,
-                    title: l.interTransferTitle,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: ReceiveWarningBanner(
-                  message: _isInterTransfer
-                      ? l.receiveInterTransferWarning
-                      : l.receiveExternalWarning,
-                  icon: _isInterTransfer
-                      ? Icons.info_outline
-                      : Icons.warning_amber_rounded,
-                  iconColor: _isInterTransfer
-                      ? Colors.green
-                      : AppColors.accentRed,
-                  borderColor: _isInterTransfer
-                      ? Colors.green
-                      : AppColors.accentRed,
-                ),
+                child: ReceiveWarningBanner(message: l.receiveExternalWarning),
               ),
               const SizedBox(height: 32),
 
-              QrCodeCard(
-                data: _isInterTransfer
-                    ? 'fomowl:sample.user@fomowl.com'
-                    : _walletAddress,
-              ),
+              QrCodeCard(data: _walletAddress),
               const SizedBox(height: 32),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: AddressDisplayCard(
-                  value: _isInterTransfer
-                      ? 'sample.user@fomowl.com'
-                      : _walletAddress,
-                  isInterTransfer: _isInterTransfer,
+                  value: _walletAddress,
+                  isInterTransfer: false,
                   onCopy: () {
-                    final copyData = _isInterTransfer
-                        ? 'sample.user@fomowl.com'
-                        : _walletAddress;
-                    Clipboard.setData(ClipboardData(text: copyData));
-                    ToastUtils.showSuccess(
-                      _isInterTransfer ? l.usernameCopied : l.addressCopied,
-                    );
+                    Clipboard.setData(ClipboardData(text: _walletAddress));
+                    ToastUtils.showSuccess(l.addressCopied);
                   },
                 ),
               ),
@@ -166,13 +126,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                 child: ReceiveActionButtons(
                   onShare: () => Navigator.pop(context),
                   onCopy: () {
-                    final copyData = _isInterTransfer
-                        ? 'sample.user@fomowl.com'
-                        : _walletAddress;
-                    Clipboard.setData(ClipboardData(text: copyData));
-                    ToastUtils.showSuccess(
-                      _isInterTransfer ? l.usernameCopied : l.addressCopied,
-                    );
+                    Clipboard.setData(ClipboardData(text: _walletAddress));
+                    ToastUtils.showSuccess(l.addressCopied);
                   },
                 ),
               ),

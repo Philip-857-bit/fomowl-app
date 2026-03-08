@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/nft_service.dart';
+import '../../services/push_notification_registration_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
@@ -41,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final TokenVisibilityService _tokenVisibilityService =
       TokenVisibilityService();
   final NftService _nftService = NftService();
+  final PushNotificationRegistrationService _pushRegistrationService =
+      PushNotificationRegistrationService();
   BlockchainService? _blockchain;
 
   String? _walletName;
@@ -130,6 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (address != null && address.isNotEmpty) {
+        unawaited(_pushRegistrationService.syncForActiveWallet());
         await Future.wait([
           _fetchRealBalances(address),
           _fetchNftPreview(address),

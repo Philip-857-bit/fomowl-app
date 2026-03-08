@@ -7,6 +7,7 @@ import '../../services/blockchain_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
+import '../../utils/app_error_utils.dart';
 import 'widgets/transfer_confirmation/transfer_header.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/transaction_details_card.dart';
@@ -132,7 +133,9 @@ class _TransferConfirmationScreenState
     } catch (e) {
       if (mounted) {
         final l = AppLocalizations.of(context);
-        ToastUtils.showError('${l.transactionFailed}: ${e.toString()}');
+        ToastUtils.showError(
+          AppErrorUtils.userMessage(e, fallback: l.transactionFailed),
+        );
         setState(() => _isConfirming = false);
       }
     }

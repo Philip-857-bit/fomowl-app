@@ -92,37 +92,6 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
-  // Map token symbol to CoinGecko ID
-  String _tokenToCoinGeckoId(String symbol) {
-    switch (symbol.toUpperCase()) {
-      case 'ETH':
-        return 'ethereum';
-      case 'BTC':
-        return 'bitcoin';
-      case 'BNB':
-        return 'binancecoin';
-      case 'USDC':
-        return 'usd-coin';
-      case 'USDT':
-        return 'tether';
-      case 'MATIC':
-        return 'matic-network';
-      case 'AVAX':
-        return 'avalanche-2';
-      case 'FTM':
-        return 'fantom';
-      case 'CRO':
-        return 'crypto-com-chain';
-      case 'XDAI':
-      case 'DAI':
-        return 'xdai';
-      case 'KLAY':
-        return 'klay-token';
-      default:
-        return '';
-    }
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -215,16 +184,16 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   Future<void> _fetchTokenStats() async {
     setState(() => _isLoadingInfo = true);
     final coinId = _resolveCoinGeckoId();
-    if (coinId == null || coinId.isEmpty) {
-      if (!mounted) return;
-      setState(() {
-        _marketData = null;
-        _isLoadingInfo = false;
-      });
-      return;
-    }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final stats = await blockchain.getTokenMarketData(coinId);
+    TokenMarketData? stats;
+    if (coinId != null && coinId.isNotEmpty) {
+      stats = await blockchain.getTokenMarketData(coinId);
+    } else if (_token?.contractAddress != null &&
+        _token!.contractAddress!.isNotEmpty) {
+      stats = await blockchain.getBackendTokenMarketData(
+        _token!.contractAddress!,
+      );
+    }
     if (!mounted) return;
     setState(() {
       _marketData = stats;
@@ -270,9 +239,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         blockchain.activeChain.coinGeckoId!.isNotEmpty) {
       return blockchain.activeChain.coinGeckoId!;
     }
-    final mapped = _tokenToCoinGeckoId(token?.symbol ?? '');
-    if (mapped.isEmpty) return null;
-    return mapped;
+    return null;
   }
 
   void _reloadTokenMarketData({bool force = false}) {

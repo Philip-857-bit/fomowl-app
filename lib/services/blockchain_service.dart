@@ -293,6 +293,34 @@ class BlockchainService extends ChangeNotifier {
     );
   }
 
+  Future<TokenMarketData?> getBackendTokenMarketData(
+    String contractAddress,
+  ) async {
+    final normalized = contractAddress.trim();
+    final addressRegex = RegExp(r'^0x[a-fA-F0-9]{40}$');
+    if (!addressRegex.hasMatch(normalized)) return null;
+
+    final url = AppEnvironment.blockchain(
+      '/${_activeChain.chainId}/token-details/$normalized',
+    );
+
+    try {
+      final response = await http.get(url).timeout(_backendDiscoveryTimeout);
+      if (response.statusCode != 200) return null;
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return TokenMarketData(
+        priceUsd: _toDouble(data['priceUsd']),
+        marketCapUsd: _nullableDouble(data['marketCapUsd']),
+        totalSupply: null,
+        circulatingSupply: null,
+        genesisDate: (data['createdAt'] as String?)?.trim(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ─── BALANCE FETCHING ────────────────────────────
 
   Future<double> getNativeBalance(String address) async {
@@ -956,6 +984,13 @@ class BlockchainService extends ChangeNotifier {
     if (v is num) return v.toDouble();
     if (v is String) return double.tryParse(v) ?? 0;
     return 0;
+  }
+
+  double? _nullableDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
   }
 
   int? _toInt(dynamic v) {

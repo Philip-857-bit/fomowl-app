@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1007668217556",
+    "project_id": "owllet-fc8d4",
+    "storage_bucket": "owllet-fc8d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1007668217556:android:955d1ba7f084535e189d41",
+        "android_client_info": {
+          "package_name": "com.fomowl.owllet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDde5o8CdNoosbEcotADpVOBbHGxfjRj2w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

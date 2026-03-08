@@ -12,6 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://fomowl-backend.onrender.com' }}
+      COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
+      CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
+      PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+      FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY || '' }}
+      FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID || '' }}
+      FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID || secrets.FIREBASE_IOS_APP_ID || '' }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID || '' }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
+      FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || '' }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
     
     steps:
       - uses: actions/checkout@v3
@@ -36,15 +50,39 @@ jobs:
 
       - name: Run Analyze
         run: flutter analyze
+
+      - name: Configure Android release signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "KEYSTORE_BASE64 is not configured." >&2
+            exit 1
+          fi
+          mkdir -p keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > keystore/owllet-release.jks
+          cat > android/key.properties <<EOF
+          storeFile=../keystore/owllet-release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Configure Firebase Android services
+        if: env.GOOGLE_SERVICES_JSON_BASE64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
         
       - name: Build APK (Fat)
-        run: flutter build apk --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL
+        run: flutter build apk --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL --dart-define=COINGECKO_API_BASE_URL=$COINGECKO_API_BASE_URL --dart-define=CONNECTIVITY_CHECK_URL=$CONNECTIVITY_CHECK_URL --dart-define=PUSH_NOTIFICATIONS_ENABLED=$PUSH_NOTIFICATIONS_ENABLED --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_ANDROID_APP_ID=$FIREBASE_ANDROID_APP_ID --dart-define=FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET --dart-define=FIREBASE_IOS_BUNDLE_ID=$FIREBASE_IOS_BUNDLE_ID
         
       - name: Build APK (Split ABI)
-        run: flutter build apk --split-per-abi --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL
+        run: flutter build apk --split-per-abi --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL --dart-define=COINGECKO_API_BASE_URL=$COINGECKO_API_BASE_URL --dart-define=CONNECTIVITY_CHECK_URL=$CONNECTIVITY_CHECK_URL --dart-define=PUSH_NOTIFICATIONS_ENABLED=$PUSH_NOTIFICATIONS_ENABLED --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_ANDROID_APP_ID=$FIREBASE_ANDROID_APP_ID --dart-define=FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET --dart-define=FIREBASE_IOS_BUNDLE_ID=$FIREBASE_IOS_BUNDLE_ID
         
       - name: Build App Bundle (AAB)
-        run: flutter build appbundle --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL
+        run: flutter build appbundle --release --dart-define=BACKEND_BASE_URL=$BACKEND_BASE_URL --dart-define=COINGECKO_API_BASE_URL=$COINGECKO_API_BASE_URL --dart-define=CONNECTIVITY_CHECK_URL=$CONNECTIVITY_CHECK_URL --dart-define=PUSH_NOTIFICATIONS_ENABLED=$PUSH_NOTIFICATIONS_ENABLED --dart-define=FIREBASE_API_KEY=$FIREBASE_API_KEY --dart-define=FIREBASE_ANDROID_APP_ID=$FIREBASE_ANDROID_APP_ID --dart-define=FIREBASE_IOS_APP_ID=$FIREBASE_IOS_APP_ID --dart-define=FIREBASE_MESSAGING_SENDER_ID=$FIREBASE_MESSAGING_SENDER_ID --dart-define=FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID --dart-define=FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET --dart-define=FIREBASE_IOS_BUNDLE_ID=$FIREBASE_IOS_BUNDLE_ID
         
       - name: Upload APKs
         uses: actions/upload-artifact@v4

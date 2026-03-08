@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/app_environment.dart';
+import '../utils/app_error_utils.dart';
 import 'storage_service.dart';
 import 'wallet_service.dart';
 
@@ -46,7 +47,7 @@ class WalletBackendAuthService {
       throw Exception(
         _extractError(
           challengeResponse.body,
-          'Failed to create wallet challenge.',
+          'Unable to verify wallet ownership.',
         ),
       );
     }
@@ -59,7 +60,7 @@ class WalletBackendAuthService {
         challenge.isEmpty ||
         message == null ||
         message.isEmpty) {
-      throw Exception('Backend challenge response was incomplete.');
+      throw Exception('Unable to verify wallet ownership.');
     }
 
     final signature = await _walletService.signMessageForAddress(
@@ -81,7 +82,10 @@ class WalletBackendAuthService {
 
     if (verifyResponse.statusCode != 200) {
       throw Exception(
-        _extractError(verifyResponse.body, 'Wallet authentication failed.'),
+        _extractError(
+          verifyResponse.body,
+          'Unable to verify wallet ownership.',
+        ),
       );
     }
 
@@ -92,7 +96,7 @@ class WalletBackendAuthService {
         token.isEmpty ||
         expiresAt == null ||
         expiresAt.isEmpty) {
-      throw Exception('Backend verification response was incomplete.');
+      throw Exception('Unable to verify wallet ownership.');
     }
 
     await _storageService.saveBackendSession(
@@ -132,15 +136,6 @@ class WalletBackendAuthService {
   }
 
   String _extractError(String body, String fallback) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final message = decoded['message']?.toString();
-        if (message != null && message.isNotEmpty) {
-          return message;
-        }
-      }
-    } catch (_) {}
-    return fallback;
+    return AppErrorUtils.backendMessage(body, fallback: fallback);
   }
 }
