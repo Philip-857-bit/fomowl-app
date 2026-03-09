@@ -129,28 +129,28 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                      child: Container(
-                        alignment: Alignment.center,
-                        child: _isNavigating
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                'Enter wallet',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: _isNavigating
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
                               ),
-                      ),
+                            )
+                          : Text(
+                              'Enter wallet',
+                              style: GoogleFonts.outfit(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
+                ),
               ),
             ),
 
