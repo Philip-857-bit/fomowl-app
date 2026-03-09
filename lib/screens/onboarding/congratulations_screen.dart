@@ -1,12 +1,43 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 
 /// Congratulations Screen
 /// Success screen after completing wallet setup
-class CongratulationsScreen extends StatelessWidget {
+class CongratulationsScreen extends StatefulWidget {
   const CongratulationsScreen({super.key});
+
+  @override
+  State<CongratulationsScreen> createState() => _CongratulationsScreenState();
+}
+
+class _CongratulationsScreenState extends State<CongratulationsScreen> {
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
+  bool _isNavigating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.disableProtection());
+  }
+
+  Future<void> _enterWallet() async {
+    if (_isNavigating) return;
+    setState(() => _isNavigating = true);
+
+    try {
+      await _screenCaptureGuard.disableProtection();
+    } catch (_) {
+      // Best effort only.
+    }
+
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,14 +111,7 @@ class CongratulationsScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 53,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to home screen and clear all previous routes
-                    Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      '/home',
-                      (route) => false,
-                    );
-                  },
+                  onPressed: _isNavigating ? null : _enterWallet,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
@@ -105,19 +129,28 @@ class CongratulationsScreen extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Enter wallet',
-                        style: GoogleFonts.outfit(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: _isNavigating
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Enter wallet',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 21,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
                     ),
                   ),
-                ),
               ),
             ),
 

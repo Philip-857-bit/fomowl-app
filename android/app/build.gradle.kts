@@ -52,6 +52,15 @@ val hasReleaseSigning =
     releaseKeyAlias != null &&
     releaseKeyPassword != null
 
+fun isReleaseTaskRequested(): Boolean {
+    val requestedTasks = gradle.startParameter.taskNames
+    if (requestedTasks.isEmpty()) return false
+    return requestedTasks.any { taskName ->
+        val normalized = taskName.lowercase()
+        normalized.contains("release") || normalized.contains("publish")
+    }
+}
+
 android {
     namespace = "com.fomowl.owllet"
     compileSdk = flutter.compileSdkVersion
@@ -89,14 +98,17 @@ android {
 
     buildTypes {
         release {
-            if (!hasReleaseSigning) {
-                throw GradleException(
-                    "Release signing is not configured. Provide android/key.properties or KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD."
-                )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
             }
-            signingConfig = signingConfigs.getByName("release")
         }
     }
+}
+
+if (isReleaseTaskRequested() && !hasReleaseSigning) {
+    throw GradleException(
+        "Release signing is not configured. Provide android/key.properties or KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD."
+    )
 }
 
 flutter {

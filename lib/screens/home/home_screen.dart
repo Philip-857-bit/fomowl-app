@@ -15,6 +15,7 @@ import '../../services/blockchain_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/nft_service.dart';
 import '../../services/push_notification_registration_service.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
@@ -45,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final NftService _nftService = NftService();
   final PushNotificationRegistrationService _pushRegistrationService =
       PushNotificationRegistrationService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   BlockchainService? _blockchain;
 
   String? _walletName;
@@ -67,6 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      unawaited(_screenCaptureGuard.disableProtection());
       unawaited(_checkConnectivity());
       unawaited(_loadWalletData());
     });

@@ -21,13 +21,20 @@ abstract class PushMessagingClient {
 
 class FirebasePushMessagingClient implements PushMessagingClient {
   FirebasePushMessagingClient({FirebaseMessaging? messaging})
-    : _messaging = messaging ?? FirebaseMessaging.instance;
+    : _providedMessaging = messaging;
 
-  final FirebaseMessaging _messaging;
+  final FirebaseMessaging? _providedMessaging;
+  FirebaseMessaging? _messaging;
   bool _initialized = false;
 
   @override
-  Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
+  Stream<String> get onTokenRefresh {
+    final messaging = _messaging;
+    if (messaging == null) {
+      return const Stream<String>.empty();
+    }
+    return messaging.onTokenRefresh;
+  }
 
   @override
   Future<bool> initialize() async {
@@ -41,6 +48,7 @@ class FirebasePushMessagingClient implements PushMessagingClient {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(options: options);
       }
+      _messaging = _providedMessaging ?? FirebaseMessaging.instance;
       _initialized = true;
       return true;
     } catch (error, stackTrace) {
@@ -52,7 +60,11 @@ class FirebasePushMessagingClient implements PushMessagingClient {
 
   @override
   Future<bool> requestPermission() async {
-    final settings = await _messaging.requestPermission(
+    final messaging = _messaging;
+    if (messaging == null) {
+      return false;
+    }
+    final settings = await messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
@@ -64,7 +76,11 @@ class FirebasePushMessagingClient implements PushMessagingClient {
 
   @override
   Future<String?> getToken() {
-    return _messaging.getToken();
+    final messaging = _messaging;
+    if (messaging == null) {
+      return Future.value(null);
+    }
+    return messaging.getToken();
   }
 }
 
