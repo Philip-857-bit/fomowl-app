@@ -23,7 +23,18 @@ class WalletService {
 
   /// Validate a mnemonic phrase
   bool validateMnemonic(String mnemonic) {
-    return bip39.validateMnemonic(mnemonic);
+    final normalizedMnemonic = normalizeMnemonic(mnemonic);
+    if (normalizedMnemonic.isEmpty) return false;
+    return bip39.validateMnemonic(normalizedMnemonic);
+  }
+
+  String normalizeMnemonic(String mnemonic) {
+    return mnemonic
+        .trim()
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .join(' ');
   }
 
   /// Create wallet from mnemonic
@@ -33,12 +44,13 @@ class WalletService {
     String? walletName,
     int derivationIndex = 0,
   }) async {
-    if (!validateMnemonic(mnemonic)) {
+    final normalizedMnemonic = normalizeMnemonic(mnemonic);
+    if (!validateMnemonic(normalizedMnemonic)) {
       throw Exception('Invalid mnemonic phrase');
     }
 
     // Generate seed from mnemonic
-    final seed = bip39.mnemonicToSeed(mnemonic);
+    final seed = bip39.mnemonicToSeed(normalizedMnemonic);
 
     // Derive Ethereum wallet (m/44'/60'/0'/0/0)
     final root = bip32.BIP32.fromSeed(seed);
@@ -60,7 +72,7 @@ class WalletService {
     await _storage.saveWallet(
       address: address,
       privateKey: privateKey,
-      mnemonic: mnemonic,
+      mnemonic: normalizedMnemonic,
       walletName: walletName ?? 'Wallet ${derivationIndex + 1}',
       origin: WalletOrigin.derived,
       derivationIndex: derivationIndex,

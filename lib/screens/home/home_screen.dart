@@ -65,8 +65,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkConnectivity();
-    _loadWalletData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_checkConnectivity());
+      unawaited(_loadWalletData());
+    });
   }
 
   @override
@@ -120,6 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      await blockchain.init();
       _lastChainId = blockchain.activeChain.chainId;
       await _loadHiddenTokens(_lastChainId!);
       final address = await _walletService.getCurrentWalletAddress();
@@ -134,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       if (address != null && address.isNotEmpty) {
-        unawaited(_pushRegistrationService.syncForActiveWallet());
+        unawaited(_safeSyncPushRegistration());
         await Future.wait([
           _fetchRealBalances(address),
           _fetchNftPreview(address),
@@ -162,6 +166,15 @@ class _HomeScreenState extends State<HomeScreen> {
           _totalBalance = 0.0;
         });
       }
+    }
+  }
+
+  Future<void> _safeSyncPushRegistration() async {
+    try {
+      await _pushRegistrationService.syncForActiveWallet();
+    } catch (error, stackTrace) {
+      debugPrint('Push registration failed during home load: $error');
+      debugPrint(stackTrace.toString());
     }
   }
 

@@ -51,14 +51,18 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
     final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
     if (clipboardData != null && clipboardData.text != null) {
       setState(() {
-        _secretPhraseController.text = clipboardData.text!;
+        _secretPhraseController.text = _walletService.normalizeMnemonic(
+          clipboardData.text!,
+        );
       });
     }
   }
 
   Future<void> _importWallet() async {
     final l = AppLocalizations.of(context);
-    final phrase = _secretPhraseController.text.trim();
+    final phrase = _walletService.normalizeMnemonic(
+      _secretPhraseController.text,
+    );
     final walletName = _walletNameController.text.trim();
 
     if (phrase.isEmpty) {
