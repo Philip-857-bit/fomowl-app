@@ -41,22 +41,23 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final l = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       final walletAddress = await _walletService.getCurrentWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) {
         throw Exception('Wallet not connected');
       }
+
+      _walletAddress = walletAddress;
       final profile = await _referralService.getProfile(walletAddress);
       if (!mounted) return;
       setState(() {
-        _walletAddress = walletAddress;
         _profile = profile;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
+      final l = AppLocalizations.of(context);
       setState(() => _loading = false);
       debugPrint('Unable to load referrals: $e');
       ToastUtils.showError(l.unableToLoadReferrals);
@@ -67,12 +68,16 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     final l = AppLocalizations.of(context);
     final walletAddress = _walletAddress;
     final code = _referralInput.text.trim().toUpperCase();
-    if (walletAddress == null || walletAddress.isEmpty) return;
+    if (walletAddress == null || walletAddress.isEmpty) {
+      ToastUtils.showError(l.unableToLoadReferrals);
+      await _loadProfile();
+      return;
+    }
     if (code.isEmpty) {
       ToastUtils.showInfo(l.enterReferralCodePrompt);
       return;
     }
-    if (_profile != null && _profile!.referralCode == code) {
+    if (_profile != null && _profile!.referralCode.toUpperCase() == code) {
       ToastUtils.showError(l.ownReferralCodeError);
       return;
     }
@@ -91,7 +96,12 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       await _loadProfile();
     } catch (e) {
       debugPrint('Unable to add referral: $e');
-      ToastUtils.showError(l.unableToAddReferral);
+      final message = e.toString().replaceFirst('Exception: ', '').trim();
+      ToastUtils.showError(
+        message.isEmpty || message == e.toString()
+            ? l.unableToAddReferral
+            : message,
+      );
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
