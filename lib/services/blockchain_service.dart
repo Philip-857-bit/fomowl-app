@@ -23,7 +23,7 @@ class BlockchainService extends ChangeNotifier {
   TokenPriceService? _priceService;
 
   // Configuration Constants
-  static const Duration _backendDiscoveryTimeout = Duration(seconds: 8);
+  static const Duration _backendDiscoveryTimeout = Duration(seconds: 15);
   final StorageService _storageService = StorageService();
   final WalletBackendAuthService _walletBackendAuthService =
       WalletBackendAuthService();

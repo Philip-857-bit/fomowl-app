@@ -255,6 +255,17 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       });
       return;
     }
+    if (trimmed.length < 2) {
+      final fallbackLocal = TokenManagementQueryHelper.filterLocalTokens(
+        _tokens,
+        trimmed,
+      );
+      setState(() {
+        _isSearchingRemote = false;
+        _searchResults = fallbackLocal;
+      });
+      return;
+    }
     if (TokenManagementQueryHelper.isContractAddress(trimmed)) {
       setState(() {
         _isSearchingRemote = false;
