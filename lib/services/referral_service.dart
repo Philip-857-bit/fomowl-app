@@ -107,7 +107,10 @@ class ReferralService {
           .post(
             uri,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'walletAddress': walletAddress, 'txHash': txHash}),
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'txHash': txHash,
+            }),
           )
           .timeout(const Duration(seconds: 15));
 
