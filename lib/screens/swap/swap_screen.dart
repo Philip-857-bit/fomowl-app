@@ -10,6 +10,7 @@ import '../../services/blockchain_service.dart';
 import '../../services/token_approval_service.dart';
 import '../../services/swap_execution_service.dart';
 import '../../services/transaction_monitor.dart';
+import '../../services/referral_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/token_selector_modal.dart';
@@ -34,6 +35,7 @@ class _SwapScreenState extends State<SwapScreen> {
   final TextEditingController _toController = TextEditingController();
   final SwapService _swapService = SwapService();
   final WalletService _walletService = WalletService();
+  final ReferralService _referralService = ReferralService();
   late final TokenApprovalService _tokenApprovalService;
   late final SwapExecutionService _swapExecutionService;
   late final TransactionMonitor _transactionMonitor;
@@ -456,6 +458,7 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<bool> _waitForTxConfirmation(
     String txHash, {
     required String successMessage,
+    bool rewardReferralOnSwap = false,
   }) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final confirmed = await _transactionMonitor.waitForConfirmation(
@@ -465,6 +468,17 @@ class _SwapScreenState extends State<SwapScreen> {
     if (!mounted) return false;
     if (confirmed) {
       _showSnack(successMessage);
+      if (rewardReferralOnSwap && _walletAddress != null) {
+        try {
+          await _referralService.rewardOnSwap(
+            walletAddress: _walletAddress!,
+            txHash: txHash,
+          );
+        } catch (e) {
+          // Referral crediting should not block successful swap UX.
+          debugPrint('Referral reward-on-swap failed: $e');
+        }
+      }
       await _refreshWalletState();
       return true;
     } else {
@@ -564,7 +578,7 @@ class _SwapScreenState extends State<SwapScreen> {
             : quote.networkFeeNative * _nativeTokenPriceUsd;
 
         // Fallback: estimate gas fee if backend did not return fee fields.
-        if (feeNative <= 0 && feeUsd <= 0) {
+        if (!_isGasless && feeNative <= 0 && feeUsd <= 0) {
           var nativePrice = _nativeTokenPriceUsd;
           if (nativePrice <= 0) {
             await _refreshTokenPrices();
@@ -855,6 +869,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _waitForTxConfirmation(
         result.transactionHash!,
         successMessage: 'Swap confirmed',
+        rewardReferralOnSwap: true,
       );
     } finally {
       if (mounted) {

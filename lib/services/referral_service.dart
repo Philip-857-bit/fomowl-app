@@ -96,4 +96,44 @@ class ReferralService {
       throw Exception('Failed to bind referral: $e');
     }
   }
+
+  Future<void> rewardOnSwap({
+    required String walletAddress,
+    required String txHash,
+  }) async {
+    try {
+      final uri = AppEnvironment.referrals('/reward-on-swap');
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'walletAddress': walletAddress, 'txHash': txHash}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        String message = 'Unable to apply referral swap reward';
+        try {
+          final body = jsonDecode(response.body);
+          if (body is Map && body.containsKey('message')) {
+            message = body['message'].toString();
+          } else if (body is Map && body.containsKey('error')) {
+            message = body['error'].toString();
+          }
+        } catch (_) {
+          // Fallback to default message.
+        }
+        throw Exception(message);
+      }
+    } on TimeoutException {
+      throw Exception(
+        'Request timed out. Please check your internet connection.',
+      );
+    } on FormatException catch (e) {
+      throw Exception('Invalid response format: $e');
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception('Failed to apply referral swap reward: $e');
+    }
+  }
 }

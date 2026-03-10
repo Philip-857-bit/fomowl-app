@@ -738,7 +738,7 @@ class AppLocalizations {
     'wallet_creation_error': 'Error creating wallet: {error}',
     'referrals_headline': 'Invite Friends and Earn Rewards Together',
     'referrals_subtitle':
-        'Earn up to \$0.5 for every user you refer using your referral code.',
+        'Earn up to \$0.1 when a referred user completes their first swap.',
     'your_referral_code': 'YOUR REFERRAL CODE',
     'my_code': 'My Code',
     'my_referral': 'My Referral',
