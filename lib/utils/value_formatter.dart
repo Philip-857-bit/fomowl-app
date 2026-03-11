@@ -21,6 +21,9 @@ class ValueFormatter {
     Decimal value, {
     required String symbol,
   }) {
+    if (value >= _trillion) {
+      return '${_fixed(divide(value, _trillion), 2)}T $symbol';
+    }
     if (value >= _billion) {
       return '${_fixed(divide(value, _billion), 2)}B $symbol';
     }
@@ -37,6 +40,12 @@ class ValueFormatter {
   }
 
   static String formatUsdValue(Decimal value) {
+    if (value >= _trillion) {
+      return '\$${_fixed(divide(value, _trillion), 2)}T';
+    }
+    if (value >= _billion) {
+      return '\$${_fixed(divide(value, _billion), 2)}B';
+    }
     if (value >= _million) {
       return '\$${_fixed(divide(value, _million), 2)}M';
     }

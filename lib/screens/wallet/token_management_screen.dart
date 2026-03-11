@@ -88,11 +88,14 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     setState(() {
       _tokens = fetched;
       _hiddenKeys = hidden;
-      if (showSpinner) {
-        _isLoading = false;
+      _isLoading = false;
+      // Immediately populate search results with local tokens while suggestions load
+      if (_query.trim().isEmpty) {
+        _searchResults = List<Token>.from(fetched);
       }
     });
-    await _loadSuggestedTokens();
+    // Load suggested tokens in the background (non-blocking)
+    _loadSuggestedTokens();
 
     _checkClipboardForTokenSuggestion();
   }
@@ -730,11 +733,18 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 )
+                              else if (_isResolvingContract)
+                                const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.accentRed,
+                                  ),
+                                )
                               else
                                 TextButton(
-                                  onPressed: _isResolvingContract
-                                      ? null
-                                      : () => _addSearchResultToken(token),
+                                  onPressed: () => _addSearchResultToken(token),
                                   child: Text(
                                     l.addToken,
                                     style: GoogleFonts.outfit(

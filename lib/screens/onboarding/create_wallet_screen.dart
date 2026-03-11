@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:bip39/bip39.dart' as bip39;
+import '../../services/native_crypto.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/screen_capture_guard.dart';
@@ -19,7 +19,7 @@ class CreateWalletScreen extends StatefulWidget {
 
 class _CreateWalletScreenState extends State<CreateWalletScreen>
     with WidgetsBindingObserver {
-  late List<String> _mnemonicWords;
+  List<String> _mnemonicWords = [];
   bool _isRevealed = false;
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
@@ -31,10 +31,14 @@ class _CreateWalletScreenState extends State<CreateWalletScreen>
     unawaited(_screenCaptureGuard.enableProtection());
   }
 
-  void _generateMnemonic() {
-    // Generate 12-word mnemonic
-    final mnemonic = bip39.generateMnemonic();
-    _mnemonicWords = mnemonic.split(' ');
+  Future<void> _generateMnemonic() async {
+    // Generate 12-word mnemonic via Rust FFI
+    final mnemonic = await NativeCrypto.generateMnemonic();
+    if (mounted) {
+      setState(() {
+        _mnemonicWords = mnemonic.split(' ');
+      });
+    }
   }
 
   @override

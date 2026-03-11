@@ -1,0 +1,64 @@
+﻿cargo :    Compiling 
+rust_lib_fomowl_wallet 
+v0.1.0 (C:\Users\HP\Deskto
+p\fomowlwallet\fomowl_wall
+et\rust)
+At line:1 char:1
++ cargo build > 
+build_errors.txt 2>&1 ; 
+Get-Content 
+build_errors.txt -E ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (   
+    Compiling ru...wl_w   
+ allet\rust):String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+warning: unused import: `e
+cdsa::RecoverableSignature
+`
+ --> src\api\secp256k1_api
+.rs:2:5
+  |
+2 |     ecdsa::Recoverable
+Signature,
+  |     ^^^^^^^^^^^^^^^^^^
+^^^^^^^^^
+  |
+  = note: 
+`#[warn(unused_imports)]` 
+on by default
+
+warning: use of 
+deprecated associated 
+function `secp256k1::Messa
+ge::from_digest_slice`: 
+use from_digest instead
+  --> src\api\secp256k1_ap
+i.rs:23:24
+   |
+23 |     let msg = Message
+::from_digest_slice(&hash)
+   |                      
+  ^^^^^^^^^^^^^^^^^
+   |
+   = note: 
+`#[warn(deprecated)]` on 
+by default
+
+warning: 
+`rust_lib_fomowl_wallet` 
+(lib) generated 2 
+warnings (run `cargo fix 
+--lib -p 
+rust_lib_fomowl_wallet` 
+to apply 1 suggestion)
+    Finished `dev` 
+profile [unoptimized + 
+debuginfo] target(s) in 
+8.87s

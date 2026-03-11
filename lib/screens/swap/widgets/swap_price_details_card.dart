@@ -12,6 +12,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
   final String receiveText;
   final String priceSeparator;
   final double swapAmountUsd;
+  /// Native token price in USD from the frontend CoinGecko cache.
+  /// Used to compute network fee in USD when the backend returns 0.
+  final double nativePriceUsd;
 
   const SwapPriceDetailsCard({
     super.key,
@@ -23,13 +26,33 @@ class SwapPriceDetailsCard extends StatelessWidget {
     required this.receiveText,
     this.priceSeparator = '->',
     this.swapAmountUsd = 0.0,
+    this.nativePriceUsd = 0.0,
   });
 
   String _formatFeeDisplay() {
-    if (swapAmountUsd > 0 && swapAmountUsd < 100) {
+    if (swapAmountUsd <= 0) return '--';
+    // Tiered platform fee: flat $0.50 for swaps under $100, percentage for larger
+    if (swapAmountUsd < 100) {
       return '\$0.50';
     }
-    return '${slippage.toStringAsFixed(1)}%';
+    final feeUsd = swapAmountUsd * (slippage / 100);
+    return '\$${feeUsd.toStringAsFixed(2)}';
+  }
+
+  String _formatNetworkFee() {
+    // Try backend-provided USD first
+    double usd = feeAmountUsd;
+    // If backend didn't provide USD, compute from native amount × native price
+    if (usd <= 0 && feeAmountNative > 0 && nativePriceUsd > 0) {
+      usd = feeAmountNative * nativePriceUsd;
+    }
+    if (feeAmountNative > 0) {
+      if (usd > 0) {
+        return '~\$${usd.toStringAsFixed(2)} (${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol)';
+      }
+      return '${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol';
+    }
+    return '--';
   }
 
   @override
@@ -38,12 +61,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
       children: [
         _buildDetailRow('Price', priceText),
         const SizedBox(height: 12),
-        _buildDetailRow('Fee', _formatFeeDisplay()),
+        _buildDetailRow('Platform Fee', _formatFeeDisplay()),
         const SizedBox(height: 12),
-        _buildDetailRow(
-          'Network Fee',
-          '~\$${feeAmountUsd.toStringAsFixed(2)} (${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol)',
-        ),
+        _buildDetailRow('Network Fee', _formatNetworkFee()),
         const SizedBox(height: 12),
         _buildDetailRow('To Receive', receiveText),
       ],

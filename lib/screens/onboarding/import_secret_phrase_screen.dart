@@ -76,7 +76,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
     }
 
     // Validate mnemonic
-    if (!_walletService.validateMnemonic(phrase)) {
+    if (!await _walletService.validateMnemonic(phrase)) {
       _showError(l.invalidSecretPhrasePrompt);
       return;
     }

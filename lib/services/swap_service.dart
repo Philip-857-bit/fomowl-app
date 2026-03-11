@@ -13,6 +13,7 @@ class SwapQuote {
   final double networkFeeUsd;
   final double networkFeeNative;
   final String allowanceTarget;
+  final int platformFeeBps;
 
   SwapQuote({
     required this.amountOutWei,
@@ -20,7 +21,11 @@ class SwapQuote {
     required this.networkFeeUsd,
     required this.networkFeeNative,
     required this.allowanceTarget,
+    this.platformFeeBps = 100,
   });
+
+  /// Platform fee as a percentage (e.g. 100 BPS = 1.0%)
+  double get platformFeePercent => platformFeeBps / 100.0;
 }
 
 /// Swap Service
@@ -54,7 +59,7 @@ class SwapService {
     146,
     2741,
   };
-  static const Set<int> supportedGaslessChainIds = {1, 10, 137, 8453, 42161};
+  static const Set<int> supportedGaslessChainIds = {1, 10, 56, 137, 8453, 42161};
   String? _lastError;
 
   String? get lastError => _lastError;
@@ -145,6 +150,7 @@ class SwapService {
           networkFeeNative:
               (data['networkFeeNative'] as num?)?.toDouble() ?? 0.0,
           allowanceTarget: allowanceTarget,
+          platformFeeBps: (data['platformFeeBps'] as num?)?.toInt() ?? 100,
         );
       } else {
         _lastError = _extractBackendMessage(

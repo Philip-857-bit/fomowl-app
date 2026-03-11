@@ -67,9 +67,14 @@ dependencies:
   screen_security: ^1.0.0
   firebase_core: ^4.5.0
   firebase_messaging: ^16.1.2
+  rust_lib_fomowl_wallet:
+    path: rust_builder
+  flutter_rust_bridge: 2.11.1
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

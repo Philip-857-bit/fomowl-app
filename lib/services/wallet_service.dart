@@ -1,13 +1,11 @@
-import 'package:bip39/bip39.dart' as bip39;
-import 'package:bip32/bip32.dart' as bip32;
 import 'package:web3dart/web3dart.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:eth_sig_util/eth_sig_util.dart';
-import 'dart:typed_data';
 import '../models/wallet_account.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
+import 'native_crypto.dart';
 
 /// Wallet Service
 /// Handles wallet creation, import, and key management
@@ -16,16 +14,16 @@ class WalletService {
   final http.Client _httpClient = http.Client();
   final Map<String, Web3Client> _web3Clients = {};
 
-  /// Generate a new 12-word mnemonic phrase
-  String generateMnemonic() {
-    return bip39.generateMnemonic();
+  /// Generate a new 12-word mnemonic phrase (Rust FFI)
+  Future<String> generateMnemonic() async {
+    return await NativeCrypto.generateMnemonic();
   }
 
-  /// Validate a mnemonic phrase
-  bool validateMnemonic(String mnemonic) {
+  /// Validate a mnemonic phrase (Rust FFI)
+  Future<bool> validateMnemonic(String mnemonic) async {
     final normalizedMnemonic = normalizeMnemonic(mnemonic);
     if (normalizedMnemonic.isEmpty) return false;
-    return bip39.validateMnemonic(normalizedMnemonic);
+    return await NativeCrypto.validateMnemonic(normalizedMnemonic);
   }
 
   String normalizeMnemonic(String mnemonic) {
@@ -45,19 +43,19 @@ class WalletService {
     int derivationIndex = 0,
   }) async {
     final normalizedMnemonic = normalizeMnemonic(mnemonic);
-    if (!validateMnemonic(normalizedMnemonic)) {
+    if (!await validateMnemonic(normalizedMnemonic)) {
       throw Exception('Invalid mnemonic phrase');
     }
 
-    // Generate seed from mnemonic
-    final seed = bip39.mnemonicToSeed(normalizedMnemonic);
+    // Generate seed from mnemonic (Rust FFI)
+    final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
 
-    // Derive Ethereum wallet (m/44'/60'/0'/0/0)
-    final root = bip32.BIP32.fromSeed(seed);
-    final child = root.derivePath("m/44'/60'/0'/0/$derivationIndex");
-
-    // Get private key
-    final privateKey = HEX.encode(child.privateKey!);
+    // Derive Ethereum wallet via HD key derivation (Rust FFI)
+    // Path: m/44'/60'/0'/0/{derivationIndex}
+    final privateKey = await NativeCrypto.deriveWalletFromSeed(
+      seed,
+      derivationIndex,
+    );
 
     // Create credentials from private key
     final credentials = EthPrivateKey.fromHex(privateKey);
@@ -65,8 +63,8 @@ class WalletService {
     // Get address
     final address = credentials.address.hexEip55;
 
-    // Get public key
-    final publicKey = HEX.encode(child.publicKey);
+    // Get public key from credentials
+    final publicKey = HEX.encode(credentials.encodedPublicKey);
 
     // Store wallet data securely
     await _storage.saveWallet(
@@ -199,19 +197,25 @@ class WalletService {
     return signMessageForAddress(null, message);
   }
 
-  /// Sign a message with a specific wallet when available.
+  /// Sign a message with a specific wallet when available (Rust FFI).
   Future<String> signMessageForAddress(String? address, String message) async {
     final privateKeyHex = await getPrivateKey(address);
     if (privateKeyHex == null) {
       throw Exception('No wallet found');
     }
 
-    final credentials = EthPrivateKey.fromHex(privateKeyHex);
-    final signature = credentials.signPersonalMessageToUint8List(
-      Uint8List.fromList(message.codeUnits),
+    final pk = privateKeyHex.startsWith('0x')
+        ? privateKeyHex.substring(2)
+        : privateKeyHex;
+
+    // Use Rust secp256k1 for personal message signing
+    final signature = await NativeCrypto.signPersonalMessage(
+      privateKeyHex: pk,
+      message: message,
     );
 
-    return HEX.encode(signature);
+    // Remove 0x prefix if present (Rust returns 0x-prefixed)
+    return signature.startsWith('0x') ? signature.substring(2) : signature;
   }
 
   /// Sign EIP-712 typed data with the active wallet.

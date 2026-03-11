@@ -75,6 +75,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool _isCalculating = false;
   String _pricing = '';
+  /// Trading slippage tolerance for 0x swap execution (not the platform fee).
   final double _slippage = 0.5;
   double _feeUsd = 0.0;
   double _feeNative = 0.0;
@@ -251,6 +252,8 @@ class _SwapScreenState extends State<SwapScreen> {
         _feeUsd = 0.0;
         _feeNative = 0.0;
       });
+      // Refresh prices so USD values are immediately available for new token
+      _refreshTokenPrices();
       _getQuote();
     }
   }
@@ -956,13 +959,14 @@ class _SwapScreenState extends State<SwapScreen> {
                     const SizedBox(height: 24),
                     SwapPriceDetailsCard(
                       priceText: priceText,
-                      slippage: _slippage,
+                      slippage: _currentQuote?.platformFeePercent ?? 1.0,
                       feeAmountUsd: _feeUsd,
                       feeAmountNative: _feeNative,
                       nativeFeeSymbol: blockchain.activeChain.symbol,
                       receiveText: receiveText,
                       priceSeparator: _priceSeparator,
                       swapAmountUsd: fromUsdValue,
+                      nativePriceUsd: _tokenPriceCache[blockchain.activeChain.coinGeckoId] ?? 0.0,
                     ),
                     const SizedBox(height: 24),
                     SwapPrimaryButton(

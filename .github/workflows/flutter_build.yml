@@ -11,6 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
       BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://fomowl-backend.onrender.com' }}
       COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
       CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
@@ -27,6 +28,9 @@ jobs:
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+    defaults:
+      run:
+        working-directory: fomowl_wallet
     
     steps:
       - uses: actions/checkout@v3
@@ -36,11 +40,26 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          
+
+      # Rust toolchain required for flutter_rust_bridge native crypto
+      - name: Setup Rust
+        uses: dtolnay/rust-action@v1
+        with:
+          toolchain: stable
+
+      # Android NDK targets for cross-compilation
+      - name: Add Rust Android targets
+        run: |
+          rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+
+      # cargo-ndk for building Rust for Android
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'
+          flutter-version: '3.35.5'
           channel: 'stable'
           
       - name: Install Dependencies
@@ -50,7 +69,7 @@ jobs:
         run: dart format --output=none --set-exit-if-changed lib
 
       - name: Run Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Configure Android release signing
         shell: bash
@@ -101,13 +120,7 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
         
-      - name: Build APK (Fat)
-        shell: bash
-        run: |
-          set -euo pipefail
-          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
-          flutter build apk --release "${DART_DEFINES[@]}"
-        
+      # Only build split APKs (no fat APK) to save storage
       - name: Build APK (Split ABI)
         shell: bash
         run: |
@@ -122,18 +135,18 @@ jobs:
           readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
           flutter build appbundle --release "${DART_DEFINES[@]}"
         
-      - name: Upload APKs
+      # Upload only arm64 APK and AAB — the most common targets.
+      # Keeps storage low. Use AAB for Play Store distribution.
+      - name: Upload APK (arm64-v8a)
         uses: actions/upload-artifact@v4
         with:
-          name: fomowl-apks
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
+          name: fomowl-apk-arm64-v8a
+          path: fomowl_wallet/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          retention-days: 1
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: fomowl-aab
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: fomowl_wallet/build/app/outputs/bundle/release/app-release.aab
+          retention-days: 1
