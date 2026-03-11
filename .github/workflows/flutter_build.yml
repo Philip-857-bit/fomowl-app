@@ -28,9 +28,6 @@ jobs:
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
-    defaults:
-      run:
-        working-directory: fomowl_wallet
     
     steps:
       - uses: actions/checkout@v3
@@ -139,12 +136,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fomowl-apk-arm64-v8a
-          path: fomowl_wallet/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           retention-days: 1
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: fomowl-aab
-          path: fomowl_wallet/build/app/outputs/bundle/release/app-release.aab
+          path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 1
