@@ -43,9 +43,7 @@ jobs:
 
       # Rust toolchain required for flutter_rust_bridge native crypto
       - name: Setup Rust
-        uses: dtolnay/rust-action@v1
-        with:
-          toolchain: stable
+        uses: dtolnay/rust-toolchain@stable
 
       # Android NDK targets for cross-compilation
       - name: Add Rust Android targets
