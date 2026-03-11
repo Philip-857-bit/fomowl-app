@@ -75,6 +75,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool _isCalculating = false;
   String _pricing = '';
+
   /// Trading slippage tolerance for 0x swap execution (not the platform fee).
   final double _slippage = 0.5;
   double _feeUsd = 0.0;
@@ -966,7 +967,11 @@ class _SwapScreenState extends State<SwapScreen> {
                       receiveText: receiveText,
                       priceSeparator: _priceSeparator,
                       swapAmountUsd: fromUsdValue,
-                      nativePriceUsd: _tokenPriceCache[blockchain.activeChain.coinGeckoId] ?? 0.0,
+                      nativePriceUsd:
+                          _tokenPriceCache[blockchain
+                              .activeChain
+                              .coinGeckoId] ??
+                          0.0,
                     ),
                     const SizedBox(height: 24),
                     SwapPrimaryButton(

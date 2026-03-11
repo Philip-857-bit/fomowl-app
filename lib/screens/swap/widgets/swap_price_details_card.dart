@@ -12,6 +12,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
   final String receiveText;
   final String priceSeparator;
   final double swapAmountUsd;
+
   /// Native token price in USD from the frontend CoinGecko cache.
   /// Used to compute network fee in USD when the backend returns 0.
   final double nativePriceUsd;

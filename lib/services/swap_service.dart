@@ -59,7 +59,14 @@ class SwapService {
     146,
     2741,
   };
-  static const Set<int> supportedGaslessChainIds = {1, 10, 56, 137, 8453, 42161};
+  static const Set<int> supportedGaslessChainIds = {
+    1,
+    10,
+    56,
+    137,
+    8453,
+    42161,
+  };
   String? _lastError;
 
   String? get lastError => _lastError;

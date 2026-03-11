@@ -27,31 +27,31 @@ void main() {
   });
 
   group('seed phrase hardening', () {
-    testWidgets('seed phrase flow no longer exposes clipboard actions',
-    skip: true,
-    (
-      tester,
-    ) async {
-      await tester.pumpWidget(_wrap(const CreateWalletScreen()));
-      await tester.pumpAndSettle();
-      expect(find.text('Copy to clipboard'), findsNothing);
+    testWidgets(
+      'seed phrase flow no longer exposes clipboard actions',
+      skip: true,
+      (tester) async {
+        await tester.pumpWidget(_wrap(const CreateWalletScreen()));
+        await tester.pumpAndSettle();
+        expect(find.text('Copy to clipboard'), findsNothing);
 
-      await tester.pumpWidget(_wrap(const VerifyPhraseScreen()));
-      await tester.pumpAndSettle();
-      expect(find.text('Paste from clipboard'), findsNothing);
+        await tester.pumpWidget(_wrap(const VerifyPhraseScreen()));
+        await tester.pumpAndSettle();
+        expect(find.text('Paste from clipboard'), findsNothing);
 
-      await tester.pumpWidget(
-        _wrap(
-          BackupSeedPhraseScreen(
-            walletService: _FakeWalletService(_mnemonic),
-            authVerifier: _allowAuth,
-            screenCaptureGuard: _FakeScreenCaptureGuard(),
+        await tester.pumpWidget(
+          _wrap(
+            BackupSeedPhraseScreen(
+              walletService: _FakeWalletService(_mnemonic),
+              authVerifier: _allowAuth,
+              screenCaptureGuard: _FakeScreenCaptureGuard(),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Copy to clipboard'), findsNothing);
-    });
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Copy to clipboard'), findsNothing);
+      },
+    );
 
     testWidgets('reveal requires fresh auth before showing phrase', (
       tester,
