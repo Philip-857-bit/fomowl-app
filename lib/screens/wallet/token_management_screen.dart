@@ -733,7 +733,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 )
-                              else if (_resolvingContract == token.contractAddress)
+                              else if (_resolvingContract ==
+                                  token.contractAddress)
                                 const SizedBox(
                                   width: 20,
                                   height: 20,
