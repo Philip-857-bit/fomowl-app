@@ -402,7 +402,37 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
                       ),
                       const SizedBox(height: 14),
                       if (_seedPhraseUnavailable)
-                        _StatusCard(message: l.noSeedPhraseAvailablePrivateKey)
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.key_off_rounded,
+                                color: AppColors.warning,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                l.noSeedPhraseAvailablePrivateKey,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
                       else if (_hasRevealedPhrase)
                         _buildRevealCard(l)
                       else if (_isVerifyingBackup)

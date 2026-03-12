@@ -84,8 +84,8 @@ class _SwapScreenState extends State<SwapScreen> {
   SwapQuote? _currentQuote;
   int _selectedPercentage = -1; // -1 = none selected
   /// Cached per-token USD prices fetched from CoinGecko.
-  /// Used as fallback when token.priceUsd is 0 (common for native tokens).
-  final Map<String, double> _tokenPriceCache = {};
+  /// Made static to persist across screen navigation.
+  static final Map<String, double> _tokenPriceCache = {};
   bool _isApproving = false;
   bool _isSwapping = false;
   bool _isGasless = false;
@@ -445,7 +445,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (lower.contains('nonce too low')) {
       return 'Transaction nonce is too low. Please wait for pending transactions to finish.';
     }
-    return 'Swap failed. Please verify your token selection and balance.';
+    return 'Swap failed: $raw';
   }
 
   Future<void> _refreshWalletState() async {
@@ -891,8 +891,8 @@ class _SwapScreenState extends State<SwapScreen> {
     final toUsdValue = _usdValueFor(_toToken, toAmount);
     final priceText = _pricing.isNotEmpty ? _pricing : '--';
     final receiveText = _toController.text.isNotEmpty
-        ? '\$${toUsdValue.toStringAsFixed(2)}'
-        : '\$0.00';
+        ? '${_toController.text} ${_toToken?.symbol ?? ''} (\$${toUsdValue.toStringAsFixed(2)})'
+        : '--';
     final swapBusy = _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
     final hasQuote = _currentQuote != null && _toController.text.isNotEmpty;

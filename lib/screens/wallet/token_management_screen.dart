@@ -41,7 +41,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Set<String> _hiddenKeys = {};
   bool _isLoading = true;
   bool _hasChanges = false;
-  bool _isResolvingContract = false;
+  String? _resolvingContract;
   bool _isSearchingRemote = false;
   bool _hasCheckedClipboard = false;
   String _query = '';
@@ -212,7 +212,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       return;
     }
 
-    setState(() => _isResolvingContract = true);
+    setState(() => _resolvingContract = _query);
     try {
       final token = await blockchain.detectTokenByContract(_query);
       if (token == null) {
@@ -243,7 +243,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => _isResolvingContract = false);
+        setState(() => _resolvingContract = null);
       }
     }
   }
@@ -319,7 +319,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       return;
     }
 
-    setState(() => _isResolvingContract = true);
+    setState(() => _resolvingContract = contract);
     try {
       final detected = await blockchain.detectTokenByContract(contract);
       final tokenToAdd = CustomTokenDefinition(
@@ -354,7 +354,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _isResolvingContract = false);
+      if (mounted) setState(() => _resolvingContract = null);
     }
   }
 
@@ -537,7 +537,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                   const SizedBox(height: 12),
                   if (canImportByContract)
                     ContractImportCard(
-                      isLoading: _isResolvingContract,
+                      isLoading: _resolvingContract == _query,
                       onAdd: _importTokenFromContract,
                       tokenName: _resolvedTokenName,
                       tokenSymbol: _resolvedTokenSymbol,
@@ -733,7 +733,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 )
-                              else if (_isResolvingContract)
+                              else if (_resolvingContract == token.contractAddress)
                                 const SizedBox(
                                   width: 20,
                                   height: 20,
