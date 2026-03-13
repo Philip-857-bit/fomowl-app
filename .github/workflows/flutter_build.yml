@@ -144,3 +144,59 @@ jobs:
           name: fomowl-aab
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 1
+
+      - name: Upload Artifacts to Dropbox
+        if: env.DROPBOX_ACCESS_TOKEN != '' || env.DROPBOX_REFRESH_TOKEN != '' || secrets.DROPBOX_ACCESS_TOKEN != '' || secrets.DROPBOX_REFRESH_TOKEN != ''
+        env:
+          DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          # 1. Fetch short-lived token using refresh token if provided
+          if [ -n "${DROPBOX_REFRESH_TOKEN:-}" ] && [ -n "${DROPBOX_APP_KEY:-}" ] && [ -n "${DROPBOX_APP_SECRET:-}" ]; then
+            echo "Fetching new access token using refresh token..."
+            RESPONSE=$(curl -s -X POST https://api.dropboxapi.com/oauth2/token \
+              -d grant_type=refresh_token \
+              -d refresh_token="$DROPBOX_REFRESH_TOKEN" \
+              -u "$DROPBOX_APP_KEY:$DROPBOX_APP_SECRET")
+            
+            # Basic parsing to extract the token
+            NEW_TOKEN=$(echo "$RESPONSE" | grep -o '"access_token": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)
+            if [ -n "$NEW_TOKEN" ]; then
+              DROPBOX_ACCESS_TOKEN="$NEW_TOKEN"
+            else
+              echo "Failed to retrieve access token from response:" >&2
+              echo "$RESPONSE" >&2
+              exit 1
+            fi
+          fi
+          
+          # 2. Upload if we have an active access token
+          if [ -z "${DROPBOX_ACCESS_TOKEN:-}" ]; then
+            echo "No DROPBOX_ACCESS_TOKEN available. Skipping Dropbox upload."
+            exit 0
+          fi
+          
+          upload_to_dropbox() {
+            local file_path=$1
+            local dest_name=$2
+            echo "Uploading $file_path to Dropbox as /$dest_name..."
+            curl -s -X POST https://content.dropboxapi.com/2/files/upload \
+              --header "Authorization: Bearer $DROPBOX_ACCESS_TOKEN" \
+              --header "Dropbox-API-Arg: {\"path\": \"/$dest_name\",\"mode\": \"overwrite\",\"autorename\": false,\"mute\": false,\"strict_conflict\": false}" \
+              --header "Content-Type: application/octet-stream" \
+              --data-binary "@$file_path"
+            echo -e "\nUpload completed for $dest_name."
+          }
+          
+          if [ -f "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" ]; then
+            upload_to_dropbox "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "fomowl-arm64-v8a-release.apk"
+          fi
+          
+          if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
+            upload_to_dropbox "build/app/outputs/bundle/release/app-release.aab" "fomowl-release.aab"
+          fi
