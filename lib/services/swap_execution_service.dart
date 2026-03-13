@@ -13,11 +13,13 @@ import 'wallet_service.dart';
 class SwapExecutionResult {
   final bool success;
   final String? transactionHash;
+  final String? tradeHash;
   final String? error;
 
   const SwapExecutionResult({
     required this.success,
     this.transactionHash,
+    this.tradeHash,
     this.error,
   });
 }
@@ -32,13 +34,12 @@ class SwapExecutionService {
 
   /// Builds calldata via backend and broadcasts the swap transaction.
   Future<SwapExecutionResult> execute({
-    required SwapQuote
-    quote, // Keep signature compatibility, despite us re-querying 1inch for calldata
+    required SwapQuote quote, // Kept for API compatibility with callers.
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
     required double expectedToAmount,
-    required double slippagePercent,
+    required int slippageBps,
     required BlockchainService blockchain,
     required String recipientAddress,
     required bool isGasless,
@@ -49,6 +50,7 @@ class SwapExecutionService {
           fromToken: fromToken,
           toToken: toToken,
           fromAmountWei: fromAmountWei,
+          slippageBps: slippageBps,
           blockchain: blockchain,
           walletAddress: recipientAddress,
         );
@@ -57,7 +59,7 @@ class SwapExecutionService {
           fromToken: fromToken,
           toToken: toToken,
           fromAmountWei: fromAmountWei,
-          slippagePercent: slippagePercent,
+          slippageBps: slippageBps,
           blockchain: blockchain,
           walletAddress: recipientAddress,
         );
@@ -72,13 +74,13 @@ class SwapExecutionService {
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
-    required double slippagePercent,
+    required int slippageBps,
     required BlockchainService blockchain,
     required String walletAddress,
   }) async {
     final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
     try {
-      // 1. Fetch swap transaction payload from Backend
+      // Always fetch a fresh firm quote close to broadcast to avoid stale RFQ data.
       final src = fromToken.contractAddress?.isNotEmpty == true
           ? fromToken.contractAddress!
           : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
@@ -88,13 +90,13 @@ class SwapExecutionService {
 
       final rawAmountStr = fromAmountWei;
 
-      final url = AppEnvironment.swap('/transaction', {
+      final url = AppEnvironment.swap('/quote', {
         'chainId': '${blockchain.activeChain.chainId}',
         'src': src,
         'dst': dst,
         'amount': rawAmountStr,
-        'from': walletAddress,
-        'slippage': '$slippagePercent',
+        'taker': walletAddress,
+        'slippageBps': '$slippageBps',
       });
 
       final response = await http.get(url).timeout(const Duration(seconds: 15));
@@ -108,7 +110,7 @@ class SwapExecutionService {
       }
 
       final data = jsonDecode(response.body);
-      final txData = data['transaction'];
+      final txData = data['transaction'] ?? data;
       if (txData == null) {
         throw Exception('Backend returned null tx object');
       }
@@ -144,7 +146,7 @@ class SwapExecutionService {
         data: dataBytes,
         value: EtherAmount.inWei(valueWei),
         gasPrice: EtherAmount.inWei(gasPrice),
-        // let web3dart estimate maxGas, or provide conservative default
+        maxGas: int.tryParse(txData['gas']?.toString() ?? ''),
       );
 
       final credentials = await _walletService.getCredentials();
@@ -167,6 +169,7 @@ class SwapExecutionService {
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
+    required int slippageBps,
     required BlockchainService blockchain,
     required String walletAddress,
   }) async {
@@ -187,6 +190,7 @@ class SwapExecutionService {
         'toTokenAddress': dst,
         'amount': rawAmountStr,
         'walletAddress': walletAddress,
+        'slippageBps': '$slippageBps',
       });
 
       final quoteResponse = await http
@@ -261,11 +265,14 @@ class SwapExecutionService {
       final submitData = jsonDecode(submitResponse.body);
       final String? transactionHash =
           submitData['transactionHash']?.toString() ??
+          submitData['txHash']?.toString();
+      final String? tradeHash =
+          submitData['tradeHash']?.toString() ??
           submitData['hash']?.toString() ??
           submitData['orderHash']?.toString() ??
           submitData['orderId']?.toString();
 
-      if (transactionHash == null) {
+      if (transactionHash == null && tradeHash == null) {
         throw Exception(
           'Backend submission response did not contain a recognizable hash or ID. Response: ${submitResponse.body}',
         );
@@ -274,6 +281,7 @@ class SwapExecutionService {
       return SwapExecutionResult(
         success: true,
         transactionHash: transactionHash,
+        tradeHash: tradeHash,
       );
     } catch (e) {
       debugPrint('Fusion execution failed: $e');

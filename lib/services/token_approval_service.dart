@@ -110,7 +110,7 @@ class TokenApprovalService {
       final tx = Transaction.callContract(
         contract: contract,
         function: approveFunc,
-        parameters: [spenderAddr, requiredAmount],
+        parameters: [spenderAddr, BigInt.two.pow(256) - BigInt.one],
       );
 
       final txHash = await client.sendTransaction(

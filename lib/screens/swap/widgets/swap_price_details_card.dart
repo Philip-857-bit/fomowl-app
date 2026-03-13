@@ -5,7 +5,8 @@ import '../../../constants/app_colors.dart';
 
 class SwapPriceDetailsCard extends StatelessWidget {
   final String priceText;
-  final double slippage;
+  final double platformFeePercent;
+  final double platformFeeUsd;
   final double feeAmountUsd;
   final double feeAmountNative;
   final String nativeFeeSymbol;
@@ -20,7 +21,8 @@ class SwapPriceDetailsCard extends StatelessWidget {
   const SwapPriceDetailsCard({
     super.key,
     required this.priceText,
-    required this.slippage,
+    required this.platformFeePercent,
+    required this.platformFeeUsd,
     required this.feeAmountUsd,
     required this.feeAmountNative,
     required this.nativeFeeSymbol,
@@ -31,13 +33,12 @@ class SwapPriceDetailsCard extends StatelessWidget {
   });
 
   String _formatFeeDisplay() {
-    if (swapAmountUsd <= 0) return '--';
-    // Tiered platform fee: flat $0.50 for swaps under $100, percentage for larger
-    if (swapAmountUsd < 100) {
-      return '\$0.50';
+    if (platformFeeUsd > 0) {
+      return '${platformFeePercent.toStringAsFixed(2)}% (~\$${platformFeeUsd.toStringAsFixed(2)})';
     }
-    final feeUsd = swapAmountUsd * (slippage / 100);
-    return '\$${feeUsd.toStringAsFixed(2)}';
+    if (swapAmountUsd <= 0) return '--';
+    final feeUsd = swapAmountUsd * (platformFeePercent / 100);
+    return '${platformFeePercent.toStringAsFixed(2)}% (~\$${feeUsd.toStringAsFixed(2)})';
   }
 
   String _formatNetworkFee() {

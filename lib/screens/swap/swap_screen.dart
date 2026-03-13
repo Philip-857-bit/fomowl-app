@@ -77,9 +77,10 @@ class _SwapScreenState extends State<SwapScreen> {
   String _pricing = '';
 
   /// Trading slippage tolerance for 0x swap execution (not the platform fee).
-  final double _slippage = 0.5;
+  final int _slippageBps = 50;
   double _feeUsd = 0.0;
   double _feeNative = 0.0;
+  double _platformFeeUsd = 0.0;
   String? _walletAddress;
   SwapQuote? _currentQuote;
   int _selectedPercentage = -1; // -1 = none selected
@@ -252,6 +253,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _toController.clear();
         _feeUsd = 0.0;
         _feeNative = 0.0;
+        _platformFeeUsd = 0.0;
       });
       // Refresh prices so USD values are immediately available for new token
       _refreshTokenPrices();
@@ -448,6 +450,103 @@ class _SwapScreenState extends State<SwapScreen> {
     return 'Swap failed: $raw';
   }
 
+  String? _extractGaslessStatusValue(Map<String, dynamic> data) {
+    final direct = data['status']?.toString();
+    if (direct != null && direct.isNotEmpty) return direct;
+    final trade = data['trade'];
+    if (trade is Map<String, dynamic>) {
+      final nested = trade['status']?.toString();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
+    return null;
+  }
+
+  String? _extractGaslessTxHash(Map<String, dynamic> data) {
+    final direct =
+        data['transactionHash']?.toString() ?? data['txHash']?.toString();
+    if (direct != null && direct.isNotEmpty) return direct;
+    final trade = data['trade'];
+    if (trade is Map<String, dynamic>) {
+      final nested =
+          trade['transactionHash']?.toString() ?? trade['txHash']?.toString();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
+    return null;
+  }
+
+  Future<void> _trackGaslessOrder(String tradeHash) async {
+    const pendingStates = {
+      'pending',
+      'submitted',
+      'queued',
+      'processing',
+      'validating',
+      'open',
+    };
+    const successStates = {
+      'success',
+      'succeeded',
+      'complete',
+      'completed',
+      'confirmed',
+      'settled',
+      'executed',
+      'filled',
+    };
+    const failedStates = {
+      'failed',
+      'expired',
+      'cancelled',
+      'canceled',
+      'rejected',
+      'invalid',
+    };
+
+    for (var attempt = 0; attempt < 20; attempt++) {
+      await Future<void>.delayed(const Duration(seconds: 6));
+      if (!mounted) return;
+
+      final statusData = await _swapService.getGaslessStatus(
+        tradeHash: tradeHash,
+      );
+      if (statusData == null) {
+        continue;
+      }
+
+      final status = _extractGaslessStatusValue(statusData)?.toLowerCase();
+      final txHash = _extractGaslessTxHash(statusData);
+
+      if (txHash != null && _looksLikeTxHash(txHash)) {
+        _showSnack('Gasless swap submitted: ${_shortHash(txHash)}');
+        _waitForTxConfirmation(
+          txHash,
+          successMessage: 'Swap confirmed',
+          rewardReferralOnSwap: true,
+        );
+        return;
+      }
+
+      if (status != null && successStates.contains(status)) {
+        _showSnack('Gasless order completed');
+        await _refreshWalletState();
+        return;
+      }
+
+      if (status != null && failedStates.contains(status)) {
+        _showError('Gasless order failed. Please try again.');
+        return;
+      }
+
+      if (status == null || pendingStates.contains(status)) {
+        continue;
+      }
+    }
+
+    if (mounted) {
+      _showSnack('Gasless order submitted. Check status shortly.');
+    }
+  }
+
   Future<void> _refreshWalletState() async {
     final address = _walletAddress;
     if (address == null) return;
@@ -500,6 +599,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _currentQuote = null;
         _feeUsd = 0.0;
         _feeNative = 0.0;
+        _platformFeeUsd = 0.0;
       });
       return;
     }
@@ -512,6 +612,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _currentQuote = null;
         _feeUsd = 0.0;
         _feeNative = 0.0;
+        _platformFeeUsd = 0.0;
       });
       return;
     }
@@ -556,6 +657,7 @@ class _SwapScreenState extends State<SwapScreen> {
             _currentQuote = null;
             _feeUsd = 0.0;
             _feeNative = 0.0;
+            _platformFeeUsd = 0.0;
           });
         }
         return;
@@ -569,13 +671,15 @@ class _SwapScreenState extends State<SwapScreen> {
         buyTokenDecimals: _toToken!.decimals,
         isGasless: _isGasless,
         walletAddress: _walletAddress,
+        slippageBps: _slippageBps,
       );
 
       if (!mounted || requestId != _quoteRequestId) return;
 
       if (quote != null) {
-        final outAmount =
-            Decimal.tryParse(quote.amountOutFormatted) ?? Decimal.zero;
+        final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
+        final inAmount = _parseAmount(_fromController);
+        final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
         double feeNative = quote.networkFeeNative;
         double feeUsd = quote.networkFeeUsd > 0
             ? quote.networkFeeUsd
@@ -597,15 +701,12 @@ class _SwapScreenState extends State<SwapScreen> {
 
         if (!mounted || requestId != _quoteRequestId) return;
         setState(() {
-          _pricing = _formatRateText(
-            outAmount > Decimal.zero
-                ? (double.tryParse(outAmount.toString()) ?? 0.0)
-                : 0.0,
-          );
+          _pricing = _formatRateText(unitRate);
           _toController.text = quote.amountOutFormatted;
           _currentQuote = quote;
           _feeNative = feeNative;
           _feeUsd = feeUsd;
+          _platformFeeUsd = quote.platformFeeUsd;
         });
       } else {
         final mapped = _mapErrorMessage(_swapService.lastError);
@@ -615,6 +716,7 @@ class _SwapScreenState extends State<SwapScreen> {
           _currentQuote = null;
           _feeUsd = 0.0;
           _feeNative = 0.0;
+          _platformFeeUsd = 0.0;
         });
       }
     } catch (e) {
@@ -625,6 +727,7 @@ class _SwapScreenState extends State<SwapScreen> {
           _currentQuote = null;
           _feeUsd = 0.0;
           _feeNative = 0.0;
+          _platformFeeUsd = 0.0;
         });
       }
     } finally {
@@ -645,6 +748,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _currentQuote = null;
       _feeUsd = 0.0;
       _feeNative = 0.0;
+      _platformFeeUsd = 0.0;
       _selectedPercentage = -1;
       if (_isGasless && _isGaslessSourceUnsupported()) {
         _isGasless = false;
@@ -740,6 +844,9 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError('No router quote available');
       return false;
     }
+    if (!quote.needsAllowance && quote.allowanceTarget.isEmpty) {
+      return true;
+    }
     if (_isApproving) return false;
 
     setState(() => _isApproving = true);
@@ -750,7 +857,7 @@ class _SwapScreenState extends State<SwapScreen> {
         amountWei: fromAmountWei,
         ownerAddress: _walletAddress!,
         blockchain: blockchain,
-        allowanceTarget: quote.allowanceTarget,
+        allowanceTarget: quote.allowanceSpender ?? quote.allowanceTarget,
       );
 
       if (!mounted) return false;
@@ -811,7 +918,7 @@ class _SwapScreenState extends State<SwapScreen> {
         toToken: toToken,
         fromAmountWei: fromAmountWei,
         expectedToAmount: expectedToAmount,
-        slippagePercent: _slippage,
+        slippageBps: _slippageBps,
         blockchain: blockchain,
         recipientAddress: _walletAddress!,
         isGasless: _isGasless, // Pass the beta toggle selection
@@ -824,7 +931,14 @@ class _SwapScreenState extends State<SwapScreen> {
 
       if (result.transactionHash == null) {
         if (_isGasless) {
-          _showSnack('Gasless order submitted successfully');
+          if (result.tradeHash != null) {
+            _showSnack(
+              'Gasless order accepted: ${_shortHash(result.tradeHash!)}',
+            );
+            _trackGaslessOrder(result.tradeHash!);
+          } else {
+            _showSnack('Gasless order submitted successfully');
+          }
           _fromController.clear();
           _toController.clear();
           setState(() {
@@ -832,6 +946,7 @@ class _SwapScreenState extends State<SwapScreen> {
             _pricing = '';
             _feeUsd = 0.0;
             _feeNative = 0.0;
+            _platformFeeUsd = 0.0;
             _selectedPercentage = -1;
           });
           await _refreshWalletState();
@@ -847,6 +962,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _showSnack(
           'Gasless order accepted: ${_shortHash(result.transactionHash!)}',
         );
+        _trackGaslessOrder(result.tradeHash ?? result.transactionHash!);
         _fromController.clear();
         _toController.clear();
         setState(() {
@@ -854,6 +970,7 @@ class _SwapScreenState extends State<SwapScreen> {
           _pricing = '';
           _feeUsd = 0.0;
           _feeNative = 0.0;
+          _platformFeeUsd = 0.0;
           _selectedPercentage = -1;
         });
         await _refreshWalletState();
@@ -868,6 +985,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _pricing = '';
         _feeUsd = 0.0;
         _feeNative = 0.0;
+        _platformFeeUsd = 0.0;
         _selectedPercentage = -1;
       });
       _waitForTxConfirmation(
@@ -891,7 +1009,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final toUsdValue = _usdValueFor(_toToken, toAmount);
     final priceText = _pricing.isNotEmpty ? _pricing : '--';
     final receiveText = _toController.text.isNotEmpty
-        ? '${_toController.text} ${_toToken?.symbol ?? ''} (\$${toUsdValue.toStringAsFixed(2)})'
+        ? '${_currentQuote?.minAmountOutFormatted ?? _toController.text} ${_toToken?.symbol ?? ''} min'
         : '--';
     final swapBusy = _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
@@ -960,7 +1078,9 @@ class _SwapScreenState extends State<SwapScreen> {
                     const SizedBox(height: 24),
                     SwapPriceDetailsCard(
                       priceText: priceText,
-                      slippage: _currentQuote?.platformFeePercent ?? 1.0,
+                      platformFeePercent:
+                          _currentQuote?.platformFeePercent ?? 1.0,
+                      platformFeeUsd: _platformFeeUsd,
                       feeAmountUsd: _feeUsd,
                       feeAmountNative: _feeNative,
                       nativeFeeSymbol: blockchain.activeChain.symbol,
