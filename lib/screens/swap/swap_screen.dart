@@ -105,8 +105,20 @@ class _SwapScreenState extends State<SwapScreen> {
       context,
       listen: false,
     ).activeChain.chainId;
-    // 0x Tx Relay (Gasless) strictly supports Ethereum(1), Optimism(10), Polygon(137), Base(8453), Arbitrum(42161)
-    return [1, 10, 137, 8453, 42161].contains(chainId);
+    // 0x Tx Relay (Gasless) supports 11+ chains: Ethereum, BSC, Polygon, Avalanche, Arbitrum, Optimism, Fantom, Base, Celo, Linea, and Polygon zkEVM.
+    return [
+      1,
+      56,
+      137,
+      43114,
+      42161,
+      10,
+      250,
+      8453,
+      42220,
+      59144,
+      1101,
+    ].contains(chainId);
   }
 
   @override

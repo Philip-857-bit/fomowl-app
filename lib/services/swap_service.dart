@@ -86,12 +86,17 @@ class SwapService {
     2741,
   };
   static const Set<int> supportedGaslessChainIds = {
-    1,
-    10,
-    56,
-    137,
-    8453,
-    42161,
+    1, // Ethereum
+    10, // Optimism
+    56, // BSC
+    137, // Polygon
+    250, // Fantom
+    1101, // Polygon zkEVM
+    8453, // Base
+    42161, // Arbitrum
+    42220, // Celo
+    43114, // Avalanche
+    59144, // Linea
   };
   String? _lastError;
 
@@ -203,8 +208,8 @@ class SwapService {
         final allowanceTarget = isGasless
             ? '0x000000000022d473030f116ddee9f6b43ac78ba3' // Permit2 Address
             : data['allowanceTarget']?.toString() ??
-                data['allowanceSpender']?.toString() ??
-                '';
+                  data['allowanceSpender']?.toString() ??
+                  '';
         final minAmount = BigInt.tryParse(minAmountWei) ?? dstAmount;
 
         // Extract decimal precision safely (fallback to swap input decimals if missing)
