@@ -129,22 +129,6 @@ jobs:
           readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
           flutter build appbundle --release "${DART_DEFINES[@]}"
         
-      # Upload only arm64 APK and AAB — the most common targets.
-      # Keeps storage low. Use AAB for Play Store distribution.
-      - name: Upload APK (arm64-v8a)
-        uses: actions/upload-artifact@v4
-        with:
-          name: fomowl-apk-arm64-v8a
-          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-          retention-days: 1
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: fomowl-aab
-          path: build/app/outputs/bundle/release/app-release.aab
-          retention-days: 1
-
       - name: Upload Artifacts to Dropbox
         if: env.DROPBOX_ACCESS_TOKEN != '' || env.DROPBOX_REFRESH_TOKEN != '' || secrets.DROPBOX_ACCESS_TOKEN != '' || secrets.DROPBOX_REFRESH_TOKEN != ''
         env:
@@ -194,9 +178,9 @@ jobs:
           }
           
           if [ -f "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" ]; then
-            upload_to_dropbox "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "fomowl-arm64-v8a-release.apk"
+            upload_to_dropbox "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "owllet-arm64-v8a-release.apk"
           fi
           
           if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
-            upload_to_dropbox "build/app/outputs/bundle/release/app-release.aab" "fomowl-release.aab"
+            upload_to_dropbox "build/app/outputs/bundle/release/app-release.aab" "owllet-release.aab"
           fi
