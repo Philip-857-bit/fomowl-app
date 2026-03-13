@@ -130,7 +130,6 @@ jobs:
           flutter build appbundle --release "${DART_DEFINES[@]}"
         
       - name: Upload Artifacts to Dropbox
-        if: env.DROPBOX_ACCESS_TOKEN != '' || env.DROPBOX_REFRESH_TOKEN != '' || secrets.DROPBOX_ACCESS_TOKEN != '' || secrets.DROPBOX_REFRESH_TOKEN != ''
         env:
           DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
