@@ -44,9 +44,8 @@ class TransactionProgressState {
 }
 
 class TransactionProgressController extends ChangeNotifier {
-  TransactionProgressController({
-    TransactionProgressState? initialState,
-  }) : _state = initialState ?? TransactionProgressState.initial();
+  TransactionProgressController({TransactionProgressState? initialState})
+    : _state = initialState ?? TransactionProgressState.initial();
 
   TransactionProgressState _state;
   bool _disposed = false;
@@ -55,9 +54,7 @@ class TransactionProgressController extends ChangeNotifier {
 
   void setPreparing() {
     _update(
-      const TransactionProgressState(
-        stage: TransactionProgressStage.preparing,
-      ),
+      const TransactionProgressState(stage: TransactionProgressStage.preparing),
     );
   }
 
@@ -153,9 +150,7 @@ class TransactionProcessingScreen extends StatelessWidget {
             as TransactionProcessingArguments?;
     final controller = args?.controller;
     if (controller == null) {
-      return _ProcessingScaffold(
-        state: TransactionProgressState.initial(),
-      );
+      return _ProcessingScaffold(state: TransactionProgressState.initial());
     }
 
     return AnimatedBuilder(

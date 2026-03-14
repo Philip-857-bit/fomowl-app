@@ -183,8 +183,7 @@ class AppLocalizations {
       translate('approval_pending_confirmation');
   String get transactionPendingConfirmation =>
       translate('transaction_pending_confirmation');
-  String get gaslessOrderFailedRetry =>
-      translate('gasless_order_failed_retry');
+  String get gaslessOrderFailedRetry => translate('gasless_order_failed_retry');
   String get swapMissingHash => translate('swap_missing_hash');
   String get transferWarningMessage => translate('transfer_warning_message');
   String get maxTotal => translate('max_total');
@@ -1010,7 +1009,8 @@ class AppLocalizations {
     'transaction_details': 'DETALLES DE LA TRANSACCIÓN',
     'close_label': 'Cerrar',
     'swap_preparing_title': 'Preparando intercambio...',
-    'swap_preparing_subtitle': 'Estamos preparando tu solicitud de intercambio.',
+    'swap_preparing_subtitle':
+        'Estamos preparando tu solicitud de intercambio.',
     'swap_approval_processing_title': 'La aprobación se está procesando...',
     'swap_approval_processing_subtitle':
         'Aprueba el gasto del token y espera la confirmación en la blockchain.',
@@ -1026,8 +1026,7 @@ class AppLocalizations {
     'swap_gasless_processing_subtitle':
         'Owllet está retransmitiendo tu orden y esperando la confirmación en la blockchain.',
     'swap_completed_title': 'Intercambio completado',
-    'swap_completed_subtitle':
-        'Tu transacción se confirmó correctamente.',
+    'swap_completed_subtitle': 'Tu transacción se confirmó correctamente.',
     'swap_failed_title': 'El intercambio falló',
     'no_quote_available': 'No hay cotización disponible',
     'no_router_quote_available': 'No hay cotización del enrutador disponible',
@@ -1035,8 +1034,7 @@ class AppLocalizations {
         'La aprobación sigue pendiente de confirmación. Vuelve a comprobar más tarde.',
     'transaction_pending_confirmation':
         'La transacción sigue pendiente de confirmación. Vuelve a comprobar más tarde.',
-    'gasless_order_failed_retry':
-        'La orden sin gas falló. Inténtalo de nuevo.',
+    'gasless_order_failed_retry': 'La orden sin gas falló. Inténtalo de nuevo.',
     'swap_missing_hash':
         'El intercambio se envió, pero no se devolvió el hash de la transacción. Comprueba la actividad más tarde.',
     'transfer_warning_message':
@@ -1259,8 +1257,7 @@ class AppLocalizations {
     'swap_gasless_processing_subtitle':
         'Owllet relaie votre ordre et attend la confirmation sur la blockchain.',
     'swap_completed_title': 'Swap terminé',
-    'swap_completed_subtitle':
-        'Votre transaction a été confirmée avec succès.',
+    'swap_completed_subtitle': 'Votre transaction a été confirmée avec succès.',
     'swap_failed_title': 'Échec du swap',
     'no_quote_available': 'Aucun devis disponible',
     'no_router_quote_available': 'Aucun devis de routeur disponible',
@@ -1484,12 +1481,10 @@ class AppLocalizations {
     'swap_submitting_title': '正在提交兑换...',
     'swap_submitting_subtitle': '你的兑换交易正在提交到网络。',
     'swap_gasless_submitting_title': '正在提交免 Gas 订单...',
-    'swap_gasless_submitting_subtitle':
-        'Owllet 正在将你的免 Gas 订单提交给中继器。',
+    'swap_gasless_submitting_subtitle': 'Owllet 正在将你的免 Gas 订单提交给中继器。',
     'swap_processing_title': '交易处理中...',
     'swap_processing_subtitle': '区块链正在验证，这可能需要几分钟。',
-    'swap_gasless_processing_subtitle':
-        'Owllet 正在中继你的订单并等待区块链确认。',
+    'swap_gasless_processing_subtitle': 'Owllet 正在中继你的订单并等待区块链确认。',
     'swap_completed_title': '兑换已完成',
     'swap_completed_subtitle': '你的交易已成功确认。',
     'swap_failed_title': '兑换失败',
@@ -1683,8 +1678,7 @@ class AppLocalizations {
     'swap_approval_processing_subtitle':
         'وافق على إنفاق الرمز ثم انتظر تأكيد البلوكشين.',
     'swap_submitting_title': 'جارٍ إرسال المبادلة...',
-    'swap_submitting_subtitle':
-        'يتم الآن إرسال معاملة المبادلة إلى الشبكة.',
+    'swap_submitting_subtitle': 'يتم الآن إرسال معاملة المبادلة إلى الشبكة.',
     'swap_gasless_submitting_title': 'جارٍ إرسال الطلب بدون غاز...',
     'swap_gasless_submitting_subtitle':
         'يقوم Owllet بإرسال طلبك بدون غاز إلى المرحّل.',
@@ -1702,8 +1696,7 @@ class AppLocalizations {
         'لا تزال الموافقة بانتظار التأكيد. تحقق لاحقًا.',
     'transaction_pending_confirmation':
         'المعاملة لا تزال بانتظار التأكيد. تحقق لاحقًا.',
-    'gasless_order_failed_retry':
-        'فشل الطلب بدون غاز. يرجى المحاولة مرة أخرى.',
+    'gasless_order_failed_retry': 'فشل الطلب بدون غاز. يرجى المحاولة مرة أخرى.',
     'swap_missing_hash':
         'تم إرسال المبادلة لكن لم يتم إرجاع بصمة المعاملة. تحقق من النشاط لاحقًا.',
     'transfer_warning_message':

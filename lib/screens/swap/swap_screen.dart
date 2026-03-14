@@ -1006,9 +1006,7 @@ class _SwapScreenState extends State<SwapScreen> {
           await _refreshWalletState();
           return;
         }
-        progressController.setError(
-          l.swapMissingHash,
-        );
+        progressController.setError(l.swapMissingHash);
         return;
       }
 
