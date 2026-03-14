@@ -1,6 +1,5 @@
 import 'package:web3dart/web3dart.dart';
 import 'package:hex/hex.dart';
-import 'package:http/http.dart' as http;
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'http_client_service.dart';
 import '../models/wallet_account.dart';
