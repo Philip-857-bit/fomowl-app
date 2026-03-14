@@ -85,16 +85,16 @@ class BlockchainService extends ChangeNotifier {
     try {
       debugPrint('[OWLLET] BlockchainService: Loading custom chains...');
       await _loadCustomChains();
-      
+
       debugPrint('[OWLLET] BlockchainService: Loading active chain...');
       await _loadActiveChain();
-      
+
       debugPrint('[OWLLET] BlockchainService: Loading custom tokens...');
       await _loadCustomTokens();
-      
+
       debugPrint('[OWLLET] BlockchainService: Hydrating from backend...');
       await _hydrateNetworkSettingsFromBackend();
-      
+
       _initialized = true;
       debugPrint('[OWLLET] BlockchainService: Init SUCCESS.');
       notifyListeners();

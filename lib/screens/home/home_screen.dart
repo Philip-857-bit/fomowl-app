@@ -172,6 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
   }
+
   Future<void> _safeSyncPushRegistration() async {
     try {
       await _pushRegistrationService.syncForActiveWallet();
