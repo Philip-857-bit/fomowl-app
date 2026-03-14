@@ -157,6 +157,35 @@ class AppLocalizations {
   String get confirmTransfer => translate('confirm_transfer');
   String get gasFee => translate('gas_fee');
   String get transactionDetails => translate('transaction_details');
+  String get closeLabel => translate('close_label');
+  String get swapPreparingTitle => translate('swap_preparing_title');
+  String get swapPreparingSubtitle => translate('swap_preparing_subtitle');
+  String get swapApprovalProcessingTitle =>
+      translate('swap_approval_processing_title');
+  String get swapApprovalProcessingSubtitle =>
+      translate('swap_approval_processing_subtitle');
+  String get swapSubmittingTitle => translate('swap_submitting_title');
+  String get swapSubmittingSubtitle => translate('swap_submitting_subtitle');
+  String get swapGaslessSubmittingTitle =>
+      translate('swap_gasless_submitting_title');
+  String get swapGaslessSubmittingSubtitle =>
+      translate('swap_gasless_submitting_subtitle');
+  String get swapProcessingTitle => translate('swap_processing_title');
+  String get swapProcessingSubtitle => translate('swap_processing_subtitle');
+  String get swapGaslessProcessingSubtitle =>
+      translate('swap_gasless_processing_subtitle');
+  String get swapCompletedTitle => translate('swap_completed_title');
+  String get swapCompletedSubtitle => translate('swap_completed_subtitle');
+  String get swapFailedTitle => translate('swap_failed_title');
+  String get noQuoteAvailable => translate('no_quote_available');
+  String get noRouterQuoteAvailable => translate('no_router_quote_available');
+  String get approvalPendingConfirmation =>
+      translate('approval_pending_confirmation');
+  String get transactionPendingConfirmation =>
+      translate('transaction_pending_confirmation');
+  String get gaslessOrderFailedRetry =>
+      translate('gasless_order_failed_retry');
+  String get swapMissingHash => translate('swap_missing_hash');
   String get transferWarningMessage => translate('transfer_warning_message');
   String get maxTotal => translate('max_total');
   String get amount => translate('amount');
@@ -571,6 +600,36 @@ class AppLocalizations {
     'confirm_transfer': 'Confirm Transfer',
     'gas_fee': 'Gas Fee',
     'transaction_details': 'TRANSACTION DETAILS',
+    'close_label': 'Close',
+    'swap_preparing_title': 'Preparing swap...',
+    'swap_preparing_subtitle': 'We are preparing your swap request.',
+    'swap_approval_processing_title': 'Approval is processing...',
+    'swap_approval_processing_subtitle':
+        'Approve the token spend and wait for blockchain confirmation.',
+    'swap_submitting_title': 'Submitting swap...',
+    'swap_submitting_subtitle':
+        'Your swap transaction is being submitted to the network.',
+    'swap_gasless_submitting_title': 'Submitting gasless order...',
+    'swap_gasless_submitting_subtitle':
+        'Owllet is submitting your gasless order to the relayer.',
+    'swap_processing_title': 'Transaction is Processing...',
+    'swap_processing_subtitle':
+        'This may take a few minutes, blockchain validation is undergoing.',
+    'swap_gasless_processing_subtitle':
+        'Owllet is relaying your order and waiting for blockchain confirmation.',
+    'swap_completed_title': 'Swap completed',
+    'swap_completed_subtitle':
+        'Your transaction has been confirmed successfully.',
+    'swap_failed_title': 'Swap failed',
+    'no_quote_available': 'No quote available',
+    'no_router_quote_available': 'No router quote available',
+    'approval_pending_confirmation':
+        'Approval is still pending confirmation. Please check later.',
+    'transaction_pending_confirmation':
+        'Transaction pending confirmation. Please check later.',
+    'gasless_order_failed_retry': 'Gasless order failed. Please try again.',
+    'swap_missing_hash':
+        'Swap submitted but transaction hash was not returned. Please check activity later.',
     'transfer_warning_message':
         'Verify the recipient address carefully. Transactions are permanent and cannot be reversed.',
     'max_total': 'MAX TOTAL',
@@ -949,6 +1008,37 @@ class AppLocalizations {
     'confirm_transfer': 'Confirmar Transferencia',
     'gas_fee': 'Tarifa de Gas',
     'transaction_details': 'DETALLES DE LA TRANSACCIÓN',
+    'close_label': 'Cerrar',
+    'swap_preparing_title': 'Preparando intercambio...',
+    'swap_preparing_subtitle': 'Estamos preparando tu solicitud de intercambio.',
+    'swap_approval_processing_title': 'La aprobación se está procesando...',
+    'swap_approval_processing_subtitle':
+        'Aprueba el gasto del token y espera la confirmación en la blockchain.',
+    'swap_submitting_title': 'Enviando intercambio...',
+    'swap_submitting_subtitle':
+        'Tu transacción de intercambio se está enviando a la red.',
+    'swap_gasless_submitting_title': 'Enviando orden sin gas...',
+    'swap_gasless_submitting_subtitle':
+        'Owllet está enviando tu orden sin gas al relayer.',
+    'swap_processing_title': 'La transacción se está procesando...',
+    'swap_processing_subtitle':
+        'Esto puede tardar unos minutos mientras se valida en la blockchain.',
+    'swap_gasless_processing_subtitle':
+        'Owllet está retransmitiendo tu orden y esperando la confirmación en la blockchain.',
+    'swap_completed_title': 'Intercambio completado',
+    'swap_completed_subtitle':
+        'Tu transacción se confirmó correctamente.',
+    'swap_failed_title': 'El intercambio falló',
+    'no_quote_available': 'No hay cotización disponible',
+    'no_router_quote_available': 'No hay cotización del enrutador disponible',
+    'approval_pending_confirmation':
+        'La aprobación sigue pendiente de confirmación. Vuelve a comprobar más tarde.',
+    'transaction_pending_confirmation':
+        'La transacción sigue pendiente de confirmación. Vuelve a comprobar más tarde.',
+    'gasless_order_failed_retry':
+        'La orden sin gas falló. Inténtalo de nuevo.',
+    'swap_missing_hash':
+        'El intercambio se envió, pero no se devolvió el hash de la transacción. Comprueba la actividad más tarde.',
     'transfer_warning_message':
         'Verifique la dirección del destinatario cuidadosamente. Las transacciones son permanentes y no se pueden revertir.',
     'max_total': 'TOTAL MÁXIMO',
@@ -1151,6 +1241,37 @@ class AppLocalizations {
     'confirm_transfer': 'Confirmer le Transfert',
     'gas_fee': 'Frais de Gas',
     'transaction_details': 'DÉTAILS DE LA TRANSACTION',
+    'close_label': 'Fermer',
+    'swap_preparing_title': 'Préparation du swap...',
+    'swap_preparing_subtitle': 'Nous préparons votre demande de swap.',
+    'swap_approval_processing_title': "L'approbation est en cours...",
+    'swap_approval_processing_subtitle':
+        'Approuvez la dépense du token puis attendez la confirmation sur la blockchain.',
+    'swap_submitting_title': 'Envoi du swap...',
+    'swap_submitting_subtitle':
+        'Votre transaction de swap est en cours d’envoi sur le réseau.',
+    'swap_gasless_submitting_title': "Envoi de l'ordre gasless...",
+    'swap_gasless_submitting_subtitle':
+        'Owllet transmet votre ordre gasless au relayer.',
+    'swap_processing_title': 'La transaction est en cours...',
+    'swap_processing_subtitle':
+        'Cela peut prendre quelques minutes pendant la validation sur la blockchain.',
+    'swap_gasless_processing_subtitle':
+        'Owllet relaie votre ordre et attend la confirmation sur la blockchain.',
+    'swap_completed_title': 'Swap terminé',
+    'swap_completed_subtitle':
+        'Votre transaction a été confirmée avec succès.',
+    'swap_failed_title': 'Échec du swap',
+    'no_quote_available': 'Aucun devis disponible',
+    'no_router_quote_available': 'Aucun devis de routeur disponible',
+    'approval_pending_confirmation':
+        "L'approbation est toujours en attente de confirmation. Vérifiez plus tard.",
+    'transaction_pending_confirmation':
+        'La transaction est toujours en attente de confirmation. Vérifiez plus tard.',
+    'gasless_order_failed_retry':
+        "L'ordre gasless a échoué. Veuillez réessayer.",
+    'swap_missing_hash':
+        'Le swap a été soumis, mais le hash de transaction n’a pas été renvoyé. Vérifiez l’activité plus tard.',
     'transfer_warning_message':
         'Vérifiez attentivement l\'adresse du destinataire. Les transactions sont permanentes et ne peuvent pas être annulées.',
     'max_total': 'TOTAL MAXIMUM',
@@ -1355,6 +1476,29 @@ class AppLocalizations {
     'confirm_transfer': '确认转账',
     'gas_fee': 'Gas 费用',
     'transaction_details': '交易详情',
+    'close_label': '关闭',
+    'swap_preparing_title': '正在准备兑换...',
+    'swap_preparing_subtitle': '我们正在准备你的兑换请求。',
+    'swap_approval_processing_title': '授权处理中...',
+    'swap_approval_processing_subtitle': '请批准代币支出并等待区块链确认。',
+    'swap_submitting_title': '正在提交兑换...',
+    'swap_submitting_subtitle': '你的兑换交易正在提交到网络。',
+    'swap_gasless_submitting_title': '正在提交免 Gas 订单...',
+    'swap_gasless_submitting_subtitle':
+        'Owllet 正在将你的免 Gas 订单提交给中继器。',
+    'swap_processing_title': '交易处理中...',
+    'swap_processing_subtitle': '区块链正在验证，这可能需要几分钟。',
+    'swap_gasless_processing_subtitle':
+        'Owllet 正在中继你的订单并等待区块链确认。',
+    'swap_completed_title': '兑换已完成',
+    'swap_completed_subtitle': '你的交易已成功确认。',
+    'swap_failed_title': '兑换失败',
+    'no_quote_available': '没有可用报价',
+    'no_router_quote_available': '没有可用路由报价',
+    'approval_pending_confirmation': '授权仍在等待确认，请稍后查看。',
+    'transaction_pending_confirmation': '交易仍在等待确认，请稍后查看。',
+    'gasless_order_failed_retry': '免 Gas 订单失败，请重试。',
+    'swap_missing_hash': '兑换已提交，但未返回交易哈希。请稍后查看活动记录。',
     'transfer_warning_message': '请仔细核对收款地址。交易是永久性的，无法撤销。',
     'max_total': '最大总额',
     'amount': '金额',
@@ -1532,6 +1676,36 @@ class AppLocalizations {
     'confirm_transfer': 'تأكيد التحويل',
     'gas_fee': 'رسوم الغاز',
     'transaction_details': 'تفاصيل المعاملة',
+    'close_label': 'إغلاق',
+    'swap_preparing_title': 'جارٍ تجهيز المبادلة...',
+    'swap_preparing_subtitle': 'نحن نجهز طلب المبادلة الخاص بك.',
+    'swap_approval_processing_title': 'تجري معالجة الموافقة...',
+    'swap_approval_processing_subtitle':
+        'وافق على إنفاق الرمز ثم انتظر تأكيد البلوكشين.',
+    'swap_submitting_title': 'جارٍ إرسال المبادلة...',
+    'swap_submitting_subtitle':
+        'يتم الآن إرسال معاملة المبادلة إلى الشبكة.',
+    'swap_gasless_submitting_title': 'جارٍ إرسال الطلب بدون غاز...',
+    'swap_gasless_submitting_subtitle':
+        'يقوم Owllet بإرسال طلبك بدون غاز إلى المرحّل.',
+    'swap_processing_title': 'المعاملة قيد المعالجة...',
+    'swap_processing_subtitle':
+        'قد يستغرق هذا بضع دقائق أثناء التحقق على البلوكشين.',
+    'swap_gasless_processing_subtitle':
+        'يقوم Owllet بترحيل طلبك وينتظر تأكيد البلوكشين.',
+    'swap_completed_title': 'اكتملت المبادلة',
+    'swap_completed_subtitle': 'تم تأكيد معاملتك بنجاح.',
+    'swap_failed_title': 'فشلت المبادلة',
+    'no_quote_available': 'لا يوجد عرض سعر متاح',
+    'no_router_quote_available': 'لا يوجد عرض سعر من الموجّه',
+    'approval_pending_confirmation':
+        'لا تزال الموافقة بانتظار التأكيد. تحقق لاحقًا.',
+    'transaction_pending_confirmation':
+        'المعاملة لا تزال بانتظار التأكيد. تحقق لاحقًا.',
+    'gasless_order_failed_retry':
+        'فشل الطلب بدون غاز. يرجى المحاولة مرة أخرى.',
+    'swap_missing_hash':
+        'تم إرسال المبادلة لكن لم يتم إرجاع بصمة المعاملة. تحقق من النشاط لاحقًا.',
     'transfer_warning_message':
         'تحقق من عنوان المستلم بعناية. المعاملات دائمة ولا يمكن التراجع عنها.',
     'max_total': 'المجموع الأقصى',

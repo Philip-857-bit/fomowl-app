@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 
 enum TransactionProgressStage {
   preparing,
@@ -17,8 +18,7 @@ enum TransactionProgressStage {
 class TransactionProgressState {
   const TransactionProgressState({
     required this.stage,
-    required this.title,
-    required this.subtitle,
+    this.message,
     this.reference,
     this.detailsUrl,
   });
@@ -26,14 +26,11 @@ class TransactionProgressState {
   factory TransactionProgressState.initial() {
     return const TransactionProgressState(
       stage: TransactionProgressStage.preparing,
-      title: 'Preparing swap...',
-      subtitle: 'We are preparing your swap request.',
     );
   }
 
   final TransactionProgressStage stage;
-  final String title;
-  final String subtitle;
+  final String? message;
   final String? reference;
   final String? detailsUrl;
 
@@ -47,8 +44,9 @@ class TransactionProgressState {
 }
 
 class TransactionProgressController extends ChangeNotifier {
-  TransactionProgressController({TransactionProgressState? initialState})
-    : _state = initialState ?? TransactionProgressState.initial();
+  TransactionProgressController({
+    TransactionProgressState? initialState,
+  }) : _state = initialState ?? TransactionProgressState.initial();
 
   TransactionProgressState _state;
   bool _disposed = false;
@@ -59,8 +57,6 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       const TransactionProgressState(
         stage: TransactionProgressStage.preparing,
-        title: 'Preparing swap...',
-        subtitle: 'We are preparing your swap request.',
       ),
     );
   }
@@ -69,9 +65,6 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       TransactionProgressState(
         stage: TransactionProgressStage.approvalPending,
-        title: 'Approval is processing...',
-        subtitle:
-            'Approve the token spend and wait for blockchain confirmation.',
         reference: reference,
         detailsUrl: detailsUrl,
       ),
@@ -81,11 +74,9 @@ class TransactionProgressController extends ChangeNotifier {
   void setSwapSubmitting({bool gasless = false}) {
     _update(
       TransactionProgressState(
-        stage: TransactionProgressStage.swapSubmitting,
-        title: gasless ? 'Submitting gasless order...' : 'Submitting swap...',
-        subtitle: gasless
-            ? 'Owllet is submitting your gasless order to the relayer.'
-            : 'Your swap transaction is being submitted to the network.',
+        stage: gasless
+            ? TransactionProgressStage.gaslessPending
+            : TransactionProgressStage.swapSubmitting,
       ),
     );
   }
@@ -94,9 +85,6 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       TransactionProgressState(
         stage: TransactionProgressStage.swapPending,
-        title: 'Transaction is Processing...',
-        subtitle:
-            'This may take a few minutes, blockchain validation is undergoing.',
         reference: reference,
         detailsUrl: detailsUrl,
       ),
@@ -107,9 +95,6 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       TransactionProgressState(
         stage: TransactionProgressStage.gaslessPending,
-        title: 'Transaction is Processing...',
-        subtitle:
-            'Owllet is relaying your order and waiting for blockchain confirmation.',
         reference: reference,
         detailsUrl: detailsUrl,
       ),
@@ -120,8 +105,6 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       TransactionProgressState(
         stage: TransactionProgressStage.success,
-        title: 'Swap completed',
-        subtitle: 'Your transaction has been confirmed successfully.',
         reference: reference,
         detailsUrl: detailsUrl,
       ),
@@ -132,8 +115,7 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       TransactionProgressState(
         stage: TransactionProgressStage.error,
-        title: 'Swap failed',
-        subtitle: message,
+        message: message,
         reference: reference,
         detailsUrl: detailsUrl,
       ),
@@ -171,7 +153,9 @@ class TransactionProcessingScreen extends StatelessWidget {
             as TransactionProcessingArguments?;
     final controller = args?.controller;
     if (controller == null) {
-      return _ProcessingScaffold(state: TransactionProgressState.initial());
+      return _ProcessingScaffold(
+        state: TransactionProgressState.initial(),
+      );
     }
 
     return AnimatedBuilder(
@@ -188,8 +172,6 @@ class _ProcessingScaffold extends StatelessWidget {
 
   IconData get _icon {
     switch (state.stage) {
-      case TransactionProgressStage.success:
-        return Icons.check_rounded;
       case TransactionProgressStage.error:
         return Icons.close_rounded;
       case TransactionProgressStage.preparing:
@@ -197,25 +179,64 @@ class _ProcessingScaffold extends StatelessWidget {
       case TransactionProgressStage.swapSubmitting:
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
+      case TransactionProgressStage.success:
         return Icons.check_rounded;
     }
   }
 
   Color get _iconColor {
-    switch (state.stage) {
-      case TransactionProgressStage.error:
-        return Colors.white;
-      default:
-        return AppColors.accentRed;
+    if (state.stage == TransactionProgressStage.error) {
+      return Colors.white;
     }
+    return AppColors.accentRed;
   }
 
   Color get _orbColor {
+    if (state.stage == TransactionProgressStage.error) {
+      return AppColors.error;
+    }
+    return AppColors.accentRed;
+  }
+
+  String _title(AppLocalizations l) {
     switch (state.stage) {
+      case TransactionProgressStage.preparing:
+        return l.swapPreparingTitle;
+      case TransactionProgressStage.approvalPending:
+        return l.swapApprovalProcessingTitle;
+      case TransactionProgressStage.swapSubmitting:
+        return l.swapSubmittingTitle;
+      case TransactionProgressStage.swapPending:
+        return l.swapProcessingTitle;
+      case TransactionProgressStage.gaslessPending:
+        return state.reference == null
+            ? l.swapGaslessSubmittingTitle
+            : l.swapProcessingTitle;
+      case TransactionProgressStage.success:
+        return l.swapCompletedTitle;
       case TransactionProgressStage.error:
-        return AppColors.error;
-      default:
-        return AppColors.accentRed;
+        return l.swapFailedTitle;
+    }
+  }
+
+  String _subtitle(AppLocalizations l) {
+    switch (state.stage) {
+      case TransactionProgressStage.preparing:
+        return l.swapPreparingSubtitle;
+      case TransactionProgressStage.approvalPending:
+        return l.swapApprovalProcessingSubtitle;
+      case TransactionProgressStage.swapSubmitting:
+        return l.swapSubmittingSubtitle;
+      case TransactionProgressStage.swapPending:
+        return l.swapProcessingSubtitle;
+      case TransactionProgressStage.gaslessPending:
+        return state.reference == null
+            ? l.swapGaslessSubmittingSubtitle
+            : l.swapGaslessProcessingSubtitle;
+      case TransactionProgressStage.success:
+        return l.swapCompletedSubtitle;
+      case TransactionProgressStage.error:
+        return state.message ?? l.tryAgain;
     }
   }
 
@@ -241,12 +262,15 @@ class _ProcessingScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final hasDetailsUrl =
+        state.detailsUrl != null && state.detailsUrl!.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.cardDark,
       body: SafeArea(
         child: Column(
           children: [
-            // Close button
             Align(
               alignment: Alignment.topRight,
               child: Padding(
@@ -269,10 +293,7 @@ class _ProcessingScaffold extends StatelessWidget {
                 ),
               ),
             ),
-
             const Spacer(flex: 2),
-
-            // Checkmark circle with gradient glow
             Container(
               width: 120,
               height: 120,
@@ -300,10 +321,8 @@ class _ProcessingScaffold extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 40),
-
-            // Title
             Text(
-              state.title,
+              _title(l),
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
@@ -311,12 +330,10 @@ class _ProcessingScaffold extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-
-            // Subtitle
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                state.subtitle,
+                _subtitle(l),
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
@@ -354,10 +371,7 @@ class _ProcessingScaffold extends StatelessWidget {
                 ),
               ),
             ],
-
             const Spacer(flex: 3),
-
-            // Transaction details button
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: GestureDetector(
@@ -371,11 +385,11 @@ class _ProcessingScaffold extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      state.detailsUrl != null && state.detailsUrl!.isNotEmpty
-                          ? 'Transaction details'
+                      hasDetailsUrl
+                          ? l.transactionDetails
                           : (state.isTerminal
-                                ? 'Close'
-                                : 'Transaction details'),
+                                ? l.closeLabel
+                                : l.transactionDetails),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

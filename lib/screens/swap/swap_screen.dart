@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
 import '../../services/swap_service.dart';
@@ -289,6 +290,13 @@ class _SwapScreenState extends State<SwapScreen> {
   void _onFromAmountChanged(String value) {
     setState(() => _selectedPercentage = -1);
     _debounceTimer?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() {
+        _resetQuoteState();
+        _isCalculating = false;
+      });
+      return;
+    }
     _debounceTimer = Timer(const Duration(milliseconds: 600), () {
       if (value.isNotEmpty) _getQuote();
     });
@@ -534,6 +542,7 @@ class _SwapScreenState extends State<SwapScreen> {
     String tradeHash, {
     required TransactionProgressController progressController,
   }) async {
+    final l = AppLocalizations.of(context);
     const pendingStates = {
       'pending',
       'submitted',
@@ -592,7 +601,7 @@ class _SwapScreenState extends State<SwapScreen> {
           );
         } else {
           progressController.setError(
-            'Transaction pending confirmation. Please check later.',
+            l.transactionPendingConfirmation,
             reference: _shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
@@ -608,7 +617,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
       if (status != null && failedStates.contains(status)) {
         progressController.setError(
-          'Gasless order failed. Please try again.',
+          l.gaslessOrderFailedRetry,
           reference: _shortHash(tradeHash),
         );
         return;
@@ -629,6 +638,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (address == null) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     await blockchain.fetchWalletTokens(address);
+    await _refreshTokenPrices();
     if (!mounted) return;
     setState(() {
       _syncSelectedTokens(blockchain.tokens);
@@ -876,13 +886,14 @@ class _SwapScreenState extends State<SwapScreen> {
     String fromAmountWei, {
     required TransactionProgressController progressController,
   }) async {
+    final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
       progressController.setError('Wallet not connected');
       return false;
     }
     final quote = _currentQuote;
     if (quote == null) {
-      progressController.setError('No router quote available');
+      progressController.setError(l.noRouterQuoteAvailable);
       return false;
     }
     if (!quote.needsAllowance && quote.allowanceTarget.isEmpty) {
@@ -918,7 +929,7 @@ class _SwapScreenState extends State<SwapScreen> {
         final confirmed = await _waitForTxConfirmation(txHash);
         if (!confirmed) {
           progressController.setError(
-            'Approval is still pending confirmation. Please check later.',
+            l.approvalPendingConfirmation,
             reference: _shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
@@ -940,13 +951,14 @@ class _SwapScreenState extends State<SwapScreen> {
     required String fromAmountWei,
     required TransactionProgressController progressController,
   }) async {
+    final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
       progressController.setError('Wallet not connected');
       return;
     }
     final quote = _currentQuote;
     if (quote == null) {
-      progressController.setError('No quote available');
+      progressController.setError(l.noQuoteAvailable);
       return;
     }
     if (_isSwapping) return;
@@ -995,7 +1007,7 @@ class _SwapScreenState extends State<SwapScreen> {
           return;
         }
         progressController.setError(
-          'Swap submitted but transaction hash was not returned. Please check activity later.',
+          l.swapMissingHash,
         );
         return;
       }
@@ -1031,7 +1043,7 @@ class _SwapScreenState extends State<SwapScreen> {
         );
       } else {
         progressController.setError(
-          'Transaction pending confirmation. Please check later.',
+          l.transactionPendingConfirmation,
           reference: _shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
