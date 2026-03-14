@@ -7,33 +7,35 @@ class SwapPrimaryButton extends StatelessWidget {
   final bool enabled;
   final bool isBusy;
   final VoidCallback onPressed;
+  final String? label;
 
   const SwapPrimaryButton({
     super.key,
     required this.enabled,
     required this.isBusy,
     required this.onPressed,
+    this.label,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: enabled ? onPressed : null,
+      onTap: (enabled && !isBusy) ? onPressed : null,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: enabled ? AppColors.primaryGradient : null,
-          color: enabled ? null : AppColors.cardDark,
+          gradient: (enabled && !isBusy) ? AppColors.primaryGradient : null,
+          color: (enabled && !isBusy) ? null : AppColors.cardDark,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(
           child: Text(
-            isBusy ? 'Processing...' : 'Swap Now',
+            isBusy ? 'Processing...' : (label ?? 'Swap Now'),
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: enabled
+              color: (enabled && !isBusy)
                   ? Colors.white
                   : Colors.white.withValues(alpha: 0.4),
             ),

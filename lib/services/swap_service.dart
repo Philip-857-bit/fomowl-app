@@ -201,10 +201,7 @@ class SwapService {
           _lastError = _extractProviderError(data);
           return null;
         }
-        if (data['hasBalanceIssue'] == true) {
-          _lastError = _extractProviderError(data);
-          return null;
-        }
+        final hasBalanceIssue = data['hasBalanceIssue'] == true;
         final allowanceTarget = isGasless
             ? '0x000000000022d473030f116ddee9f6b43ac78ba3' // Permit2 Address
             : data['allowanceTarget']?.toString() ??
@@ -283,8 +280,12 @@ class SwapService {
       if (balance is Map<String, dynamic>) {
         final expected = balance['expected']?.toString();
         final actual = balance['actual']?.toString();
+        final desc = balance['description']?.toString();
         if (expected != null && actual != null) {
           return 'Insufficient balance. Need $expected but only $actual is available.';
+        }
+        if (desc != null && desc.isNotEmpty) {
+          return desc;
         }
       }
       final allowance = issues['allowance'];

@@ -1026,17 +1026,21 @@ class _SwapScreenState extends State<SwapScreen> {
     final swapBusy = _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
     final hasQuote = _currentQuote != null && _toController.text.isNotEmpty;
-    final chainSupported = _swapService.isChainSupported(
-      blockchain.activeChain.chainId,
-      isGasless: _isGasless,
-    );
+    final hasBalance = !(_currentQuote?.hasBalanceIssue ?? false);
     final swapEnabled =
         hasInputAmount &&
         hasQuote &&
+        hasBalance &&
         chainSupported &&
         !_tokensAreIdentical(_fromToken, _toToken) &&
         !_isGaslessSourceUnsupported() &&
         !swapBusy;
+
+    String? buttonLabel;
+    if (hasQuote && !hasBalance) {
+      buttonLabel = 'Insufficient Balance';
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: BottomNavBar(
@@ -1110,6 +1114,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       enabled: swapEnabled,
                       isBusy: swapBusy,
                       onPressed: _executeSwap,
+                      label: buttonLabel,
                     ),
                     if (_isGaslessSupported) ...[
                       const SizedBox(height: 20),

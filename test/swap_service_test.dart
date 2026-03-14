@@ -88,5 +88,39 @@ void main() {
         expect(service.lastError, contains('Insufficient balance'));
       },
     );
+
+    test(
+      'returns quote even if hasBalanceIssue is true when buyAmount is valid',
+      () async {
+        final service = SwapService(
+          httpClient: MockClient((request) async {
+            return http.Response(
+              jsonEncode({
+                'buyAmount': '5000',
+                'hasBalanceIssue': true,
+                'allowanceTarget': '0xabc',
+                'tokenMetadata': {
+                  'buyToken': {'decimals': 18},
+                },
+              }),
+              200,
+            );
+          }),
+        );
+
+        final quote = await service.get0xQuote(
+          chainId: 1,
+          fromTokenAddress: '0x123',
+          toTokenAddress: '0x456',
+          amountWei: '1000',
+          buyTokenDecimals: 18,
+          isGasless: false,
+        );
+
+        expect(quote, isNotNull);
+        expect(quote!.hasBalanceIssue, isTrue);
+        expect(quote.amountOutWei, '5000');
+      },
+    );
   });
 }
