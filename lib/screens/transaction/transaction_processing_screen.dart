@@ -1,11 +1,243 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../constants/app_colors.dart';
 
-/// Transaction Processing Screen
-/// Shows a processing/success state with checkmark and "Transaction details" button
+enum TransactionProgressStage {
+  preparing,
+  approvalPending,
+  swapSubmitting,
+  swapPending,
+  gaslessPending,
+  success,
+  error,
+}
+
+class TransactionProgressState {
+  const TransactionProgressState({
+    required this.stage,
+    required this.title,
+    required this.subtitle,
+    this.reference,
+    this.detailsUrl,
+  });
+
+  factory TransactionProgressState.initial() {
+    return const TransactionProgressState(
+      stage: TransactionProgressStage.preparing,
+      title: 'Preparing swap...',
+      subtitle: 'We are preparing your swap request.',
+    );
+  }
+
+  final TransactionProgressStage stage;
+  final String title;
+  final String subtitle;
+  final String? reference;
+  final String? detailsUrl;
+
+  bool get isTerminal =>
+      stage == TransactionProgressStage.success ||
+      stage == TransactionProgressStage.error;
+
+  bool get hasProcessingState =>
+      stage != TransactionProgressStage.success &&
+      stage != TransactionProgressStage.error;
+}
+
+class TransactionProgressController extends ChangeNotifier {
+  TransactionProgressController({TransactionProgressState? initialState})
+    : _state = initialState ?? TransactionProgressState.initial();
+
+  TransactionProgressState _state;
+  bool _disposed = false;
+
+  TransactionProgressState get state => _state;
+
+  void setPreparing() {
+    _update(
+      const TransactionProgressState(
+        stage: TransactionProgressStage.preparing,
+        title: 'Preparing swap...',
+        subtitle: 'We are preparing your swap request.',
+      ),
+    );
+  }
+
+  void setApprovalPending({String? reference, String? detailsUrl}) {
+    _update(
+      TransactionProgressState(
+        stage: TransactionProgressStage.approvalPending,
+        title: 'Approval is processing...',
+        subtitle:
+            'Approve the token spend and wait for blockchain confirmation.',
+        reference: reference,
+        detailsUrl: detailsUrl,
+      ),
+    );
+  }
+
+  void setSwapSubmitting({bool gasless = false}) {
+    _update(
+      TransactionProgressState(
+        stage: TransactionProgressStage.swapSubmitting,
+        title: gasless ? 'Submitting gasless order...' : 'Submitting swap...',
+        subtitle: gasless
+            ? 'Owllet is submitting your gasless order to the relayer.'
+            : 'Your swap transaction is being submitted to the network.',
+      ),
+    );
+  }
+
+  void setSwapPending({String? reference, String? detailsUrl}) {
+    _update(
+      TransactionProgressState(
+        stage: TransactionProgressStage.swapPending,
+        title: 'Transaction is Processing...',
+        subtitle:
+            'This may take a few minutes, blockchain validation is undergoing.',
+        reference: reference,
+        detailsUrl: detailsUrl,
+      ),
+    );
+  }
+
+  void setGaslessPending({String? reference, String? detailsUrl}) {
+    _update(
+      TransactionProgressState(
+        stage: TransactionProgressStage.gaslessPending,
+        title: 'Transaction is Processing...',
+        subtitle:
+            'Owllet is relaying your order and waiting for blockchain confirmation.',
+        reference: reference,
+        detailsUrl: detailsUrl,
+      ),
+    );
+  }
+
+  void setSuccess({String? reference, String? detailsUrl}) {
+    _update(
+      TransactionProgressState(
+        stage: TransactionProgressStage.success,
+        title: 'Swap completed',
+        subtitle: 'Your transaction has been confirmed successfully.',
+        reference: reference,
+        detailsUrl: detailsUrl,
+      ),
+    );
+  }
+
+  void setError(String message, {String? reference, String? detailsUrl}) {
+    _update(
+      TransactionProgressState(
+        stage: TransactionProgressStage.error,
+        title: 'Swap failed',
+        subtitle: message,
+        reference: reference,
+        detailsUrl: detailsUrl,
+      ),
+    );
+  }
+
+  void _update(TransactionProgressState nextState) {
+    if (_disposed) {
+      return;
+    }
+    _state = nextState;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
+class TransactionProcessingArguments {
+  const TransactionProcessingArguments({required this.controller});
+
+  final TransactionProgressController controller;
+}
+
 class TransactionProcessingScreen extends StatelessWidget {
   const TransactionProcessingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments
+            as TransactionProcessingArguments?;
+    final controller = args?.controller;
+    if (controller == null) {
+      return _ProcessingScaffold(state: TransactionProgressState.initial());
+    }
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => _ProcessingScaffold(state: controller.state),
+    );
+  }
+}
+
+class _ProcessingScaffold extends StatelessWidget {
+  const _ProcessingScaffold({required this.state});
+
+  final TransactionProgressState state;
+
+  IconData get _icon {
+    switch (state.stage) {
+      case TransactionProgressStage.success:
+        return Icons.check_rounded;
+      case TransactionProgressStage.error:
+        return Icons.close_rounded;
+      case TransactionProgressStage.preparing:
+      case TransactionProgressStage.approvalPending:
+      case TransactionProgressStage.swapSubmitting:
+      case TransactionProgressStage.swapPending:
+      case TransactionProgressStage.gaslessPending:
+        return Icons.check_rounded;
+    }
+  }
+
+  Color get _iconColor {
+    switch (state.stage) {
+      case TransactionProgressStage.error:
+        return Colors.white;
+      default:
+        return AppColors.accentRed;
+    }
+  }
+
+  Color get _orbColor {
+    switch (state.stage) {
+      case TransactionProgressStage.error:
+        return AppColors.error;
+      default:
+        return AppColors.accentRed;
+    }
+  }
+
+  Future<void> _openDetails(BuildContext context) async {
+    final detailsUrl = state.detailsUrl;
+    if (detailsUrl != null && detailsUrl.isNotEmpty) {
+      final uri = Uri.tryParse(detailsUrl);
+      if (uri != null) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    }
+
+    if (!context.mounted) {
+      return;
+    }
+    if (state.isTerminal) {
+      Navigator.pop(context);
+      return;
+    }
+    Navigator.pushNamed(context, '/transactions');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +280,8 @@ class TransactionProcessingScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.accentRed.withValues(alpha: 0.35),
-                    AppColors.accentRed.withValues(alpha: 0.08),
+                    _orbColor.withValues(alpha: 0.35),
+                    _orbColor.withValues(alpha: 0.08),
                     Colors.transparent,
                   ],
                   stops: const [0.3, 0.7, 1.0],
@@ -61,13 +293,9 @@ class TransactionProcessingScreen extends StatelessWidget {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.accentRed.withValues(alpha: 0.2),
+                    color: _orbColor.withValues(alpha: 0.2),
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: AppColors.accentRed,
-                    size: 40,
-                  ),
+                  child: Icon(_icon, color: _iconColor, size: 40),
                 ),
               ),
             ),
@@ -75,7 +303,7 @@ class TransactionProcessingScreen extends StatelessWidget {
 
             // Title
             Text(
-              'Transaction is Processing...',
+              state.title,
               style: GoogleFonts.outfit(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
@@ -88,7 +316,7 @@ class TransactionProcessingScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                'This may take a few minutes, blockchain validation is undergoing.',
+                state.subtitle,
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   fontWeight: FontWeight.w400,
@@ -98,6 +326,34 @@ class TransactionProcessingScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
+            if (state.reference != null && state.reference!.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48),
+                child: Text(
+                  state.reference!,
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.72),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+            if (state.hasProcessingState) ...[
+              const SizedBox(height: 18),
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.accentRed,
+                  ),
+                ),
+              ),
+            ],
 
             const Spacer(flex: 3),
 
@@ -105,10 +361,7 @@ class TransactionProcessingScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: GestureDetector(
-                onTap: () {
-                  // Pop back or navigate to transaction detail
-                  Navigator.pop(context);
-                },
+                onTap: () => _openDetails(context),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -118,7 +371,11 @@ class TransactionProcessingScreen extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'Transaction details',
+                      state.detailsUrl != null && state.detailsUrl!.isNotEmpty
+                          ? 'Transaction details'
+                          : (state.isTerminal
+                                ? 'Close'
+                                : 'Transaction details'),
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

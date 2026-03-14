@@ -6,6 +6,7 @@ import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/language_controller.dart';
 import '../utils/language_utils.dart';
+import 'app_navigator.dart';
 import 'app_bootstrapper.dart';
 import 'app_routes.dart';
 
@@ -19,6 +20,7 @@ class OwlletApp extends StatelessWidget {
         return MaterialApp(
           title: 'Owllet Wallet',
           debugShowCheckedModeBanner: false,
+          navigatorKey: appNavigatorKey,
           locale: languageController.locale,
           localeResolutionCallback: (deviceLocale, supportedLocales) {
             if (supportedLocales.any(

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'utils/toast_utils.dart';
 import 'config/app_environment.dart';
 
+import 'app/app_navigator.dart';
 import 'app/app_providers.dart';
 import 'app/owllet_app.dart';
 import 'constants/app_colors.dart';
@@ -24,9 +25,20 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling a background message: ${message.messageId}");
 }
 
+void _openNotificationsFromPush(RemoteMessage _) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) {
+      return;
+    }
+    navigator.pushNamed('/notifications');
+  });
+}
+
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  RemoteMessage? initialPushMessage;
 
   if (AppEnvironment.pushNotificationsEnabled &&
       AppEnvironment.firebaseOptions != null) {
@@ -43,6 +55,8 @@ Future<void> main() async {
           );
         }
       });
+      FirebaseMessaging.onMessageOpenedApp.listen(_openNotificationsFromPush);
+      initialPushMessage = await FirebaseMessaging.instance.getInitialMessage();
     } catch (_) {
       // Ignore init errors here, handled in service.
     }
@@ -69,4 +83,8 @@ Future<void> main() async {
   runApp(
     MultiProvider(providers: buildAppProviders(), child: const OwlletApp()),
   );
+
+  if (initialPushMessage != null) {
+    _openNotificationsFromPush(initialPushMessage);
+  }
 }

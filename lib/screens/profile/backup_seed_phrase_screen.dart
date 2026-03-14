@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/wallet_account.dart';
 import '../../services/screen_capture_guard.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/sensitive_access_guard.dart';
@@ -50,6 +51,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   Timer? _autoHideTimer;
   int _revealSession = 0;
   bool _isLoading = false;
+  bool _isCheckingAvailability = true;
   bool _seedPhraseUnavailable = false;
   bool _backupVerified = false;
   List<String>? _revealedWords;
@@ -64,6 +66,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_screenCaptureGuard.enableProtection());
+    unawaited(_checkSeedPhraseAvailability());
   }
 
   @override
@@ -125,6 +128,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
     if (mnemonic == null || mnemonic.trim().isEmpty) {
       setState(() {
         _isLoading = false;
+        _isCheckingAvailability = false;
         _seedPhraseUnavailable = true;
         _clearSensitiveState(updateUi: false);
       });
@@ -145,6 +149,28 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       if (!mounted || sessionId != _revealSession) return;
       _clearSensitiveState();
     });
+  }
+
+  Future<void> _checkSeedPhraseAvailability() async {
+    try {
+      final activeWallet = await _walletService.getActiveWalletAccount();
+      final mnemonic = await _walletService.getMnemonic();
+      if (!mounted) return;
+
+      final importedWithoutMnemonic =
+          activeWallet?.origin == WalletOrigin.imported &&
+          (mnemonic == null || mnemonic.trim().isEmpty);
+
+      setState(() {
+        _isCheckingAvailability = false;
+        _seedPhraseUnavailable = importedWithoutMnemonic;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isCheckingAvailability = false;
+      });
+    }
   }
 
   Future<bool?> _showRevealWarningDialog(AppLocalizations l) {
@@ -401,7 +427,16 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
                         ),
                       ),
                       const SizedBox(height: 14),
-                      if (_seedPhraseUnavailable)
+                      if (_isCheckingAvailability)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.accentRed,
+                            ),
+                          ),
+                        )
+                      else if (_seedPhraseUnavailable)
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(

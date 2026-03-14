@@ -15,6 +15,7 @@ import '../../utils/amount_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/token_selector_modal.dart';
 import 'dart:async';
+import '../transaction/transaction_processing_screen.dart';
 import 'widgets/swap_from_card.dart';
 import 'widgets/swap_to_card.dart';
 import 'widgets/swap_direction_button.dart';
@@ -55,14 +56,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final chainId = blockchain.activeChain.chainId;
     if (_lastChainId != chainId) {
       _lastChainId = chainId;
-      _quoteRequestId++;
-      _pricing = '';
-      _currentQuote = null;
-      _feeUsd = 0.0;
-      _feeNative = 0.0;
-      _toController.clear();
-      _fromController.clear();
-      _selectedPercentage = -1;
+      _resetQuoteState(clearInputAmounts: true);
       if (_isGasless && !_isGaslessSupported) {
         _isGasless = false;
       }
@@ -261,11 +255,7 @@ class _SwapScreenState extends State<SwapScreen> {
         } else {
           _toToken = selectedToken;
         }
-        _pricing = '';
-        _toController.clear();
-        _feeUsd = 0.0;
-        _feeNative = 0.0;
-        _platformFeeUsd = 0.0;
+        _resetQuoteState();
       });
       // Refresh prices so USD values are immediately available for new token
       _refreshTokenPrices();
@@ -403,6 +393,25 @@ class _SwapScreenState extends State<SwapScreen> {
     return contract.isNotEmpty;
   }
 
+  bool get _canOfferGaslessToggle {
+    final from = _fromToken;
+    return _isGaslessSupported && from != null && _tokenRequiresApproval(from);
+  }
+
+  void _resetQuoteState({bool clearInputAmounts = false}) {
+    _quoteRequestId++;
+    _pricing = '';
+    _currentQuote = null;
+    _feeUsd = 0.0;
+    _feeNative = 0.0;
+    _platformFeeUsd = 0.0;
+    _toController.clear();
+    if (clearInputAmounts) {
+      _fromController.clear();
+      _selectedPercentage = -1;
+    }
+  }
+
   bool _isGaslessSourceUnsupported({bool? gaslessEnabled}) {
     final from = _fromToken;
     if (from == null) return false;
@@ -413,6 +422,41 @@ class _SwapScreenState extends State<SwapScreen> {
   String _shortHash(String hash) {
     if (hash.length <= 10) return hash;
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
+  }
+
+  String? _transactionDetailsUrl(String hash) {
+    if (!_looksLikeTxHash(hash)) {
+      return null;
+    }
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
+    if (explorerUrl == null || explorerUrl.isEmpty) {
+      return null;
+    }
+    final normalized = explorerUrl.endsWith('/')
+        ? explorerUrl.substring(0, explorerUrl.length - 1)
+        : explorerUrl;
+    return '$normalized/tx/$hash';
+  }
+
+  void _clearSubmittedSwapState() {
+    if (!mounted) return;
+    setState(() {
+      _resetQuoteState(clearInputAmounts: true);
+    });
+  }
+
+  TransactionProgressController _openProgressFlow() {
+    final controller = TransactionProgressController();
+    unawaited(
+      Navigator.of(context)
+          .pushNamed(
+            '/transaction-processing',
+            arguments: TransactionProcessingArguments(controller: controller),
+          )
+          .whenComplete(controller.dispose),
+    );
+    return controller;
   }
 
   bool _looksLikeTxHash(String value) {
@@ -486,7 +530,10 @@ class _SwapScreenState extends State<SwapScreen> {
     return null;
   }
 
-  Future<void> _trackGaslessOrder(String tradeHash) async {
+  Future<void> _trackGaslessOrder(
+    String tradeHash, {
+    required TransactionProgressController progressController,
+  }) async {
     const pendingStates = {
       'pending',
       'submitted',
@@ -529,23 +576,41 @@ class _SwapScreenState extends State<SwapScreen> {
       final txHash = _extractGaslessTxHash(statusData);
 
       if (txHash != null && _looksLikeTxHash(txHash)) {
-        _showSnack('Gasless swap submitted: ${_shortHash(txHash)}');
-        _waitForTxConfirmation(
+        progressController.setSwapPending(
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+        final confirmed = await _waitForTxConfirmation(
           txHash,
-          successMessage: 'Swap confirmed',
           rewardReferralOnSwap: true,
         );
+        if (!mounted) return;
+        if (confirmed) {
+          progressController.setSuccess(
+            reference: _shortHash(txHash),
+            detailsUrl: _transactionDetailsUrl(txHash),
+          );
+        } else {
+          progressController.setError(
+            'Transaction pending confirmation. Please check later.',
+            reference: _shortHash(txHash),
+            detailsUrl: _transactionDetailsUrl(txHash),
+          );
+        }
         return;
       }
 
       if (status != null && successStates.contains(status)) {
-        _showSnack('Gasless order completed');
+        progressController.setSuccess(reference: _shortHash(tradeHash));
         await _refreshWalletState();
         return;
       }
 
       if (status != null && failedStates.contains(status)) {
-        _showError('Gasless order failed. Please try again.');
+        progressController.setError(
+          'Gasless order failed. Please try again.',
+          reference: _shortHash(tradeHash),
+        );
         return;
       }
 
@@ -555,7 +620,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     if (mounted) {
-      _showSnack('Gasless order submitted. Check status shortly.');
+      progressController.setGaslessPending(reference: _shortHash(tradeHash));
     }
   }
 
@@ -572,7 +637,6 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Future<bool> _waitForTxConfirmation(
     String txHash, {
-    required String successMessage,
     bool rewardReferralOnSwap = false,
   }) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -582,7 +646,6 @@ class _SwapScreenState extends State<SwapScreen> {
     );
     if (!mounted) return false;
     if (confirmed) {
-      _showSnack(successMessage);
       if (rewardReferralOnSwap && _walletAddress != null) {
         try {
           await _referralService.rewardOnSwap(
@@ -596,22 +659,15 @@ class _SwapScreenState extends State<SwapScreen> {
       }
       await _refreshWalletState();
       return true;
-    } else {
-      _showError('Transaction pending confirmation. Please check later.');
-      return false;
     }
+    return false;
   }
 
   Future<void> _getQuote() async {
     if (_fromToken == null || _toToken == null) return;
     if (_tokensAreIdentical(_fromToken, _toToken)) {
       setState(() {
-        _pricing = '';
-        _toController.clear();
-        _currentQuote = null;
-        _feeUsd = 0.0;
-        _feeNative = 0.0;
-        _platformFeeUsd = 0.0;
+        _resetQuoteState();
       });
       return;
     }
@@ -619,12 +675,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final amount = _parseDecimalAmount(amountText);
     if (amount <= Decimal.zero) {
       setState(() {
-        _pricing = '';
-        _toController.clear();
-        _currentQuote = null;
-        _feeUsd = 0.0;
-        _feeNative = 0.0;
-        _platformFeeUsd = 0.0;
+        _resetQuoteState();
       });
       return;
     }
@@ -640,8 +691,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _pricing = _isGasless
             ? 'Gasless not supported on ${blockchain.activeChain.name}'
             : 'Swap not supported on ${blockchain.activeChain.name}';
-        _toController.clear();
-        _currentQuote = null;
+        _resetQuoteState();
         _isCalculating = false;
       });
       return;
@@ -649,8 +699,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_isGaslessSourceUnsupported()) {
       setState(() {
         _pricing = 'Gasless requires ERC-20 source token';
-        _toController.clear();
-        _currentQuote = null;
+        _resetQuoteState();
         _isCalculating = false;
       });
       return;
@@ -665,11 +714,7 @@ class _SwapScreenState extends State<SwapScreen> {
         if (mounted && requestId == _quoteRequestId) {
           setState(() {
             _pricing = 'Invalid amount';
-            _toController.clear();
-            _currentQuote = null;
-            _feeUsd = 0.0;
-            _feeNative = 0.0;
-            _platformFeeUsd = 0.0;
+            _resetQuoteState();
           });
         }
         return;
@@ -724,22 +769,14 @@ class _SwapScreenState extends State<SwapScreen> {
         final mapped = _mapErrorMessage(_swapService.lastError);
         setState(() {
           _pricing = mapped;
-          _toController.clear();
-          _currentQuote = null;
-          _feeUsd = 0.0;
-          _feeNative = 0.0;
-          _platformFeeUsd = 0.0;
+          _resetQuoteState();
         });
       }
     } catch (e) {
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
           _pricing = _mapErrorMessage(e.toString());
-          _toController.clear();
-          _currentQuote = null;
-          _feeUsd = 0.0;
-          _feeNative = 0.0;
-          _platformFeeUsd = 0.0;
+          _resetQuoteState();
         });
       }
     } finally {
@@ -754,14 +791,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final temp = _fromToken;
       _fromToken = _toToken;
       _toToken = temp;
-      _fromController.clear();
-      _toController.clear();
-      _pricing = '';
-      _currentQuote = null;
-      _feeUsd = 0.0;
-      _feeNative = 0.0;
-      _platformFeeUsd = 0.0;
-      _selectedPercentage = -1;
+      _resetQuoteState(clearInputAmounts: true);
       if (_isGasless && _isGaslessSourceUnsupported()) {
         _isGasless = false;
       }
@@ -817,8 +847,15 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
 
+    final progressController = _openProgressFlow();
+    progressController.setPreparing();
+
     if (_tokenRequiresApproval(fromToken)) {
-      final approvalOk = await _handleTokenApproval(fromToken, fromAmountWei);
+      final approvalOk = await _handleTokenApproval(
+        fromToken,
+        fromAmountWei,
+        progressController: progressController,
+      );
       if (!approvalOk) return;
     }
 
@@ -826,6 +863,7 @@ class _SwapScreenState extends State<SwapScreen> {
       fromToken: fromToken,
       toToken: toToken,
       fromAmountWei: fromAmountWei,
+      progressController: progressController,
     );
   }
 
@@ -833,27 +871,18 @@ class _SwapScreenState extends State<SwapScreen> {
     ToastUtils.showError(message);
   }
 
-  void _showSnack(String message, {Color background = AppColors.success}) {
-    if (background == AppColors.error) {
-      ToastUtils.showError(message);
-    } else if (background == AppColors.success) {
-      ToastUtils.showSuccess(message);
-    } else {
-      ToastUtils.showInfo(message);
-    }
-  }
-
   Future<bool> _handleTokenApproval(
     Token fromToken,
-    String fromAmountWei,
-  ) async {
+    String fromAmountWei, {
+    required TransactionProgressController progressController,
+  }) async {
     if (_walletAddress == null) {
-      _showError('Wallet not connected');
+      progressController.setError('Wallet not connected');
       return false;
     }
     final quote = _currentQuote;
     if (quote == null) {
-      _showError('No router quote available');
+      progressController.setError('No router quote available');
       return false;
     }
     if (!quote.needsAllowance && quote.allowanceTarget.isEmpty) {
@@ -863,6 +892,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     setState(() => _isApproving = true);
     try {
+      progressController.setApprovalPending();
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final result = await _tokenApprovalService.ensureApproval(
         token: fromToken,
@@ -875,21 +905,25 @@ class _SwapScreenState extends State<SwapScreen> {
       if (!mounted) return false;
 
       if (result.hasError) {
-        _showError(_mapErrorMessage(result.error));
+        progressController.setError(_mapErrorMessage(result.error));
         return false;
       }
 
       if (result.approvalSubmitted && result.transactionHash != null) {
-        _showSnack(
-          'Approval tx submitted: ${_shortHash(result.transactionHash!)}',
+        final txHash = result.transactionHash!;
+        progressController.setApprovalPending(
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
         );
-        final confirmed = await _waitForTxConfirmation(
-          result.transactionHash!,
-          successMessage: 'Approval confirmed',
-        );
-        if (!confirmed) return false;
-      } else {
-        _showSnack('Allowance already sufficient');
+        final confirmed = await _waitForTxConfirmation(txHash);
+        if (!confirmed) {
+          progressController.setError(
+            'Approval is still pending confirmation. Please check later.',
+            reference: _shortHash(txHash),
+            detailsUrl: _transactionDetailsUrl(txHash),
+          );
+          return false;
+        }
       }
 
       return true;
@@ -904,14 +938,15 @@ class _SwapScreenState extends State<SwapScreen> {
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
+    required TransactionProgressController progressController,
   }) async {
     if (_walletAddress == null) {
-      _showError('Wallet not connected');
+      progressController.setError('Wallet not connected');
       return;
     }
     final quote = _currentQuote;
     if (quote == null) {
-      _showError('No quote available');
+      progressController.setError('No quote available');
       return;
     }
     if (_isSwapping) return;
@@ -923,6 +958,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     setState(() => _isSwapping = true);
     try {
+      progressController.setSwapSubmitting(gasless: _isGasless);
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final result = await _swapExecutionService.execute(
         quote: quote,
@@ -937,74 +973,69 @@ class _SwapScreenState extends State<SwapScreen> {
       );
 
       if (!result.success) {
-        _showError(_mapErrorMessage(result.error));
+        progressController.setError(_mapErrorMessage(result.error));
         return;
       }
 
       if (result.transactionHash == null) {
         if (_isGasless) {
           if (result.tradeHash != null) {
-            _showSnack(
-              'Gasless order accepted: ${_shortHash(result.tradeHash!)}',
+            _clearSubmittedSwapState();
+            progressController.setGaslessPending(
+              reference: _shortHash(result.tradeHash!),
             );
-            _trackGaslessOrder(result.tradeHash!);
+            await _trackGaslessOrder(
+              result.tradeHash!,
+              progressController: progressController,
+            );
           } else {
-            _showSnack('Gasless order submitted successfully');
+            progressController.setGaslessPending();
           }
-          _fromController.clear();
-          _toController.clear();
-          setState(() {
-            _currentQuote = null;
-            _pricing = '';
-            _feeUsd = 0.0;
-            _feeNative = 0.0;
-            _platformFeeUsd = 0.0;
-            _selectedPercentage = -1;
-          });
           await _refreshWalletState();
           return;
         }
-        _showError(
+        progressController.setError(
           'Swap submitted but transaction hash was not returned. Please check activity later.',
         );
         return;
       }
 
       if (_isGasless && !_looksLikeTxHash(result.transactionHash!)) {
-        _showSnack(
-          'Gasless order accepted: ${_shortHash(result.transactionHash!)}',
+        _clearSubmittedSwapState();
+        progressController.setGaslessPending(
+          reference: _shortHash(result.transactionHash!),
         );
-        _trackGaslessOrder(result.tradeHash ?? result.transactionHash!);
-        _fromController.clear();
-        _toController.clear();
-        setState(() {
-          _currentQuote = null;
-          _pricing = '';
-          _feeUsd = 0.0;
-          _feeNative = 0.0;
-          _platformFeeUsd = 0.0;
-          _selectedPercentage = -1;
-        });
+        await _trackGaslessOrder(
+          result.tradeHash ?? result.transactionHash!,
+          progressController: progressController,
+        );
         await _refreshWalletState();
         return;
       }
 
-      _showSnack('Swap submitted: ${_shortHash(result.transactionHash!)}');
-      _fromController.clear();
-      _toController.clear();
-      setState(() {
-        _currentQuote = null;
-        _pricing = '';
-        _feeUsd = 0.0;
-        _feeNative = 0.0;
-        _platformFeeUsd = 0.0;
-        _selectedPercentage = -1;
-      });
-      _waitForTxConfirmation(
-        result.transactionHash!,
-        successMessage: 'Swap confirmed',
+      final txHash = result.transactionHash!;
+      _clearSubmittedSwapState();
+      progressController.setSwapPending(
+        reference: _shortHash(txHash),
+        detailsUrl: _transactionDetailsUrl(txHash),
+      );
+      final confirmed = await _waitForTxConfirmation(
+        txHash,
         rewardReferralOnSwap: true,
       );
+      if (!mounted) return;
+      if (confirmed) {
+        progressController.setSuccess(
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+      } else {
+        progressController.setError(
+          'Transaction pending confirmation. Please check later.',
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isSwapping = false);
@@ -1030,7 +1061,12 @@ class _SwapScreenState extends State<SwapScreen> {
       blockchain.activeChain.chainId,
       isGasless: _isGasless,
     );
-    final hasBalance = !(_currentQuote?.hasBalanceIssue ?? false);
+    final localHasBalance =
+        _fromToken != null &&
+        _parseDecimalAmount(_fromController.text) <=
+            (Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero);
+    final quoteHasBalance = !(_currentQuote?.hasBalanceIssue ?? false);
+    final hasBalance = localHasBalance && quoteHasBalance;
     final swapEnabled =
         hasInputAmount &&
         hasQuote &&
@@ -1107,6 +1143,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       receiveText: receiveText,
                       priceSeparator: _priceSeparator,
                       swapAmountUsd: fromUsdValue,
+                      gaslessFeeCovered: _isGasless,
                       nativePriceUsd:
                           _tokenPriceCache[blockchain
                               .activeChain
@@ -1120,25 +1157,18 @@ class _SwapScreenState extends State<SwapScreen> {
                       onPressed: _executeSwap,
                       label: buttonLabel,
                     ),
-                    if (_isGaslessSupported) ...[
+                    if (_canOfferGaslessToggle) ...[
                       const SizedBox(height: 20),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: SwapGaslessToggle(
                           value: _isGasless,
                           onChanged: (val) {
-                            if (_isGaslessSourceUnsupported(
-                              gaslessEnabled: val,
-                            )) {
-                              _showError(
-                                'Gasless mode requires an ERC-20 source token.',
-                              );
-                              return;
-                            }
                             setState(() {
                               _isGasless = val;
-                              _getQuote();
+                              _resetQuoteState();
                             });
+                            _getQuote();
                           },
                         ),
                       ),

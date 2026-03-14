@@ -13,6 +13,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
   final String receiveText;
   final String priceSeparator;
   final double swapAmountUsd;
+  final bool gaslessFeeCovered;
 
   /// Native token price in USD from the frontend CoinGecko cache.
   /// Used to compute network fee in USD when the backend returns 0.
@@ -30,6 +31,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
     this.priceSeparator = '->',
     this.swapAmountUsd = 0.0,
     this.nativePriceUsd = 0.0,
+    this.gaslessFeeCovered = false,
   });
 
   String _formatFeeDisplay() {
@@ -42,6 +44,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
   }
 
   String _formatNetworkFee() {
+    if (gaslessFeeCovered) {
+      return 'Covered by Owllet';
+    }
     // Try backend-provided USD first
     double usd = feeAmountUsd;
     // If backend didn't provide USD, compute from native amount × native price

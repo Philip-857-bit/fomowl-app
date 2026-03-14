@@ -161,6 +161,20 @@ class WalletService {
     return _storage.getWalletAccounts();
   }
 
+  Future<WalletAccount?> getActiveWalletAccount() async {
+    final address = await _storage.getWalletAddress();
+    if (address == null || address.isEmpty) {
+      return null;
+    }
+    final accounts = await _storage.getWalletAccounts();
+    for (final account in accounts) {
+      if (account.address.toLowerCase() == address.toLowerCase()) {
+        return account;
+      }
+    }
+    return null;
+  }
+
   Future<void> setActiveWallet(String address) async {
     await _storage.setActiveWallet(address);
   }
