@@ -123,21 +123,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadWalletData() async {
     if (!mounted) return;
+    debugPrint('[OWLLET] Starting wallet data load...');
     setState(() => _isLoading = true);
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
 
-      // Add a safety timeout to the initialization process
+      debugPrint('[OWLLET] Initializing BlockchainService...');
       await blockchain.init().timeout(
         const Duration(seconds: 10),
-        onTimeout: () => debugPrint('Blockchain init timed out'),
+        onTimeout: () {
+          debugPrint('[OWLLET] CRITICAL: Blockchain init timed out after 10s');
+        },
       );
 
       _lastChainId = blockchain.activeChain.chainId;
+      debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
+
       await _loadHiddenTokens(_lastChainId!);
       final address = await _walletService.getCurrentWalletAddress();
       final name = await _storage.getWalletName();
+      debugPrint('[OWLLET] Wallet Address: ${address ?? 'NULL'}');
 
       if (mounted) {
         final l = AppLocalizations.of(context);
@@ -145,24 +151,27 @@ class _HomeScreenState extends State<HomeScreen> {
           _walletName = name ?? l.mainWallet;
           _isLoading = false;
         });
+        debugPrint('[OWLLET] Loading state cleared. Wallet name set.');
       }
 
       if (address != null && address.isNotEmpty) {
+        debugPrint('[OWLLET] Triggering background data sync...');
         unawaited(_safeSyncPushRegistration());
-        // Fetch balances in parallel to speed up load
         unawaited(_fetchRealBalances(address));
         unawaited(_fetchNftPreview(address));
         unawaited(_refreshNotificationDot(address: address));
         unawaited(_checkClipboardTokenSuggestion());
+      } else {
+        debugPrint('[OWLLET] WARNING: No wallet address found during init');
       }
-    } catch (e) {
-      debugPrint('Error loading wallet data: $e');
+    } catch (e, stack) {
+      debugPrint('[OWLLET] ERROR in _loadWalletData: $e');
+      debugPrint('[OWLLET] STACKTRACE: $stack');
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
-
   Future<void> _safeSyncPushRegistration() async {
     try {
       await _pushRegistrationService.syncForActiveWallet();

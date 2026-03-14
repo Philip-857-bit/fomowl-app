@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -19,22 +20,51 @@ abstract class PushMessagingClient {
 }
 
 class FirebasePushMessagingClient implements PushMessagingClient {
-  final FirebaseMessaging _messaging;
-
   FirebasePushMessagingClient({FirebaseMessaging? messaging})
-    : _messaging = messaging ?? FirebaseMessaging.instance;
+    : _providedMessaging = messaging;
+
+  final FirebaseMessaging? _providedMessaging;
+  FirebaseMessaging? _messaging;
+  bool _initialized = false;
 
   @override
-  Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
+  Stream<String> get onTokenRefresh {
+    final messaging = _messaging;
+    if (messaging == null) {
+      return const Stream<String>.empty();
+    }
+    return messaging.onTokenRefresh;
+  }
 
   @override
   Future<bool> initialize() async {
-    return true; // Firebase initialized in main.dart
+    if (_initialized) return true;
+    final options = AppEnvironment.firebaseOptions;
+    if (!AppEnvironment.pushNotificationsEnabled || options == null) {
+      return false;
+    }
+
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(options: options);
+      }
+      _messaging = _providedMessaging ?? FirebaseMessaging.instance;
+      _initialized = true;
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('Push init failed: $error');
+      debugPrint(stackTrace.toString());
+      return false;
+    }
   }
 
   @override
   Future<bool> requestPermission() async {
-    final settings = await _messaging.requestPermission(
+    final messaging = _messaging;
+    if (messaging == null) {
+      return false;
+    }
+    final settings = await messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
@@ -45,8 +75,12 @@ class FirebasePushMessagingClient implements PushMessagingClient {
 
   @override
   Future<String?> getToken() async {
+    final messaging = _messaging;
+    if (messaging == null) {
+      return null;
+    }
     try {
-      return await _messaging.getToken();
+      return await messaging.getToken();
     } catch (_) {
       return null;
     }
@@ -84,6 +118,11 @@ class PushNotificationRegistrationService {
 
   Future<void> syncForActiveWallet() async {
     if (!_pushNotificationsEnabled) {
+      return;
+    }
+
+    final initialized = await _messagingClient.initialize();
+    if (!initialized) {
       return;
     }
 

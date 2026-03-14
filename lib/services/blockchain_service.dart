@@ -77,16 +77,29 @@ class BlockchainService extends ChangeNotifier {
 
   /// Initialize — load persisted chains and active chain from storage
   Future<void> init() async {
-    if (_initialized) return;
+    if (_initialized) {
+      debugPrint('[OWLLET] BlockchainService: Already initialized.');
+      return;
+    }
+    debugPrint('[OWLLET] BlockchainService: Starting initialization...');
     try {
+      debugPrint('[OWLLET] BlockchainService: Loading custom chains...');
       await _loadCustomChains();
+      
+      debugPrint('[OWLLET] BlockchainService: Loading active chain...');
       await _loadActiveChain();
+      
+      debugPrint('[OWLLET] BlockchainService: Loading custom tokens...');
       await _loadCustomTokens();
+      
+      debugPrint('[OWLLET] BlockchainService: Hydrating from backend...');
       await _hydrateNetworkSettingsFromBackend();
+      
       _initialized = true;
+      debugPrint('[OWLLET] BlockchainService: Init SUCCESS.');
       notifyListeners();
     } catch (e) {
-      debugPrint('BlockchainService initialization failed: $e');
+      debugPrint('[OWLLET] BlockchainService: Init FAILED with error: $e');
       _initialized = false;
       notifyListeners();
     }
