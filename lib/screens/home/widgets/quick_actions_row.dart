@@ -6,13 +6,13 @@ import '../../../constants/app_colors.dart';
 class QuickActionsRow extends StatelessWidget {
   final VoidCallback onReceive;
   final VoidCallback onSend;
-  final VoidCallback onWithdraw;
+  final VoidCallback onSwap;
 
   const QuickActionsRow({
     super.key,
     required this.onReceive,
     required this.onSend,
-    required this.onWithdraw,
+    required this.onSwap,
   });
 
   @override
@@ -33,9 +33,9 @@ class QuickActionsRow extends StatelessWidget {
             onTap: onSend,
           ),
           _QuickActionButton(
-            icon: Icons.arrow_outward_rounded,
-            label: 'Withdraw',
-            onTap: onWithdraw,
+            icon: Icons.swap_horiz_rounded,
+            label: 'Swap',
+            onTap: onSwap,
           ),
         ],
       ),

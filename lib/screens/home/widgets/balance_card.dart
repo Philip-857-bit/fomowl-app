@@ -3,14 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
 
-/// Displays the wallet balance, eye-toggle, and deposit CTA.
+/// Displays the wallet balance, eye-toggle, and history access.
 class BalanceCard extends StatelessWidget {
   final String formattedBalance;
   final bool isBalanceVisible;
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
   final VoidCallback onHistoryTap;
-  final VoidCallback onDepositTap;
 
   const BalanceCard({
     super.key,
@@ -19,13 +18,13 @@ class BalanceCard extends StatelessWidget {
     required this.isLoadingBalances,
     required this.onToggleVisibility,
     required this.onHistoryTap,
-    required this.onDepositTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         gradient: AppColors.balanceGradient,
         borderRadius: BorderRadius.circular(20),
@@ -131,37 +130,6 @@ class BalanceCard extends StatelessWidget {
                   ],
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          GestureDetector(
-            onTap: onDepositTap,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.add_circle_outline,
-                    size: 18,
-                    color: AppColors.background,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Deposit Funds',
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.background,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],

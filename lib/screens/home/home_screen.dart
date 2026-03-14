@@ -563,10 +563,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               onHistoryTap: () =>
                                   Navigator.pushNamed(context, '/transactions'),
-                              onDepositTap: () => Navigator.pushNamed(
-                                context,
-                                '/deposit-funds',
-                              ),
                             ),
                             const SizedBox(height: 24),
                             QuickActionsRow(
@@ -576,10 +572,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               onSend: () =>
                                   Navigator.pushNamed(context, '/send-token'),
-                              onWithdraw: () => Navigator.pushNamed(
-                                context,
-                                '/withdraw-to-bank',
-                              ),
+                              onSwap: () =>
+                                  Navigator.pushNamed(context, '/swap'),
                             ),
                             const SizedBox(height: 24),
                             SocialBannerCard(onTap: _openSocialLink),

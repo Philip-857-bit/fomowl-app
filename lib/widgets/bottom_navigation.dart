@@ -5,7 +5,7 @@ import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
 
 /// Shared Bottom Navigation Bar
-/// 5 tabs: Wallet, Swap, Earn, Payment, Me
+/// 3 tabs: Wallet, Swap, Me
 class BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
@@ -44,9 +44,7 @@ class BottomNavBar extends StatelessWidget {
                     0,
                   ),
                   _buildNavItem(Icons.swap_horiz_rounded, l.swap, 1),
-                  _buildNavItem(Icons.trending_up_rounded, l.earn, 2),
-                  _buildNavItem(Icons.credit_card_rounded, l.payment, 3),
-                  _buildNavItem(Icons.settings_outlined, l.settings, 4),
+                  _buildNavItem(Icons.settings_outlined, l.settings, 2),
                 ],
               ),
             ),
@@ -109,21 +107,7 @@ class BottomNavBar extends StatelessWidget {
           Navigator.pushReplacementNamed(context, '/swap');
         }
         break;
-      case 2: // Earn
-        if (currentScreenIndex == 0) {
-          Navigator.pushNamed(context, '/earn');
-        } else {
-          Navigator.pushReplacementNamed(context, '/earn');
-        }
-        break;
-      case 3: // Payment
-        if (currentScreenIndex == 0) {
-          Navigator.pushNamed(context, '/payments');
-        } else {
-          Navigator.pushReplacementNamed(context, '/payments');
-        }
-        break;
-      case 4: // Me
+      case 2: // Me
         if (currentScreenIndex == 0) {
           Navigator.pushNamed(context, '/profile');
         } else {
