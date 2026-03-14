@@ -1,10 +1,10 @@
-import 'package:http/http.dart' as http;
 import 'package:web3dart/web3dart.dart';
 
 import '../models/token.dart';
 import 'blockchain_service.dart';
 import 'swap_service.dart';
 import 'wallet_service.dart';
+import 'http_client_service.dart';
 
 class TokenApprovalResult {
   final bool approvalSatisfied;
@@ -25,6 +25,7 @@ class TokenApprovalResult {
 /// Handles ERC20 allowance checks and approval transactions fully on-chain via Web3Dart
 class TokenApprovalService {
   final WalletService _walletService;
+  final HttpClientService _httpClientService = HttpClientService();
 
   TokenApprovalService({
     WalletService? walletService,
@@ -51,7 +52,10 @@ class TokenApprovalService {
       );
     }
 
-    final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);

@@ -2,6 +2,7 @@ import 'package:web3dart/web3dart.dart';
 import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:eth_sig_util/eth_sig_util.dart';
+import 'http_client_service.dart';
 import '../models/wallet_account.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
@@ -11,7 +12,7 @@ import 'native_crypto.dart';
 /// Handles wallet creation, import, and key management
 class WalletService {
   final StorageService _storage = StorageService();
-  final http.Client _httpClient = http.Client();
+  final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
 
   /// Generate a new 12-word mnemonic phrase (Rust FFI)
@@ -266,7 +267,7 @@ class WalletService {
     final credentials = await getCredentials();
     final client = _web3Clients.putIfAbsent(
       rpcUrl,
-      () => Web3Client(rpcUrl, _httpClient),
+      () => Web3Client(rpcUrl, _httpClientService.client),
     );
     final recipient = EthereumAddress.fromHex(toAddress);
     final gasPrice = await client.getGasPrice();

@@ -48,7 +48,9 @@ class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
           _isFaceAvailable = availableBiometrics.contains(BiometricType.face);
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error checking biometric availability: $e');
+    }
   }
 
   Future<void> _startVerification() async {

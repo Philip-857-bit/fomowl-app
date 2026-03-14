@@ -1,16 +1,15 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../config/app_environment.dart';
 import 'storage_service.dart';
 import 'wallet_backend_auth_service.dart';
 import 'wallet_service.dart';
+import 'http_client_service.dart';
 
 abstract class PushMessagingClient {
   Stream<String> get onTokenRefresh;
@@ -20,67 +19,37 @@ abstract class PushMessagingClient {
 }
 
 class FirebasePushMessagingClient implements PushMessagingClient {
-  FirebasePushMessagingClient({FirebaseMessaging? messaging})
-    : _providedMessaging = messaging;
+  final FirebaseMessaging _messaging;
 
-  final FirebaseMessaging? _providedMessaging;
-  FirebaseMessaging? _messaging;
-  bool _initialized = false;
+  FirebasePushMessagingClient({FirebaseMessaging? messaging})
+    : _messaging = messaging ?? FirebaseMessaging.instance;
 
   @override
-  Stream<String> get onTokenRefresh {
-    final messaging = _messaging;
-    if (messaging == null) {
-      return const Stream<String>.empty();
-    }
-    return messaging.onTokenRefresh;
-  }
+  Stream<String> get onTokenRefresh => _messaging.onTokenRefresh;
 
   @override
   Future<bool> initialize() async {
-    if (_initialized) return true;
-    final options = AppEnvironment.firebaseOptions;
-    if (!AppEnvironment.pushNotificationsEnabled || options == null) {
-      return false;
-    }
-
-    try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(options: options);
-      }
-      _messaging = _providedMessaging ?? FirebaseMessaging.instance;
-      _initialized = true;
-      return true;
-    } catch (error, stackTrace) {
-      debugPrint('Push init failed: $error');
-      debugPrint(stackTrace.toString());
-      return false;
-    }
+    return true; // Firebase initialized in main.dart
   }
 
   @override
   Future<bool> requestPermission() async {
-    final messaging = _messaging;
-    if (messaging == null) {
-      return false;
-    }
-    final settings = await messaging.requestPermission(
+    final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
       sound: true,
-      provisional: false,
     );
     return settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional;
   }
 
   @override
-  Future<String?> getToken() {
-    final messaging = _messaging;
-    if (messaging == null) {
-      return Future.value(null);
+  Future<String?> getToken() async {
+    try {
+      return await _messaging.getToken();
+    } catch (_) {
+      return null;
     }
-    return messaging.getToken();
   }
 }
 
@@ -90,7 +59,7 @@ class PushNotificationRegistrationService {
     WalletService? walletService,
     WalletBackendAuthService? walletBackendAuthService,
     PushMessagingClient? messagingClient,
-    http.Client? httpClient,
+    HttpClientService? httpClientService,
     Future<String> Function()? appVersionProvider,
     bool? pushNotificationsEnabled,
   }) : _storageService = storageService ?? StorageService(),
@@ -98,7 +67,7 @@ class PushNotificationRegistrationService {
        _walletBackendAuthService =
            walletBackendAuthService ?? WalletBackendAuthService(),
        _messagingClient = messagingClient ?? FirebasePushMessagingClient(),
-       _httpClient = httpClient ?? http.Client(),
+       _httpClientService = httpClientService ?? HttpClientService(),
        _appVersionProvider = appVersionProvider ?? _defaultAppVersionProvider,
        _pushNotificationsEnabled =
            pushNotificationsEnabled ?? AppEnvironment.pushNotificationsEnabled;
@@ -107,7 +76,7 @@ class PushNotificationRegistrationService {
   final WalletService _walletService;
   final WalletBackendAuthService _walletBackendAuthService;
   final PushMessagingClient _messagingClient;
-  final http.Client _httpClient;
+  final HttpClientService _httpClientService;
   final Future<String> Function() _appVersionProvider;
   final bool _pushNotificationsEnabled;
 
@@ -118,100 +87,83 @@ class PushNotificationRegistrationService {
       return;
     }
 
-    final initialized = await _messagingClient.initialize();
-    if (!initialized) {
-      return;
-    }
-
-    _bindTokenRefreshListener();
-
     final walletAddress = await _walletService.getCurrentWalletAddress();
     if (walletAddress == null || walletAddress.isEmpty) {
       return;
     }
 
-    final permissionGranted = await _messagingClient.requestPermission();
-    if (!permissionGranted) {
-      return;
-    }
+    try {
+      // 1. Ensure permissions
+      final hasPermission = await _messagingClient.requestPermission();
+      if (!hasPermission) return;
 
-    final token = await _messagingClient.getToken();
-    if (token == null || token.trim().isEmpty) {
-      return;
-    }
+      // 2. Get current device token
+      final deviceToken = await _messagingClient.getToken();
+      if (deviceToken == null || deviceToken.isEmpty) return;
 
-    await _registerDeviceToken(
-      walletAddress: walletAddress,
-      deviceToken: token.trim(),
-    );
+      // 3. Register if needed
+      await _registerDeviceToken(
+        walletAddress: walletAddress,
+        deviceToken: deviceToken,
+      );
+
+      // 4. Setup refresh listener
+      _setupTokenRefreshListener(walletAddress);
+    } catch (e) {
+      debugPrint('Push sync failed: $e');
+    }
   }
 
-  void _bindTokenRefreshListener() {
-    if (_tokenRefreshSubscription != null) return;
-    _tokenRefreshSubscription = _messagingClient.onTokenRefresh.listen(
-      (token) async {
-        try {
-          final walletAddress = await _walletService.getCurrentWalletAddress();
-          if (walletAddress == null || walletAddress.isEmpty) {
-            return;
-          }
-          final normalized = token.trim();
-          if (normalized.isEmpty) {
-            return;
-          }
-          await _registerDeviceToken(
-            walletAddress: walletAddress,
-            deviceToken: normalized,
-          );
-        } catch (error, stackTrace) {
-          debugPrint('Push token refresh registration failed: $error');
-          debugPrint(stackTrace.toString());
-        }
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        debugPrint('Push token refresh listener failed: $error');
-        debugPrint(stackTrace.toString());
-      },
-    );
+  void _setupTokenRefreshListener(String walletAddress) {
+    _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = _messagingClient.onTokenRefresh.listen((
+      newToken,
+    ) {
+      _registerDeviceToken(walletAddress: walletAddress, deviceToken: newToken);
+    });
   }
 
   Future<void> _registerDeviceToken({
     required String walletAddress,
     required String deviceToken,
   }) async {
-    final appVersion = await _appVersionProvider();
-    final existing = await _storageService.getNotificationDeviceRegistration(
+    final cached = await _storageService.getNotificationDeviceRegistration(
       walletAddress,
     );
-    final oldToken = existing?['token'];
+    final appVersion = await _appVersionProvider();
 
-    if (existing != null &&
-        existing['token'] == deviceToken &&
-        existing['appVersion'] == appVersion) {
+    if (cached != null &&
+        cached['token'] == deviceToken &&
+        cached['appVersion'] == appVersion) {
+      // Already registered with backend
       return;
     }
 
-    if (oldToken != null &&
-        oldToken.isNotEmpty &&
-        oldToken.toLowerCase() != deviceToken.toLowerCase()) {
-      await _unregisterDeviceToken(
-        walletAddress: walletAddress,
-        deviceToken: oldToken,
+    // If token changed, unregister old one (best effort)
+    final oldToken = cached?['token'];
+    if (oldToken != null && oldToken != deviceToken) {
+      unawaited(
+        _unregisterDeviceToken(
+          walletAddress: walletAddress,
+          deviceToken: oldToken,
+        ),
       );
     }
 
     final response = await _walletBackendAuthService.sendAuthorized(
       walletAddress,
-      (headers) => _httpClient
-          .post(
-            AppEnvironment.notifications('/devices/register'),
-            headers: headers,
-            body: jsonEncode({
-              'walletAddress': walletAddress,
-              'deviceToken': deviceToken,
-              'platform': _platformName,
-              'appVersion': appVersion,
-            }),
+      (headers) => _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              AppEnvironment.notifications('/devices/register'),
+              headers: headers,
+              body: jsonEncode({
+                'walletAddress': walletAddress,
+                'deviceToken': deviceToken,
+                'platform': _platformName,
+                'appVersion': appVersion,
+              }),
+            ),
           )
           .timeout(const Duration(seconds: 10)),
       {'Content-Type': 'application/json'},
@@ -236,14 +188,16 @@ class PushNotificationRegistrationService {
     try {
       final response = await _walletBackendAuthService.sendAuthorized(
         walletAddress,
-        (headers) => _httpClient
-            .post(
-              AppEnvironment.notifications('/devices/unregister'),
-              headers: headers,
-              body: jsonEncode({
-                'walletAddress': walletAddress,
-                'deviceToken': deviceToken,
-              }),
+        (headers) => _httpClientService
+            .sendWithRetry(
+              () => _httpClientService.client.post(
+                AppEnvironment.notifications('/devices/unregister'),
+                headers: headers,
+                body: jsonEncode({
+                  'walletAddress': walletAddress,
+                  'deviceToken': deviceToken,
+                }),
+              ),
             )
             .timeout(const Duration(seconds: 10)),
         {'Content-Type': 'application/json'},
@@ -260,20 +214,24 @@ class PushNotificationRegistrationService {
     }
   }
 
-  static Future<String> _defaultAppVersionProvider() async {
-    final packageInfo = await PackageInfo.fromPlatform();
-    return '${packageInfo.version}+${packageInfo.buildNumber}';
-  }
-
   String get _platformName {
     if (kIsWeb) return 'web';
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'android';
-      case TargetPlatform.iOS:
-        return 'ios';
-      default:
-        return 'web';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'android';
+    if (defaultTargetPlatform == TargetPlatform.iOS) return 'ios';
+    return 'unknown';
+  }
+
+  static Future<String> _defaultAppVersionProvider() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      return '${packageInfo.version}+${packageInfo.buildNumber}';
+    } catch (_) {
+      return 'unknown';
     }
+  }
+
+  void dispose() {
+    _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
   }
 }

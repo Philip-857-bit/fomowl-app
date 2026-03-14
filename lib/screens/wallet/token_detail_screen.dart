@@ -51,7 +51,9 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     if (genesis != null && genesis.isNotEmpty) {
       try {
         createdOn = DateFormat.yMMMEd().format(DateTime.parse(genesis));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error parsing genesis date: $e');
+      }
     }
     final contract = token.contractAddress;
     return [
@@ -148,11 +150,14 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         return tokens.firstWhere(
           (t) => (t.contractAddress ?? '').toLowerCase() == addr,
         );
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error finding token by address: $e');
+      }
     }
     try {
       return tokens.firstWhere((t) => t.symbol == target.symbol);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error finding token by symbol: $e');
       return null;
     }
   }

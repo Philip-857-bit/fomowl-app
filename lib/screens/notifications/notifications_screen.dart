@@ -52,7 +52,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           DateTime? dt;
           try {
             dt = DateTime.parse(dtStr);
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('Error parsing notification date: $e');
+          }
           final formatted = dt != null
               ? DateFormat('MM.dd.yyyy HH:mm').format(dt)
               : dtStr;

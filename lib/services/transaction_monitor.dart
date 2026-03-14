@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:web3dart/web3dart.dart';
 
 import 'blockchain_service.dart';
+import 'http_client_service.dart';
 
 class TransactionMonitor {
+  final HttpClientService _httpClientService = HttpClientService();
+
   Future<bool> waitForConfirmation({
     required String txHash,
     required BlockchainService blockchain,
@@ -14,7 +16,10 @@ class TransactionMonitor {
     Duration timeout = const Duration(minutes: 2),
     void Function(int attempts)? onPoll,
   }) async {
-    final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
       final completer = Completer<bool>();
       final stopwatch = Stopwatch()..start();

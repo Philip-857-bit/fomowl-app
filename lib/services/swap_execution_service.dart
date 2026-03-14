@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:web3dart/web3dart.dart';
 import 'package:web3dart/crypto.dart';
 
@@ -9,6 +8,7 @@ import '../models/token.dart';
 import 'blockchain_service.dart';
 import 'swap_service.dart'; // Still needed for SwapQuote
 import 'wallet_service.dart';
+import 'http_client_service.dart';
 
 class SwapExecutionResult {
   final bool success;
@@ -26,6 +26,7 @@ class SwapExecutionResult {
 
 class SwapExecutionService {
   final WalletService _walletService;
+  final HttpClientService _httpClientService = HttpClientService();
 
   SwapExecutionService({
     WalletService? walletService,
@@ -78,7 +79,10 @@ class SwapExecutionService {
     required BlockchainService blockchain,
     required String walletAddress,
   }) async {
-    final client = Web3Client(blockchain.activeChain.rpcUrl, http.Client());
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
       // Always fetch a fresh firm quote close to broadcast to avoid stale RFQ data.
       final src = fromToken.contractAddress?.isNotEmpty == true
@@ -99,7 +103,9 @@ class SwapExecutionService {
         'slippageBps': '$slippageBps',
       });
 
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
         throw Exception(
           _extractBackendMessage(
@@ -193,8 +199,8 @@ class SwapExecutionService {
         'slippageBps': '$slippageBps',
       });
 
-      final quoteResponse = await http
-          .get(quoteUrl)
+      final quoteResponse = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(quoteUrl))
           .timeout(const Duration(seconds: 15));
       if (quoteResponse.statusCode != 200) {
         throw Exception(
@@ -245,11 +251,13 @@ class SwapExecutionService {
       submitPayload['chainId'] = blockchain.activeChain.chainId;
       submitPayload['signature'] = signature;
 
-      final submitResponse = await http
-          .post(
-            submitUrl,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(submitPayload),
+      final submitResponse = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              submitUrl,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(submitPayload),
+            ),
           )
           .timeout(const Duration(seconds: 15));
 
@@ -298,7 +306,9 @@ class SwapExecutionService {
           return message;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error decoding backend message: $e');
+    }
     return fallback;
   }
 }

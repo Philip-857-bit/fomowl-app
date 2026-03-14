@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
 import 'dart:async';
@@ -13,6 +12,7 @@ import 'rpc_service.dart';
 import 'token_price_service.dart';
 import 'storage_service.dart';
 import 'wallet_backend_auth_service.dart';
+import 'http_client_service.dart';
 
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
@@ -21,6 +21,7 @@ class BlockchainService extends ChangeNotifier {
   // Dependencies
   RpcService? _rpcService;
   TokenPriceService? _priceService;
+  final HttpClientService _httpClientService = HttpClientService();
 
   // Configuration Constants
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 15);
@@ -305,7 +306,9 @@ class BlockchainService extends ChangeNotifier {
     );
 
     try {
-      final response = await http.get(url).timeout(_backendDiscoveryTimeout);
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
+          .timeout(_backendDiscoveryTimeout);
       if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -442,7 +445,9 @@ class BlockchainService extends ChangeNotifier {
             return _hexToUtf8(hex.substring(dataStart, dataEnd));
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error parsing hex as string: $e');
+      }
     }
 
     final bytes32 = hex.substring(0, hex.length >= 64 ? 64 : hex.length);
@@ -660,7 +665,9 @@ class BlockchainService extends ChangeNotifier {
       ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
 
       try {
-        final response = await http.get(url).timeout(_backendDiscoveryTimeout);
+        final response = await _httpClientService
+            .sendWithRetry(() => _httpClientService.client.get(url))
+            .timeout(_backendDiscoveryTimeout);
         if (response.statusCode != 200) continue;
 
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -717,7 +724,9 @@ class BlockchainService extends ChangeNotifier {
         '$normalizedBase/${_activeChain.chainId}/wallet-tokens/$walletAddress',
       );
       try {
-        final response = await http.get(url).timeout(_backendDiscoveryTimeout);
+        final response = await _httpClientService
+            .sendWithRetry(() => _httpClientService.client.get(url))
+            .timeout(_backendDiscoveryTimeout);
         if (response.statusCode == 200) {
           _backendDiscoveryBackoffUntil.remove(base);
           return _parseBackendDiscoveredTokens(response.body);
@@ -923,10 +932,12 @@ class BlockchainService extends ChangeNotifier {
       await _walletBackendAuthService
           .sendAuthorized(
             walletAddress,
-            (headers) => http.post(
-              AppEnvironment.settings('/networks'),
-              headers: headers,
-              body: jsonEncode(payload),
+            (headers) => _httpClientService.sendWithRetry(
+              () => _httpClientService.client.post(
+                AppEnvironment.settings('/networks'),
+                headers: headers,
+                body: jsonEncode(payload),
+              ),
             ),
             {'Content-Type': 'application/json'},
           )
@@ -944,9 +955,11 @@ class BlockchainService extends ChangeNotifier {
       final response = await _walletBackendAuthService
           .sendAuthorized(
             walletAddress,
-            (headers) => http.get(
-              AppEnvironment.settings('/networks/$encoded'),
-              headers: headers,
+            (headers) => _httpClientService.sendWithRetry(
+              () => _httpClientService.client.get(
+                AppEnvironment.settings('/networks/$encoded'),
+                headers: headers,
+              ),
             ),
             const {},
           )

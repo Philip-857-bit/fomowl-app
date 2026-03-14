@@ -5,9 +5,11 @@ import '../services/blockchain_service.dart';
 import '../services/language_controller.dart';
 import '../services/rpc_service.dart';
 import '../services/token_price_service.dart';
+import '../services/http_client_service.dart';
 
 List<SingleChildWidget> buildAppProviders() {
   return [
+    Provider(create: (_) => HttpClientService()),
     ChangeNotifierProvider(create: (_) => RpcService()),
     ChangeNotifierProvider(create: (_) => TokenPriceService()),
     ChangeNotifierProvider(create: (_) => LanguageController()..init()),

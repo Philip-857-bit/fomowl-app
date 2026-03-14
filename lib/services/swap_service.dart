@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
 import '../config/app_environment.dart';
 import '../utils/amount_utils.dart';
+import 'http_client_service.dart';
 
 /// Swap Quote Model
 class SwapQuote {
@@ -57,10 +57,10 @@ class SwapQuote {
 /// Swap Service
 /// Routes all swap intents through the secure Rust backend for 0x swap and gasless flows.
 class SwapService {
-  SwapService({http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  SwapService({HttpClientService? httpClientService})
+    : _httpClientService = httpClientService ?? HttpClientService();
 
-  final http.Client _httpClient;
+  final HttpClientService _httpClientService;
 
   static const Set<int> supportedQuoteChainIds = {
     1,
@@ -108,8 +108,8 @@ class SwapService {
     _lastError = null;
     try {
       final url = AppEnvironment.swap('/fusion/status/$tradeHash');
-      final response = await _httpClient
-          .get(url)
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
           .timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -188,8 +188,8 @@ class SwapService {
 
       final url = AppEnvironment.swap('/$endpoint', queryParams);
 
-      final response = await _httpClient
-          .get(url)
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
           .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
@@ -238,7 +238,7 @@ class SwapService {
           allowanceTarget: allowanceTarget,
           allowanceSpender: data['allowanceSpender']?.toString(),
           needsAllowance: data['needsAllowance'] == true,
-          hasBalanceIssue: data['hasBalanceIssue'] == true,
+          hasBalanceIssue: hasBalanceIssue,
           balanceNeeded: data['balanceNeeded']?.toString(),
           balanceActual: data['balanceActual']?.toString(),
           platformFeeBps:
@@ -312,7 +312,9 @@ class SwapService {
           return message;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error decoding backend message: $e');
+    }
     return fallback;
   }
 }

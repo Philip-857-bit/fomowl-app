@@ -1026,6 +1026,10 @@ class _SwapScreenState extends State<SwapScreen> {
     final swapBusy = _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
     final hasQuote = _currentQuote != null && _toController.text.isNotEmpty;
+    final chainSupported = _swapService.isChainSupported(
+      blockchain.activeChain.chainId,
+      isGasless: _isGasless,
+    );
     final hasBalance = !(_currentQuote?.hasBalanceIssue ?? false);
     final swapEnabled =
         hasInputAmount &&

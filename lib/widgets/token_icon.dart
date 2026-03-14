@@ -128,7 +128,9 @@ class TokenIcon extends StatelessWidget {
     values.add(trimmed.toLowerCase());
     try {
       values.add(EthereumAddress.fromHex(trimmed).hexEip55);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error converting checksum address: $e');
+    }
     return values.toList();
   }
 

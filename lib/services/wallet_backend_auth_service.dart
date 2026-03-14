@@ -6,19 +6,20 @@ import '../config/app_environment.dart';
 import '../utils/app_error_utils.dart';
 import 'storage_service.dart';
 import 'wallet_service.dart';
+import 'http_client_service.dart';
 
 class WalletBackendAuthService {
   WalletBackendAuthService({
     StorageService? storageService,
     WalletService? walletService,
-    http.Client? httpClient,
+    HttpClientService? httpClientService,
   }) : _storageService = storageService ?? StorageService(),
        _walletService = walletService ?? WalletService(),
-       _httpClient = httpClient ?? http.Client();
+       _httpClientService = httpClientService ?? HttpClientService();
 
   final StorageService _storageService;
   final WalletService _walletService;
-  final http.Client _httpClient;
+  final HttpClientService _httpClientService;
 
   Future<String?> getValidSessionToken(String walletAddress) async {
     final session = await _storageService.getBackendSession(walletAddress);
@@ -35,11 +36,13 @@ class WalletBackendAuthService {
     final cached = await getValidSessionToken(walletAddress);
     if (cached != null) return cached;
 
-    final challengeResponse = await _httpClient
-        .post(
-          AppEnvironment.settings('/auth/challenge'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'walletAddress': walletAddress}),
+    final challengeResponse = await _httpClientService
+        .sendWithRetry(
+          () => _httpClientService.client.post(
+            AppEnvironment.settings('/auth/challenge'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'walletAddress': walletAddress}),
+          ),
         )
         .timeout(const Duration(seconds: 8));
 
@@ -68,15 +71,17 @@ class WalletBackendAuthService {
       message,
     );
 
-    final verifyResponse = await _httpClient
-        .post(
-          AppEnvironment.settings('/auth/verify'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'walletAddress': walletAddress,
-            'challenge': challenge,
-            'signature': '0x$signature',
-          }),
+    final verifyResponse = await _httpClientService
+        .sendWithRetry(
+          () => _httpClientService.client.post(
+            AppEnvironment.settings('/auth/verify'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'challenge': challenge,
+              'signature': '0x$signature',
+            }),
+          ),
         )
         .timeout(const Duration(seconds: 8));
 

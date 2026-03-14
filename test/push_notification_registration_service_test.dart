@@ -10,6 +10,25 @@ import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/services/wallet_backend_auth_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
+import 'package:fomowl_wallet/services/http_client_service.dart';
+
+class HttpClientServiceMock extends HttpClientService {
+  final http.Client _mockClient;
+  HttpClientServiceMock(this._mockClient) : super.internal();
+
+  @override
+  http.Client get client => _mockClient;
+
+  @override
+  Future<http.Response> sendWithRetry(
+    Future<http.Response> Function() request, {
+    int maxRetries = 3,
+    Duration delay = const Duration(seconds: 2),
+    bool Function(http.Response)? retryIf,
+  }) {
+    return request();
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +57,7 @@ void main() {
         ),
         walletBackendAuthService: _FakeWalletBackendAuthService(),
         messagingClient: messagingClient,
-        httpClient: httpClient,
+        httpClientService: HttpClientServiceMock(httpClient),
         appVersionProvider: () async => '1.2.0+5',
         pushNotificationsEnabled: true,
       );

@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'base_service.dart';
+import 'http_client_service.dart';
 
 /// Service for handling JSON-RPC calls to various chains
 class RpcService extends BaseService {
   int _nextRequestId = 1;
   RpcCallException? _lastError;
+  final HttpClientService _httpClientService = HttpClientService();
 
   RpcCallException? get lastError => _lastError;
 
@@ -39,16 +40,18 @@ class RpcService extends BaseService {
 
     for (final rpcUrl in candidates) {
       try {
-        final response = await http
-            .post(
-              Uri.parse(rpcUrl),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'jsonrpc': '2.0',
-                'method': method,
-                'params': params,
-                'id': requestId,
-              }),
+        final response = await _httpClientService
+            .sendWithRetry(
+              () => _httpClientService.client.post(
+                Uri.parse(rpcUrl),
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'jsonrpc': '2.0',
+                  'method': method,
+                  'params': params,
+                  'id': requestId,
+                }),
+              ),
             )
             .timeout(timeout);
 
@@ -103,16 +106,18 @@ class RpcService extends BaseService {
   Future<bool> testRpcUrl(String rpcUrl) async {
     final requestId = _nextRequestId++;
     try {
-      final response = await http
-          .post(
-            Uri.parse(rpcUrl),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'jsonrpc': '2.0',
-              'method': 'eth_chainId',
-              'params': [],
-              'id': requestId,
-            }),
+      final response = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              Uri.parse(rpcUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'jsonrpc': '2.0',
+                'method': 'eth_chainId',
+                'params': [],
+                'id': requestId,
+              }),
+            ),
           )
           .timeout(const Duration(seconds: 8));
 

@@ -55,7 +55,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           DateTime? dt;
           try {
             dt = DateTime.parse(dateStr);
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('Error parsing transaction date: $e');
+          }
           final formattedDate = dt != null
               ? DateFormat('MM.dd.yyyy').format(dt)
               : dateStr;

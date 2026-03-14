@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import '../config/app_environment.dart';
 import 'base_service.dart';
 import '../models/token_market_data.dart';
+import 'http_client_service.dart';
 
 /// Service for fetching token prices and market data from CoinGecko
 class TokenPriceService extends BaseService {
   static String get priceApiBase => AppEnvironment.coinGeckoApiBaseUrl;
+
+  final HttpClientService _httpClientService = HttpClientService();
 
   final Map<String, _CachedChartData> _priceHistoryCache = {};
   final Map<String, _CachedMarketData> _tokenMarketDataCache = {};
@@ -22,8 +24,8 @@ class TokenPriceService extends BaseService {
       final ids = tokenIds.map((id) => Uri.encodeComponent(id)).join(',');
       final url =
           '$priceApiBase/simple/price?ids=$ids&vs_currencies=usd&include_24hr_change=true';
-      final response = await http
-          .get(Uri.parse(url))
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(Uri.parse(url)))
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -62,8 +64,8 @@ class TokenPriceService extends BaseService {
       final encodedId = Uri.encodeComponent(coinId);
       final url =
           '$priceApiBase/coins/$encodedId/market_chart?vs_currency=usd&days=$days';
-      final response = await http
-          .get(Uri.parse(url))
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(Uri.parse(url)))
           .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
@@ -103,8 +105,8 @@ class TokenPriceService extends BaseService {
       final toSec = (now.millisecondsSinceEpoch / 1000).floor();
       final url =
           '$priceApiBase/coins/$encodedId/market_chart/range?vs_currency=usd&from=$fromSec&to=$toSec';
-      final response = await http
-          .get(Uri.parse(url))
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(Uri.parse(url)))
           .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
@@ -138,8 +140,8 @@ class TokenPriceService extends BaseService {
       final encodedId = Uri.encodeComponent(coinId);
       final url =
           '$priceApiBase/coins/$encodedId?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false';
-      final response = await http
-          .get(Uri.parse(url))
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(Uri.parse(url)))
           .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
