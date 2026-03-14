@@ -48,7 +48,7 @@ class TransactionMonitor {
       final confirmed = await completer.future;
       return confirmed;
     } finally {
-      client.dispose();
+      // client.dispose() intentionally removed — HttpClient is a shared singleton.
     }
   }
 }

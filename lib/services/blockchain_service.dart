@@ -72,6 +72,7 @@ class BlockchainService extends ChangeNotifier {
   void updateDependencies(RpcService rpc, TokenPriceService price) {
     _rpcService = rpc;
     _priceService = price;
+    notifyListeners();
   }
 
   /// Initialize — load persisted chains and active chain from storage
@@ -83,9 +84,11 @@ class BlockchainService extends ChangeNotifier {
       await _loadCustomTokens();
       await _hydrateNetworkSettingsFromBackend();
       _initialized = true;
+      notifyListeners();
     } catch (e) {
       debugPrint('BlockchainService initialization failed: $e');
       _initialized = false;
+      notifyListeners();
     }
   }
 

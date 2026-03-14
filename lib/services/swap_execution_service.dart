@@ -167,7 +167,7 @@ class SwapExecutionService {
 
       return SwapExecutionResult(success: true, transactionHash: txHash);
     } finally {
-      client.dispose();
+      // client.dispose() intentionally removed — HttpClient is a shared singleton.
     }
   }
 

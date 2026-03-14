@@ -122,11 +122,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadWalletData() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      await blockchain.init();
+
+      // Add a safety timeout to the initialization process
+      await blockchain.init().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => debugPrint('Blockchain init timed out'),
+      );
+
       _lastChainId = blockchain.activeChain.chainId;
       await _loadHiddenTokens(_lastChainId!);
       final address = await _walletService.getCurrentWalletAddress();
@@ -142,32 +149,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (address != null && address.isNotEmpty) {
         unawaited(_safeSyncPushRegistration());
-        await Future.wait([
-          _fetchRealBalances(address),
-          _fetchNftPreview(address),
-          _refreshNotificationDot(address: address),
-        ]);
-        await _checkClipboardTokenSuggestion();
-      } else {
-        if (mounted) {
-          setState(() {
-            _tokens = [];
-            _totalBalance = 0.0;
-            _nftPreview = [];
-            _hasMoreNfts = false;
-            _hasUnreadNotifications = false;
-            _isLoadingNfts = false;
-          });
-        }
+        // Fetch balances in parallel to speed up load
+        unawaited(_fetchRealBalances(address));
+        unawaited(_fetchNftPreview(address));
+        unawaited(_refreshNotificationDot(address: address));
+        unawaited(_checkClipboardTokenSuggestion());
       }
     } catch (e) {
       debugPrint('Error loading wallet data: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _tokens = [];
-          _totalBalance = 0.0;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }

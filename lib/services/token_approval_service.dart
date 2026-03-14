@@ -132,7 +132,7 @@ class TokenApprovalService {
     } catch (e) {
       return TokenApprovalResult(approvalSatisfied: false, error: e.toString());
     } finally {
-      client.dispose();
+      // client.dispose() intentionally removed — HttpClient is a shared singleton.
     }
   }
 }
