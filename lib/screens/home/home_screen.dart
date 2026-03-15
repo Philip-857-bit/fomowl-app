@@ -148,7 +148,10 @@ class _HomeScreenState extends State<HomeScreen> {
       final name = await _storage.getWalletName();
       if (address != null && address.isNotEmpty) {
         // Load snapshot before unblocking UI with _isLoading = false
-        final snapshot = await _snapshotService.loadSnapshot(_lastChainId!, address);
+        final snapshot = await _snapshotService.loadSnapshot(
+          _lastChainId!,
+          address,
+        );
         if (snapshot != null && mounted) {
           setState(() {
             _tokens = snapshot.tokens;
@@ -156,7 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _walletName = snapshot.walletName;
             _isUsingCachedData = true;
           });
-          debugPrint('[OWLLET] Loaded cached snapshot: ${_tokens.length} tokens');
+          debugPrint(
+            '[OWLLET] Loaded cached snapshot: ${_tokens.length} tokens',
+          );
         }
 
         if (mounted) {
@@ -325,14 +330,16 @@ class _HomeScreenState extends State<HomeScreen> {
         final name = await _storage.getWalletName();
         if (!mounted) return;
         final l = AppLocalizations.of(context);
-        _snapshotService.saveSnapshot(HomePortfolioSnapshot(
-          walletAddress: address,
-          chainId: _lastChainId!,
-          walletName: name ?? l.mainWallet,
-          totalBalance: _totalBalance,
-          tokens: _tokens,
-          timestamp: DateTime.now(),
-        ));
+        _snapshotService.saveSnapshot(
+          HomePortfolioSnapshot(
+            walletAddress: address,
+            chainId: _lastChainId!,
+            walletName: name ?? l.mainWallet,
+            totalBalance: _totalBalance,
+            tokens: _tokens,
+            timestamp: DateTime.now(),
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Error fetching balances: $e');
@@ -369,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadHiddenTokens(chainId);
     _walletService.getCurrentWalletAddress().then((address) async {
       if (!mounted || address == null) return;
-      
+
       // Attempt to load snapshot for the new chain to show something instantly
       final snapshot = await _snapshotService.loadSnapshot(chainId, address);
       if (snapshot != null && mounted) {
@@ -632,7 +639,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 28),
                             TokensSection(
                               tokens: _tokens,
-                              isLoading: _isLoadingBalances && !_isUsingCachedData,
+                              isLoading:
+                                  _isLoadingBalances && !_isUsingCachedData,
                               isLoadingNfts: _isLoadingNfts,
                               nftPreview: _nftPreview,
                               hasMoreNfts: _hasMoreNfts,

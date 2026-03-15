@@ -50,11 +50,7 @@ class TokenIcon extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.verified,
-              size: size * 0.35,
-              color: Colors.red,
-            ),
+            child: Icon(Icons.verified, size: size * 0.35, color: Colors.red),
           ),
         ),
       ],

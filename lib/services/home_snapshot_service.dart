@@ -39,7 +39,9 @@ class HomePortfolioSnapshot {
       tokens: (json['tokens'] as List? ?? [])
           .map((t) => _tokenFromJson(t as Map<String, dynamic>))
           .toList(),
-      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
+      timestamp: DateTime.parse(
+        json['timestamp'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -91,7 +93,10 @@ class HomeSnapshotService {
     }
   }
 
-  Future<HomePortfolioSnapshot?> loadSnapshot(int chainId, String walletAddress) async {
+  Future<HomePortfolioSnapshot?> loadSnapshot(
+    int chainId,
+    String walletAddress,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = _getKey(chainId, walletAddress);

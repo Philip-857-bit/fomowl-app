@@ -34,18 +34,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _refreshAll() async {
     setState(() => _loading = true);
-    await Future.wait([
-      _fetchStats(),
-      _fetchRegistry(),
-    ]);
+    await Future.wait([_fetchStats(), _fetchRegistry()]);
     setState(() => _loading = false);
   }
 
   Future<void> _fetchStats() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final url = Uri.parse('${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/stats');
-      final response = await http.get(url, headers: {'X-Owllet-Admin-Key': widget.adminSecret});
+      final url = Uri.parse(
+        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/stats',
+      );
+      final response = await http.get(
+        url,
+        headers: {'X-Owllet-Admin-Key': widget.adminSecret},
+      );
       if (response.statusCode == 200) {
         setState(() => _stats = jsonDecode(response.body));
       }
@@ -57,10 +59,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _fetchRegistry() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      // Re-use token-search with an empty query to get common tokens, 
+      // Re-use token-search with an empty query to get common tokens,
       // or we could add a dedicated /admin/registry/list endpoint.
       // For now, let's use the public search but we'll filter certified status.
-      final url = Uri.parse('${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/token-search?q=$_searchQuery&limit=50');
+      final url = Uri.parse(
+        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/token-search?q=$_searchQuery&limit=50',
+      );
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -74,7 +78,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _toggleVerification(dynamic token, bool verify) async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final url = Uri.parse('${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/registry/batch');
+      final url = Uri.parse(
+        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/registry/batch',
+      );
       final response = await http.post(
         url,
         headers: {
@@ -87,8 +93,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               'chainId': blockchain.activeChain.chainId,
               'contractAddress': token['contractAddress'],
               'isCertified': verify,
-            }
-          ]
+            },
+          ],
         }),
       );
 
@@ -96,7 +102,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (!mounted) return;
         _fetchRegistry();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(verify ? 'Token Verified' : 'Token Unverified')),
+          SnackBar(
+            content: Text(verify ? 'Token Verified' : 'Token Unverified'),
+          ),
         );
       }
     } catch (e) {
@@ -108,12 +116,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _sendBroadcast() async {
-    if (_pushTitleController.text.isEmpty || _pushMessageController.text.isEmpty) return;
+    if (_pushTitleController.text.isEmpty ||
+        _pushMessageController.text.isEmpty)
+      return;
 
     setState(() => _loading = true);
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final url = Uri.parse('${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/broadcast');
+      final url = Uri.parse(
+        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/broadcast',
+      );
       final response = await http.post(
         url,
         headers: {
@@ -132,14 +144,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _pushTitleController.clear();
         _pushMessageController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Broadcast sent to ~${data['estimatedRecipients']} devices')),
+          SnackBar(
+            content: Text(
+              'Broadcast sent to ~${data['estimatedRecipients']} devices',
+            ),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Broadcast failed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Broadcast failed')));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -154,13 +170,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Owllet Control Center', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Owllet Control Center',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(onPressed: _refreshAll, icon: const Icon(Icons.refresh)),
         ],
       ),
-      body: _loading 
-          ? const Center(child: CircularProgressIndicator(color: AppColors.accentRed))
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.accentRed),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -188,20 +209,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isHealthy ? Colors.green.withValues(alpha: 0.3) : Colors.orange.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: isHealthy
+              ? Colors.green.withValues(alpha: 0.3)
+              : Colors.orange.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
-          Icon(isHealthy ? Icons.check_circle : Icons.warning, color: isHealthy ? Colors.green : Colors.orange),
+          Icon(
+            isHealthy ? Icons.check_circle : Icons.warning,
+            color: isHealthy ? Colors.green : Colors.orange,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('System Status: ${health['status']?.toUpperCase() ?? 'UNKNOWN'}', 
-                  style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-                Text('Backend Latency: ${health['latencyMs'] ?? '??'}ms', 
-                  style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13)),
+                Text(
+                  'System Status: ${health['status']?.toUpperCase() ?? 'UNKNOWN'}',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Backend Latency: ${health['latencyMs'] ?? '??'}ms',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
@@ -215,33 +253,67 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('App Performance', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          'App Performance',
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
             _buildStatCard('DAU', s['dau']?.toString() ?? '0', Icons.people),
             const SizedBox(width: 12),
-            _buildStatCard('Total Users', s['totalUsers']?.toString() ?? '0', Icons.person_add),
+            _buildStatCard(
+              'Total Users',
+              s['totalUsers']?.toString() ?? '0',
+              Icons.person_add,
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        _buildStatCard('Total Transactions', s['totalTransactions']?.toString() ?? '0', Icons.swap_horiz, wide: true),
+        _buildStatCard(
+          'Total Transactions',
+          s['totalTransactions']?.toString() ?? '0',
+          Icons.swap_horiz,
+          wide: true,
+        ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, {bool wide = false}) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon, {
+    bool wide = false,
+  }) {
     return Expanded(
       flex: wide ? 2 : 1,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppColors.cardDark, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
           children: [
             Icon(icon, color: AppColors.accentRed, size: 24),
             const SizedBox(height: 8),
-            Text(value, style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-            Text(label, style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
+            Text(
+              value,
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12),
+            ),
           ],
         ),
       ),
@@ -251,11 +323,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildPushSection() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: AppColors.cardDark, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Global Broadcast', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            'Global Broadcast',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 12),
           TextField(
             controller: _pushTitleController,
@@ -265,7 +346,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.black26,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -278,7 +362,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.black26,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -286,7 +373,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _sendBroadcast,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentRed),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+              ),
               child: const Text('Send to All Users'),
             ),
           ),
@@ -299,7 +388,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Token Registry', style: GoogleFonts.outfit(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          'Token Registry',
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         const SizedBox(height: 12),
         TextField(
           onChanged: (val) {
@@ -312,7 +408,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             prefixIcon: const Icon(Icons.search, color: Colors.white54),
             filled: true,
             fillColor: AppColors.cardDark,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -325,7 +424,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             final isCertified = t['isCertified'] == true;
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(color: AppColors.cardDark, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: ListTile(
                 leading: TokenIcon(
                   tokenSymbol: t['symbol'] ?? '?',
@@ -334,8 +436,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   size: 32,
                   isCertified: isCertified,
                 ),
-                title: Text(t['name'] ?? 'Unknown', style: const TextStyle(color: Colors.white, fontSize: 14)),
-                subtitle: Text(t['symbol'] ?? '', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                title: Text(
+                  t['name'] ?? 'Unknown',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                subtitle: Text(
+                  t['symbol'] ?? '',
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
                 trailing: Switch(
                   value: isCertified,
                   activeThumbColor: Colors.green,

@@ -55,34 +55,43 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
       // 1. Fetch from Local Backend
       final backendUrl = AppEnvironment.history('/$address');
-      final backendResponse = await http.get(backendUrl).timeout(const Duration(seconds: 10));
+      final backendResponse = await http
+          .get(backendUrl)
+          .timeout(const Duration(seconds: 10));
 
       final List<_Transaction> localTxs = [];
       if (backendResponse.statusCode == 200) {
         final data = json.decode(backendResponse.body);
         final historyList = data['history'] as List<dynamic>? ?? [];
-        localTxs.addAll(historyList.map((j) => _Transaction.fromBackendJson(j)));
+        localTxs.addAll(
+          historyList.map((j) => _Transaction.fromBackendJson(j)),
+        );
       }
 
       // 2. Fetch from Etherscan V2 (Centralized Backend)
-      final List<dynamic> onChainData = await _etherscanService.getUnifiedHistory(chainId, address);
-      
+      final List<dynamic> onChainData = await _etherscanService
+          .getUnifiedHistory(chainId, address);
+
       final List<_Transaction> onChainTxs = onChainData.map((j) {
         if (j['tokenSymbol'] != null) {
           return _Transaction.fromEtherscanToken(j, address);
         } else {
-          return _Transaction.fromEtherscanNormal(j, address, blockchain.activeChain.symbol);
+          return _Transaction.fromEtherscanNormal(
+            j,
+            address,
+            blockchain.activeChain.symbol,
+          );
         }
       }).toList();
 
       // 3. Merge and Deduplicate (by hash)
       final Map<String, _Transaction> merged = {};
-      
+
       // Local first (often has better 'tx_type' human-readable names like 'swap')
       for (final tx in localTxs) {
         if (tx.hash != null) merged[tx.hash!.toLowerCase()] = tx;
       }
-      
+
       // On-chain second (adds missing or incoming txs)
       for (final tx in onChainTxs) {
         final key = tx.hash?.toLowerCase();
@@ -351,7 +360,7 @@ class _Transaction {
     final dateStr = j['created_at'] as String? ?? '';
     final dt = DateTime.tryParse(dateStr) ?? DateTime.now();
     final rawType = j['tx_type'] as String? ?? 'receive';
-    
+
     _TxType type = _TxType.receive;
     if (rawType == 'send') {
       type = _TxType.send;
@@ -372,9 +381,16 @@ class _Transaction {
     );
   }
 
-  factory _Transaction.fromEtherscanNormal(Map<String, dynamic> j, String myAddr, String nativeSymbol) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(j['timeStamp']) * 1000);
-    final isIncoming = (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
+  factory _Transaction.fromEtherscanNormal(
+    Map<String, dynamic> j,
+    String myAddr,
+    String nativeSymbol,
+  ) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(
+      int.parse(j['timeStamp']) * 1000,
+    );
+    final isIncoming =
+        (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
     final value = BigInt.parse(j['value']);
     final amount = value.toDouble() / 1e18;
 
@@ -391,9 +407,15 @@ class _Transaction {
     );
   }
 
-  factory _Transaction.fromEtherscanToken(Map<String, dynamic> j, String myAddr) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(j['timeStamp']) * 1000);
-    final isIncoming = (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
+  factory _Transaction.fromEtherscanToken(
+    Map<String, dynamic> j,
+    String myAddr,
+  ) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(
+      int.parse(j['timeStamp']) * 1000,
+    );
+    final isIncoming =
+        (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
     final decimals = int.tryParse(j['tokenDecimal']) ?? 18;
     final value = BigInt.parse(j['value']);
     final amount = value.toDouble() / pow(10, decimals);

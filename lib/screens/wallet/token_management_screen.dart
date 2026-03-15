@@ -189,7 +189,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
           (c) => c.address.toLowerCase() == (contract ?? '').toLowerCase(),
         );
 
-        if (!existsInWallet && !existsAsCustom && contract != null && contract.isNotEmpty) {
+        if (!existsInWallet &&
+            !existsAsCustom &&
+            contract != null &&
+            contract.isNotEmpty) {
           // Add as custom token
           final detected = await blockchain.detectTokenByContract(contract);
           final tokenToAdd = CustomTokenDefinition(
@@ -202,10 +205,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
             coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
             imageUrl: token.imageUrl ?? detected?.imageUrl,
           );
-          await blockchain.addCustomToken(
-            chainId: chainId,
-            token: tokenToAdd,
-          );
+          await blockchain.addCustomToken(chainId: chainId, token: tokenToAdd);
         }
       } else {
         // Disabling: hide the token
@@ -229,7 +229,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         _processingTokens.remove(key);
       });
       ToastUtils.showError(
-        AppErrorUtils.userMessage(e, fallback: l.tokenAddFailed('Please try again.')),
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.tokenAddFailed('Please try again.'),
+        ),
       );
     }
   }
@@ -290,7 +293,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
 
     final blockchain = context.read<BlockchainService>();
-    final cacheKey = '${blockchain.activeChain.chainId}:${trimmed.toLowerCase()}';
+    final cacheKey =
+        '${blockchain.activeChain.chainId}:${trimmed.toLowerCase()}';
 
     // Show cached results immediately
     final cached = _searchCache[cacheKey];
@@ -300,7 +304,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
     setState(() => _isSearchingRemote = true);
     try {
-      final results = await blockchain.searchTokensFromBackend(trimmed, limit: 60);
+      final results = await blockchain.searchTokensFromBackend(
+        trimmed,
+        limit: 60,
+      );
       if (!mounted || trimmed != _query.trim()) return;
       _searchCache[cacheKey] = results;
       setState(() {
@@ -355,7 +362,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       ToastUtils.showSuccess(l.tokenAdded(token.symbol));
     } catch (e) {
       ToastUtils.showError(
-        AppErrorUtils.userMessage(e, fallback: l.tokenAddFailed('Please try again.')),
+        AppErrorUtils.userMessage(
+          e,
+          fallback: l.tokenAddFailed('Please try again.'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _resolvingContract = null);
@@ -499,7 +509,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       // Merge: wallet tokens + remote results, deduplicated
       sourceTokens = _deduplicateTokens([..._walletTokens, ..._remoteResults]);
     } else if (query.isEmpty && _suggestedTokens.isNotEmpty) {
-      sourceTokens = _deduplicateTokens([..._walletTokens, ..._suggestedTokens]);
+      sourceTokens = _deduplicateTokens([
+        ..._walletTokens,
+        ..._suggestedTokens,
+      ]);
     } else {
       sourceTokens = _walletTokens;
     }
@@ -531,7 +544,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final blockchain = context.watch<BlockchainService>();
-    final canImportByContract = TokenManagementQueryHelper.isContractAddress(_query);
+    final canImportByContract = TokenManagementQueryHelper.isContractAddress(
+      _query,
+    );
     final displayTokens = _buildDisplayList();
     final query = _query.trim().toLowerCase();
 
@@ -649,7 +664,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                             final key = _tokenKey(token);
                             final isNative = _isNativeToken(token);
                             final isEnabled = _isTokenEnabled(token);
-                            final isProcessing = _processingTokens.contains(key);
+                            final isProcessing = _processingTokens.contains(
+                              key,
+                            );
 
                             return ManagedTokenTile(
                               key: ValueKey(key),
@@ -657,7 +674,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                               isEnabled: isEnabled,
                               isNative: isNative,
                               isProcessing: isProcessing,
-                              onToggleChanged: (value) => _handleToggle(token, value),
+                              onToggleChanged: (value) =>
+                                  _handleToggle(token, value),
                               chainId: blockchain.activeChain.chainId,
                             );
                           },

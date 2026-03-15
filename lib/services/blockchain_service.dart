@@ -249,7 +249,8 @@ class BlockchainService extends ChangeNotifier {
 
   Future<double> getGasPrice() async {
     final data = await getGasPriceData();
-    return double.tryParse(data['gasPriceInGwei']?.toString() ?? '20.0') ?? 20.0;
+    return double.tryParse(data['gasPriceInGwei']?.toString() ?? '20.0') ??
+        20.0;
   }
 
   Future<Map<String, dynamic>> estimateGasFee({
@@ -730,9 +731,10 @@ class BlockchainService extends ChangeNotifier {
               changePercent24h: _toDouble(entry['changePercent24h']),
               decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
               imageUrl: (entry['imageUrl'] as String?)?.trim(),
-              coinGeckoId:
-                  ((entry['coinGeckoId'] ?? entry['id']) as String?)?.trim(),
-              isCertified: entry['isCertified'] == true || entry['isNative'] == true,
+              coinGeckoId: ((entry['coinGeckoId'] ?? entry['id']) as String?)
+                  ?.trim(),
+              isCertified:
+                  entry['isCertified'] == true || entry['isNative'] == true,
             ),
           );
         }

@@ -182,7 +182,9 @@ class _DecentralizedProfileScreenState
       final message = 'Owllet Admin Access $timestamp';
       final signature = await _walletService.signMessage(message);
 
-      final url = Uri.parse('${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/verify');
+      final url = Uri.parse(
+        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/verify',
+      );
       final response = await _httpClientService.client.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -205,7 +207,10 @@ class _DecentralizedProfileScreenState
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.cardDark,
-          title: Text('Admin Secret', style: GoogleFonts.outfit(color: Colors.white)),
+          title: Text(
+            'Admin Secret',
+            style: GoogleFonts.outfit(color: Colors.white),
+          ),
           content: TextField(
             controller: secretController,
             obscureText: true,
