@@ -7,6 +7,50 @@ class ValueFormatter {
   static final Decimal _million = Decimal.parse('1000000');
   static final Decimal _billion = Decimal.parse('1000000000');
   static final Decimal _trillion = Decimal.parse('1000000000000');
+  static String _currencyCode = 'USD';
+
+  static const Map<String, String> _currencySymbols = {
+    'USD': r'$',
+    'EUR': 'EUR ',
+    'GBP': 'GBP ',
+    'NGN': 'NGN ',
+  };
+
+  static Map<String, Decimal> _usdConversionRates = {
+    'USD': Decimal.one,
+    'EUR': Decimal.one,
+    'GBP': Decimal.one,
+    'NGN': Decimal.one,
+  };
+
+  static void setCurrencyCode(String code) {
+    final normalized = code.trim().toUpperCase();
+    _currencyCode = _currencySymbols.containsKey(normalized)
+        ? normalized
+        : 'USD';
+  }
+
+  static void updateUsdConversionRates(Map<String, double> rates) {
+    final nextRates = <String, Decimal>{'USD': Decimal.one};
+    for (final entry in rates.entries) {
+      final normalized = entry.key.trim().toUpperCase();
+      if (normalized.isEmpty || entry.value <= 0) {
+        continue;
+      }
+      nextRates[normalized] = Decimal.parse(entry.value.toString());
+    }
+    _usdConversionRates = nextRates;
+  }
+
+  static String get currencyCode => _currencyCode;
+
+  static String get _currencySymbol =>
+      _currencySymbols[_currencyCode] ?? _currencySymbols['USD']!;
+
+  static Decimal _convertFromUsd(Decimal value) {
+    final rate = _usdConversionRates[_currencyCode] ?? Decimal.one;
+    return value * rate;
+  }
 
   static Decimal decimalFromNum(num? value) {
     if (value == null) return Decimal.zero;
@@ -40,26 +84,31 @@ class ValueFormatter {
   }
 
   static String formatUsdValue(Decimal value) {
-    if (value >= _trillion) {
-      return '\$${_fixed(divide(value, _trillion), 2)}T';
+    final converted = _convertFromUsd(value);
+    if (converted >= _trillion) {
+      return '$_currencySymbol${_fixed(divide(converted, _trillion), 2)}T';
     }
-    if (value >= _billion) {
-      return '\$${_fixed(divide(value, _billion), 2)}B';
+    if (converted >= _billion) {
+      return '$_currencySymbol${_fixed(divide(converted, _billion), 2)}B';
     }
-    if (value >= _million) {
-      return '\$${_fixed(divide(value, _million), 2)}M';
+    if (converted >= _million) {
+      return '$_currencySymbol${_fixed(divide(converted, _million), 2)}M';
     }
-    if (value >= _thousand) {
-      return '\$${_fixed(divide(value, _thousand), 2)}K';
+    if (converted >= _thousand) {
+      return '$_currencySymbol${_fixed(divide(converted, _thousand), 2)}K';
     }
-    return '\$${_fixed(value, 2)}';
+    return '$_currencySymbol${_fixed(converted, 2)}';
   }
 
   static String formatUsdPrice(Decimal value) {
-    if (value <= Decimal.zero) return '\$0.00';
-    if (value >= _thousand) return '\$${_fixed(value, 0)}';
-    if (value >= Decimal.one) return '\$${_fixed(value, 2)}';
-    return '\$${_fixed(value, 6)}';
+    final converted = _convertFromUsd(value);
+    if (converted <= Decimal.zero) return '${_currencySymbol}0.00';
+    if (converted >= _thousand)
+      return '$_currencySymbol${_fixed(converted, 0)}';
+    if (converted >= Decimal.one) {
+      return '$_currencySymbol${_fixed(converted, 2)}';
+    }
+    return '$_currencySymbol${_fixed(converted, 6)}';
   }
 
   static String formatCompactNumber(Decimal value) {
@@ -79,10 +128,12 @@ class ValueFormatter {
   }
 
   static String formatCurrencyWithGrouping(Decimal value) {
-    final fixed = _fixed(value, 2);
+    final fixed = _fixed(_convertFromUsd(value), 2);
     final parts = fixed.split('.');
     final whole = _groupThousands(parts.first);
-    return parts.length == 1 ? '\$$whole' : '\$$whole.${parts[1]}';
+    return parts.length == 1
+        ? '$_currencySymbol$whole'
+        : '$_currencySymbol$whole.${parts[1]}';
   }
 
   static String _fixed(Decimal value, int fractionDigits) {

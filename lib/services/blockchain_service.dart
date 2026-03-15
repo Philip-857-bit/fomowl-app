@@ -234,11 +234,10 @@ class BlockchainService extends ChangeNotifier {
 
     // Fallback to raw RPC if backend fails
     final result = await _rpcCall('eth_gasPrice', []);
-    if (result != null) {
-      final gasPriceWei = BigInt.parse(
-        (result as String).substring(2),
-        radix: 16,
-      );
+    if (result is String &&
+        result.startsWith('0x') &&
+        RegExp(r'^[0-9a-fA-F]+$').hasMatch(result.substring(2))) {
+      final gasPriceWei = BigInt.parse(result.substring(2), radix: 16);
       return {
         'gasPrice': gasPriceWei.toString(),
         'gasPriceInGwei': _scaledBigIntToDouble(gasPriceWei, 9).toString(),
@@ -559,6 +558,7 @@ class BlockchainService extends ChangeNotifier {
             decimals: custom.decimals,
             imageUrl: custom.imageUrl,
             coinGeckoId: custom.coinGeckoId,
+            isCertified: false,
           ),
         );
       }
@@ -610,6 +610,7 @@ class BlockchainService extends ChangeNotifier {
               _activeChain.logoUrl ??
               BlockchainCatalog.iconUrlForSymbol(_activeChain.symbol),
           coinGeckoId: activeCoinGeckoId,
+          isCertified: true,
         ),
       );
 
@@ -636,6 +637,7 @@ class BlockchainService extends ChangeNotifier {
                   tDef['imageUrl'] ??
                   BlockchainCatalog.iconUrlForSymbol(tDef['symbol']!),
               coinGeckoId: tDef['coinGeckoId'],
+              isCertified: tDef['isCertified'] == 'true',
             ),
           );
         }
@@ -674,6 +676,7 @@ class BlockchainService extends ChangeNotifier {
             decimals: custom.decimals,
             imageUrl: custom.imageUrl,
             coinGeckoId: custom.coinGeckoId,
+            isCertified: false,
           ),
         );
       }

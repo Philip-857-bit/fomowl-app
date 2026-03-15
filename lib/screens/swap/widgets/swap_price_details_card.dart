@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../utils/value_formatter.dart';
 
 class SwapPriceDetailsCard extends StatelessWidget {
   final String priceText;
@@ -36,11 +37,11 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   String _formatFeeDisplay() {
     if (platformFeeUsd > 0) {
-      return '${platformFeePercent.toStringAsFixed(2)}% (~\$${platformFeeUsd.toStringAsFixed(2)})';
+      return '${platformFeePercent.toStringAsFixed(2)}% (~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(platformFeeUsd))})';
     }
     if (swapAmountUsd <= 0) return '--';
     final feeUsd = swapAmountUsd * (platformFeePercent / 100);
-    return '${platformFeePercent.toStringAsFixed(2)}% (~\$${feeUsd.toStringAsFixed(2)})';
+    return '${platformFeePercent.toStringAsFixed(2)}% (~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(feeUsd))})';
   }
 
   String _formatNetworkFee() {
@@ -55,7 +56,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
     }
     if (feeAmountNative > 0) {
       if (usd > 0) {
-        return '~\$${usd.toStringAsFixed(2)} (${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol)';
+        return '~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(usd))} (${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol)';
       }
       return '${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol';
     }

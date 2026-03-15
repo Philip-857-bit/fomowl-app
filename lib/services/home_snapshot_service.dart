@@ -39,9 +39,13 @@ class HomePortfolioSnapshot {
       tokens: (json['tokens'] as List? ?? [])
           .map((t) => _tokenFromJson(t as Map<String, dynamic>))
           .toList(),
-      timestamp: DateTime.parse(
-        json['timestamp'] ?? DateTime.now().toIso8601String(),
-      ),
+      timestamp: (() {
+        final raw = json['timestamp']?.toString();
+        if (raw == null || raw.isEmpty) {
+          return DateTime.fromMillisecondsSinceEpoch(0);
+        }
+        return DateTime.parse(raw);
+      })(),
     );
   }
 
@@ -117,10 +121,14 @@ class HomeSnapshotService {
   }
 
   Future<void> clearAllSnapshots() async {
-    final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith(_prefix));
-    for (final key in keys) {
-      await prefs.remove(key);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((k) => k.startsWith(_prefix));
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } catch (e) {
+      debugPrint('clearAllSnapshots failed: $e');
     }
   }
 }

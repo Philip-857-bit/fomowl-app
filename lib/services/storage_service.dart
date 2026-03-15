@@ -637,6 +637,36 @@ class StorageService {
     return base64Encode(result);
   }
 
+  @visibleForTesting
+  Future<String> derivePasscodeHashForTest({
+    required String passcode,
+    required String salt,
+    required int iterations,
+    required int memoryPowerOf2,
+  }) {
+    return _derivePasscodeHashAsync(
+      passcode: passcode,
+      salt: salt,
+      iterations: iterations,
+      memoryPowerOf2: memoryPowerOf2,
+    );
+  }
+
+  @visibleForTesting
+  String derivePasscodeHashDartForTest({
+    required String passcode,
+    required String salt,
+    required int iterations,
+    required int memoryPowerOf2,
+  }) {
+    return _derivePasscodeHashDart(
+      passcode: passcode,
+      salt: salt,
+      iterations: iterations,
+      memoryPowerOf2: memoryPowerOf2,
+    );
+  }
+
   bool _constantTimeEquals(String a, String b) {
     final aBytes = utf8.encode(a);
     final bBytes = utf8.encode(b);

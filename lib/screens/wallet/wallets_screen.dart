@@ -9,6 +9,7 @@ import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
+import '../../utils/value_formatter.dart';
 import 'widgets/manage_wallet/create_wallet_action_sheet.dart';
 import 'widgets/manage_wallet/manage_wallet_tile.dart';
 
@@ -362,7 +363,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
     if (account.address.toLowerCase() == (_activeAddress ?? '').toLowerCase()) {
       return AppLocalizations.of(context).activeWalletLabel;
     }
-    return '\$0.00';
+    return ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(0));
   }
 
   @override

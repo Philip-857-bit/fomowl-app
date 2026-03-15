@@ -34,6 +34,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
   int _lockoutSecondsRemaining = 0;
   Timer? _lockoutTimer;
   bool _navigated = false;
+  bool _returnToPrevious = false;
 
   @override
   void initState() {
@@ -45,6 +46,14 @@ class _UnlockScreenState extends State<UnlockScreen> {
   void dispose() {
     _lockoutTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _returnToPrevious = args?['returnToPrevious'] == true;
   }
 
   Future<void> _checkLockoutAndBiometric() async {
@@ -114,7 +123,11 @@ class _UnlockScreenState extends State<UnlockScreen> {
         _navigated = true;
         await _storage.resetFailedAttempts();
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          if (_returnToPrevious) {
+            Navigator.pop(context, true);
+          } else {
+            Navigator.pushReplacementNamed(context, '/home');
+          }
         }
       }
     } catch (e) {
@@ -155,7 +168,11 @@ class _UnlockScreenState extends State<UnlockScreen> {
       _navigated = true;
       await _storage.resetFailedAttempts();
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        if (_returnToPrevious) {
+          Navigator.pop(context, true);
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } else if (mounted) {
       // Wrong passcode

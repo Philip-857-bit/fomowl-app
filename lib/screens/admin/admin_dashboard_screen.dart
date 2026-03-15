@@ -32,9 +32,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _refreshAll();
   }
 
+  @override
+  void dispose() {
+    _pushTitleController.dispose();
+    _pushMessageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _refreshAll() async {
     setState(() => _loading = true);
     await Future.wait([_fetchStats(), _fetchRegistry()]);
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
@@ -49,6 +57,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         headers: {'X-Owllet-Admin-Key': widget.adminSecret},
       );
       if (response.statusCode == 200) {
+        if (!mounted) return;
         setState(() => _stats = jsonDecode(response.body));
       }
     } catch (e) {
@@ -63,11 +72,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       // or we could add a dedicated /admin/registry/list endpoint.
       // For now, let's use the public search but we'll filter certified status.
       final url = Uri.parse(
-        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/token-search?q=$_searchQuery&limit=50',
-      );
+        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/token-search',
+      ).replace(queryParameters: {'q': _searchQuery, 'limit': '50'});
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (!mounted) return;
         setState(() => _registryTokens = data['tokens'] ?? []);
       }
     } catch (e) {
@@ -117,8 +127,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _sendBroadcast() async {
     if (_pushTitleController.text.isEmpty ||
-        _pushMessageController.text.isEmpty)
+        _pushMessageController.text.isEmpty) {
       return;
+    }
 
     setState(() => _loading = true);
     try {
@@ -279,6 +290,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           s['totalTransactions']?.toString() ?? '0',
           Icons.swap_horiz,
           wide: true,
+          useExpanded: false,
         ),
       ],
     );
@@ -289,35 +301,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     String value,
     IconData icon, {
     bool wide = false,
+    bool useExpanded = true,
   }) {
-    return Expanded(
-      flex: wide ? 2 : 1,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppColors.accentRed, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+    final card = Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.accentRed, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            Text(
-              label,
-              style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12),
-            ),
-          ],
-        ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12),
+          ),
+        ],
       ),
     );
+    if (!useExpanded) return card;
+    return Expanded(flex: wide ? 2 : 1, child: card);
   }
 
   Widget _buildPushSection() {

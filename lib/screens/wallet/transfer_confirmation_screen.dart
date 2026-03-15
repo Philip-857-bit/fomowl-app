@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../constants/app_colors.dart';
-import '../../models/token.dart';
-import '../../services/wallet_service.dart';
-import '../../services/blockchain_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/toast_utils.dart';
+import '../../models/token.dart';
+import '../../services/blockchain_service.dart';
+import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
-import 'widgets/transfer_confirmation/transfer_header.dart';
+import '../../utils/toast_utils.dart';
+import '../../utils/value_formatter.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
-import 'widgets/transfer_confirmation/transaction_details_card.dart';
-import 'widgets/transfer_confirmation/warning_banner.dart';
 import 'widgets/transfer_confirmation/confirm_button.dart';
+import 'widgets/transfer_confirmation/transaction_details_card.dart';
+import 'widgets/transfer_confirmation/transfer_header.dart';
+import 'widgets/transfer_confirmation/warning_banner.dart';
 
 /// Transfer Confirmation Screen
 /// Shows transaction details and fee breakdown before confirming
@@ -31,7 +33,6 @@ class _TransferConfirmationScreenState
   String? _fromAddress;
   bool _isConfirming = false;
 
-  // Real gas data
   double _gasPriceGwei = 0;
   double _gasFeeEth = 0;
   double _gasFeeUsd = 0;
@@ -56,7 +57,6 @@ class _TransferConfirmationScreenState
   Future<void> _fetchGasEstimate() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      // Fetch native price for USD conversion
       final effectiveCoinId = blockchain.activeChain.coinGeckoId;
 
       double nativePrice = 0;
@@ -108,7 +108,6 @@ class _TransferConfirmationScreenState
         listen: false,
       ).activeChain;
 
-      // Sign and broadcast the real transaction
       final txHash = await _walletService.sendNativeTransaction(
         toAddress: toAddress,
         amountInBaseUnits: amountInBaseUnits,
@@ -153,7 +152,6 @@ class _TransferConfirmationScreenState
     final blockchain = Provider.of<BlockchainService>(context);
     final l = AppLocalizations.of(context);
 
-    // Use real gas fees
     final isNative = token?.contractAddress == null;
     final parsedAmount = AmountUtils.formatBaseUnits(
       amountInBaseUnits,
@@ -173,7 +171,7 @@ class _TransferConfirmationScreenState
 
     final gasValueUsd = _gasEstimationFailed
         ? ''
-        : '≈\$${_gasFeeUsd.toStringAsFixed(2)}';
+        : '≈${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(_gasFeeUsd))}';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -181,12 +179,10 @@ class _TransferConfirmationScreenState
         child: Column(
           children: [
             TransferHeader(onBack: () => Navigator.pop(context)),
-
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // White card container
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(24),
@@ -196,7 +192,6 @@ class _TransferConfirmationScreenState
                       ),
                       child: Column(
                         children: [
-                          // Header
                           Row(
                             children: [
                               GestureDetector(
@@ -227,14 +222,11 @@ class _TransferConfirmationScreenState
                             ],
                           ),
                           const SizedBox(height: 32),
-
                           AmountSummary(
                             amountText: parsedAmount,
                             symbol: symbol,
                           ),
                           const SizedBox(height: 28),
-
-                          // TRANSACTION DETAILS
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
@@ -248,7 +240,6 @@ class _TransferConfirmationScreenState
                             ),
                           ),
                           const SizedBox(height: 14),
-
                           TransactionDetailsCard(
                             fromAddress: _shortenAddress(_fromAddress),
                             toAddress: _shortenAddress(toAddress),
@@ -265,8 +256,6 @@ class _TransferConfirmationScreenState
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // Warning
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: WarningBanner(message: l.transferWarningMessage),
@@ -276,8 +265,6 @@ class _TransferConfirmationScreenState
                 ),
               ),
             ),
-
-            // Confirm button
             Padding(
               padding: const EdgeInsets.all(16),
               child: ConfirmButton(

@@ -1,16 +1,15 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/currency_controller.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
-import '../../services/http_client_service.dart';
+import '../../services/wallet_backend_auth_service.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
@@ -31,7 +30,8 @@ class _DecentralizedProfileScreenState
     extends State<DecentralizedProfileScreen> {
   final WalletService _walletService = WalletService();
   final StorageService _storageService = StorageService();
-  final HttpClientService _httpClientService = HttpClientService();
+  final WalletBackendAuthService _walletBackendAuthService =
+      WalletBackendAuthService();
 
   String _walletName = 'Main Wallet';
   String _walletAddress = '--';
@@ -136,7 +136,8 @@ class _DecentralizedProfileScreenState
       ),
     );
     if (selected == null || selected == _currency) return;
-    await _storageService.setCurrency(selected);
+    if (!mounted) return;
+    await context.read<CurrencyController>().setCurrencyCode(selected);
     if (!mounted) return;
     setState(() => _currency = selected);
   }
@@ -172,37 +173,17 @@ class _DecentralizedProfileScreenState
   }
 
   Future<void> _handleAdminTrigger() async {
+    final secretController = TextEditingController();
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final walletAddress = await _walletService.getCurrentWalletAddress();
-      if (walletAddress == null) return;
+      if (walletAddress == null || walletAddress.isEmpty) {
+        throw Exception('No wallet connected');
+      }
 
-      // 1. Challenge-Response Signature Verification
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final message = 'Owllet Admin Access $timestamp';
-      final signature = await _walletService.signMessage(message);
-
-      final url = Uri.parse(
-        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/verify',
-      );
-      final response = await _httpClientService.client.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'walletAddress': walletAddress,
-          'message': message,
-          'signature': '0x$signature',
-        }),
-      );
-
-      if (response.statusCode != 200) return;
-      final data = jsonDecode(response.body);
-      if (data['success'] != true) return;
+      await _walletBackendAuthService.ensureWalletSession(walletAddress);
 
       if (!mounted) return;
-
-      // 2. Secondary Secret Gate
-      final secretController = TextEditingController();
       final secret = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -233,18 +214,34 @@ class _DecentralizedProfileScreenState
         ),
       );
 
-      if (secret == null || secret.isEmpty) return;
+      final trimmedSecret = secret?.trim() ?? '';
+      if (trimmedSecret.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Admin secret is required')),
+        );
+        return;
+      }
 
-      // 3. Navigate to Dashboard (passing secret for API headers)
+      debugPrint(
+        'Admin access verified for wallet $walletAddress on chain ${blockchain.activeChain.chainId}',
+      );
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => AdminDashboardScreen(adminSecret: secret),
+          builder: (context) =>
+              AdminDashboardScreen(adminSecret: trimmedSecret),
         ),
       );
-    } catch (_) {
-      // Fail silently to keep the backdoor hidden
+    } catch (e, st) {
+      debugPrint('Admin access failed: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Admin access failed: $e')));
+    } finally {
+      secretController.dispose();
     }
   }
 
@@ -410,6 +407,15 @@ class _DecentralizedProfileScreenState
                     SettingsSectionHeader(title: l.security),
                     SettingsGroupCard(
                       children: [
+                        SettingsItemTile(
+                          icon: Icons.lock_outline_rounded,
+                          title: l.changePassword,
+                          subtitle: l.passcodeUnlock,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/password-security',
+                          ),
+                        ),
                         SettingsItemTile(
                           icon: Icons.vpn_key_rounded,
                           title: l.seedPhraseBackup,

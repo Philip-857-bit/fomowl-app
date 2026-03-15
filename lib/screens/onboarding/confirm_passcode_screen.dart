@@ -18,13 +18,21 @@ class ConfirmPasscodeScreen extends StatefulWidget {
 class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   String _passcode = '';
   String? _originalPasscode;
+  String? _mode;
   final int _passcodeLength = 6;
   final StorageService _storage = StorageService();
+  bool _isVerifying = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _originalPasscode ??= ModalRoute.of(context)?.settings.arguments as String?;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _originalPasscode ??= args['passcode'] as String?;
+      _mode ??= args['mode']?.toString();
+    } else if (args is String) {
+      _originalPasscode ??= args;
+    }
   }
 
   void _onNumberPressed(String number) {
@@ -34,7 +42,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
       });
 
       // Auto-verify when passcode is complete
-      if (_passcode.length == _passcodeLength) {
+      if (_passcode.length == _passcodeLength && !_isVerifying) {
         _verifyPasscode();
       }
     }
@@ -48,26 +56,43 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
     }
   }
 
-  void _verifyPasscode() async {
+  Future<void> _verifyPasscode() async {
+    if (_isVerifying) return;
     final l = AppLocalizations.of(context);
-    if (_passcode == _originalPasscode) {
-      // Success - save passcode securely
-      try {
+    setState(() => _isVerifying = true);
+    try {
+      if (_passcode == _originalPasscode) {
         await _storage.savePasscode(_passcode);
         if (mounted) {
-          Navigator.pushNamed(context, '/biometric-setup');
+          if (_mode == 'change') {
+            Navigator.popUntil(
+              context,
+              (route) =>
+                  route.settings.name == '/password-security' ||
+                  route.settings.name == '/profile' ||
+                  route.settings.name == '/home',
+            );
+          } else {
+            Navigator.pushNamed(context, '/biometric-setup');
+          }
         }
-      } catch (e) {
-        if (mounted) {
-          ToastUtils.showError(l.failedToSavePasscode);
-        }
+        return;
       }
-    } else {
-      // Error - passcodes don't match
+
       ToastUtils.showError(l.passcodesDoNotMatch);
-      setState(() {
-        _passcode = '';
-      });
+      if (mounted) {
+        setState(() {
+          _passcode = '';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ToastUtils.showError(l.failedToSavePasscode);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isVerifying = false);
+      }
     }
   }
 
@@ -204,7 +229,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
                   color: Colors.white,
                   size: 28,
                 ),
-                onPressed: _passcode.length == _passcodeLength
+                onPressed: _passcode.length == _passcodeLength && !_isVerifying
                     ? _verifyPasscode
                     : null,
               ),

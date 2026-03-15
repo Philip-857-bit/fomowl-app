@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -61,6 +62,28 @@ void main() {
 
       await storage.clearBackendSession(walletAddress);
       expect(await storage.getBackendSession(walletAddress), isNull);
+    });
+
+    test('rust and dart argon2 derivation stay compatible', () async {
+      final saltBytes = Uint8List.fromList(
+        List<int>.generate(16, (i) => i + 1),
+      );
+      final salt = base64Encode(saltBytes);
+
+      final rustHash = await storage.derivePasscodeHashForTest(
+        passcode: '123456',
+        salt: salt,
+        iterations: 3,
+        memoryPowerOf2: 16,
+      );
+      final dartHash = storage.derivePasscodeHashDartForTest(
+        passcode: '123456',
+        salt: salt,
+        iterations: 3,
+        memoryPowerOf2: 16,
+      );
+
+      expect(rustHash, dartHash);
     });
   });
 }

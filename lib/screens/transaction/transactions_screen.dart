@@ -103,6 +103,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       final sorted = merged.values.toList()
         ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
+      if (!mounted) return;
       setState(() {
         _allTransactions = sorted;
         _isLoading = false;
@@ -306,7 +307,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${tx.isIncoming ? "+" : "-"} ${tx.amount.toStringAsFixed(2)} \$',
+                '${tx.isIncoming ? "+" : "-"} ${tx.amount.toStringAsFixed(2)} ${tx.tokenSymbol}',
                 style: GoogleFonts.outfit(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -386,23 +387,24 @@ class _Transaction {
     String myAddr,
     String nativeSymbol,
   ) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(
-      int.parse(j['timeStamp']) * 1000,
-    );
-    final isIncoming =
-        (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
-    final value = BigInt.parse(j['value']);
+    final timestampSeconds =
+        int.tryParse(j['timeStamp']?.toString() ?? '') ?? 0;
+    final dt = DateTime.fromMillisecondsSinceEpoch(timestampSeconds * 1000);
+    final toAddress = j['to']?.toString() ?? '';
+    final fromAddress = j['from']?.toString() ?? '';
+    final isIncoming = toAddress.toLowerCase() == myAddr.toLowerCase();
+    final value = BigInt.tryParse(j['value']?.toString() ?? '') ?? BigInt.zero;
     final amount = value.toDouble() / 1e18;
 
     return _Transaction(
       type: isIncoming ? _TxType.receive : _TxType.send,
       tokenName: 'Native',
       tokenSymbol: nativeSymbol,
-      address: isIncoming ? j['from'] : j['to'],
+      address: isIncoming ? fromAddress : toAddress,
       amount: amount,
       date: DateFormat('MM.dd.yyyy').format(dt),
       isIncoming: isIncoming,
-      hash: j['hash'],
+      hash: j['hash']?.toString(),
       timestamp: dt,
     );
   }
@@ -411,24 +413,25 @@ class _Transaction {
     Map<String, dynamic> j,
     String myAddr,
   ) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(
-      int.parse(j['timeStamp']) * 1000,
-    );
-    final isIncoming =
-        (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
-    final decimals = int.tryParse(j['tokenDecimal']) ?? 18;
-    final value = BigInt.parse(j['value']);
+    final timestampSeconds =
+        int.tryParse(j['timeStamp']?.toString() ?? '') ?? 0;
+    final dt = DateTime.fromMillisecondsSinceEpoch(timestampSeconds * 1000);
+    final toAddress = j['to']?.toString() ?? '';
+    final fromAddress = j['from']?.toString() ?? '';
+    final isIncoming = toAddress.toLowerCase() == myAddr.toLowerCase();
+    final decimals = int.tryParse(j['tokenDecimal']?.toString() ?? '') ?? 18;
+    final value = BigInt.tryParse(j['value']?.toString() ?? '') ?? BigInt.zero;
     final amount = value.toDouble() / pow(10, decimals);
 
     return _Transaction(
       type: isIncoming ? _TxType.receive : _TxType.send,
-      tokenName: j['tokenName'] ?? 'Unknown',
-      tokenSymbol: j['tokenSymbol'] ?? 'UNK',
-      address: isIncoming ? j['from'] : j['to'],
+      tokenName: j['tokenName']?.toString() ?? 'Unknown',
+      tokenSymbol: j['tokenSymbol']?.toString() ?? 'UNK',
+      address: isIncoming ? fromAddress : toAddress,
       amount: amount,
       date: DateFormat('MM.dd.yyyy').format(dt),
       isIncoming: isIncoming,
-      hash: j['hash'],
+      hash: j['hash']?.toString(),
       timestamp: dt,
     );
   }

@@ -16,6 +16,16 @@ class CreatePasscodeScreen extends StatefulWidget {
 class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
   String _passcode = '';
   final int _passcodeLength = 6;
+  String? _mode;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      _mode ??= args['mode']?.toString();
+    }
+  }
 
   void _onNumberPressed(String number) {
     if (_passcode.length < _passcodeLength) {
@@ -30,7 +40,7 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
             Navigator.pushNamed(
               context,
               '/confirm-passcode',
-              arguments: _passcode,
+              arguments: {'passcode': _passcode, 'mode': _mode},
             );
           }
         });
@@ -198,7 +208,7 @@ class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
                     ? () => Navigator.pushNamed(
                         context,
                         '/confirm-passcode',
-                        arguments: _passcode,
+                        arguments: {'passcode': _passcode, 'mode': _mode},
                       )
                     : null,
               ),

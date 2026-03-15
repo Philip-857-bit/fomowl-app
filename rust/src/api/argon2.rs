@@ -21,12 +21,10 @@ pub fn derive_passcode_hash_argon2(
         .map_err(|e| format!("Invalid salt length/format: {}", e))?;
 
     // Configure Argon2id
-    let params = Params::new(
-        memory_power_of_2,
-        iterations,
-        1,
-        Some(Params::DEFAULT_OUTPUT_LEN),
-    )
+    let memory_kib = 1u32
+        .checked_shl(memory_power_of_2)
+        .ok_or_else(|| "Invalid Argon2 memory parameter".to_string())?;
+    let params = Params::new(memory_kib, iterations, 1, Some(32))
     .map_err(|e| format!("Invalid Argon2 parameters: {}", e))?;
     
     let argon2 = Argon2::new(

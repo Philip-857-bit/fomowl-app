@@ -77,6 +77,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   Future<void> _loadData({bool showSpinner = true}) async {
     final blockchain = context.read<BlockchainService>();
+    if (!mounted) return;
     final chainId = blockchain.activeChain.chainId;
     if (showSpinner) {
       setState(() => _isLoading = true);
@@ -164,6 +165,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final chainId = blockchain.activeChain.chainId;
     final key = _tokenKey(token);
     final contract = token.contractAddress;
+    if (_processingTokens.contains(key)) return;
 
     // Optimistic UI update
     setState(() {

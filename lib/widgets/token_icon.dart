@@ -39,6 +39,7 @@ class TokenIcon extends StatelessWidget {
     if (!isCertified) return icon;
 
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         icon,
         Positioned(

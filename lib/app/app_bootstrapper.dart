@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
-import '../screens/auth/unlock_screen.dart';
-import '../screens/home/home_screen.dart';
-import '../screens/onboarding/welcome_screen.dart';
 import '../services/storage_service.dart';
 import '../services/wallet_service.dart';
 
@@ -28,22 +25,14 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     final hasWallet = await _walletService.hasWallet();
     if (!mounted) return;
 
-    var nextScreen = const WelcomeScreen() as Widget;
+    var nextRoute = '/welcome';
     if (hasWallet) {
-      nextScreen = await _storage.hasPasscode()
-          ? const UnlockScreen()
-          : const HomeScreen();
+      nextRoute = await _storage.hasPasscode() ? '/unlock' : '/home';
     }
 
     if (!mounted) return;
     FlutterNativeSplash.remove();
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder<void>(
-        pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
-    );
+    Navigator.of(context).pushReplacementNamed(nextRoute);
   }
 
   @override

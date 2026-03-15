@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/storage_service.dart';
+import '../../utils/sensitive_access_guard.dart';
 import '../../widgets/bottom_navigation.dart';
 import 'widgets/settings_group_card.dart';
 import 'widgets/settings_item_tile.dart';
@@ -170,6 +171,20 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
     }
   }
 
+  Future<void> _startChangePasswordFlow() async {
+    final l = AppLocalizations.of(context);
+    final authenticated = await SensitiveAccessGuard.verify(
+      context,
+      reason: l.unlockWalletReason,
+    );
+    if (!authenticated || !mounted) return;
+    await Navigator.pushNamed(
+      context,
+      '/create-passcode',
+      arguments: {'mode': 'change'},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -223,8 +238,7 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           icon: Icons.lock_outline_rounded,
                           title: l.changePassword,
                           subtitle: l.passcodeUnlock,
-                          onTap: () =>
-                              Navigator.pushNamed(context, '/create-passcode'),
+                          onTap: _startChangePasswordFlow,
                         ),
                         SettingsItemTile(
                           icon: Icons.fingerprint_rounded,

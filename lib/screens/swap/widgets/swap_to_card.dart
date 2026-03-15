@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../models/token.dart';
+import '../../../utils/value_formatter.dart';
 import 'swap_token_chip.dart';
 
 class SwapToCard extends StatelessWidget {
@@ -90,7 +91,9 @@ class SwapToCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '\$${usdValue.toStringAsFixed(2)}',
+                ValueFormatter.formatUsdValue(
+                  ValueFormatter.decimalFromNum(usdValue),
+                ),
                 style: GoogleFonts.outfit(
                   fontSize: 13,
                   color: Colors.white.withValues(alpha: 0.5),
