@@ -35,11 +35,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
 
       // Auto-verify when passcode is complete
       if (_passcode.length == _passcodeLength) {
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted) {
-            _verifyPasscode();
-          }
-        });
+        _verifyPasscode();
       }
     }
   }

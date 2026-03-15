@@ -21,6 +21,7 @@ class AppEnvironment {
   static final FirebaseOptions? firebaseOptions =
       _resolveFirebaseOptionsForCurrentPlatform();
 
+
   static Uri api(String path, [Map<String, String>? queryParameters]) {
     return _buildUri('/api$path', queryParameters);
   }

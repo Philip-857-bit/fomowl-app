@@ -30,7 +30,7 @@ class ReceiveActionButtons extends StatelessWidget {
               child: Text(
                 'Share',
                 style: GoogleFonts.outfit(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -52,7 +52,7 @@ class ReceiveActionButtons extends StatelessWidget {
               child: Text(
                 'Copy',
                 style: GoogleFonts.outfit(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),

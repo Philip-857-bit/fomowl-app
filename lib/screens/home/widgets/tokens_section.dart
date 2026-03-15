@@ -127,27 +127,8 @@ class _TokensSectionState extends State<TokensSection> {
   }
 
   List<Widget> _buildTokensContent(List<Token> visibleTokens) {
-    if (widget.isLoading) {
-      return [
-        Padding(
-          padding: const EdgeInsets.all(40),
-          child: Center(
-            child: Column(
-              children: [
-                const CircularProgressIndicator(color: AppColors.accentRed),
-                const SizedBox(height: 16),
-                Text(
-                  widget.localization.loadingBalances,
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: Colors.white54,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ];
+    if (widget.isLoading && visibleTokens.isEmpty) {
+      return _buildSkeletonList();
     }
 
     if (visibleTokens.isEmpty) {
@@ -252,6 +233,79 @@ class _TokensSectionState extends State<TokensSection> {
         ),
         const SizedBox(height: 10),
       ],
+    );
+  }
+
+  List<Widget> _buildSkeletonList() {
+    return List.generate(
+      4,
+      (index) => Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: 40,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  width: 60,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: 30,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -412,6 +466,7 @@ class _TokenListItem extends StatelessWidget {
               tokenImageUrl: token.imageUrl,
               size: 40,
               chainId: chainId,
+              isCertified: token.isCertified,
             ),
             const SizedBox(width: 12),
             Expanded(

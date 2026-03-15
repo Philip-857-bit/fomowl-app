@@ -21,7 +21,7 @@ class SendHeader extends StatelessWidget {
             child: Text(
               title,
               style: GoogleFonts.outfit(
-                fontSize: 20,
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),

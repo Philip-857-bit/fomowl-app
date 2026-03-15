@@ -50,12 +50,13 @@ class TokenSelectorCard extends StatelessWidget {
                     tokenAddress: token!.contractAddress,
                     tokenImageUrl: token!.imageUrl,
                     size: 38,
+                    isCertified: token!.isCertified,
                   ),
                 if (token != null) const SizedBox(width: 12),
                 Text(
                   token?.symbol ?? 'Select',
                   style: GoogleFonts.outfit(
-                    fontSize: 31,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),

@@ -56,13 +56,13 @@ class AmountInputField extends StatelessWidget {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: GoogleFonts.outfit(
               color: Colors.white,
-              fontSize: 34,
+              fontSize: 22,
               fontWeight: FontWeight.w600,
             ),
             decoration: InputDecoration(
               hintText: '0.00',
               hintStyle: GoogleFonts.outfit(
-                fontSize: 34,
+                fontSize: 22,
                 color: Colors.white.withValues(alpha: 0.3),
                 fontWeight: FontWeight.w600,
               ),
@@ -77,7 +77,7 @@ class AmountInputField extends StatelessWidget {
                   Text(
                     tokenSymbol,
                     style: GoogleFonts.outfit(
-                      fontSize: 24,
+                      fontSize: 16,
                       color: Colors.white.withValues(alpha: 0.45),
                       fontWeight: FontWeight.w500,
                     ),
@@ -88,7 +88,7 @@ class AmountInputField extends StatelessWidget {
                     child: Text(
                       'MAX',
                       style: GoogleFonts.outfit(
-                        fontSize: 24,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: AppColors.accentRed,
                       ),

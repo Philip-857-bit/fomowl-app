@@ -1075,8 +1075,7 @@ class _SwapScreenState extends State<SwapScreen> {
         _fromToken != null &&
         _parseDecimalAmount(_fromController.text) <=
             (Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero);
-    final quoteHasBalance = !(_currentQuote?.hasBalanceIssue ?? false);
-    final hasBalance = localHasBalance && quoteHasBalance;
+    final hasBalance = localHasBalance;
     final swapEnabled =
         hasInputAmount &&
         hasQuote &&

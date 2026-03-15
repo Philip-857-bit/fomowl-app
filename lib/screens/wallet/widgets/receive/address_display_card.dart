@@ -30,7 +30,7 @@ class AddressDisplayCard extends StatelessWidget {
             child: Text(
               value,
               style: GoogleFonts.robotoMono(
-                fontSize: isInterTransfer ? 15 : 13,
+                fontSize: isInterTransfer ? 13 : 11,
                 color: Colors.white.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,

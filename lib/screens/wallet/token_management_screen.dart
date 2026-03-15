@@ -15,13 +15,12 @@ import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
-import '../../widgets/token_icon.dart';
 import 'helpers/token_management_query_helper.dart';
 import 'widgets/token_management/contract_import_card.dart';
 import 'widgets/token_management/managed_token_tile.dart';
 import 'widgets/token_management/token_management_search_bar.dart';
 
-/// Full-screen token manager that lets users hide tokens or add/remove custom ones.
+/// MetaMask / TrustWallet style token manager with instant toggles.
 class TokenManagementScreen extends StatefulWidget {
   const TokenManagementScreen({super.key});
 
@@ -35,20 +34,28 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
 
-  List<Token> _tokens = [];
-  List<Token> _searchResults = [];
+  // ── State ──────────────────────────────────
+  List<Token> _walletTokens = [];
   List<Token> _suggestedTokens = [];
+  List<Token> _remoteResults = [];
   Set<String> _hiddenKeys = {};
   bool _isLoading = true;
   bool _hasChanges = false;
-  String? _resolvingContract;
   bool _isSearchingRemote = false;
   bool _hasCheckedClipboard = false;
   String _query = '';
-  // Resolved contract token metadata for display in ContractImportCard
+
+  // Contract import
+  String? _resolvingContract;
   String? _resolvedTokenName;
   String? _resolvedTokenSymbol;
   String? _resolvedTokenImageUrl;
+
+  // Tokens being toggled (optimistic state tracking)
+  final Set<String> _processingTokens = {};
+
+  // In-memory search cache: "chainId:query" → results
+  final Map<String, List<Token>> _searchCache = {};
 
   @override
   void initState() {
@@ -65,6 +72,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       ..dispose();
     super.dispose();
   }
+
+  // ── Data Loading ───────────────────────────
 
   Future<void> _loadData({bool showSpinner = true}) async {
     final blockchain = context.read<BlockchainService>();
@@ -86,17 +95,13 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
     if (!mounted) return;
     setState(() {
-      _tokens = fetched;
+      _walletTokens = fetched;
       _hiddenKeys = hidden;
       _isLoading = false;
-      // Immediately populate search results with local tokens while suggestions load
-      if (_query.trim().isEmpty) {
-        _searchResults = List<Token>.from(fetched);
-      }
     });
-    // Load suggested tokens in the background (non-blocking)
-    _loadSuggestedTokens();
 
+    // Load suggested tokens in background (non-blocking first paint)
+    _loadSuggestedTokens();
     _checkClipboardForTokenSuggestion();
   }
 
@@ -108,69 +113,140 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       setState(() {
         _suggestedTokens = results.isNotEmpty
             ? results
-            : List<Token>.from(_tokens);
-        if (_query.trim().isEmpty) {
-          _searchResults = _suggestedTokens;
-        }
+            : List<Token>.from(_walletTokens);
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _suggestedTokens = List<Token>.from(_tokens);
-        if (_query.trim().isEmpty) {
-          _searchResults = _suggestedTokens;
-        }
+        _suggestedTokens = List<Token>.from(_walletTokens);
       });
     }
   }
 
-  bool _isTokenHidden(Token token) {
-    return _hiddenKeys.contains(TokenVisibilityUtils.identifier(token));
-  }
+  // ── Token Identity & Enabled Logic ─────────
 
-  Future<void> _toggleToken(Token token, bool hideToken) async {
+  String _tokenKey(Token token) => TokenVisibilityUtils.identifier(token);
+
+  bool _isTokenEnabled(Token token) {
+    // Native token (no contract) is always enabled
+    if (token.contractAddress == null || token.contractAddress!.isEmpty) {
+      return true;
+    }
+    // If it's in hidden set, it's disabled
+    if (_hiddenKeys.contains(_tokenKey(token))) return false;
+    // If it's in wallet tokens or custom tokens, it's enabled
+    if (_walletTokens.any(
+      (t) =>
+          (t.contractAddress ?? '').toLowerCase() ==
+          (token.contractAddress ?? '').toLowerCase(),
+    )) {
+      return true;
+    }
+    // Check custom tokens
     final blockchain = context.read<BlockchainService>();
-    await _visibilityService.setTokenHidden(
-      blockchain.activeChain.chainId,
-      token,
-      hideToken,
+    final customs = blockchain.customTokensForActiveChain;
+    return customs.any(
+      (c) =>
+          c.address.toLowerCase() ==
+          (token.contractAddress ?? '').toLowerCase(),
     );
-    if (!mounted) return;
-    setState(() {
-      final key = TokenVisibilityUtils.identifier(token);
-      if (hideToken) {
-        _hiddenKeys.add(key);
-      } else {
-        _hiddenKeys.remove(key);
-      }
-      _hasChanges = true;
-    });
   }
 
-  Future<void> _removeCustomToken(CustomTokenDefinition token) async {
+  bool _isNativeToken(Token token) {
+    return token.contractAddress == null || token.contractAddress!.isEmpty;
+  }
+
+  // ── Optimistic Toggle ──────────────────────
+
+  Future<void> _handleToggle(Token token, bool enable) async {
     final l = AppLocalizations.of(context);
     final blockchain = context.read<BlockchainService>();
-    await blockchain.removeCustomToken(
-      blockchain.activeChain.chainId,
-      token.address,
-    );
-    await _loadData(showSpinner: false);
-    setState(() => _hasChanges = true);
-    ToastUtils.showSuccess(l.tokenRemoved);
+    final chainId = blockchain.activeChain.chainId;
+    final key = _tokenKey(token);
+    final contract = token.contractAddress;
+
+    // Optimistic UI update
+    setState(() {
+      _processingTokens.add(key);
+      if (enable) {
+        _hiddenKeys.remove(key);
+      } else {
+        _hiddenKeys.add(key);
+      }
+    });
+
+    try {
+      if (enable) {
+        // Enabling: unhide the token, and add as custom if not already in wallet
+        await _visibilityService.setTokenHidden(chainId, token, false);
+
+        final existsInWallet = _walletTokens.any(
+          (t) =>
+              (t.contractAddress ?? '').toLowerCase() ==
+              (contract ?? '').toLowerCase(),
+        );
+        final existsAsCustom = blockchain.customTokensForActiveChain.any(
+          (c) => c.address.toLowerCase() == (contract ?? '').toLowerCase(),
+        );
+
+        if (!existsInWallet && !existsAsCustom && contract != null && contract.isNotEmpty) {
+          // Add as custom token
+          final detected = await blockchain.detectTokenByContract(contract);
+          final tokenToAdd = CustomTokenDefinition(
+            symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
+            name: detected?.name ?? token.name,
+            address: detected?.address ?? contract,
+            decimals: (detected?.decimals ?? token.decimals) > 0
+                ? (detected?.decimals ?? token.decimals)
+                : 18,
+            coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
+            imageUrl: token.imageUrl ?? detected?.imageUrl,
+          );
+          await blockchain.addCustomToken(
+            chainId: chainId,
+            token: tokenToAdd,
+          );
+        }
+      } else {
+        // Disabling: hide the token
+        await _visibilityService.setTokenHidden(chainId, token, true);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _hasChanges = true;
+        _processingTokens.remove(key);
+      });
+    } catch (e) {
+      // Revert optimistic update
+      if (!mounted) return;
+      setState(() {
+        if (enable) {
+          _hiddenKeys.add(key);
+        } else {
+          _hiddenKeys.remove(key);
+        }
+        _processingTokens.remove(key);
+      });
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(e, fallback: l.tokenAddFailed('Please try again.')),
+      );
+    }
   }
+
+  // ── Search ─────────────────────────────────
 
   void _handleSearchChanged() {
     if (!mounted) return;
     final nextQuery = _searchController.text.trim();
     setState(() {
       _query = nextQuery;
-      // Clear resolved contract info when query changes
       _resolvedTokenName = null;
       _resolvedTokenSymbol = null;
       _resolvedTokenImageUrl = null;
     });
     _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
       if (TokenManagementQueryHelper.isContractAddress(nextQuery)) {
         _autoResolveContract(nextQuery);
       } else {
@@ -191,14 +267,57 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
           _resolvedTokenImageUrl = token.imageUrl;
         });
       }
+    } catch (_) {}
+  }
+
+  Future<void> _runRemoteSearch(String query) async {
+    final trimmed = query.trim();
+    if (!mounted) return;
+
+    if (trimmed.isEmpty || trimmed.length < 2) {
+      setState(() {
+        _isSearchingRemote = false;
+        _remoteResults = [];
+      });
+      return;
+    }
+    if (TokenManagementQueryHelper.isContractAddress(trimmed)) {
+      setState(() {
+        _isSearchingRemote = false;
+        _remoteResults = [];
+      });
+      return;
+    }
+
+    final blockchain = context.read<BlockchainService>();
+    final cacheKey = '${blockchain.activeChain.chainId}:${trimmed.toLowerCase()}';
+
+    // Show cached results immediately
+    final cached = _searchCache[cacheKey];
+    if (cached != null) {
+      setState(() => _remoteResults = cached);
+    }
+
+    setState(() => _isSearchingRemote = true);
+    try {
+      final results = await blockchain.searchTokensFromBackend(trimmed, limit: 60);
+      if (!mounted || trimmed != _query.trim()) return;
+      _searchCache[cacheKey] = results;
+      setState(() {
+        _remoteResults = results;
+        _isSearchingRemote = false;
+      });
     } catch (_) {
-      // Silently ignore — user can still tap Add to retry
+      if (!mounted || trimmed != _query.trim()) return;
+      setState(() => _isSearchingRemote = false);
     }
   }
 
+  // ── Contract Import ────────────────────────
+
   bool _tokenExistsForAddress(String contractAddress) {
     final normalized = contractAddress.toLowerCase();
-    return _tokens.any(
+    return _walletTokens.any(
       (t) => (t.contractAddress ?? '').toLowerCase() == normalized,
     );
   }
@@ -236,127 +355,14 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       ToastUtils.showSuccess(l.tokenAdded(token.symbol));
     } catch (e) {
       ToastUtils.showError(
-        AppErrorUtils.userMessage(
-          e,
-          fallback: l.tokenAddFailed('Please try again.'),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _resolvingContract = null);
-      }
-    }
-  }
-
-  Future<void> _runRemoteSearch(String query) async {
-    final trimmed = query.trim();
-    if (!mounted) return;
-    if (trimmed.isEmpty) {
-      setState(() {
-        _isSearchingRemote = false;
-        _searchResults = _suggestedTokens;
-      });
-      return;
-    }
-    if (trimmed.length < 2) {
-      final fallbackLocal = TokenManagementQueryHelper.filterLocalTokens(
-        _tokens,
-        trimmed,
-      );
-      setState(() {
-        _isSearchingRemote = false;
-        _searchResults = fallbackLocal;
-      });
-      return;
-    }
-    if (TokenManagementQueryHelper.isContractAddress(trimmed)) {
-      setState(() {
-        _isSearchingRemote = false;
-        _searchResults = _suggestedTokens;
-      });
-      return;
-    }
-
-    setState(() => _isSearchingRemote = true);
-    final blockchain = context.read<BlockchainService>();
-    try {
-      final results = await blockchain.searchTokensFromBackend(
-        trimmed,
-        limit: 60,
-      );
-      if (!mounted || trimmed != _query.trim()) return;
-      final fallbackLocal = TokenManagementQueryHelper.filterLocalTokens(
-        _tokens,
-        trimmed,
-      );
-      setState(() {
-        _searchResults = results.isNotEmpty ? results : fallbackLocal;
-        _isSearchingRemote = false;
-      });
-    } catch (_) {
-      if (!mounted || trimmed != _query.trim()) return;
-      final fallbackLocal = TokenManagementQueryHelper.filterLocalTokens(
-        _tokens,
-        trimmed,
-      );
-      setState(() {
-        _searchResults = fallbackLocal;
-        _isSearchingRemote = false;
-      });
-    }
-  }
-
-  Future<void> _addSearchResultToken(Token token) async {
-    final l = AppLocalizations.of(context);
-    final blockchain = context.read<BlockchainService>();
-    final contract = token.contractAddress;
-    if (contract == null || contract.isEmpty) {
-      ToastUtils.showError(l.missingTokenContractAddress);
-      return;
-    }
-    if (_tokenExistsForAddress(contract)) {
-      ToastUtils.showInfo(l.tokenAlreadyAvailable);
-      return;
-    }
-
-    setState(() => _resolvingContract = contract);
-    try {
-      final detected = await blockchain.detectTokenByContract(contract);
-      final tokenToAdd = CustomTokenDefinition(
-        symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
-        name: detected?.name ?? token.name,
-        address: detected?.address ?? contract,
-        decimals: (detected?.decimals ?? token.decimals) > 0
-            ? (detected?.decimals ?? token.decimals)
-            : 18,
-        coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
-        imageUrl: token.imageUrl ?? detected?.imageUrl,
-      );
-
-      final added = await blockchain.addCustomToken(
-        chainId: blockchain.activeChain.chainId,
-        token: tokenToAdd,
-      );
-      if (!added) {
-        ToastUtils.showInfo(l.tokenAlreadyExistsOnNetwork);
-        return;
-      }
-
-      await _loadData(showSpinner: false);
-      if (!mounted) return;
-      setState(() => _hasChanges = true);
-      ToastUtils.showSuccess(l.tokenAdded(tokenToAdd.symbol));
-    } catch (e) {
-      ToastUtils.showError(
-        AppErrorUtils.userMessage(
-          e,
-          fallback: l.tokenAddFailed('Please try again.'),
-        ),
+        AppErrorUtils.userMessage(e, fallback: l.tokenAddFailed('Please try again.')),
       );
     } finally {
       if (mounted) setState(() => _resolvingContract = null);
     }
   }
+
+  // ── Clipboard auto-detect ──────────────────
 
   Future<void> _checkClipboardForTokenSuggestion() async {
     final l = AppLocalizations.of(context);
@@ -480,6 +486,43 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
   }
 
+  // ── Build unified token list ───────────────
+
+  List<Token> _buildDisplayList() {
+    final query = _query.trim().toLowerCase();
+    final isContract = TokenManagementQueryHelper.isContractAddress(_query);
+    if (isContract) return _walletTokens;
+
+    // Determine source list
+    List<Token> sourceTokens;
+    if (query.isNotEmpty && query.length >= 2 && _remoteResults.isNotEmpty) {
+      // Merge: wallet tokens + remote results, deduplicated
+      sourceTokens = _deduplicateTokens([..._walletTokens, ..._remoteResults]);
+    } else if (query.isEmpty && _suggestedTokens.isNotEmpty) {
+      sourceTokens = _deduplicateTokens([..._walletTokens, ..._suggestedTokens]);
+    } else {
+      sourceTokens = _walletTokens;
+    }
+
+    // Filter by query
+    if (query.isEmpty) return sourceTokens;
+    return TokenManagementQueryHelper.filterLocalTokens(sourceTokens, query);
+  }
+
+  List<Token> _deduplicateTokens(List<Token> tokens) {
+    final seen = <String>{};
+    final result = <Token>[];
+    for (final token in tokens) {
+      final key = (token.contractAddress ?? token.symbol).toLowerCase();
+      if (seen.add(key)) {
+        result.add(token);
+      }
+    }
+    return result;
+  }
+
+  // ── UI ─────────────────────────────────────
+
   void _closeScreen() {
     Navigator.pop(context, _hasChanges);
   }
@@ -488,17 +531,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final blockchain = context.watch<BlockchainService>();
-    final customTokens = blockchain.customTokensForActiveChain;
-    final query = _query.toLowerCase();
-    final filteredTokens = TokenManagementQueryHelper.filterLocalTokens(
-      _tokens,
-      query,
-    );
-    final canImportByContract = TokenManagementQueryHelper.isContractAddress(
-      _query,
-    );
-    final hasRemoteResults =
-        _isSearchingRemote || _searchResults.isNotEmpty || _query.isNotEmpty;
+    final canImportByContract = TokenManagementQueryHelper.isContractAddress(_query);
+    final displayTokens = _buildDisplayList();
+    final query = _query.trim().toLowerCase();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -523,20 +558,46 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.accentRed),
             )
-          : RefreshIndicator(
-              color: AppColors.accentRed,
-              onRefresh: _loadData,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                children: [
-                  TokenManagementSearchBar(
+          : Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                  child: TokenManagementSearchBar(
                     controller: _searchController,
                     query: _query,
                   ),
-                  const SizedBox(height: 12),
-                  if (canImportByContract)
-                    ContractImportCard(
+                ),
+                const SizedBox(height: 8),
+                // Search status indicator
+                if (_isSearchingRemote)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: AppColors.accentRed,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l.searchResults,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: Colors.white38,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                // Contract import card
+                if (canImportByContract)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: ContractImportCard(
                       isLoading: _resolvingContract == _query,
                       onAdd: _importTokenFromContract,
                       tokenName: _resolvedTokenName,
@@ -544,223 +605,65 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                       tokenImageUrl: _resolvedTokenImageUrl,
                       chainId: blockchain.activeChain.chainId,
                     ),
-                  // ── Visible Tokens (toggles) — at the top ──
-                  Text(
-                    l.visibleTokens,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
                   ),
-                  const SizedBox(height: 10),
-                  if (filteredTokens.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardDark,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                const SizedBox(height: 4),
+                // Section label
+                if (!canImportByContract)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
                       child: Text(
-                        _query.isEmpty
-                            ? l.noTokensDetectedYet
-                            : l.noMatchingTokensFound,
-                        style: GoogleFonts.outfit(color: Colors.white54),
-                      ),
-                    )
-                  else
-                    ...filteredTokens.map(
-                      (token) => ManagedTokenTile(
-                        token: token,
-                        isVisible: !_isTokenHidden(token),
-                        onVisibilityChanged: (value) =>
-                            _toggleToken(token, !value),
-                        chainId: blockchain.activeChain.chainId,
-                      ),
-                    ),
-                  // ── Added Tokens (custom imports) ──
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l.addedTokens,
+                        query.isEmpty ? l.visibleTokens : l.searchResults,
                         style: GoogleFonts.outfit(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Colors.white54,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  if (customTokens.isEmpty)
-                    Text(
-                      l.pasteContractToAddToken,
-                      style: GoogleFonts.outfit(color: Colors.white54),
-                    )
-                  else
-                    ...customTokens.map(
-                      (custom) => Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardDark,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    custom.name,
-                                    style: GoogleFonts.outfit(
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    custom.address,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 11,
-                                      color: Colors.white54,
-                                    ),
-                                  ),
-                                ],
+                // Unified token list
+                Expanded(
+                  child: displayTokens.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              query.isEmpty
+                                  ? l.noTokensDetectedYet
+                                  : l.noMatchingTokensFound,
+                              style: GoogleFonts.outfit(
+                                color: Colors.white38,
+                                fontSize: 14,
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.white54,
-                                size: 20,
-                              ),
-                              onPressed: () => _removeCustomToken(custom),
-                            ),
-                          ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: displayTokens.length,
+                          itemBuilder: (context, index) {
+                            final token = displayTokens[index];
+                            final key = _tokenKey(token);
+                            final isNative = _isNativeToken(token);
+                            final isEnabled = _isTokenEnabled(token);
+                            final isProcessing = _processingTokens.contains(key);
+
+                            return ManagedTokenTile(
+                              key: ValueKey(key),
+                              token: token,
+                              isEnabled: isEnabled,
+                              isNative: isNative,
+                              isProcessing: isProcessing,
+                              onToggleChanged: (value) => _handleToggle(token, value),
+                              chainId: blockchain.activeChain.chainId,
+                            );
+                          },
                         ),
-                      ),
-                    ),
-                  // ── Search Results / Suggested Tokens ──
-                  if (hasRemoteResults) ...[
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Text(
-                          _query.isEmpty ? l.suggestedTokens : l.searchResults,
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (_isSearchingRemote)
-                          const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.accentRed,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    if (!_isSearchingRemote && _searchResults.isEmpty)
-                      Text(
-                        _query.isEmpty
-                            ? l.noSuggestedTokensYet
-                            : l.noRemoteTokensFound,
-                        style: GoogleFonts.outfit(color: Colors.white54),
-                      )
-                    else
-                      ..._searchResults.map((token) {
-                        final exists = _tokenExistsForAddress(
-                          token.contractAddress ?? '',
-                        );
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardDark,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: [
-                              TokenIcon(
-                                tokenSymbol: token.symbol,
-                                tokenAddress: token.contractAddress,
-                                tokenImageUrl: token.imageUrl,
-                                size: 36,
-                                chainId: blockchain.activeChain.chainId,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      token.name,
-                                      style: GoogleFonts.outfit(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Text(
-                                      token.symbol,
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 12,
-                                        color: Colors.white54,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (exists)
-                                Text(
-                                  l.added,
-                                  style: GoogleFonts.outfit(
-                                    color: AppColors.success,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                )
-                              else if (_resolvingContract ==
-                                  token.contractAddress)
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.accentRed,
-                                  ),
-                                )
-                              else
-                                TextButton(
-                                  onPressed: () => _addSearchResultToken(token),
-                                  child: Text(
-                                    l.addToken,
-                                    style: GoogleFonts.outfit(
-                                      color: AppColors.accentRed,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      }),
-                  ],
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }

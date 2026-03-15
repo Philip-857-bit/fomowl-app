@@ -218,16 +218,38 @@ class BlockchainService extends ChangeNotifier {
 
   // ─── GAS ESTIMATION ──────────────────────────────
 
-  Future<double> getGasPrice() async {
+  Future<Map<String, dynamic>> getGasPriceData() async {
+    final url = AppEnvironment.blockchain('/${_activeChain.chainId}/gas-price');
+    try {
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch gas price from backend: $e');
+    }
+
+    // Fallback to raw RPC if backend fails
     final result = await _rpcCall('eth_gasPrice', []);
     if (result != null) {
       final gasPriceWei = BigInt.parse(
         (result as String).substring(2),
         radix: 16,
       );
-      return _scaledBigIntToDouble(gasPriceWei, 9);
+      return {
+        'gasPrice': gasPriceWei.toString(),
+        'gasPriceInGwei': _scaledBigIntToDouble(gasPriceWei, 9).toString(),
+      };
     }
-    return 20.0;
+    return {'gasPrice': '20000000000', 'gasPriceInGwei': '20.0'};
+  }
+
+  Future<double> getGasPrice() async {
+    final data = await getGasPriceData();
+    return double.tryParse(data['gasPriceInGwei']?.toString() ?? '20.0') ?? 20.0;
   }
 
   Future<Map<String, dynamic>> estimateGasFee({
@@ -706,11 +728,11 @@ class BlockchainService extends ChangeNotifier {
               valueUsd: 0,
               priceUsd: _toDouble(entry['priceUsd']),
               changePercent24h: _toDouble(entry['changePercent24h']),
-              // Do not silently assume 18 for search results when the backend
-              // could not determine token decimals yet.
               decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
-              coinGeckoId: (entry['id'] as String?)?.trim(),
               imageUrl: (entry['imageUrl'] as String?)?.trim(),
+              coinGeckoId:
+                  ((entry['coinGeckoId'] ?? entry['id']) as String?)?.trim(),
+              isCertified: entry['isCertified'] == true || entry['isNative'] == true,
             ),
           );
         }
@@ -777,6 +799,7 @@ class BlockchainService extends ChangeNotifier {
               decimals: _toInt(e['decimals']) ?? 18,
               imageUrl: e['imageUrl'],
               coinGeckoId: e['coinGeckoId'],
+              isCertified: e['isCertified'] == true,
             ),
           )
           .toList();
@@ -795,7 +818,6 @@ class BlockchainService extends ChangeNotifier {
       priceIds.add(nativeCgId);
     }
     for (final t in tokens) {
-      if (t.priceUsd > 0 && t.valueUsd > 0) continue; // already has price
       final cgId = t.coinGeckoId;
       if (cgId != null && cgId.isNotEmpty) {
         priceIds.add(cgId);
@@ -806,7 +828,6 @@ class BlockchainService extends ChangeNotifier {
     final prices = await getTokenPrices(priceIds.toList());
 
     return tokens.map((t) {
-      if (t.priceUsd > 0 && t.valueUsd > 0) return t; // already priced
       // Derive coinGeckoId — use token's own or fallback to chain native
       final cgId = (t.coinGeckoId != null && t.coinGeckoId!.isNotEmpty)
           ? t.coinGeckoId!
@@ -817,6 +838,11 @@ class BlockchainService extends ChangeNotifier {
 
       final price = prices[cgId] ?? 0.0;
       final change = prices['${cgId}_change'] ?? t.changePercent24h;
+
+      // Skip enrichment only if token already has valid price AND the new
+      // price lookup returned nothing useful (avoids overwriting good data
+      // with zero).
+      if (t.priceUsd > 0 && t.valueUsd > 0 && price == 0) return t;
       if (price == 0) return t;
 
       return Token(
@@ -830,6 +856,7 @@ class BlockchainService extends ChangeNotifier {
         decimals: t.decimals,
         imageUrl: t.imageUrl,
         coinGeckoId: t.coinGeckoId,
+        isCertified: t.isCertified,
       );
     }).toList();
   }
@@ -910,6 +937,7 @@ class BlockchainService extends ChangeNotifier {
           'decimals': '6',
           'coinGeckoId': 'tether',
           'imageUrl': 'https://cryptologos.cc/logos/tether-usdt-logo.png',
+          'isCertified': 'true',
         },
       ]);
     }

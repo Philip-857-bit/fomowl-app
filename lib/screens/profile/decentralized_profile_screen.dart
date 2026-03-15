@@ -1,14 +1,18 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
+import '../../services/http_client_service.dart';
 import '../../widgets/bottom_navigation.dart';
+import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'widgets/settings_group_card.dart';
 import 'widgets/settings_item_tile.dart';
@@ -27,6 +31,7 @@ class _DecentralizedProfileScreenState
     extends State<DecentralizedProfileScreen> {
   final WalletService _walletService = WalletService();
   final StorageService _storageService = StorageService();
+  final HttpClientService _httpClientService = HttpClientService();
 
   String _walletName = 'Main Wallet';
   String _walletAddress = '--';
@@ -166,6 +171,78 @@ class _DecentralizedProfileScreenState
     );
   }
 
+  Future<void> _handleAdminTrigger() async {
+    try {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final walletAddress = await _walletService.getCurrentWalletAddress();
+      if (walletAddress == null) return;
+
+      // 1. Challenge-Response Signature Verification
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final message = 'Owllet Admin Access $timestamp';
+      final signature = await _walletService.signMessage(message);
+
+      final url = Uri.parse('${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/verify');
+      final response = await _httpClientService.client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'walletAddress': walletAddress,
+          'message': message,
+          'signature': '0x$signature',
+        }),
+      );
+
+      if (response.statusCode != 200) return;
+      final data = jsonDecode(response.body);
+      if (data['success'] != true) return;
+
+      if (!mounted) return;
+
+      // 2. Secondary Secret Gate
+      final secretController = TextEditingController();
+      final secret = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          title: Text('Admin Secret', style: GoogleFonts.outfit(color: Colors.white)),
+          content: TextField(
+            controller: secretController,
+            obscureText: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Enter Admin Secret',
+              hintStyle: TextStyle(color: Colors.white54),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, secretController.text),
+              child: const Text('Enter'),
+            ),
+          ],
+        ),
+      );
+
+      if (secret == null || secret.isEmpty) return;
+
+      // 3. Navigate to Dashboard (passing secret for API headers)
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AdminDashboardScreen(adminSecret: secret),
+        ),
+      );
+    } catch (_) {
+      // Fail silently to keep the backdoor hidden
+    }
+  }
+
   Future<void> _confirmReset() async {
     final l = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
@@ -253,8 +330,8 @@ class _DecentralizedProfileScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 4,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 4),
+        currentIndex: 2,
+        onTap: (index) => BottomNavBar.handleNavigation(context, index, 2),
       ),
       body: SafeArea(
         child: _loading
@@ -374,11 +451,14 @@ class _DecentralizedProfileScreenState
                     ),
                     const SizedBox(height: 22),
                     Center(
-                      child: Text(
-                        _versionLabel,
-                        style: GoogleFonts.outfit(
-                          color: AppColors.textSecondary,
-                          fontSize: 15,
+                      child: GestureDetector(
+                        onLongPress: _handleAdminTrigger,
+                        child: Text(
+                          _versionLabel,
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textSecondary,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),

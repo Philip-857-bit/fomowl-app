@@ -11,6 +11,7 @@ class TokenIcon extends StatelessWidget {
   final double size;
   final Color? backgroundColor;
   final int? chainId;
+  final bool isCertified;
 
   const TokenIcon({
     super.key,
@@ -20,11 +21,12 @@ class TokenIcon extends StatelessWidget {
     this.size = 40,
     this.backgroundColor,
     this.chainId,
+    this.isCertified = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    Widget icon = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -32,6 +34,30 @@ class TokenIcon extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: ClipOval(child: _buildIcon()),
+    );
+
+    if (!isCertified) return icon;
+
+    return Stack(
+      children: [
+        icon,
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Container(
+            padding: const EdgeInsets.all(1),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.verified,
+              size: size * 0.35,
+              color: Colors.red,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

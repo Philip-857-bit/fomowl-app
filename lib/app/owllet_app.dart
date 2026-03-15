@@ -49,6 +49,15 @@ class OwlletApp extends StatelessWidget {
               secondary: AppColors.primaryAccent,
               surface: AppColors.cardBackground,
             ),
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+                TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+              },
+            ),
             useMaterial3: true,
           ),
           home: const AppBootstrapper(),

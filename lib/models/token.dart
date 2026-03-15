@@ -19,6 +19,7 @@ class Token {
   final int decimals;
   final String? imageUrl;
   final String? coinGeckoId;
+  final bool isCertified;
 
   const Token({
     required this.symbol,
@@ -31,6 +32,7 @@ class Token {
     this.decimals = 18,
     this.imageUrl,
     this.coinGeckoId,
+    this.isCertified = false,
   });
 
   Decimal get balanceDecimal => ValueFormatter.decimalFromNum(balance);

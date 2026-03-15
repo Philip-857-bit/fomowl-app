@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math';
 import 'package:intl/intl.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../services/wallet_service.dart';
+import '../../services/blockchain_service.dart';
+import '../../services/etherscan_v2_service.dart';
+import '../../services/http_client_service.dart';
+import 'package:provider/provider.dart';
 
 /// My Transactions Screen
 /// Shows transaction history with All / Deposit / Withdrawal filter tabs
@@ -24,16 +29,19 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<_Transaction> _allTransactions = [];
+  late final EtherscanV2Service _etherscanService;
 
   @override
   void initState() {
     super.initState();
+    _etherscanService = EtherscanV2Service(HttpClientService());
     _fetchHistory();
   }
 
   Future<void> _fetchHistory() async {
     try {
       final address = await _walletService.getCurrentWalletAddress();
+      if (!mounted) return;
       if (address == null) {
         setState(() {
           _isLoading = false;
@@ -42,58 +50,55 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         return;
       }
 
-      final url = AppEnvironment.history('/$address');
-      final response = await http.get(url).timeout(const Duration(seconds: 60));
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final chainId = blockchain.activeChain.chainId;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      // 1. Fetch from Local Backend
+      final backendUrl = AppEnvironment.history('/$address');
+      final backendResponse = await http.get(backendUrl).timeout(const Duration(seconds: 10));
+
+      final List<_Transaction> localTxs = [];
+      if (backendResponse.statusCode == 200) {
+        final data = json.decode(backendResponse.body);
         final historyList = data['history'] as List<dynamic>? ?? [];
-
-        final parsedTx = historyList.map((jsonTx) {
-          // Parse date
-          final dateStr = jsonTx['created_at'] as String? ?? '';
-          DateTime? dt;
-          try {
-            dt = DateTime.parse(dateStr);
-          } catch (e) {
-            debugPrint('Error parsing transaction date: $e');
-          }
-          final formattedDate = dt != null
-              ? DateFormat('MM.dd.yyyy').format(dt)
-              : dateStr;
-
-          // Parse Type
-          final rawType = jsonTx['tx_type'] as String? ?? 'receive';
-          _TxType type;
-          if (rawType == 'send') {
-            type = _TxType.send;
-          } else if (rawType == 'swap') {
-            type = _TxType.swap;
-          } else {
-            type = _TxType.receive;
-          }
-
-          return _Transaction(
-            type: type,
-            tokenName: jsonTx['token_name'] ?? 'Unknown',
-            tokenSymbol: jsonTx['token_symbol'] ?? 'UNK',
-            address: jsonTx['wallet_address'] ?? '',
-            amount: (jsonTx['amount'] ?? 0.0).toDouble(),
-            date: formattedDate,
-            isIncoming: jsonTx['is_incoming'] ?? true,
-          );
-        }).toList();
-
-        setState(() {
-          _allTransactions = parsedTx;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = "Failed to load history (${response.statusCode})";
-        });
+        localTxs.addAll(historyList.map((j) => _Transaction.fromBackendJson(j)));
       }
+
+      // 2. Fetch from Etherscan V2 (Centralized Backend)
+      final List<dynamic> onChainData = await _etherscanService.getUnifiedHistory(chainId, address);
+      
+      final List<_Transaction> onChainTxs = onChainData.map((j) {
+        if (j['tokenSymbol'] != null) {
+          return _Transaction.fromEtherscanToken(j, address);
+        } else {
+          return _Transaction.fromEtherscanNormal(j, address, blockchain.activeChain.symbol);
+        }
+      }).toList();
+
+      // 3. Merge and Deduplicate (by hash)
+      final Map<String, _Transaction> merged = {};
+      
+      // Local first (often has better 'tx_type' human-readable names like 'swap')
+      for (final tx in localTxs) {
+        if (tx.hash != null) merged[tx.hash!.toLowerCase()] = tx;
+      }
+      
+      // On-chain second (adds missing or incoming txs)
+      for (final tx in onChainTxs) {
+        final key = tx.hash?.toLowerCase();
+        if (key != null && !merged.containsKey(key)) {
+          merged[key] = tx;
+        }
+      }
+
+      final sorted = merged.values.toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+      setState(() {
+        _allTransactions = sorted;
+        _isLoading = false;
+        _errorMessage = null;
+      });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -327,6 +332,8 @@ class _Transaction {
   final double amount;
   final String date;
   final bool isIncoming;
+  final String? hash;
+  final DateTime timestamp;
 
   const _Transaction({
     required this.type,
@@ -336,5 +343,71 @@ class _Transaction {
     required this.amount,
     required this.date,
     required this.isIncoming,
+    this.hash,
+    required this.timestamp,
   });
+
+  factory _Transaction.fromBackendJson(Map<String, dynamic> j) {
+    final dateStr = j['created_at'] as String? ?? '';
+    final dt = DateTime.tryParse(dateStr) ?? DateTime.now();
+    final rawType = j['tx_type'] as String? ?? 'receive';
+    
+    _TxType type = _TxType.receive;
+    if (rawType == 'send') {
+      type = _TxType.send;
+    } else if (rawType == 'swap') {
+      type = _TxType.swap;
+    }
+
+    return _Transaction(
+      type: type,
+      tokenName: j['token_name'] ?? 'Unknown',
+      tokenSymbol: j['token_symbol'] ?? 'UNK',
+      address: j['wallet_address'] ?? '',
+      amount: (j['amount'] ?? 0.0).toDouble(),
+      date: DateFormat('MM.dd.yyyy').format(dt),
+      isIncoming: j['is_incoming'] ?? true,
+      hash: j['tx_hash'],
+      timestamp: dt,
+    );
+  }
+
+  factory _Transaction.fromEtherscanNormal(Map<String, dynamic> j, String myAddr, String nativeSymbol) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(j['timeStamp']) * 1000);
+    final isIncoming = (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
+    final value = BigInt.parse(j['value']);
+    final amount = value.toDouble() / 1e18;
+
+    return _Transaction(
+      type: isIncoming ? _TxType.receive : _TxType.send,
+      tokenName: 'Native',
+      tokenSymbol: nativeSymbol,
+      address: isIncoming ? j['from'] : j['to'],
+      amount: amount,
+      date: DateFormat('MM.dd.yyyy').format(dt),
+      isIncoming: isIncoming,
+      hash: j['hash'],
+      timestamp: dt,
+    );
+  }
+
+  factory _Transaction.fromEtherscanToken(Map<String, dynamic> j, String myAddr) {
+    final dt = DateTime.fromMillisecondsSinceEpoch(int.parse(j['timeStamp']) * 1000);
+    final isIncoming = (j['to'] as String).toLowerCase() == myAddr.toLowerCase();
+    final decimals = int.tryParse(j['tokenDecimal']) ?? 18;
+    final value = BigInt.parse(j['value']);
+    final amount = value.toDouble() / pow(10, decimals);
+
+    return _Transaction(
+      type: isIncoming ? _TxType.receive : _TxType.send,
+      tokenName: j['tokenName'] ?? 'Unknown',
+      tokenSymbol: j['tokenSymbol'] ?? 'UNK',
+      address: isIncoming ? j['from'] : j['to'],
+      amount: amount,
+      date: DateFormat('MM.dd.yyyy').format(dt),
+      isIncoming: isIncoming,
+      hash: j['hash'],
+      timestamp: dt,
+    );
+  }
 }

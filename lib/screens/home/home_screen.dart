@@ -27,6 +27,7 @@ import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/social_banner_card.dart';
 import 'widgets/tokens_section.dart';
+import '../../services/home_snapshot_service.dart';
 
 /// Home Screen - Main Wallet Dashboard
 /// Shows wallet balance, quick actions, and token list
@@ -47,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PushNotificationRegistrationService _pushRegistrationService =
       PushNotificationRegistrationService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
+  final HomeSnapshotService _snapshotService = HomeSnapshotService();
   BlockchainService? _blockchain;
 
   String? _walletName;
@@ -63,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<NftAsset> _nftPreview = [];
   bool _hasMoreNfts = false;
   bool _clipboardChecked = false;
+  bool _isUsingCachedData = false;
 
   @override
   void initState() {
@@ -143,18 +146,28 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadHiddenTokens(_lastChainId!);
       final address = await _walletService.getCurrentWalletAddress();
       final name = await _storage.getWalletName();
-      debugPrint('[OWLLET] Wallet Address: ${address ?? 'NULL'}');
-
-      if (mounted) {
-        final l = AppLocalizations.of(context);
-        setState(() {
-          _walletName = name ?? l.mainWallet;
-          _isLoading = false;
-        });
-        debugPrint('[OWLLET] Loading state cleared. Wallet name set.');
-      }
-
       if (address != null && address.isNotEmpty) {
+        // Load snapshot before unblocking UI with _isLoading = false
+        final snapshot = await _snapshotService.loadSnapshot(_lastChainId!, address);
+        if (snapshot != null && mounted) {
+          setState(() {
+            _tokens = snapshot.tokens;
+            _totalBalance = snapshot.totalBalance;
+            _walletName = snapshot.walletName;
+            _isUsingCachedData = true;
+          });
+          debugPrint('[OWLLET] Loaded cached snapshot: ${_tokens.length} tokens');
+        }
+
+        if (mounted) {
+          final l = AppLocalizations.of(context);
+          setState(() {
+            _walletName ??= name ?? l.mainWallet;
+            _isLoading = false;
+          });
+          debugPrint('[OWLLET] Loading state cleared. UI unblocked.');
+        }
+
         debugPrint('[OWLLET] Triggering background data sync...');
         unawaited(_safeSyncPushRegistration());
         unawaited(_fetchRealBalances(address));
@@ -162,6 +175,13 @@ class _HomeScreenState extends State<HomeScreen> {
         unawaited(_refreshNotificationDot(address: address));
         unawaited(_checkClipboardTokenSuggestion());
       } else {
+        if (mounted) {
+          final l = AppLocalizations.of(context);
+          setState(() {
+            _walletName = name ?? l.mainWallet;
+            _isLoading = false;
+          });
+        }
         debugPrint('[OWLLET] WARNING: No wallet address found during init');
       }
     } catch (e, stack) {
@@ -296,9 +316,23 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _tokens = realTokens;
           _isLoadingBalances = false;
+          _isUsingCachedData = false;
         });
         _calculateTotalBalance();
         _lastChainId = blockchain.activeChain.chainId;
+
+        // Save fresh snapshot
+        final name = await _storage.getWalletName();
+        if (!mounted) return;
+        final l = AppLocalizations.of(context);
+        _snapshotService.saveSnapshot(HomePortfolioSnapshot(
+          walletAddress: address,
+          chainId: _lastChainId!,
+          walletName: name ?? l.mainWallet,
+          totalBalance: _totalBalance,
+          tokens: _tokens,
+          timestamp: DateTime.now(),
+        ));
       }
     } catch (e) {
       debugPrint('Error fetching balances: $e');
@@ -333,8 +367,25 @@ class _HomeScreenState extends State<HomeScreen> {
     if (chainId == null || chainId == _lastChainId) return;
     _lastChainId = chainId;
     _loadHiddenTokens(chainId);
-    _walletService.getCurrentWalletAddress().then((address) {
+    _walletService.getCurrentWalletAddress().then((address) async {
       if (!mounted || address == null) return;
+      
+      // Attempt to load snapshot for the new chain to show something instantly
+      final snapshot = await _snapshotService.loadSnapshot(chainId, address);
+      if (snapshot != null && mounted) {
+        setState(() {
+          _tokens = snapshot.tokens;
+          _totalBalance = snapshot.totalBalance;
+          _isUsingCachedData = true;
+        });
+      } else if (mounted) {
+        setState(() {
+          _tokens = [];
+          _totalBalance = 0;
+          _isUsingCachedData = false;
+        });
+      }
+
       _fetchRealBalances(address);
       _fetchNftPreview(address);
       _refreshNotificationDot(address: address);
@@ -581,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 28),
                             TokensSection(
                               tokens: _tokens,
-                              isLoading: _isLoadingBalances,
+                              isLoading: _isLoadingBalances && !_isUsingCachedData,
                               isLoadingNfts: _isLoadingNfts,
                               nftPreview: _nftPreview,
                               hasMoreNfts: _hasMoreNfts,

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
-import 'package:argon2/argon2.dart';
+import 'package:argon2/argon2.dart' as dart_argon2;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../src/rust/api/argon2.dart' as rust_argon2;
+import 'package:flutter/foundation.dart';
 
 import '../models/wallet_account.dart';
 import '../utils/language_utils.dart';
@@ -366,7 +367,7 @@ class StorageService {
   Future<void> savePasscode(String passcode) async {
     await _secureStore.write(
       key: _keyPasscode,
-      value: jsonEncode(_buildPasscodeRecord(passcode)),
+      value: jsonEncode(await _buildPasscodeRecord(passcode)),
     );
   }
 
@@ -388,7 +389,7 @@ class StorageService {
       return isLegacyMatch;
     }
 
-    final derivedHash = _derivePasscodeHash(
+    final derivedHash = await _derivePasscodeHashAsync(
       passcode: passcode,
       salt: record.salt,
       iterations: record.iterations,
@@ -540,7 +541,7 @@ class StorageService {
     await prefs.clear();
   }
 
-  Map<String, dynamic> _buildPasscodeRecord(String passcode) {
+  Future<Map<String, dynamic>> _buildPasscodeRecord(String passcode) async {
     final saltBytes = List<int>.generate(
       _passcodeSaltLength,
       (_) => Random.secure().nextInt(256),
@@ -552,7 +553,7 @@ class StorageService {
       'iterations': _passcodeHashIterations,
       'memoryPowerOf2': _passcodeMemoryPowerOf2,
       'salt': salt,
-      'hash': _derivePasscodeHash(
+      'hash': await _derivePasscodeHashAsync(
         passcode: passcode,
         salt: salt,
         iterations: _passcodeHashIterations,
@@ -588,20 +589,44 @@ class StorageService {
     }
   }
 
-  String _derivePasscodeHash({
+  Future<String> _derivePasscodeHashAsync({
+    required String passcode,
+    required String salt,
+    required int iterations,
+    required int memoryPowerOf2,
+  }) async {
+    try {
+      return await rust_argon2.derivePasscodeHashArgon2(
+        passcode: passcode,
+        saltBase64: salt,
+        iterations: iterations,
+        memoryPowerOf2: memoryPowerOf2,
+      );
+    } catch (e) {
+      debugPrint('Rust Argon2 failed, falling back to Dart: $e');
+      return _derivePasscodeHashDart(
+        passcode: passcode,
+        salt: salt,
+        iterations: iterations,
+        memoryPowerOf2: memoryPowerOf2,
+      );
+    }
+  }
+
+  String _derivePasscodeHashDart({
     required String passcode,
     required String salt,
     required int iterations,
     required int memoryPowerOf2,
   }) {
-    final parameters = Argon2Parameters(
-      Argon2Parameters.ARGON2_id,
+    final parameters = dart_argon2.Argon2Parameters(
+      dart_argon2.Argon2Parameters.ARGON2_id,
       Uint8List.fromList(base64Decode(salt)),
-      version: Argon2Parameters.ARGON2_VERSION_13,
+      version: dart_argon2.Argon2Parameters.ARGON2_VERSION_13,
       iterations: iterations,
       memoryPowerOf2: memoryPowerOf2,
     );
-    final generator = Argon2BytesGenerator()..init(parameters);
+    final generator = dart_argon2.Argon2BytesGenerator()..init(parameters);
     final result = Uint8List(_passcodeHashBytes);
     generator.generateBytes(
       Uint8List.fromList(parameters.converter.convert(passcode)),
