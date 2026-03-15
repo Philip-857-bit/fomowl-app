@@ -39,17 +39,19 @@ class HomePortfolioSnapshot {
       tokens: (json['tokens'] as List? ?? [])
           .map((t) => _tokenFromJson(t as Map<String, dynamic>))
           .toList(),
-      timestamp: (() {
-        final raw = json['timestamp']?.toString();
-        if (raw == null || raw.isEmpty) {
-          return DateTime.fromMillisecondsSinceEpoch(0);
-        }
-        return DateTime.parse(raw);
-      })(),
+      timestamp: _parseTimestamp(json['timestamp']),
     );
   }
 
   bool get isStale => DateTime.now().difference(timestamp).inHours > 24;
+}
+
+DateTime _parseTimestamp(Object? rawValue) {
+  final raw = rawValue?.toString();
+  if (raw == null || raw.isEmpty) {
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+  return DateTime.tryParse(raw) ?? DateTime.fromMillisecondsSinceEpoch(0);
 }
 
 Map<String, dynamic> _tokenToJson(Token token) => {

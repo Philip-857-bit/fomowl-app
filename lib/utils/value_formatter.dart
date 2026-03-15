@@ -16,12 +16,7 @@ class ValueFormatter {
     'NGN': 'NGN ',
   };
 
-  static Map<String, Decimal> _usdConversionRates = {
-    'USD': Decimal.one,
-    'EUR': Decimal.one,
-    'GBP': Decimal.one,
-    'NGN': Decimal.one,
-  };
+  static Map<String, Decimal> _usdConversionRates = {'USD': Decimal.one};
 
   static void setCurrencyCode(String code) {
     final normalized = code.trim().toUpperCase();
@@ -44,12 +39,22 @@ class ValueFormatter {
 
   static String get currencyCode => _currencyCode;
 
+  static bool get _hasActiveCurrencyRate =>
+      _currencyCode == 'USD' || _usdConversionRates.containsKey(_currencyCode);
+
+  static String get _displayCurrencyCode =>
+      _hasActiveCurrencyRate ? _currencyCode : 'USD';
+
   static String get _currencySymbol =>
-      _currencySymbols[_currencyCode] ?? _currencySymbols['USD']!;
+      _currencySymbols[_displayCurrencyCode] ?? _currencySymbols['USD']!;
 
   static Decimal _convertFromUsd(Decimal value) {
-    final rate = _usdConversionRates[_currencyCode] ?? Decimal.one;
-    return value * rate;
+    final rate = _usdConversionRates[_currencyCode];
+    if (_currencyCode != 'USD' && rate == null) {
+      return value;
+    }
+    final effectiveRate = rate ?? Decimal.one;
+    return value * effectiveRate;
   }
 
   static Decimal decimalFromNum(num? value) {

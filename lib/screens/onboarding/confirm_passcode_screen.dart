@@ -68,6 +68,7 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
             Navigator.popUntil(
               context,
               (route) =>
+                  route.isFirst ||
                   route.settings.name == '/password-security' ||
                   route.settings.name == '/profile' ||
                   route.settings.name == '/home',

@@ -389,7 +389,9 @@ class _Transaction {
   ) {
     final timestampSeconds =
         int.tryParse(j['timeStamp']?.toString() ?? '') ?? 0;
-    final dt = DateTime.fromMillisecondsSinceEpoch(timestampSeconds * 1000);
+    final dt = timestampSeconds > 0
+        ? DateTime.fromMillisecondsSinceEpoch(timestampSeconds * 1000)
+        : DateTime.now();
     final toAddress = j['to']?.toString() ?? '';
     final fromAddress = j['from']?.toString() ?? '';
     final isIncoming = toAddress.toLowerCase() == myAddr.toLowerCase();
@@ -415,7 +417,9 @@ class _Transaction {
   ) {
     final timestampSeconds =
         int.tryParse(j['timeStamp']?.toString() ?? '') ?? 0;
-    final dt = DateTime.fromMillisecondsSinceEpoch(timestampSeconds * 1000);
+    final dt = timestampSeconds > 0
+        ? DateTime.fromMillisecondsSinceEpoch(timestampSeconds * 1000)
+        : DateTime.now();
     final toAddress = j['to']?.toString() ?? '';
     final fromAddress = j['from']?.toString() ?? '';
     final isIncoming = toAddress.toLowerCase() == myAddr.toLowerCase();

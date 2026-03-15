@@ -25,17 +25,22 @@ class CurrencyController extends ChangeNotifier {
   bool get initialized => _initialized;
 
   Future<void> init() async {
+    if (_initialized) return;
     final stored = await _storage.getCurrency();
-    _currencyCode = stored;
+    final normalizedStored = stored.trim().toUpperCase();
+    _currencyCode = _supportedCurrencies.contains(normalizedStored)
+        ? normalizedStored
+        : 'USD';
+    ValueFormatter.setCurrencyCode(_currencyCode);
     await _refreshRates();
-    ValueFormatter.setCurrencyCode(stored);
     _initialized = true;
     notifyListeners();
   }
 
   Future<void> setCurrencyCode(String code) async {
     final normalized = code.trim().toUpperCase();
-    if (normalized.isEmpty) return;
+    if (normalized.isEmpty || normalized == _currencyCode) return;
+    if (!_supportedCurrencies.contains(normalized)) return;
     _currencyCode = normalized;
     await _refreshRates();
     ValueFormatter.setCurrencyCode(normalized);
