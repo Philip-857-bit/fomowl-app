@@ -138,9 +138,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _maintainerNameController.clear();
         await _fetchMaintainers();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maintainer added')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Maintainer added')));
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

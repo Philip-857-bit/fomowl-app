@@ -350,8 +350,7 @@ class AppLocalizations {
   String get unableToUpdateTwoFactor =>
       translate('unable_to_update_two_factor');
   String get unableToUpdateAutoLock => translate('unable_to_update_auto_lock');
-  String get foregroundAutoLockTimer =>
-      translate('foreground_auto_lock_timer');
+  String get foregroundAutoLockTimer => translate('foreground_auto_lock_timer');
   String get lockOnBackground => translate('lock_on_background');
   String get immediateWhenAppIsHidden =>
       translate('immediate_when_app_is_hidden');

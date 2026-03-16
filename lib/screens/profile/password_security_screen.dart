@@ -161,9 +161,9 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _lockOnBackground = previous);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.unableToUpdateBackgroundLock)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateBackgroundLock)));
       }
       debugPrint('Failed to persist background lock setting: $e');
     }
