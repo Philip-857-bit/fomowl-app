@@ -21,8 +21,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   final StorageService _storage = StorageService();
 
   bool _biometricEnabled = false;
-  bool _twoFactorEnabled = false;
   int _autoLockMinutes = 1;
+  bool _lockOnBackground = true;
   bool _loading = true;
   bool _preferencesLoadFailed = false;
 
@@ -40,13 +40,13 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
     });
     try {
       final biometric = await _storage.isBiometricEnabled();
-      final twoFactor = await _storage.isTwoFactorEnabled();
       final autoLock = await _storage.getAutoLockMinutes();
+      final lockOnBackground = await _storage.isLockOnBackgroundEnabled();
       if (!mounted) return;
       setState(() {
         _biometricEnabled = biometric;
-        _twoFactorEnabled = twoFactor;
         _autoLockMinutes = autoLock;
+        _lockOnBackground = lockOnBackground;
         _preferencesLoadFailed = false;
       });
     } catch (e) {
@@ -82,25 +82,6 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.unableToUpdateBiometric)));
-      }
-    }
-  }
-
-  Future<void> _setTwoFactor(bool enabled) async {
-    final l = AppLocalizations.of(context);
-    final previous = _twoFactorEnabled;
-    setState(() => _twoFactorEnabled = enabled);
-    try {
-      await _storage.setTwoFactorEnabled(enabled);
-    } catch (e) {
-      if (mounted) {
-        setState(() => _twoFactorEnabled = previous);
-      }
-      debugPrint('Failed to persist 2FA setting: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateTwoFactor)));
       }
     }
   }
@@ -168,6 +149,23 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
         ).showSnackBar(SnackBar(content: Text(l.unableToUpdateAutoLock)));
       }
       debugPrint('Failed to persist auto-lock setting: $e');
+    }
+  }
+
+  Future<void> _setLockOnBackground(bool enabled) async {
+    final l = AppLocalizations.of(context);
+    final previous = _lockOnBackground;
+    setState(() => _lockOnBackground = enabled);
+    try {
+      await _storage.setLockOnBackground(enabled);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _lockOnBackground = previous);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.unableToUpdateBackgroundLock)),
+        );
+      }
+      debugPrint('Failed to persist background lock setting: $e');
     }
   }
 
@@ -263,11 +261,19 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                     SettingsGroupCard(
                       children: [
                         SettingsItemTile(
-                          icon: Icons.verified_user_outlined,
-                          title: l.twoFactorAuth,
-                          subtitle: _twoFactorEnabled ? l.onLabel : l.offLabel,
+                          icon: Icons.timer_outlined,
+                          title: l.foregroundAutoLockTimer,
+                          subtitle: l.autoLockMinutesLabel(_autoLockMinutes),
+                          onTap: _showAutoLockPicker,
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.lock_clock_outlined,
+                          title: l.lockOnBackground,
+                          subtitle: _lockOnBackground
+                              ? l.immediateWhenAppIsHidden
+                              : l.offLabel,
                           trailing: Switch(
-                            value: _twoFactorEnabled,
+                            value: _lockOnBackground,
                             materialTapTargetSize:
                                 MaterialTapTargetSize.shrinkWrap,
                             activeThumbColor: Colors.white,
@@ -276,14 +282,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                             inactiveTrackColor: AppColors.divider,
                             onChanged: _preferencesLoadFailed
                                 ? null
-                                : _setTwoFactor,
+                                : _setLockOnBackground,
                           ),
-                        ),
-                        SettingsItemTile(
-                          icon: Icons.timer_outlined,
-                          title: l.autoLockTimer,
-                          subtitle: l.autoLockMinutesLabel(_autoLockMinutes),
-                          onTap: _showAutoLockPicker,
                         ),
                       ],
                     ),

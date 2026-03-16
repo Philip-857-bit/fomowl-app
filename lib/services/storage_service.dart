@@ -40,6 +40,7 @@ class StorageService {
   static const String _keyLockoutUntil = 'lockout_until';
   static const String _keyTwoFactorEnabled = 'two_factor_enabled';
   static const String _keyAutoLockMinutes = 'auto_lock_minutes';
+  static const String _keyLockOnBackground = 'lock_on_background';
   static const String _keyBackendSessionPrefix = 'backend_session_';
   static const String _keyNotificationDevicePrefix = 'notification_device_';
 
@@ -500,6 +501,16 @@ class StorageService {
   Future<int> getAutoLockMinutes() async {
     final prefs = await _prefs;
     return prefs.getInt(_keyAutoLockMinutes) ?? 1;
+  }
+
+  Future<void> setLockOnBackground(bool enabled) async {
+    final prefs = await _prefs;
+    await prefs.setBool(_keyLockOnBackground, enabled);
+  }
+
+  Future<bool> isLockOnBackgroundEnabled() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_keyLockOnBackground) ?? true;
   }
 
   Future<void> setLanguage(String languageCode) async {

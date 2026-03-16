@@ -1,18 +1,24 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
-import '../../services/wallet_backend_auth_service.dart';
+import '../../services/language_controller.dart';
+import '../../utils/app_error_utils.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
+import '../onboarding/language_selection_screen.dart';
 import 'widgets/settings_group_card.dart';
 import 'widgets/settings_item_tile.dart';
 import 'widgets/settings_section_header.dart';
@@ -30,8 +36,6 @@ class _DecentralizedProfileScreenState
     extends State<DecentralizedProfileScreen> {
   final WalletService _walletService = WalletService();
   final StorageService _storageService = StorageService();
-  final WalletBackendAuthService _walletBackendAuthService =
-      WalletBackendAuthService();
 
   String _walletName = 'Main Wallet';
   String _walletAddress = '--';
@@ -176,12 +180,42 @@ class _DecentralizedProfileScreenState
     final secretController = TextEditingController();
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final chainId = blockchain.activeChain.chainId;
       final walletAddress = await _walletService.getCurrentWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) {
         throw Exception('No wallet connected');
       }
 
-      await _walletBackendAuthService.ensureWalletSession(walletAddress);
+      final timestamp = DateTime.now().toUtc().toIso8601String();
+      final message =
+          'Owllet Admin Access\nWallet: $walletAddress\nChain: $chainId\nTimestamp: $timestamp';
+      final signature = await _walletService.signMessageForAddress(
+        walletAddress,
+        message,
+      );
+
+      final verifyResponse = await http
+          .post(
+            AppEnvironment.blockchain('/$chainId/admin/verify'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'message': message,
+              'signature': '0x$signature',
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (verifyResponse.statusCode != 200) {
+        if (verifyResponse.statusCode == 403) {
+          return;
+        }
+        final errorMessage = AppErrorUtils.backendMessage(
+          verifyResponse.body,
+          fallback: 'Admin access denied.',
+        );
+        throw Exception(errorMessage);
+      }
 
       if (!mounted) return;
       final secret = await showDialog<String>(
@@ -224,7 +258,7 @@ class _DecentralizedProfileScreenState
       }
 
       debugPrint(
-        'Admin access verified for wallet $walletAddress on chain ${blockchain.activeChain.chainId}',
+        'Admin access verified for wallet $walletAddress on chain $chainId',
       );
       if (!mounted) return;
       Navigator.push(
@@ -390,13 +424,17 @@ class _DecentralizedProfileScreenState
                           title: l.chooseYourLanguage,
                           trailing: _valueTrailing(localeName),
                           onTap: () async {
-                            final languageCode =
-                                await Navigator.pushNamed<String>(
-                                  context,
-                                  '/language-selection',
-                                );
+                            final languageCode = await Navigator.push<String>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LanguageSelectionScreen(),
+                              ),
+                            );
                             if (!mounted) return;
                             if (languageCode != null) {
+                              await context
+                                  .read<LanguageController>()
+                                  .setLanguageCode(languageCode);
                               await _load();
                             }
                           },

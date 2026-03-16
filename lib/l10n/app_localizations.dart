@@ -350,6 +350,13 @@ class AppLocalizations {
   String get unableToUpdateTwoFactor =>
       translate('unable_to_update_two_factor');
   String get unableToUpdateAutoLock => translate('unable_to_update_auto_lock');
+  String get foregroundAutoLockTimer =>
+      translate('foreground_auto_lock_timer');
+  String get lockOnBackground => translate('lock_on_background');
+  String get immediateWhenAppIsHidden =>
+      translate('immediate_when_app_is_hidden');
+  String get unableToUpdateBackgroundLock =>
+      translate('unable_to_update_background_lock');
   String get securitySummary => translate('security_summary');
   String get searchTokenOrPasteContract =>
       translate('search_token_or_paste_contract');
@@ -774,12 +781,17 @@ class AppLocalizations {
     'on_label': 'On',
     'off_label': 'Off',
     'auto_lock_timer': 'Auto-Lock Timer',
+    'foreground_auto_lock_timer': 'Foreground Auto-Lock Timer',
     'auto_lock_minutes_label': '{minutes} minute(s)',
+    'lock_on_background': 'Lock on Background',
+    'immediate_when_app_is_hidden': 'Immediate when app is hidden',
     'security_preferences_load_failed': 'Failed to load security preferences',
     'retry': 'Retry',
     'unable_to_update_biometric': 'Unable to update biometric setting',
     'unable_to_update_two_factor': 'Unable to update 2FA setting',
     'unable_to_update_auto_lock': 'Unable to update auto-lock setting',
+    'unable_to_update_background_lock':
+        'Unable to update background lock setting',
     'security_summary':
         'Enable additional security measures to protect your digital assets from unauthorized access.',
     'search_token_or_paste_contract': 'Search token or paste contract address',

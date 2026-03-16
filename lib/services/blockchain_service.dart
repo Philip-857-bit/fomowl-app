@@ -512,7 +512,7 @@ class BlockchainService extends ChangeNotifier {
 
   Future<List<Token>> fetchWalletTokens(String walletAddress) async {
     final discoveredTokens = await _fetchWalletTokensFromBackend(walletAddress);
-    if (discoveredTokens != null && discoveredTokens.isNotEmpty) {
+    if (discoveredTokens != null) {
       // --- Enrich discovered tokens with CoinGecko prices when backend omits them ---
       final enriched = await _enrichTokensWithPrices(discoveredTokens);
 

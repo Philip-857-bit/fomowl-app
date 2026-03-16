@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:web3dart/web3dart.dart';
 
+import '../services/blockchain/blockchain_catalog.dart';
+
 /// Token Icon Widget
 /// Displays token icons with fallback support
-/// Priority: Local assets -> Network URL -> TrustWallet CDN (chain-aware) -> Placeholder
+/// Priority: Local assets -> Network URL -> TrustWallet CDN (chain-aware) -> Native chain logo -> Placeholder
 class TokenIcon extends StatelessWidget {
   final String tokenSymbol;
   final String? tokenAddress;
@@ -110,7 +112,7 @@ class TokenIcon extends StatelessWidget {
     }
 
     // No address available, show placeholder
-    return _buildPlaceholder();
+    return _buildNativeLogoFallback();
   }
 
   /// Maps a chainId to the TrustWallet assets directory name.
@@ -167,7 +169,7 @@ class TokenIcon extends StatelessWidget {
       if (blockchainName != 'ethereum') {
         return _buildTrustWalletCandidate('ethereum', candidates, 0);
       }
-      return _buildPlaceholder();
+      return _buildNativeLogoFallback();
     }
     final addr = candidates[index];
     return Image.network(
@@ -182,6 +184,26 @@ class TokenIcon extends StatelessWidget {
           index + 1,
         );
       },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return _buildPlaceholder();
+      },
+    );
+  }
+
+  Widget _buildNativeLogoFallback() {
+    final nativeLogoUrl = chainId == null
+        ? null
+        : BlockchainCatalog.defaultChainLogoUrl(chainId!);
+    if (nativeLogoUrl == null || nativeLogoUrl.isEmpty) {
+      return _buildPlaceholder();
+    }
+    return Image.network(
+      nativeLogoUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return _buildPlaceholder();

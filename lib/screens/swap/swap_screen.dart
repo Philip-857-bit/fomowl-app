@@ -33,6 +33,7 @@ class SwapScreen extends StatefulWidget {
 }
 
 class _SwapScreenState extends State<SwapScreen> {
+  static const Duration _quoteUiTimeout = Duration(seconds: 18);
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final SwapService _swapService = SwapService();
@@ -730,16 +731,18 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      final quote = await _swapService.get0xQuote(
-        chainId: blockchain.activeChain.chainId,
-        fromTokenAddress: _fromToken!.contractAddress ?? '',
-        toTokenAddress: _toToken!.contractAddress ?? '',
-        amountWei: amountWei,
-        buyTokenDecimals: _toToken!.decimals,
-        isGasless: _isGasless,
-        walletAddress: _walletAddress,
-        slippageBps: _slippageBps,
-      );
+      final quote = await _swapService
+          .get0xQuote(
+            chainId: blockchain.activeChain.chainId,
+            fromTokenAddress: _fromToken!.contractAddress ?? '',
+            toTokenAddress: _toToken!.contractAddress ?? '',
+            amountWei: amountWei,
+            buyTokenDecimals: _toToken!.decimals,
+            isGasless: _isGasless,
+            walletAddress: _walletAddress,
+            slippageBps: _slippageBps,
+          )
+          .timeout(_quoteUiTimeout);
 
       if (!mounted || requestId != _quoteRequestId) return;
 
@@ -779,6 +782,13 @@ class _SwapScreenState extends State<SwapScreen> {
         final mapped = _mapErrorMessage(_swapService.lastError);
         setState(() {
           _pricing = mapped;
+          _resetQuoteState();
+        });
+      }
+    } on TimeoutException {
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() {
+          _pricing = 'Quote timed out. Try again.';
           _resetQuoteState();
         });
       }

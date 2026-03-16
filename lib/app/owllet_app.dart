@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
@@ -25,15 +27,22 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
 
   bool _unlockInFlight = false;
   bool _wasBackgrounded = false;
+  DateTime _lastInteractionAt = DateTime.now();
+  Timer? _foregroundLockTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _foregroundLockTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _maybeRequireForegroundUnlock(),
+    );
   }
 
   @override
   void dispose() {
+    _foregroundLockTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -55,7 +64,53 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     _wasBackgrounded = false;
 
     final routeName = currentRouteName.value;
-    if (routeName == '/unlock' ||
+    if (_shouldSkipLockForRoute(routeName)) {
+      return;
+    }
+
+    final hasWallet = await _walletService.hasWallet();
+    if (!hasWallet) return;
+
+    final hasPasscode = await _storage.hasPasscode();
+    final biometricEnabled = await _storage.isBiometricEnabled();
+    if (!hasPasscode && !biometricEnabled) return;
+
+    final lockOnBackground = await _storage.isLockOnBackgroundEnabled();
+    if (!lockOnBackground) {
+      return;
+    }
+
+    await _pushUnlockScreen();
+  }
+
+  Future<void> _maybeRequireForegroundUnlock() async {
+    if (_unlockInFlight || !mounted) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+
+    final routeName = currentRouteName.value;
+    if (_shouldSkipLockForRoute(routeName)) return;
+
+    final hasWallet = await _walletService.hasWallet();
+    if (!hasWallet) return;
+
+    final hasPasscode = await _storage.hasPasscode();
+    final biometricEnabled = await _storage.isBiometricEnabled();
+    if (!hasPasscode && !biometricEnabled) return;
+
+    final autoLockMinutes = await _storage.getAutoLockMinutes();
+    final lockDelay = Duration(minutes: autoLockMinutes);
+    if (lockDelay <= Duration.zero ||
+        DateTime.now().difference(_lastInteractionAt) < lockDelay) {
+      return;
+    }
+
+    await _pushUnlockScreen();
+  }
+
+  bool _shouldSkipLockForRoute(String? routeName) {
+    return routeName == '/unlock' ||
         routeName == '/welcome' ||
         routeName == '/import-wallet' ||
         routeName == '/language-selection' ||
@@ -69,20 +124,14 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
         routeName == '/biometric-setup' ||
         routeName == '/face-id-verification' ||
         routeName == '/fingerprint-verification' ||
-        routeName == '/congratulations') {
-      return;
-    }
+        routeName == '/congratulations';
+  }
 
-    final hasWallet = await _walletService.hasWallet();
-    if (!hasWallet) return;
-
-    final hasPasscode = await _storage.hasPasscode();
-    final biometricEnabled = await _storage.isBiometricEnabled();
-    if (!hasPasscode && !biometricEnabled) return;
-
+  Future<void> _pushUnlockScreen() async {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null || !mounted) return;
 
+    _lastInteractionAt = DateTime.now();
     _unlockInFlight = true;
     try {
       await navigator.pushNamed(
@@ -92,6 +141,10 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     } finally {
       _unlockInFlight = false;
     }
+  }
+
+  void _recordInteraction() {
+    _lastInteractionAt = DateTime.now();
   }
 
   @override
@@ -141,6 +194,13 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
               },
             ),
             useMaterial3: true,
+          ),
+          builder: (context, child) => Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => _recordInteraction(),
+            onPointerMove: (_) => _recordInteraction(),
+            onPointerSignal: (_) => _recordInteraction(),
+            child: child,
           ),
           home: const AppBootstrapper(),
           routes: buildAppRoutes(),

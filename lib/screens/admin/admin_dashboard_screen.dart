@@ -22,9 +22,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _loading = true;
   Map<String, dynamic>? _stats;
   List<dynamic> _registryTokens = [];
+  List<dynamic> _maintainers = [];
   String _searchQuery = '';
   final TextEditingController _pushTitleController = TextEditingController();
   final TextEditingController _pushMessageController = TextEditingController();
+  final TextEditingController _maintainerAddressController =
+      TextEditingController();
+  final TextEditingController _maintainerNameController =
+      TextEditingController();
 
   @override
   void initState() {
@@ -36,12 +41,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void dispose() {
     _pushTitleController.dispose();
     _pushMessageController.dispose();
+    _maintainerAddressController.dispose();
+    _maintainerNameController.dispose();
     super.dispose();
   }
 
   Future<void> _refreshAll() async {
     setState(() => _loading = true);
-    await Future.wait([_fetchStats(), _fetchRegistry()]);
+    await Future.wait([_fetchStats(), _fetchRegistry(), _fetchMaintainers()]);
     if (!mounted) return;
     setState(() => _loading = false);
   }
@@ -49,8 +56,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _fetchStats() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final url = Uri.parse(
-        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/stats',
+      final url = AppEnvironment.blockchain(
+        '/${blockchain.activeChain.chainId}/admin/stats',
       );
       final response = await http.get(
         url,
@@ -68,12 +75,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _fetchRegistry() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      // Re-use token-search with an empty query to get common tokens,
-      // or we could add a dedicated /admin/registry/list endpoint.
-      // For now, let's use the public search but we'll filter certified status.
-      final url = Uri.parse(
-        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/token-search',
-      ).replace(queryParameters: {'q': _searchQuery, 'limit': '50'});
+      final url = AppEnvironment.blockchain(
+        '/${blockchain.activeChain.chainId}/token-search',
+        {'q': _searchQuery, 'limit': '50'},
+      );
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -85,11 +90,80 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _fetchMaintainers() async {
+    try {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final url = AppEnvironment.blockchain(
+        '/${blockchain.activeChain.chainId}/admin/maintainers',
+      );
+      final response = await http.get(
+        url,
+        headers: {'X-Owllet-Admin-Key': widget.adminSecret},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        if (!mounted) return;
+        setState(() => _maintainers = data['maintainers'] ?? []);
+      }
+    } catch (e) {
+      debugPrint('Failed to fetch maintainers: $e');
+    }
+  }
+
+  Future<void> _addMaintainer() async {
+    final address = _maintainerAddressController.text.trim();
+    final name = _maintainerNameController.text.trim();
+    if (address.isEmpty) return;
+
+    setState(() => _loading = true);
+    try {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final url = AppEnvironment.blockchain(
+        '/${blockchain.activeChain.chainId}/admin/maintainers',
+      );
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Owllet-Admin-Key': widget.adminSecret,
+        },
+        body: jsonEncode({
+          'walletAddress': address,
+          'name': name.isEmpty ? null : name,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        _maintainerAddressController.clear();
+        _maintainerNameController.clear();
+        await _fetchMaintainers();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maintainer added')),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to add maintainer')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Failed to add maintainer')));
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
   Future<void> _toggleVerification(dynamic token, bool verify) async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final url = Uri.parse(
-        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/registry/batch',
+      final url = AppEnvironment.blockchain(
+        '/${blockchain.activeChain.chainId}/admin/registry/batch',
       );
       final response = await http.post(
         url,
@@ -134,8 +208,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() => _loading = true);
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final url = Uri.parse(
-        '${AppEnvironment.blockchain('')}/${blockchain.activeChain.chainId}/admin/broadcast',
+      final url = AppEnvironment.blockchain(
+        '/${blockchain.activeChain.chainId}/admin/broadcast',
       );
       final response = await http.post(
         url,
@@ -202,6 +276,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 24),
                   _buildStatsSection(),
                   const SizedBox(height: 24),
+                  _buildMaintainersSection(),
+                  const SizedBox(height: 24),
                   _buildPushSection(),
                   const SizedBox(height: 24),
                   _buildRegistrySection(),
@@ -212,8 +288,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildHealthSection() {
-    final health = _stats?['health'] ?? {};
-    final isHealthy = health['status'] == 'healthy';
+    final status = (_stats?['health'] ?? _stats?['status'] ?? 'unknown')
+        .toString();
+    final latency = (_stats?['latencyMs'] ?? _stats?['latency_ms'] ?? '??')
+        .toString();
+    final isHealthy = status.toLowerCase() == 'healthy';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -238,14 +317,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'System Status: ${health['status']?.toUpperCase() ?? 'UNKNOWN'}',
+                  'System Status: ${status.toUpperCase()}',
                   style: GoogleFonts.outfit(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  'Backend Latency: ${health['latencyMs'] ?? '??'}ms',
+                  'Backend Latency: ${latency}ms',
                   style: GoogleFonts.outfit(
                     color: Colors.white70,
                     fontSize: 13,
@@ -260,7 +339,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildStatsSection() {
-    final s = _stats?['stats'] ?? {};
+    final s = _stats ?? const <String, dynamic>{};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -279,7 +358,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const SizedBox(width: 12),
             _buildStatCard(
               'Total Users',
-              s['totalUsers']?.toString() ?? '0',
+              (s['totalUsers'] ?? s['users_count'])?.toString() ?? '0',
               Icons.person_add,
             ),
           ],
@@ -287,7 +366,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: 12),
         _buildStatCard(
           'Total Transactions',
-          s['totalTransactions']?.toString() ?? '0',
+          (s['totalTransactions'] ?? s['transactions_24h'])?.toString() ?? '0',
           Icons.swap_horiz,
           wide: true,
           useExpanded: false,
@@ -396,6 +475,93 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildMaintainersSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Maintainers',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _maintainerAddressController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Wallet Address',
+              hintStyle: const TextStyle(color: Colors.white38),
+              filled: true,
+              fillColor: Colors.black26,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _maintainerNameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Name (optional)',
+              hintStyle: const TextStyle(color: Colors.white38),
+              filled: true,
+              fillColor: Colors.black26,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _addMaintainer,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+              ),
+              child: const Text('Add Maintainer'),
+            ),
+          ),
+          if (_maintainers.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ..._maintainers.map((maintainer) {
+              final walletAddress =
+                  maintainer['walletAddress']?.toString() ?? '--';
+              final name = maintainer['name']?.toString();
+              final isActive = maintainer['isActive'] == true;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  isActive ? Icons.verified_user : Icons.block,
+                  color: isActive ? Colors.green : Colors.orange,
+                ),
+                title: Text(
+                  name == null || name.isEmpty ? walletAddress : name,
+                  style: const TextStyle(color: Colors.white),
+                ),
+                subtitle: Text(
+                  walletAddress,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildRegistrySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -445,6 +611,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   tokenSymbol: t['symbol'] ?? '?',
                   tokenImageUrl: t['imageUrl'],
                   tokenAddress: t['contractAddress'],
+                  chainId: Provider.of<BlockchainService>(
+                    context,
+                    listen: false,
+                  ).activeChain.chainId,
                   size: 32,
                   isCertified: isCertified,
                 ),
