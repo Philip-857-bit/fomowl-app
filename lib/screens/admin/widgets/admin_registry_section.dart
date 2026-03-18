@@ -38,6 +38,17 @@ class _AdminRegistrySectionState extends State<AdminRegistrySection> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final query = _searchController.text.trim().toLowerCase();
+    final filteredTokens = widget.registryTokens.where((token) {
+      if (query.isEmpty) return true;
+      final name = (token['name'] ?? '').toString().toLowerCase();
+      final symbol = (token['symbol'] ?? '').toString().toLowerCase();
+      final address = (token['contractAddress'] ?? '').toString().toLowerCase();
+      return name.contains(query) ||
+          symbol.contains(query) ||
+          address.contains(query);
+    }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -52,6 +63,7 @@ class _AdminRegistrySectionState extends State<AdminRegistrySection> {
         const SizedBox(height: 12),
         TextField(
           controller: _searchController,
+          onChanged: (_) => setState(() {}),
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: l.adminSearchRegistryHint,
@@ -68,9 +80,9 @@ class _AdminRegistrySectionState extends State<AdminRegistrySection> {
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: widget.registryTokens.length,
+          itemCount: filteredTokens.length,
           itemBuilder: (context, index) {
-            final t = widget.registryTokens[index];
+            final t = filteredTokens[index];
             final isCertified = t['isCertified'] == true;
             return Container(
               margin: const EdgeInsets.only(bottom: 8),

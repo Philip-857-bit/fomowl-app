@@ -103,12 +103,13 @@ class TokenPortfolioModule {
 
     for (final custom in missingCustom) {
       final bal = balanceByAddress[custom.address.toLowerCase()] ?? 0.0;
-      final price = (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
+      final customCoinGeckoId = custom.coinGeckoId;
+      final price = (customCoinGeckoId == null || customCoinGeckoId.isEmpty)
           ? 0.0
-          : (customPrices[custom.coinGeckoId] ?? 0.0);
-      final change = (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
+          : (customPrices[customCoinGeckoId] ?? 0.0);
+      final change = (customCoinGeckoId == null || customCoinGeckoId.isEmpty)
           ? 0.0
-          : (customPrices['${custom.coinGeckoId}_change'] ?? 0.0);
+          : (customPrices['${customCoinGeckoId}_change'] ?? 0.0);
 
       merged.add(
         Token(
@@ -213,7 +214,9 @@ class TokenPortfolioModule {
 
     final effectiveBatchSize = batchSize <= 0 ? 1 : batchSize;
     for (var index = 0; index < items.length; index += effectiveBatchSize) {
-      final end = (index + effectiveBatchSize).clamp(0, items.length);
+      final end = (index + effectiveBatchSize) > items.length
+          ? items.length
+          : (index + effectiveBatchSize);
       final batch = items.sublist(index, end);
 
       final batchResults = await Future.wait(

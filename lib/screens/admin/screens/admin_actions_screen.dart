@@ -107,10 +107,19 @@ class _AdminActionsScreenState extends State<AdminActionsScreen> {
   String _extractBackendError(http.Response response, String fallback) {
     try {
       final data = jsonDecode(response.body);
-      return data['error'] ?? fallback;
-    } catch (e) {
+      if (data is Map<String, dynamic>) {
+        final error = data['error'];
+        if (error is String && error.trim().isNotEmpty) {
+          return error;
+        }
+        if (error != null) {
+          return error.toString();
+        }
+      }
+    } catch (_) {
       return fallback;
     }
+    return fallback;
   }
 
   @override

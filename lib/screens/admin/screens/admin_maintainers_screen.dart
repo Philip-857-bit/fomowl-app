@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../config/app_environment.dart';
 import '../widgets/admin_maintainers_section.dart';
@@ -61,20 +62,31 @@ class _AdminMaintainersScreenState extends State<AdminMaintainersScreen> {
   }
 
   Future<void> _addMaintainer() async {
+    final l = AppLocalizations.of(context);
     final address = _maintainerAddressController.text.trim().toLowerCase();
     final name = _maintainerNameController.text.trim();
 
-    if (address.isEmpty || name.isEmpty) return;
+    if (address.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.adminWalletAddressHint)));
+      return;
+    }
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final url = AppEnvironment.blockchain(
         '/${blockchain.activeChain.chainId}/admin/maintainers',
       );
+      final payload = <String, dynamic>{'address': address};
+      if (name.isNotEmpty) {
+        payload['name'] = name;
+      }
       final response = await http.post(
         url,
         headers: _adminHeaders(json: true),
-        body: jsonEncode({'address': address, 'name': name}),
+        body: jsonEncode(payload),
       );
 
       if (response.statusCode == 200 && mounted) {
@@ -82,19 +94,28 @@ class _AdminMaintainersScreenState extends State<AdminMaintainersScreen> {
         _maintainerNameController.clear();
         await _fetchMaintainers();
         if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.adminMaintainerAdded)));
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maintainer added successfully')),
+          SnackBar(
+            content: Text(
+              _extractBackendError(response, l.adminMaintainerAddFailed),
+            ),
+          ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error adding maintainer: $e')));
+      ).showSnackBar(SnackBar(content: Text(l.adminMaintainerAddFailed)));
     }
   }
 
   Future<void> _deactivateMaintainer(String address) async {
+    final l = AppLocalizations.of(context);
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final url = AppEnvironment.blockchain(
@@ -107,13 +128,13 @@ class _AdminMaintainersScreenState extends State<AdminMaintainersScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Maintainer deactivated')));
+        ).showSnackBar(SnackBar(content: Text(l.adminMaintainers)));
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deactivating maintainer: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.networkError)));
     }
   }
 
@@ -124,15 +145,29 @@ class _AdminMaintainersScreenState extends State<AdminMaintainersScreen> {
     };
   }
 
+  String _extractBackendError(http.Response response, String fallback) {
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        final error = data['error'];
+        if (error is String && error.trim().isNotEmpty) {
+          return error;
+        }
+      }
+    } catch (_) {}
+    return fallback;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Maintainers',
+          l.adminMaintainers,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         actions: [
