@@ -10,7 +10,10 @@ import 'native_crypto.dart';
 /// Wallet Service
 /// Handles wallet creation, import, and key management
 class WalletService {
-  final StorageService _storage = StorageService();
+  WalletService({StorageService? storageService})
+    : _storage = storageService ?? StorageService();
+
+  final StorageService _storage;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
 
