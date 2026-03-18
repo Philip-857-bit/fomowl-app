@@ -102,6 +102,11 @@ class WalletService {
         throw Exception('Invalid private key length');
       }
 
+      // Validate that the key contains only valid hex characters
+      if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
+        throw Exception('Invalid private key format: must be hexadecimal');
+      }
+
       // Create credentials from private key
       final credentials = EthPrivateKey.fromHex(privateKey);
 

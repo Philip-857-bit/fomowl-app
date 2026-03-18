@@ -45,7 +45,10 @@ class StorageService {
   static const String _keyNotificationDevicePrefix = 'notification_device_';
 
   static const int maxFailedAttempts = 5;
-  static const int lockoutDurationSeconds = 30;
+  // 60-second lockout after maxFailedAttempts consecutive wrong passcode
+  // attempts. This limits brute-force to ≤300 guesses/hour while remaining
+  // tolerable for legitimate users who forget their PIN.
+  static const int lockoutDurationSeconds = 60;
   static const int _passcodeHashVersion = 2;
   static const int _passcodeHashIterations = 3;
   static const int _passcodeSaltLength = 16;

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class AppErrorUtils {
   AppErrorUtils._();
 
@@ -86,6 +88,13 @@ class AppErrorUtils {
     ])) {
       return fallback;
     }
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString();
+        if (message != null && message.isNotEmpty) return message;
+      }
+    } catch (_) {}
     return fallback;
   }
 
