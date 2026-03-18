@@ -981,7 +981,7 @@ class AppLocalizationsHa extends AppLocalizations {
   String get currencySymbolHint => 'misali: CRO, ETH';
 
   @override
-  String get chainIdLabel => 'Chain ID *';
+  String get chainIdLabel => 'ID na sarkar*';
 
   @override
   String get chainIdHint => 'misali: 25, 324';
@@ -1000,7 +1000,7 @@ class AppLocalizationsHa extends AppLocalizations {
       'Saka Chain ID don cika bayanan hanyar sadarwa da kansa.';
 
   @override
-  String get rpcUrlLabel => 'RPC URL *';
+  String get rpcUrlLabel => 'RPC URL*';
 
   @override
   String get rpcUrlHint => 'https://rpc.example.com';
@@ -1076,43 +1076,43 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get seedPhraseVerificationFailed =>
-      'That backup check did not match. Try again.';
+      'Wannan cak ɗin ajiyar bai dace ba. Gwada kuma.';
 
   @override
-  String get seedPhraseBackupVerified => 'Seed phrase backup verified';
+  String get seedPhraseBackupVerified => 'An tabbatar da madadin jimlar iri';
 
   @override
   String get seedPhraseBackupVerificationComplete =>
-      'Your recovery phrase backup has been confirmed.';
+      'An tabbatar da madadin jimlar dawo da ku.';
 
   @override
-  String get confirmSecretPhraseTitle => 'Confirm your secret phrase';
+  String get confirmSecretPhraseTitle => 'Tabbatar da kalmar sirrinku';
 
   @override
-  String get confirmSecretPhraseCheckOne => 'I am the only one that knows it.';
+  String get confirmSecretPhraseCheckOne => 'Ni kadai na san shi.';
 
   @override
   String get confirmSecretPhraseCheckTwo =>
-      'The secret phrase is not accessible to third parties.';
+      'Kalmar sirrin ba ta isa ga wasu mutane na uku.';
 
   @override
   String get confirmSecretPhraseCheckThree =>
-      'My funds can be stolen if someone else sees my recovery phrase.';
+      'Za a iya sace kuɗina idan wani ya ga maganar dawo da ni.';
 
   @override
-  String get adminControlCenter => 'Owllet Control Center';
+  String get adminControlCenter => 'Cibiyar Kula da Owllet';
 
   @override
   String get adminSystemStatus => 'Yanayin Tsarin';
 
   @override
-  String get adminBackendLatency => 'Backend Latency';
+  String get adminBackendLatency => 'Latency Backend';
 
   @override
   String get adminAppPerformance => 'Aikin App';
 
   @override
-  String get adminRegistryTokens => 'Registry Tokens';
+  String get adminRegistryTokens => 'Alamar rajista';
 
   @override
   String get adminTotalUsers => 'Dukkan Mutane';
@@ -1151,7 +1151,7 @@ class AppLocalizationsHa extends AppLocalizations {
   String get adminMaintainerAddFailed => 'An kasa ƙara mai kula';
 
   @override
-  String get adminTokenRegistry => 'Token Registry';
+  String get adminTokenRegistry => 'Registry Token';
 
   @override
   String get adminSearchRegistryHint => 'Nema a cikin registry...';
@@ -1312,105 +1312,105 @@ class AppLocalizationsHa extends AppLocalizations {
   String get privacyLastUpdated => 'An sabunta ƙarshe: Fabrairu 2026';
 
   @override
-  String get faceVerifyReason => 'Verify your identity with Face ID';
+  String get faceVerifyReason => 'Tabbatar da asalin ku tare da ID na Fuskar';
 
   @override
   String get faceVerificationFailed =>
-      'Face verification failed. Please try again.';
+      'Tabbatar da fuska ya gaza. Da fatan za a sake gwadawa.';
 
   @override
   String get biometricUnavailable =>
-      'Biometric authentication is not available on this device.';
+      'Babu tabbacin biometric akan wannan na\'urar.';
 
   @override
-  String get verifying => 'Verifying...';
+  String get verifying => 'Tabbatarwa...';
 
   @override
-  String get faceVerificationTitle => 'Face Verification';
+  String get faceVerificationTitle => 'Tabbatar da fuska';
 
   @override
   String get biometricPromptInstruction =>
-      'Place your face in the frame to verify';
+      'Sanya fuskarka a cikin firam don tabbatarwa';
 
   @override
-  String get facePromptInstruction => 'Position your face in the circle above';
+  String get facePromptInstruction => 'Sanya fuskarka a cikin da\'irar sama';
 
   @override
-  String get verifyFace => 'Verify Face';
+  String get verifyFace => 'Tabbatar da Fuska';
 
   @override
-  String get identityVerifyReason => 'Verify your identity to continue';
+  String get identityVerifyReason => 'Tabbatar da asalin ku don ci gaba';
 
   @override
   String get biometricVerificationFailed =>
-      'Biometric verification failed. Please try again.';
+      'Tabbacin biometric ya gaza. Da fatan za a sake gwadawa.';
 
   @override
   String get biometricVerificationFailedWithPasscode =>
-      'Biometric verification failed. Please use your passcode instead.';
+      'Tabbacin biometric ya gaza. Da fatan za a yi amfani da lambar wucewar ku maimakon.';
 
   @override
-  String get biometricVerificationTitle => 'Biometric Verification';
+  String get biometricVerificationTitle => 'Tabbatar da Biometric';
 
   @override
-  String get tapBelowToVerify => 'Tap below to verify';
+  String get tapBelowToVerify => 'Matsa ƙasa don tabbatarwa';
 
   @override
-  String get startVerification => 'Start Verification';
+  String get startVerification => 'Fara Tabbatarwa';
 
   @override
-  String get fingerprintVerifyReason => 'Verify your identity with fingerprint';
+  String get fingerprintVerifyReason => 'Tabbatar da asalin ku da sawun yatsa';
 
   @override
   String get fingerprintVerificationFailed =>
-      'Fingerprint verification failed. Please try again.';
+      'Tabbatar da sawun yatsa ya kasa. Da fatan za a sake gwadawa.';
 
   @override
-  String get fingerprintVerificationTitle => 'Fingerprint Verification';
+  String get fingerprintVerificationTitle => 'Tabbatar da Sawun yatsa';
 
   @override
   String get fingerprintPromptInstruction =>
-      'Place your finger on the sensor to verify';
+      'Sanya yatsanka akan firikwensin don tabbatarwa';
 
   @override
-  String get verify => 'Verify';
+  String get verify => 'Tabbatar';
 
   @override
-  String get swapFromLabel => 'From';
+  String get swapFromLabel => 'Daga';
 
   @override
-  String get priceLabel => 'Price';
+  String get priceLabel => 'Farashin';
 
   @override
-  String get platformFeeLabel => 'Platform Fee';
+  String get platformFeeLabel => 'Kuɗin Platform';
 
   @override
-  String get networkFeeLabel => 'Network Fee';
+  String get networkFeeLabel => 'Kudin hanyar sadarwa';
 
   @override
   String get coveredByOwllet => 'Owllet ne ya rufe';
 
   @override
-  String get toReceiveLabel => 'To Receive';
+  String get toReceiveLabel => 'Don Karɓa';
 
   @override
-  String get swapToLabel => 'To';
+  String get swapToLabel => 'Zuwa';
 
   @override
-  String get calculatingLabel => 'Calculating...';
+  String get calculatingLabel => 'Ana lissafin...';
 
   @override
-  String get receiveTokenTitle => 'Receive Token';
+  String get receiveTokenTitle => 'Karɓi Token';
 
   @override
   String get receiveExternalWarning =>
-      'Only send tokens on the correct network. Sending tokens on the wrong network may result in permanent loss.';
+      'Kawai aika alamu akan hanyar sadarwa daidai. Aika alamu akan hanyar sadarwar da ba daidai ba na iya haifar da asara ta dindindin.';
 
   @override
   String get currencyUsd => 'Dalar Amurka (USD)';
 
   @override
-  String get currencyEur => 'Euro (EUR)';
+  String get currencyEur => 'Yuro (EUR)';
 
   @override
   String get currencyGbp => 'Fam na Ingila (GBP)';

@@ -100,7 +100,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get tokens => 'Token';
 
   @override
-  String get nfts => 'NFTs';
+  String get nfts => 'NFT';
 
   @override
   String get loadingBalances => 'Na-ebupụta ego...';
@@ -976,7 +976,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get currencySymbolHint => 'dịka: CRO, ETH';
 
   @override
-  String get chainIdLabel => 'Chain ID *';
+  String get chainIdLabel => 'NJ Chain *';
 
   @override
   String get chainIdHint => 'dịka: 25, 324';
@@ -994,7 +994,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get enterChainIdHelp => 'Tinye Chain ID ka o dejua ozi netwọk ozugbo.';
 
   @override
-  String get rpcUrlLabel => 'RPC URL *';
+  String get rpcUrlLabel => 'URL RPC *';
 
   @override
   String get rpcUrlHint => 'https://rpc.example.com';
@@ -1069,43 +1069,44 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get seedPhraseVerificationFailed =>
-      'That backup check did not match. Try again.';
+      'Nyocha ndabere ahụ adabaghị. Nwaa ọzọ.';
 
   @override
-  String get seedPhraseBackupVerified => 'Seed phrase backup verified';
+  String get seedPhraseBackupVerified =>
+      'Ekwenyere nkwado ndabere nke mkpụrụokwu';
 
   @override
   String get seedPhraseBackupVerificationComplete =>
-      'Your recovery phrase backup has been confirmed.';
+      'Ekwenyela nkwado ndabere nkebiokwu mgbake gị.';
 
   @override
-  String get confirmSecretPhraseTitle => 'Confirm your secret phrase';
+  String get confirmSecretPhraseTitle => 'Kwado akpaokwu nzuzo gị';
 
   @override
-  String get confirmSecretPhraseCheckOne => 'I am the only one that knows it.';
+  String get confirmSecretPhraseCheckOne => 'Ọ bụ naanị m maara ya.';
 
   @override
   String get confirmSecretPhraseCheckTwo =>
-      'The secret phrase is not accessible to third parties.';
+      'Ndị ọzọ enweghị ike ịnweta akpaokwu nzuzo a.';
 
   @override
   String get confirmSecretPhraseCheckThree =>
-      'My funds can be stolen if someone else sees my recovery phrase.';
+      'Enwere ike izuru ego m ma ọ bụrụ na onye ọzọ ahụ nkebi ahịrịokwu mgbake m.';
 
   @override
-  String get adminControlCenter => 'Owllet Control Center';
+  String get adminControlCenter => 'Ebe nchịkwa Owllet';
 
   @override
   String get adminSystemStatus => 'Ọnọdụ Usoro';
 
   @override
-  String get adminBackendLatency => 'Backend Latency';
+  String get adminBackendLatency => 'Latency azụ';
 
   @override
   String get adminAppPerformance => 'Ọrụ App';
 
   @override
-  String get adminRegistryTokens => 'Registry Tokens';
+  String get adminRegistryTokens => 'Ndebanye aha Token';
 
   @override
   String get adminTotalUsers => 'Ndị Ọrụ Niile';
@@ -1144,7 +1145,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get adminMaintainerAddFailed => 'Enweghị ike itinye onye nlekọta';
 
   @override
-  String get adminTokenRegistry => 'Token Registry';
+  String get adminTokenRegistry => 'Ndekọ Token';
 
   @override
   String get adminSearchRegistryHint => 'Chọọ n\'ime registry...';
@@ -1306,80 +1307,79 @@ class AppLocalizationsIg extends AppLocalizations {
   String get privacyLastUpdated => 'Emelitere ikpeazụ: Febụwarị 2026';
 
   @override
-  String get faceVerifyReason => 'Verify your identity with Face ID';
+  String get faceVerifyReason => 'Jiri NJ ihu nyochaa njirimara gị';
 
   @override
-  String get faceVerificationFailed =>
-      'Face verification failed. Please try again.';
+  String get faceVerificationFailed => 'Nnwale ihu dara. Biko nwaa ọzọ.';
 
   @override
-  String get biometricUnavailable =>
-      'Biometric authentication is not available on this device.';
+  String get biometricUnavailable => 'Nyocha biometric adịghị na ngwaọrụ a.';
 
   @override
-  String get verifying => 'Verifying...';
+  String get verifying => 'Na-enyocha...';
 
   @override
-  String get faceVerificationTitle => 'Face Verification';
+  String get faceVerificationTitle => 'Nyocha ihu';
 
   @override
   String get biometricPromptInstruction =>
-      'Place your face in the frame to verify';
+      'Tinye ihu gị n\'ime etiti iji nyochaa';
 
   @override
-  String get facePromptInstruction => 'Position your face in the circle above';
+  String get facePromptInstruction => 'Debe ihu gị n\'okirikiri dị n\'elu';
 
   @override
-  String get verifyFace => 'Verify Face';
+  String get verifyFace => 'Nyochaa ihu';
 
   @override
-  String get identityVerifyReason => 'Verify your identity to continue';
+  String get identityVerifyReason => 'Nyochaa njirimara gị ka ịga n\'ihu';
 
   @override
   String get biometricVerificationFailed =>
-      'Biometric verification failed. Please try again.';
+      'Nyocha biometric dara. Biko nwaa ọzọ.';
 
   @override
   String get biometricVerificationFailedWithPasscode =>
-      'Biometric verification failed. Please use your passcode instead.';
+      'Nyocha biometric dara. Biko jiri koodu passcode gị kama.';
 
   @override
-  String get biometricVerificationTitle => 'Biometric Verification';
+  String get biometricVerificationTitle => 'Nyocha biometric';
 
   @override
-  String get tapBelowToVerify => 'Tap below to verify';
+  String get tapBelowToVerify => 'Pịa n\'okpuru iji nyochaa';
 
   @override
-  String get startVerification => 'Start Verification';
+  String get startVerification => 'Malite nkwenye';
 
   @override
-  String get fingerprintVerifyReason => 'Verify your identity with fingerprint';
+  String get fingerprintVerifyReason =>
+      'Jiri akara mkpịsị aka nyochaa njirimara gị';
 
   @override
   String get fingerprintVerificationFailed =>
-      'Fingerprint verification failed. Please try again.';
+      'Nyochaa akara mkpịsị aka dara. Biko nwaa ọzọ.';
 
   @override
-  String get fingerprintVerificationTitle => 'Fingerprint Verification';
+  String get fingerprintVerificationTitle => 'Nyochaa akara mkpịsị aka';
 
   @override
   String get fingerprintPromptInstruction =>
-      'Place your finger on the sensor to verify';
+      'Tinye mkpịsị aka gị na ihe mmetụta iji nyochaa';
 
   @override
-  String get verify => 'Verify';
+  String get verify => 'Nyochaa';
 
   @override
-  String get swapFromLabel => 'From';
+  String get swapFromLabel => 'Site na';
 
   @override
-  String get priceLabel => 'Price';
+  String get priceLabel => 'Ọnụ ahịa';
 
   @override
-  String get platformFeeLabel => 'Platform Fee';
+  String get platformFeeLabel => 'Ụgwọ Platform';
 
   @override
-  String get networkFeeLabel => 'Network Fee';
+  String get networkFeeLabel => 'Ụgwọ netwọkụ';
 
   @override
   String get coveredByOwllet => 'Owllet kpuchiri ya';
@@ -1388,7 +1388,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get toReceiveLabel => 'To Receive';
 
   @override
-  String get swapToLabel => 'To';
+  String get swapToLabel => 'Iji';
 
   @override
   String get calculatingLabel => 'Calculating...';
@@ -1398,7 +1398,7 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get receiveExternalWarning =>
-      'Only send tokens on the correct network. Sending tokens on the wrong network may result in permanent loss.';
+      'Naanị zipu token na netwọk ziri ezi. Izipu akara na netwọk na-ezighi ezi nwere ike bute mfu na-adịgide adịgide.';
 
   @override
   String get currencyUsd => 'Dọla Amerika (USD)';

@@ -100,7 +100,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get tokens => 'Jetons';
 
   @override
-  String get nfts => 'NFTs';
+  String get nfts => 'NFT';
 
   @override
   String get loadingBalances => 'Chargement des soldes...';
@@ -385,390 +385,401 @@ class AppLocalizationsFr extends AppLocalizations {
   String get actionRequired => 'Action requise';
 
   @override
-  String get sendToken => 'Send Token';
+  String get sendToken => 'Envoyer un jeton';
 
   @override
-  String get enterReceivingAddress => 'Please enter a receiving address';
+  String get enterReceivingAddress =>
+      'Veuillez entrer une adresse de réception';
 
   @override
-  String get invalidEthereumAddress => 'Invalid Ethereum address';
+  String get invalidEthereumAddress => 'Adresse Ethereum invalide';
 
   @override
-  String get enterValidAmount => 'Please enter a valid amount';
+  String get enterValidAmount => 'Veuillez entrer un montant valide';
 
   @override
-  String get insufficientBalance => 'Insufficient balance';
+  String get insufficientBalance => 'Solde insuffisant';
 
   @override
-  String get createPasscodeTitle => 'Create Passcode';
+  String get createPasscodeTitle => 'Créer un mot de passe';
 
   @override
   String get createPasscodeDescription =>
-      'Enter a 6 digit code that only you can remember';
+      'Entrez un code à 6 chiffres dont vous seul pouvez vous souvenir';
 
   @override
-  String get confirmPasscodeTitle => 'Confirm Passcode';
+  String get confirmPasscodeTitle => 'Confirmer le code d\'accès';
 
   @override
   String get confirmPasscodeDescription =>
-      'Confirm the digits you entered if they are correct';
+      'Confirmez les chiffres que vous avez saisis s\'ils sont corrects';
 
   @override
-  String get failedToSavePasscode => 'Failed to save passcode';
+  String get failedToSavePasscode =>
+      'Échec de l\'enregistrement du mot de passe';
 
   @override
-  String get passcodesDoNotMatch => 'Passcodes do not match. Please try again.';
+  String get passcodesDoNotMatch =>
+      'Les codes d\'accès ne correspondent pas. Veuillez réessayer.';
 
   @override
-  String get unlockWalletReason => 'Unlock your wallet';
+  String get unlockWalletReason => 'Débloquez votre portefeuille';
 
   @override
-  String get unlockEnterPasscode => 'Enter your passcode';
+  String get unlockEnterPasscode => 'Entrez votre mot de passe';
 
   @override
-  String get lockedOutTitle => 'Locked out';
+  String get lockedOutTitle => 'Verrouillé';
 
   @override
   String unlockTryAgainIn(Object seconds) {
-    return 'Try again in ${seconds}s';
+    return 'Réessayez dans ${seconds}s';
   }
 
   @override
   String attemptsRemaining(Object count) {
-    return '$count attempts remaining';
+    return '$count tentatives restantes';
   }
 
   @override
   String incorrectPasscodeRemaining(Object count) {
-    return 'Incorrect passcode. $count attempts remaining.';
+    return 'Mot de passe incorrect. $count tentatives restantes.';
   }
 
   @override
   String tooManyAttemptsLocked(Object seconds) {
-    return 'Too many failed attempts. Locked for $seconds seconds.';
+    return 'Trop de tentatives infructueuses. Verrouillé pendant $seconds secondes.';
   }
 
   @override
-  String get enterPasscodeTitle => 'Enter Passcode';
+  String get enterPasscodeTitle => 'Entrez le code d\'accès';
 
   @override
-  String get passcodeHint => 'Passcode';
+  String get passcodeHint => 'Code d\'accès';
 
   @override
-  String get walletNameLabel => 'Wallet name';
+  String get walletNameLabel => 'Nom du portefeuille';
 
   @override
-  String get enterWalletNameHint => 'Enter wallet name';
+  String get enterWalletNameHint => 'Entrez le nom du portefeuille';
 
   @override
-  String get enterSecretPhraseHint => 'Enter your 12 or 24-word secret phrase';
+  String get enterSecretPhraseHint =>
+      'Entrez votre phrase secrète de 12 ou 24 mots';
 
   @override
   String get secretPhraseHelperText =>
-      'Your secret phrase is 12 or 24 words separated by single spaces';
+      'Votre phrase secrète est composée de 12 ou 24 mots séparés par des espaces simples';
 
   @override
-  String get paste => 'Paste';
+  String get paste => 'Coller';
 
   @override
-  String get walletImportedSuccessfully => 'Wallet imported successfully!';
+  String get walletImportedSuccessfully => 'Portefeuille importé avec succès !';
 
   @override
-  String get enterSecretPhrasePrompt => 'Please enter your secret phrase';
+  String get enterSecretPhrasePrompt => 'Veuillez entrer votre phrase secrète';
 
   @override
-  String get enterWalletNamePrompt => 'Please enter a wallet name';
+  String get enterWalletNamePrompt => 'Veuillez saisir un nom de portefeuille';
 
   @override
   String get invalidSecretPhrasePrompt =>
-      'Invalid secret phrase. Please check and try again.';
+      'Phrase secrète invalide. Veuillez vérifier et réessayer.';
 
   @override
   String importWalletFailed(Object error) {
-    return 'Failed to import wallet: $error';
+    return 'Échec de l\'importation du portefeuille : $error';
   }
 
   @override
-  String get enterPrivateKeyPrompt => 'Please enter your private key';
+  String get enterPrivateKeyPrompt => 'Veuillez entrer votre clé privée';
 
   @override
   String get invalidPrivateKeyLength =>
-      'Invalid private key. Must be 64 hexadecimal characters.';
+      'Clé privée invalide. Doit contenir 64 caractères hexadécimaux.';
 
   @override
   String get invalidPrivateKeyCharacters =>
-      'Invalid private key. Must contain only hexadecimal characters (0-9, a-f).';
+      'Clé privée invalide. Doit contenir uniquement des caractères hexadécimaux (0-9, a-f).';
 
   @override
-  String get enterPrivateKeyHint => 'Enter your private key';
+  String get enterPrivateKeyHint => 'Entrez votre clé privée';
 
   @override
   String get privateKeyHelperText =>
-      'Your private key comprises of 64 alphanumeric characters';
+      'Votre clé privée comprend 64 caractères alphanumériques';
 
   @override
-  String get incorrectPasscode => 'Incorrect passcode';
+  String get incorrectPasscode => 'Mot de passe incorrect';
 
   @override
-  String get confirm => 'Confirm';
+  String get confirm => 'Confirmer';
 
   @override
-  String get feedbackTitle => 'Feedback';
+  String get feedbackTitle => 'Retour';
 
   @override
   String get feedbackSubtitle =>
-      'Help us improve Owllet by sharing your thoughts.';
+      'Aidez-nous à améliorer Owllet en partageant vos réflexions.';
 
   @override
-  String get feedbackCategory => 'Category';
+  String get feedbackCategory => 'Catégorie';
 
   @override
-  String get feedbackSubjectOptional => 'Subject (Optional)';
+  String get feedbackSubjectOptional => 'Sujet (facultatif)';
 
   @override
   String get feedbackMessage => 'Message';
 
   @override
-  String get feedbackContactEmailOptional => 'Contact Email (Optional)';
+  String get feedbackContactEmailOptional => 'E-mail de contact (facultatif)';
 
   @override
-  String get feedbackCategoryGeneral => 'General';
+  String get feedbackCategoryGeneral => 'Général';
 
   @override
-  String get feedbackCategoryBug => 'Bug Report';
+  String get feedbackCategoryBug => 'Rapport de bug';
 
   @override
-  String get feedbackCategoryFeature => 'Feature Request';
+  String get feedbackCategoryFeature => 'Demande de fonctionnalité';
 
   @override
-  String get feedbackCategoryDesign => 'Design Feedback';
+  String get feedbackCategoryDesign => 'Commentaires sur la conception';
 
   @override
-  String get feedbackSubjectHint => 'Short summary';
+  String get feedbackSubjectHint => 'Bref résumé';
 
   @override
-  String get feedbackMessageHint => 'Tell us what happened or what you need';
+  String get feedbackMessageHint =>
+      'Dites-nous ce qui s\'est passé ou ce dont vous avez besoin';
 
   @override
   String get feedbackEmailHint => 'you@example.com';
 
   @override
-  String get submitFeedback => 'Submit Feedback';
+  String get submitFeedback => 'Envoyer des commentaires';
 
   @override
-  String get enterFeedbackMessage => 'Please enter your feedback message';
+  String get enterFeedbackMessage =>
+      'Veuillez saisir votre message de commentaires';
 
   @override
-  String get noActiveWalletFound => 'No active wallet found';
+  String get noActiveWalletFound => 'Aucun portefeuille actif trouvé';
 
   @override
-  String get feedbackSubmitted => 'Feedback submitted. Thank you.';
+  String get feedbackSubmitted => 'Commentaires soumis. Merci.';
 
   @override
   String get feedbackSubmitFailed =>
-      'Unable to submit feedback. Please try again.';
+      'Impossible de soumettre des commentaires. Veuillez réessayer.';
 
   @override
-  String get manageWalletsTitle => 'Manage Wallets';
+  String get manageWalletsTitle => 'Gérer les portefeuilles';
 
   @override
-  String get createAddWallet => 'Create / Add Wallet';
+  String get createAddWallet => 'Créer/Ajouter un portefeuille';
 
   @override
-  String get renameWallet => 'Rename Wallet';
+  String get renameWallet => 'Renommer le portefeuille';
 
   @override
-  String get viewPrivateKey => 'View Private Key';
+  String get viewPrivateKey => 'Afficher la clé privée';
 
   @override
-  String get removeWallet => 'Remove Wallet';
+  String get removeWallet => 'Supprimer le portefeuille';
 
   @override
-  String get save => 'Save';
+  String get save => 'Sauvegarder';
 
   @override
-  String get walletRenamed => 'Wallet renamed';
+  String get walletRenamed => 'Portefeuille renommé';
 
   @override
-  String get walletRemoved => 'Wallet removed';
+  String get walletRemoved => 'Portefeuille supprimé';
 
   @override
-  String get unableToLoadWallets => 'Unable to load wallets';
+  String get unableToLoadWallets => 'Impossible de charger les portefeuilles';
 
   @override
-  String get newWalletCreated => 'New wallet created';
+  String get newWalletCreated => 'Nouveau portefeuille créé';
 
   @override
   String unableToCreateWallet(Object error) {
-    return 'Unable to create wallet: $error';
+    return 'Impossible de créer un portefeuille : $error';
   }
 
   @override
   String walletSetAsActive(Object name) {
-    return '$name set as active';
+    return '$name défini comme actif';
   }
 
   @override
   String unableToSwitchWallet(Object error) {
-    return 'Unable to switch wallet: $error';
+    return 'Impossible de changer de portefeuille : $error';
   }
 
   @override
   String unableToRenameWallet(Object error) {
-    return 'Unable to rename wallet: $error';
+    return 'Impossible de renommer le portefeuille : $error';
   }
 
   @override
   String unableToRemoveWallet(Object error) {
-    return 'Unable to remove wallet: $error';
+    return 'Impossible de supprimer le portefeuille : $error';
   }
 
   @override
-  String get mustKeepOneWallet => 'You must keep at least one wallet';
+  String get mustKeepOneWallet =>
+      'Vous devez conserver au moins un portefeuille';
 
   @override
   String get removeWalletWarning =>
-      'Remove this wallet from this device? This does not delete the wallet onchain.';
+      'Supprimer ce portefeuille de cet appareil ? Cela ne supprime pas le portefeuille en chaîne.';
 
   @override
-  String get authenticationRequired => 'Authentication required';
+  String get authenticationRequired => 'Authentification requise';
 
   @override
-  String get noPrivateKeyFound => 'No private key found';
+  String get noPrivateKeyFound => 'Aucune clé privée trouvée';
 
   @override
   String get privateKeySecurityWarning =>
-      'Never share this with anyone. Anyone with this key can access your funds.';
+      'Ne partagez jamais cela avec qui que ce soit. Toute personne possédant cette clé peut accéder à vos fonds.';
 
   @override
-  String get activeWalletLabel => 'Active wallet';
+  String get activeWalletLabel => 'Portefeuille actif';
 
   @override
-  String get addToken => 'Add Token';
+  String get addToken => 'Ajouter un jeton';
 
   @override
   String get authenticateToViewPrivateKey =>
-      'Authenticate to view your private key';
+      'Authentifiez-vous pour afficher votre clé privée';
 
   @override
   String unableToLoadPrivateKey(Object error) {
-    return 'Unable to load private key: $error';
+    return 'Impossible de charger la clé privée : $error';
   }
 
   @override
-  String get manageTokens => 'Manage Tokens';
+  String get manageTokens => 'Gérer les jetons';
 
   @override
-  String get visibleTokens => 'Visible Tokens';
+  String get visibleTokens => 'Jetons visibles';
 
   @override
-  String get addedTokens => 'Added Tokens';
+  String get addedTokens => 'Jetons ajoutés';
 
   @override
-  String get suggestedTokens => 'Suggested Tokens';
+  String get suggestedTokens => 'Jetons suggérés';
 
   @override
-  String get searchResults => 'Search Results';
+  String get searchResults => 'Résultats de la recherche';
 
   @override
-  String get noTokensDetectedYet => 'No tokens detected for this wallet yet.';
+  String get noTokensDetectedYet =>
+      'Aucun jeton détecté pour ce portefeuille pour l\'instant.';
 
   @override
-  String get noMatchingTokensFound => 'No matching tokens found.';
+  String get noMatchingTokensFound => 'Aucun jeton correspondant trouvé.';
 
   @override
   String get pasteContractToAddToken =>
-      'Paste a contract address above to add a token instantly.';
+      'Collez une adresse de contrat ci-dessus pour ajouter un jeton instantanément.';
 
   @override
-  String get noSuggestedTokensYet => 'No suggested tokens available yet.';
+  String get noSuggestedTokensYet =>
+      'Aucun jeton suggéré n\'est encore disponible.';
 
   @override
-  String get noRemoteTokensFound => 'No remote tokens found.';
+  String get noRemoteTokensFound => 'Aucun jeton distant trouvé.';
 
   @override
-  String get tokenRemoved => 'Token removed';
+  String get tokenRemoved => 'Jeton supprimé';
 
   @override
-  String get tokenAlreadyAvailable => 'Token already available in your list';
+  String get tokenAlreadyAvailable => 'Jeton déjà disponible dans votre liste';
 
   @override
   String get tokenAlreadyExistsOnNetwork =>
-      'Token already exists on this network';
+      'Le token existe déjà sur ce réseau';
 
   @override
   String tokenAdded(Object symbol) {
-    return '$symbol added';
+    return '$symbol ajouté';
   }
 
   @override
   String tokenAddFailed(Object error) {
-    return 'Failed to add token: $error';
+    return 'Échec de l\'ajout du jeton : $error';
   }
 
   @override
-  String get missingTokenContractAddress => 'Missing token contract address';
+  String get missingTokenContractAddress =>
+      'Adresse du contrat de jeton manquante';
 
   @override
-  String get tokenDetected => 'Token Detected';
+  String get tokenDetected => 'Jeton détecté';
 
   @override
-  String get contractAddressLabel => 'Contract Address';
+  String get contractAddressLabel => 'Adresse du contrat';
 
   @override
-  String get ignore => 'Ignore';
+  String get ignore => 'Ignorer';
 
   @override
-  String get added => 'Added';
+  String get added => 'Ajouté';
 
   @override
   String get couldNotDetectTokenMetadata =>
-      'Could not detect token metadata from this contract on the selected network';
+      'Impossible de détecter les métadonnées du jeton de ce contrat sur le réseau sélectionné';
 
   @override
-  String get myBalance => 'MY BALANCE';
+  String get myBalance => 'MON SOLDE';
 
   @override
-  String get tokenNotFound => 'Token not found';
+  String get tokenNotFound => 'Jeton introuvable';
 
   @override
-  String get loading => 'Loading...';
+  String get loading => 'Chargement...';
 
   @override
-  String get copiedToClipboard => 'Copied to clipboard';
+  String get copiedToClipboard => 'Copié dans le presse-papiers';
 
   @override
-  String get passwordSecurityTitle => 'Password & Security';
+  String get passwordSecurityTitle => 'Mot de passe et sécurité';
 
   @override
-  String get accessControl => 'Access Control';
+  String get accessControl => 'Contrôle d\'accès';
 
   @override
-  String get changePassword => 'Change Password';
+  String get changePassword => 'Changer le mot de passe';
 
   @override
-  String get passcodeUnlock => 'Passcode unlock';
+  String get passcodeUnlock => 'Déverrouillage par mot de passe';
 
   @override
-  String get biometricsFaceId => 'Biometrics / Face ID';
+  String get biometricsFaceId => 'Biométrie / Face ID';
 
   @override
-  String get advancedSecurity => 'Advanced Security';
+  String get advancedSecurity => 'Sécurité avancée';
 
   @override
-  String get twoFactorAuth => 'Two-Factor Authentication (2FA)';
+  String get twoFactorAuth => 'Authentification à deux facteurs (2FA)';
 
   @override
-  String get onLabel => 'On';
+  String get onLabel => 'Sur';
 
   @override
-  String get offLabel => 'Off';
+  String get offLabel => 'Désactivé';
 
   @override
-  String get autoLockTimer => 'Auto-Lock Timer';
+  String get autoLockTimer => 'Minuterie de verrouillage automatique';
 
   @override
-  String get foregroundAutoLockTimer => 'Foreground Auto-Lock Timer';
+  String get foregroundAutoLockTimer =>
+      'Minuterie de verrouillage automatique au premier plan';
 
   @override
   String autoLockMinutesLabel(Object minutes) {
@@ -776,26 +787,30 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get lockOnBackground => 'Lock on Background';
+  String get lockOnBackground => 'Verrouiller sur l\'arrière-plan';
 
   @override
-  String get immediateWhenAppIsHidden => 'Immediate when app is hidden';
+  String get immediateWhenAppIsHidden =>
+      'Immédiat lorsque l\'application est masquée';
 
   @override
   String get securityPreferencesLoadFailed =>
-      'Failed to load security preferences';
+      'Échec du chargement des préférences de sécurité';
 
   @override
-  String get retry => 'Retry';
+  String get retry => 'Réessayer';
 
   @override
-  String get unableToUpdateBiometric => 'Unable to update biometric setting';
+  String get unableToUpdateBiometric =>
+      'Impossible de mettre à jour les paramètres biométriques';
 
   @override
-  String get unableToUpdateTwoFactor => 'Unable to update 2FA setting';
+  String get unableToUpdateTwoFactor =>
+      'Impossible de mettre à jour le paramètre 2FA';
 
   @override
-  String get unableToUpdateAutoLock => 'Unable to update auto-lock setting';
+  String get unableToUpdateAutoLock =>
+      'Impossible de mettre à jour le paramètre de verrouillage automatique';
 
   @override
   String get unableToUpdateBackgroundLock =>
@@ -803,137 +818,142 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get securitySummary =>
-      'Enable additional security measures to protect your digital assets from unauthorized access.';
+      'Activez des mesures de sécurité supplémentaires pour protéger vos actifs numériques contre tout accès non autorisé.';
 
   @override
   String get searchTokenOrPasteContract =>
-      'Search token or paste contract address';
+      'Rechercher un jeton ou coller l\'adresse du contrat';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => 'Effacer la recherche';
 
   @override
-  String get createWalletCopiedSeed => 'Secret phrase copied to clipboard';
+  String get createWalletCopiedSeed =>
+      'Phrase secrète copiée dans le presse-papiers';
 
   @override
-  String get secretRecoveryPhrase => 'Secret recovery phrase';
+  String get secretRecoveryPhrase => 'Phrase secrète de récupération';
 
   @override
   String get seedPhraseShareWarning =>
-      'Never share your seed phrase with anybody even your family members.';
+      'Ne partagez jamais votre phrase de départ avec qui que ce soit, même les membres de votre famille.';
 
   @override
-  String get tapToReveal => 'Tap to reveal';
+  String get tapToReveal => 'Appuyez pour révéler';
 
   @override
-  String get copyToClipboard => 'Copy to clipboard';
+  String get copyToClipboard => 'Copier dans le presse-papier';
 
   @override
-  String get beSureNoOneWatching => 'Be sure no one is watching';
+  String get beSureNoOneWatching => 'Assurez-vous que personne ne regarde';
 
   @override
-  String get verifyAllWords => 'Please fill in all 12 words';
+  String get verifyAllWords => 'Veuillez remplir les 12 mots';
 
   @override
   String get seedPhraseMismatch =>
-      'The seed phrase does not match. Please try again.';
+      'La phrase de départ ne correspond pas. Veuillez réessayer.';
 
   @override
   String walletCreationError(Object error) {
-    return 'Error creating wallet: $error';
+    return 'Erreur lors de la création du portefeuille : $error';
   }
 
   @override
-  String get referralsHeadline => 'Invite Friends and Earn Rewards Together';
+  String get referralsHeadline =>
+      'Invitez des amis et gagnez des récompenses ensemble';
 
   @override
   String get referralsSubtitle =>
-      'Earn up to \$0.1 when a referred user completes their first swap.';
+      'Gagnez jusqu\'à 0,1 \$ lorsqu\'un utilisateur parrainé effectue son premier échange.';
 
   @override
-  String get yourReferralCode => 'YOUR REFERRAL CODE';
+  String get yourReferralCode => 'VOTRE CODE DE RÉFÉRENCE';
 
   @override
-  String get myCode => 'My Code';
+  String get myCode => 'Mon code';
 
   @override
-  String get myReferral => 'My Referral';
+  String get myReferral => 'Ma référence';
 
   @override
-  String get noReferral => 'No referral';
+  String get noReferral => 'Aucune référence';
 
   @override
-  String get rewardsEarned => 'Rewards Earned';
+  String get rewardsEarned => 'Récompenses gagnées';
 
   @override
-  String get referredUsers => 'Referred Users';
+  String get referredUsers => 'Utilisateurs référés';
 
   @override
   String referredUsersCount(Object count) {
-    return '$count users';
+    return '$count utilisateurs';
   }
 
   @override
-  String get addReferral => 'Add Referral';
+  String get addReferral => 'Ajouter une référence';
 
   @override
-  String get enterReferralCode => 'Enter referral code';
+  String get enterReferralCode => 'Entrez le code de parrainage';
 
   @override
-  String get unableToLoadReferrals => 'Unable to load referrals';
+  String get unableToLoadReferrals => 'Impossible de charger les références';
 
   @override
-  String get enterReferralCodePrompt => 'Enter a referral code';
+  String get enterReferralCodePrompt => 'Entrez un code de parrainage';
 
   @override
-  String get ownReferralCodeError => 'You cannot use your own referral code';
+  String get ownReferralCodeError =>
+      'Vous ne pouvez pas utiliser votre propre code de parrainage';
 
   @override
-  String get referralAdded => 'Referral added';
+  String get referralAdded => 'Référence ajoutée';
 
   @override
-  String get unableToAddReferral => 'Unable to add referral';
+  String get unableToAddReferral => 'Impossible d\'ajouter une référence';
 
   @override
-  String get referralCodeCopied => 'Referral code copied';
+  String get referralCodeCopied => 'Code de parrainage copié';
 
   @override
-  String get refresh => 'Refresh';
+  String get refresh => 'Rafraîchir';
 
   @override
-  String get backupSeedPhraseTitle => 'Backup Seed Phrase';
+  String get backupSeedPhraseTitle => 'Phrase de départ de sauvegarde';
 
   @override
   String get authenticateToViewSeedPhrase =>
-      'Authenticate to view your seed phrase';
+      'Authentifiez-vous pour afficher votre phrase de départ';
 
   @override
   String get authenticationRequiredSeedPhrase =>
-      'Authentication required to view seed phrase';
+      'Authentification requise pour afficher la phrase de départ';
 
   @override
-  String get securityWarning => 'Security Warning';
+  String get securityWarning => 'Avertissement de sécurité';
 
   @override
   String get seedPhraseMasterKeyWarning =>
-      'Your seed phrase is the master key to your wallet. Anyone with it can move all your funds.';
+      'Votre phrase de départ est la clé principale de votre portefeuille. N\'importe qui le possédant peut déplacer tous vos fonds.';
 
   @override
   String get seedPhraseSafetyBullets =>
-      '• Never share it with anyone\n• Never enter it on websites\n• Write it down and store it offline';
+      '• Ne le partagez jamais avec qui que ce soit\n• Ne le saisissez jamais sur les sites Web\n• Notez-le et stockez-le hors ligne';
 
   @override
-  String get iUnderstand => 'I Understand';
+  String get iUnderstand => 'Je comprends';
 
   @override
-  String get noSeedPhraseStored => 'No seed phrase stored for this wallet';
+  String get noSeedPhraseStored =>
+      'Aucune phrase de départ stockée pour ce portefeuille';
 
   @override
-  String get seedPhraseCopied => 'Seed phrase copied to clipboard';
+  String get seedPhraseCopied =>
+      'Phrase de départ copiée dans le presse-papiers';
 
   @override
   String get backupSeedPhraseIntro =>
-      'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.';
+      'Votre phrase de récupération de 12 mots est le seul moyen de récupérer votre portefeuille si vous perdez votre téléphone ou oubliez votre mot de passe.';
 
   @override
   String unableToOpenLink(Object value) {
@@ -1420,7 +1440,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get currencyUsd => 'Dollar américain (USD)';
 
   @override
-  String get currencyEur => 'Euro (EUR)';
+  String get currencyEur => 'euros (EUR)';
 
   @override
   String get currencyGbp => 'Livre sterling (GBP)';
