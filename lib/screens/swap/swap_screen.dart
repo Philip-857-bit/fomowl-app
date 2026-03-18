@@ -885,11 +885,7 @@ class _SwapScreenState extends State<SwapScreen> {
       blockchain.activeChain.chainId,
       isGasless: _isGasless,
     )) {
-      _showError(
-        _isGasless
-            ? l.networkError
-            : l.networkError,
-      );
+      _showError(_isGasless ? l.networkError : l.networkError);
       return;
     }
     if (_isGaslessSourceUnsupported()) {

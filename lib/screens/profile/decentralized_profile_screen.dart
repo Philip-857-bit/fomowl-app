@@ -257,6 +257,8 @@ class _DecentralizedProfileScreenState
         return;
       }
 
+      if (!mounted) return;
+
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final chainId = blockchain.activeChain.chainId;
       final walletAddress = await _walletService.getCurrentWalletAddress();
@@ -290,9 +292,9 @@ class _DecentralizedProfileScreenState
       if (verifyResponse.statusCode != 200) {
         if (verifyResponse.statusCode == 403) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l.adminSecretRequired)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
           }
           return;
         }
