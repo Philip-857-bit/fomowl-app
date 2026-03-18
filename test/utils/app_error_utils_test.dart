@@ -31,18 +31,12 @@ void main() {
 
     test('returns fallback when JSON has no message field', () {
       const body = '{"error": "something"}';
-      expect(
-        AppErrorUtils.backendMessage(body, fallback: fallback),
-        fallback,
-      );
+      expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
     });
 
     test('returns fallback when message field is empty', () {
       const body = '{"message": ""}';
-      expect(
-        AppErrorUtils.backendMessage(body, fallback: fallback),
-        fallback,
-      );
+      expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
     });
 
     test('returns fallback when body contains sensitive terms', () {
@@ -70,33 +64,32 @@ void main() {
     });
 
     test(
-        'sanitizes infra-detail message containing "connection refused" to connection fallback',
-        () {
-      const body =
-          '{"message": "dial tcp 10.0.0.5:5432: connect: connection refused"}';
-      expect(
-        AppErrorUtils.backendMessage(body, fallback: fallback),
-        'Connection failed. Please check your internet and try again.',
-      );
-    });
+      'sanitizes infra-detail message containing "connection refused" to connection fallback',
+      () {
+        const body =
+            '{"message": "dial tcp 10.0.0.5:5432: connect: connection refused"}';
+        expect(
+          AppErrorUtils.backendMessage(body, fallback: fallback),
+          'Connection failed. Please check your internet and try again.',
+        );
+      },
+    );
 
     test(
-        'sanitizes infra-detail message containing "timed out" to connection fallback',
-        () {
-      const body = '{"message": "request timed out after 30s"}';
-      expect(
-        AppErrorUtils.backendMessage(body, fallback: fallback),
-        'Connection failed. Please check your internet and try again.',
-      );
-    });
+      'sanitizes infra-detail message containing "timed out" to connection fallback',
+      () {
+        const body = '{"message": "request timed out after 30s"}';
+        expect(
+          AppErrorUtils.backendMessage(body, fallback: fallback),
+          'Connection failed. Please check your internet and try again.',
+        );
+      },
+    );
 
     test('sanitizes messages with backend/RPC details to fallback', () {
       const body = '{"message": "upstream rpc node unreachable"}';
       // Body-level denylist fires before extraction — returns main fallback
-      expect(
-        AppErrorUtils.backendMessage(body, fallback: fallback),
-        fallback,
-      );
+      expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
     });
   });
 }

@@ -629,7 +629,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                        child: Text(
+                      child: Text(
                         query.isEmpty
                             ? (showingSuggestions
                                   ? l.suggestedTokens

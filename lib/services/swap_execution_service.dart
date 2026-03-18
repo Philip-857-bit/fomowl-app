@@ -129,9 +129,7 @@ class SwapExecutionService {
       final toAddress = EthereumAddress.fromHex(txData['to'].toString());
 
       final gasPriceStr = txData['gasPrice']?.toString();
-      final gasPrice = gasPriceStr != null
-          ? _parseBigInt(gasPriceStr)
-          : null;
+      final gasPrice = gasPriceStr != null ? _parseBigInt(gasPriceStr) : null;
       if (gasPrice == null) {
         throw Exception('Invalid or missing gasPrice in txData: $gasPriceStr');
       }

@@ -45,7 +45,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     final entry = _cacheByWallet[address.toLowerCase()];
-    if (entry != null && DateTime.now().difference(entry.fetchedAt) < _cacheTtl) {
+    if (entry != null &&
+        DateTime.now().difference(entry.fetchedAt) < _cacheTtl) {
       setState(() {
         _notifications = entry.notifications;
         _isLoading = false;
@@ -91,7 +92,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final notifList = rawList is List ? rawList : const <dynamic>[];
 
         final parsed = notifList.map((j) {
-          final item = j is Map<String, dynamic> ? j : const <String, dynamic>{};
+          final item = j is Map<String, dynamic>
+              ? j
+              : const <String, dynamic>{};
           final dtStr = item['created_at']?.toString() ?? '';
           DateTime? dt;
           try {
@@ -195,7 +198,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ? SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: Container(
-                                height: MediaQuery.of(context).size.height * 0.7,
+                                height:
+                                    MediaQuery.of(context).size.height * 0.7,
                                 alignment: Alignment.center,
                                 child: Padding(
                                   padding: const EdgeInsets.all(40),
@@ -206,18 +210,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                         width: 100,
                                         height: 100,
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.04),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.04,
+                                          ),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
                                           Icons.notifications_off_outlined,
                                           size: 48,
-                                          color: Colors.white.withValues(alpha: 0.15),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.15,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 24),
                                       Text(
-                                          l.notifications,
+                                        l.notifications,
                                         style: GoogleFonts.outfit(
                                           fontSize: 22,
                                           fontWeight: FontWeight.w600,
@@ -226,7 +234,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                          l.pushNotificationsDesc,
+                                        l.pushNotificationsDesc,
                                         style: GoogleFonts.outfit(
                                           fontSize: 14,
                                           color: Colors.white54,
@@ -236,7 +244,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                          l.refresh,
+                                        l.refresh,
                                         style: GoogleFonts.outfit(
                                           fontSize: 12,
                                           color: Colors.white24,
@@ -248,65 +256,73 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                             )
                           : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      separatorBuilder: (_, a) => const SizedBox(height: 10),
-                      itemCount: _notifications.length,
-                      itemBuilder: (context, index) {
-                        final n = _notifications[index];
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: n.isRead
-                                ? Colors.transparent
-                                : AppColors.cardDark,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    n.title,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 16,
-                                      fontWeight: n.isRead
-                                          ? FontWeight.w500
-                                          : FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Text(
-                                    n.date,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              separatorBuilder: (_, a) =>
+                                  const SizedBox(height: 10),
+                              itemCount: _notifications.length,
+                              itemBuilder: (context, index) {
+                                final n = _notifications[index];
+                                return Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: n.isRead
+                                        ? Colors.transparent
+                                        : AppColors.cardDark,
+                                    border: Border.all(
                                       color: Colors.white.withValues(
-                                        alpha: n.isRead ? 0.4 : 0.7,
+                                        alpha: 0.1,
                                       ),
                                     ),
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                n.message,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: Colors.white.withValues(alpha: 0.6),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            n.title,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 16,
+                                              fontWeight: n.isRead
+                                                  ? FontWeight.w500
+                                                  : FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          Text(
+                                            n.date,
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              color: Colors.white.withValues(
+                                                alpha: n.isRead ? 0.4 : 0.7,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        n.message,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.6,
+                                          ),
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                     ),
-                  ),
             ),
           ],
         ),

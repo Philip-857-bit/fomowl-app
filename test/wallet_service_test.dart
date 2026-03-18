@@ -89,17 +89,19 @@ void main() {
       );
     });
 
-    test('accepts a valid 64-character hex key and derives EIP-55 address',
-        () async {
-      // Hardhat default account #0 — well-known test key, safe to use in tests
-      const validKey =
-          'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-      final result = await walletService.importWalletFromPrivateKey(validKey);
-      expect(result['address'], isNotEmpty);
-      // Ethereum addresses are 42 chars including 0x prefix
-      expect(result['address']!.length, 42);
-      expect(result['address'], startsWith('0x'));
-    });
+    test(
+      'accepts a valid 64-character hex key and derives EIP-55 address',
+      () async {
+        // Hardhat default account #0 — well-known test key, safe to use in tests
+        const validKey =
+            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+        final result = await walletService.importWalletFromPrivateKey(validKey);
+        expect(result['address'], isNotEmpty);
+        // Ethereum addresses are 42 chars including 0x prefix
+        expect(result['address']!.length, 42);
+        expect(result['address'], startsWith('0x'));
+      },
+    );
   });
 }
 

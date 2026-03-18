@@ -90,10 +90,10 @@ class _DecentralizedProfileScreenState
 
     final normalizedWallet = walletAddress ?? '';
     final reg = normalizedWallet.isEmpty
-      ? null
-      : await _storageService.getNotificationDeviceRegistration(
-        normalizedWallet,
-        );
+        ? null
+        : await _storageService.getNotificationDeviceRegistration(
+            normalizedWallet,
+          );
     final isNotificationsEnabled = reg != null && reg['token'] != null;
 
     setState(() {
@@ -282,9 +282,9 @@ class _DecentralizedProfileScreenState
       final trimmedSecret = secret?.trim() ?? '';
       if (trimmedSecret.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.adminSecretRequired)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
         return;
       }
 
@@ -396,16 +396,18 @@ class _DecentralizedProfileScreenState
         await service.disableForActiveWallet();
       }
 
-      final reg = await _storageService.getNotificationDeviceRegistration(_walletAddress);
+      final reg = await _storageService.getNotificationDeviceRegistration(
+        _walletAddress,
+      );
       final success = reg != null && reg['token'] != null;
 
       if (!mounted) return;
       setState(() => _isNotificationsEnabled = success);
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.notifications)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.notifications)));
       }
     } catch (e) {
       if (!mounted) return;
@@ -420,7 +422,9 @@ class _DecentralizedProfileScreenState
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     final localeName =
-        LanguageUtils.languageNamesByCode[Localizations.localeOf(context).languageCode] ??
+        LanguageUtils.languageNamesByCode[Localizations.localeOf(
+          context,
+        ).languageCode] ??
         LanguageUtils.languageNamesByCode['en']!;
 
     return Scaffold(
@@ -484,7 +488,8 @@ class _DecentralizedProfileScreenState
                           title: l.chooseYourLanguage,
                           trailing: _valueTrailing(localeName),
                           onTap: () async {
-                            final langController = context.read<LanguageController>();
+                            final langController = context
+                                .read<LanguageController>();
                             final languageCode = await Navigator.push<String>(
                               context,
                               MaterialPageRoute(
@@ -493,8 +498,9 @@ class _DecentralizedProfileScreenState
                             );
                             if (!mounted) return;
                             if (languageCode != null) {
-                              await langController
-                                  .setLanguageCode(languageCode);
+                              await langController.setLanguageCode(
+                                languageCode,
+                              );
                               await _load();
                             }
                           },

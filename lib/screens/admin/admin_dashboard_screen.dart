@@ -145,9 +145,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ).showSnackBar(SnackBar(content: Text(l.adminMaintainerAdded)));
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.adminMaintainerAddFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.adminMaintainerAddFailed)));
       }
     } catch (e) {
       if (!mounted) return;
@@ -198,9 +198,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l.adminRegistryUpdateFailed)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.adminRegistryUpdateFailed)));
     }
   }
 

@@ -4,7 +4,6 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/language_utils.dart';
 
-
 /// Welcome Screen - Onboarding page after splash
 /// Shows language selector, welcome message, and wallet options
 class WelcomeScreen extends StatefulWidget {
