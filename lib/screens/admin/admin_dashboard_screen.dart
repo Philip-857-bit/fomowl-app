@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../../constants/app_colors.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/wallet_service.dart';
 import '../../config/app_environment.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/token_icon.dart';
@@ -24,6 +25,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Map<String, dynamic>? _stats;
   List<dynamic> _registryTokens = [];
   List<dynamic> _maintainers = [];
+  final WalletService _walletService = WalletService();
+  String _backendBaseUrl = AppEnvironment.backendBaseUrl;
+  int? _activeChainId;
+  String? _adminWalletAddress;
+  String? _lastAdminError;
   String _searchQuery = '';
   final TextEditingController _pushTitleController = TextEditingController();
   final TextEditingController _pushMessageController = TextEditingController();
@@ -49,9 +55,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _refreshAll() async {
     setState(() => _loading = true);
+    await _loadAdminContext();
     await Future.wait([_fetchStats(), _fetchRegistry(), _fetchMaintainers()]);
     if (!mounted) return;
     setState(() => _loading = false);
+  }
+
+  Future<void> _loadAdminContext() async {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (!mounted) return;
+    setState(() {
+      _backendBaseUrl = AppEnvironment.backendBaseUrl;
+      _activeChainId = blockchain.activeChain.chainId;
+      _adminWalletAddress = walletAddress;
+    });
+  }
+
+  Map<String, String> _adminHeaders({bool json = false}) {
+    final headers = <String, String>{'X-Owllet-Admin-Key': widget.adminSecret};
+    if (json) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+  }
+
+  String _extractBackendError(http.Response response, String fallback) {
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        final message = (data['message'] ?? data['error'] ?? data['details'])
+            ?.toString();
+        if (message != null && message.trim().isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (_) {}
+    return fallback;
   }
 
   Future<void> _fetchStats() async {
@@ -60,16 +100,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final url = AppEnvironment.blockchain(
         '/${blockchain.activeChain.chainId}/admin/stats',
       );
-      final response = await http.get(
-        url,
-        headers: {'X-Owllet-Admin-Key': widget.adminSecret},
-      );
+      final response = await http.get(url, headers: _adminHeaders());
       if (response.statusCode == 200) {
         if (!mounted) return;
-        setState(() => _stats = jsonDecode(response.body));
+        setState(() {
+          _stats = jsonDecode(response.body);
+          _lastAdminError = null;
+        });
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _lastAdminError = _extractBackendError(
+            response,
+            'Failed to fetch admin stats (HTTP ${response.statusCode})',
+          );
+        });
       }
     } catch (e) {
       debugPrint('Failed to fetch admin stats: $e');
+      if (!mounted) return;
+      setState(() => _lastAdminError = 'Failed to fetch admin stats: $e');
     }
   }
 
@@ -97,10 +147,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final url = AppEnvironment.blockchain(
         '/${blockchain.activeChain.chainId}/admin/maintainers',
       );
-      final response = await http.get(
-        url,
-        headers: {'X-Owllet-Admin-Key': widget.adminSecret},
-      );
+      final response = await http.get(url, headers: _adminHeaders());
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         if (!mounted) return;
@@ -125,10 +172,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Owllet-Admin-Key': widget.adminSecret,
-        },
+        headers: _adminHeaders(json: true),
         body: jsonEncode({
           'walletAddress': address,
           'name': name.isEmpty ? null : name,
@@ -170,10 +214,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Owllet-Admin-Key': widget.adminSecret,
-        },
+        headers: _adminHeaders(json: true),
         body: jsonEncode({
           'updates': [
             {
@@ -219,10 +260,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Owllet-Admin-Key': widget.adminSecret,
-        },
+        headers: _adminHeaders(json: true),
         body: jsonEncode({
           'title': _pushTitleController.text,
           'message': _pushMessageController.text,
@@ -342,6 +380,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     fontSize: 13,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Chain: ${_activeChainId ?? '--'} | Wallet: ${_adminWalletAddress ?? '--'}',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white54,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  'Backend: $_backendBaseUrl',
+                  style: GoogleFonts.outfit(
+                    color: Colors.white54,
+                    fontSize: 12,
+                  ),
+                ),
+                if (_lastAdminError != null && _lastAdminError!.isNotEmpty)
+                  Text(
+                    _lastAdminError!,
+                    style: GoogleFonts.outfit(
+                      color: Colors.orange,
+                      fontSize: 12,
+                    ),
+                  ),
               ],
             ),
           ),

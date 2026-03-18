@@ -566,6 +566,7 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<void> _trackGaslessOrder(
     String tradeHash, {
     required TransactionProgressController progressController,
+    bool rewardReferralOnSwap = false,
   }) async {
     final l = AppLocalizations.of(context);
     const pendingStates = {
@@ -635,6 +636,17 @@ class _SwapScreenState extends State<SwapScreen> {
       }
 
       if (status != null && successStates.contains(status)) {
+        if (rewardReferralOnSwap && _walletAddress != null) {
+          try {
+            await _referralService.rewardOnSwap(
+              walletAddress: _walletAddress!,
+              txHash: tradeHash,
+            );
+          } catch (e) {
+            // Referral crediting should not block successful swap UX.
+            debugPrint('Referral reward-on-gasless-swap failed: $e');
+          }
+        }
         progressController.setSuccess(reference: _shortHash(tradeHash));
         await _refreshWalletState();
         return;
@@ -1035,6 +1047,7 @@ class _SwapScreenState extends State<SwapScreen> {
             await _trackGaslessOrder(
               result.tradeHash!,
               progressController: progressController,
+              rewardReferralOnSwap: true,
             );
           } else {
             progressController.setGaslessPending();
@@ -1054,6 +1067,7 @@ class _SwapScreenState extends State<SwapScreen> {
         await _trackGaslessOrder(
           result.tradeHash ?? result.transactionHash!,
           progressController: progressController,
+          rewardReferralOnSwap: true,
         );
         await _refreshWalletState();
         return;
