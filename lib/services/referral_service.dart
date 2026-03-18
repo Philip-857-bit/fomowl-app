@@ -29,9 +29,15 @@ class ReferralProfile {
 }
 
 class ReferralService {
+  String _normalizeWallet(String walletAddress) {
+    return walletAddress.trim().toLowerCase();
+  }
+
   Future<ReferralProfile> getProfile(String walletAddress) async {
     try {
-      final encodedAddress = Uri.encodeComponent(walletAddress);
+      final encodedAddress = Uri.encodeComponent(
+        _normalizeWallet(walletAddress),
+      );
       final uri = AppEnvironment.referrals('/$encodedAddress');
       final response = await http.get(uri).timeout(const Duration(seconds: 15));
       if (response.statusCode != 200) {
@@ -65,7 +71,7 @@ class ReferralService {
             uri,
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'walletAddress': walletAddress,
+              'walletAddress': _normalizeWallet(walletAddress),
               'referralCode': referralCode,
             }),
           )
@@ -108,7 +114,7 @@ class ReferralService {
             uri,
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'walletAddress': walletAddress,
+              'walletAddress': _normalizeWallet(walletAddress),
               'txHash': txHash,
             }),
           )
