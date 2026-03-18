@@ -9,7 +9,14 @@ import '../../services/blockchain_service.dart';
 import '../../services/wallet_service.dart';
 import '../../config/app_environment.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/token_icon.dart';
+import 'widgets/admin_health_section.dart';
+import 'widgets/admin_stats_section.dart';
+import 'widgets/admin_ops_section.dart';
+import 'widgets/admin_feedback_section.dart';
+import 'widgets/admin_actions_section.dart';
+import 'widgets/admin_push_section.dart';
+import 'widgets/admin_maintainers_section.dart';
+import 'widgets/admin_registry_section.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final String adminSecret;
@@ -22,6 +29,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _loading = true;
+  int _selectedTabIndex = 0;
   Map<String, dynamic>? _stats;
   Map<String, dynamic>? _ops;
   List<dynamic> _registryTokens = [];
@@ -457,675 +465,117 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHealthSection(),
-                  const SizedBox(height: 24),
-                  _buildStatsSection(),
-                  const SizedBox(height: 24),
-                  _buildOpsSection(),
-                  const SizedBox(height: 24),
-                  _buildFeedbackSection(),
-                  const SizedBox(height: 24),
-                  _buildMaintainersSection(),
-                  const SizedBox(height: 24),
-                  _buildAdminActionsSection(),
-                  const SizedBox(height: 24),
-                  _buildPushSection(),
-                  const SizedBox(height: 24),
-                  _buildRegistrySection(),
-                ],
-              ),
+              child: _buildTabContent(l),
             ),
-    );
-  }
-
-  Widget _buildHealthSection() {
-    final l = AppLocalizations.of(context);
-    final status = (_stats?['health'] ?? _stats?['status'] ?? 'unknown')
-        .toString();
-    final latency = (_stats?['latencyMs'] ?? _stats?['latency_ms'] ?? '??')
-        .toString();
-    final isHealthy = status.toLowerCase() == 'healthy';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isHealthy
-              ? Colors.green.withValues(alpha: 0.3)
-              : Colors.orange.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isHealthy ? Icons.check_circle : Icons.warning,
-            color: isHealthy ? Colors.green : Colors.orange,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedTabIndex,
+        onTap: (index) => setState(() => _selectedTabIndex = index),
+        backgroundColor: AppColors.cardDark,
+        selectedItemColor: AppColors.accentRed,
+        unselectedItemColor: Colors.white54,
+        type: BottomNavigationBarType.shifting,
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.dashboard),
+            label: 'Overview',
+            backgroundColor: AppColors.cardDark,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${l.adminSystemStatus}: ${status.toUpperCase()}',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '${l.adminBackendLatency}: ${latency}ms',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Chain: ${_activeChainId ?? '--'} | Wallet: ${_adminWalletAddress ?? '--'}',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  'Backend: $_backendBaseUrl',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
-                ),
-                if (_lastAdminError != null && _lastAdminError!.isNotEmpty)
-                  Text(
-                    _lastAdminError!,
-                    style: GoogleFonts.outfit(
-                      color: Colors.orange,
-                      fontSize: 12,
-                    ),
-                  ),
-              ],
-            ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.assessment),
+            label: 'Stats',
+            backgroundColor: AppColors.cardDark,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.speed),
+            label: 'Ops',
+            backgroundColor: AppColors.cardDark,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.feedback),
+            label: 'Feedback',
+            backgroundColor: AppColors.cardDark,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.admin_panel_settings),
+            label: 'Actions',
+            backgroundColor: AppColors.cardDark,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.notifications),
+            label: 'Push',
+            backgroundColor: AppColors.cardDark,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.group),
+            label: 'Maintainers',
+            backgroundColor: AppColors.cardDark,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.local_offer),
+            label: 'Registry',
+            backgroundColor: AppColors.cardDark,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatsSection() {
-    final l = AppLocalizations.of(context);
-    final s = _stats ?? const <String, dynamic>{};
-    final activity =
-        (_ops?['activity'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l.adminAppPerformance,
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
+  Widget _buildTabContent(AppLocalizations l) {
+    switch (_selectedTabIndex) {
+      case 0:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatCard(
-              l.adminRegistryTokens,
-              (s['token_registry_size'])?.toString() ?? '0',
-              Icons.local_offer_outlined,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              l.adminTotalUsers,
-              (s['totalUsers'] ?? s['users_count'])?.toString() ?? '0',
-              Icons.person_add,
+            AdminHealthSection(
+              stats: _stats,
+              activeChainId: _activeChainId,
+              adminWalletAddress: _adminWalletAddress,
+              backendBaseUrl: _backendBaseUrl,
+              lastError: _lastAdminError,
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _buildStatCard(
-              l.adminTransactions,
-              (s['totalTransactions'] ?? s['transactions_24h'])?.toString() ??
-                  '0',
-              Icons.swap_horiz,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              l.adminMaintainers,
-              (s['maintainers_count'])?.toString() ?? '0',
-              Icons.verified_user,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            _buildStatCard(
-              'RPS (est)',
-              ((activity['estimatedEventsPerSecond'] ?? 0.0) as num)
-                  .toStringAsFixed(2),
-              Icons.speed,
-            ),
-            const SizedBox(width: 12),
-            _buildStatCard(
-              'RPM (est)',
-              (activity['estimatedEventsPerMinute'] ?? 0).toString(),
-              Icons.timer,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOpsSection() {
-    final activity =
-        (_ops?['activity'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    final errorSignals =
-        (_ops?['errorSignals'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    final limits =
-        (_ops?['rateLimits'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
-    final push =
-        (_ops?['push'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Ops, Errors & Throughput',
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Events: ${activity['estimatedEventsPerSecond'] ?? 0} / sec, ${activity['estimatedEventsPerMinute'] ?? 0} / min',
-            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
-          ),
-          Text(
-            'Feedback/min: ${activity['feedbackLastMinute'] ?? 0} | Notifications/min: ${activity['notificationsLastMinute'] ?? 0} | Tx/min: ${activity['transactionsLastMinute'] ?? 0}',
-            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
-          ),
-          Text(
-            'Configured limit: ${limits['configuredRequestsPerSecond'] ?? 0} rps (burst ${limits['configuredBurstSize'] ?? 0})',
-            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Error signals (feedback, 24h): ${errorSignals['feedbackErrorSignals24h'] ?? 0}',
-            style: GoogleFonts.outfit(color: Colors.orange, fontSize: 13),
-          ),
-          Text(
-            'FCM: enabled=${push['fcmEnabled'] ?? false}, configured=${push['fcmConfigured'] ?? false}, devices=${push['registeredDevices'] ?? 0}',
-            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeedbackSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Feedback Queue',
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            onChanged: (value) => _feedbackWalletFilter = value,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Filter by wallet (optional)',
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              suffixIcon: IconButton(
-                onPressed: _fetchFeedback,
-                icon: const Icon(Icons.search, color: Colors.white70),
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (_feedbackItems.isEmpty)
-            Text(
-              'No feedback found.',
-              style: GoogleFonts.outfit(color: Colors.white54),
-            )
-          else
-            ..._feedbackItems.take(10).map((item) {
-              final wallet = item['walletAddress']?.toString() ?? '--';
-              final category = item['category']?.toString() ?? 'general';
-              final message = item['message']?.toString() ?? '';
-              final createdAt = item['createdAt']?.toString() ?? '';
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.black26,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '$category | $wallet',
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      createdAt,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white38,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAdminActionsSection() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Administrative Actions',
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _testPushWalletController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Wallet for test push',
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _testPushTitleController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Push title',
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _testPushMessageController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Push message',
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _sendTestPush,
-              icon: const Icon(Icons.send),
-              label: const Text('Send Test Push'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentRed,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    String label,
-    String value,
-    IconData icon, {
-    bool wide = false,
-    bool useExpanded = true,
-  }) {
-    final card = Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.accentRed, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12),
-          ),
-        ],
-      ),
-    );
-    if (!useExpanded) return card;
-    return Expanded(flex: wide ? 2 : 1, child: card);
-  }
-
-  Widget _buildPushSection() {
-    final l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l.adminGlobalBroadcast,
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _pushTitleController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: l.adminNotificationTitleHint,
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _pushMessageController,
-            style: const TextStyle(color: Colors.white),
-            maxLines: 2,
-            decoration: InputDecoration(
-              hintText: l.adminMessageBodyHint,
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _sendBroadcast,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentRed,
-              ),
-              child: Text(l.adminSendToAllUsers),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMaintainersSection() {
-    final l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l.adminMaintainers,
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _maintainerAddressController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: l.adminWalletAddressHint,
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _maintainerNameController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: l.adminNameOptionalHint,
-              hintStyle: const TextStyle(color: Colors.white38),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _addMaintainer,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentRed,
-              ),
-              child: Text(l.adminAddMaintainer),
-            ),
-          ),
-          if (_maintainers.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            ..._maintainers.map((maintainer) {
-              final walletAddress =
-                  maintainer['walletAddress']?.toString() ?? '--';
-              final name = maintainer['name']?.toString();
-              final isActive = maintainer['isActive'] == true;
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  isActive ? Icons.verified_user : Icons.block,
-                  color: isActive ? Colors.green : Colors.orange,
-                ),
-                title: Text(
-                  name == null || name.isEmpty ? walletAddress : name,
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: Text(
-                  walletAddress,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                trailing: isActive
-                    ? IconButton(
-                        onPressed: () => _deactivateMaintainer(walletAddress),
-                        icon: const Icon(
-                          Icons.person_off,
-                          color: Colors.orange,
-                        ),
-                      )
-                    : null,
-              );
-            }),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRegistrySection() {
-    final l = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l.adminTokenRegistry,
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          onChanged: (val) {
-            _searchQuery = val;
-            _fetchRegistry();
-          },
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: l.adminSearchRegistryHint,
-            prefixIcon: const Icon(Icons.search, color: Colors.white54),
-            filled: true,
-            fillColor: AppColors.cardDark,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _registryTokens.length,
-          itemBuilder: (context, index) {
-            final t = _registryTokens[index];
-            final isCertified = t['isCertified'] == true;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: AppColors.cardDark,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                leading: TokenIcon(
-                  tokenSymbol: t['symbol'] ?? '?',
-                  tokenImageUrl: t['imageUrl'],
-                  tokenAddress: t['contractAddress'],
-                  chainId: Provider.of<BlockchainService>(
-                    context,
-                    listen: false,
-                  ).activeChain.chainId,
-                  size: 32,
-                  isCertified: isCertified,
-                ),
-                title: Text(
-                  t['name'] ?? 'Unknown',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-                subtitle: Text(
-                  t['symbol'] ?? '',
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                trailing: Switch(
-                  value: isCertified,
-                  activeThumbColor: Colors.green,
-                  onChanged: (val) => _toggleVerification(t, val),
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    );
+        );
+      case 1:
+        return AdminStatsSection(stats: _stats, ops: _ops);
+      case 2:
+        return AdminOpsSection(ops: _ops);
+      case 3:
+        return AdminFeedbackSection(
+          feedbackItems: _feedbackItems,
+          onFilterChanged: (value) => _feedbackWalletFilter = value,
+          onSearch: _fetchFeedback,
+        );
+      case 4:
+        return AdminActionsSection(
+          onSendTestPush: _sendTestPush,
+          walletController: _testPushWalletController,
+          titleController: _testPushTitleController,
+          messageController: _testPushMessageController,
+          isLoading: _loading,
+        );
+      case 5:
+        return AdminPushSection(
+          onSendBroadcast: _sendBroadcast,
+          titleController: _pushTitleController,
+          messageController: _pushMessageController,
+          isLoading: _loading,
+        );
+      case 6:
+        return AdminMaintainersSection(
+          maintainers: _maintainers,
+          onAddMaintainer: _addMaintainer,
+          onDeactivateMaintainer: _deactivateMaintainer,
+          addressController: _maintainerAddressController,
+          nameController: _maintainerNameController,
+          isLoading: _loading,
+        );
+      case 7:
+        return AdminRegistrySection(
+          registryTokens: _registryTokens,
+          onToggleVerification: _toggleVerification,
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
