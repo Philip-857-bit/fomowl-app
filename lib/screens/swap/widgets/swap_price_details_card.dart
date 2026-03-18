@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/value_formatter.dart';
 
 class SwapPriceDetailsCard extends StatelessWidget {
@@ -46,7 +47,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   String _formatNetworkFee() {
     if (gaslessFeeCovered) {
-      return 'Covered by Owllet';
+      return '';
     }
     // Try backend-provided USD first
     double usd = feeAmountUsd;
@@ -65,21 +66,25 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       children: [
-        _buildDetailRow('Price', priceText),
+        _buildDetailRow(l.priceLabel, priceText, isPrice: true),
         const SizedBox(height: 12),
-        _buildDetailRow('Platform Fee', _formatFeeDisplay()),
+        _buildDetailRow(l.platformFeeLabel, _formatFeeDisplay()),
         const SizedBox(height: 12),
-        _buildDetailRow('Network Fee', _formatNetworkFee()),
+        _buildDetailRow(
+          l.networkFeeLabel,
+          gaslessFeeCovered ? l.coveredByOwllet : _formatNetworkFee(),
+        ),
         const SizedBox(height: 12),
-        _buildDetailRow('To Receive', receiveText),
+        _buildDetailRow(l.toReceiveLabel, receiveText),
       ],
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    final isPrice = label == 'Price' && value.contains(priceSeparator);
+  Widget _buildDetailRow(String label, String value, {bool isPrice = false}) {
+    final priceRow = isPrice && value.contains(priceSeparator);
     return Row(
       children: [
         Expanded(
@@ -97,7 +102,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
           flex: 5,
           child: Align(
             alignment: Alignment.centerRight,
-            child: isPrice
+            child: priceRow
                 ? _buildPriceText(value)
                 : Text(
                     value,

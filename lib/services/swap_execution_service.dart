@@ -115,8 +115,9 @@ class SwapExecutionService {
         );
       }
 
-      final data = jsonDecode(response.body);
-      final txData = data['transaction'] ?? data;
+      final decoded = jsonDecode(response.body);
+      final data = _asMap(decoded);
+      final txData = _asMap(data?['transaction']) ?? data;
       if (txData == null) {
         throw Exception('Backend returned null tx object');
       }
@@ -129,7 +130,7 @@ class SwapExecutionService {
 
       final gasPriceStr = txData['gasPrice']?.toString();
       final gasPrice = gasPriceStr != null
-          ? BigInt.tryParse(gasPriceStr)
+          ? _parseBigInt(gasPriceStr)
           : null;
       if (gasPrice == null) {
         throw Exception('Invalid or missing gasPrice in txData: $gasPriceStr');
@@ -142,7 +143,7 @@ class SwapExecutionService {
       final dataBytes = hexToBytes(dataStr.replaceFirst('0x', ''));
 
       final valueStr = txData['value']?.toString();
-      final valueWei = valueStr != null ? BigInt.tryParse(valueStr) : null;
+      final valueWei = valueStr != null ? _parseBigInt(valueStr) : null;
       if (valueWei == null) {
         throw Exception('Invalid or missing value in txData: $valueStr');
       }
@@ -152,7 +153,7 @@ class SwapExecutionService {
         data: dataBytes,
         value: EtherAmount.inWei(valueWei),
         gasPrice: EtherAmount.inWei(gasPrice),
-        maxGas: int.tryParse(txData['gas']?.toString() ?? ''),
+        maxGas: _parseInt(txData['gas']?.toString()),
       );
 
       final credentials = await _walletService.getCredentials();
@@ -217,15 +218,12 @@ class SwapExecutionService {
       }
 
       // 0x Gasless Payload Extraction
-      Map<String, dynamic>? eip712Data;
-      if (quoteData['trade'] != null && quoteData['trade']['eip712'] != null) {
-        eip712Data = quoteData['trade']['eip712'];
-      } else if (quoteData['permit2'] != null &&
-          quoteData['permit2']['eip712'] != null) {
-        eip712Data = quoteData['permit2']['eip712'];
-      } else if (quoteData['eip712'] != null) {
-        eip712Data = quoteData['eip712'];
-      }
+      final trade = _asMap(quoteData['trade']);
+      final permit2 = _asMap(quoteData['permit2']);
+      Map<String, dynamic>? eip712Data =
+          _asMap(trade?['eip712']) ??
+          _asMap(permit2?['eip712']) ??
+          _asMap(quoteData['eip712']);
 
       if (eip712Data == null) {
         throw Exception(
@@ -270,7 +268,10 @@ class SwapExecutionService {
         );
       }
 
-      final submitData = jsonDecode(submitResponse.body);
+      final submitData = _asMap(jsonDecode(submitResponse.body));
+      if (submitData == null) {
+        throw Exception('Backend submission response was malformed.');
+      }
       final String? transactionHash =
           submitData['transactionHash']?.toString() ??
           submitData['txHash']?.toString();
@@ -310,5 +311,37 @@ class SwapExecutionService {
       debugPrint('Error decoding backend message: $e');
     }
     return fallback;
+  }
+
+  Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map(
+        (key, entryValue) => MapEntry(key.toString(), entryValue),
+      );
+    }
+    return null;
+  }
+
+  /// Parse a numeric string that may be decimal ("1000000") or hex ("0x...").
+  static BigInt? _parseBigInt(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final trimmed = raw.trim();
+    if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+      return BigInt.tryParse(trimmed.substring(2), radix: 16);
+    }
+    return BigInt.tryParse(trimmed);
+  }
+
+  /// Parse an int from decimal or hex string.
+  static int? _parseInt(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final trimmed = raw.trim();
+    if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+      return int.tryParse(trimmed.substring(2), radix: 16);
+    }
+    return int.tryParse(trimmed);
   }
 }

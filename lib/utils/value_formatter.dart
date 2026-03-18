@@ -108,8 +108,9 @@ class ValueFormatter {
   static String formatUsdPrice(Decimal value) {
     final converted = _convertFromUsd(value);
     if (converted <= Decimal.zero) return '${_currencySymbol}0.00';
-    if (converted >= _thousand)
+    if (converted >= _thousand) {
       return '$_currencySymbol${_fixed(converted, 0)}';
+    }
     if (converted >= Decimal.one) {
       return '$_currencySymbol${_fixed(converted, 2)}';
     }

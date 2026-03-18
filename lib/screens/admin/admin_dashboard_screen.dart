@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../../constants/app_colors.dart';
 import '../../services/blockchain_service.dart';
 import '../../config/app_environment.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/token_icon.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -111,6 +112,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _addMaintainer() async {
+    final l = AppLocalizations.of(context);
     final address = _maintainerAddressController.text.trim();
     final name = _maintainerNameController.text.trim();
     if (address.isEmpty) return;
@@ -140,18 +142,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Maintainer added')));
+        ).showSnackBar(SnackBar(content: Text(l.adminMaintainerAdded)));
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to add maintainer')),
+          SnackBar(content: Text(l.adminMaintainerAddFailed)),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to add maintainer')));
+      ).showSnackBar(SnackBar(content: Text(l.adminMaintainerAddFailed)));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -160,6 +162,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _toggleVerification(dynamic token, bool verify) async {
+    final l = AppLocalizations.of(context);
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final url = AppEnvironment.blockchain(
@@ -187,19 +190,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _fetchRegistry();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(verify ? 'Token Verified' : 'Token Unverified'),
+            content: Text(
+              verify ? l.adminTokenVerified : l.adminTokenUnverified,
+            ),
           ),
         );
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update registry')),
+        SnackBar(content: Text(l.adminRegistryUpdateFailed)),
       );
     }
   }
 
   Future<void> _sendBroadcast() async {
+    final l = AppLocalizations.of(context);
     if (_pushTitleController.text.isEmpty ||
         _pushMessageController.text.isEmpty) {
       return;
@@ -231,7 +237,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Broadcast sent to ~${data['estimatedRecipients']} devices',
+              data['estimatedRecipients'] != null
+                  ? l.adminBroadcastSentToDevices(
+                      data['estimatedRecipients'].toString(),
+                    )
+                  : l.adminBroadcastSent,
             ),
           ),
         );
@@ -240,7 +250,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Broadcast failed')));
+      ).showSnackBar(SnackBar(content: Text(l.adminBroadcastFailed)));
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -250,13 +260,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Owllet Control Center',
+          l.adminControlCenter,
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -288,6 +299,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildHealthSection() {
+    final l = AppLocalizations.of(context);
     final status = (_stats?['health'] ?? _stats?['status'] ?? 'unknown')
         .toString();
     final latency = (_stats?['latencyMs'] ?? _stats?['latency_ms'] ?? '??')
@@ -317,14 +329,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'System Status: ${status.toUpperCase()}',
+                  '${l.adminSystemStatus}: ${status.toUpperCase()}',
                   style: GoogleFonts.outfit(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  'Backend Latency: ${latency}ms',
+                  '${l.adminBackendLatency}: ${latency}ms',
                   style: GoogleFonts.outfit(
                     color: Colors.white70,
                     fontSize: 13,
@@ -339,12 +351,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildStatsSection() {
+    final l = AppLocalizations.of(context);
     final s = _stats ?? const <String, dynamic>{};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'App Performance',
+          l.adminAppPerformance,
           style: GoogleFonts.outfit(
             color: Colors.white,
             fontSize: 18,
@@ -354,22 +367,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            _buildStatCard('DAU', s['dau']?.toString() ?? '0', Icons.people),
+            _buildStatCard(
+              l.adminRegistryTokens,
+              (s['token_registry_size'])?.toString() ?? '0',
+              Icons.local_offer_outlined,
+            ),
             const SizedBox(width: 12),
             _buildStatCard(
-              'Total Users',
+              l.adminTotalUsers,
               (s['totalUsers'] ?? s['users_count'])?.toString() ?? '0',
               Icons.person_add,
             ),
           ],
         ),
         const SizedBox(height: 12),
-        _buildStatCard(
-          'Total Transactions',
-          (s['totalTransactions'] ?? s['transactions_24h'])?.toString() ?? '0',
-          Icons.swap_horiz,
-          wide: true,
-          useExpanded: false,
+        Row(
+          children: [
+            _buildStatCard(
+              l.adminTransactions,
+              (s['totalTransactions'] ?? s['transactions_24h'])?.toString() ??
+                  '0',
+              Icons.swap_horiz,
+            ),
+            const SizedBox(width: 12),
+            _buildStatCard(
+              l.adminMaintainers,
+              (s['maintainers_count'])?.toString() ?? '0',
+              Icons.verified_user,
+            ),
+          ],
         ),
       ],
     );
@@ -412,6 +438,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildPushSection() {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -422,7 +449,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Global Broadcast',
+            l.adminGlobalBroadcast,
             style: GoogleFonts.outfit(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -433,7 +460,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             controller: _pushTitleController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Notification Title',
+              hintText: l.adminNotificationTitleHint,
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.black26,
@@ -449,7 +476,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             style: const TextStyle(color: Colors.white),
             maxLines: 2,
             decoration: InputDecoration(
-              hintText: 'Message Body',
+              hintText: l.adminMessageBodyHint,
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.black26,
@@ -467,7 +494,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentRed,
               ),
-              child: const Text('Send to All Users'),
+              child: Text(l.adminSendToAllUsers),
             ),
           ),
         ],
@@ -476,6 +503,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildMaintainersSection() {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -486,7 +514,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Maintainers',
+            l.adminMaintainers,
             style: GoogleFonts.outfit(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -497,7 +525,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             controller: _maintainerAddressController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Wallet Address',
+              hintText: l.adminWalletAddressHint,
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.black26,
@@ -512,7 +540,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             controller: _maintainerNameController,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Name (optional)',
+              hintText: l.adminNameOptionalHint,
               hintStyle: const TextStyle(color: Colors.white38),
               filled: true,
               fillColor: Colors.black26,
@@ -530,7 +558,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accentRed,
               ),
-              child: const Text('Add Maintainer'),
+              child: Text(l.adminAddMaintainer),
             ),
           ),
           if (_maintainers.isNotEmpty) ...[
@@ -563,11 +591,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildRegistrySection() {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Token Registry',
+          l.adminTokenRegistry,
           style: GoogleFonts.outfit(
             color: Colors.white,
             fontSize: 18,
@@ -582,7 +611,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           },
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
-            hintText: 'Search Registry...',
+            hintText: l.adminSearchRegistryHint,
             prefixIcon: const Icon(Icons.search, color: Colors.white54),
             filled: true,
             fillColor: AppColors.cardDark,

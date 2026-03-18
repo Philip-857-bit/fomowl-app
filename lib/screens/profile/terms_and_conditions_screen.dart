@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
+
 
 class TermsAndConditionsScreen extends StatelessWidget {
   const TermsAndConditionsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -29,7 +32,7 @@ class TermsAndConditionsScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Terms of Service',
+                    l.termsServiceTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 26,
                       fontWeight: FontWeight.w600,
@@ -47,55 +50,45 @@ class TermsAndConditionsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionCard(
-                      '1. Acceptance of Terms',
-                      'By installing or using Owllet you confirm that you are legally allowed to hold digital assets and that you accept these terms. '
-                          'If you disagree, uninstall the application immediately.',
+                      l.termsSection1Title,
+                      l.termsSection1Body,
                     ),
                     _buildSectionCard(
-                      '2. Self-Custody Responsibilities',
-                      'Owllet only generates keys and signs transactions locally. You control the mnemonic, derived wallets, approvals, and transactions. '
-                          'We cannot recover a forgotten passcode, seed phrase, or private key.',
+                      l.termsSection2Title,
+                      l.termsSection2Body,
                     ),
                     _buildSectionCard(
-                      '3. Blockchain Transactions & Fees',
-                      'Every transfer, approval, or swap you send is broadcast to the EVM network you selected. Gas estimates are best-effort and the final cost '
-                          'is determined by the network. You are responsible for verifying recipient addresses and paying all network fees.',
+                      l.termsSection3Title,
+                      l.termsSection3Body,
                     ),
                     _buildSectionCard(
-                      '4. Third-Party Services & Swaps',
-                      'The app relies on RPC providers (e.g., Alchemy and any custom RPC you add), CoinGecko, and public AMM routers such as Uniswap, QuickSwap, '
-                          'PancakeSwap, and SushiSwap. Service interruptions, inaccurate market data, or smart-contract bugs can cause losses or failed transactions. '
-                          'We do not audit tokens, pools, or smart contracts.',
+                      l.termsSection4Title,
+                      l.termsSection4Body,
                     ),
                     _buildSectionCard(
-                      '5. Compliance & Taxes',
-                      'You are solely responsible for determining whether your use of Owllet is legal in your jurisdiction and for paying any taxes or reporting obligations '
-                          'related to your digital-asset activity.',
+                      l.termsSection5Title,
+                      l.termsSection5Body,
                     ),
                     _buildSectionCard(
-                      '6. Prohibited Use',
-                      'You may not use the app for illicit activity, sanctions evasion, malware distribution, or to violate the terms of any blockchain, RPC provider, or applicable law. '
-                          'We reserve the right to disable access to network features that are abused.',
+                      l.termsSection6Title,
+                      l.termsSection6Body,
                     ),
                     _buildSectionCard(
-                      '7. Disclaimer of Warranties',
-                      'The app is provided "as is" and "as available" without warranties of any kind, express or implied. '
-                          'We do not guarantee that price data is accurate, that transactions will succeed, or that the software is error-free.',
+                      l.termsSection7Title,
+                      l.termsSection7Body,
                     ),
                     _buildSectionCard(
-                      '8. Limitation of Liability',
-                      'To the maximum extent permitted by law, we are not liable for lost funds, lost seed phrases, market losses, smart-contract exploits, indirect, incidental, or '
-                          'consequential damages arising out of your use of the app.',
+                      l.termsSection8Title,
+                      l.termsSection8Body,
                     ),
                     _buildSectionCard(
-                      '9. Changes & Contact',
-                      'We may update these terms as we launch new features or networks. Continued use after a change means you accept the new terms. '
-                          'Contact us on X (@fomowlhq) if you need clarification.',
+                      l.termsSection9Title,
+                      l.termsSection9Body,
                     ),
                     const SizedBox(height: 6),
                     Center(
                       child: Text(
-                        'Effective date: February 2026',
+                        l.termsEffectiveDate,
                         style: GoogleFonts.outfit(
                           fontSize: 12,
                           color: AppColors.textSecondary,

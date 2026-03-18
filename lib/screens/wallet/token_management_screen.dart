@@ -112,14 +112,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       final results = await blockchain.searchTokensFromBackend('', limit: 60);
       if (!mounted) return;
       setState(() {
-        _suggestedTokens = results.isNotEmpty
-            ? results
-            : List<Token>.from(_walletTokens);
+        _suggestedTokens = results;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _suggestedTokens = List<Token>.from(_walletTokens);
+        _suggestedTokens = [];
       });
     }
   }
@@ -551,6 +549,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     );
     final displayTokens = _buildDisplayList();
     final query = _query.trim().toLowerCase();
+    final showingSuggestions = query.isEmpty && _suggestedTokens.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -630,8 +629,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        query.isEmpty ? l.visibleTokens : l.searchResults,
+                        child: Text(
+                        query.isEmpty
+                            ? (showingSuggestions
+                                  ? l.suggestedTokens
+                                  : l.visibleTokens)
+                            : l.searchResults,
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -648,7 +651,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                             padding: const EdgeInsets.all(20),
                             child: Text(
                               query.isEmpty
-                                  ? l.noTokensDetectedYet
+                                  ? (showingSuggestions
+                                        ? l.noSuggestedTokensYet
+                                        : l.noTokensDetectedYet)
                                   : l.noMatchingTokensFound,
                               style: GoogleFonts.outfit(
                                 color: Colors.white38,

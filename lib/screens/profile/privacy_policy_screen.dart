@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
+
 
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -29,7 +32,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Privacy Policy',
+                    l.privacyPolicyTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 26,
                       fontWeight: FontWeight.w600,
@@ -47,47 +50,33 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionCard(
-                      '1. Overview',
-                      'Owllet is an EVM-only, self-custody wallet. All key generation and signing happen on your device '
-                          'using battle-tested BIP-39/BIP-32 libraries. We never run a centralized ledger or take possession of your assets.',
+                      l.privacySection1Title,
+                      l.privacySection1Body,
                     ),
                     _buildSectionCard(
-                      '2. Data Stored Locally',
-                      'We store the following items with Flutter Secure Storage or SharedPreferences on your device:\n'
-                          '• Wallet names, addresses, and derivation indexes\n'
-                          '• Encrypted private keys, seed phrase (if you save it), and your passcode hash\n'
-                          '• Biometric toggles plus language/UI preferences\n'
-                          'Deleting the app or clearing secure storage permanently removes this data. It never leaves your device.',
+                      l.privacySection2Title,
+                      l.privacySection2Body,
                     ),
                     _buildSectionCard(
-                      '3. Third-Party Services',
-                      'To display balances, price data, and execute swaps the app connects directly to:\n'
-                          '• RPC providers such as Alchemy and any custom RPC you add\n'
-                          '• CoinGecko for market data and charts\n'
-                          '• Public AMM routers (Uniswap, QuickSwap, PancakeSwap, SushiSwap, etc.) when you submit swaps or approvals\n'
-                          'These providers may log IP addresses or wallet activity under their own policies.',
+                      l.privacySection3Title,
+                      l.privacySection3Body,
                     ),
                     _buildSectionCard(
-                      '4. Device Permissions',
-                      'Camera access is used only for QR scanning. Biometric prompts (Face/Touch ID, fingerprint) are handled by the operating system; '
-                          'we receive only success/failure. We do not access your photos, contacts, microphone, or location.',
+                      l.privacySection4Title,
+                      l.privacySection4Body,
                     ),
                     _buildSectionCard(
-                      '5. Your Responsibilities',
-                      '• Back up your 12-word seed phrase offline and never share it\n'
-                          '• Verify destination addresses and approvals before signing\n'
-                          '• Keep your device updated, set a strong passcode, and enable biometrics\n'
-                          '• Understand that blockchain transactions are irreversible',
+                      l.privacySection5Title,
+                      l.privacySection5Body,
                     ),
                     _buildSectionCard(
-                      '6. Updates & Contact',
-                      'We may revise this notice as we add networks or features. The latest version is always available in the app. '
-                          'Reach us on X (@fomowlhq) if you have privacy questions.',
+                      l.privacySection6Title,
+                      l.privacySection6Body,
                     ),
                     const SizedBox(height: 6),
                     Center(
                       child: Text(
-                        'Last updated: February 2026',
+                        l.privacyLastUpdated,
                         style: GoogleFonts.outfit(
                           fontSize: 12,
                           color: AppColors.textSecondary,

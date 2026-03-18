@@ -11,13 +11,19 @@ class LanguageUtils {
     'fr',
     'zh',
     'ar',
+    'yo',
+    'ig',
+    'ha',
   };
   static const Map<String, String> languageNamesByCode = {
     'en': 'English',
     'es': 'Español',
     'fr': 'Français',
-    'zh': 'Chinese',
-    'ar': 'Arabic',
+    'zh': '中文',
+    'ar': 'العربية',
+    'yo': 'Yorùbá',
+    'ig': 'Igbo',
+    'ha': 'Hausa',
   };
 
   static String normalizeLanguageCode(String? raw) {
@@ -41,6 +47,9 @@ class LanguageUtils {
     if (lower.startsWith('span')) return 'es';
     if (lower.startsWith('fren')) return 'fr';
     if (lower.startsWith('chin') || lower.startsWith('zho')) return 'zh';
+    if (lower.startsWith('yor')) return 'yo';
+    if (lower.startsWith('igb')) return 'ig';
+    if (lower.startsWith('hau')) return 'ha';
 
     return fallbackLanguageCode;
   }

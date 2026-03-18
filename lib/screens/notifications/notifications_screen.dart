@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:intl/intl.dart';
-import '../../config/app_environment.dart';
+import '../../services/api_client.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/wallet_service.dart';
@@ -19,17 +17,36 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final WalletService _walletService = WalletService();
+  final ApiClient _apiClient = ApiClient();
   bool _isLoading = true;
   String? _errorMessage;
   List<_Notification> _notifications = [];
 
+  // Simple local cache for current session
+  static List<_Notification>? _cachedNotifications;
+  static DateTime? _lastFetchTime;
+
   @override
   void initState() {
     super.initState();
-    _fetchNotifications();
+    if (_cachedNotifications != null &&
+        _lastFetchTime != null &&
+        DateTime.now().difference(_lastFetchTime!) < const Duration(minutes: 5)) {
+      _notifications = _cachedNotifications!;
+      _isLoading = false;
+    } else {
+      _fetchNotifications();
+    }
   }
 
-  Future<void> _fetchNotifications() async {
+  Future<void> _fetchNotifications({bool isRefresh = false}) async {
+    if (!isRefresh) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
+
     try {
       final address = await _walletService.getCurrentWalletAddress();
       if (address == null) {
@@ -40,11 +57,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return;
       }
 
-      final url = AppEnvironment.notifications('/$address');
-      final response = await http.get(url).timeout(const Duration(seconds: 60));
+      final path = '/notifications/$address';
+      final response = await _apiClient.get(path);
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = response.data;
         final notifList = data['notifications'] as List<dynamic>? ?? [];
 
         final parsed = notifList.map((j) {
@@ -71,6 +88,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         setState(() {
           _notifications = parsed;
           _isLoading = false;
+          _cachedNotifications = parsed;
+          _lastFetchTime = DateTime.now();
         });
       } else {
         setState(() {
@@ -139,50 +158,67 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         ),
                       ),
                     )
-                  : _notifications.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.04),
-                                shape: BoxShape.circle,
+                  : RefreshIndicator(
+                      color: Colors.white,
+                      backgroundColor: AppColors.background,
+                      onRefresh: () => _fetchNotifications(isRefresh: true),
+                      child: _notifications.isEmpty
+                          ? SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: Container(
+                                height: MediaQuery.of(context).size.height * 0.7,
+                                alignment: Alignment.center,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(40),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        width: 100,
+                                        height: 100,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.04),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.notifications_off_outlined,
+                                          size: 48,
+                                          color: Colors.white.withValues(alpha: 0.15),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Text(
+                                        'No notifications yet',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Updates about transactions, security,\nand news will appear here.',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
+                                          color: Colors.white54,
+                                          height: 1.5,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Pull down to refresh',
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 12,
+                                          color: Colors.white24,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              child: Icon(
-                                Icons.notifications_off_outlined,
-                                size: 48,
-                                color: Colors.white.withValues(alpha: 0.15),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              'No notifications yet',
-                              style: GoogleFonts.outfit(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Updates about transactions, security,\nand news will appear here.',
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: Colors.white54,
-                                height: 1.5,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
+                            )
+                          : ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       separatorBuilder: (_, a) => const SizedBox(height: 10),
                       itemCount: _notifications.length,
@@ -241,6 +277,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         );
                       },
                     ),
+                  ),
             ),
           ],
         ),

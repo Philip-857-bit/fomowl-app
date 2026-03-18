@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../../../../models/token.dart';
 import '../../../../services/blockchain_service.dart';
 import '../../../../widgets/token_icon.dart';
@@ -20,11 +21,12 @@ class TokenSelectorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'SELECT TOKEN & NETWORK',
+          l.selectTokenAndNetwork,
           style: GoogleFonts.outfit(
             fontSize: 11,
             fontWeight: FontWeight.w500,
@@ -53,19 +55,22 @@ class TokenSelectorCard extends StatelessWidget {
                     isCertified: token!.isCertified,
                   ),
                 if (token != null) const SizedBox(width: 12),
-                Text(
-                  token?.symbol ?? 'Select',
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    token?.symbol ?? 'Select',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const Spacer(),
                 Row(
                   children: [
                     Text(
-                      'Network: ${blockchain.activeChain.name}',
+                      '${l.networkLabel}: ${blockchain.activeChain.name}',
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         color: Colors.white.withValues(alpha: 0.72),

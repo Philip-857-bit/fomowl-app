@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
 import 'swap_token_chip.dart';
@@ -28,6 +29,7 @@ class SwapToCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -39,7 +41,7 @@ class SwapToCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Swapping To:',
+            l.swapToLabel,
             style: GoogleFonts.outfit(
               fontSize: 13,
               color: Colors.white.withValues(alpha: 0.6),
@@ -62,7 +64,7 @@ class SwapToCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Calculating...',
+                            l.calculatingLabel,
                             style: GoogleFonts.outfit(
                               fontSize: 16,
                               color: Colors.white54,
@@ -91,7 +93,7 @@ class SwapToCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                ValueFormatter.formatUsdValue(
+                ValueFormatter.formatCurrencyWithGrouping(
                   ValueFormatter.decimalFromNum(usdValue),
                 ),
                 style: GoogleFonts.outfit(

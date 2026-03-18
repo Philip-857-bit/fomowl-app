@@ -15,6 +15,9 @@ import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../services/language_controller.dart';
 import '../../utils/app_error_utils.dart';
+import '../../utils/language_utils.dart';
+import '../../services/push_notification_registration_service.dart';
+
 import '../../widgets/bottom_navigation.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
@@ -42,6 +45,7 @@ class _DecentralizedProfileScreenState
   String _currency = 'USD';
   String _versionLabel = 'Owllet v1.0.0';
   bool _loading = true;
+  bool _isNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -83,16 +87,37 @@ class _DecentralizedProfileScreenState
     }
 
     if (!mounted) return;
+
+    final reg = await _storageService.getNotificationDeviceRegistration(_walletAddress);
+    final isNotificationsEnabled = reg != null && reg['token'] != null;
+
     setState(() {
       _walletName = walletName ?? 'Main Wallet';
       _walletAddress = walletAddress ?? '--';
       _currency = currency;
+      _isNotificationsEnabled = isNotificationsEnabled;
       _loading = false;
     });
   }
 
+  String _currencyDisplayName(String code, AppLocalizations l) {
+    switch (code) {
+      case 'USD':
+        return l.currencyUsd;
+      case 'EUR':
+        return l.currencyEur;
+      case 'GBP':
+        return l.currencyGbp;
+      case 'NGN':
+        return l.currencyNgn;
+      default:
+        return code;
+    }
+  }
+
   Future<void> _pickCurrency() async {
     final l = AppLocalizations.of(context);
+    final currencyController = context.read<CurrencyController>();
     final options = <String>['USD', 'EUR', 'GBP', 'NGN'];
     final selected = await showModalBottomSheet<String>(
       context: context,
@@ -126,7 +151,7 @@ class _DecentralizedProfileScreenState
             for (final item in options)
               ListTile(
                 title: Text(
-                  item,
+                  _currencyDisplayName(item, l),
                   style: GoogleFonts.outfit(color: Colors.white),
                 ),
                 trailing: _currency == item
@@ -141,7 +166,7 @@ class _DecentralizedProfileScreenState
     );
     if (selected == null || selected == _currency) return;
     if (!mounted) return;
-    await context.read<CurrencyController>().setCurrencyCode(selected);
+    await currencyController.setCurrencyCode(selected);
     if (!mounted) return;
     setState(() => _currency = selected);
   }
@@ -177,6 +202,7 @@ class _DecentralizedProfileScreenState
   }
 
   Future<void> _handleAdminTrigger() async {
+    final l = AppLocalizations.of(context);
     final secretController = TextEditingController();
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -223,26 +249,26 @@ class _DecentralizedProfileScreenState
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.cardDark,
           title: Text(
-            'Admin Secret',
+            l.adminControlCenter,
             style: GoogleFonts.outfit(color: Colors.white),
           ),
           content: TextField(
             controller: secretController,
             obscureText: true,
             style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Enter Admin Secret',
-              hintStyle: TextStyle(color: Colors.white54),
+            decoration: InputDecoration(
+              hintText: 'Enter admin secret',
+              hintStyle: const TextStyle(color: Colors.white54),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(l.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, secretController.text),
-              child: const Text('Enter'),
+              child: Text(l.continue_),
             ),
           ],
         ),
@@ -252,7 +278,7 @@ class _DecentralizedProfileScreenState
       if (trimmedSecret.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Admin secret is required')),
+          SnackBar(content: Text(l.adminSecretRequired)),
         );
         return;
       }
@@ -355,13 +381,38 @@ class _DecentralizedProfileScreenState
     Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
   }
 
+  Future<void> _handleNotificationToggle() async {
+    final l = AppLocalizations.of(context);
+    try {
+      final service = PushNotificationRegistrationService();
+      await service.syncForActiveWallet();
+      
+      final reg = await _storageService.getNotificationDeviceRegistration(_walletAddress);
+      final success = reg != null && reg['token'] != null;
+      
+      if (!mounted) return;
+      setState(() => _isNotificationsEnabled = success);
+      
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.notifications)),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to enable notifications: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     final localeName =
-        AppLocalizations.languageNames[l.locale.languageCode] ??
-        AppLocalizations.languageNames['en']!;
+        LanguageUtils.languageNamesByCode[Localizations.localeOf(context).languageCode] ??
+        LanguageUtils.languageNamesByCode['en']!;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -424,6 +475,7 @@ class _DecentralizedProfileScreenState
                           title: l.chooseYourLanguage,
                           trailing: _valueTrailing(localeName),
                           onTap: () async {
+                            final langController = context.read<LanguageController>();
                             final languageCode = await Navigator.push<String>(
                               context,
                               MaterialPageRoute(
@@ -432,8 +484,7 @@ class _DecentralizedProfileScreenState
                             );
                             if (!mounted) return;
                             if (languageCode != null) {
-                              await context
-                                  .read<LanguageController>()
+                              await langController
                                   .setLanguageCode(languageCode);
                               await _load();
                             }
@@ -463,6 +514,23 @@ class _DecentralizedProfileScreenState
                             context,
                             '/backup-seed-phrase',
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SettingsSectionHeader(title: l.notificationsSettings),
+                    SettingsGroupCard(
+                      children: [
+                        SettingsItemTile(
+                          icon: Icons.notifications_active_outlined,
+                          title: l.enablePushNotifications,
+                          subtitle: l.pushNotificationsDesc,
+                          trailing: Switch.adaptive(
+                            value: _isNotificationsEnabled,
+                            activeTrackColor: AppColors.primaryAccent,
+                            onChanged: (_) => _handleNotificationToggle(),
+                          ),
+                          onTap: _handleNotificationToggle,
                         ),
                       ],
                     ),

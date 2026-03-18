@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/language_utils.dart';
+
 
 /// Welcome Screen - Onboarding page after splash
 /// Shows language selector, welcome message, and wallet options
@@ -131,9 +133,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                               textAlign: TextAlign.center,
                               text: TextSpan(
                                 style: GoogleFonts.outfit(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
                                   color: Colors.white.withValues(alpha: 0.6),
+                                  height: 1.4,
                                 ),
                                 children: [
                                   TextSpan(text: l.continueAgreementPrefix),
@@ -148,7 +151,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                                       child: Text(
                                         l.termsOfUseLabel,
                                         style: GoogleFonts.outfit(
-                                          fontSize: 16,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  TextSpan(text: l.andLabel),
+                                  WidgetSpan(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/privacy-policy',
+                                        );
+                                      },
+                                      child: Text(
+                                        l.privacyPolicyLabel,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.white.withValues(
                                             alpha: 0.8,
@@ -207,9 +232,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(
-                    AppLocalizations.languageNames[AppLocalizations.of(
+                    LanguageUtils.languageNamesByCode[Localizations.localeOf(
                           context,
-                        ).locale.languageCode] ??
+                        ).languageCode] ??
                         AppLocalizations.of(context).chooseLanguage,
                     style: GoogleFonts.outfit(
                       fontSize: 16,

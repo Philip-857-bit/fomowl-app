@@ -193,7 +193,11 @@ class SwapService {
           .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = _asMap(jsonDecode(response.body));
+        if (data == null) {
+          _lastError = 'Swap quote response was malformed.';
+          return null;
+        }
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';
         final minAmountWei = data['minBuyAmount']?.toString() ?? dstAmountWei;
         final dstAmount = BigInt.tryParse(dstAmountWei) ?? BigInt.zero;
@@ -225,6 +229,7 @@ class SwapService {
           decimals,
           maxFractionDigits: math.min(decimals, 8),
         );
+        final transaction = _asMap(data['transaction']);
         return SwapQuote(
           amountOutWei: dstAmountWei,
           minAmountOutWei: minAmountWei,
@@ -244,11 +249,11 @@ class SwapService {
           platformFeeBps:
               int.tryParse(data['platformFeeBps']?.toString() ?? '100') ?? 100,
           platformFeeUsd: 0.0,
-          txTo: data['transaction']?['to']?.toString(),
-          txData: data['transaction']?['data']?.toString(),
-          txValue: data['transaction']?['value']?.toString(),
-          txGas: data['transaction']?['gas']?.toString(),
-          txGasPrice: data['transaction']?['gasPrice']?.toString(),
+          txTo: transaction?['to']?.toString(),
+          txData: transaction?['data']?.toString(),
+          txValue: transaction?['value']?.toString(),
+          txGas: transaction?['gas']?.toString(),
+          txGasPrice: transaction?['gasPrice']?.toString(),
         );
       } else {
         _lastError = _extractBackendMessage(
@@ -316,5 +321,17 @@ class SwapService {
       debugPrint('Error decoding backend message: $e');
     }
     return fallback;
+  }
+
+  Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map(
+        (key, entryValue) => MapEntry(key.toString(), entryValue),
+      );
+    }
+    return null;
   }
 }

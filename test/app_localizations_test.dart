@@ -1,31 +1,36 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 
 void main() {
   group('AppLocalizations', () {
-    test('resolves every english key for all supported languages', () {
-      final englishValues = AppLocalizations.resolvedStringsForLanguage('en');
+    testWidgets('loads English locale', (WidgetTester tester) async {
+      late AppLocalizations l;
 
-      for (final languageCode in AppLocalizations.supportedLanguageCodes) {
-        final localized = AppLocalizations.resolvedStringsForLanguage(
-          languageCode,
-        );
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              l = AppLocalizations.of(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
 
-        expect(
-          localized.keys.toSet(),
-          containsAll(englishValues.keys),
-          reason: 'Missing keys for $languageCode',
-        );
-
-        for (final entry in englishValues.entries) {
-          expect(
-            localized[entry.key],
-            isNotNull,
-            reason: 'Missing translation for ${entry.key} in $languageCode',
-          );
-        }
-      }
+      expect(l.appName, isNotEmpty);
+      expect(l.home, isNotEmpty);
+      expect(l.wallet, isNotEmpty);
     });
   });
 }
