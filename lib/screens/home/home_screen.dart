@@ -558,14 +558,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openTokenManager() async {
     await Navigator.pushNamed(context, '/token-management');
-    final chainId = _lastChainId;
-    if (chainId != null) {
-      await _loadHiddenTokens(chainId);
-    }
-    final address = await _walletService.getCurrentWalletAddress();
-    if (address != null) {
-      await _fetchRealBalances(address);
-    }
+    await _loadWalletData();
   }
 
   void _showNetworkSelector() {

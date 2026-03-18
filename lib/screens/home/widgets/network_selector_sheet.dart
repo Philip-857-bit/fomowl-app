@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/chain.dart';
 
 class NetworkSelectorSheet extends StatelessWidget {
@@ -20,6 +21,7 @@ class NetworkSelectorSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return ListView(
       shrinkWrap: true,
       children: [
@@ -37,7 +39,7 @@ class NetworkSelectorSheet extends StatelessWidget {
         const SizedBox(height: 16),
         Center(
           child: Text(
-            'Select Network',
+            l.selectNetwork,
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -97,7 +99,7 @@ class NetworkSelectorSheet extends StatelessWidget {
               ),
               icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
               label: Text(
-                'Add Custom Network',
+                l.addCustomNetwork,
                 style: GoogleFonts.outfit(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

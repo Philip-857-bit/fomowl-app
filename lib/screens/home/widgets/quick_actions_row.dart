@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 
 class QuickActionsRow extends StatelessWidget {
   final VoidCallback onReceive;
@@ -17,6 +18,7 @@ class QuickActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Row(
@@ -24,17 +26,17 @@ class QuickActionsRow extends StatelessWidget {
         children: [
           _QuickActionButton(
             icon: Icons.arrow_downward_rounded,
-            label: 'Receive',
+            label: l.receive,
             onTap: onReceive,
           ),
           _QuickActionButton(
             icon: Icons.arrow_upward_rounded,
-            label: 'Send',
+            label: l.send,
             onTap: onSend,
           ),
           _QuickActionButton(
             icon: Icons.swap_horiz_rounded,
-            label: 'Swap',
+            label: l.swap,
             onTap: onSwap,
           ),
         ],

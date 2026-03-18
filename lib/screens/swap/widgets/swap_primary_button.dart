@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SwapPrimaryButton extends StatelessWidget {
   final bool enabled;
@@ -19,6 +20,7 @@ class SwapPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GestureDetector(
       onTap: (enabled && !isBusy) ? onPressed : null,
       child: Container(
@@ -31,7 +33,7 @@ class SwapPrimaryButton extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            isBusy ? 'Processing...' : (label ?? 'Swap Now'),
+            isBusy ? l.loading : (label ?? l.swap),
             style: GoogleFonts.outfit(
               fontSize: 18,
               fontWeight: FontWeight.w600,

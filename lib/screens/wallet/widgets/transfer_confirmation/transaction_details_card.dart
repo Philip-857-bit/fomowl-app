@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class TransactionDetailsCard extends StatelessWidget {
   final String fromAddress;
@@ -31,6 +32,7 @@ class TransactionDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -39,15 +41,15 @@ class TransactionDetailsCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildDetailRow('From', fromAddress),
+          _buildDetailRow(l.swapFromLabel, fromAddress),
           _buildDivider(),
-          _buildDetailRow('To', toAddress),
+          _buildDetailRow(l.swapToLabel, toAddress),
           _buildDivider(),
-          _buildNetworkRow(network),
+          _buildNetworkRow(l.network, network),
           _buildDivider(),
           const SizedBox(height: 8),
           isLoadingGas
-              ? _buildGasLoading()
+                ? _buildGasLoading(l)
               : _buildFeeRow(
                   gasLabel,
                   gasValue,
@@ -109,14 +111,14 @@ class TransactionDetailsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildNetworkRow(String value) {
+  Widget _buildNetworkRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Network',
+            label,
             style: GoogleFonts.outfit(
               fontSize: 14,
               color: Colors.white.withValues(alpha: 0.6),
@@ -149,13 +151,13 @@ class TransactionDetailsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildGasLoading() {
+  Widget _buildGasLoading(AppLocalizations l) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Text(
-            'Gas Fee',
+            l.gasFee,
             style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60),
           ),
           const Spacer(),
@@ -169,7 +171,7 @@ class TransactionDetailsCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Estimating...',
+            l.loading,
             style: GoogleFonts.outfit(fontSize: 13, color: Colors.white38),
           ),
         ],

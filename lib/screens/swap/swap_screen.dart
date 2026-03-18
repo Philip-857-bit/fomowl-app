@@ -711,6 +711,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Future<void> _getQuote() async {
+    final l = AppLocalizations.of(context);
     if (_fromToken == null || _toToken == null) return;
     if (_tokensAreIdentical(_fromToken, _toToken)) {
       setState(() {
@@ -735,9 +736,7 @@ class _SwapScreenState extends State<SwapScreen> {
       isGasless: _isGasless,
     )) {
       setState(() {
-        _pricing = _isGasless
-            ? 'Gasless not supported on ${blockchain.activeChain.name}'
-            : 'Swap not supported on ${blockchain.activeChain.name}';
+        _pricing = l.networkError;
         _resetQuoteState();
         _isCalculating = false;
       });
@@ -745,7 +744,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     if (_isGaslessSourceUnsupported()) {
       setState(() {
-        _pricing = 'Gasless requires ERC-20 source token';
+        _pricing = l.networkError;
         _resetQuoteState();
         _isCalculating = false;
       });
@@ -760,7 +759,7 @@ class _SwapScreenState extends State<SwapScreen> {
       if (amountWei == null || amountWei == '0') {
         if (mounted && requestId == _quoteRequestId) {
           setState(() {
-            _pricing = 'Invalid amount';
+            _pricing = l.enterValidAmount;
             _resetQuoteState();
           });
         }
@@ -824,7 +823,7 @@ class _SwapScreenState extends State<SwapScreen> {
     } on TimeoutException {
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
-          _pricing = 'Quote timed out. Try again.';
+          _pricing = l.tryAgain;
           _resetQuoteState();
         });
       }
@@ -857,27 +856,28 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   void _executeSwap() async {
+    final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
-      _showError('Wallet not connected');
+      _showError(l.noActiveWalletFound);
       return;
     }
     final fromAmount = _parseDecimalAmount(_fromController.text);
     if (fromAmount <= Decimal.zero) {
-      _showError('Invalid amount');
+      _showError(l.enterValidAmount);
       return;
     }
     final fromToken = _fromToken;
     final toToken = _toToken;
     if (fromToken == null || toToken == null) {
-      _showError('Select tokens');
+      _showError(l.selectTokenTitle);
       return;
     }
     if (_tokensAreIdentical(fromToken, toToken)) {
-      _showError('Choose different tokens');
+      _showError(l.tryAgain);
       return;
     }
     if (_currentQuote == null) {
-      _showError('No quote available');
+      _showError(l.noQuoteAvailable);
       return;
     }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -887,13 +887,13 @@ class _SwapScreenState extends State<SwapScreen> {
     )) {
       _showError(
         _isGasless
-            ? 'Gasless swaps are not available on this network yet.'
-            : 'Swaps are not available on this network yet.',
+            ? l.networkError
+            : l.networkError,
       );
       return;
     }
     if (_isGaslessSourceUnsupported()) {
-      _showError('Gasless mode requires an ERC-20 source token.');
+      _showError(l.networkError);
       return;
     }
     final fromAmountWei = _toWeiAmount(
@@ -901,7 +901,7 @@ class _SwapScreenState extends State<SwapScreen> {
       fromToken.decimals,
     );
     if (fromAmountWei == null || fromAmountWei == '0') {
-      _showError('Invalid amount');
+      _showError(l.enterValidAmount);
       return;
     }
 
@@ -936,7 +936,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }) async {
     final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
-      progressController.setError('Wallet not connected');
+      progressController.setError(l.noActiveWalletFound);
       return false;
     }
     final quote = _currentQuote;
@@ -1001,7 +1001,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }) async {
     final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
-      progressController.setError('Wallet not connected');
+      progressController.setError(l.noActiveWalletFound);
       return;
     }
     final quote = _currentQuote;
@@ -1105,6 +1105,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     final fromAmount = _parseAmount(_fromController);
     final toAmount = _parseAmount(_toController);
@@ -1137,7 +1138,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     String? buttonLabel;
     if (hasQuote && !hasBalance) {
-      buttonLabel = 'Insufficient Balance';
+      buttonLabel = l.insufficientBalance;
     }
 
     return Scaffold(
@@ -1149,11 +1150,11 @@ class _SwapScreenState extends State<SwapScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Text(
-                'Swap',
-                style: TextStyle(
+                l.swap,
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,

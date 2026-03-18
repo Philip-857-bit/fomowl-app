@@ -217,44 +217,6 @@ class _DecentralizedProfileScreenState
     final l = AppLocalizations.of(context);
     final secretController = TextEditingController();
     try {
-      final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final chainId = blockchain.activeChain.chainId;
-      final walletAddress = await _walletService.getCurrentWalletAddress();
-      if (walletAddress == null || walletAddress.isEmpty) {
-        throw Exception(l.noActiveWalletFound);
-      }
-
-      final timestamp = DateTime.now().toUtc().toIso8601String();
-      final message =
-          'Owllet Admin Access\nWallet: $walletAddress\nChain: $chainId\nTimestamp: $timestamp';
-      final signature = await _walletService.signMessageForAddress(
-        walletAddress,
-        message,
-      );
-
-      final verifyResponse = await http
-          .post(
-            AppEnvironment.blockchain('/$chainId/admin/verify'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'walletAddress': walletAddress,
-              'message': message,
-              'signature': '0x$signature',
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (verifyResponse.statusCode != 200) {
-        if (verifyResponse.statusCode == 403) {
-          return;
-        }
-        final errorMessage = AppErrorUtils.backendMessage(
-          verifyResponse.body,
-          fallback: 'Admin access denied.',
-        );
-        throw Exception(errorMessage);
-      }
-
       if (!mounted) return;
       final secret = await showDialog<String>(
         context: context,
@@ -293,6 +255,52 @@ class _DecentralizedProfileScreenState
           context,
         ).showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
         return;
+      }
+
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final chainId = blockchain.activeChain.chainId;
+      final walletAddress = await _walletService.getCurrentWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) {
+        throw Exception(l.noActiveWalletFound);
+      }
+
+      final timestamp = DateTime.now().toUtc().toIso8601String();
+      final message =
+          'Owllet Admin Access\nWallet: $walletAddress\nChain: $chainId\nTimestamp: $timestamp';
+      final signature = await _walletService.signMessageForAddress(
+        walletAddress,
+        message,
+      );
+
+      final verifyResponse = await http
+          .post(
+            AppEnvironment.blockchain('/$chainId/admin/verify'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Secret': trimmedSecret,
+            },
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'message': message,
+              'signature': '0x$signature',
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (verifyResponse.statusCode != 200) {
+        if (verifyResponse.statusCode == 403) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l.adminSecretRequired)),
+            );
+          }
+          return;
+        }
+        final errorMessage = AppErrorUtils.backendMessage(
+          verifyResponse.body,
+          fallback: 'Admin access denied.',
+        );
+        throw Exception(errorMessage);
       }
 
       debugPrint(
@@ -398,6 +406,15 @@ class _DecentralizedProfileScreenState
   Future<void> _setNotificationsEnabled(bool enabled) async {
     final l = AppLocalizations.of(context);
     try {
+      if (!AppEnvironment.pushNotificationsEnabled) {
+        if (!mounted) return;
+        setState(() => _isNotificationsEnabled = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l.networkError}: Push is not configured.')),
+        );
+        return;
+      }
+
       final activeWalletAddress = await _walletService
           .getCurrentWalletAddress();
       if (activeWalletAddress == null || activeWalletAddress.isEmpty) {
@@ -414,6 +431,15 @@ class _DecentralizedProfileScreenState
           activeWalletAddress,
         );
         success = reg != null && reg['token'] != null;
+        if (!success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Notification permission or token registration is missing. Check device notification permission and Firebase config.',
+              ),
+            ),
+          );
+        }
       } else {
         await service.disableForActiveWallet();
         success = false;
@@ -611,6 +637,7 @@ class _DecentralizedProfileScreenState
                     const SizedBox(height: 22),
                     Center(
                       child: GestureDetector(
+                        onTap: _handleAdminTrigger,
                         onLongPress: _handleAdminTrigger,
                         child: Text(
                           _versionLabel,

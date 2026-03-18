@@ -67,22 +67,29 @@ class TokenSelectorCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                Row(
-                  children: [
-                    Text(
-                      '${l.networkLabel}: ${blockchain.activeChain.name}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.72),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${l.networkLabel}: ${blockchain.activeChain.name}',
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.72),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 12,
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
