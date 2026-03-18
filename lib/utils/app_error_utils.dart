@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class AppErrorUtils {
   AppErrorUtils._();
 
@@ -86,6 +88,19 @@ class AppErrorUtils {
     ])) {
       return fallback;
     }
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message']?.toString();
+        if (message != null && message.isNotEmpty) {
+          // Run the extracted message through the same sanitisation pipeline
+          // used for all user-visible error strings so that internal infra
+          // details (e.g. "dial tcp 10.0.0.5:5432: connection refused") are
+          // never exposed to users.
+          return userMessage(message, fallback: fallback);
+        }
+      }
+    } catch (_) {}
     return fallback;
   }
 

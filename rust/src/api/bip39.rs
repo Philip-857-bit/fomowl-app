@@ -5,7 +5,8 @@ pub fn generate_mnemonic() -> String {
     // Generate a new 12-word mnemonic phrase (128 bits of entropy)
     let mut entropy = [0u8; 16];
     rand::rng().fill_bytes(&mut entropy);
-    let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy).unwrap();
+    let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy)
+        .expect("16-byte (128-bit) entropy is always a valid BIP-39 entropy size");
     mnemonic.to_string()
 }
 

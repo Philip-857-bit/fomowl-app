@@ -10,7 +10,10 @@ import 'native_crypto.dart';
 /// Wallet Service
 /// Handles wallet creation, import, and key management
 class WalletService {
-  final StorageService _storage = StorageService();
+  WalletService({StorageService? storageService})
+    : _storage = storageService ?? StorageService();
+
+  final StorageService _storage;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
 
@@ -100,6 +103,11 @@ class WalletService {
       // Validate private key length (64 hex characters = 32 bytes)
       if (privateKey.length != 64) {
         throw Exception('Invalid private key length');
+      }
+
+      // Validate that the key contains only valid hex characters
+      if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
+        throw Exception('Invalid private key format: must be hexadecimal');
       }
 
       // Create credentials from private key

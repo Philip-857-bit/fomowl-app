@@ -52,9 +52,16 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success'] == true) {
-        final token = data['data']['token'];
+        final responseData = data['data'];
+        if (responseData is! Map<String, dynamic>) {
+          return {'success': false, 'error': 'Unexpected response format'};
+        }
+        final token = responseData['token']?.toString();
+        if (token == null || token.isEmpty) {
+          return {'success': false, 'error': 'Unexpected response format'};
+        }
         await saveToken(token);
-        return {'success': true, 'profile': data['data']['profile']};
+        return {'success': true, 'profile': responseData['profile']};
       } else {
         return {
           'success': false,
@@ -88,9 +95,16 @@ class AuthService {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success'] == true) {
-        final token = data['data']['token'];
+        final responseData = data['data'];
+        if (responseData is! Map<String, dynamic>) {
+          return {'success': false, 'error': 'Unexpected response format'};
+        }
+        final token = responseData['token']?.toString();
+        if (token == null || token.isEmpty) {
+          return {'success': false, 'error': 'Unexpected response format'};
+        }
         await saveToken(token);
-        return {'success': true, 'profile': data['data']['profile']};
+        return {'success': true, 'profile': responseData['profile']};
       } else {
         return {
           'success': false,
