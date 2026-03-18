@@ -432,5 +432,6 @@
   "currencyGbp": "Libra esterlina (GBP)",
   "currencyNgn": "Naira nigeriana (NGN)",
   "selectTokenAndNetwork": "SELECCIONAR TOKEN Y RED",
-  "networkLabel": "Red"
+  "networkLabel": "Red",
+  "noNotificationsYet": "Aún no hay notificaciones"
 }

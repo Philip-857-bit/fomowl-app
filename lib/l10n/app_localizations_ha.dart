@@ -1388,7 +1388,7 @@ class AppLocalizationsHa extends AppLocalizations {
   String get networkFeeLabel => 'Network Fee';
 
   @override
-  String get coveredByOwllet => 'Covered by Owllet';
+  String get coveredByOwllet => 'Owllet ne ya rufe';
 
   @override
   String get toReceiveLabel => 'To Receive';
@@ -1423,4 +1423,7 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get networkLabel => 'Cibiyar sadarwa';
+
+  @override
+  String get noNotificationsYet => 'Babu sanarwa tukuna';
 }

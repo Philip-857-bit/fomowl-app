@@ -1368,4 +1368,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get networkLabel => '网络';
+
+  @override
+  String get noNotificationsYet => '暂无通知';
 }

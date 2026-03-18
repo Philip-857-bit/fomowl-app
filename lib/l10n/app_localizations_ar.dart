@@ -1425,4 +1425,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get networkLabel => 'الشبكة';
+
+  @override
+  String get noNotificationsYet => 'لا توجد إشعارات بعد';
 }

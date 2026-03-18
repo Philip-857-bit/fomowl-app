@@ -46,9 +46,6 @@ class SwapPriceDetailsCard extends StatelessWidget {
   }
 
   String _formatNetworkFee() {
-    if (gaslessFeeCovered) {
-      return '';
-    }
     // Try backend-provided USD first
     double usd = feeAmountUsd;
     // If backend didn't provide USD, compute from native amount × native price

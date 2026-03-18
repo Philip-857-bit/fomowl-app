@@ -1433,4 +1433,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get networkLabel => 'Réseau';
+
+  @override
+  String get noNotificationsYet => 'Aucune notification pour le moment';
 }

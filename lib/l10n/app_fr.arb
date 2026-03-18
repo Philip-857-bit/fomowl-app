@@ -432,5 +432,6 @@
   "currencyGbp": "Livre sterling (GBP)",
   "currencyNgn": "Naira nigérian (NGN)",
   "selectTokenAndNetwork": "SÉLECTIONNER JETON ET RÉSEAU",
-  "networkLabel": "Réseau"
+  "networkLabel": "Réseau",
+  "noNotificationsYet": "Aucune notification pour le moment"
 }

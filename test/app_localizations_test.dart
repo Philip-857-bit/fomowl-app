@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 
@@ -21,6 +24,43 @@ class _TestWidgetsLocalizationsDelegate
 
 void main() {
   group('AppLocalizations', () {
+    test('all locale ARBs include every English key', () {
+      final l10nDir = Directory('lib/l10n');
+      final enFile = File('lib/l10n/app_en.arb');
+      expect(enFile.existsSync(), isTrue, reason: 'Missing app_en.arb');
+
+      final enMap =
+          jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;
+      final enKeys = enMap.keys
+          .where((key) => !key.startsWith('@'))
+          .where((key) => key != '@@locale')
+          .toSet();
+
+      final localeFiles =
+          l10nDir
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.arb'))
+              .where((file) => !file.path.endsWith('app_en.arb'))
+              .toList()
+            ..sort((a, b) => a.path.compareTo(b.path));
+
+      for (final file in localeFiles) {
+        final map = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final localeKeys = map.keys
+            .where((key) => !key.startsWith('@'))
+            .where((key) => key != '@@locale')
+            .toSet();
+        final missing = enKeys.difference(localeKeys);
+
+        expect(
+          missing,
+          isEmpty,
+          reason: '${file.path} missing keys: ${missing.join(', ')}',
+        );
+      }
+    });
+
     testWidgets('loads English locale', (WidgetTester tester) async {
       late AppLocalizations l;
 

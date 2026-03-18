@@ -84,19 +84,25 @@ class TokenPortfolioModule {
         ? await getTokenPrices(customPriceIds)
         : <String, double>{};
 
-    for (final custom in customTokens) {
-      final alreadyInList = merged.any(
+    final missingCustom = customTokens.where((custom) {
+      return !merged.any(
         (t) =>
             (t.contractAddress ?? '').toLowerCase() ==
             custom.address.toLowerCase(),
       );
-      if (alreadyInList) continue;
+    }).toList();
 
-      final bal = await getTokenBalance(
-        walletAddress,
-        custom.address,
-        custom.decimals,
-      );
+    final balanceByAddress =
+        await _fetchBalancesInBatches<CustomTokenDefinition>(
+          items: missingCustom,
+          addressOf: (custom) => custom.address,
+          decimalsOf: (custom) => custom.decimals,
+          walletAddress: walletAddress,
+          batchSize: 6,
+        );
+
+    for (final custom in missingCustom) {
+      final bal = balanceByAddress[custom.address.toLowerCase()] ?? 0.0;
       final price = (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
           ? 0.0
           : (customPrices[custom.coinGeckoId] ?? 0.0);
@@ -125,10 +131,10 @@ class TokenPortfolioModule {
   }
 
   Future<List<Token>> collectSupplementalKnownTokens({
-    required int chainId,
     required String walletAddress,
     required List<Token> existing,
     required List<Map<String, String>> knownTokens,
+    int maxResults = 8,
   }) async {
     final existingContracts = existing
         .map((t) => (t.contractAddress ?? '').toLowerCase())
@@ -149,11 +155,19 @@ class TokenPortfolioModule {
         ? await getTokenPrices(priceIds)
         : <String, double>{};
 
+    final balanceByAddress = await _fetchBalancesInBatches<Map<String, String>>(
+      items: candidates,
+      addressOf: (token) => token['address'] ?? '',
+      decimalsOf: (token) => int.tryParse(token['decimals'] ?? '') ?? 18,
+      walletAddress: walletAddress,
+      batchSize: 8,
+    );
+
     final results = <Token>[];
     for (final tDef in candidates) {
       final address = tDef['address']!;
       final decimals = int.tryParse(tDef['decimals'] ?? '') ?? 18;
-      final bal = await getTokenBalance(walletAddress, address, decimals);
+      final bal = balanceByAddress[address.toLowerCase()] ?? 0.0;
       if (bal <= 0) continue;
 
       final coinGeckoId = tDef['coinGeckoId'];
@@ -179,7 +193,46 @@ class TokenPortfolioModule {
           isCertified: tDef['isCertified'] == 'true',
         ),
       );
+
+      if (results.length >= maxResults) {
+        break;
+      }
     }
     return results;
+  }
+
+  Future<Map<String, double>> _fetchBalancesInBatches<T>({
+    required List<T> items,
+    required String Function(T item) addressOf,
+    required int Function(T item) decimalsOf,
+    required String walletAddress,
+    int batchSize = 6,
+  }) async {
+    final balances = <String, double>{};
+    if (items.isEmpty) return balances;
+
+    final effectiveBatchSize = batchSize <= 0 ? 1 : batchSize;
+    for (var index = 0; index < items.length; index += effectiveBatchSize) {
+      final end = (index + effectiveBatchSize).clamp(0, items.length);
+      final batch = items.sublist(index, end);
+
+      final batchResults = await Future.wait(
+        batch.map((item) async {
+          final address = addressOf(item);
+          final decimals = decimalsOf(item);
+          final balance = await getTokenBalance(
+            walletAddress,
+            address,
+            decimals,
+          );
+          return MapEntry(address.toLowerCase(), balance);
+        }),
+      );
+
+      for (final entry in batchResults) {
+        balances[entry.key] = entry.value;
+      }
+    }
+    return balances;
   }
 }

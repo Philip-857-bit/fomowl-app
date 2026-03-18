@@ -221,7 +221,7 @@ class _DecentralizedProfileScreenState
       final chainId = blockchain.activeChain.chainId;
       final walletAddress = await _walletService.getCurrentWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) {
-        throw Exception('No wallet connected');
+        throw Exception(l.noActiveWalletFound);
       }
 
       final timestamp = DateTime.now().toUtc().toIso8601String();

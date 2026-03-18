@@ -1382,7 +1382,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get networkFeeLabel => 'Network Fee';
 
   @override
-  String get coveredByOwllet => 'Covered by Owllet';
+  String get coveredByOwllet => 'Owllet kpuchiri ya';
 
   @override
   String get toReceiveLabel => 'To Receive';
@@ -1417,4 +1417,7 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get networkLabel => 'Netwọk';
+
+  @override
+  String get noNotificationsYet => 'Enweghị ọkwa ọ bụla ugbu a';
 }

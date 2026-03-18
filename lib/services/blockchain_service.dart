@@ -157,7 +157,8 @@ class BlockchainService extends ChangeNotifier {
   final Map<String, Future<List<Token>>> _walletTokensInFlight = {};
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
   Timer? _livePriceTimer;
-  final Set<String> _trackedPriceIds = {};
+  final Map<String, Set<String>> _trackedPriceIdsByScope = {};
+  final Map<String, Duration> _livePriceIntervalsByScope = {};
   Duration _livePriceInterval = const Duration(seconds: 10);
   bool _isLivePriceTicking = false;
   bool _initialized = false;
@@ -478,40 +479,30 @@ class BlockchainService extends ChangeNotifier {
   void setLivePriceTrackingForTokens(
     List<Token> tokens, {
     Duration interval = const Duration(seconds: 10),
+    String scope = 'default',
   }) {
-    _trackedPriceIds
-      ..clear()
-      ..addAll(
-        tokens
-            .map((t) => t.coinGeckoId)
-            .whereType<String>()
-            .where((id) => id.isNotEmpty),
-      );
+    final trackedIds = tokens
+        .map((t) => t.coinGeckoId)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
 
-    if (_trackedPriceIds.isEmpty) {
-      _stopLivePriceTimer();
+    if (trackedIds.isEmpty) {
+      _trackedPriceIdsByScope.remove(scope);
+      _livePriceIntervalsByScope.remove(scope);
+      _reconfigureLivePriceTimer();
       return;
     }
 
-    _livePriceInterval = interval;
-    _livePriceTimer?.cancel();
-
-    // Add jitter to start time to avoid thundering herd (all users refreshing at same time)
-    final jitter = _getJitter();
-    Future.delayed(jitter, () {
-      if (_trackedPriceIds.isNotEmpty) {
-        unawaited(_refreshTrackedTokenPrices());
-      }
-    });
-
-    _livePriceTimer = Timer.periodic(_livePriceInterval, (_) {
-      unawaited(_refreshTrackedTokenPrices());
-    });
+    _trackedPriceIdsByScope[scope] = trackedIds;
+    _livePriceIntervalsByScope[scope] = interval;
+    _reconfigureLivePriceTimer();
   }
 
-  void clearLivePriceTracking() {
-    _trackedPriceIds.clear();
-    _stopLivePriceTimer();
+  void clearLivePriceTracking({String scope = 'default'}) {
+    _trackedPriceIdsByScope.remove(scope);
+    _livePriceIntervalsByScope.remove(scope);
+    _reconfigureLivePriceTimer();
   }
 
   /// Refresh prices for given tokens — use in confirmation screens before signing
@@ -756,7 +747,8 @@ class BlockchainService extends ChangeNotifier {
   // ─── TOKEN LIST ──────────────────────────────────
 
   Future<List<Token>> fetchWalletTokens(String walletAddress) async {
-    final cacheKey = '${_activeChain.chainId}:${walletAddress.toLowerCase()}';
+    final requestedChainId = _activeChain.chainId;
+    final cacheKey = '$requestedChainId:${walletAddress.toLowerCase()}';
     final now = DateTime.now();
 
     final cached = _walletTokensCache[cacheKey];
@@ -772,7 +764,11 @@ class BlockchainService extends ChangeNotifier {
       return inFlight;
     }
 
-    final future = _fetchWalletTokensFresh(walletAddress, cacheKey);
+    final future = _fetchWalletTokensFresh(
+      walletAddress,
+      cacheKey,
+      requestedChainId,
+    );
     _walletTokensInFlight[cacheKey] = future;
     future.whenComplete(() => _walletTokensInFlight.remove(cacheKey));
     return future;
@@ -781,8 +777,12 @@ class BlockchainService extends ChangeNotifier {
   Future<List<Token>> _fetchWalletTokensFresh(
     String walletAddress,
     String cacheKey,
+    int requestedChainId,
   ) async {
-    final discovered = await _fetchWalletTokensFromBackend(walletAddress);
+    final discovered = await _fetchWalletTokensFromBackend(
+      walletAddress,
+      requestedChainId,
+    );
     if (discovered != null) {
       _lastDiscoverySource = discovered.source;
       _lastDiscoveryPartialFailure = discovered.partialFailure;
@@ -790,13 +790,20 @@ class BlockchainService extends ChangeNotifier {
       _lastDiscoveryMessage = discovered.message;
 
       // --- Enrich discovered tokens with CoinGecko prices when backend omits them ---
+      final nativeCoinGeckoId = allChains
+          .firstWhere(
+            (chain) => chain.chainId == requestedChainId,
+            orElse: () => _activeChain,
+          )
+          .coinGeckoId;
+
       final enriched = await _tokenPortfolioModule.enrichTokensWithPrices(
         discovered.tokens,
-        nativeCoinGeckoId: _activeChain.coinGeckoId,
+        nativeCoinGeckoId: nativeCoinGeckoId,
       );
 
       // Merge custom tokens that weren't discovered by the backend.
-      final customTokens = _customTokens[_activeChain.chainId] ?? const [];
+      final customTokens = _customTokens[requestedChainId] ?? const [];
       final merged = await _tokenPortfolioModule.mergeMissingCustomTokens(
         walletAddress: walletAddress,
         existing: enriched,
@@ -808,22 +815,23 @@ class BlockchainService extends ChangeNotifier {
       if (merged.length <= 1) {
         final supplemental = await _tokenPortfolioModule
             .collectSupplementalKnownTokens(
-              chainId: _activeChain.chainId,
               walletAddress: walletAddress,
               existing: merged,
-              knownTokens: _getWellKnownTokens(_activeChain.chainId),
+              knownTokens: _getWellKnownTokens(requestedChainId),
             );
         if (supplemental.isNotEmpty) {
           merged.addAll(supplemental);
         }
       }
 
-      _walletTokens = merged;
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
         tokens: List<Token>.from(merged),
         fetchedAt: DateTime.now(),
       );
-      notifyListeners();
+      if (_activeChain.chainId == requestedChainId) {
+        _walletTokens = merged;
+        notifyListeners();
+      }
       return merged;
     }
 
@@ -831,13 +839,17 @@ class BlockchainService extends ChangeNotifier {
     try {
       final nativeBalance = await getNativeBalance(walletAddress);
       final priceIds = <String>[];
-      final activeCoinGeckoId = _activeChain.coinGeckoId;
+      final requestedChain = allChains.firstWhere(
+        (chain) => chain.chainId == requestedChainId,
+        orElse: () => _activeChain,
+      );
+      final activeCoinGeckoId = requestedChain.coinGeckoId;
       if (activeCoinGeckoId != null && activeCoinGeckoId.isNotEmpty) {
         priceIds.add(activeCoinGeckoId);
       }
 
-      final builtInTokens = _getWellKnownTokens(_activeChain.chainId);
-      final customTokens = _customTokens[_activeChain.chainId] ?? const [];
+      final builtInTokens = _getWellKnownTokens(requestedChainId);
+      final customTokens = _customTokens[requestedChainId] ?? const [];
       for (var t in builtInTokens) {
         if (t['coinGeckoId'] != null && t['coinGeckoId']!.isNotEmpty) {
           priceIds.add(t['coinGeckoId']!);
@@ -857,8 +869,8 @@ class BlockchainService extends ChangeNotifier {
 
       tokens.add(
         Token(
-          symbol: _activeChain.symbol,
-          name: _activeChain.name,
+          symbol: requestedChain.symbol,
+          name: requestedChain.name,
           balance: nativeBalance,
           valueUsd: nativeBalance * nativePrice,
           priceUsd: nativePrice,
@@ -867,8 +879,8 @@ class BlockchainService extends ChangeNotifier {
               ? 0.0
               : (prices['${activeCoinGeckoId}_change'] ?? 0.0),
           imageUrl:
-              _activeChain.logoUrl ??
-              BlockchainCatalog.iconUrlForSymbol(_activeChain.symbol),
+              requestedChain.logoUrl ??
+              BlockchainCatalog.iconUrlForSymbol(requestedChain.symbol),
           coinGeckoId: activeCoinGeckoId,
           isCertified: true,
         ),
@@ -944,12 +956,14 @@ class BlockchainService extends ChangeNotifier {
       debugPrint('Error fetching tokens: $e');
     }
 
-    _walletTokens = tokens;
     _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
       tokens: List<Token>.from(tokens),
       fetchedAt: DateTime.now(),
     );
-    notifyListeners();
+    if (_activeChain.chainId == requestedChainId) {
+      _walletTokens = tokens;
+      notifyListeners();
+    }
     return tokens;
   }
 
@@ -1017,6 +1031,7 @@ class BlockchainService extends ChangeNotifier {
 
   Future<_BackendWalletTokensResponse?> _fetchWalletTokensFromBackend(
     String walletAddress,
+    int chainId,
   ) async {
     final now = DateTime.now();
     final discoveryBases = [AppEnvironment.blockchain('').toString()];
@@ -1043,7 +1058,7 @@ class BlockchainService extends ChangeNotifier {
           ? base.substring(0, base.length - 1)
           : base;
       final url = Uri.parse(
-        '$normalizedBase/${_activeChain.chainId}/wallet-tokens/$walletAddress',
+        '$normalizedBase/$chainId/wallet-tokens/$walletAddress',
       );
 
       try {
@@ -1126,9 +1141,8 @@ class BlockchainService extends ChangeNotifier {
   }
 
   Future<void> _refreshTrackedTokenPrices() async {
-    if (_isLivePriceTicking ||
-        _trackedPriceIds.isEmpty ||
-        _walletTokens.isEmpty) {
+    final trackedIds = _effectiveTrackedPriceIds;
+    if (_isLivePriceTicking || trackedIds.isEmpty || _walletTokens.isEmpty) {
       return;
     }
 
@@ -1136,7 +1150,7 @@ class BlockchainService extends ChangeNotifier {
     final startTime = DateTime.now();
 
     try {
-      final prices = await getTokenPrices(_trackedPriceIds.toList());
+      final prices = await getTokenPrices(trackedIds.toList());
       if (prices.isEmpty) return;
 
       bool changed = false;
@@ -1186,6 +1200,40 @@ class BlockchainService extends ChangeNotifier {
   void _stopLivePriceTimer() {
     _livePriceTimer?.cancel();
     _livePriceTimer = null;
+  }
+
+  Set<String> get _effectiveTrackedPriceIds {
+    final merged = <String>{};
+    for (final ids in _trackedPriceIdsByScope.values) {
+      merged.addAll(ids);
+    }
+    return merged;
+  }
+
+  void _reconfigureLivePriceTimer() {
+    final trackedIds = _effectiveTrackedPriceIds;
+    if (trackedIds.isEmpty) {
+      _stopLivePriceTimer();
+      return;
+    }
+
+    final interval = _livePriceIntervalsByScope.values.isEmpty
+        ? const Duration(seconds: 10)
+        : _livePriceIntervalsByScope.values.reduce((a, b) => a <= b ? a : b);
+
+    _livePriceInterval = interval;
+    _livePriceTimer?.cancel();
+
+    final jitter = _getJitter();
+    Future.delayed(jitter, () {
+      if (_effectiveTrackedPriceIds.isNotEmpty) {
+        unawaited(_refreshTrackedTokenPrices());
+      }
+    });
+
+    _livePriceTimer = Timer.periodic(_livePriceInterval, (_) {
+      unawaited(_refreshTrackedTokenPrices());
+    });
   }
 
   // ─── HELPERS ─────────────────────────────────────

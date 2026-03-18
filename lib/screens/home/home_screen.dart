@@ -39,6 +39,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const String _livePriceScope = 'home_screen';
   List<Token> _tokens = [];
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
@@ -96,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
-    _blockchain?.clearLivePriceTracking();
+    _blockchain?.clearLivePriceTracking(scope: _livePriceScope);
     _blockchain?.removeListener(_handleBlockchainChange);
     super.dispose();
   }
@@ -160,7 +161,10 @@ class _HomeScreenState extends State<HomeScreen> {
             _walletName = snapshot.walletName;
             _isUsingCachedData = true;
           });
-          blockchain.setLivePriceTrackingForTokens(_tokens);
+          blockchain.setLivePriceTrackingForTokens(
+            _tokens,
+            scope: _livePriceScope,
+          );
           debugPrint(
             '[OWLLET] Loaded cached snapshot: ${_tokens.length} tokens',
           );
@@ -335,7 +339,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoadingBalances = false;
           _isUsingCachedData = false;
         });
-        blockchain.setLivePriceTrackingForTokens(_tokens);
+        blockchain.setLivePriceTrackingForTokens(
+          _tokens,
+          scope: _livePriceScope,
+        );
         _calculateTotalBalance();
         _lastChainId = blockchain.activeChain.chainId;
 
@@ -399,7 +406,10 @@ class _HomeScreenState extends State<HomeScreen> {
           _totalBalance = snapshot.totalBalance;
           _isUsingCachedData = true;
         });
-        _blockchain?.setLivePriceTrackingForTokens(_tokens);
+        _blockchain?.setLivePriceTrackingForTokens(
+          _tokens,
+          scope: _livePriceScope,
+        );
       } else if (mounted) {
         setState(() {
           _tokens = [];

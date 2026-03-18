@@ -1386,7 +1386,7 @@ class AppLocalizationsYo extends AppLocalizations {
   String get networkFeeLabel => 'Network Fee';
 
   @override
-  String get coveredByOwllet => 'Covered by Owllet';
+  String get coveredByOwllet => 'Owllet ni yóò bo';
 
   @override
   String get toReceiveLabel => 'To Receive';
@@ -1421,4 +1421,7 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get networkLabel => 'Nẹtiwọ̀kì';
+
+  @override
+  String get noNotificationsYet => 'Ko si ìfitónilétí sibẹsibẹ';
 }

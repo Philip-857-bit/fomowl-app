@@ -41,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (address == null || address.isEmpty) {
       setState(() {
         _isLoading = false;
-        _errorMessage = l.connectionFailed;
+        _errorMessage = l.noActiveWalletFound;
       });
       return;
     }
@@ -61,6 +61,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _fetchNotifications({bool isRefresh = false}) async {
     final l = AppLocalizations.of(context);
+    if (!mounted) return;
     setState(() {
       _errorMessage = null;
       if (!isRefresh) {
@@ -70,10 +71,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     try {
       final address = await _walletService.getCurrentWalletAddress();
+      if (!mounted) return;
       if (address == null) {
         setState(() {
           _isLoading = false;
-          _errorMessage = l.connectionFailed;
+          _errorMessage = l.noActiveWalletFound;
         });
         return;
       }
@@ -84,6 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (response.statusCode == 200) {
         final rawData = response.data;
         if (rawData is! Map<String, dynamic>) {
+          if (!mounted) return;
           setState(() {
             _isLoading = false;
             _errorMessage = l.networkError;
@@ -111,13 +114,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           return _Notification(
             id: item['id']?.toString() ?? '',
-            title: item['title']?.toString() ?? 'Notification',
+            title: item['title']?.toString() ?? l.notifications,
             message: item['message']?.toString() ?? '',
             isRead: item['is_read'] == 1 || item['is_read'] == true,
             date: formatted,
           );
         }).toList();
 
+        if (!mounted) return;
         setState(() {
           _notifications = parsed;
           _isLoading = false;
@@ -128,6 +132,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           );
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
           _errorMessage = '${l.networkError} (${response.statusCode})';
@@ -232,7 +237,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       ),
                                       const SizedBox(height: 24),
                                       Text(
-                                        l.notifications,
+                                        l.noNotificationsYet,
                                         style: GoogleFonts.outfit(
                                           fontSize: 22,
                                           fontWeight: FontWeight.w600,

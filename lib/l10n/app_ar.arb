@@ -432,5 +432,6 @@
   "currencyGbp": "جنيه إسترليني (GBP)",
   "currencyNgn": "نيرا نيجيرية (NGN)",
   "selectTokenAndNetwork": "اختر الرمز والشبكة",
-  "networkLabel": "الشبكة"
+  "networkLabel": "الشبكة",
+  "noNotificationsYet": "لا توجد إشعارات بعد"
 }

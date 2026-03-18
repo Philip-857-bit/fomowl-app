@@ -432,5 +432,6 @@
   "currencyGbp": "British Pound (GBP)",
   "currencyNgn": "Nigerian Naira (NGN)",
   "selectTokenAndNetwork": "SELECT TOKEN & NETWORK",
-  "networkLabel": "Network"
+  "networkLabel": "Network",
+  "noNotificationsYet": "No notifications yet"
 }

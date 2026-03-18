@@ -435,5 +435,6 @@
   "iUnderstand": "我已了解",
   "noSeedPhraseStored": "此钱包未存储助记词",
   "seedPhraseCopied": "助记词已复制到剪贴板",
-  "backupSeedPhraseIntro": "你的 12 个单词恢复短语是找回钱包的唯一方式，如果你丢失手机或忘记密码。"
+  "backupSeedPhraseIntro": "你的 12 个单词恢复短语是找回钱包的唯一方式，如果你丢失手机或忘记密码。",
+  "noNotificationsYet": "暂无通知"
 }

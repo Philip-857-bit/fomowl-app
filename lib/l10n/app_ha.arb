@@ -421,7 +421,7 @@
   "priceLabel": "Price",
   "platformFeeLabel": "Platform Fee",
   "networkFeeLabel": "Network Fee",
-  "coveredByOwllet": "Covered by Owllet",
+  "coveredByOwllet": "Owllet ne ya rufe",
   "toReceiveLabel": "To Receive",
   "swapToLabel": "To",
   "calculatingLabel": "Calculating...",
@@ -432,5 +432,6 @@
   "currencyGbp": "Fam na Ingila (GBP)",
   "currencyNgn": "Naira (NGN)",
   "selectTokenAndNetwork": "ZAƁI TOKEN DA CIBIYAR SADARWA",
-  "networkLabel": "Cibiyar sadarwa"
+  "networkLabel": "Cibiyar sadarwa",
+  "noNotificationsYet": "Babu sanarwa tukuna"
 }

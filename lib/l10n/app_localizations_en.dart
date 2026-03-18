@@ -1427,4 +1427,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get networkLabel => 'Network';
+
+  @override
+  String get noNotificationsYet => 'No notifications yet';
 }

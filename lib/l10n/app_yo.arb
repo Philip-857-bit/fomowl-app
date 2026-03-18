@@ -421,7 +421,7 @@
   "priceLabel": "Price",
   "platformFeeLabel": "Platform Fee",
   "networkFeeLabel": "Network Fee",
-  "coveredByOwllet": "Covered by Owllet",
+  "coveredByOwllet": "Owllet ni yóò bo",
   "toReceiveLabel": "To Receive",
   "swapToLabel": "To",
   "calculatingLabel": "Calculating...",
@@ -432,5 +432,6 @@
   "currencyGbp": "Pọ́ọ̀ndì Gẹ̀ẹ́sì (GBP)",
   "currencyNgn": "Náírà (NGN)",
   "selectTokenAndNetwork": "YÀN TOKEN ÀTI NẸTIWỌ̀KÌ",
-  "networkLabel": "Nẹtiwọ̀kì"
+  "networkLabel": "Nẹtiwọ̀kì",
+  "noNotificationsYet": "Ko si ìfitónilétí sibẹsibẹ"
 }
