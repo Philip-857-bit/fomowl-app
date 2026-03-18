@@ -130,6 +130,7 @@ class _SwapScreenState extends State<SwapScreen> {
     );
     _transactionMonitor = TransactionMonitor();
     _loadWalletBalance();
+    _activateSwapLiveTracking();
   }
 
   Future<void> _loadWalletBalance() async {
@@ -167,6 +168,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     // Fetch live prices for all tokens with coinGeckoId to fill price gaps.
     await _refreshTokenPrices();
+    _activateSwapLiveTracking();
   }
 
   /// Fetches live prices from CoinGecko for tokens whose priceUsd is 0.
@@ -262,6 +264,8 @@ class _SwapScreenState extends State<SwapScreen> {
       // Refresh prices so USD values are immediately available for new token
       _refreshTokenPrices();
       _getQuote();
+      // Reactivate live tracking for new token pair
+      _activateSwapLiveTracking();
     }
   }
 
@@ -270,7 +274,27 @@ class _SwapScreenState extends State<SwapScreen> {
     _fromController.dispose();
     _toController.dispose();
     _debounceTimer?.cancel();
+    // Clear live price tracking when exiting swap screen
+    if (mounted) {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      blockchain.clearLivePriceTracking();
+    }
     super.dispose();
+  }
+
+  /// Activate live price tracking for swap tokens to ensure quote freshness
+  void _activateSwapLiveTracking() {
+    Future.microtask(() {
+      if (!mounted) return;
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      if (_fromToken != null && _toToken != null) {
+        // 5s refresh cadence for swap (hot - user actively trading)
+        blockchain.setLivePriceTrackingForTokens([
+          _fromToken!,
+          _toToken!,
+        ], interval: const Duration(seconds: 5));
+      }
+    });
   }
 
   void _setPercentage(int percent) {
@@ -816,6 +840,8 @@ class _SwapScreenState extends State<SwapScreen> {
         _isGasless = false;
       }
     });
+    // Reactivate live tracking for swapped token pair
+    _activateSwapLiveTracking();
   }
 
   void _executeSwap() async {

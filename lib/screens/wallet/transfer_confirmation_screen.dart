@@ -103,10 +103,13 @@ class _TransferConfirmationScreenState
         _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
 
     try {
-      final chain = Provider.of<BlockchainService>(
-        context,
-        listen: false,
-      ).activeChain;
+      // Refresh selected token price right before confirmation for accuracy
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final chain = blockchain.activeChain;
+      final token = _args?['token'] as Token?;
+      await blockchain.refreshPricesBeforeConfirmation(
+        token == null ? const [] : [token],
+      );
 
       final txHash = await _walletService.sendNativeTransaction(
         toAddress: toAddress,
