@@ -16,7 +16,7 @@ class CurrencyController extends ChangeNotifier {
   final HttpClientService _httpClient;
 
   static const _supportedCurrencies = {'USD', 'EUR', 'GBP', 'NGN'};
-  static const _frankfurterBaseUrl = 'https://api.frankfurter.dev/v1/latest';
+  static const _exchangeRatesBaseUrl = 'https://open.er-api.com/v6/latest/USD';
 
   String _currencyCode = 'USD';
   bool _initialized = false;
@@ -50,12 +50,7 @@ class CurrencyController extends ChangeNotifier {
 
   Future<void> _refreshRates() async {
     try {
-      final symbols = _supportedCurrencies
-          .where((code) => code != 'USD')
-          .join(',');
-      final uri = Uri.parse(
-        _frankfurterBaseUrl,
-      ).replace(queryParameters: {'base': 'USD', 'symbols': symbols});
+      final uri = Uri.parse(_exchangeRatesBaseUrl);
       final response = await _httpClient.client
           .get(uri)
           .timeout(const Duration(seconds: 8));
@@ -67,15 +62,21 @@ class CurrencyController extends ChangeNotifier {
       final rates = <String, double>{'USD': 1.0};
       if (decoded is Map<String, dynamic>) {
         final rawRates = decoded['rates'];
-        if (rawRates is Map<String, dynamic>) {
-          for (final entry in rawRates.entries) {
-            final value = entry.value;
-            if (value is num) {
-              rates[entry.key.toUpperCase()] = value.toDouble();
+        if (rawRates is Map) {
+          for (final code in _supportedCurrencies) {
+            if (code == 'USD') continue;
+            final value = rawRates[code];
+            if (value is num && value > 0) {
+              rates[code] = value.toDouble();
             }
           }
         }
       }
+
+      if (rates.length <= 1) {
+        return;
+      }
+
       ValueFormatter.updateUsdConversionRates(rates);
     } catch (_) {
       // Keep the last known rates or the default USD-only fallback.

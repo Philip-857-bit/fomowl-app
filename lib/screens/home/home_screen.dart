@@ -12,6 +12,7 @@ import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/currency_controller.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/nft_service.dart';
 import '../../services/push_notification_registration_service.dart';
@@ -586,6 +587,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.select<CurrencyController, String>((c) => c.currencyCode);
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     return Scaffold(

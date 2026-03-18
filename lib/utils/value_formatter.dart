@@ -39,14 +39,8 @@ class ValueFormatter {
 
   static String get currencyCode => _currencyCode;
 
-  static bool get _hasActiveCurrencyRate =>
-      _currencyCode == 'USD' || _usdConversionRates.containsKey(_currencyCode);
-
-  static String get _displayCurrencyCode =>
-      _hasActiveCurrencyRate ? _currencyCode : 'USD';
-
   static String get _currencySymbol =>
-      _currencySymbols[_displayCurrencyCode] ?? _currencySymbols['USD']!;
+      _currencySymbols[_currencyCode] ?? _currencySymbols['USD']!;
 
   static Decimal _convertFromUsd(Decimal value) {
     final rate = _usdConversionRates[_currencyCode];

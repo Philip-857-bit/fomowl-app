@@ -383,7 +383,11 @@ class BlockchainService extends ChangeNotifier {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
+        final decoded = jsonDecode(response.body);
+        final asMap = _asMap(decoded);
+        if (asMap != null) {
+          return asMap;
+        }
       }
     } catch (e) {
       debugPrint('Failed to fetch gas price from backend: $e');
@@ -426,6 +430,16 @@ class BlockchainService extends ChangeNotifier {
       'totalFeeUsd': totalFeeNative * nativePriceUsd,
       'totalFeeWei': totalFeeWei,
     };
+  }
+
+  Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map((key, entryValue) => MapEntry('$key', entryValue));
+    }
+    return null;
   }
 
   // ─── PRICE DATA DELEGATION ───────────────────────
@@ -585,7 +599,9 @@ class BlockchainService extends ChangeNotifier {
           .timeout(_backendDiscoveryTimeout);
       if (response.statusCode != 200) return null;
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final decoded = jsonDecode(response.body);
+      final data = _asMap(decoded);
+      if (data == null) return null;
       return TokenMarketData(
         priceUsd: _toDouble(data['priceUsd']),
         marketCapUsd: _nullableDouble(data['marketCapUsd']),

@@ -55,6 +55,72 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+
+      - name: Validate Firebase config for push
+        shell: bash
+        run: |
+          set -euo pipefail
+          enabled="$(printf '%s' "${PUSH_NOTIFICATIONS_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+          if [ "$enabled" != "true" ]; then
+            echo "Push notifications disabled for this build; skipping Firebase validation."
+            exit 0
+          fi
+
+          required=(
+            FIREBASE_API_KEY
+            FIREBASE_ANDROID_APP_ID
+            FIREBASE_MESSAGING_SENDER_ID
+            FIREBASE_PROJECT_ID
+          )
+
+          missing=0
+          for key in "${required[@]}"; do
+            value="${!key:-}"
+            if [ -z "$value" ]; then
+              echo "Missing required Firebase env: $key" >&2
+              missing=1
+            fi
+          done
+
+          if [ -z "${GOOGLE_SERVICES_JSON_BASE64:-}" ]; then
+            echo "Missing GOOGLE_SERVICES_JSON_BASE64 while push is enabled." >&2
+            missing=1
+          fi
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          tmp_json="$(mktemp)"
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > "$tmp_json"
+
+          if ! grep -q '"project_id"' "$tmp_json"; then
+            echo "google-services.json is malformed: missing project_id" >&2
+            exit 1
+          fi
+          if ! grep -q '"mobilesdk_app_id"' "$tmp_json"; then
+            echo "google-services.json is malformed: missing mobilesdk_app_id" >&2
+            exit 1
+          fi
+          if ! grep -q '"project_number"' "$tmp_json"; then
+            echo "google-services.json is malformed: missing project_number" >&2
+            exit 1
+          fi
+
+          if ! grep -q "\"project_id\"[[:space:]]*:[[:space:]]*\"${FIREBASE_PROJECT_ID}\"" "$tmp_json"; then
+            echo "FIREBASE_PROJECT_ID does not match google-services.json project_id" >&2
+            exit 1
+          fi
+          if ! grep -q "\"mobilesdk_app_id\"[[:space:]]*:[[:space:]]*\"${FIREBASE_ANDROID_APP_ID}\"" "$tmp_json"; then
+            echo "FIREBASE_ANDROID_APP_ID does not match google-services.json mobilesdk_app_id" >&2
+            exit 1
+          fi
+          if ! grep -q "\"project_number\"[[:space:]]*:[[:space:]]*\"${FIREBASE_MESSAGING_SENDER_ID}\"" "$tmp_json"; then
+            echo "FIREBASE_MESSAGING_SENDER_ID does not match google-services.json project_number" >&2
+            exit 1
+          fi
+
+          echo "Firebase validation passed."
           
       - name: Install Dependencies
         run: flutter pub get
