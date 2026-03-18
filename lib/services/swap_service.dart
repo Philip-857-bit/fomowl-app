@@ -214,7 +214,9 @@ class SwapService {
         final minAmount = BigInt.tryParse(minAmountWei) ?? dstAmount;
 
         // Extract decimal precision safely (fallback to swap input decimals if missing)
-        final rawDecimals = data['tokenMetadata']?['buyToken']?['decimals'];
+        final tokenMetadata = _asMap(data['tokenMetadata']);
+        final buyTokenMeta = _asMap(tokenMetadata?['buyToken']);
+        final rawDecimals = buyTokenMeta?['decimals'];
         final decimals = rawDecimals is int
             ? rawDecimals
             : int.tryParse(rawDecimals?.toString() ?? '') ?? buyTokenDecimals;

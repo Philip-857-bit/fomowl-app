@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
+import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/screens/onboarding/create_wallet_screen.dart';
 import 'package:fomowl_wallet/screens/onboarding/verify_phrase_screen.dart';
 import 'package:fomowl_wallet/screens/profile/backup_seed_phrase_screen.dart';
@@ -69,7 +70,7 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await tester.tap(find.text('Tap to reveal'));
       await tester.pump();
@@ -91,20 +92,20 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await _revealPhrase(tester);
       expect(find.text('I backed it up'), findsOneWidget);
 
       await tester.tap(find.text('Hide'));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
       expect(find.text('I backed it up'), findsNothing);
 
       await _revealPhrase(tester);
       expect(find.text('I backed it up'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
       expect(find.text('I backed it up'), findsNothing);
     });
 
@@ -122,7 +123,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
       expect(guard.enableCalls, 1);
 
       await _revealPhrase(tester);
@@ -147,13 +148,13 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       await _revealPhrase(tester);
       expect(find.text('I backed it up'), findsOneWidget);
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-      await tester.pumpAndSettle();
+      await _pumpUi(tester);
 
       expect(find.text('I backed it up'), findsNothing);
       expect(find.text('Tap to reveal'), findsOneWidget);
@@ -171,13 +172,13 @@ void main() {
             ),
           ),
         );
-        await tester.pumpAndSettle();
+        await _pumpUi(tester);
 
         await _revealPhrase(tester);
         expect(find.text('alpha'), findsOneWidget);
 
         await tester.tap(find.text('I backed it up'));
-        await tester.pumpAndSettle();
+        await _pumpUi(tester);
 
         expect(find.text('Confirm your backup'), findsOneWidget);
         expect(find.text('Hide'), findsNothing);
@@ -319,6 +320,11 @@ Future<void> _revealPhrase(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 250));
 }
 
+Future<void> _pumpUi(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 350));
+}
+
 Widget _wrap(Widget child) {
   return MaterialApp(
     localizationsDelegates: const [
@@ -336,6 +342,9 @@ class _FakeWalletService extends WalletService {
   _FakeWalletService(this.mnemonic);
 
   final String? mnemonic;
+
+  @override
+  Future<WalletAccount?> getActiveWalletAccount() async => null;
 
   @override
   Future<String?> getMnemonic() async => mnemonic;
