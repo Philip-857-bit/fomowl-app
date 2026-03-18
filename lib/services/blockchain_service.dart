@@ -519,6 +519,15 @@ class BlockchainService extends ChangeNotifier {
       // Merge custom tokens that weren't discovered by the backend.
       final customTokens = _customTokens[_activeChain.chainId] ?? const [];
       final merged = List<Token>.from(enriched);
+      final customPriceIds = customTokens
+          .where((c) => c.coinGeckoId != null && c.coinGeckoId!.isNotEmpty)
+          .map((c) => c.coinGeckoId!)
+          .toSet()
+          .toList();
+      final customPrices = customPriceIds.isNotEmpty
+          ? await getTokenPrices(customPriceIds)
+          : <String, double>{};
+
       for (final custom in customTokens) {
         final alreadyInList = merged.any(
           (t) =>
@@ -531,21 +540,14 @@ class BlockchainService extends ChangeNotifier {
           custom.address,
           custom.decimals,
         );
-        final priceIds = <String>[];
-        if (custom.coinGeckoId != null && custom.coinGeckoId!.isNotEmpty) {
-          priceIds.add(custom.coinGeckoId!);
-        }
-        final prices = priceIds.isNotEmpty
-            ? await getTokenPrices(priceIds)
-            : <String, double>{};
         final price =
             (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
             ? 0.0
-            : (prices[custom.coinGeckoId] ?? 0.0);
+            : (customPrices[custom.coinGeckoId] ?? 0.0);
         final change =
             (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
             ? 0.0
-            : (prices['${custom.coinGeckoId}_change'] ?? 0.0);
+            : (customPrices['${custom.coinGeckoId}_change'] ?? 0.0);
         merged.add(
           Token(
             symbol: custom.symbol,
@@ -562,6 +564,19 @@ class BlockchainService extends ChangeNotifier {
           ),
         );
       }
+
+      // If backend discovery yielded only native (or near-empty), supplement
+      // with a fast local known-token scan so the list does not collapse.
+      if (merged.length <= 1) {
+        final supplemental = await _collectSupplementalKnownTokens(
+          walletAddress,
+          existing: merged,
+        );
+        if (supplemental.isNotEmpty) {
+          merged.addAll(supplemental);
+        }
+      }
+
       _walletTokens = merged;
       notifyListeners();
       return merged;
@@ -864,6 +879,69 @@ class BlockchainService extends ChangeNotifier {
         isCertified: t.isCertified,
       );
     }).toList();
+  }
+
+  Future<List<Token>> _collectSupplementalKnownTokens(
+    String walletAddress, {
+    required List<Token> existing,
+  }) async {
+    final existingContracts = existing
+        .map((t) => (t.contractAddress ?? '').toLowerCase())
+        .toSet();
+    final knownTokens = _getWellKnownTokens(_activeChain.chainId).where((t) {
+      final address = (t['address'] ?? '').toLowerCase();
+      return address.isNotEmpty && !existingContracts.contains(address);
+    }).toList();
+    if (knownTokens.isEmpty) return const [];
+
+    final priceIds = knownTokens
+        .map((t) => t['coinGeckoId'])
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final prices = priceIds.isNotEmpty
+        ? await getTokenPrices(priceIds)
+        : <String, double>{};
+
+    final results = await Future.wait(
+      knownTokens.map((tDef) async {
+        final address = tDef['address']!;
+        final parsedDecimals = int.tryParse(tDef['decimals'] ?? '') ?? 18;
+        final bal = await getTokenBalance(
+          walletAddress,
+          address,
+          parsedDecimals,
+        );
+        if (bal <= 0) return null;
+
+        final coinGeckoId = tDef['coinGeckoId'];
+        final price = (coinGeckoId == null || coinGeckoId.isEmpty)
+            ? 0.0
+            : (prices[coinGeckoId] ?? 0.0);
+        final change = (coinGeckoId == null || coinGeckoId.isEmpty)
+            ? 0.0
+            : (prices['${coinGeckoId}_change'] ?? 0.0);
+
+        return Token(
+          symbol: tDef['symbol']!,
+          name: tDef['name']!,
+          contractAddress: address,
+          balance: bal,
+          valueUsd: bal * price,
+          priceUsd: price,
+          changePercent24h: change,
+          decimals: parsedDecimals,
+          imageUrl:
+              tDef['imageUrl'] ??
+              BlockchainCatalog.iconUrlForSymbol(tDef['symbol']!),
+          coinGeckoId: coinGeckoId,
+          isCertified: tDef['isCertified'] == 'true',
+        );
+      }),
+    );
+
+    return results.whereType<Token>().toList();
   }
 
   // ─── HELPERS ─────────────────────────────────────

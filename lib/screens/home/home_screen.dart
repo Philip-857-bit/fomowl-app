@@ -346,8 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _isLoadingBalances = false;
-          // Fallback: show native token with 0 balance so list isn't empty
-          if (_tokens.isEmpty) {
+          // Keep existing tokens on transient failures. Only inject a native
+          // placeholder when we truly have nothing to show.
+          if (_tokens.isEmpty && !_isUsingCachedData) {
             final chain = Provider.of<BlockchainService>(
               context,
               listen: false,
