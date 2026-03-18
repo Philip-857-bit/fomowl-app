@@ -96,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _blockchain?.clearLivePriceTracking();
     _blockchain?.removeListener(_handleBlockchainChange);
     super.dispose();
   }
@@ -159,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _walletName = snapshot.walletName;
             _isUsingCachedData = true;
           });
+          blockchain.setLivePriceTrackingForTokens(_tokens);
           debugPrint(
             '[OWLLET] Loaded cached snapshot: ${_tokens.length} tokens',
           );
@@ -323,6 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _isLoadingBalances = false;
           _isUsingCachedData = false;
         });
+        blockchain.setLivePriceTrackingForTokens(_tokens);
         _calculateTotalBalance();
         _lastChainId = blockchain.activeChain.chainId;
 
@@ -386,6 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _totalBalance = snapshot.totalBalance;
           _isUsingCachedData = true;
         });
+        _blockchain?.setLivePriceTrackingForTokens(_tokens);
       } else if (mounted) {
         setState(() {
           _tokens = [];

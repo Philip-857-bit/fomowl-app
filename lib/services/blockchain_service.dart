@@ -13,6 +13,7 @@ import 'token_price_service.dart';
 import 'storage_service.dart';
 import 'wallet_backend_auth_service.dart';
 import 'http_client_service.dart';
+import 'blockchain/token_portfolio_module.dart';
 
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
@@ -22,9 +23,11 @@ class BlockchainService extends ChangeNotifier {
   RpcService? _rpcService;
   TokenPriceService? _priceService;
   final HttpClientService _httpClientService = HttpClientService();
+  late final TokenPortfolioModule _tokenPortfolioModule;
 
   // Configuration Constants
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 15);
+  static const Duration _walletTokensCacheTtl = Duration(seconds: 25);
   final StorageService _storageService = StorageService();
   final WalletBackendAuthService _walletBackendAuthService =
       WalletBackendAuthService();
@@ -41,8 +44,22 @@ class BlockchainService extends ChangeNotifier {
   EvmChain _activeChain = builtInChains[0];
   final Map<int, List<CustomTokenDefinition>> _customTokens = {};
   List<Token> _walletTokens = [];
+  final Map<String, _WalletTokensCacheEntry> _walletTokensCache = {};
+  final Map<String, Future<List<Token>>> _walletTokensInFlight = {};
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
+  Timer? _livePriceTimer;
+  final Set<String> _trackedPriceIds = {};
+  Duration _livePriceInterval = const Duration(seconds: 10);
+  bool _isLivePriceTicking = false;
   bool _initialized = false;
+
+  BlockchainService() {
+    _tokenPortfolioModule = TokenPortfolioModule(
+      getTokenPrices: getTokenPrices,
+      getTokenBalance: getTokenBalance,
+      resolveIconUrl: BlockchainCatalog.iconUrlForSymbol,
+    );
+  }
 
   // Getters
   List<EvmChain> get allChains => [...builtInChains, ..._customChains];
@@ -319,6 +336,37 @@ class BlockchainService extends ChangeNotifier {
     return _priceService!.getTokenPrices(tokenIds);
   }
 
+  void setLivePriceTrackingForTokens(
+    List<Token> tokens, {
+    Duration interval = const Duration(seconds: 10),
+  }) {
+    _trackedPriceIds
+      ..clear()
+      ..addAll(
+        tokens
+            .map((t) => t.coinGeckoId)
+            .whereType<String>()
+            .where((id) => id.isNotEmpty),
+      );
+
+    if (_trackedPriceIds.isEmpty) {
+      _stopLivePriceTimer();
+      return;
+    }
+
+    _livePriceInterval = interval;
+    _livePriceTimer?.cancel();
+    _livePriceTimer = Timer.periodic(_livePriceInterval, (_) {
+      unawaited(_refreshTrackedTokenPrices());
+    });
+    unawaited(_refreshTrackedTokenPrices());
+  }
+
+  void clearLivePriceTracking() {
+    _trackedPriceIds.clear();
+    _stopLivePriceTimer();
+  }
+
   Future<TokenMarketData?> getTokenMarketData(String coinId) async {
     if (_priceService == null) return null;
     final data = await _priceService!.getTokenMarketData(coinId);
@@ -511,73 +559,68 @@ class BlockchainService extends ChangeNotifier {
   // ─── TOKEN LIST ──────────────────────────────────
 
   Future<List<Token>> fetchWalletTokens(String walletAddress) async {
+    final cacheKey = '${_activeChain.chainId}:${walletAddress.toLowerCase()}';
+    final now = DateTime.now();
+
+    final cached = _walletTokensCache[cacheKey];
+    if (cached != null &&
+        now.difference(cached.fetchedAt) < _walletTokensCacheTtl) {
+      _walletTokens = cached.tokens;
+      notifyListeners();
+      return cached.tokens;
+    }
+
+    final inFlight = _walletTokensInFlight[cacheKey];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _fetchWalletTokensFresh(walletAddress, cacheKey);
+    _walletTokensInFlight[cacheKey] = future;
+    future.whenComplete(() => _walletTokensInFlight.remove(cacheKey));
+    return future;
+  }
+
+  Future<List<Token>> _fetchWalletTokensFresh(
+    String walletAddress,
+    String cacheKey,
+  ) async {
     final discoveredTokens = await _fetchWalletTokensFromBackend(walletAddress);
     if (discoveredTokens != null) {
       // --- Enrich discovered tokens with CoinGecko prices when backend omits them ---
-      final enriched = await _enrichTokensWithPrices(discoveredTokens);
+      final enriched = await _tokenPortfolioModule.enrichTokensWithPrices(
+        discoveredTokens,
+        nativeCoinGeckoId: _activeChain.coinGeckoId,
+      );
 
       // Merge custom tokens that weren't discovered by the backend.
       final customTokens = _customTokens[_activeChain.chainId] ?? const [];
-      final merged = List<Token>.from(enriched);
-      final customPriceIds = customTokens
-          .where((c) => c.coinGeckoId != null && c.coinGeckoId!.isNotEmpty)
-          .map((c) => c.coinGeckoId!)
-          .toSet()
-          .toList();
-      final customPrices = customPriceIds.isNotEmpty
-          ? await getTokenPrices(customPriceIds)
-          : <String, double>{};
-
-      for (final custom in customTokens) {
-        final alreadyInList = merged.any(
-          (t) =>
-              (t.contractAddress ?? '').toLowerCase() ==
-              custom.address.toLowerCase(),
-        );
-        if (alreadyInList) continue;
-        final bal = await getTokenBalance(
-          walletAddress,
-          custom.address,
-          custom.decimals,
-        );
-        final price =
-            (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
-            ? 0.0
-            : (customPrices[custom.coinGeckoId] ?? 0.0);
-        final change =
-            (custom.coinGeckoId == null || custom.coinGeckoId!.isEmpty)
-            ? 0.0
-            : (customPrices['${custom.coinGeckoId}_change'] ?? 0.0);
-        merged.add(
-          Token(
-            symbol: custom.symbol,
-            name: custom.name,
-            contractAddress: custom.address,
-            balance: bal,
-            valueUsd: bal * price,
-            priceUsd: price,
-            changePercent24h: change,
-            decimals: custom.decimals,
-            imageUrl: custom.imageUrl,
-            coinGeckoId: custom.coinGeckoId,
-            isCertified: false,
-          ),
-        );
-      }
+      final merged = await _tokenPortfolioModule.mergeMissingCustomTokens(
+        walletAddress: walletAddress,
+        existing: enriched,
+        customTokens: customTokens,
+      );
 
       // If backend discovery yielded only native (or near-empty), supplement
       // with a fast local known-token scan so the list does not collapse.
       if (merged.length <= 1) {
-        final supplemental = await _collectSupplementalKnownTokens(
-          walletAddress,
-          existing: merged,
-        );
+        final supplemental = await _tokenPortfolioModule
+            .collectSupplementalKnownTokens(
+              chainId: _activeChain.chainId,
+              walletAddress: walletAddress,
+              existing: merged,
+              knownTokens: _getWellKnownTokens(_activeChain.chainId),
+            );
         if (supplemental.isNotEmpty) {
           merged.addAll(supplemental);
         }
       }
 
       _walletTokens = merged;
+      _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+        tokens: List<Token>.from(merged),
+        fetchedAt: DateTime.now(),
+      );
       notifyListeners();
       return merged;
     }
@@ -700,6 +743,10 @@ class BlockchainService extends ChangeNotifier {
     }
 
     _walletTokens = tokens;
+    _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+      tokens: List<Token>.from(tokens),
+      fetchedAt: DateTime.now(),
+    );
     notifyListeners();
     return tokens;
   }
@@ -828,120 +875,61 @@ class BlockchainService extends ChangeNotifier {
     }
   }
 
-  /// Batch-fetches CoinGecko prices for tokens missing price data and
-  /// returns a new list with enriched price/value fields.
-  Future<List<Token>> _enrichTokensWithPrices(List<Token> tokens) async {
-    // Collect coinGeckoIds that need pricing
-    final priceIds = <String>{};
-    final nativeCgId = _activeChain.coinGeckoId;
-    if (nativeCgId != null && nativeCgId.isNotEmpty) {
-      priceIds.add(nativeCgId);
+  Future<void> _refreshTrackedTokenPrices() async {
+    if (_isLivePriceTicking ||
+        _trackedPriceIds.isEmpty ||
+        _walletTokens.isEmpty) {
+      return;
     }
-    for (final t in tokens) {
-      final cgId = t.coinGeckoId;
-      if (cgId != null && cgId.isNotEmpty) {
-        priceIds.add(cgId);
+
+    _isLivePriceTicking = true;
+    try {
+      final prices = await getTokenPrices(_trackedPriceIds.toList());
+      if (prices.isEmpty) return;
+
+      bool changed = false;
+      final updated = _walletTokens.map((token) {
+        final id = token.coinGeckoId;
+        if (id == null || id.isEmpty) return token;
+
+        final nextPrice = prices[id];
+        if (nextPrice == null || nextPrice <= 0) return token;
+
+        final nextChange = prices['${id}_change'] ?? token.changePercent24h;
+        if ((nextPrice - token.priceUsd).abs() < 0.0000001 &&
+            (nextChange - token.changePercent24h).abs() < 0.0000001) {
+          return token;
+        }
+        changed = true;
+        return Token(
+          symbol: token.symbol,
+          name: token.name,
+          contractAddress: token.contractAddress,
+          balance: token.balance,
+          valueUsd: token.balance * nextPrice,
+          priceUsd: nextPrice,
+          changePercent24h: nextChange,
+          decimals: token.decimals,
+          imageUrl: token.imageUrl,
+          coinGeckoId: token.coinGeckoId,
+          isCertified: token.isCertified,
+        );
+      }).toList();
+
+      if (changed) {
+        _walletTokens = updated;
+        notifyListeners();
       }
+    } catch (_) {
+      // Keep existing prices when realtime refresh fails.
+    } finally {
+      _isLivePriceTicking = false;
     }
-    if (priceIds.isEmpty) return tokens;
-
-    final prices = await getTokenPrices(priceIds.toList());
-
-    return tokens.map((t) {
-      // Derive coinGeckoId — use token's own or fallback to chain native
-      final cgId = (t.coinGeckoId != null && t.coinGeckoId!.isNotEmpty)
-          ? t.coinGeckoId!
-          : (t.contractAddress == null && nativeCgId != null
-                ? nativeCgId
-                : null);
-      if (cgId == null) return t;
-
-      final price = prices[cgId] ?? 0.0;
-      final change = prices['${cgId}_change'] ?? t.changePercent24h;
-
-      // Skip enrichment only if token already has valid price AND the new
-      // price lookup returned nothing useful (avoids overwriting good data
-      // with zero).
-      if (t.priceUsd > 0 && t.valueUsd > 0 && price == 0) return t;
-      if (price == 0) return t;
-
-      return Token(
-        symbol: t.symbol,
-        name: t.name,
-        contractAddress: t.contractAddress,
-        balance: t.balance,
-        valueUsd: t.balance * price,
-        priceUsd: price,
-        changePercent24h: change,
-        decimals: t.decimals,
-        imageUrl: t.imageUrl,
-        coinGeckoId: t.coinGeckoId,
-        isCertified: t.isCertified,
-      );
-    }).toList();
   }
 
-  Future<List<Token>> _collectSupplementalKnownTokens(
-    String walletAddress, {
-    required List<Token> existing,
-  }) async {
-    final existingContracts = existing
-        .map((t) => (t.contractAddress ?? '').toLowerCase())
-        .toSet();
-    final knownTokens = _getWellKnownTokens(_activeChain.chainId).where((t) {
-      final address = (t['address'] ?? '').toLowerCase();
-      return address.isNotEmpty && !existingContracts.contains(address);
-    }).toList();
-    if (knownTokens.isEmpty) return const [];
-
-    final priceIds = knownTokens
-        .map((t) => t['coinGeckoId'])
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
-        .toSet()
-        .toList();
-    final prices = priceIds.isNotEmpty
-        ? await getTokenPrices(priceIds)
-        : <String, double>{};
-
-    final results = await Future.wait(
-      knownTokens.map((tDef) async {
-        final address = tDef['address']!;
-        final parsedDecimals = int.tryParse(tDef['decimals'] ?? '') ?? 18;
-        final bal = await getTokenBalance(
-          walletAddress,
-          address,
-          parsedDecimals,
-        );
-        if (bal <= 0) return null;
-
-        final coinGeckoId = tDef['coinGeckoId'];
-        final price = (coinGeckoId == null || coinGeckoId.isEmpty)
-            ? 0.0
-            : (prices[coinGeckoId] ?? 0.0);
-        final change = (coinGeckoId == null || coinGeckoId.isEmpty)
-            ? 0.0
-            : (prices['${coinGeckoId}_change'] ?? 0.0);
-
-        return Token(
-          symbol: tDef['symbol']!,
-          name: tDef['name']!,
-          contractAddress: address,
-          balance: bal,
-          valueUsd: bal * price,
-          priceUsd: price,
-          changePercent24h: change,
-          decimals: parsedDecimals,
-          imageUrl:
-              tDef['imageUrl'] ??
-              BlockchainCatalog.iconUrlForSymbol(tDef['symbol']!),
-          coinGeckoId: coinGeckoId,
-          isCertified: tDef['isCertified'] == 'true',
-        );
-      }),
-    );
-
-    return results.whereType<Token>().toList();
+  void _stopLivePriceTimer() {
+    _livePriceTimer?.cancel();
+    _livePriceTimer = null;
   }
 
   // ─── HELPERS ─────────────────────────────────────
@@ -1170,4 +1158,20 @@ class BlockchainService extends ChangeNotifier {
     final res = await _rpcCall('eth_sendRawTransaction', [signedTxHex]);
     return res as String?;
   }
+
+  @override
+  void dispose() {
+    _stopLivePriceTimer();
+    super.dispose();
+  }
+}
+
+class _WalletTokensCacheEntry {
+  final List<Token> tokens;
+  final DateTime fetchedAt;
+
+  const _WalletTokensCacheEntry({
+    required this.tokens,
+    required this.fetchedAt,
+  });
 }
