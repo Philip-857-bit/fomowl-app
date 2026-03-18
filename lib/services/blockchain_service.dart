@@ -15,6 +15,110 @@ import 'wallet_backend_auth_service.dart';
 import 'http_client_service.dart';
 import 'blockchain/token_portfolio_module.dart';
 
+class _CircuitBreakerState {
+  int failureCount = 0;
+  DateTime? lastFailureTime;
+  Duration currentBackoff;
+  final int failureThreshold;
+
+  _CircuitBreakerState({
+    this.currentBackoff = const Duration(seconds: 30),
+    this.failureThreshold = 3,
+  });
+
+  bool isOpen() {
+    if (lastFailureTime == null) return false;
+    final elapsed = DateTime.now().difference(lastFailureTime!);
+    if (elapsed >= currentBackoff) {
+      return false;
+    }
+    return failureCount >= failureThreshold;
+  }
+
+  void recordFailure(Duration maxBackoff) {
+    failureCount++;
+    lastFailureTime = DateTime.now();
+    currentBackoff = Duration(
+      seconds: (currentBackoff.inSeconds * 2)
+          .clamp(30, maxBackoff.inSeconds)
+          .toInt(),
+    );
+  }
+
+  void reset(Duration initialBackoff) {
+    failureCount = 0;
+    lastFailureTime = null;
+    currentBackoff = initialBackoff;
+  }
+}
+
+class _PerformanceMetrics {
+  int totalDiscoveryCalls = 0;
+  int successfulDiscoveryCalls = 0;
+  int failedDiscoveryCalls = 0;
+  final List<Duration> priceRefreshLatencies = [];
+  int priceRefreshCount = 0;
+  int tokenMismatchCount = 0;
+  int registryFallbackCount = 0;
+  final Map<String, int> endpointFailureCount = {};
+
+  double get discoverySuccessRate => totalDiscoveryCalls == 0
+      ? 0.0
+      : (successfulDiscoveryCalls / totalDiscoveryCalls) * 100;
+
+  Duration get avgPriceRefreshLatency {
+    if (priceRefreshLatencies.isEmpty) return Duration.zero;
+    final total = priceRefreshLatencies.fold<Duration>(
+      Duration.zero,
+      (sum, d) => sum + d,
+    );
+    return total ~/ priceRefreshLatencies.length;
+  }
+
+  void recordDiscoveryCall({
+    required bool success,
+    required bool usedFallback,
+  }) {
+    totalDiscoveryCalls++;
+    if (success) {
+      successfulDiscoveryCalls++;
+    } else {
+      failedDiscoveryCalls++;
+    }
+    if (usedFallback) {
+      registryFallbackCount++;
+    }
+  }
+
+  void recordPriceRefresh({required Duration latency}) {
+    priceRefreshCount++;
+    if (priceRefreshLatencies.length >= 100) {
+      priceRefreshLatencies.removeAt(0);
+    }
+    priceRefreshLatencies.add(latency);
+  }
+
+  void recordTokenMismatch() {
+    tokenMismatchCount++;
+  }
+
+  void recordEndpointFailure(String endpoint) {
+    endpointFailureCount[endpoint] = (endpointFailureCount[endpoint] ?? 0) + 1;
+  }
+
+  Map<String, dynamic> toJson() => {
+    'totalDiscoveryCalls': totalDiscoveryCalls,
+    'successfulDiscoveryCalls': successfulDiscoveryCalls,
+    'failedDiscoveryCalls': failedDiscoveryCalls,
+    'discoverySuccessRate': '${discoverySuccessRate.toStringAsFixed(1)}%',
+    'priceRefreshCount': priceRefreshCount,
+    'avgPriceRefreshLatencyMs': avgPriceRefreshLatency.inMilliseconds,
+    'tokenMismatchCount': tokenMismatchCount,
+    'registryFallbackCount': registryFallbackCount,
+    'endpointFailures': endpointFailureCount,
+  };
+}
+
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
 /// Now delegates core RPC and Price logic to specialized services.
@@ -28,7 +132,12 @@ class BlockchainService extends ChangeNotifier {
   // Configuration Constants
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 15);
   static const Duration _walletTokensCacheTtl = Duration(seconds: 25);
+  static const Duration _jitterMax = Duration(milliseconds: 100);
+  static const int _circuitBreakerFailureThreshold = 3;
+  static const Duration _circuitBreakerInitialBackoff = Duration(seconds: 30);
+  static const Duration _circuitBreakerMaxBackoff = Duration(minutes: 10);
   final StorageService _storageService = StorageService();
+
   final WalletBackendAuthService _walletBackendAuthService =
       WalletBackendAuthService();
 
@@ -53,6 +162,10 @@ class BlockchainService extends ChangeNotifier {
   bool _isLivePriceTicking = false;
   bool _initialized = false;
 
+  // Circuit Breaker State
+  final Map<String, _CircuitBreakerState> _circuitBreakers = {};
+  final _PerformanceMetrics _metrics = _PerformanceMetrics();
+
   String _lastDiscoverySource = 'unknown';
   bool _lastDiscoveryPartialFailure = false;
   int _lastDiscoveryTokenCount = 0;
@@ -66,6 +179,19 @@ class BlockchainService extends ChangeNotifier {
     );
   }
 
+  Duration _getJitter() {
+    final random = Random();
+    return Duration(
+      milliseconds: random.nextInt(_jitterMax.inMilliseconds + 1),
+    );
+  }
+
+  Duration _calculateBackoffWithJitter(int attemptNumber) {
+    final exponent = (attemptNumber - 1).clamp(0, 10);
+    final baseBackoff = Duration(seconds: 1 << exponent);
+    return baseBackoff + _getJitter();
+  }
+
   // Getters
   List<EvmChain> get allChains => [...builtInChains, ..._customChains];
   List<EvmChain> get customChains => _customChains;
@@ -77,6 +203,9 @@ class BlockchainService extends ChangeNotifier {
   bool get lastDiscoveryPartialFailure => _lastDiscoveryPartialFailure;
   int get lastDiscoveryTokenCount => _lastDiscoveryTokenCount;
   String? get lastDiscoveryMessage => _lastDiscoveryMessage;
+
+  /// Get performance metrics for observability (for logging/debugging)
+  Map<String, dynamic> get performanceMetrics => _metrics.toJson();
 
   List<Token> get tokens {
     if (_walletTokens.isNotEmpty) return _walletTokens;
@@ -366,15 +495,73 @@ class BlockchainService extends ChangeNotifier {
 
     _livePriceInterval = interval;
     _livePriceTimer?.cancel();
+
+    // Add jitter to start time to avoid thundering herd (all users refreshing at same time)
+    final jitter = _getJitter();
+    Future.delayed(jitter, () {
+      if (_trackedPriceIds.isNotEmpty) {
+        unawaited(_refreshTrackedTokenPrices());
+      }
+    });
+
     _livePriceTimer = Timer.periodic(_livePriceInterval, (_) {
       unawaited(_refreshTrackedTokenPrices());
     });
-    unawaited(_refreshTrackedTokenPrices());
   }
 
   void clearLivePriceTracking() {
     _trackedPriceIds.clear();
     _stopLivePriceTimer();
+  }
+
+  /// Refresh prices for given tokens — use in confirmation screens before signing
+  /// Ensures latest quotes before user executes swap or transfer
+  Future<void> refreshPricesBeforeConfirmation(List<Token> tokens) async {
+    if (tokens.isEmpty) return;
+    final coinIds = tokens
+        .map((t) => t.coinGeckoId)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toList();
+    if (coinIds.isEmpty) return;
+
+    try {
+      final prices = await getTokenPrices(coinIds);
+      if (prices.isEmpty) return;
+
+      final updated = _walletTokens.map((token) {
+        final id = token.coinGeckoId;
+        if (id == null || id.isEmpty) return token;
+
+        final nextPrice = prices[id];
+        if (nextPrice == null || nextPrice <= 0) return token;
+
+        final nextChange = prices['${id}_change'] ?? token.changePercent24h;
+        if ((nextPrice - token.priceUsd).abs() < 0.0000001 &&
+            (nextChange - token.changePercent24h).abs() < 0.0000001) {
+          return token;
+        }
+
+        return Token(
+          symbol: token.symbol,
+          name: token.name,
+          contractAddress: token.contractAddress,
+          balance: token.balance,
+          valueUsd: token.balance * nextPrice,
+          priceUsd: nextPrice,
+          changePercent24h: nextChange,
+          decimals: token.decimals,
+          imageUrl: token.imageUrl,
+          coinGeckoId: token.coinGeckoId,
+          isCertified: token.isCertified,
+        );
+      }).toList();
+
+      _walletTokens = updated;
+      notifyListeners();
+    } catch (_) {
+      // If refresh fails, proceed with existing prices
+    }
   }
 
   Future<TokenMarketData?> getTokenMarketData(String coinId) async {
@@ -826,14 +1013,29 @@ class BlockchainService extends ChangeNotifier {
     return parsed;
   }
 
-  // ─── BACKEND DISCOVERY (Kept here for simplicity) ──
+  // ─── BACKEND DISCOVERY WITH CIRCUIT BREAKER ───────
 
   Future<_BackendWalletTokensResponse?> _fetchWalletTokensFromBackend(
     String walletAddress,
   ) async {
     final now = DateTime.now();
     final discoveryBases = [AppEnvironment.blockchain('').toString()];
+
     for (final base in discoveryBases) {
+      // Circuit breaker check
+      final breaker = _circuitBreakers.putIfAbsent(
+        'discovery_$base',
+        () => _CircuitBreakerState(
+          currentBackoff: _circuitBreakerInitialBackoff,
+          failureThreshold: _circuitBreakerFailureThreshold,
+        ),
+      );
+
+      if (breaker.isOpen()) {
+        debugPrint('Circuit breaker OPEN for discovery endpoint $base');
+        continue;
+      }
+
       final backoff = _backendDiscoveryBackoffUntil[base];
       if (backoff != null && now.isBefore(backoff)) continue;
 
@@ -843,24 +1045,40 @@ class BlockchainService extends ChangeNotifier {
       final url = Uri.parse(
         '$normalizedBase/${_activeChain.chainId}/wallet-tokens/$walletAddress',
       );
+
       try {
         final response = await _httpClientService
             .sendWithRetry(() => _httpClientService.client.get(url))
             .timeout(_backendDiscoveryTimeout);
+
         if (response.statusCode == 200) {
           _backendDiscoveryBackoffUntil.remove(base);
-          return _parseBackendDiscoveredTokens(response.body);
+          breaker.reset(_circuitBreakerInitialBackoff);
+          final result = _parseBackendDiscoveredTokens(response.body);
+          _metrics.recordDiscoveryCall(
+            success: true,
+            usedFallback: result?.source != 'alchemy',
+          );
+          return result;
         }
+
+        // Non-200 response
+        breaker.recordFailure(_circuitBreakerMaxBackoff);
+        _metrics.recordEndpointFailure('discovery_$base');
         _backendDiscoveryBackoffUntil[base] = DateTime.now().add(
-          const Duration(seconds: 30),
+          _calculateBackoffWithJitter(breaker.failureCount),
         );
       } catch (e) {
         debugPrint('Backend discovery failed for $base: $e');
+        breaker.recordFailure(_circuitBreakerMaxBackoff);
+        _metrics.recordEndpointFailure('discovery_$base');
         _backendDiscoveryBackoffUntil[base] = DateTime.now().add(
-          const Duration(seconds: 45),
+          _calculateBackoffWithJitter(breaker.failureCount),
         );
       }
     }
+
+    _metrics.recordDiscoveryCall(success: false, usedFallback: false);
     return null;
   }
 
@@ -888,13 +1106,18 @@ class BlockchainService extends ChangeNotifier {
           )
           .toList();
 
+      final expectedCount = _toInt(discovery['tokenCount']) ?? tokens.length;
+      if (expectedCount != tokens.length) {
+        _metrics.recordTokenMismatch();
+      }
+
       return _BackendWalletTokensResponse(
         tokens: tokens,
         source: (discovery['source'] as String?)?.trim().isNotEmpty == true
             ? (discovery['source'] as String)
             : 'unknown',
         partialFailure: discovery['partialFailure'] == true,
-        tokenCount: _toInt(discovery['tokenCount']) ?? tokens.length,
+        tokenCount: expectedCount,
         message: (discovery['message'] as String?)?.trim(),
       );
     } catch (_) {
@@ -910,6 +1133,8 @@ class BlockchainService extends ChangeNotifier {
     }
 
     _isLivePriceTicking = true;
+    final startTime = DateTime.now();
+
     try {
       final prices = await getTokenPrices(_trackedPriceIds.toList());
       if (prices.isEmpty) return;
@@ -947,6 +1172,10 @@ class BlockchainService extends ChangeNotifier {
         _walletTokens = updated;
         notifyListeners();
       }
+
+      // Record latency metric
+      final latency = DateTime.now().difference(startTime);
+      _metrics.recordPriceRefresh(latency: latency);
     } catch (_) {
       // Keep existing prices when realtime refresh fails.
     } finally {
