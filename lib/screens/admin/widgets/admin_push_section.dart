@@ -10,12 +10,12 @@ class AdminPushSection extends StatefulWidget {
   final bool isLoading;
 
   const AdminPushSection({
-    Key? key,
+    super.key,
     required this.onSendBroadcast,
     required this.titleController,
     required this.messageController,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AdminPushSection> createState() => _AdminPushSectionState();

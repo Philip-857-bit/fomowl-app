@@ -10,13 +10,13 @@ class AdminStatCard extends StatelessWidget {
   final bool useExpanded;
 
   const AdminStatCard({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     required this.icon,
     this.wide = false,
     this.useExpanded = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

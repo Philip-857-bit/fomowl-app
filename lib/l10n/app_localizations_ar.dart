@@ -1037,7 +1037,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get hide => 'إإخفاء';
+  String get hide => 'إخفاء';
 
   @override
   String get noSeedPhraseAvailablePrivateKey =>

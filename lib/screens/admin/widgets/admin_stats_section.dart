@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import 'admin_stat_card.dart';
 
@@ -8,8 +7,7 @@ class AdminStatsSection extends StatelessWidget {
   final Map<String, dynamic>? stats;
   final Map<String, dynamic>? ops;
 
-  const AdminStatsSection({Key? key, required this.stats, required this.ops})
-    : super(key: key);
+  const AdminStatsSection({super.key, required this.stats, required this.ops});
 
   @override
   Widget build(BuildContext context) {

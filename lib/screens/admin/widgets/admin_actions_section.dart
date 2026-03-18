@@ -10,13 +10,13 @@ class AdminActionsSection extends StatefulWidget {
   final bool isLoading;
 
   const AdminActionsSection({
-    Key? key,
+    super.key,
     required this.onSendTestPush,
     required this.walletController,
     required this.titleController,
     required this.messageController,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AdminActionsSection> createState() => _AdminActionsSectionState();

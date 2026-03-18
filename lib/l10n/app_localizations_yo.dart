@@ -258,7 +258,7 @@ class AppLocalizationsYo extends AppLocalizations {
   String get gasFee => 'Owo Nẹtiwọọki';
 
   @override
-  String get transactionDetails => 'AWỌN细节IṢOWO';
+  String get transactionDetails => 'Awọn alaye ìṣòwò';
 
   @override
   String get closeLabel => 'Pa mọ';

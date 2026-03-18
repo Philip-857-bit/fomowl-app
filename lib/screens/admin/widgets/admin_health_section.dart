@@ -11,13 +11,13 @@ class AdminHealthSection extends StatelessWidget {
   final String? lastError;
 
   const AdminHealthSection({
-    Key? key,
+    super.key,
     required this.stats,
     required this.activeChainId,
     required this.adminWalletAddress,
     required this.backendBaseUrl,
     this.lastError,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

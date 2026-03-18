@@ -12,14 +12,14 @@ class AdminMaintainersSection extends StatefulWidget {
   final bool isLoading;
 
   const AdminMaintainersSection({
-    Key? key,
+    super.key,
     required this.maintainers,
     required this.onAddMaintainer,
     required this.onDeactivateMaintainer,
     required this.addressController,
     required this.nameController,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AdminMaintainersSection> createState() =>

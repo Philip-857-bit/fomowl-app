@@ -4,15 +4,31 @@ import '../../../constants/app_colors.dart';
 
 class AdminFeedbackSection extends StatefulWidget {
   final List<dynamic> feedbackItems;
+  final int page;
+  final int pageSize;
+  final int total;
+  final bool hasNext;
   final Function(String) onFilterChanged;
   final VoidCallback onSearch;
+  final VoidCallback? onPreviousPage;
+  final VoidCallback? onNextPage;
+  final VoidCallback onExportCsv;
+  final VoidCallback onExportJson;
 
   const AdminFeedbackSection({
-    Key? key,
+    super.key,
     required this.feedbackItems,
+    required this.page,
+    required this.pageSize,
+    required this.total,
+    required this.hasNext,
     required this.onFilterChanged,
     required this.onSearch,
-  }) : super(key: key);
+    required this.onPreviousPage,
+    required this.onNextPage,
+    required this.onExportCsv,
+    required this.onExportJson,
+  });
 
   @override
   State<AdminFeedbackSection> createState() => _AdminFeedbackSectionState();
@@ -72,6 +88,26 @@ class _AdminFeedbackSectionState extends State<AdminFeedbackSection> {
             ),
           ),
           const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                'Page ${widget.page} • ${widget.feedbackItems.length}/${widget.total}',
+                style: GoogleFonts.outfit(color: Colors.white60, fontSize: 12),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: widget.onExportCsv,
+                icon: const Icon(Icons.table_view, size: 16),
+                label: const Text('CSV'),
+              ),
+              TextButton.icon(
+                onPressed: widget.onExportJson,
+                icon: const Icon(Icons.data_object, size: 16),
+                label: const Text('JSON'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
           if (widget.feedbackItems.isEmpty)
             Text(
               'No feedback found.',
@@ -79,6 +115,22 @@ class _AdminFeedbackSectionState extends State<AdminFeedbackSection> {
             )
           else
             ..._buildFeedbackItems(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: widget.onPreviousPage,
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('Previous'),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: widget.onNextPage,
+                icon: const Icon(Icons.chevron_right),
+                label: const Text('Next'),
+              ),
+            ],
+          ),
         ],
       ),
     );

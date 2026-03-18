@@ -6,6 +6,7 @@ import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/app_error_utils.dart';
 
 /// Notifications Screen
 /// Lists withdrawal/transfer receipts, KYC status, etc.
@@ -33,13 +34,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _bootstrap() async {
+    final l = AppLocalizations.of(context);
     final address = await _walletService.getCurrentWalletAddress();
     if (!mounted) return;
 
     if (address == null || address.isEmpty) {
       setState(() {
         _isLoading = false;
-        _errorMessage = 'No wallet connected';
+        _errorMessage = l.connectionFailed;
       });
       return;
     }
@@ -58,19 +60,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> _fetchNotifications({bool isRefresh = false}) async {
-    if (!isRefresh) {
-      setState(() {
+    final l = AppLocalizations.of(context);
+    setState(() {
+      _errorMessage = null;
+      if (!isRefresh) {
         _isLoading = true;
-        _errorMessage = null;
-      });
-    }
+      }
+    });
 
     try {
       final address = await _walletService.getCurrentWalletAddress();
       if (address == null) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "No wallet connected";
+          _errorMessage = l.connectionFailed;
         });
         return;
       }
@@ -83,7 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         if (rawData is! Map<String, dynamic>) {
           setState(() {
             _isLoading = false;
-            _errorMessage = 'Received malformed notifications data.';
+            _errorMessage = l.networkError;
           });
           return;
         }
@@ -118,6 +121,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         setState(() {
           _notifications = parsed;
           _isLoading = false;
+          _errorMessage = null;
           _cacheByWallet[address.toLowerCase()] = _NotificationCacheEntry(
             notifications: parsed,
             fetchedAt: DateTime.now(),
@@ -126,14 +130,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _errorMessage = "Failed to load (${response.statusCode})";
+          _errorMessage = '${l.networkError} (${response.statusCode})';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = "Exception: $e";
+          _errorMessage = AppErrorUtils.userMessage(
+            e,
+            fallback: l.networkError,
+          );
         });
       }
     }

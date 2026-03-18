@@ -89,12 +89,19 @@ class _DecentralizedProfileScreenState
     if (!mounted) return;
 
     final normalizedWallet = walletAddress ?? '';
+    final pushPreference = normalizedWallet.isEmpty
+        ? null
+        : await _storageService.getPushNotificationsEnabledForWallet(
+            normalizedWallet,
+          );
     final reg = normalizedWallet.isEmpty
         ? null
         : await _storageService.getNotificationDeviceRegistration(
             normalizedWallet,
           );
-    final isNotificationsEnabled = reg != null && reg['token'] != null;
+    if (!mounted) return;
+    final isNotificationsEnabled =
+        pushPreference ?? (reg != null && reg['token'] != null);
 
     setState(() {
       _walletName = walletName ?? 'Main Wallet';
@@ -262,7 +269,7 @@ class _DecentralizedProfileScreenState
             obscureText: true,
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Enter admin secret',
+              hintText: l.adminSecretRequired,
               hintStyle: const TextStyle(color: Colors.white54),
             ),
           ),
@@ -302,9 +309,11 @@ class _DecentralizedProfileScreenState
     } catch (e, st) {
       debugPrint('Admin access failed: $e\n$st');
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Admin access failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppErrorUtils.userMessage(e, fallback: l.networkError)),
+        ),
+      );
     } finally {
       secretController.dispose();
     }
@@ -389,22 +398,36 @@ class _DecentralizedProfileScreenState
   Future<void> _setNotificationsEnabled(bool enabled) async {
     final l = AppLocalizations.of(context);
     try {
-      final service = PushNotificationRegistrationService();
-      if (enabled) {
-        await service.syncForActiveWallet();
-      } else {
-        await service.disableForActiveWallet();
+      final activeWalletAddress = await _walletService
+          .getCurrentWalletAddress();
+      if (activeWalletAddress == null || activeWalletAddress.isEmpty) {
+        if (!mounted) return;
+        setState(() => _isNotificationsEnabled = false);
+        return;
       }
 
-      final reg = await _storageService.getNotificationDeviceRegistration(
-        _walletAddress,
+      final service = PushNotificationRegistrationService();
+      var success = false;
+      if (enabled) {
+        await service.syncForActiveWallet();
+        final reg = await _storageService.getNotificationDeviceRegistration(
+          activeWalletAddress,
+        );
+        success = reg != null && reg['token'] != null;
+      } else {
+        await service.disableForActiveWallet();
+        success = false;
+      }
+
+      await _storageService.setPushNotificationsEnabledForWallet(
+        activeWalletAddress,
+        enabled && success,
       );
-      final success = reg != null && reg['token'] != null;
 
       if (!mounted) return;
-      setState(() => _isNotificationsEnabled = success);
+      setState(() => _isNotificationsEnabled = enabled && success);
 
-      if (success) {
+      if (enabled && success) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(l.notifications)));
@@ -412,7 +435,9 @@ class _DecentralizedProfileScreenState
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to enable notifications: $e')),
+        SnackBar(
+          content: Text(AppErrorUtils.userMessage(e, fallback: l.networkError)),
+        ),
       );
     }
   }

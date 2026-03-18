@@ -202,6 +202,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _safeSyncPushRegistration() async {
     try {
+      final walletAddress = await _walletService.getCurrentWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) {
+        return;
+      }
+      final pushEnabled = await _storage.getPushNotificationsEnabledForWallet(
+        walletAddress,
+      );
+      if (pushEnabled == false) {
+        return;
+      }
       await _pushRegistrationService.syncForActiveWallet();
     } catch (error, stackTrace) {
       debugPrint('Push registration failed during home load: $error');
@@ -639,7 +649,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ?.isNotEmpty ==
                                             true
                                         ? blockchain.lastDiscoveryMessage!
-                                        : 'Partial token discovery mode is active. Prices/balances may be delayed.',
+                                        : l.networkError,
                                     style: const TextStyle(
                                       color: Color(0xFFFFE7C2),
                                       fontSize: 12,

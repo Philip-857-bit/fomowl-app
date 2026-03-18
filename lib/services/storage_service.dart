@@ -43,6 +43,7 @@ class StorageService {
   static const String _keyLockOnBackground = 'lock_on_background';
   static const String _keyBackendSessionPrefix = 'backend_session_';
   static const String _keyNotificationDevicePrefix = 'notification_device_';
+  static const String _keyPushPreferencePrefix = 'push_pref_';
 
   static const int maxFailedAttempts = 5;
   // 60-second lockout after maxFailedAttempts consecutive wrong passcode
@@ -190,6 +191,26 @@ class StorageService {
 
   Future<void> clearNotificationDeviceRegistration(String walletAddress) {
     return _secureStore.delete(key: _notificationDeviceKey(walletAddress));
+  }
+
+  Future<void> setPushNotificationsEnabledForWallet(
+    String walletAddress,
+    bool enabled,
+  ) {
+    return _secureStore.write(
+      key: _pushPreferenceKey(walletAddress),
+      value: enabled ? '1' : '0',
+    );
+  }
+
+  Future<bool?> getPushNotificationsEnabledForWallet(
+    String walletAddress,
+  ) async {
+    final raw = await _secureStore.read(key: _pushPreferenceKey(walletAddress));
+    if (raw == null || raw.isEmpty) return null;
+    if (raw == '1') return true;
+    if (raw == '0') return false;
+    return null;
   }
 
   Future<void> deleteWallet() async {
@@ -367,6 +388,9 @@ class StorageService {
 
   String _notificationDeviceKey(String address) =>
       '$_keyNotificationDevicePrefix${address.toLowerCase()}';
+
+  String _pushPreferenceKey(String address) =>
+      '$_keyPushPreferencePrefix${address.toLowerCase()}';
 
   Future<void> savePasscode(String passcode) async {
     await _secureStore.write(

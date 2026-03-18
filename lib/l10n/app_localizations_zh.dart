@@ -99,7 +99,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tokens => '代币';
 
   @override
-  String get nfts => 'NFTs';
+  String get nfts => 'NFT';
 
   @override
   String get loadingBalances => '加载余额中...';
@@ -369,555 +369,528 @@ class AppLocalizationsZh extends AppLocalizations {
   String get actionRequired => '需要操作';
 
   @override
-  String get sendToken => 'Send Token';
+  String get sendToken => '发送代币';
 
   @override
-  String get enterReceivingAddress => 'Please enter a receiving address';
+  String get enterReceivingAddress => '请输入收款地址';
 
   @override
-  String get invalidEthereumAddress => 'Invalid Ethereum address';
+  String get invalidEthereumAddress => '无效的以太坊地址';
 
   @override
-  String get enterValidAmount => 'Please enter a valid amount';
+  String get enterValidAmount => '请输入有效金额';
 
   @override
-  String get insufficientBalance => 'Insufficient balance';
+  String get insufficientBalance => '余额不足';
 
   @override
-  String get createPasscodeTitle => 'Create Passcode';
+  String get createPasscodeTitle => '创建密码';
 
   @override
-  String get createPasscodeDescription =>
-      'Enter a 6 digit code that only you can remember';
+  String get createPasscodeDescription => '请输入一个只有你记得的 6 位数字密码';
 
   @override
-  String get confirmPasscodeTitle => 'Confirm Passcode';
+  String get confirmPasscodeTitle => '确认密码';
 
   @override
-  String get confirmPasscodeDescription =>
-      'Confirm the digits you entered if they are correct';
+  String get confirmPasscodeDescription => '请确认你输入的数字是否正确';
 
   @override
-  String get failedToSavePasscode => 'Failed to save passcode';
+  String get failedToSavePasscode => '保存密码失败';
 
   @override
-  String get passcodesDoNotMatch => 'Passcodes do not match. Please try again.';
+  String get passcodesDoNotMatch => '两次输入的密码不一致，请重试。';
 
   @override
-  String get unlockWalletReason => 'Unlock your wallet';
+  String get unlockWalletReason => '解锁你的钱包';
 
   @override
-  String get unlockEnterPasscode => 'Enter your passcode';
+  String get unlockEnterPasscode => '请输入你的密码';
 
   @override
-  String get lockedOutTitle => 'Locked out';
+  String get lockedOutTitle => '已锁定';
 
   @override
   String unlockTryAgainIn(Object seconds) {
-    return 'Try again in ${seconds}s';
+    return '$seconds秒后重试';
   }
 
   @override
   String attemptsRemaining(Object count) {
-    return '$count attempts remaining';
+    return '剩余 $count 次尝试';
   }
 
   @override
   String incorrectPasscodeRemaining(Object count) {
-    return 'Incorrect passcode. $count attempts remaining.';
+    return '密码错误。剩余 $count 次尝试。';
   }
 
   @override
   String tooManyAttemptsLocked(Object seconds) {
-    return 'Too many failed attempts. Locked for $seconds seconds.';
+    return '失败次数过多，已锁定 $seconds 秒。';
   }
 
   @override
-  String get enterPasscodeTitle => 'Enter Passcode';
+  String get enterPasscodeTitle => '输入密码';
 
   @override
-  String get passcodeHint => 'Passcode';
+  String get passcodeHint => '密码';
 
   @override
-  String get walletNameLabel => 'Wallet name';
+  String get walletNameLabel => '钱包名称';
 
   @override
-  String get enterWalletNameHint => 'Enter wallet name';
+  String get enterWalletNameHint => '输入钱包名称';
 
   @override
-  String get enterSecretPhraseHint => 'Enter your 12 or 24-word secret phrase';
+  String get enterSecretPhraseHint => '输入你的 12 或 24 个单词助记词';
 
   @override
-  String get secretPhraseHelperText =>
-      'Your secret phrase is 12 or 24 words separated by single spaces';
+  String get secretPhraseHelperText => '助记词由 12 或 24 个单词组成，单词之间仅用一个空格分隔';
 
   @override
-  String get paste => 'Paste';
+  String get paste => '粘贴';
 
   @override
-  String get walletImportedSuccessfully => 'Wallet imported successfully!';
+  String get walletImportedSuccessfully => '钱包导入成功！';
 
   @override
-  String get enterSecretPhrasePrompt => 'Please enter your secret phrase';
+  String get enterSecretPhrasePrompt => '请输入你的助记词';
 
   @override
-  String get enterWalletNamePrompt => 'Please enter a wallet name';
+  String get enterWalletNamePrompt => '请输入钱包名称';
 
   @override
-  String get invalidSecretPhrasePrompt =>
-      'Invalid secret phrase. Please check and try again.';
+  String get invalidSecretPhrasePrompt => '助记词无效，请检查后重试。';
 
   @override
   String importWalletFailed(Object error) {
-    return 'Failed to import wallet: $error';
+    return '导入钱包失败：$error';
   }
 
   @override
-  String get enterPrivateKeyPrompt => 'Please enter your private key';
+  String get enterPrivateKeyPrompt => '请输入你的私钥';
 
   @override
-  String get invalidPrivateKeyLength =>
-      'Invalid private key. Must be 64 hexadecimal characters.';
+  String get invalidPrivateKeyLength => '私钥无效，必须为 64 个十六进制字符。';
 
   @override
-  String get invalidPrivateKeyCharacters =>
-      'Invalid private key. Must contain only hexadecimal characters (0-9, a-f).';
+  String get invalidPrivateKeyCharacters => '私钥无效，只能包含十六进制字符（0-9，a-f）。';
 
   @override
-  String get enterPrivateKeyHint => 'Enter your private key';
+  String get enterPrivateKeyHint => '输入你的私钥';
 
   @override
-  String get privateKeyHelperText =>
-      'Your private key comprises of 64 alphanumeric characters';
+  String get privateKeyHelperText => '你的私钥由 64 个字母数字字符组成';
 
   @override
-  String get incorrectPasscode => 'Incorrect passcode';
+  String get incorrectPasscode => '密码错误';
 
   @override
-  String get confirm => 'Confirm';
+  String get confirm => '确认';
 
   @override
-  String get feedbackTitle => 'Feedback';
+  String get feedbackTitle => '反馈';
 
   @override
-  String get feedbackSubtitle =>
-      'Help us improve Owllet by sharing your thoughts.';
+  String get feedbackSubtitle => '分享你的想法，帮助我们改进 Owllet。';
 
   @override
-  String get feedbackCategory => 'Category';
+  String get feedbackCategory => '类别';
 
   @override
-  String get feedbackSubjectOptional => 'Subject (Optional)';
+  String get feedbackSubjectOptional => '主题（可选）';
 
   @override
-  String get feedbackMessage => 'Message';
+  String get feedbackMessage => '内容';
 
   @override
-  String get feedbackContactEmailOptional => 'Contact Email (Optional)';
+  String get feedbackContactEmailOptional => '联系邮箱（可选）';
 
   @override
-  String get feedbackCategoryGeneral => 'General';
+  String get feedbackCategoryGeneral => '常规';
 
   @override
-  String get feedbackCategoryBug => 'Bug Report';
+  String get feedbackCategoryBug => 'Bug 反馈';
 
   @override
-  String get feedbackCategoryFeature => 'Feature Request';
+  String get feedbackCategoryFeature => '功能建议';
 
   @override
-  String get feedbackCategoryDesign => 'Design Feedback';
+  String get feedbackCategoryDesign => '设计反馈';
 
   @override
-  String get feedbackSubjectHint => 'Short summary';
+  String get feedbackSubjectHint => '简要概述';
 
   @override
-  String get feedbackMessageHint => 'Tell us what happened or what you need';
+  String get feedbackMessageHint => '请告诉我们发生了什么，或你需要什么帮助';
 
   @override
   String get feedbackEmailHint => 'you@example.com';
 
   @override
-  String get submitFeedback => 'Submit Feedback';
+  String get submitFeedback => '提交反馈';
 
   @override
-  String get enterFeedbackMessage => 'Please enter your feedback message';
+  String get enterFeedbackMessage => '请输入反馈内容';
 
   @override
-  String get noActiveWalletFound => 'No active wallet found';
+  String get noActiveWalletFound => '未找到活动钱包';
 
   @override
-  String get feedbackSubmitted => 'Feedback submitted. Thank you.';
+  String get feedbackSubmitted => '反馈已提交，感谢你。';
 
   @override
-  String get feedbackSubmitFailed =>
-      'Unable to submit feedback. Please try again.';
+  String get feedbackSubmitFailed => '提交反馈失败，请重试。';
 
   @override
-  String get manageWalletsTitle => 'Manage Wallets';
+  String get manageWalletsTitle => '管理钱包';
 
   @override
-  String get createAddWallet => 'Create / Add Wallet';
+  String get createAddWallet => '创建 / 添加钱包';
 
   @override
-  String get renameWallet => 'Rename Wallet';
+  String get renameWallet => '重命名钱包';
 
   @override
-  String get viewPrivateKey => 'View Private Key';
+  String get viewPrivateKey => '查看私钥';
 
   @override
-  String get removeWallet => 'Remove Wallet';
+  String get removeWallet => '移除钱包';
 
   @override
-  String get save => 'Save';
+  String get save => '保存';
 
   @override
-  String get walletRenamed => 'Wallet renamed';
+  String get walletRenamed => '钱包已重命名';
 
   @override
-  String get walletRemoved => 'Wallet removed';
+  String get walletRemoved => '钱包已移除';
 
   @override
-  String get unableToLoadWallets => 'Unable to load wallets';
+  String get unableToLoadWallets => '无法加载钱包';
 
   @override
-  String get newWalletCreated => 'New wallet created';
+  String get newWalletCreated => '新钱包已创建';
 
   @override
   String unableToCreateWallet(Object error) {
-    return 'Unable to create wallet: $error';
+    return '无法创建钱包：$error';
   }
 
   @override
   String walletSetAsActive(Object name) {
-    return '$name set as active';
+    return '$name 已设为活动钱包';
   }
 
   @override
   String unableToSwitchWallet(Object error) {
-    return 'Unable to switch wallet: $error';
+    return '无法切换钱包：$error';
   }
 
   @override
   String unableToRenameWallet(Object error) {
-    return 'Unable to rename wallet: $error';
+    return '无法重命名钱包：$error';
   }
 
   @override
   String unableToRemoveWallet(Object error) {
-    return 'Unable to remove wallet: $error';
+    return '无法移除钱包：$error';
   }
 
   @override
-  String get mustKeepOneWallet => 'You must keep at least one wallet';
+  String get mustKeepOneWallet => '至少需要保留一个钱包';
 
   @override
-  String get removeWalletWarning =>
-      'Remove this wallet from this device? This does not delete the wallet onchain.';
+  String get removeWalletWarning => '要从此设备移除此钱包吗？这不会删除链上的钱包。';
 
   @override
-  String get authenticationRequired => 'Authentication required';
+  String get authenticationRequired => '需要身份验证';
 
   @override
-  String get noPrivateKeyFound => 'No private key found';
+  String get noPrivateKeyFound => '未找到私钥';
 
   @override
-  String get privateKeySecurityWarning =>
-      'Never share this with anyone. Anyone with this key can access your funds.';
+  String get privateKeySecurityWarning => '切勿与任何人分享。任何拥有该私钥的人都可以访问你的资金。';
 
   @override
-  String get activeWalletLabel => 'Active wallet';
+  String get activeWalletLabel => '活动钱包';
 
   @override
-  String get addToken => 'Add Token';
+  String get addToken => '添加代币';
 
   @override
-  String get authenticateToViewPrivateKey =>
-      'Authenticate to view your private key';
+  String get authenticateToViewPrivateKey => '请验证身份以查看私钥';
 
   @override
   String unableToLoadPrivateKey(Object error) {
-    return 'Unable to load private key: $error';
+    return '无法加载私钥：$error';
   }
 
   @override
-  String get manageTokens => 'Manage Tokens';
+  String get manageTokens => '管理代币';
 
   @override
-  String get visibleTokens => 'Visible Tokens';
+  String get visibleTokens => '可见代币';
 
   @override
-  String get addedTokens => 'Added Tokens';
+  String get addedTokens => '已添加代币';
 
   @override
-  String get suggestedTokens => 'Suggested Tokens';
+  String get suggestedTokens => '推荐代币';
 
   @override
-  String get searchResults => 'Search Results';
+  String get searchResults => '搜索结果';
 
   @override
-  String get noTokensDetectedYet => 'No tokens detected for this wallet yet.';
+  String get noTokensDetectedYet => '该钱包暂未检测到代币。';
 
   @override
-  String get noMatchingTokensFound => 'No matching tokens found.';
+  String get noMatchingTokensFound => '未找到匹配的代币。';
 
   @override
-  String get pasteContractToAddToken =>
-      'Paste a contract address above to add a token instantly.';
+  String get pasteContractToAddToken => '在上方粘贴合约地址即可立即添加代币。';
 
   @override
-  String get noSuggestedTokensYet => 'No suggested tokens available yet.';
+  String get noSuggestedTokensYet => '暂时没有可用的推荐代币。';
 
   @override
-  String get noRemoteTokensFound => 'No remote tokens found.';
+  String get noRemoteTokensFound => '未找到远程代币。';
 
   @override
-  String get tokenRemoved => 'Token removed';
+  String get tokenRemoved => '代币已移除';
 
   @override
-  String get tokenAlreadyAvailable => 'Token already available in your list';
+  String get tokenAlreadyAvailable => '该代币已在你的列表中';
 
   @override
-  String get tokenAlreadyExistsOnNetwork =>
-      'Token already exists on this network';
+  String get tokenAlreadyExistsOnNetwork => '该网络中已存在此代币';
 
   @override
   String tokenAdded(Object symbol) {
-    return '$symbol added';
+    return '$symbol 已添加';
   }
 
   @override
   String tokenAddFailed(Object error) {
-    return 'Failed to add token: $error';
+    return '添加代币失败：$error';
   }
 
   @override
-  String get missingTokenContractAddress => 'Missing token contract address';
+  String get missingTokenContractAddress => '缺少代币合约地址';
 
   @override
-  String get tokenDetected => 'Token Detected';
+  String get tokenDetected => '检测到代币';
 
   @override
-  String get contractAddressLabel => 'Contract Address';
+  String get contractAddressLabel => '合约地址';
 
   @override
-  String get ignore => 'Ignore';
+  String get ignore => '忽略';
 
   @override
-  String get added => 'Added';
+  String get added => '已添加';
 
   @override
-  String get couldNotDetectTokenMetadata =>
-      'Could not detect token metadata from this contract on the selected network';
+  String get couldNotDetectTokenMetadata => '无法从所选网络上的该合约检测到代币元数据';
 
   @override
-  String get myBalance => 'MY BALANCE';
+  String get myBalance => '我的余额';
 
   @override
-  String get tokenNotFound => 'Token not found';
+  String get tokenNotFound => '未找到代币';
 
   @override
-  String get loading => 'Loading...';
+  String get loading => '加载中...';
 
   @override
-  String get copiedToClipboard => 'Copied to clipboard';
+  String get copiedToClipboard => '已复制到剪贴板';
 
   @override
-  String get passwordSecurityTitle => 'Password & Security';
+  String get passwordSecurityTitle => '密码与安全';
 
   @override
-  String get accessControl => 'Access Control';
+  String get accessControl => '访问控制';
 
   @override
-  String get changePassword => 'Change Password';
+  String get changePassword => '修改密码';
 
   @override
-  String get passcodeUnlock => 'Passcode unlock';
+  String get passcodeUnlock => '密码解锁';
 
   @override
-  String get biometricsFaceId => 'Biometrics / Face ID';
+  String get biometricsFaceId => '生物识别 / 面容 ID';
 
   @override
-  String get advancedSecurity => 'Advanced Security';
+  String get advancedSecurity => '高级安全';
 
   @override
-  String get twoFactorAuth => 'Two-Factor Authentication (2FA)';
+  String get twoFactorAuth => '双重身份验证 (2FA)';
 
   @override
-  String get onLabel => 'On';
+  String get onLabel => '开';
 
   @override
-  String get offLabel => 'Off';
+  String get offLabel => '关';
 
   @override
-  String get autoLockTimer => 'Auto-Lock Timer';
+  String get autoLockTimer => '自动锁定计时器';
 
   @override
-  String get foregroundAutoLockTimer => 'Foreground Auto-Lock Timer';
+  String get foregroundAutoLockTimer => '前台自动锁定计时器';
 
   @override
   String autoLockMinutesLabel(Object minutes) {
-    return '$minutes minute(s)';
+    return '$minutes 分钟';
   }
 
   @override
-  String get lockOnBackground => 'Lock on Background';
+  String get lockOnBackground => '切到后台时锁定';
 
   @override
-  String get immediateWhenAppIsHidden => 'Immediate when app is hidden';
+  String get immediateWhenAppIsHidden => '应用隐藏时立即锁定';
 
   @override
-  String get securityPreferencesLoadFailed =>
-      'Failed to load security preferences';
+  String get securityPreferencesLoadFailed => '加载安全偏好失败';
 
   @override
-  String get retry => 'Retry';
+  String get retry => '重试';
 
   @override
-  String get unableToUpdateBiometric => 'Unable to update biometric setting';
+  String get unableToUpdateBiometric => '无法更新生物识别设置';
 
   @override
-  String get unableToUpdateTwoFactor => 'Unable to update 2FA setting';
+  String get unableToUpdateTwoFactor => '无法更新 2FA 设置';
 
   @override
-  String get unableToUpdateAutoLock => 'Unable to update auto-lock setting';
+  String get unableToUpdateAutoLock => '无法更新自动锁定设置';
 
   @override
-  String get unableToUpdateBackgroundLock =>
-      'Unable to update background lock setting';
+  String get unableToUpdateBackgroundLock => '无法更新后台锁定设置';
 
   @override
-  String get securitySummary =>
-      'Enable additional security measures to protect your digital assets from unauthorized access.';
+  String get securitySummary => '启用额外的安全措施，以保护你的数字资产免受未授权访问。';
 
   @override
-  String get searchTokenOrPasteContract =>
-      'Search token or paste contract address';
+  String get searchTokenOrPasteContract => '搜索代币或粘贴合约地址';
 
   @override
-  String get clearSearch => 'Clear search';
+  String get clearSearch => '清除搜索';
 
   @override
-  String get createWalletCopiedSeed => 'Secret phrase copied to clipboard';
+  String get createWalletCopiedSeed => '助记词已复制到剪贴板';
 
   @override
-  String get secretRecoveryPhrase => 'Secret recovery phrase';
+  String get secretRecoveryPhrase => '恢复助记词';
 
   @override
-  String get seedPhraseShareWarning =>
-      'Never share your seed phrase with anybody even your family members.';
+  String get seedPhraseShareWarning => '切勿将助记词分享给任何人，包括你的家人。';
 
   @override
-  String get tapToReveal => 'Tap to reveal';
+  String get tapToReveal => '点击显示';
 
   @override
-  String get copyToClipboard => 'Copy to clipboard';
+  String get copyToClipboard => '复制到剪贴板';
 
   @override
-  String get beSureNoOneWatching => 'Be sure no one is watching';
+  String get beSureNoOneWatching => '请确保没有人在旁观看';
 
   @override
-  String get verifyAllWords => 'Please fill in all 12 words';
+  String get verifyAllWords => '请填写全部 12 个单词';
 
   @override
-  String get seedPhraseMismatch =>
-      'The seed phrase does not match. Please try again.';
+  String get seedPhraseMismatch => '助记词不匹配，请重试。';
 
   @override
   String walletCreationError(Object error) {
-    return 'Error creating wallet: $error';
+    return '创建钱包出错：$error';
   }
 
   @override
-  String get referralsHeadline => 'Invite Friends and Earn Rewards Together';
+  String get referralsHeadline => '邀请好友，一起赚取奖励';
 
   @override
-  String get referralsSubtitle =>
-      'Earn up to \$0.1 when a referred user completes their first swap.';
+  String get referralsSubtitle => '当被推荐用户完成首次兑换时，你最多可获得 0.1 美元奖励。';
 
   @override
-  String get yourReferralCode => 'YOUR REFERRAL CODE';
+  String get yourReferralCode => '你的推荐码';
 
   @override
-  String get myCode => 'My Code';
+  String get myCode => '我的推荐码';
 
   @override
-  String get myReferral => 'My Referral';
+  String get myReferral => '我的推荐';
 
   @override
-  String get noReferral => 'No referral';
+  String get noReferral => '暂无推荐';
 
   @override
-  String get rewardsEarned => 'Rewards Earned';
+  String get rewardsEarned => '已获得奖励';
 
   @override
-  String get referredUsers => 'Referred Users';
+  String get referredUsers => '已推荐用户';
 
   @override
   String referredUsersCount(Object count) {
-    return '$count users';
+    return '$count 位用户';
   }
 
   @override
-  String get addReferral => 'Add Referral';
+  String get addReferral => '添加推荐码';
 
   @override
-  String get enterReferralCode => 'Enter referral code';
+  String get enterReferralCode => '输入推荐码';
 
   @override
-  String get unableToLoadReferrals => 'Unable to load referrals';
+  String get unableToLoadReferrals => '无法加载推荐信息';
 
   @override
-  String get enterReferralCodePrompt => 'Enter a referral code';
+  String get enterReferralCodePrompt => '请输入推荐码';
 
   @override
-  String get ownReferralCodeError => 'You cannot use your own referral code';
+  String get ownReferralCodeError => '你不能使用自己的推荐码';
 
   @override
-  String get referralAdded => 'Referral added';
+  String get referralAdded => '推荐码已添加';
 
   @override
-  String get unableToAddReferral => 'Unable to add referral';
+  String get unableToAddReferral => '无法添加推荐码';
 
   @override
-  String get referralCodeCopied => 'Referral code copied';
+  String get referralCodeCopied => '推荐码已复制';
 
   @override
-  String get refresh => 'Refresh';
+  String get refresh => '刷新';
 
   @override
-  String get backupSeedPhraseTitle => 'Backup Seed Phrase';
+  String get backupSeedPhraseTitle => '备份助记词';
 
   @override
-  String get authenticateToViewSeedPhrase =>
-      'Authenticate to view your seed phrase';
+  String get authenticateToViewSeedPhrase => '请验证身份以查看助记词';
 
   @override
-  String get authenticationRequiredSeedPhrase =>
-      'Authentication required to view seed phrase';
+  String get authenticationRequiredSeedPhrase => '查看助记词需要身份验证';
 
   @override
-  String get securityWarning => 'Security Warning';
+  String get securityWarning => '安全警告';
 
   @override
-  String get seedPhraseMasterKeyWarning =>
-      'Your seed phrase is the master key to your wallet. Anyone with it can move all your funds.';
+  String get seedPhraseMasterKeyWarning => '助记词是你钱包的主密钥。任何人拿到它都可以转走你的全部资金。';
 
   @override
-  String get seedPhraseSafetyBullets =>
-      '• Never share it with anyone\n• Never enter it on websites\n• Write it down and store it offline';
+  String get seedPhraseSafetyBullets => ' 切勿与任何人分享\n 切勿在网站中输入\n 请写下并离线妥善保管';
 
   @override
-  String get iUnderstand => 'I Understand';
+  String get iUnderstand => '我已了解';
 
   @override
-  String get noSeedPhraseStored => 'No seed phrase stored for this wallet';
+  String get noSeedPhraseStored => '此钱包未存储助记词';
 
   @override
-  String get seedPhraseCopied => 'Seed phrase copied to clipboard';
+  String get seedPhraseCopied => '助记词已复制到剪贴板';
 
   @override
-  String get backupSeedPhraseIntro =>
-      'Your 12-word recovery phrase is the only way to recover your wallet if you lose your phone or forget your password.';
+  String get backupSeedPhraseIntro => '你的 12 个单词恢复短语是找回钱包的唯一方式，如果你丢失手机或忘记密码。';
 
   @override
   String unableToOpenLink(Object value) {
@@ -988,7 +961,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get enterChainIdHelp => '输入链 ID 以在可用时自动填写网络详细信息。';
 
   @override
-  String get rpcUrlLabel => 'RPC URL *';
+  String get rpcUrlLabel => 'RPC 地址 *';
 
   @override
   String get rpcUrlHint => 'https://rpc.example.com';

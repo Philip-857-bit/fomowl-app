@@ -147,7 +147,7 @@ class PushNotificationRegistrationService {
       );
 
       // 4. Setup refresh listener
-      _setupTokenRefreshListener(walletAddress);
+      await _setupTokenRefreshListener(walletAddress);
     } catch (e) {
       debugPrint('Push sync failed: $e');
     }
@@ -171,12 +171,12 @@ class PushNotificationRegistrationService {
       walletAddress: walletAddress,
       deviceToken: deviceToken,
     );
-    _tokenRefreshSubscription?.cancel();
+    await _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription = null;
   }
 
-  void _setupTokenRefreshListener(String walletAddress) {
-    _tokenRefreshSubscription?.cancel();
+  Future<void> _setupTokenRefreshListener(String walletAddress) async {
+    await _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription = _messagingClient.onTokenRefresh.listen((
       newToken,
     ) {

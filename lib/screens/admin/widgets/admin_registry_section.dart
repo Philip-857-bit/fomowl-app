@@ -11,10 +11,10 @@ class AdminRegistrySection extends StatefulWidget {
   final Function(dynamic, bool) onToggleVerification;
 
   const AdminRegistrySection({
-    Key? key,
+    super.key,
     required this.registryTokens,
     required this.onToggleVerification,
-  }) : super(key: key);
+  });
 
   @override
   State<AdminRegistrySection> createState() => _AdminRegistrySectionState();
