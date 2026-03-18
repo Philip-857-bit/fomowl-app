@@ -574,6 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final blockchain = Provider.of<BlockchainService>(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
@@ -589,12 +590,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       await Navigator.pushNamed(context, '/wallets');
                       await _loadWalletData();
                     },
-                    chainSymbol: Provider.of<BlockchainService>(
-                      context,
-                    ).activeChain.symbol,
-                    chainLogoUrl: Provider.of<BlockchainService>(
-                      context,
-                    ).activeChain.logoUrl,
+                    chainSymbol: blockchain.activeChain.symbol,
+                    chainLogoUrl: blockchain.activeChain.logoUrl,
                     onChainTap: _showNetworkSelector,
                     showNotificationDot: _hasUnreadNotifications,
                     onNotificationsTap: () async {
@@ -615,6 +612,42 @@ class _HomeScreenState extends State<HomeScreen> {
                               show: _hasInternet != null && !_hasInternet!,
                               statusText: _connectivityStatus,
                             ),
+                            if (blockchain.lastDiscoveryPartialFailure)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  16,
+                                  8,
+                                  16,
+                                  0,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0x33F59E0B),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0x66F59E0B),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    blockchain
+                                                .lastDiscoveryMessage
+                                                ?.isNotEmpty ==
+                                            true
+                                        ? blockchain.lastDiscoveryMessage!
+                                        : 'Partial token discovery mode is active. Prices/balances may be delayed.',
+                                    style: const TextStyle(
+                                      color: Color(0xFFFFE7C2),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             const SizedBox(height: 8),
                             BalanceCard(
                               formattedBalance: _formattedTotalBalance,

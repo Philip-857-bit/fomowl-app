@@ -53,6 +53,11 @@ class BlockchainService extends ChangeNotifier {
   bool _isLivePriceTicking = false;
   bool _initialized = false;
 
+  String _lastDiscoverySource = 'unknown';
+  bool _lastDiscoveryPartialFailure = false;
+  int _lastDiscoveryTokenCount = 0;
+  String? _lastDiscoveryMessage;
+
   BlockchainService() {
     _tokenPortfolioModule = TokenPortfolioModule(
       getTokenPrices: getTokenPrices,
@@ -67,6 +72,11 @@ class BlockchainService extends ChangeNotifier {
   EvmChain get activeChain => _activeChain;
   List<CustomTokenDefinition> get customTokensForActiveChain =>
       List.unmodifiable(_customTokens[_activeChain.chainId] ?? []);
+
+  String get lastDiscoverySource => _lastDiscoverySource;
+  bool get lastDiscoveryPartialFailure => _lastDiscoveryPartialFailure;
+  int get lastDiscoveryTokenCount => _lastDiscoveryTokenCount;
+  String? get lastDiscoveryMessage => _lastDiscoveryMessage;
 
   List<Token> get tokens {
     if (_walletTokens.isNotEmpty) return _walletTokens;
@@ -585,11 +595,16 @@ class BlockchainService extends ChangeNotifier {
     String walletAddress,
     String cacheKey,
   ) async {
-    final discoveredTokens = await _fetchWalletTokensFromBackend(walletAddress);
-    if (discoveredTokens != null) {
+    final discovered = await _fetchWalletTokensFromBackend(walletAddress);
+    if (discovered != null) {
+      _lastDiscoverySource = discovered.source;
+      _lastDiscoveryPartialFailure = discovered.partialFailure;
+      _lastDiscoveryTokenCount = discovered.tokenCount;
+      _lastDiscoveryMessage = discovered.message;
+
       // --- Enrich discovered tokens with CoinGecko prices when backend omits them ---
       final enriched = await _tokenPortfolioModule.enrichTokensWithPrices(
-        discoveredTokens,
+        discovered.tokens,
         nativeCoinGeckoId: _activeChain.coinGeckoId,
       );
 
@@ -813,7 +828,7 @@ class BlockchainService extends ChangeNotifier {
 
   // ─── BACKEND DISCOVERY (Kept here for simplicity) ──
 
-  Future<List<Token>?> _fetchWalletTokensFromBackend(
+  Future<_BackendWalletTokensResponse?> _fetchWalletTokensFromBackend(
     String walletAddress,
   ) async {
     final now = DateTime.now();
@@ -849,11 +864,13 @@ class BlockchainService extends ChangeNotifier {
     return null;
   }
 
-  List<Token>? _parseBackendDiscoveredTokens(String body) {
+  _BackendWalletTokensResponse? _parseBackendDiscoveredTokens(String body) {
     try {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final list = data['tokens'] as List<dynamic>? ?? [];
-      return list
+      final discovery = data['discovery'] as Map<String, dynamic>? ?? const {};
+
+      final tokens = list
           .map(
             (e) => Token(
               symbol: e['symbol'] ?? '',
@@ -870,6 +887,16 @@ class BlockchainService extends ChangeNotifier {
             ),
           )
           .toList();
+
+      return _BackendWalletTokensResponse(
+        tokens: tokens,
+        source: (discovery['source'] as String?)?.trim().isNotEmpty == true
+            ? (discovery['source'] as String)
+            : 'unknown',
+        partialFailure: discovery['partialFailure'] == true,
+        tokenCount: _toInt(discovery['tokenCount']) ?? tokens.length,
+        message: (discovery['message'] as String?)?.trim(),
+      );
     } catch (_) {
       return null;
     }
@@ -1173,5 +1200,21 @@ class _WalletTokensCacheEntry {
   const _WalletTokensCacheEntry({
     required this.tokens,
     required this.fetchedAt,
+  });
+}
+
+class _BackendWalletTokensResponse {
+  final List<Token> tokens;
+  final String source;
+  final bool partialFailure;
+  final int tokenCount;
+  final String? message;
+
+  const _BackendWalletTokensResponse({
+    required this.tokens,
+    required this.source,
+    required this.partialFailure,
+    required this.tokenCount,
+    this.message,
   });
 }
