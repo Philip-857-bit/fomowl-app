@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
@@ -43,9 +44,29 @@ class _TransferConfirmationScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _args ??=
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _args ??= _routeArgumentsAsMap(ModalRoute.of(context)?.settings.arguments);
     if (_fromAddress == null) _loadFromAddress();
+  }
+
+  Map<String, dynamic>? _routeArgumentsAsMap(dynamic arguments) {
+    if (arguments is Map<String, dynamic>) {
+      return arguments;
+    }
+    if (arguments is Map) {
+      return arguments.map((key, value) => MapEntry('$key', value));
+    }
+    if (arguments is String && arguments.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(arguments);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+        if (decoded is Map) {
+          return decoded.map((key, value) => MapEntry('$key', value));
+        }
+      } catch (_) {}
+    }
+    return null;
   }
 
   Future<void> _loadFromAddress() async {
