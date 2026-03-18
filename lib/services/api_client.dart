@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
 import '../config/app_environment.dart';
-import 'dart:io';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -27,7 +26,7 @@ class ApiClient {
     // Add smart retry logic
     dio.interceptors.add(RetryInterceptor(
       dio: dio,
-      logPrint: print, // Use a better logger in production
+      logPrint: kDebugMode ? debugPrint : (_) {},
       retries: 3,
       retryDelays: const [
         Duration(seconds: 1),
@@ -40,13 +39,14 @@ class ApiClient {
     // Add logging and error handling interceptors
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
-        // You can add auth tokens here in the future
         return handler.next(options);
       },
       onError: (DioException e, handler) {
-        if (e.error is HandshakeException || e.type == DioExceptionType.connectionError) {
-           // Log specifically for handshake issues to track frequency
-           debugPrint('Network Handshake/Connection Error: ${e.message}');
+        final isTlsOrConnectionError =
+            e.type == DioExceptionType.connectionError ||
+            e.type == DioExceptionType.badCertificate;
+        if (isTlsOrConnectionError && kDebugMode) {
+          debugPrint('Network/TLS Error: ${e.message}');
         }
         return handler.next(e);
       },

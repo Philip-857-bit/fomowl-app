@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_client.dart';
+import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/wallet_service.dart';
@@ -22,21 +23,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   String? _errorMessage;
   List<_Notification> _notifications = [];
 
-  // Simple local cache for current session
-  static List<_Notification>? _cachedNotifications;
-  static DateTime? _lastFetchTime;
+  static const Duration _cacheTtl = Duration(minutes: 5);
+  static final Map<String, _NotificationCacheEntry> _cacheByWallet = {};
 
   @override
   void initState() {
     super.initState();
-    if (_cachedNotifications != null &&
-        _lastFetchTime != null &&
-        DateTime.now().difference(_lastFetchTime!) < const Duration(minutes: 5)) {
-      _notifications = _cachedNotifications!;
-      _isLoading = false;
-    } else {
-      _fetchNotifications();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    final address = await _walletService.getCurrentWalletAddress();
+    if (!mounted) return;
+
+    if (address == null || address.isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'No wallet connected';
+      });
+      return;
     }
+
+    final entry = _cacheByWallet[address.toLowerCase()];
+    if (entry != null && DateTime.now().difference(entry.fetchedAt) < _cacheTtl) {
+      setState(() {
+        _notifications = entry.notifications;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    await _fetchNotifications();
   }
 
   Future<void> _fetchNotifications({bool isRefresh = false}) async {
@@ -57,15 +74,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return;
       }
 
-      final path = '/notifications/$address';
+      final path = AppEnvironment.notifications('/$address').toString();
       final response = await _apiClient.get(path);
 
       if (response.statusCode == 200) {
-        final data = response.data;
-        final notifList = data['notifications'] as List<dynamic>? ?? [];
+        final rawData = response.data;
+        if (rawData is! Map<String, dynamic>) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Received malformed notifications data.';
+          });
+          return;
+        }
+        final data = rawData;
+        final rawList = data['notifications'];
+        final notifList = rawList is List ? rawList : const <dynamic>[];
 
         final parsed = notifList.map((j) {
-          final dtStr = j['created_at'] as String? ?? '';
+          final item = j is Map<String, dynamic> ? j : const <String, dynamic>{};
+          final dtStr = item['created_at']?.toString() ?? '';
           DateTime? dt;
           try {
             dt = DateTime.parse(dtStr);
@@ -77,10 +104,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               : dtStr;
 
           return _Notification(
-            id: j['id'] ?? '',
-            title: j['title'] ?? 'Notification',
-            message: j['message'] ?? '',
-            isRead: j['is_read'] == 1 || j['is_read'] == true,
+            id: item['id']?.toString() ?? '',
+            title: item['title']?.toString() ?? 'Notification',
+            message: item['message']?.toString() ?? '',
+            isRead: item['is_read'] == 1 || item['is_read'] == true,
             date: formatted,
           );
         }).toList();
@@ -88,8 +115,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         setState(() {
           _notifications = parsed;
           _isLoading = false;
-          _cachedNotifications = parsed;
-          _lastFetchTime = DateTime.now();
+          _cacheByWallet[address.toLowerCase()] = _NotificationCacheEntry(
+            notifications: parsed,
+            fetchedAt: DateTime.now(),
+          );
         });
       } else {
         setState(() {
@@ -188,7 +217,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       ),
                                       const SizedBox(height: 24),
                                       Text(
-                                        'No notifications yet',
+                                          l.notifications,
                                         style: GoogleFonts.outfit(
                                           fontSize: 22,
                                           fontWeight: FontWeight.w600,
@@ -197,7 +226,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        'Updates about transactions, security,\nand news will appear here.',
+                                          l.pushNotificationsDesc,
                                         style: GoogleFonts.outfit(
                                           fontSize: 14,
                                           color: Colors.white54,
@@ -207,7 +236,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'Pull down to refresh',
+                                          l.refresh,
                                         style: GoogleFonts.outfit(
                                           fontSize: 12,
                                           color: Colors.white24,
@@ -300,4 +329,14 @@ class _Notification {
     required this.isRead,
     required this.date,
   });
+}
+
+class _NotificationCacheEntry {
+  const _NotificationCacheEntry({
+    required this.notifications,
+    required this.fetchedAt,
+  });
+
+  final List<_Notification> notifications;
+  final DateTime fetchedAt;
 }

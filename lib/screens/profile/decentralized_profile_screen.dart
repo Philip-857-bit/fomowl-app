@@ -88,7 +88,12 @@ class _DecentralizedProfileScreenState
 
     if (!mounted) return;
 
-    final reg = await _storageService.getNotificationDeviceRegistration(_walletAddress);
+    final normalizedWallet = walletAddress ?? '';
+    final reg = normalizedWallet.isEmpty
+      ? null
+      : await _storageService.getNotificationDeviceRegistration(
+        normalizedWallet,
+        );
     final isNotificationsEnabled = reg != null && reg['token'] != null;
 
     setState(() {
@@ -381,18 +386,22 @@ class _DecentralizedProfileScreenState
     Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
   }
 
-  Future<void> _handleNotificationToggle() async {
+  Future<void> _setNotificationsEnabled(bool enabled) async {
     final l = AppLocalizations.of(context);
     try {
       final service = PushNotificationRegistrationService();
-      await service.syncForActiveWallet();
-      
+      if (enabled) {
+        await service.syncForActiveWallet();
+      } else {
+        await service.disableForActiveWallet();
+      }
+
       final reg = await _storageService.getNotificationDeviceRegistration(_walletAddress);
       final success = reg != null && reg['token'] != null;
-      
+
       if (!mounted) return;
       setState(() => _isNotificationsEnabled = success);
-      
+
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l.notifications)),
@@ -528,9 +537,11 @@ class _DecentralizedProfileScreenState
                           trailing: Switch.adaptive(
                             value: _isNotificationsEnabled,
                             activeTrackColor: AppColors.primaryAccent,
-                            onChanged: (_) => _handleNotificationToggle(),
+                            onChanged: _setNotificationsEnabled,
                           ),
-                          onTap: _handleNotificationToggle,
+                          onTap: () => _setNotificationsEnabled(
+                            !_isNotificationsEnabled,
+                          ),
                         ),
                       ],
                     ),

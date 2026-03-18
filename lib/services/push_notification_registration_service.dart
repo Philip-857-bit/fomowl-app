@@ -153,6 +153,28 @@ class PushNotificationRegistrationService {
     }
   }
 
+  Future<void> disableForActiveWallet() async {
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (walletAddress == null || walletAddress.isEmpty) {
+      return;
+    }
+
+    final cached = await _storageService.getNotificationDeviceRegistration(
+      walletAddress,
+    );
+    final deviceToken = cached?['token'];
+    if (deviceToken == null || deviceToken.isEmpty) {
+      return;
+    }
+
+    await _unregisterDeviceToken(
+      walletAddress: walletAddress,
+      deviceToken: deviceToken,
+    );
+    _tokenRefreshSubscription?.cancel();
+    _tokenRefreshSubscription = null;
+  }
+
   void _setupTokenRefreshListener(String walletAddress) {
     _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription = _messagingClient.onTokenRefresh.listen((

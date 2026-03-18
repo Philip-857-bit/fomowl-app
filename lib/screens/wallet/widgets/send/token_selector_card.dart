@@ -57,7 +57,7 @@ class TokenSelectorCard extends StatelessWidget {
                 if (token != null) const SizedBox(width: 12),
                 Flexible(
                   child: Text(
-                    token?.symbol ?? 'Select',
+                    token?.symbol ?? l.selectTokenTitle,
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
