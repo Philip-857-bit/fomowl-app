@@ -470,6 +470,54 @@ class _DecentralizedProfileScreenState
     }
   }
 
+  Future<void> _sendTestPushNotification() async {
+    final l = AppLocalizations.of(context);
+    try {
+      final walletAddress = await _walletService.getCurrentWalletAddress();
+      if (walletAddress == null || walletAddress.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.noActiveWalletFound)),
+        );
+        return;
+      }
+
+      final response = await http.post(
+        AppEnvironment.notifications('/add'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'walletAddress': walletAddress,
+          'title': 'Test Notification',
+          'message': 'This is a test push notification from Owllet Wallet.',
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Test notification sent! Check your notifications.'),
+          ),
+        );
+      } else {
+        final errorMessage = AppErrorUtils.backendMessage(
+          response.body,
+          fallback: 'Failed to send test notification',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppErrorUtils.userMessage(e, fallback: l.networkError)),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -602,6 +650,13 @@ class _DecentralizedProfileScreenState
                             !_isNotificationsEnabled,
                           ),
                         ),
+                        if (_isNotificationsEnabled)
+                          SettingsItemTile(
+                            icon: Icons.send_outlined,
+                            title: 'Test Push Notification',
+                            subtitle: 'Send a test notification to this device',
+                            onTap: _sendTestPushNotification,
+                          ),
                       ],
                     ),
                     const SizedBox(height: 14),

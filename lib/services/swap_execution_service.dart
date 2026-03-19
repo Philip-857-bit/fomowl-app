@@ -243,9 +243,12 @@ class SwapExecutionService {
         '/fusion/order/submit/${blockchain.activeChain.chainId}',
       );
 
-      final submitPayload = Map<String, dynamic>.from(quoteData);
-      submitPayload['chainId'] = blockchain.activeChain.chainId;
-      submitPayload['signature'] = signature;
+      // Create a new map with only the necessary fields to avoid nested structure issues
+      final submitPayload = <String, dynamic>{
+        ...quoteData,
+        'chainId': '${blockchain.activeChain.chainId}',
+        'signature': signature,
+      };
 
       final submitResponse = await _httpClientService
           .sendWithRetry(

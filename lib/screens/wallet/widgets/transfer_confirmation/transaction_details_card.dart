@@ -3,11 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../models/token.dart';
+import '../../../../widgets/token_icon.dart';
 
 class TransactionDetailsCard extends StatelessWidget {
   final String fromAddress;
   final String toAddress;
   final String network;
+  final Token? token;
+  final int chainId;
   final bool isLoadingGas;
   final bool gasEstimationFailed;
   final String gasLabel;
@@ -21,6 +25,8 @@ class TransactionDetailsCard extends StatelessWidget {
     required this.fromAddress,
     required this.toAddress,
     required this.network,
+    this.token,
+    required this.chainId,
     required this.isLoadingGas,
     this.gasEstimationFailed = false,
     required this.gasLabel,
@@ -126,14 +132,12 @@ class TransactionDetailsCard extends StatelessWidget {
           ),
           Row(
             children: [
-              Container(
-                width: 18,
-                height: 18,
-                decoration: const BoxDecoration(
-                  color: AppColors.warning,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.circle, size: 8, color: Colors.white),
+              TokenIcon(
+                tokenSymbol: token?.symbol ?? 'ETH',
+                tokenAddress: token?.contractAddress,
+                tokenImageUrl: token?.imageUrl,
+                size: 18,
+                chainId: chainId,
               ),
               const SizedBox(width: 6),
               Text(

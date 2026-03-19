@@ -47,6 +47,15 @@ Future<void> main() async {
       FirebaseMessaging.onBackgroundMessage(
         _firebaseMessagingBackgroundHandler,
       );
+      
+      // Request permission proactively on first launch
+      final messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         final notification = message.notification;
         if (notification != null && notification.title != null) {

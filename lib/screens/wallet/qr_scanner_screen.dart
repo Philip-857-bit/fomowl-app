@@ -1,9 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../constants/app_colors.dart';
 
-class QrScannerScreen extends StatelessWidget {
+class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
+
+  @override
+  State<QrScannerScreen> createState() => _QrScannerScreenState();
+}
+
+class _QrScannerScreenState extends State<QrScannerScreen> {
+  final MobileScannerController _controller = MobileScannerController();
+  bool _hasScanned = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_hasScanned) return;
+    
+    final barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+    
+    final code = barcodes.first.rawValue;
+    if (code == null || code.isEmpty) return;
+
+    setState(() => _hasScanned = true);
+    Navigator.pop(context, code);
+  }
+
+  Widget _buildErrorWidget(BuildContext context, MobileScannerException error) {
+    return Container(
+      color: const Color(0xFF1E1E1E),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.camera_alt_outlined,
+              color: Colors.white54,
+              size: 64,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Camera Error',
+              style: GoogleFonts.outfit(
+                color: Colors.white54,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.errorDetails?.message ?? 'Unknown error',
+              style: GoogleFonts.outfit(
+                color: Colors.white38,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,29 +74,11 @@ class QrScannerScreen extends StatelessWidget {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Mock Camera View
-          Container(
-            color: const Color(0xFF1E1E1E),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.camera_alt_outlined,
-                    color: Colors.white54,
-                    size: 64,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Camera View Placeholder',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white54,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Real Camera View
+          MobileScanner(
+            controller: _controller,
+            onDetect: _onDetect,
+            errorBuilder: _buildErrorWidget,
           ),
 
           // QR Scanner Overlay
@@ -61,11 +106,13 @@ class QrScannerScreen extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.photo_library_outlined,
+                        icon: Icon(
+                          _controller.torchEnabled
+                              ? Icons.flash_on
+                              : Icons.flash_off,
                           color: Colors.white,
                         ),
-                        onPressed: null,
+                        onPressed: () => _controller.toggleTorch(),
                       ),
                     ],
                   ),

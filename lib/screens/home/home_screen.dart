@@ -558,8 +558,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openTokenManager() async {
-    await Navigator.pushNamed(context, '/token-management');
-    await _loadWalletData();
+    final hasChanges = await Navigator.pushNamed(context, '/token-management');
+    if (hasChanges == true) {
+      await _loadWalletData();
+    }
   }
 
   void _showNetworkSelector() {

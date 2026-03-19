@@ -55,41 +55,27 @@ class TokenSelectorCard extends StatelessWidget {
                     isCertified: token!.isCertified,
                   ),
                 if (token != null) const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    token?.symbol ?? l.selectTokenTitle,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  token?.symbol ?? l.selectTokenTitle,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
                 const Spacer(),
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          '${l.networkLabel}: ${blockchain.activeChain.name}',
-                          textAlign: TextAlign.end,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.72),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ],
+                Text(
+                  '${l.networkLabel}: ${blockchain.activeChain.name}',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.72),
                   ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: Colors.white.withValues(alpha: 0.5),
                 ),
               ],
             ),

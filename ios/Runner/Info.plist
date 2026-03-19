@@ -47,6 +47,8 @@
 		<true/>
 		<key>NSFaceIDUsageDescription</key>
 		<string>We use Face ID to secure your wallet and verify transactions</string>
+		<key>NSCameraUsageDescription</key>
+		<string>We need camera access to scan QR codes for wallet addresses and transactions</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

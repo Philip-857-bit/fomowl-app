@@ -268,6 +268,8 @@ class _TransferConfirmationScreenState
                             fromAddress: _shortenAddress(_fromAddress),
                             toAddress: _shortenAddress(toAddress),
                             network: network,
+                            token: token,
+                            chainId: blockchain.activeChain.chainId,
                             isLoadingGas: _isLoadingGas,
                             gasEstimationFailed: _gasEstimationFailed,
                             gasLabel: gasLabel,
