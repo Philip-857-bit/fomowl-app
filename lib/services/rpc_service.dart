@@ -78,7 +78,17 @@ class RpcService extends BaseService {
         }
 
         if (data['error'] != null) {
-          final error = data['error'] as Map<String, dynamic>?;
+          final errorObj = data['error'];
+          if (errorObj is String) {
+            _lastError = RpcCallException(
+              method: method,
+              rpcUrl: rpcUrl,
+              message: errorObj,
+            );
+            debugPrint(_lastError.toString());
+            continue;
+          }
+          final error = errorObj as Map<String, dynamic>?;
           _lastError = RpcCallException(
             method: method,
             rpcUrl: rpcUrl,

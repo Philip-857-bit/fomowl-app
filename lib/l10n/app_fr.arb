@@ -433,5 +433,9 @@
   "currencyNgn": "Naira nigérian (NGN)",
   "selectTokenAndNetwork": "SÉLECTIONNER JETON ET RÉSEAU",
   "networkLabel": "Réseau",
-  "noNotificationsYet": "Aucune notification pour le moment"
+  "noNotificationsYet": "Aucune notification pour le moment",
+  "availableBalance": "SOLDE DISPONIBLE",
+  "history": "Historique",
+  "followSocialhq": "Suivez @fomowlhq sur X pour les mises à jour",
+  "socialhqHandle": "x.com/fomowlhq"
 }

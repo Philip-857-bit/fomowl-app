@@ -436,5 +436,9 @@
   "noSeedPhraseStored": "此钱包未存储助记词",
   "seedPhraseCopied": "助记词已复制到剪贴板",
   "backupSeedPhraseIntro": "你的 12 个单词恢复短语是找回钱包的唯一方式，如果你丢失手机或忘记密码。",
-  "noNotificationsYet": "暂无通知"
+  "noNotificationsYet": "暂无通知",
+  "availableBalance": "可用余额",
+  "history": "历史",
+  "followSocialhq": "在X上关注@fomowlhq获取即时更新",
+  "socialhqHandle": "x.com/fomowlhq"
 }

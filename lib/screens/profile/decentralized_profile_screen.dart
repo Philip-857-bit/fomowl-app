@@ -45,7 +45,6 @@ class _DecentralizedProfileScreenState
   String _currency = 'USD';
   String _versionLabel = 'Owllet v1.0.0';
   bool _loading = true;
-  bool _isNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -88,26 +87,10 @@ class _DecentralizedProfileScreenState
 
     if (!mounted) return;
 
-    final normalizedWallet = walletAddress ?? '';
-    final pushPreference = normalizedWallet.isEmpty
-        ? null
-        : await _storageService.getPushNotificationsEnabledForWallet(
-            normalizedWallet,
-          );
-    final reg = normalizedWallet.isEmpty
-        ? null
-        : await _storageService.getNotificationDeviceRegistration(
-            normalizedWallet,
-          );
-    if (!mounted) return;
-    final isNotificationsEnabled =
-        pushPreference ?? (reg != null && reg['token'] != null);
-
     setState(() {
       _walletName = walletName ?? 'Main Wallet';
       _walletAddress = walletAddress ?? '--';
       _currency = currency;
-      _isNotificationsEnabled = isNotificationsEnabled;
       _loading = false;
     });
   }
@@ -405,121 +388,6 @@ class _DecentralizedProfileScreenState
     Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
   }
 
-  Future<void> _setNotificationsEnabled(bool enabled) async {
-    final l = AppLocalizations.of(context);
-    try {
-      if (!AppEnvironment.pushNotificationsEnabled) {
-        if (!mounted) return;
-        setState(() => _isNotificationsEnabled = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l.networkError}: Push is not configured.')),
-        );
-        return;
-      }
-
-      final activeWalletAddress = await _walletService
-          .getCurrentWalletAddress();
-      if (activeWalletAddress == null || activeWalletAddress.isEmpty) {
-        if (!mounted) return;
-        setState(() => _isNotificationsEnabled = false);
-        return;
-      }
-
-      final service = PushNotificationRegistrationService();
-      var success = false;
-      if (enabled) {
-        await service.syncForActiveWallet();
-        final reg = await _storageService.getNotificationDeviceRegistration(
-          activeWalletAddress,
-        );
-        success = reg != null && reg['token'] != null;
-        if (!success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Notification permission or token registration is missing. Check device notification permission and Firebase config.',
-              ),
-            ),
-          );
-        }
-      } else {
-        await service.disableForActiveWallet();
-        success = false;
-      }
-
-      await _storageService.setPushNotificationsEnabledForWallet(
-        activeWalletAddress,
-        enabled && success,
-      );
-
-      if (!mounted) return;
-      setState(() => _isNotificationsEnabled = enabled && success);
-
-      if (enabled && success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.notifications)));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppErrorUtils.userMessage(e, fallback: l.networkError)),
-        ),
-      );
-    }
-  }
-
-  Future<void> _sendTestPushNotification() async {
-    final l = AppLocalizations.of(context);
-    try {
-      final walletAddress = await _walletService.getCurrentWalletAddress();
-      if (walletAddress == null || walletAddress.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.noActiveWalletFound)));
-        return;
-      }
-
-      final response = await http
-          .post(
-            AppEnvironment.notifications('/add'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'walletAddress': walletAddress,
-              'title': 'Test Notification',
-              'message': 'This is a test push notification from Owllet Wallet.',
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (!mounted) return;
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Test notification sent! Check your notifications.'),
-          ),
-        );
-      } else {
-        final errorMessage = AppErrorUtils.backendMessage(
-          response.body,
-          fallback: 'Failed to send test notification',
-        );
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppErrorUtils.userMessage(e, fallback: l.networkError)),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -635,32 +503,7 @@ class _DecentralizedProfileScreenState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    SettingsSectionHeader(title: l.notificationsSettings),
-                    SettingsGroupCard(
-                      children: [
-                        SettingsItemTile(
-                          icon: Icons.notifications_active_outlined,
-                          title: l.enablePushNotifications,
-                          subtitle: l.pushNotificationsDesc,
-                          trailing: Switch.adaptive(
-                            value: _isNotificationsEnabled,
-                            activeTrackColor: AppColors.primaryAccent,
-                            onChanged: _setNotificationsEnabled,
-                          ),
-                          onTap: () => _setNotificationsEnabled(
-                            !_isNotificationsEnabled,
-                          ),
-                        ),
-                        if (_isNotificationsEnabled)
-                          SettingsItemTile(
-                            icon: Icons.send_outlined,
-                            title: 'Test Push Notification',
-                            subtitle: 'Send a test notification to this device',
-                            onTap: _sendTestPushNotification,
-                          ),
-                      ],
-                    ),
+
                     const SizedBox(height: 14),
                     SettingsSectionHeader(title: l.others),
                     SettingsGroupCard(

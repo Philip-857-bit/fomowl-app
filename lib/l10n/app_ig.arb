@@ -433,5 +433,9 @@
   "currencyNgn": "Naịra (NGN)",
   "selectTokenAndNetwork": "HỌ̀RỌ̀ TOKEN NA NETWỌK",
   "networkLabel": "Netwọk",
-  "noNotificationsYet": "Enweghị ọkwa ọ bụla ugbu a"
+  "noNotificationsYet": "Enweghị ọkwa ọ bụla ugbu a",
+  "availableBalance": "EGO DỊ",
+  "history": "Akụkọ",
+  "followSocialhq": "Soro @fomowlhq na X maka ozi ọhụrụ",
+  "socialhqHandle": "x.com/fomowlhq"
 }

@@ -433,5 +433,9 @@
   "currencyNgn": "نيرا نيجيرية (NGN)",
   "selectTokenAndNetwork": "اختر الرمز والشبكة",
   "networkLabel": "الشبكة",
-  "noNotificationsYet": "لا توجد إشعارات بعد"
+  "noNotificationsYet": "لا توجد إشعارات بعد",
+  "availableBalance": "الرصيد المتاح",
+  "history": "السجل",
+  "followSocialhq": "تابع @fomowlhq على X للحصول على التحديثات",
+  "socialhqHandle": "x.com/fomowlhq"
 }

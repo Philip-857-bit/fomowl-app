@@ -57,6 +57,13 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
+      'type \'string\' is not a subtype of type \'int\' of \'index\'',
+      'type \'string\' is not a subtype of type \'int\'',
+    ])) {
+      return 'Transaction reverted or failed. Please check your balance or slippage and try again.';
+    }
+
+    if (_containsAny(lowered, const [
       'backend',
       'database',
       'sql',

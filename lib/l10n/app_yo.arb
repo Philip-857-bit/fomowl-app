@@ -433,5 +433,9 @@
   "currencyNgn": "Náírà (NGN)",
   "selectTokenAndNetwork": "YÀN TOKEN ÀTI NẸTIWỌ̀KÌ",
   "networkLabel": "Nẹtiwọ̀kì",
-  "noNotificationsYet": "Ko si ìfitónilétí sibẹsibẹ"
+  "noNotificationsYet": "Ko si ìfitónilétí sibẹsibẹ",
+  "availableBalance": "IWỌN TO WA",
+  "history": "Itan",
+  "followSocialhq": "Tẹle @fomowlhq lori X fun awọn imudojuiwọn",
+  "socialhqHandle": "x.com/fomowlhq"
 }

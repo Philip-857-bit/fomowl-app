@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SocialBannerCard extends StatelessWidget {
   final VoidCallback onTap;
@@ -10,6 +11,7 @@ class SocialBannerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -40,7 +42,7 @@ class SocialBannerCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Follow @fomowlhq on X for live updates',
+                    l.followSocialhq,
                     style: GoogleFonts.outfit(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -49,7 +51,7 @@ class SocialBannerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'x.com/fomowlhq',
+                    l.socialhqHandle,
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,

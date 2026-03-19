@@ -433,5 +433,9 @@
   "currencyNgn": "Naira nigeriana (NGN)",
   "selectTokenAndNetwork": "SELECCIONAR TOKEN Y RED",
   "networkLabel": "Red",
-  "noNotificationsYet": "Aún no hay notificaciones"
+  "noNotificationsYet": "Aún no hay notificaciones",
+  "availableBalance": "SALDO DISPONIBLE",
+  "history": "Historial",
+  "followSocialhq": "Siga a @fomowlhq en X para actualizaciones",
+  "socialhqHandle": "x.com/fomowlhq"
 }

@@ -433,5 +433,9 @@
   "currencyNgn": "Naira (NGN)",
   "selectTokenAndNetwork": "ZAƁI TOKEN DA CIBIYAR SADARWA",
   "networkLabel": "Cibiyar sadarwa",
-  "noNotificationsYet": "Babu sanarwa tukuna"
+  "noNotificationsYet": "Babu sanarwa tukuna",
+  "availableBalance": "KUƊIN DA AKE DA SU",
+  "history": "Tarihi",
+  "followSocialhq": "Bi @fomowlhq a X don samun sababbin labarai",
+  "socialhqHandle": "x.com/fomowlhq"
 }

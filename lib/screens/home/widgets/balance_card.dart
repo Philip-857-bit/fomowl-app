@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Displays the wallet balance, eye-toggle, and history access.
 class BalanceCard extends StatelessWidget {
@@ -22,6 +23,7 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.only(bottom: 24),
@@ -39,7 +41,7 @@ class BalanceCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'AVAILABLE BALANCE',
+                      l.availableBalance,
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
@@ -87,7 +89,7 @@ class BalanceCard extends StatelessWidget {
                         child: Row(
                           children: [
                             Text(
-                              'History',
+                              l.history,
                               style: GoogleFonts.outfit(
                                 fontSize: 12,
                                 color: Colors.white.withValues(alpha: 0.95),

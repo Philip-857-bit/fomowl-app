@@ -73,13 +73,27 @@ class CurrencyController extends ChangeNotifier {
         }
       }
 
-      if (rates.length <= 1) {
-        return;
+      // Apply static fallbacks if the API misses any supported currencies
+      if (!rates.containsKey('NGN') || rates['NGN']! <= 0) {
+        rates['NGN'] = 1600.0;
+      }
+      if (!rates.containsKey('EUR') || rates['EUR']! <= 0) {
+        rates['EUR'] = 0.92;
+      }
+      if (!rates.containsKey('GBP') || rates['GBP']! <= 0) {
+        rates['GBP'] = 0.79;
       }
 
       ValueFormatter.updateUsdConversionRates(rates);
     } catch (_) {
-      // Keep the last known rates or the default USD-only fallback.
+      // In case of total network failure, apply static fallbacks before updating
+      final fallbackRates = <String, double>{
+        'USD': 1.0,
+        'NGN': 1600.0,
+        'EUR': 0.92,
+        'GBP': 0.79,
+      };
+      ValueFormatter.updateUsdConversionRates(fallbackRates);
     }
   }
 }
