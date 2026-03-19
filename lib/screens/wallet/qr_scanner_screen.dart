@@ -22,10 +22,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
   void _onDetect(BarcodeCapture capture) {
     if (_hasScanned) return;
-    
+
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
-    
+
     final code = barcodes.first.rawValue;
     if (code == null || code.isEmpty) return;
 
@@ -48,18 +48,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             const SizedBox(height: 16),
             Text(
               'Camera Error',
-              style: GoogleFonts.outfit(
-                color: Colors.white54,
-                fontSize: 16,
-              ),
+              style: GoogleFonts.outfit(color: Colors.white54, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
               error.errorDetails?.message ?? 'Unknown error',
-              style: GoogleFonts.outfit(
-                color: Colors.white38,
-                fontSize: 12,
-              ),
+              style: GoogleFonts.outfit(color: Colors.white38, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],

@@ -476,21 +476,23 @@ class _DecentralizedProfileScreenState
       final walletAddress = await _walletService.getCurrentWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.noActiveWalletFound)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.noActiveWalletFound)));
         return;
       }
 
-      final response = await http.post(
-        AppEnvironment.notifications('/add'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'walletAddress': walletAddress,
-          'title': 'Test Notification',
-          'message': 'This is a test push notification from Owllet Wallet.',
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            AppEnvironment.notifications('/add'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'title': 'Test Notification',
+              'message': 'This is a test push notification from Owllet Wallet.',
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (!mounted) return;
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -504,9 +506,9 @@ class _DecentralizedProfileScreenState
           response.body,
           fallback: 'Failed to send test notification',
         );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (e) {
       if (!mounted) return;

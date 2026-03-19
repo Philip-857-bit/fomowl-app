@@ -217,7 +217,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         _hasChanges = true;
         _processingTokens.remove(key);
       });
-      
+
       // Reload wallet data to reflect changes
       await _loadData(showSpinner: false);
     } catch (e) {
