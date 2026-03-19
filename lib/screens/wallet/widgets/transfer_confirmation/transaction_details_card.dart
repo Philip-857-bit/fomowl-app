@@ -49,7 +49,7 @@ class TransactionDetailsCard extends StatelessWidget {
           _buildDivider(),
           const SizedBox(height: 8),
           isLoadingGas
-                ? _buildGasLoading(l)
+              ? _buildGasLoading(l)
               : _buildFeeRow(
                   gasLabel,
                   gasValue,
