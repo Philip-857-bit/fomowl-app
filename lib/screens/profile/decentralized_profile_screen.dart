@@ -16,7 +16,6 @@ import '../../services/wallet_service.dart';
 import '../../services/language_controller.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/language_utils.dart';
-import '../../services/push_notification_registration_service.dart';
 
 import '../../widgets/bottom_navigation.dart';
 import '../admin/admin_dashboard_screen.dart';
