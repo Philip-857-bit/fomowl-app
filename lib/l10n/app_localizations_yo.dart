@@ -1423,4 +1423,16 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get noNotificationsYet => 'Ko si ìfitónilétí sibẹsibẹ';
+
+  @override
+  String get availableBalance => 'IWỌN TO WA';
+
+  @override
+  String get history => 'Itan';
+
+  @override
+  String get followSocialhq => 'Tẹle @fomowlhq lori X fun awọn imudojuiwọn';
+
+  @override
+  String get socialhqHandle => 'x.com/fomowlhq';
 }

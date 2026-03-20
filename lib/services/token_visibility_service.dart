@@ -1,7 +1,19 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/token.dart';
 import '../utils/token_visibility_utils.dart';
+
+class TokenVisibilityChange {
+  const TokenVisibilityChange({
+    required this.chainId,
+    required this.hiddenTokens,
+  });
+
+  final int chainId;
+  final Set<String> hiddenTokens;
+}
 
 /// Persists which tokens should be hidden per chain and exposes helpers that
 /// cache the results in-memory for fast lookups.
@@ -14,6 +26,10 @@ class TokenVisibilityService {
   factory TokenVisibilityService() => _instance;
 
   final Map<int, Set<String>> _cache = {};
+  final StreamController<TokenVisibilityChange> _changes =
+      StreamController<TokenVisibilityChange>.broadcast();
+
+  Stream<TokenVisibilityChange> get changes => _changes.stream;
 
   /// Loads hidden tokens for [chainId] from storage.
   Future<Set<String>> loadHiddenTokens(int chainId) async {
@@ -42,6 +58,7 @@ class TokenVisibilityService {
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_key(chainId), entry.toList());
+    _emitChange(chainId, entry);
   }
 
   /// Returns whether [token] is hidden for [chainId].
@@ -49,6 +66,18 @@ class TokenVisibilityService {
     final entry = _cache[chainId];
     if (entry == null) return false;
     return entry.contains(TokenVisibilityUtils.identifier(token));
+  }
+
+  void _emitChange(int chainId, Set<String> hiddenTokens) {
+    if (_changes.isClosed) {
+      return;
+    }
+    _changes.add(
+      TokenVisibilityChange(
+        chainId: chainId,
+        hiddenTokens: Set<String>.from(hiddenTokens),
+      ),
+    );
   }
 
   String _key(int chainId) => 'hidden_tokens_$chainId';

@@ -10,10 +10,13 @@ import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/token_approval_service.dart';
 import '../../services/swap_execution_service.dart';
+import '../../services/token_visibility_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/referral_service.dart';
+import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/toast_utils.dart';
+import '../../utils/token_visibility_utils.dart';
 import '../../widgets/token_selector_modal.dart';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
@@ -40,6 +43,10 @@ class _SwapScreenState extends State<SwapScreen> {
   final SwapService _swapService = SwapService();
   final WalletService _walletService = WalletService();
   final ReferralService _referralService = ReferralService();
+  final TokenVisibilityService _tokenVisibilityService =
+      TokenVisibilityService();
+  final WalletNotificationService _walletNotificationService =
+      WalletNotificationService();
   late final TokenApprovalService _tokenApprovalService;
   late final SwapExecutionService _swapExecutionService;
   late final TransactionMonitor _transactionMonitor;
@@ -65,7 +72,7 @@ class _SwapScreenState extends State<SwapScreen> {
       }
       _loadWalletBalance();
     } else if (_fromToken == null || _toToken == null) {
-      final tokens = blockchain.tokens;
+      final tokens = _visibleTokens(blockchain.tokens);
       _syncSelectedTokens(tokens);
     }
   }
@@ -138,8 +145,11 @@ class _SwapScreenState extends State<SwapScreen> {
     final address = await _walletService.getCurrentWalletAddress();
     if (!mounted) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    await _tokenVisibilityService.loadHiddenTokens(
+      blockchain.activeChain.chainId,
+    );
     // Always sync with whatever token set we currently have so selectors never look empty.
-    _syncSelectedTokens(blockchain.tokens);
+    _syncSelectedTokens(_visibleTokens(blockchain.tokens));
     if (mounted) {
       setState(() => _walletAddress = address);
     }
@@ -150,20 +160,20 @@ class _SwapScreenState extends State<SwapScreen> {
         await blockchain.fetchWalletTokens(address);
         if (mounted) {
           setState(() {
-            _syncSelectedTokens(blockchain.tokens);
+            _syncSelectedTokens(_visibleTokens(blockchain.tokens));
           });
         }
       } catch (e) {
         debugPrint('Error fetching balance for swap: $e');
         if (mounted) {
           setState(() {
-            _syncSelectedTokens(blockchain.tokens);
+            _syncSelectedTokens(_visibleTokens(blockchain.tokens));
           });
         }
       }
     } else if (mounted) {
       setState(() {
-        _syncSelectedTokens(blockchain.tokens);
+        _syncSelectedTokens(_visibleTokens(blockchain.tokens));
       });
     }
 
@@ -237,9 +247,28 @@ class _SwapScreenState extends State<SwapScreen> {
     _toToken = to;
   }
 
+  List<Token> _visibleTokens(List<Token> tokens) {
+    final hiddenTokens = _tokenVisibilityService.getHiddenTokens(
+      Provider.of<BlockchainService>(
+        context,
+        listen: false,
+      ).activeChain.chainId,
+    );
+    if (hiddenTokens.isEmpty) {
+      return tokens;
+    }
+    return tokens.where((token) {
+      final contractAddress = token.contractAddress ?? '';
+      if (contractAddress.isEmpty) {
+        return true;
+      }
+      return !hiddenTokens.contains(TokenVisibilityUtils.identifier(token));
+    }).toList();
+  }
+
   Future<void> _showTokenSelector(bool isFrom) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final tokens = blockchain.tokens;
+    final tokens = _visibleTokens(blockchain.tokens);
     final selectedToken = await showDialog<Token>(
       context: context,
       builder: (ctx) => TokenSelectorDialog(
@@ -480,7 +509,9 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   TransactionProgressController _openProgressFlow() {
-    final controller = TransactionProgressController();
+    final controller = TransactionProgressController(
+      flow: TransactionProgressFlow.swap,
+    );
     unawaited(
       Navigator.of(context)
           .pushNamed(
@@ -678,7 +709,7 @@ class _SwapScreenState extends State<SwapScreen> {
     await _refreshTokenPrices();
     if (!mounted) return;
     setState(() {
-      _syncSelectedTokens(blockchain.tokens);
+      _syncSelectedTokens(_visibleTokens(blockchain.tokens));
     });
   }
 
@@ -1011,6 +1042,10 @@ class _SwapScreenState extends State<SwapScreen> {
     if (expectedToAmount <= 0) {
       expectedToAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
     }
+    final fromAmountText = _fromController.text.trim();
+    final toAmountText = _toController.text.trim().isNotEmpty
+        ? _toController.text.trim()
+        : quote.amountOutFormatted;
 
     setState(() => _isSwapping = true);
     try {
@@ -1081,6 +1116,16 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
       if (confirmed) {
+        unawaited(
+          _walletNotificationService.notifySwapConfirmed(
+            walletAddress: _walletAddress!,
+            fromAmount: fromAmountText,
+            fromSymbol: fromToken.symbol,
+            toAmount: toAmountText,
+            toSymbol: toToken.symbol,
+            networkName: blockchain.activeChain.name,
+          ),
+        );
         progressController.setSuccess(
           reference: _shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),

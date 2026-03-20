@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -53,6 +55,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _notifications = entry.notifications;
         _isLoading = false;
       });
+      unawaited(_fetchNotifications(isRefresh: true));
       return;
     }
 
@@ -122,15 +125,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }).toList();
 
         if (!mounted) return;
+        final unreadIds = parsed
+            .where((notification) => !notification.isRead)
+            .map((notification) => notification.id)
+            .where((id) => id.isNotEmpty)
+            .toList();
+        final visibleNotifications = unreadIds.isEmpty
+            ? parsed
+            : parsed
+                  .map(
+                    (notification) => unreadIds.contains(notification.id)
+                        ? notification.copyWith(isRead: true)
+                        : notification,
+                  )
+                  .toList();
         setState(() {
-          _notifications = parsed;
+          _notifications = visibleNotifications;
           _isLoading = false;
           _errorMessage = null;
           _cacheByWallet[address.toLowerCase()] = _NotificationCacheEntry(
-            notifications: parsed,
+            notifications: visibleNotifications,
             fetchedAt: DateTime.now(),
           );
         });
+        if (unreadIds.isNotEmpty) {
+          unawaited(_markNotificationsAsRead(unreadIds));
+        }
       } else {
         if (!mounted) return;
         setState(() {
@@ -149,6 +169,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
       }
     }
+  }
+
+  Future<void> _markNotificationsAsRead(List<String> ids) async {
+    if (ids.isEmpty) {
+      return;
+    }
+    try {
+      await _apiClient.post(
+        AppEnvironment.notifications('/read').toString(),
+        data: {'ids': ids},
+      );
+    } catch (_) {}
   }
 
   @override
@@ -357,6 +389,22 @@ class _Notification {
     required this.isRead,
     required this.date,
   });
+
+  _Notification copyWith({
+    String? id,
+    String? title,
+    String? message,
+    bool? isRead,
+    String? date,
+  }) {
+    return _Notification(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      isRead: isRead ?? this.isRead,
+      date: date ?? this.date,
+    );
+  }
 }
 
 class _NotificationCacheEntry {

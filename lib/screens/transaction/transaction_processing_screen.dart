@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 
+enum TransactionProgressFlow { generic, swap, transfer }
+
 enum TransactionProgressStage {
   preparing,
   approvalPending,
@@ -18,18 +20,23 @@ enum TransactionProgressStage {
 class TransactionProgressState {
   const TransactionProgressState({
     required this.stage,
+    this.flow = TransactionProgressFlow.generic,
     this.message,
     this.reference,
     this.detailsUrl,
   });
 
-  factory TransactionProgressState.initial() {
-    return const TransactionProgressState(
+  factory TransactionProgressState.initial({
+    TransactionProgressFlow flow = TransactionProgressFlow.generic,
+  }) {
+    return TransactionProgressState(
       stage: TransactionProgressStage.preparing,
+      flow: flow,
     );
   }
 
   final TransactionProgressStage stage;
+  final TransactionProgressFlow flow;
   final String? message;
   final String? reference;
   final String? detailsUrl;
@@ -41,11 +48,32 @@ class TransactionProgressState {
   bool get hasProcessingState =>
       stage != TransactionProgressStage.success &&
       stage != TransactionProgressStage.error;
+
+  TransactionProgressState copyWith({
+    TransactionProgressStage? stage,
+    TransactionProgressFlow? flow,
+    String? message,
+    bool clearMessage = false,
+    String? reference,
+    bool clearReference = false,
+    String? detailsUrl,
+    bool clearDetailsUrl = false,
+  }) {
+    return TransactionProgressState(
+      stage: stage ?? this.stage,
+      flow: flow ?? this.flow,
+      message: clearMessage ? null : (message ?? this.message),
+      reference: clearReference ? null : (reference ?? this.reference),
+      detailsUrl: clearDetailsUrl ? null : (detailsUrl ?? this.detailsUrl),
+    );
+  }
 }
 
 class TransactionProgressController extends ChangeNotifier {
-  TransactionProgressController({TransactionProgressState? initialState})
-    : _state = initialState ?? TransactionProgressState.initial();
+  TransactionProgressController({
+    TransactionProgressFlow flow = TransactionProgressFlow.generic,
+    TransactionProgressState? initialState,
+  }) : _state = initialState ?? TransactionProgressState.initial(flow: flow);
 
   TransactionProgressState _state;
   bool _disposed = false;
@@ -54,63 +82,75 @@ class TransactionProgressController extends ChangeNotifier {
 
   void setPreparing() {
     _update(
-      const TransactionProgressState(stage: TransactionProgressStage.preparing),
+      _state.copyWith(
+        stage: TransactionProgressStage.preparing,
+        clearMessage: true,
+        clearReference: true,
+        clearDetailsUrl: true,
+      ),
     );
   }
 
   void setApprovalPending({String? reference, String? detailsUrl}) {
     _update(
-      TransactionProgressState(
+      _state.copyWith(
         stage: TransactionProgressStage.approvalPending,
         reference: reference,
         detailsUrl: detailsUrl,
+        clearMessage: true,
       ),
     );
   }
 
   void setSwapSubmitting({bool gasless = false}) {
     _update(
-      TransactionProgressState(
+      _state.copyWith(
         stage: gasless
             ? TransactionProgressStage.gaslessPending
             : TransactionProgressStage.swapSubmitting,
+        clearMessage: true,
+        clearReference: true,
+        clearDetailsUrl: true,
       ),
     );
   }
 
   void setSwapPending({String? reference, String? detailsUrl}) {
     _update(
-      TransactionProgressState(
+      _state.copyWith(
         stage: TransactionProgressStage.swapPending,
         reference: reference,
         detailsUrl: detailsUrl,
+        clearMessage: true,
       ),
     );
   }
 
   void setGaslessPending({String? reference, String? detailsUrl}) {
     _update(
-      TransactionProgressState(
+      _state.copyWith(
         stage: TransactionProgressStage.gaslessPending,
         reference: reference,
         detailsUrl: detailsUrl,
+        clearMessage: true,
       ),
     );
   }
 
   void setSuccess({String? reference, String? detailsUrl}) {
     _update(
-      TransactionProgressState(
+      _state.copyWith(
         stage: TransactionProgressStage.success,
         reference: reference,
         detailsUrl: detailsUrl,
+        clearMessage: true,
       ),
     );
   }
 
   void setError(String message, {String? reference, String? detailsUrl}) {
     _update(
-      TransactionProgressState(
+      _state.copyWith(
         stage: TransactionProgressStage.error,
         message: message,
         reference: reference,
@@ -135,9 +175,15 @@ class TransactionProgressController extends ChangeNotifier {
 }
 
 class TransactionProcessingArguments {
-  const TransactionProcessingArguments({required this.controller});
+  const TransactionProcessingArguments({
+    required this.controller,
+    this.terminalRouteName,
+    this.clearStackOnTerminalRoute = false,
+  });
 
   final TransactionProgressController controller;
+  final String? terminalRouteName;
+  final bool clearStackOnTerminalRoute;
 }
 
 class TransactionProcessingScreen extends StatelessWidget {
@@ -150,20 +196,34 @@ class TransactionProcessingScreen extends StatelessWidget {
             as TransactionProcessingArguments?;
     final controller = args?.controller;
     if (controller == null) {
-      return _ProcessingScaffold(state: TransactionProgressState.initial());
+      return const _ProcessingScaffold(
+        state: TransactionProgressState(
+          stage: TransactionProgressStage.preparing,
+        ),
+      );
     }
 
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, _) => _ProcessingScaffold(state: controller.state),
+      builder: (context, _) => _ProcessingScaffold(
+        state: controller.state,
+        terminalRouteName: args?.terminalRouteName,
+        clearStackOnTerminalRoute: args?.clearStackOnTerminalRoute ?? false,
+      ),
     );
   }
 }
 
 class _ProcessingScaffold extends StatelessWidget {
-  const _ProcessingScaffold({required this.state});
+  const _ProcessingScaffold({
+    required this.state,
+    this.terminalRouteName,
+    this.clearStackOnTerminalRoute = false,
+  });
 
   final TransactionProgressState state;
+  final String? terminalRouteName;
+  final bool clearStackOnTerminalRoute;
 
   IconData get _icon {
     switch (state.stage) {
@@ -194,6 +254,28 @@ class _ProcessingScaffold extends StatelessWidget {
   }
 
   String _title(AppLocalizations l) {
+    switch (state.flow) {
+      case TransactionProgressFlow.swap:
+        return _swapTitle(l);
+      case TransactionProgressFlow.transfer:
+        return _transferTitle();
+      case TransactionProgressFlow.generic:
+        return _genericTitle(l);
+    }
+  }
+
+  String _subtitle(AppLocalizations l) {
+    switch (state.flow) {
+      case TransactionProgressFlow.swap:
+        return _swapSubtitle(l);
+      case TransactionProgressFlow.transfer:
+        return _transferSubtitle(l);
+      case TransactionProgressFlow.generic:
+        return _genericSubtitle(l);
+    }
+  }
+
+  String _swapTitle(AppLocalizations l) {
     switch (state.stage) {
       case TransactionProgressStage.preparing:
         return l.swapPreparingTitle;
@@ -214,7 +296,7 @@ class _ProcessingScaffold extends StatelessWidget {
     }
   }
 
-  String _subtitle(AppLocalizations l) {
+  String _swapSubtitle(AppLocalizations l) {
     switch (state.stage) {
       case TransactionProgressStage.preparing:
         return l.swapPreparingSubtitle;
@@ -235,11 +317,88 @@ class _ProcessingScaffold extends StatelessWidget {
     }
   }
 
+  String _transferTitle() {
+    switch (state.stage) {
+      case TransactionProgressStage.preparing:
+        return 'Preparing transfer...';
+      case TransactionProgressStage.approvalPending:
+        return 'Transfer approval pending';
+      case TransactionProgressStage.swapSubmitting:
+        return 'Submitting transfer...';
+      case TransactionProgressStage.swapPending:
+      case TransactionProgressStage.gaslessPending:
+        return 'Transfer in progress';
+      case TransactionProgressStage.success:
+        return 'Transfer completed';
+      case TransactionProgressStage.error:
+        return 'Transfer failed';
+    }
+  }
+
+  String _transferSubtitle(AppLocalizations l) {
+    switch (state.stage) {
+      case TransactionProgressStage.preparing:
+        return 'Your transfer is being prepared for submission.';
+      case TransactionProgressStage.approvalPending:
+        return 'Please wait while the network processes the approval.';
+      case TransactionProgressStage.swapSubmitting:
+        return 'Your transfer is being broadcast to the network.';
+      case TransactionProgressStage.swapPending:
+        return 'Waiting for the network to confirm your transfer.';
+      case TransactionProgressStage.gaslessPending:
+        return 'Waiting for the network to confirm your transfer.';
+      case TransactionProgressStage.success:
+        return 'Your transfer has been confirmed successfully.';
+      case TransactionProgressStage.error:
+        return state.message ?? l.tryAgain;
+    }
+  }
+
+  String _genericTitle(AppLocalizations l) {
+    switch (state.stage) {
+      case TransactionProgressStage.preparing:
+        return 'Preparing transaction...';
+      case TransactionProgressStage.approvalPending:
+        return 'Approval pending';
+      case TransactionProgressStage.swapSubmitting:
+        return 'Submitting transaction...';
+      case TransactionProgressStage.swapPending:
+      case TransactionProgressStage.gaslessPending:
+        return 'Transaction in progress';
+      case TransactionProgressStage.success:
+        return 'Transaction completed';
+      case TransactionProgressStage.error:
+        return l.transactionFailed;
+    }
+  }
+
+  String _genericSubtitle(AppLocalizations l) {
+    switch (state.stage) {
+      case TransactionProgressStage.preparing:
+        return 'Your transaction is being prepared.';
+      case TransactionProgressStage.approvalPending:
+        return 'Please wait while the network processes the approval.';
+      case TransactionProgressStage.swapSubmitting:
+        return 'Your transaction is being broadcast to the network.';
+      case TransactionProgressStage.swapPending:
+      case TransactionProgressStage.gaslessPending:
+        return 'Waiting for the network to confirm your transaction.';
+      case TransactionProgressStage.success:
+        return 'Your transaction has been confirmed successfully.';
+      case TransactionProgressStage.error:
+        return state.message ?? l.tryAgain;
+    }
+  }
+
   Future<void> _openDetails(BuildContext context) async {
     final detailsUrl = state.detailsUrl;
     if (detailsUrl != null && detailsUrl.isNotEmpty) {
       final uri = Uri.tryParse(detailsUrl);
       if (uri != null) {
+        final opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        if (opened) {
+          return;
+        }
         await launchUrl(uri, mode: LaunchMode.externalApplication);
         return;
       }
@@ -249,17 +408,50 @@ class _ProcessingScaffold extends StatelessWidget {
       return;
     }
     if (state.isTerminal) {
-      Navigator.pop(context);
+      _close(context);
       return;
     }
     Navigator.pushNamed(context, '/transactions');
+  }
+
+  void _close(BuildContext context) {
+    if (!context.mounted) {
+      return;
+    }
+    if (state.isTerminal &&
+        terminalRouteName != null &&
+        terminalRouteName!.isNotEmpty) {
+      if (clearStackOnTerminalRoute) {
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          terminalRouteName!,
+          (route) => false,
+        );
+        return;
+      }
+      Navigator.pushReplacementNamed(context, terminalRouteName!);
+      return;
+    }
+    Navigator.pop(context);
+  }
+
+  String _primaryActionLabel(AppLocalizations l) {
+    final hasDetailsUrl =
+        state.detailsUrl != null && state.detailsUrl!.trim().isNotEmpty;
+    if (hasDetailsUrl) {
+      return 'View on Explorer';
+    }
+    if (state.isTerminal) {
+      return l.closeLabel;
+    }
+    return l.transactionDetails;
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final hasDetailsUrl =
-        state.detailsUrl != null && state.detailsUrl!.isNotEmpty;
+        state.detailsUrl != null && state.detailsUrl!.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.cardDark,
@@ -271,7 +463,7 @@ class _ProcessingScaffold extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(0, 12, 12, 0),
                 child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => _close(context),
                   child: Container(
                     width: 36,
                     height: 36,
@@ -369,30 +561,44 @@ class _ProcessingScaffold extends StatelessWidget {
             const Spacer(flex: 3),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: GestureDetector(
-                onTap: () => _openDetails(context),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      hasDetailsUrl
-                          ? l.transactionDetails
-                          : (state.isTerminal
-                                ? l.closeLabel
-                                : l.transactionDetails),
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: () => _openDetails(context),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _primaryActionLabel(l),
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  if (state.isTerminal && hasDetailsUrl) ...[
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () => _close(context),
+                      child: Text(
+                        l.closeLabel,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.78),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

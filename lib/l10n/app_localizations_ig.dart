@@ -1420,4 +1420,16 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get noNotificationsYet => 'Enweghị ọkwa ọ bụla ugbu a';
+
+  @override
+  String get availableBalance => 'EGO DỊ';
+
+  @override
+  String get history => 'Akụkọ';
+
+  @override
+  String get followSocialhq => 'Soro @fomowlhq na X maka ozi ọhụrụ';
+
+  @override
+  String get socialhqHandle => 'x.com/fomowlhq';
 }

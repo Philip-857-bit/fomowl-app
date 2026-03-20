@@ -1371,4 +1371,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noNotificationsYet => '暂无通知';
+
+  @override
+  String get availableBalance => '可用余额';
+
+  @override
+  String get history => '历史';
+
+  @override
+  String get followSocialhq => '在X上关注@fomowlhq获取即时更新';
+
+  @override
+  String get socialhqHandle => 'x.com/fomowlhq';
 }

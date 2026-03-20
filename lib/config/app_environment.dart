@@ -21,6 +21,18 @@ class AppEnvironment {
   static final FirebaseOptions? firebaseOptions =
       _resolveFirebaseOptionsForCurrentPlatform();
 
+  static Future<void> initializeFirebaseApp() async {
+    if (Firebase.apps.isNotEmpty) {
+      return;
+    }
+    final options = firebaseOptions;
+    if (options != null) {
+      await Firebase.initializeApp(options: options);
+      return;
+    }
+    await Firebase.initializeApp();
+  }
+
   static Uri api(String path, [Map<String, String>? queryParameters]) {
     return _buildUri('/api$path', queryParameters);
   }
@@ -129,7 +141,10 @@ class AppEnvironment {
     if (configured.isNotEmpty) {
       return configured.toLowerCase() == 'true';
     }
-    return firebaseOptions != null;
+    return !kIsWeb &&
+        (firebaseOptions != null ||
+            defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
   }
 
   static FirebaseOptions? _resolveFirebaseOptionsForCurrentPlatform() {

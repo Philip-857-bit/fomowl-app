@@ -68,10 +68,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasMoreNfts = false;
   bool _clipboardChecked = false;
   bool _isUsingCachedData = false;
+  StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
 
   @override
   void initState() {
     super.initState();
+    _tokenVisibilitySubscription = _tokenVisibilityService.changes.listen((
+      change,
+    ) {
+      if (!mounted || change.chainId != _lastChainId) {
+        return;
+      }
+      setState(() => _hiddenTokenKeys = change.hiddenTokens);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       unawaited(_screenCaptureGuard.disableProtection());
@@ -100,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _blockchain?.clearLivePriceTracking(scope: _livePriceScope);
     _blockchain?.removeListener(_handleBlockchainChange);
+    _tokenVisibilitySubscription?.cancel();
     super.dispose();
   }
 

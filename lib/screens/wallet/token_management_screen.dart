@@ -554,145 +554,154 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final query = _query.trim().toLowerCase();
     final showingSuggestions = query.isEmpty && _suggestedTokens.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) {
+          return;
+        }
+        _closeScreen();
+      },
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _closeScreen,
-        ),
-        title: Text(
-          l.manageTokens,
-          style: GoogleFonts.outfit(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+        appBar: AppBar(
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: _closeScreen,
           ),
+          title: Text(
+            l.manageTokens,
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          centerTitle: false,
         ),
-        centerTitle: false,
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.accentRed),
-            )
-          : Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                  child: TokenManagementSearchBar(
-                    controller: _searchController,
-                    query: _query,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Search status indicator
-                if (_isSearchingRemote)
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.accentRed),
+              )
+            : Column(
+                children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            color: AppColors.accentRed,
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                    child: TokenManagementSearchBar(
+                      controller: _searchController,
+                      query: _query,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Search status indicator
+                  if (_isSearchingRemote)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 1.5,
+                              color: AppColors.accentRed,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l.searchResults,
+                          const SizedBox(width: 8),
+                          Text(
+                            l.searchResults,
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: Colors.white38,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  // Contract import card
+                  if (canImportByContract)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                      child: ContractImportCard(
+                        isLoading: _resolvingContract == _query,
+                        onAdd: _importTokenFromContract,
+                        tokenName: _resolvedTokenName,
+                        tokenSymbol: _resolvedTokenSymbol,
+                        tokenImageUrl: _resolvedTokenImageUrl,
+                        chainId: blockchain.activeChain.chainId,
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  // Section label
+                  if (!canImportByContract)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          query.isEmpty
+                              ? (showingSuggestions
+                                    ? l.suggestedTokens
+                                    : l.visibleTokens)
+                              : l.searchResults,
                           style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: Colors.white38,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white54,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                // Contract import card
-                if (canImportByContract)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    child: ContractImportCard(
-                      isLoading: _resolvingContract == _query,
-                      onAdd: _importTokenFromContract,
-                      tokenName: _resolvedTokenName,
-                      tokenSymbol: _resolvedTokenSymbol,
-                      tokenImageUrl: _resolvedTokenImageUrl,
-                      chainId: blockchain.activeChain.chainId,
-                    ),
-                  ),
-                const SizedBox(height: 4),
-                // Section label
-                if (!canImportByContract)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        query.isEmpty
-                            ? (showingSuggestions
-                                  ? l.suggestedTokens
-                                  : l.visibleTokens)
-                            : l.searchResults,
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white54,
                         ),
                       ),
                     ),
-                  ),
-                // Unified token list
-                Expanded(
-                  child: displayTokens.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Text(
-                              query.isEmpty
-                                  ? (showingSuggestions
-                                        ? l.noSuggestedTokensYet
-                                        : l.noTokensDetectedYet)
-                                  : l.noMatchingTokensFound,
-                              style: GoogleFonts.outfit(
-                                color: Colors.white38,
-                                fontSize: 14,
+                  // Unified token list
+                  Expanded(
+                    child: displayTokens.isEmpty
+                        ? Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Text(
+                                query.isEmpty
+                                    ? (showingSuggestions
+                                          ? l.noSuggestedTokensYet
+                                          : l.noTokensDetectedYet)
+                                    : l.noMatchingTokensFound,
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white38,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: displayTokens.length,
-                          itemBuilder: (context, index) {
-                            final token = displayTokens[index];
-                            final key = _tokenKey(token);
-                            final isNative = _isNativeToken(token);
-                            final isEnabled = _isTokenEnabled(token);
-                            final isProcessing = _processingTokens.contains(
-                              key,
-                            );
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: displayTokens.length,
+                            itemBuilder: (context, index) {
+                              final token = displayTokens[index];
+                              final key = _tokenKey(token);
+                              final isNative = _isNativeToken(token);
+                              final isEnabled = _isTokenEnabled(token);
+                              final isProcessing = _processingTokens.contains(
+                                key,
+                              );
 
-                            return ManagedTokenTile(
-                              key: ValueKey(key),
-                              token: token,
-                              isEnabled: isEnabled,
-                              isNative: isNative,
-                              isProcessing: isProcessing,
-                              onToggleChanged: (value) =>
-                                  _handleToggle(token, value),
-                              chainId: blockchain.activeChain.chainId,
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
+                              return ManagedTokenTile(
+                                key: ValueKey(key),
+                                token: token,
+                                isEnabled: isEnabled,
+                                isNative: isNative,
+                                isProcessing: isProcessing,
+                                onToggleChanged: (value) =>
+                                    _handleToggle(token, value),
+                                chainId: blockchain.activeChain.chainId,
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }

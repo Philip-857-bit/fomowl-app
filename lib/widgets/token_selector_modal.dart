@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../models/token.dart';
 import '../../l10n/app_localizations.dart';
+import '../services/token_visibility_service.dart';
+import '../utils/token_visibility_utils.dart';
 import 'token_icon.dart';
 
 class TokenSelectorDialog extends StatefulWidget {
@@ -17,12 +19,17 @@ class TokenSelectorDialog extends StatefulWidget {
 class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
   late List<Token> _filteredTokens;
   final TextEditingController _searchController = TextEditingController();
+  final TokenVisibilityService _tokenVisibilityService =
+      TokenVisibilityService();
+  Set<String> _hiddenTokens = <String>{};
+  bool _isLoadingVisibility = false;
 
   @override
   void initState() {
     super.initState();
-    _filteredTokens = widget.tokens;
+    _filteredTokens = _visibleTokens;
     _searchController.addListener(_onSearchChanged);
+    _loadVisibility();
   }
 
   @override
@@ -36,9 +43,9 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       if (query.isEmpty) {
-        _filteredTokens = widget.tokens;
+        _filteredTokens = _visibleTokens;
       } else {
-        _filteredTokens = widget.tokens
+        _filteredTokens = _visibleTokens
             .where(
               (token) =>
                   token.name.toLowerCase().contains(query) ||
@@ -47,6 +54,38 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
             .toList();
       }
     });
+  }
+
+  List<Token> get _visibleTokens {
+    if (_hiddenTokens.isEmpty) {
+      return widget.tokens;
+    }
+    return widget.tokens.where((token) {
+      final contractAddress = token.contractAddress ?? '';
+      if (contractAddress.isEmpty) {
+        return true;
+      }
+      return !_hiddenTokens.contains(TokenVisibilityUtils.identifier(token));
+    }).toList();
+  }
+
+  Future<void> _loadVisibility() async {
+    final chainId = widget.chainId;
+    if (chainId == null) {
+      return;
+    }
+    setState(() => _isLoadingVisibility = true);
+    final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
+      chainId,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _hiddenTokens = hiddenTokens;
+      _isLoadingVisibility = false;
+    });
+    _onSearchChanged();
   }
 
   @override
@@ -103,7 +142,16 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.4,
               ),
-              child: _filteredTokens.isEmpty
+              child: _isLoadingVisibility
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: CircularProgressIndicator(
+                          color: AppColors.accentRed,
+                        ),
+                      ),
+                    )
+                  : _filteredTokens.isEmpty
                   ? Center(
                       child: Text(
                         _searchController.text.isEmpty

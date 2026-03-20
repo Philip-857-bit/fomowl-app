@@ -7,7 +7,9 @@ import '../../models/token.dart';
 import '../../widgets/token_icon.dart';
 
 import '../../services/blockchain_service.dart';
+import '../../services/token_visibility_service.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/token_visibility_utils.dart';
 
 /// Select Token Screen
 /// Search and filter tokens by network, tap to select
@@ -22,6 +24,8 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   final WalletService _walletService = WalletService();
+  final TokenVisibilityService _tokenVisibilityService =
+      TokenVisibilityService();
 
   List<Token> _allTokens = [];
   List<Token> _filteredTokens = [];
@@ -41,40 +45,60 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
 
   Future<void> _loadTokens() async {
     setState(() => _isLoading = true);
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
     try {
+      final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
+        blockchain.activeChain.chainId,
+      );
       final address = await _walletService.getCurrentWalletAddress();
       if (address != null) {
         if (!mounted) return;
-        final tokens = await Provider.of<BlockchainService>(
-          context,
-          listen: false,
-        ).fetchWalletTokens(address);
+        final tokens = await blockchain.fetchWalletTokens(address);
+        final visibleTokens = _applyVisibility(tokens, hiddenTokens);
         if (mounted) {
           setState(() {
-            _allTokens = tokens;
-            _filteredTokens = tokens;
+            _allTokens = visibleTokens;
+            _filteredTokens = visibleTokens;
             _isLoading = false;
           });
         }
       } else {
         // Show default token list even without wallet
+        final defaultTokens = _applyVisibility(
+          _getDefaultTokens(),
+          hiddenTokens,
+        );
         if (mounted) {
           setState(() {
-            _allTokens = _getDefaultTokens();
-            _filteredTokens = _allTokens;
+            _allTokens = defaultTokens;
+            _filteredTokens = defaultTokens;
             _isLoading = false;
           });
         }
       }
     } catch (e) {
+      final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
+        blockchain.activeChain.chainId,
+      );
+      final defaultTokens = _applyVisibility(_getDefaultTokens(), hiddenTokens);
       if (mounted) {
         setState(() {
-          _allTokens = _getDefaultTokens();
-          _filteredTokens = _allTokens;
+          _allTokens = defaultTokens;
+          _filteredTokens = defaultTokens;
           _isLoading = false;
         });
       }
     }
+  }
+
+  List<Token> _applyVisibility(List<Token> tokens, Set<String> hiddenTokens) {
+    return tokens.where((token) {
+      final contractAddress = token.contractAddress ?? '';
+      if (contractAddress.isEmpty) {
+        return true;
+      }
+      return !hiddenTokens.contains(TokenVisibilityUtils.identifier(token));
+    }).toList();
   }
 
   List<Token> _getDefaultTokens() {

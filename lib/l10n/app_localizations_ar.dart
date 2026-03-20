@@ -1433,4 +1433,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get noNotificationsYet => 'لا توجد إشعارات بعد';
+
+  @override
+  String get availableBalance => 'الرصيد المتاح';
+
+  @override
+  String get history => 'السجل';
+
+  @override
+  String get followSocialhq => 'تابع @fomowlhq على X للحصول على التحديثات';
+
+  @override
+  String get socialhqHandle => 'x.com/fomowlhq';
 }

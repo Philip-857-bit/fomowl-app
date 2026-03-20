@@ -1,16 +1,20 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/transaction_monitor.dart';
+import '../../services/wallet_notification_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
-import '../../utils/toast_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../transaction/transaction_processing_screen.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/confirm_button.dart';
 import 'widgets/transfer_confirmation/transaction_details_card.dart';
@@ -30,6 +34,9 @@ class TransferConfirmationScreen extends StatefulWidget {
 class _TransferConfirmationScreenState
     extends State<TransferConfirmationScreen> {
   final WalletService _walletService = WalletService();
+  final TransactionMonitor _transactionMonitor = TransactionMonitor();
+  final WalletNotificationService _walletNotificationService =
+      WalletNotificationService();
   Map<String, dynamic>? _args;
   String? _fromAddress;
   bool _isConfirming = false;
@@ -45,7 +52,9 @@ class _TransferConfirmationScreenState
   void didChangeDependencies() {
     super.didChangeDependencies();
     _args ??= _routeArgumentsAsMap(ModalRoute.of(context)?.settings.arguments);
-    if (_fromAddress == null) _loadFromAddress();
+    if (_fromAddress == null) {
+      _loadFromAddress();
+    }
   }
 
   Map<String, dynamic>? _routeArgumentsAsMap(dynamic arguments) {
@@ -71,7 +80,9 @@ class _TransferConfirmationScreenState
 
   Future<void> _loadFromAddress() async {
     final address = await _walletService.getCurrentWalletAddress();
-    if (mounted) setState(() => _fromAddress = address);
+    if (mounted) {
+      setState(() => _fromAddress = address);
+    }
     _fetchGasEstimate();
   }
 
@@ -111,26 +122,89 @@ class _TransferConfirmationScreenState
   }
 
   String _shortenAddress(String? address) {
-    if (address == null || address.length < 10) return address ?? '--';
+    if (address == null || address.length < 10) {
+      return address ?? '--';
+    }
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
+  String _shortHash(String hash) {
+    if (hash.length <= 10) {
+      return hash;
+    }
+    return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
+  }
+
+  String? _transactionDetailsUrl(String hash, BlockchainService blockchain) {
+    if (!RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(hash)) {
+      return null;
+    }
+    final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
+    if (explorerUrl == null || explorerUrl.isEmpty) {
+      return null;
+    }
+    final normalized = explorerUrl.endsWith('/')
+        ? explorerUrl.substring(0, explorerUrl.length - 1)
+        : explorerUrl;
+    return '$normalized/tx/$hash';
+  }
+
+  TransactionProgressController _openProgressFlow() {
+    final controller = TransactionProgressController(
+      flow: TransactionProgressFlow.transfer,
+    );
+    unawaited(
+      Navigator.of(context)
+          .pushNamed(
+            '/transaction-processing',
+            arguments: TransactionProcessingArguments(
+              controller: controller,
+              terminalRouteName: '/home',
+              clearStackOnTerminalRoute: true,
+            ),
+          )
+          .whenComplete(controller.dispose),
+    );
+    return controller;
+  }
+
   Future<void> _confirmTransfer() async {
-    if (_isConfirming) return;
+    if (_isConfirming) {
+      return;
+    }
     setState(() => _isConfirming = true);
 
     final toAddress = _args?['toAddress'] as String? ?? '';
     final amountInBaseUnits =
         _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
+    final amountText = _args?['amount'] as String? ?? '0';
+    final token = _args?['token'] as Token?;
+    final progressController = _openProgressFlow();
+    progressController.setPreparing();
 
     try {
-      // Refresh selected token price right before confirmation for accuracy
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final chain = blockchain.activeChain;
-      final token = _args?['token'] as Token?;
       await blockchain.refreshPricesBeforeConfirmation(
         token == null ? const [] : [token],
       );
+
+      progressController.setSwapSubmitting();
+
+      final isNative =
+          token?.contractAddress == null ||
+          (token?.contractAddress?.isEmpty ?? true);
+      if (isNative && _fromAddress != null) {
+        final availableBalance = await blockchain.getNativeBalanceBaseUnits(
+          _fromAddress!,
+        );
+        if (amountInBaseUnits + _gasFeeWei > availableBalance) {
+          progressController.setError(
+            'Insufficient ${chain.symbol} to cover the transfer amount and gas fee.',
+          );
+          return;
+        }
+      }
 
       final txHash = await _walletService.sendNativeTransaction(
         toAddress: toAddress,
@@ -139,26 +213,53 @@ class _TransferConfirmationScreenState
         chainId: chain.chainId,
       );
 
-      if (mounted) {
-        ToastUtils.showSuccess(
-          '${AppLocalizations.of(context).transactionBroadcast}. Tx: ${txHash.substring(0, 10)}...${txHash.substring(txHash.length - 6)}',
+      final detailsUrl = _transactionDetailsUrl(txHash, blockchain);
+      progressController.setSwapPending(
+        reference: _shortHash(txHash),
+        detailsUrl: detailsUrl,
+      );
+
+      final confirmed = await _transactionMonitor.waitForConfirmation(
+        txHash: txHash,
+        blockchain: blockchain,
+      );
+      if (!mounted) {
+        return;
+      }
+
+      if (confirmed) {
+        if (_fromAddress != null && token != null) {
+          unawaited(
+            _walletNotificationService.notifySendConfirmed(
+              walletAddress: _fromAddress!,
+              amountText: amountText,
+              tokenSymbol: token.symbol,
+              toAddress: toAddress,
+              networkName: chain.name,
+            ),
+          );
+        }
+        progressController.setSuccess(
+          reference: _shortHash(txHash),
+          detailsUrl: detailsUrl,
         );
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/home',
-              (route) => false,
-            );
-          }
-        });
+      } else {
+        progressController.setError(
+          AppLocalizations.of(context).transactionPendingConfirmation,
+          reference: _shortHash(txHash),
+          detailsUrl: detailsUrl,
+        );
       }
     } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      final l = AppLocalizations.of(context);
+      progressController.setError(
+        AppErrorUtils.userMessage(e, fallback: l.transactionFailed),
+      );
+    } finally {
       if (mounted) {
-        final l = AppLocalizations.of(context);
-        ToastUtils.showError(
-          AppErrorUtils.userMessage(e, fallback: l.transactionFailed),
-        );
         setState(() => _isConfirming = false);
       }
     }
@@ -176,7 +277,9 @@ class _TransferConfirmationScreenState
     final blockchain = Provider.of<BlockchainService>(context);
     final l = AppLocalizations.of(context);
 
-    final isNative = token?.contractAddress == null;
+    final isNative =
+        token?.contractAddress == null ||
+        (token?.contractAddress?.isEmpty ?? true);
     final parsedAmount = AmountUtils.formatBaseUnits(
       amountInBaseUnits,
       token?.decimals ?? 18,
@@ -195,7 +298,7 @@ class _TransferConfirmationScreenState
 
     final gasValueUsd = _gasEstimationFailed
         ? ''
-        : '≈${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(_gasFeeUsd))}';
+        : '~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(_gasFeeUsd))}';
 
     return Scaffold(
       backgroundColor: AppColors.background,

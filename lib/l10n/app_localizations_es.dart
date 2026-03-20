@@ -1454,4 +1454,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noNotificationsYet => 'Aún no hay notificaciones';
+
+  @override
+  String get availableBalance => 'SALDO DISPONIBLE';
+
+  @override
+  String get history => 'Historial';
+
+  @override
+  String get followSocialhq => 'Siga a @fomowlhq en X para actualizaciones';
+
+  @override
+  String get socialhqHandle => 'x.com/fomowlhq';
 }

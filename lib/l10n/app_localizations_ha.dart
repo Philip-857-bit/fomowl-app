@@ -1426,4 +1426,16 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get noNotificationsYet => 'Babu sanarwa tukuna';
+
+  @override
+  String get availableBalance => 'KUƊIN DA AKE DA SU';
+
+  @override
+  String get history => 'Tarihi';
+
+  @override
+  String get followSocialhq => 'Bi @fomowlhq a X don samun sababbin labarai';
+
+  @override
+  String get socialhqHandle => 'x.com/fomowlhq';
 }

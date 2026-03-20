@@ -2713,6 +2713,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No notifications yet'**
   String get noNotificationsYet;
+
+  /// No description provided for @availableBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'AVAILABLE BALANCE'**
+  String get availableBalance;
+
+  /// No description provided for @history.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get history;
+
+  /// No description provided for @followSocialhq.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow @fomowlhq on X for live updates'**
+  String get followSocialhq;
+
+  /// No description provided for @socialhqHandle.
+  ///
+  /// In en, this message translates to:
+  /// **'x.com/fomowlhq'**
+  String get socialhqHandle;
 }
 
 class _AppLocalizationsDelegate

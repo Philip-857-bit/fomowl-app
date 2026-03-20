@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -39,15 +38,12 @@ class FirebasePushMessagingClient implements PushMessagingClient {
   @override
   Future<bool> initialize() async {
     if (_initialized) return true;
-    final options = AppEnvironment.firebaseOptions;
-    if (!AppEnvironment.pushNotificationsEnabled || options == null) {
+    if (!AppEnvironment.pushNotificationsEnabled) {
       return false;
     }
 
     try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(options: options);
-      }
+      await AppEnvironment.initializeFirebaseApp();
       _messaging = _providedMessaging ?? FirebaseMessaging.instance;
       _initialized = true;
       return true;
