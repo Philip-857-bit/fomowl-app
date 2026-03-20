@@ -249,15 +249,29 @@ class BlockchainService extends ChangeNotifier {
       debugPrint('[OWLLET] BlockchainService: Loading custom tokens...');
       await _loadCustomTokens();
 
-      debugPrint('[OWLLET] BlockchainService: Hydrating from backend...');
-      await _hydrateNetworkSettingsFromBackend();
-
       _initialized = true;
-      debugPrint('[OWLLET] BlockchainService: Init SUCCESS.');
+      debugPrint('[OWLLET] BlockchainService: Local init SUCCESS.');
       notifyListeners();
+
+      // Do not block first paint on a best-effort backend settings fetch.
+      unawaited(_hydrateNetworkSettingsAfterInit());
     } catch (e) {
       debugPrint('[OWLLET] BlockchainService: Init FAILED with error: $e');
       _initialized = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _hydrateNetworkSettingsAfterInit() async {
+    debugPrint('[OWLLET] BlockchainService: Hydrating from backend...');
+    final beforeChainId = _activeChain.chainId;
+    final beforeCustomCount = _customChains.length;
+    await _hydrateNetworkSettingsFromBackend();
+    if (beforeChainId != _activeChain.chainId ||
+        beforeCustomCount != _customChains.length) {
+      debugPrint(
+        '[OWLLET] BlockchainService: Backend hydration updated chains.',
+      );
       notifyListeners();
     }
   }

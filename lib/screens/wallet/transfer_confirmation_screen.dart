@@ -14,6 +14,7 @@ import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../../widgets/wallet_signing_sheet.dart';
 import '../transaction/transaction_processing_screen.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/confirm_button.dart';
@@ -168,6 +169,35 @@ class _TransferConfirmationScreenState
     return controller;
   }
 
+  Future<bool> _requestTransferSignature({
+    required BlockchainService blockchain,
+    required String toAddress,
+    required String amountText,
+    required String symbol,
+  }) {
+    final networkName = blockchain.activeChain.name;
+    final gasLabel = _gasEstimationFailed
+        ? 'Gas estimate unavailable'
+        : '${_gasFeeEth.toStringAsFixed(6)} ${blockchain.activeChain.symbol}';
+
+    return WalletSigningSheet.show(
+      context,
+      title: 'Sign transfer',
+      confirmLabel: 'Sign',
+      subtitle:
+          'Review the transfer details below. This signature is created locally on this device.',
+      note:
+          'Only sign if the recipient address and amount are correct. Signed transfers cannot be reversed.',
+      fields: [
+        WalletSigningField(label: 'From', value: _shortenAddress(_fromAddress)),
+        WalletSigningField(label: 'To', value: _shortenAddress(toAddress)),
+        WalletSigningField(label: 'Amount', value: '$amountText $symbol'),
+        WalletSigningField(label: 'Network', value: networkName),
+        WalletSigningField(label: 'Est. gas', value: gasLabel),
+      ],
+    );
+  }
+
   Future<void> _confirmTransfer() async {
     if (_isConfirming) {
       return;
@@ -179,11 +209,24 @@ class _TransferConfirmationScreenState
         _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
     final amountText = _args?['amount'] as String? ?? '0';
     final token = _args?['token'] as Token?;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final approved = await _requestTransferSignature(
+      blockchain: blockchain,
+      toAddress: toAddress,
+      amountText: amountText,
+      symbol: token?.symbol ?? blockchain.activeChain.symbol,
+    );
+    if (!approved) {
+      if (mounted) {
+        setState(() => _isConfirming = false);
+      }
+      return;
+    }
+
     final progressController = _openProgressFlow();
     progressController.setPreparing();
 
     try {
-      final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final chain = blockchain.activeChain;
       await blockchain.refreshPricesBeforeConfirmation(
         token == null ? const [] : [token],

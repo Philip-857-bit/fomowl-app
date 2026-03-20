@@ -45,6 +45,7 @@ class FirebasePushMessagingClient implements PushMessagingClient {
     try {
       await AppEnvironment.initializeFirebaseApp();
       _messaging = _providedMessaging ?? FirebaseMessaging.instance;
+      await _messaging!.setAutoInitEnabled(true);
       _initialized = true;
       return true;
     } catch (error, stackTrace) {
@@ -134,7 +135,10 @@ class PushNotificationRegistrationService {
 
       // 2. Get current device token
       final deviceToken = await _messagingClient.getToken();
-      if (deviceToken == null || deviceToken.isEmpty) return;
+      if (deviceToken == null || deviceToken.isEmpty) {
+        debugPrint('Push sync skipped: Firebase returned no device token.');
+        return;
+      }
 
       // 3. Register if needed
       await _registerDeviceToken(
@@ -189,13 +193,6 @@ class PushNotificationRegistrationService {
     );
     final appVersion = await _appVersionProvider();
 
-    if (cached != null &&
-        cached['token'] == deviceToken &&
-        cached['appVersion'] == appVersion) {
-      // Already registered with backend
-      return;
-    }
-
     // If token changed, unregister old one (best effort)
     final oldToken = cached?['token'];
     if (oldToken != null && oldToken != deviceToken) {
@@ -227,7 +224,9 @@ class PushNotificationRegistrationService {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      debugPrint('Push device registration failed: ${response.statusCode}');
+      debugPrint(
+        'Push device registration failed: ${response.statusCode} ${response.body}',
+      );
       return;
     }
 

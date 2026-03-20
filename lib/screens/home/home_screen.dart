@@ -68,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasMoreNfts = false;
   bool _clipboardChecked = false;
   bool _isUsingCachedData = false;
+  int _deferredLoadGeneration = 0;
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
 
   @override
@@ -107,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _deferredLoadGeneration++;
     _blockchain?.clearLivePriceTracking(scope: _livePriceScope);
     _blockchain?.removeListener(_handleBlockchainChange);
     _tokenVisibilitySubscription?.cancel();
@@ -191,11 +193,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         debugPrint('[OWLLET] Triggering background data sync...');
-        unawaited(_safeSyncPushRegistration());
         unawaited(_fetchRealBalances(address));
-        unawaited(_fetchNftPreview(address));
-        unawaited(_refreshNotificationDot(address: address));
-        unawaited(_checkClipboardTokenSuggestion());
+        _scheduleDeferredHomeTasks(address);
       } else {
         if (mounted) {
           final l = AppLocalizations.of(context);
@@ -213,6 +212,29 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _scheduleDeferredHomeTasks(String address) {
+    final generation = ++_deferredLoadGeneration;
+    unawaited(_runDeferredHomeTasks(address, generation));
+  }
+
+  Future<void> _runDeferredHomeTasks(String address, int generation) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted || generation != _deferredLoadGeneration) {
+      return;
+    }
+
+    unawaited(_safeSyncPushRegistration());
+    unawaited(_refreshNotificationDot(address: address));
+
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted || generation != _deferredLoadGeneration) {
+      return;
+    }
+
+    unawaited(_fetchNftPreview(address));
+    unawaited(_checkClipboardTokenSuggestion());
   }
 
   Future<void> _safeSyncPushRegistration() async {
@@ -430,8 +452,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
 
       _fetchRealBalances(address);
-      _fetchNftPreview(address);
-      _refreshNotificationDot(address: address);
+      _scheduleDeferredHomeTasks(address);
     });
   }
 
