@@ -86,6 +86,23 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final hidden = await _visibilityService.loadHiddenTokens(chainId);
     final address = await _walletService.getCurrentWalletAddress();
     List<Token> fetched = blockchain.tokens;
+    if (address != null && address.isNotEmpty) {
+      final cached = blockchain.getCachedWalletTokens(
+        address,
+        chainId: chainId,
+      );
+      if (cached.isNotEmpty) {
+        fetched = cached;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _walletTokens = fetched;
+        _hiddenKeys = hidden;
+        _isLoading = false;
+      });
+    }
+
     if (address != null) {
       try {
         fetched = await blockchain.fetchWalletTokens(address);
@@ -155,6 +172,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     return token.contractAddress == null || token.contractAddress!.isEmpty;
   }
 
+  void _syncWalletTokensFromBlockchain(BlockchainService blockchain) {
+    _walletTokens = List<Token>.from(blockchain.tokens);
+  }
+
   // ── Optimistic Toggle ──────────────────────
 
   Future<void> _handleToggle(Token token, bool enable) async {
@@ -214,12 +235,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
       if (!mounted) return;
       setState(() {
+        _syncWalletTokensFromBlockchain(blockchain);
         _hasChanges = true;
         _processingTokens.remove(key);
       });
-
-      // Reload wallet data to reflect changes
-      await _loadData(showSpinner: false);
     } catch (e) {
       // Revert optimistic update
       if (!mounted) return;
@@ -356,9 +375,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ToastUtils.showInfo(l.tokenAlreadyExistsOnNetwork);
         return;
       }
-      await _loadData(showSpinner: false);
       if (!mounted) return;
       setState(() {
+        _syncWalletTokensFromBlockchain(blockchain);
         _hasChanges = true;
         _searchController.clear();
       });
@@ -489,9 +508,11 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ToastUtils.showInfo(l.tokenAlreadyExistsOnNetwork);
         return;
       }
-      await _loadData(showSpinner: false);
       if (!mounted) return;
-      setState(() => _hasChanges = true);
+      setState(() {
+        _syncWalletTokensFromBlockchain(blockchain);
+        _hasChanges = true;
+      });
       ToastUtils.showSuccess(l.tokenAdded(detected.symbol));
     } catch (e, stackTrace) {
       debugPrint('Token clipboard suggestion error: $e');

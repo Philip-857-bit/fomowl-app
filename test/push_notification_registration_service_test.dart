@@ -83,12 +83,23 @@ void main() {
       expect(stored['appVersion'], '1.2.0+5');
     });
 
-    test('skips registration when cached token and version match', () async {
-      await service.syncForActiveWallet();
-      await service.syncForActiveWallet();
+    test(
+      're-registers current token even when cached token and version match',
+      () async {
+        await service.syncForActiveWallet();
+        await service.syncForActiveWallet();
 
-      expect(httpClient.requests, hasLength(1));
-    });
+        expect(httpClient.requests, hasLength(2));
+        expect(
+          httpClient.requests[0].url.path,
+          '/api/notifications/devices/register',
+        );
+        expect(
+          httpClient.requests[1].url.path,
+          '/api/notifications/devices/register',
+        );
+      },
+    );
 
     test('unregisters old token before registering new one', () async {
       await service.syncForActiveWallet();

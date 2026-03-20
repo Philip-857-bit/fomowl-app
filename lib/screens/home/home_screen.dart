@@ -15,6 +15,7 @@ import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/nft_service.dart';
+import '../../services/app_notification_service.dart';
 import '../../services/push_notification_registration_service.dart';
 import '../../services/screen_capture_guard.dart';
 import '../../l10n/app_localizations.dart';
@@ -70,6 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isUsingCachedData = false;
   int _deferredLoadGeneration = 0;
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
+  StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
+  String _lastTokenSignature = '';
 
   @override
   void initState() {
@@ -81,6 +84,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
       setState(() => _hiddenTokenKeys = change.hiddenTokens);
+    });
+    _notificationEventSubscription = AppNotificationService().events.listen((
+      event,
+    ) {
+      unawaited(_handleNotificationEvent(event));
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -112,7 +120,62 @@ class _HomeScreenState extends State<HomeScreen> {
     _blockchain?.clearLivePriceTracking(scope: _livePriceScope);
     _blockchain?.removeListener(_handleBlockchainChange);
     _tokenVisibilitySubscription?.cancel();
+    _notificationEventSubscription?.cancel();
     super.dispose();
+  }
+
+  Future<void> _handleNotificationEvent(AppNotificationEvent event) async {
+    final currentWalletAddress = await _walletService.getCurrentWalletAddress();
+    if (!mounted ||
+        currentWalletAddress == null ||
+        currentWalletAddress.isEmpty) {
+      return;
+    }
+
+    final eventWalletAddress = event.walletAddress?.trim().toLowerCase();
+    if (eventWalletAddress != null &&
+        eventWalletAddress.isNotEmpty &&
+        eventWalletAddress != currentWalletAddress.toLowerCase()) {
+      return;
+    }
+
+    await _refreshNotificationDot(address: currentWalletAddress);
+  }
+
+  String _buildTokenSignature(List<Token> tokens) {
+    return tokens
+        .map((token) {
+          final contractAddress = (token.contractAddress ?? '').toLowerCase();
+          final imageUrl = token.imageUrl ?? '';
+          return [
+            contractAddress,
+            token.symbol.toLowerCase(),
+            token.name.toLowerCase(),
+            token.balance.toStringAsPrecision(12),
+            token.priceUsd.toStringAsPrecision(12),
+            imageUrl,
+          ].join(':');
+        })
+        .join('|');
+  }
+
+  double _sumTokenUsdValue(List<Token> tokens) {
+    var total = ValueFormatter.decimalFromNum(0);
+    for (final token in tokens) {
+      total += token.totalValueUsdDecimal;
+    }
+    return ValueFormatter.doubleFromDecimal(total);
+  }
+
+  void _replaceDisplayedTokens(
+    List<Token> tokens, {
+    required bool isUsingCachedData,
+  }) {
+    final nextTokens = List<Token>.from(tokens);
+    _tokens = nextTokens;
+    _totalBalance = _sumTokenUsdValue(nextTokens);
+    _lastTokenSignature = _buildTokenSignature(nextTokens);
+    _isUsingCachedData = isUsingCachedData;
   }
 
   Future<void> _checkConnectivity() async {
@@ -169,10 +232,8 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         if (snapshot != null && mounted) {
           setState(() {
-            _tokens = snapshot.tokens;
-            _totalBalance = snapshot.totalBalance;
+            _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
             _walletName = snapshot.walletName;
-            _isUsingCachedData = true;
           });
           blockchain.setLivePriceTrackingForTokens(
             _tokens,
@@ -368,15 +429,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _tokens = realTokens;
+          _replaceDisplayedTokens(realTokens, isUsingCachedData: false);
           _isLoadingBalances = false;
-          _isUsingCachedData = false;
         });
         blockchain.setLivePriceTrackingForTokens(
           _tokens,
           scope: _livePriceScope,
         );
-        _calculateTotalBalance();
         _lastChainId = blockchain.activeChain.chainId;
 
         // Save fresh snapshot
@@ -406,7 +465,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               listen: false,
             ).activeChain;
-            _tokens = [
+            _replaceDisplayedTokens([
               Token(
                 symbol: chain.symbol,
                 name: chain.name,
@@ -415,7 +474,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 changePercent24h: 0,
                 coinGeckoId: chain.coinGeckoId,
               ),
-            ];
+            ], isUsingCachedData: false);
           }
         });
       }
@@ -424,8 +483,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleBlockchainChange() {
     if (!mounted) return;
-    final chainId = _blockchain?.activeChain.chainId;
-    if (chainId == null || chainId == _lastChainId) return;
+    final blockchain = _blockchain;
+    final chainId = blockchain?.activeChain.chainId;
+    if (blockchain == null || chainId == null) return;
+
+    if (chainId == _lastChainId) {
+      final nextTokens = blockchain.tokens;
+      final nextSignature = _buildTokenSignature(nextTokens);
+      if (nextSignature == _lastTokenSignature) {
+        return;
+      }
+      setState(() {
+        _replaceDisplayedTokens(nextTokens, isUsingCachedData: false);
+      });
+      blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
+      return;
+    }
+
     _lastChainId = chainId;
     _loadHiddenTokens(chainId);
     _walletService.getCurrentWalletAddress().then((address) async {
@@ -435,9 +509,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final snapshot = await _snapshotService.loadSnapshot(chainId, address);
       if (snapshot != null && mounted) {
         setState(() {
-          _tokens = snapshot.tokens;
-          _totalBalance = snapshot.totalBalance;
-          _isUsingCachedData = true;
+          _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
         });
         _blockchain?.setLivePriceTrackingForTokens(
           _tokens,
@@ -445,25 +517,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       } else if (mounted) {
         setState(() {
-          _tokens = [];
-          _totalBalance = 0;
-          _isUsingCachedData = false;
+          _replaceDisplayedTokens(const [], isUsingCachedData: false);
         });
       }
 
       _fetchRealBalances(address);
       _scheduleDeferredHomeTasks(address);
     });
-  }
-
-  void _calculateTotalBalance() {
-    var total = ValueFormatter.decimalFromNum(0);
-    for (final token in _tokens) {
-      total += token.totalValueUsdDecimal;
-    }
-    if (mounted) {
-      setState(() => _totalBalance = ValueFormatter.doubleFromDecimal(total));
-    }
   }
 
   Future<void> _loadHiddenTokens(int chainId) async {
@@ -590,8 +650,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openTokenManager() async {
     final hasChanges = await Navigator.pushNamed(context, '/token-management');
-    if (hasChanges == true) {
-      await _loadWalletData();
+    if (hasChanges == true && mounted) {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      setState(() {
+        _replaceDisplayedTokens(blockchain.tokens, isUsingCachedData: false);
+      });
+      blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
+
+      final address = await _walletService.getCurrentWalletAddress();
+      if (address != null && address.isNotEmpty) {
+        unawaited(_fetchRealBalances(address));
+      }
     }
   }
 

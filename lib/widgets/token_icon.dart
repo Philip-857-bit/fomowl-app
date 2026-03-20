@@ -7,6 +7,8 @@ import '../services/blockchain/blockchain_catalog.dart';
 /// Displays token icons with fallback support
 /// Priority: Local assets -> Network URL -> TrustWallet CDN (chain-aware) -> Native chain logo -> Placeholder
 class TokenIcon extends StatelessWidget {
+  static final Set<String> _knownMissingUrls = <String>{};
+
   final String tokenSymbol;
   final String? tokenAddress;
   final String? tokenImageUrl;
@@ -75,16 +77,9 @@ class TokenIcon extends StatelessWidget {
 
     // Then try backend-provided image URL.
     if (tokenImageUrl != null && tokenImageUrl!.isNotEmpty) {
-      return Image.network(
+      return _buildNetworkImage(
         tokenImageUrl!,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildTrustWalletIcon(),
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildPlaceholder();
-        },
+        fallback: _buildTrustWalletIcon(),
       );
     }
 
@@ -172,22 +167,15 @@ class TokenIcon extends StatelessWidget {
       return _buildNativeLogoFallback();
     }
     final addr = candidates[index];
-    return Image.network(
-      'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$blockchainName/assets/$addr/logo.png',
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) {
-        return _buildTrustWalletCandidate(
-          blockchainName,
-          candidates,
-          index + 1,
-        );
-      },
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return _buildPlaceholder();
-      },
+    final url =
+        'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$blockchainName/assets/$addr/logo.png';
+    return _buildNetworkImage(
+      url,
+      fallback: _buildTrustWalletCandidate(
+        blockchainName,
+        candidates,
+        index + 1,
+      ),
     );
   }
 
@@ -198,12 +186,23 @@ class TokenIcon extends StatelessWidget {
     if (nativeLogoUrl == null || nativeLogoUrl.isEmpty) {
       return _buildPlaceholder();
     }
+    return _buildNetworkImage(nativeLogoUrl, fallback: _buildPlaceholder());
+  }
+
+  Widget _buildNetworkImage(String url, {required Widget fallback}) {
+    final normalizedUrl = url.trim();
+    if (normalizedUrl.isEmpty || _knownMissingUrls.contains(normalizedUrl)) {
+      return fallback;
+    }
     return Image.network(
-      nativeLogoUrl,
+      normalizedUrl,
       width: size,
       height: size,
       fit: BoxFit.cover,
-      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+      errorBuilder: (context, error, stackTrace) {
+        _knownMissingUrls.add(normalizedUrl);
+        return fallback;
+      },
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return _buildPlaceholder();

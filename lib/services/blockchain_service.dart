@@ -131,7 +131,7 @@ class BlockchainService extends ChangeNotifier {
 
   // Configuration Constants
   static const Duration _backendDiscoveryTimeout = Duration(seconds: 15);
-  static const Duration _walletTokensCacheTtl = Duration(seconds: 25);
+  static const Duration _walletTokensCacheTtl = Duration(minutes: 2);
   static const Duration _jitterMax = Duration(milliseconds: 100);
   static const int _circuitBreakerFailureThreshold = 3;
   static const Duration _circuitBreakerInitialBackoff = Duration(seconds: 30);
@@ -223,6 +223,19 @@ class BlockchainService extends ChangeNotifier {
         coinGeckoId: activeChain.coinGeckoId,
       ),
     ];
+  }
+
+  List<Token> getCachedWalletTokens(String walletAddress, {int? chainId}) {
+    final effectiveChainId = chainId ?? _activeChain.chainId;
+    final cacheKey = '$effectiveChainId:${walletAddress.toLowerCase()}';
+    final cached = _walletTokensCache[cacheKey];
+    if (cached != null && cached.tokens.isNotEmpty) {
+      return List<Token>.from(cached.tokens);
+    }
+    if (_activeChain.chainId == effectiveChainId && _walletTokens.isNotEmpty) {
+      return List<Token>.from(_walletTokens);
+    }
+    return const [];
   }
 
   /// Update dependencies from ProxyProvider
@@ -1311,6 +1324,7 @@ class BlockchainService extends ChangeNotifier {
     }
     list.add(token);
     await _saveCustomTokens();
+    _applyCustomTokenMutationToLocalState(chainId, addedToken: token);
     notifyListeners();
     return true;
   }
@@ -1320,7 +1334,101 @@ class BlockchainService extends ChangeNotifier {
     if (list == null) return;
     list.removeWhere((t) => t.address.toLowerCase() == address.toLowerCase());
     await _saveCustomTokens();
+    _applyCustomTokenMutationToLocalState(chainId, removedAddress: address);
     notifyListeners();
+  }
+
+  void _applyCustomTokenMutationToLocalState(
+    int chainId, {
+    CustomTokenDefinition? addedToken,
+    String? removedAddress,
+  }) {
+    if (addedToken == null &&
+        (removedAddress == null || removedAddress.trim().isEmpty)) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final updatedCacheEntries = <String, _WalletTokensCacheEntry>{};
+    for (final entry in _walletTokensCache.entries) {
+      if (!entry.key.startsWith('$chainId:')) {
+        continue;
+      }
+
+      var nextTokens = List<Token>.from(entry.value.tokens);
+      if (addedToken != null) {
+        nextTokens = _upsertCustomTokenIntoList(nextTokens, addedToken);
+      }
+      if (removedAddress != null && removedAddress.trim().isNotEmpty) {
+        nextTokens = _removeCustomTokenFromList(nextTokens, removedAddress);
+      }
+
+      updatedCacheEntries[entry.key] = _WalletTokensCacheEntry(
+        tokens: nextTokens,
+        fetchedAt: now,
+      );
+    }
+
+    if (updatedCacheEntries.isNotEmpty) {
+      _walletTokensCache.addAll(updatedCacheEntries);
+    }
+
+    if (_activeChain.chainId != chainId) {
+      return;
+    }
+
+    var currentTokens = _walletTokens.isNotEmpty
+        ? List<Token>.from(_walletTokens)
+        : List<Token>.from(tokens);
+    if (addedToken != null) {
+      currentTokens = _upsertCustomTokenIntoList(currentTokens, addedToken);
+    }
+    if (removedAddress != null && removedAddress.trim().isNotEmpty) {
+      currentTokens = _removeCustomTokenFromList(currentTokens, removedAddress);
+    }
+    _walletTokens = currentTokens;
+  }
+
+  List<Token> _upsertCustomTokenIntoList(
+    List<Token> source,
+    CustomTokenDefinition token,
+  ) {
+    final normalizedAddress = token.address.toLowerCase();
+    if (source.any(
+      (existing) =>
+          (existing.contractAddress ?? '').toLowerCase() == normalizedAddress,
+    )) {
+      return List<Token>.from(source);
+    }
+
+    final next = List<Token>.from(source);
+    next.add(
+      Token(
+        symbol: token.symbol,
+        name: token.name,
+        contractAddress: token.address,
+        balance: 0,
+        valueUsd: 0,
+        priceUsd: 0,
+        changePercent24h: 0,
+        decimals: token.decimals,
+        imageUrl: token.imageUrl,
+        coinGeckoId: token.coinGeckoId,
+        isCertified: false,
+      ),
+    );
+    return next;
+  }
+
+  List<Token> _removeCustomTokenFromList(List<Token> source, String address) {
+    final normalizedAddress = address.toLowerCase();
+    return source.where((token) {
+      final contractAddress = (token.contractAddress ?? '').toLowerCase();
+      if (contractAddress != normalizedAddress) {
+        return true;
+      }
+      return token.balance > 0;
+    }).toList();
   }
 
   List<Map<String, String>> _getWellKnownTokens(int chainId) {

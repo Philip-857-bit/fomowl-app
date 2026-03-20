@@ -7,6 +7,7 @@ import '../../models/token.dart';
 import '../../widgets/token_icon.dart';
 
 import '../../services/blockchain_service.dart';
+import '../../services/home_snapshot_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/token_visibility_utils.dart';
@@ -26,6 +27,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   final WalletService _walletService = WalletService();
   final TokenVisibilityService _tokenVisibilityService =
       TokenVisibilityService();
+  final HomeSnapshotService _snapshotService = HomeSnapshotService();
 
   List<Token> _allTokens = [];
   List<Token> _filteredTokens = [];
@@ -44,23 +46,30 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   }
 
   Future<void> _loadTokens() async {
-    setState(() => _isLoading = true);
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final chainId = blockchain.activeChain.chainId;
+    setState(() => _isLoading = true);
     try {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
-        blockchain.activeChain.chainId,
+        chainId,
       );
       final address = await _walletService.getCurrentWalletAddress();
+      final cachedTokens = await _loadCachedTokens(
+        blockchain: blockchain,
+        walletAddress: address,
+        chainId: chainId,
+        hiddenTokens: hiddenTokens,
+      );
+      if (cachedTokens.isNotEmpty && mounted) {
+        _applyLoadedTokens(cachedTokens, isLoading: false);
+      }
+
       if (address != null) {
         if (!mounted) return;
         final tokens = await blockchain.fetchWalletTokens(address);
         final visibleTokens = _applyVisibility(tokens, hiddenTokens);
         if (mounted) {
-          setState(() {
-            _allTokens = visibleTokens;
-            _filteredTokens = visibleTokens;
-            _isLoading = false;
-          });
+          _applyLoadedTokens(visibleTokens, isLoading: false);
         }
       } else {
         // Show default token list even without wallet
@@ -69,25 +78,61 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
           hiddenTokens,
         );
         if (mounted) {
-          setState(() {
-            _allTokens = defaultTokens;
-            _filteredTokens = defaultTokens;
-            _isLoading = false;
-          });
+          _applyLoadedTokens(defaultTokens, isLoading: false);
         }
       }
     } catch (e) {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
-        blockchain.activeChain.chainId,
+        chainId,
       );
       final defaultTokens = _applyVisibility(_getDefaultTokens(), hiddenTokens);
       if (mounted) {
-        setState(() {
-          _allTokens = defaultTokens;
-          _filteredTokens = defaultTokens;
-          _isLoading = false;
-        });
+        _applyLoadedTokens(defaultTokens, isLoading: false);
       }
+    }
+  }
+
+  Future<List<Token>> _loadCachedTokens({
+    required BlockchainService blockchain,
+    required String? walletAddress,
+    required int chainId,
+    required Set<String> hiddenTokens,
+  }) async {
+    var cachedTokens = <Token>[];
+    if (walletAddress != null && walletAddress.isNotEmpty) {
+      cachedTokens = _applyVisibility(
+        blockchain.getCachedWalletTokens(walletAddress, chainId: chainId),
+        hiddenTokens,
+      );
+      if (cachedTokens.isNotEmpty) {
+        return cachedTokens;
+      }
+
+      final snapshot = await _snapshotService.loadSnapshot(
+        chainId,
+        walletAddress,
+      );
+      if (snapshot != null && snapshot.tokens.isNotEmpty) {
+        return _applyVisibility(snapshot.tokens, hiddenTokens);
+      }
+    }
+
+    final currentTokens = _applyVisibility(blockchain.tokens, hiddenTokens);
+    if (currentTokens.isNotEmpty) {
+      return currentTokens;
+    }
+
+    return const [];
+  }
+
+  void _applyLoadedTokens(List<Token> tokens, {required bool isLoading}) {
+    setState(() {
+      _allTokens = tokens;
+      _filteredTokens = tokens;
+      _isLoading = isLoading;
+    });
+    if (_searchController.text.isNotEmpty) {
+      _filterTokens(_searchController.text);
     }
   }
 

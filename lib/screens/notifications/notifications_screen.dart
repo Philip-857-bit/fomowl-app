@@ -7,6 +7,7 @@ import '../../services/api_client.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/app_notification_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 
@@ -25,6 +26,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<_Notification> _notifications = [];
+  String? _walletAddress;
+  StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
 
   static const Duration _cacheTtl = Duration(minutes: 5);
   static final Map<String, _NotificationCacheEntry> _cacheByWallet = {};
@@ -32,7 +35,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    _notificationEventSubscription = AppNotificationService().events.listen((
+      event,
+    ) {
+      unawaited(_handleNotificationEvent(event));
+    });
     _bootstrap();
+  }
+
+  @override
+  void dispose() {
+    _notificationEventSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleNotificationEvent(AppNotificationEvent event) async {
+    final walletAddress =
+        _walletAddress ?? await _walletService.getCurrentWalletAddress();
+    if (!mounted || walletAddress == null || walletAddress.isEmpty) {
+      return;
+    }
+
+    final eventWalletAddress = event.walletAddress?.trim().toLowerCase();
+    if (eventWalletAddress != null &&
+        eventWalletAddress.isNotEmpty &&
+        eventWalletAddress != walletAddress.toLowerCase()) {
+      return;
+    }
+
+    _walletAddress = walletAddress;
+    _cacheByWallet.remove(walletAddress.toLowerCase());
+    await _fetchNotifications(isRefresh: true);
   }
 
   Future<void> _bootstrap() async {
@@ -47,6 +80,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       });
       return;
     }
+
+    _walletAddress = address;
 
     final entry = _cacheByWallet[address.toLowerCase()];
     if (entry != null &&
@@ -82,6 +117,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         });
         return;
       }
+      _walletAddress = address;
 
       final path = AppEnvironment.notifications('/$address').toString();
       final response = await _apiClient.get(path);

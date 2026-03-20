@@ -5,13 +5,11 @@ import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 
-import 'utils/toast_utils.dart';
 import 'config/app_environment.dart';
-
-import 'app/app_navigator.dart';
 import 'app/app_providers.dart';
 import 'app/owllet_app.dart';
 import 'constants/app_colors.dart';
+import 'services/app_notification_service.dart';
 
 const bool kEnableRustBridge = bool.fromEnvironment(
   'ENABLE_RUST_BRIDGE',
@@ -22,22 +20,17 @@ const bool kEnableRustBridge = bool.fromEnvironment(
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await AppEnvironment.initializeFirebaseApp();
   debugPrint("Handling a background message: ${message.messageId}");
-}
-
-void _openNotificationsFromPush(RemoteMessage _) {
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    final navigator = appNavigatorKey.currentState;
-    if (navigator == null) {
-      return;
-    }
-    navigator.pushNamed('/notifications');
-  });
+  AppNotificationService().announceInboxChanged(
+    walletAddress: message.data['wallet_address'],
+  );
 }
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   RemoteMessage? initialPushMessage;
+  final appNotificationService = AppNotificationService();
+  await appNotificationService.initialize();
 
   if (AppEnvironment.pushNotificationsEnabled) {
     try {
@@ -49,16 +42,21 @@ Future<void> main() async {
       // Request permission proactively on first launch
       final messaging = FirebaseMessaging.instance;
       await messaging.requestPermission(alert: true, badge: true, sound: true);
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        final notification = message.notification;
-        if (notification != null && notification.title != null) {
-          ToastUtils.showInfo(
-            '${notification.title}\n${notification.body ?? ''}'.trim(),
-          );
-        }
+        appNotificationService.showForegroundMessage(message);
       });
-      FirebaseMessaging.onMessageOpenedApp.listen(_openNotificationsFromPush);
+      FirebaseMessaging.onMessageOpenedApp.listen((message) {
+        appNotificationService.announceInboxChanged(
+          walletAddress: message.data['wallet_address'],
+        );
+        appNotificationService.openNotificationsInbox();
+      });
       initialPushMessage = await FirebaseMessaging.instance.getInitialMessage();
     } catch (_) {
       // Ignore init errors here, handled in service.
@@ -88,6 +86,9 @@ Future<void> main() async {
   );
 
   if (initialPushMessage != null) {
-    _openNotificationsFromPush(initialPushMessage);
+    appNotificationService.announceInboxChanged(
+      walletAddress: initialPushMessage.data['wallet_address'],
+    );
+    appNotificationService.openNotificationsInbox();
   }
 }

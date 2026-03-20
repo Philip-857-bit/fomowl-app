@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../config/app_environment.dart';
+import 'app_notification_service.dart';
 import 'http_client_service.dart';
 
 class WalletNotificationService {
@@ -67,7 +68,11 @@ class WalletNotificationService {
         debugPrint(
           'Wallet notification creation failed: ${response.statusCode}',
         );
+        return;
       }
+      AppNotificationService().announceInboxChanged(
+        walletAddress: walletAddress,
+      );
     } catch (error, stackTrace) {
       debugPrint('Wallet notification creation failed: $error');
       debugPrint(stackTrace.toString());

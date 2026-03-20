@@ -136,6 +136,28 @@ class _TransferConfirmationScreenState
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
   }
 
+  String _formatGasPriceGwei(double value) {
+    if (value >= 10) {
+      return value.toStringAsFixed(1);
+    }
+    if (value >= 1) {
+      return value.toStringAsFixed(2);
+    }
+    if (value >= 0.01) {
+      return value.toStringAsFixed(4);
+    }
+    return value.toStringAsFixed(6);
+  }
+
+  String _formatGasFeeNative(double value, String symbol) {
+    final decimals = value >= 0.01
+        ? 6
+        : value >= 0.0001
+        ? 8
+        : 10;
+    return '${value.toStringAsFixed(decimals)} $symbol';
+  }
+
   String? _transactionDetailsUrl(String hash, BlockchainService blockchain) {
     if (!RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(hash)) {
       return null;
@@ -333,11 +355,11 @@ class _TransferConfirmationScreenState
 
     final gasLabel = _gasEstimationFailed
         ? '${l.gasFee} (${l.estimationFailed})'
-        : '${l.gasFee} (${_gasPriceGwei.toStringAsFixed(1)} Gwei)';
+        : '${l.gasFee} (${_formatGasPriceGwei(_gasPriceGwei)} Gwei)';
 
     final gasValue = _gasEstimationFailed
         ? 'Error'
-        : '${_gasFeeEth.toStringAsFixed(6)} ${blockchain.activeChain.symbol}';
+        : _formatGasFeeNative(_gasFeeEth, blockchain.activeChain.symbol);
 
     final gasValueUsd = _gasEstimationFailed
         ? ''
