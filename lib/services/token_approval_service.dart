@@ -26,11 +26,76 @@ class TokenApprovalResult {
 class TokenApprovalService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
+  static final ContractAbi _erc20ApprovalAbi = ContractAbi.fromJson('''[
+        {
+          "constant": true,
+          "inputs": [
+            {"name": "owner", "type": "address"},
+            {"name": "spender", "type": "address"}
+          ],
+          "name": "allowance",
+          "outputs": [{"name": "", "type": "uint256"}],
+          "type": "function"
+        },
+        {
+          "constant": false,
+          "inputs": [
+            {"name": "spender", "type": "address"},
+            {"name": "amount", "type": "uint256"}
+          ],
+          "name": "approve",
+          "outputs": [{"name": "", "type": "bool"}],
+          "type": "function"
+        }
+      ]''', 'ERC20');
 
   TokenApprovalService({
     WalletService? walletService,
     SwapService? swapService, // signature compat
   }) : _walletService = walletService ?? WalletService();
+
+  Future<BigInt?> estimateApprovalFeeWei({
+    required Token token,
+    required String ownerAddress,
+    required BlockchainService blockchain,
+    required String allowanceTarget,
+  }) async {
+    final tokenAddress = token.contractAddress;
+    if (tokenAddress == null ||
+        tokenAddress.isEmpty ||
+        allowanceTarget.isEmpty) {
+      return BigInt.zero;
+    }
+
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
+    try {
+      final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
+      final tokenAddr = EthereumAddress.fromHex(tokenAddress);
+      final ownerAddr = EthereumAddress.fromHex(ownerAddress);
+      final contract = DeployedContract(_erc20ApprovalAbi, tokenAddr);
+      final approveFunc = contract.function('approve');
+      final approvalAmount = BigInt.two.pow(256) - BigInt.one;
+      final approvalData = approveFunc.encodeCall([
+        spenderAddr,
+        approvalAmount,
+      ]);
+      final gasPrice = await client.getGasPrice();
+      final estimatedGas = await client.estimateGas(
+        sender: ownerAddr,
+        to: tokenAddr,
+        data: approvalData,
+      );
+      final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
+      return gasPrice.getInWei * bufferedGas;
+    } catch (_) {
+      return null;
+    } finally {
+      // client.dispose() intentionally removed — HttpClient is a shared singleton.
+    }
+  }
 
   Future<TokenApprovalResult> ensureApproval({
     required Token token,
@@ -69,30 +134,7 @@ class TokenApprovalService {
         );
       }
 
-      final abi = ContractAbi.fromJson('''[
-        {
-          "constant": true,
-          "inputs": [
-            {"name": "owner", "type": "address"},
-            {"name": "spender", "type": "address"}
-          ],
-          "name": "allowance",
-          "outputs": [{"name": "", "type": "uint256"}],
-          "type": "function"
-        },
-        {
-          "constant": false,
-          "inputs": [
-            {"name": "spender", "type": "address"},
-            {"name": "amount", "type": "uint256"}
-          ],
-          "name": "approve",
-          "outputs": [{"name": "", "type": "bool"}],
-          "type": "function"
-        }
-      ]''', 'ERC20');
-
-      final contract = DeployedContract(abi, tokenAddr);
+      final contract = DeployedContract(_erc20ApprovalAbi, tokenAddr);
       final allowanceFunc = contract.function('allowance');
       final approveFunc = contract.function('approve');
 

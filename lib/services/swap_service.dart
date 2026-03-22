@@ -57,6 +57,9 @@ class SwapQuote {
 /// Swap Service
 /// Routes all swap intents through the secure Rust backend for 0x swap and gasless flows.
 class SwapService {
+  static const String _permit2Address =
+      '0x000000000022d473030f116ddee9f6b43ac78ba3';
+
   SwapService({HttpClientService? httpClientService})
     : _httpClientService = httpClientService ?? HttpClientService();
 
@@ -157,7 +160,7 @@ class SwapService {
     }
 
     try {
-      final endpoint = isGasless ? 'fusion/price' : 'price';
+      final endpoint = isGasless ? 'fusion/quote' : 'price';
 
       // Native ETH/token addresses for 0x (uses WETH/WBNB address implicitly or 0xeeee...)
       final src = fromTokenAddress.isEmpty
@@ -205,12 +208,28 @@ class SwapService {
           _lastError = _extractProviderError(data);
           return null;
         }
+        final issues = _asMap(data['issues']);
+        final allowanceIssue = _asMap(issues?['allowance']);
+        final rawAllowanceTarget = data['allowanceTarget']?.toString() ?? '';
+        final allowanceSpender =
+            data['allowanceSpender']?.toString() ??
+            allowanceIssue?['spender']?.toString();
+        final needsAllowance =
+            data['needsAllowance'] == true ||
+            allowanceSpender != null && allowanceSpender.isNotEmpty ||
+            rawAllowanceTarget.isNotEmpty;
         final hasBalanceIssue = data['hasBalanceIssue'] == true;
         final allowanceTarget = isGasless
-            ? '0x000000000022d473030f116ddee9f6b43ac78ba3' // Permit2 Address
-            : data['allowanceTarget']?.toString() ??
-                  data['allowanceSpender']?.toString() ??
-                  '';
+            ? (needsAllowance
+                  ? (rawAllowanceTarget.isNotEmpty
+                        ? rawAllowanceTarget
+                        : allowanceSpender?.isNotEmpty == true
+                        ? allowanceSpender!
+                        : _permit2Address)
+                  : '')
+            : (rawAllowanceTarget.isNotEmpty
+                  ? rawAllowanceTarget
+                  : allowanceSpender ?? '');
         final minAmount = BigInt.tryParse(minAmountWei) ?? dstAmount;
 
         // Extract decimal precision safely (fallback to swap input decimals if missing)
@@ -243,8 +262,8 @@ class SwapService {
               double.tryParse(data['networkFeeNative']?.toString() ?? '0') ??
               0.0,
           allowanceTarget: allowanceTarget,
-          allowanceSpender: data['allowanceSpender']?.toString(),
-          needsAllowance: data['needsAllowance'] == true,
+          allowanceSpender: allowanceSpender,
+          needsAllowance: needsAllowance,
           hasBalanceIssue: hasBalanceIssue,
           balanceNeeded: data['balanceNeeded']?.toString(),
           balanceActual: data['balanceActual']?.toString(),

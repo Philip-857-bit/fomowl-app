@@ -540,6 +540,67 @@ class _SwapScreenState extends State<SwapScreen> {
     return '$normalized/tx/$hash';
   }
 
+  String _gaslessApprovalFundingMessage({
+    required Token token,
+    required BlockchainService blockchain,
+    BigInt? estimatedApprovalFeeWei,
+  }) {
+    final nativeSymbol = blockchain.activeChain.symbol;
+    final tokenSymbol = token.symbol;
+    final approxFee =
+        estimatedApprovalFeeWei != null && estimatedApprovalFeeWei > BigInt.zero
+        ? AmountUtils.formatBaseUnits(
+            estimatedApprovalFeeWei,
+            18,
+            maxFractionDigits: 6,
+          )
+        : null;
+    final feeSuffix = approxFee != null && approxFee != '0'
+        ? ' Add about $approxFee $nativeSymbol to cover that approval.'
+        : ' Add a small amount of $nativeSymbol to cover that approval.';
+    return 'Gasless swap still needs a one-time $tokenSymbol approval paid in $nativeSymbol.$feeSuffix';
+  }
+
+  Future<bool> _ensureGaslessApprovalFunding({
+    required Token token,
+    required SwapQuote quote,
+    required BlockchainService blockchain,
+    required TransactionProgressController progressController,
+  }) async {
+    if (!_isGasless || !quote.needsAllowance || _walletAddress == null) {
+      return true;
+    }
+
+    final estimatedApprovalFeeWei = await _tokenApprovalService
+        .estimateApprovalFeeWei(
+          token: token,
+          ownerAddress: _walletAddress!,
+          blockchain: blockchain,
+          allowanceTarget: quote.allowanceSpender ?? quote.allowanceTarget,
+        );
+
+    if (estimatedApprovalFeeWei == null ||
+        estimatedApprovalFeeWei <= BigInt.zero) {
+      return true;
+    }
+
+    final nativeBalanceWei = await blockchain.getNativeBalanceBaseUnits(
+      _walletAddress!,
+    );
+    if (nativeBalanceWei >= estimatedApprovalFeeWei) {
+      return true;
+    }
+
+    progressController.setError(
+      _gaslessApprovalFundingMessage(
+        token: token,
+        blockchain: blockchain,
+        estimatedApprovalFeeWei: estimatedApprovalFeeWei,
+      ),
+    );
+    return false;
+  }
+
   void _clearSubmittedSwapState() {
     if (!mounted) return;
     setState(() {
@@ -573,6 +634,21 @@ class _SwapScreenState extends State<SwapScreen> {
     final lower = raw.toLowerCase();
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final nativeSymbol = blockchain.activeChain.symbol;
+    if (_isGasless &&
+        _currentQuote?.needsAllowance == true &&
+        (lower.contains('insufficient funds') ||
+            lower.contains('insufficient native gas') ||
+            lower.contains('funds for gas') ||
+            lower.contains('gas required exceeds allowance'))) {
+      final fromToken = _fromToken;
+      if (fromToken != null) {
+        return _gaslessApprovalFundingMessage(
+          token: fromToken,
+          blockchain: blockchain,
+        );
+      }
+      return 'Gasless swap still needs a one-time token approval paid in $nativeSymbol.';
+    }
     if (lower.contains('insufficient funds')) {
       return 'You do not have enough $nativeSymbol to cover the amount and gas fees.';
     }
@@ -1015,7 +1091,7 @@ class _SwapScreenState extends State<SwapScreen> {
       progressController.setError(l.noRouterQuoteAvailable);
       return false;
     }
-    if (!quote.needsAllowance && quote.allowanceTarget.isEmpty) {
+    if (!quote.needsAllowance) {
       return true;
     }
     if (_isApproving) return false;
@@ -1024,6 +1100,15 @@ class _SwapScreenState extends State<SwapScreen> {
     try {
       progressController.setApprovalPending();
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final gaslessApprovalFunded = await _ensureGaslessApprovalFunding(
+        token: fromToken,
+        quote: quote,
+        blockchain: blockchain,
+        progressController: progressController,
+      );
+      if (!gaslessApprovalFunded) {
+        return false;
+      }
       final result = await _tokenApprovalService.ensureApproval(
         token: fromToken,
         amountWei: fromAmountWei,
