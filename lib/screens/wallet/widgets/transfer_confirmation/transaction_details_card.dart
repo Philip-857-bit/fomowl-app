@@ -95,21 +95,31 @@ class TransactionDetailsCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.6),
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
@@ -121,34 +131,47 @@ class TransactionDetailsCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.6),
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
             ),
           ),
-          Row(
-            children: [
-              TokenIcon(
-                tokenSymbol: token?.symbol ?? 'ETH',
-                tokenAddress: token?.contractAddress,
-                tokenImageUrl: token?.imageUrl,
-                size: 18,
-                chainId: chainId,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                value,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TokenIcon(
+                  tokenSymbol: token?.symbol ?? 'ETH',
+                  tokenAddress: token?.contractAddress,
+                  tokenImageUrl: token?.imageUrl,
+                  size: 18,
+                  chainId: chainId,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -160,11 +183,12 @@ class TransactionDetailsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text(
-            l.gasFee,
-            style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60),
+          Expanded(
+            child: Text(
+              l.networkFeeLabel,
+              style: GoogleFonts.outfit(fontSize: 14, color: Colors.white60),
+            ),
           ),
-          const Spacer(),
           const SizedBox(
             width: 14,
             height: 14,
@@ -190,49 +214,70 @@ class TransactionDetailsCard extends StatelessWidget {
     bool isError,
   ) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: isError
-                    ? AppColors.accentRed
-                    : Colors.white.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              isError ? Icons.warning_amber_rounded : Icons.help_outline,
-              size: 14,
-              color: isError
-                  ? AppColors.accentRed
-                  : Colors.white.withValues(alpha: 0.3),
-            ),
-          ],
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isError ? AppColors.accentRed : Colors.white,
-              ),
-            ),
-            if (!isError)
-              Text(
-                usdValue,
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  color: Colors.white.withValues(alpha: 0.4),
+        Expanded(
+          flex: 4,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: isError
+                        ? AppColors.accentRed
+                        : Colors.white.withValues(alpha: 0.6),
+                  ),
                 ),
               ),
-          ],
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(
+                  isError ? Icons.warning_amber_rounded : Icons.help_outline,
+                  size: 14,
+                  color: isError
+                      ? AppColors.accentRed
+                      : Colors.white.withValues(alpha: 0.3),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isError ? AppColors.accentRed : Colors.white,
+                ),
+              ),
+              if (!isError && usdValue.isNotEmpty)
+                Text(
+                  usdValue,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.4),
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );

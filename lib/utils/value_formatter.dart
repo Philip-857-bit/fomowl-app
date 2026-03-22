@@ -99,6 +99,14 @@ class ValueFormatter {
     return '$_currencySymbol${_fixed(converted, 2)}';
   }
 
+  static String formatUsdValueOrLessThanCent(Decimal value) {
+    final converted = _convertFromUsd(value);
+    if (converted > Decimal.zero && converted < Decimal.parse('0.01')) {
+      return '<${_currencySymbol}0.01';
+    }
+    return formatUsdValue(value);
+  }
+
   static String formatUsdPrice(Decimal value) {
     final converted = _convertFromUsd(value);
     if (converted <= Decimal.zero) return '${_currencySymbol}0.00';

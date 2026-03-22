@@ -810,7 +810,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get referralsHeadline => '邀请好友，一起赚取奖励';
 
   @override
-  String get referralsSubtitle => '当被推荐用户完成首次兑换时，你最多可获得 0.1 美元奖励。';
+  String get referralsSubtitle =>
+      '当被推荐用户完成首次符合条件的 10 美元及以上兑换时，你最多可获得 0.5 美元奖励。';
 
   @override
   String get yourReferralCode => '你的推荐码';

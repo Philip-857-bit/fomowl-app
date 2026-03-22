@@ -16,6 +16,18 @@ class WalletService {
   final StorageService _storage;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
+  static final ContractAbi _erc20Abi = ContractAbi.fromJson('''[
+      {
+        "constant": false,
+        "inputs": [
+          {"name": "recipient", "type": "address"},
+          {"name": "amount", "type": "uint256"}
+        ],
+        "name": "transfer",
+        "outputs": [{"name": "", "type": "bool"}],
+        "type": "function"
+      }
+    ]''', 'ERC20');
 
   /// Generate a new 12-word mnemonic phrase (Rust FFI)
   Future<String> generateMnemonic() async {
@@ -277,6 +289,13 @@ class WalletService {
     return EthPrivateKey.fromHex(privateKeyHex);
   }
 
+  Web3Client _clientForRpc(String rpcUrl) {
+    return _web3Clients.putIfAbsent(
+      rpcUrl,
+      () => Web3Client(rpcUrl, _httpClientService.client),
+    );
+  }
+
   /// Send native coin (ETH/BNB/MATIC/etc.) to an address
   /// Returns the transaction hash if successful
   Future<String> sendNativeTransaction({
@@ -286,10 +305,7 @@ class WalletService {
     required int chainId,
   }) async {
     final credentials = await getCredentials();
-    final client = _web3Clients.putIfAbsent(
-      rpcUrl,
-      () => Web3Client(rpcUrl, _httpClientService.client),
-    );
+    final client = _clientForRpc(rpcUrl);
     final recipient = EthereumAddress.fromHex(toAddress);
     final gasPrice = await client.getGasPrice();
     final estimatedGas = await client.estimateGas(
@@ -309,6 +325,89 @@ class WalletService {
       ),
       chainId: chainId,
     );
+  }
+
+  Future<String> sendTokenTransaction({
+    required String tokenAddress,
+    required String toAddress,
+    required BigInt amountInBaseUnits,
+    required String rpcUrl,
+    required int chainId,
+  }) async {
+    final credentials = await getCredentials();
+    final client = _clientForRpc(rpcUrl);
+    final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final contract = DeployedContract(_erc20Abi, tokenContractAddress);
+    final transferFunction = contract.function('transfer');
+    final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
+    final gasPrice = await client.getGasPrice();
+    final estimatedGas = await client.estimateGas(
+      sender: credentials.address,
+      to: tokenContractAddress,
+      data: data,
+    );
+    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
+
+    return client.sendTransaction(
+      credentials,
+      Transaction.callContract(
+        contract: contract,
+        function: transferFunction,
+        parameters: [recipient, amountInBaseUnits],
+        gasPrice: gasPrice,
+        maxGas: bufferedGas.toInt(),
+      ),
+      chainId: chainId,
+      fetchChainIdFromNetworkId: false,
+    );
+  }
+
+  Future<Map<String, dynamic>> estimateTransferFee({
+    required String fromAddress,
+    required String toAddress,
+    required BigInt amountInBaseUnits,
+    required String rpcUrl,
+    String? tokenAddress,
+    double nativePriceUsd = 0,
+  }) async {
+    final client = _clientForRpc(rpcUrl);
+    final sender = EthereumAddress.fromHex(fromAddress);
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final gasPrice = await client.getGasPrice();
+
+    BigInt estimatedGas;
+    if (tokenAddress == null || tokenAddress.isEmpty) {
+      estimatedGas = await client.estimateGas(
+        sender: sender,
+        to: recipient,
+        value: EtherAmount.inWei(amountInBaseUnits),
+      );
+    } else {
+      final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
+      final contract = DeployedContract(_erc20Abi, tokenContractAddress);
+      final transferFunction = contract.function('transfer');
+      final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
+      estimatedGas = await client.estimateGas(
+        sender: sender,
+        to: tokenContractAddress,
+        data: data,
+      );
+    }
+
+    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
+    final totalFeeWei = gasPrice.getInWei * bufferedGas;
+    final totalFeeNativeDouble = EtherAmount.inWei(
+      totalFeeWei,
+    ).getValueInUnit(EtherUnit.ether).toDouble();
+
+    return {
+      'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
+      'gasLimitUnits': bufferedGas.toDouble(),
+      'totalFeeEth': totalFeeNativeDouble,
+      'totalFeeUsd': totalFeeNativeDouble * nativePriceUsd,
+      'totalFeeWei': totalFeeWei,
+    };
   }
 
   BigInt parseAmountToBaseUnits(String amount, {int decimals = 18}) {

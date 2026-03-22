@@ -243,12 +243,11 @@ class SwapExecutionService {
         '/fusion/order/submit/${blockchain.activeChain.chainId}',
       );
 
-      // Create a new map with only the necessary fields to avoid nested structure issues
-      final submitPayload = <String, dynamic>{
-        ...quoteData,
-        'chainId': '${blockchain.activeChain.chainId}',
-        'signature': signature,
-      };
+      final submitPayload = _buildFusionSubmitPayload(
+        quoteData: quoteData,
+        signature: signature,
+        chainId: blockchain.activeChain.chainId,
+      );
 
       final submitResponse = await _httpClientService
           .sendWithRetry(
@@ -324,6 +323,25 @@ class SwapExecutionService {
       );
     }
     return null;
+  }
+
+  Map<String, dynamic> _buildFusionSubmitPayload({
+    required Map<String, dynamic> quoteData,
+    required String signature,
+    required int chainId,
+  }) {
+    final payload = Map<String, dynamic>.from(quoteData);
+    payload['chainId'] = '$chainId';
+
+    final trade = _asMap(payload['trade']);
+    if (trade != null) {
+      payload['trade'] = <String, dynamic>{...trade, 'signature': signature};
+      payload.remove('signature');
+      return payload;
+    }
+
+    payload['signature'] = signature;
+    return payload;
   }
 
   /// Parse a numeric string that may be decimal ("1000000") or hex ("0x...").

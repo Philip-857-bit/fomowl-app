@@ -118,8 +118,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         return;
       }
       _walletAddress = address;
+      final normalizedAddress = address.trim().toLowerCase();
 
-      final path = AppEnvironment.notifications('/$address').toString();
+      final path = AppEnvironment.notifications(
+        '/$normalizedAddress',
+      ).toString();
       final response = await _apiClient.get(path);
 
       if (response.statusCode == 200) {
@@ -179,7 +182,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           _notifications = visibleNotifications;
           _isLoading = false;
           _errorMessage = null;
-          _cacheByWallet[address.toLowerCase()] = _NotificationCacheEntry(
+          _cacheByWallet[normalizedAddress] = _NotificationCacheEntry(
             notifications: visibleNotifications,
             fetchedAt: DateTime.now(),
           );

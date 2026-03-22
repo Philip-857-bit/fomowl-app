@@ -250,7 +250,8 @@ class SwapService {
           balanceActual: data['balanceActual']?.toString(),
           platformFeeBps:
               int.tryParse(data['platformFeeBps']?.toString() ?? '100') ?? 100,
-          platformFeeUsd: 0.0,
+          platformFeeUsd:
+              double.tryParse(data['platformFeeUsd']?.toString() ?? '0') ?? 0.0,
           txTo: transaction?['to']?.toString(),
           txData: transaction?['data']?.toString(),
           txValue: transaction?['value']?.toString(),

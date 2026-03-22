@@ -257,7 +257,7 @@
   "seedPhraseMismatch": "La phrase de départ ne correspond pas. Veuillez réessayer.",
   "walletCreationError": "Erreur lors de la création du portefeuille : {error}",
   "referralsHeadline": "Invitez des amis et gagnez des récompenses ensemble",
-  "referralsSubtitle": "Gagnez jusqu'à 0,1 $ lorsqu'un utilisateur parrainé effectue son premier échange.",
+  "referralsSubtitle": "Gagnez jusqu'à 0,5 $ lorsqu'un utilisateur parrainé effectue son premier swap qualifiant de 10 $ ou plus.",
   "yourReferralCode": "VOTRE CODE DE RÉFÉRENCE",
   "myCode": "Mon code",
   "myReferral": "Ma référence",

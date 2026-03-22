@@ -257,7 +257,7 @@
   "seedPhraseMismatch": "The seed phrase does not match. Please try again.",
   "walletCreationError": "Error creating wallet: {error}",
   "referralsHeadline": "Invite Friends and Earn Rewards Together",
-  "referralsSubtitle": "Earn up to $0.1 when a referred user completes their first swap.",
+  "referralsSubtitle": "Earn up to $0.5 when a referred user completes their first qualifying $10+ swap.",
   "yourReferralCode": "YOUR REFERRAL CODE",
   "myCode": "My Code",
   "myReferral": "My Referral",

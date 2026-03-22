@@ -852,7 +852,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'اربح ما يصل إلى 0.1 دولار عندما يكمل المستخدم المُحال أول مبادلة له.';
+      'اربح ما يصل إلى 0.5 دولار عندما يُكمل المستخدم المُحال أول مبادلة مؤهلة بقيمة 10 دولارات أو أكثر.';
 
   @override
   String get yourReferralCode => 'رمز الإحالة الخاص بك';

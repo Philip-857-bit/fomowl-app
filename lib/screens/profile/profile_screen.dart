@@ -110,6 +110,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Join our communities',
                       () => _navigateComingSoon('Communities'),
                     ),
+                    _buildMenuItem(Icons.people_outline, 'Referrals', () {
+                      Navigator.pushNamed(context, '/referrals');
+                    }),
                     const SizedBox(height: 16),
 
                     // Preferences section

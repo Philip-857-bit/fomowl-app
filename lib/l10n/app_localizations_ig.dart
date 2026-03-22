@@ -837,7 +837,7 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'Nweta ruru \$0.1 mgbe onye ị kpọbatara gbanwere ego mbụ ya.';
+      'Nweta ruo \$0.5 mgbe onye ị kpọbatara mezuru swap mbụ tozuru etozu nke \$10 ma ọ bụ karịa.';
 
   @override
   String get yourReferralCode => 'KOODU Ị KPỌBATARA';

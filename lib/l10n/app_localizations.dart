@@ -1655,7 +1655,7 @@ abstract class AppLocalizations {
   /// No description provided for @referralsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Earn up to \$0.1 when a referred user completes their first swap.'**
+  /// **'Earn up to \$0.5 when a referred user completes their first qualifying \$10+ swap.'**
   String get referralsSubtitle;
 
   /// No description provided for @yourReferralCode.

@@ -550,7 +550,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final url = AppEnvironment.notifications('/$walletAddress');
+      final normalizedAddress = walletAddress.trim().toLowerCase();
+      final url = AppEnvironment.notifications('/$normalizedAddress');
       final response = await http.get(url).timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         if (mounted) {

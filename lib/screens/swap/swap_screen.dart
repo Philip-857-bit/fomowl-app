@@ -18,7 +18,6 @@ import '../../utils/amount_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../widgets/token_selector_modal.dart';
-import '../../widgets/wallet_signing_sheet.dart';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
 import 'widgets/swap_from_card.dart';
@@ -422,6 +421,45 @@ class _SwapScreenState extends State<SwapScreen> {
     return amount * price;
   }
 
+  double _estimateReferralSwapAmountUsd({
+    required Token fromToken,
+    required String fromAmountText,
+    required SwapQuote quote,
+  }) {
+    final typedAmount = _parseAmount(_fromController);
+    final directAmount = typedAmount > 0
+        ? typedAmount
+        : (double.tryParse(fromAmountText.replaceAll(',', '')) ?? 0.0);
+    final directUsd = _usdValueFor(fromToken, directAmount);
+    if (directUsd > 0) {
+      return directUsd;
+    }
+
+    final feeUsd = quote.platformFeeUsd;
+    if (feeUsd <= 0) {
+      return 0.0;
+    }
+
+    if (quote.platformFeeBps >= 1000) {
+      return feeUsd / 0.10;
+    }
+
+    if ((feeUsd - 1.0).abs() < 0.0001 || (quote.platformFeeBps > 100)) {
+      return 10.0;
+    }
+
+    if (quote.platformFeeBps == 100) {
+      return feeUsd / 0.01;
+    }
+
+    final feeRate = quote.platformFeePercent / 100.0;
+    if (feeRate > 0) {
+      return feeUsd / feeRate;
+    }
+
+    return 0.0;
+  }
+
   /// Returns the native token's USD price from the cache or token model.
   double get _nativeTokenPriceUsd {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -485,13 +523,6 @@ class _SwapScreenState extends State<SwapScreen> {
   String _shortHash(String hash) {
     if (hash.length <= 10) return hash;
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
-  }
-
-  String _shortAddress(String? value) {
-    if (value == null || value.length < 10) {
-      return value ?? '--';
-    }
-    return '${value.substring(0, 6)}...${value.substring(value.length - 4)}';
   }
 
   String? _transactionDetailsUrl(String hash) {
@@ -606,6 +637,7 @@ class _SwapScreenState extends State<SwapScreen> {
     String tradeHash, {
     required TransactionProgressController progressController,
     bool rewardReferralOnSwap = false,
+    double swapAmountUsd = 0.0,
   }) async {
     final l = AppLocalizations.of(context);
     const pendingStates = {
@@ -657,6 +689,7 @@ class _SwapScreenState extends State<SwapScreen> {
         final confirmed = await _waitForTxConfirmation(
           txHash,
           rewardReferralOnSwap: true,
+          swapAmountUsd: swapAmountUsd,
         );
         if (!mounted) return;
         if (confirmed) {
@@ -680,6 +713,7 @@ class _SwapScreenState extends State<SwapScreen> {
             await _referralService.rewardOnSwap(
               walletAddress: _walletAddress!,
               txHash: tradeHash,
+              swapAmountUsd: swapAmountUsd,
             );
           } catch (e) {
             // Referral crediting should not block successful swap UX.
@@ -724,6 +758,7 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<bool> _waitForTxConfirmation(
     String txHash, {
     bool rewardReferralOnSwap = false,
+    double swapAmountUsd = 0.0,
   }) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final confirmed = await _transactionMonitor.waitForConfirmation(
@@ -737,6 +772,7 @@ class _SwapScreenState extends State<SwapScreen> {
           await _referralService.rewardOnSwap(
             walletAddress: _walletAddress!,
             txHash: txHash,
+            swapAmountUsd: swapAmountUsd,
           );
         } catch (e) {
           // Referral crediting should not block successful swap UX.
@@ -964,89 +1000,6 @@ class _SwapScreenState extends State<SwapScreen> {
     ToastUtils.showError(message);
   }
 
-  Future<bool> _requestApprovalSignature({
-    required Token token,
-    required String allowanceTarget,
-    required String amountWei,
-  }) {
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final displayAmount = AmountUtils.formatBaseUnits(
-      BigInt.tryParse(amountWei) ?? BigInt.zero,
-      token.decimals,
-    );
-    return WalletSigningSheet.show(
-      context,
-      title: 'Sign approval',
-      confirmLabel: 'Sign approval',
-      subtitle:
-          'This approval lets the swap contract spend the selected token for this trade.',
-      note:
-          'Approvals are on-chain transactions. You can revoke token allowances later if needed.',
-      fields: [
-        WalletSigningField(label: 'Token', value: token.symbol),
-        WalletSigningField(
-          label: 'Amount',
-          value: '$displayAmount ${token.symbol}',
-        ),
-        WalletSigningField(
-          label: 'Spender',
-          value: _shortAddress(allowanceTarget),
-        ),
-        WalletSigningField(
-          label: 'Wallet',
-          value: _shortAddress(_walletAddress),
-        ),
-        WalletSigningField(
-          label: 'Network',
-          value: blockchain.activeChain.name,
-        ),
-      ],
-    );
-  }
-
-  Future<bool> _requestSwapSignature({
-    required Token fromToken,
-    required Token toToken,
-    required String fromAmountText,
-    required String toAmountText,
-    required bool gasless,
-  }) {
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    return WalletSigningSheet.show(
-      context,
-      title: gasless ? 'Sign gasless order' : 'Sign swap',
-      confirmLabel: gasless ? 'Sign order' : 'Sign swap',
-      subtitle: gasless
-          ? 'This signs an off-chain gasless order on this device before it is submitted to the relayer.'
-          : 'Review the swap details below before signing the transaction on this device.',
-      note: gasless
-          ? 'Gasless mode still requires a valid signature. The quote can expire before settlement.'
-          : 'Signed swaps are broadcast to the network immediately after approval.',
-      fields: [
-        WalletSigningField(
-          label: 'Pay',
-          value: '$fromAmountText ${fromToken.symbol}',
-        ),
-        WalletSigningField(
-          label: 'Receive',
-          value: '$toAmountText ${toToken.symbol}',
-        ),
-        WalletSigningField(
-          label: 'Wallet',
-          value: _shortAddress(_walletAddress),
-        ),
-        WalletSigningField(
-          label: 'Network',
-          value: blockchain.activeChain.name,
-        ),
-        WalletSigningField(
-          label: 'Mode',
-          value: gasless ? 'Gasless' : 'On-chain',
-        ),
-      ],
-    );
-  }
-
   Future<bool> _handleTokenApproval(
     Token fromToken,
     String fromAmountWei, {
@@ -1066,17 +1019,6 @@ class _SwapScreenState extends State<SwapScreen> {
       return true;
     }
     if (_isApproving) return false;
-
-    final approvedByUser = await _requestApprovalSignature(
-      token: fromToken,
-      allowanceTarget: quote.allowanceSpender ?? quote.allowanceTarget,
-      amountWei: fromAmountWei,
-    );
-    if (!approvedByUser) {
-      progressController.setError('Approval was cancelled.');
-      return false;
-    }
-    if (!mounted) return false;
 
     setState(() => _isApproving = true);
     try {
@@ -1148,21 +1090,11 @@ class _SwapScreenState extends State<SwapScreen> {
     final toAmountText = _toController.text.trim().isNotEmpty
         ? _toController.text.trim()
         : quote.amountOutFormatted;
-
-    final approvedByUser = await _requestSwapSignature(
+    final referralSwapAmountUsd = _estimateReferralSwapAmountUsd(
       fromToken: fromToken,
-      toToken: toToken,
       fromAmountText: fromAmountText,
-      toAmountText: toAmountText,
-      gasless: _isGasless,
+      quote: quote,
     );
-    if (!approvedByUser) {
-      progressController.setError(
-        _isGasless ? 'Gasless order cancelled.' : 'Swap was cancelled.',
-      );
-      return;
-    }
-    if (!mounted) return;
 
     setState(() => _isSwapping = true);
     try {
@@ -1196,6 +1128,7 @@ class _SwapScreenState extends State<SwapScreen> {
               result.tradeHash!,
               progressController: progressController,
               rewardReferralOnSwap: true,
+              swapAmountUsd: referralSwapAmountUsd,
             );
           } else {
             progressController.setGaslessPending();
@@ -1216,6 +1149,7 @@ class _SwapScreenState extends State<SwapScreen> {
           result.tradeHash ?? result.transactionHash!,
           progressController: progressController,
           rewardReferralOnSwap: true,
+          swapAmountUsd: referralSwapAmountUsd,
         );
         await _refreshWalletState();
         return;
@@ -1230,6 +1164,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final confirmed = await _waitForTxConfirmation(
         txHash,
         rewardReferralOnSwap: true,
+        swapAmountUsd: referralSwapAmountUsd,
       );
       if (!mounted) return;
       if (confirmed) {

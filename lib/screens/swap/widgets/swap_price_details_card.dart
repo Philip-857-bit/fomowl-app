@@ -38,11 +38,24 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   String _formatFeeDisplay() {
     if (platformFeeUsd > 0) {
-      return '${platformFeePercent.toStringAsFixed(2)}% (~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(platformFeeUsd))})';
+      return ValueFormatter.formatUsdValueOrLessThanCent(
+        ValueFormatter.decimalFromNum(platformFeeUsd),
+      );
     }
-    if (swapAmountUsd <= 0) return '--';
+    if (swapAmountUsd <= 0 || platformFeePercent <= 0) return '--';
     final feeUsd = swapAmountUsd * (platformFeePercent / 100);
-    return '${platformFeePercent.toStringAsFixed(2)}% (~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(feeUsd))})';
+    return ValueFormatter.formatUsdValueOrLessThanCent(
+      ValueFormatter.decimalFromNum(feeUsd),
+    );
+  }
+
+  String _formatNativeFeeAmount() {
+    final formatted = feeAmountNative
+        .toStringAsFixed(8)
+        .replaceFirst(RegExp(r'0+$'), '');
+    return formatted.endsWith('.')
+        ? formatted.substring(0, formatted.length - 1)
+        : formatted;
   }
 
   String _formatNetworkFee() {
@@ -54,9 +67,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
     }
     if (feeAmountNative > 0) {
       if (usd > 0) {
-        return '~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(usd))} (${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol)';
+        return '${ValueFormatter.formatUsdValueOrLessThanCent(ValueFormatter.decimalFromNum(usd))} (${_formatNativeFeeAmount()} $nativeFeeSymbol)';
       }
-      return '${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol';
+      return '${_formatNativeFeeAmount()} $nativeFeeSymbol';
     }
     return '--';
   }

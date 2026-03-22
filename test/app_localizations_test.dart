@@ -116,6 +116,32 @@ void main() {
         expect(l.appName, isNotEmpty, reason: 'appName empty for $locale');
         expect(l.home, isNotEmpty, reason: 'home empty for $locale');
         expect(l.wallet, isNotEmpty, reason: 'wallet empty for $locale');
+        expect(
+          l.referralsSubtitle,
+          isNotEmpty,
+          reason: 'referralsSubtitle empty for $locale',
+        );
+      }
+    });
+
+    test('referrals subtitle no longer references 0.1 in any ARB', () {
+      final l10nDir = Directory('lib/l10n');
+      final localeFiles =
+          l10nDir
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.arb'))
+              .toList()
+            ..sort((a, b) => a.path.compareTo(b.path));
+
+      for (final file in localeFiles) {
+        final map = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+        final subtitle = map['referralsSubtitle']?.toString() ?? '';
+        expect(
+          subtitle.contains('0.1'),
+          isFalse,
+          reason: '${file.path} still contains the old referral reward text',
+        );
       }
     });
   });

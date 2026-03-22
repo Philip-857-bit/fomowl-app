@@ -842,7 +842,7 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'Sami har \$0.1 idan wanda ka gayyata ya yi musayar kudi ta farko.';
+      'Sami har \$0.5 idan wanda ka gayyata ya kammala musayar farko mai cancanta ta \$10 ko fiye.';
 
   @override
   String get yourReferralCode => 'LAMBAR GAYYATAR KA';

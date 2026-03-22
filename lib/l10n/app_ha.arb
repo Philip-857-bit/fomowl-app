@@ -257,7 +257,7 @@
   "seedPhraseMismatch": "Kalmomin ba su zo ɗaya ba. Sake gwadawa.",
   "walletCreationError": "Matsala wajen ƙirƙirar walat: {error}",
   "referralsHeadline": "Gayyaci abokai don ku sami lada tare",
-  "referralsSubtitle": "Sami har $0.1 idan wanda ka gayyata ya yi musayar kudi ta farko.",
+  "referralsSubtitle": "Sami har $0.5 idan wanda ka gayyata ya kammala musayar farko mai cancanta ta $10 ko fiye.",
   "yourReferralCode": "LAMBAR GAYYATAR KA",
   "myCode": "Lambara",
   "myReferral": "Wanda Ya Gayyace Ni",

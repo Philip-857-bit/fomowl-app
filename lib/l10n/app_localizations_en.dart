@@ -848,7 +848,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'Earn up to \$0.1 when a referred user completes their first swap.';
+      'Earn up to \$0.5 when a referred user completes their first qualifying \$10+ swap.';
 
   @override
   String get yourReferralCode => 'YOUR REFERRAL CODE';

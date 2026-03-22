@@ -257,7 +257,7 @@
   "seedPhraseMismatch": "Okwu nzuzo adabaghị. Biko gbalịa ọzọ.",
   "walletCreationError": "Njehie na imepụta obere akpa: {error}",
   "referralsHeadline": "Kpọọ ndị enyi ma nweta ere niile",
-  "referralsSubtitle": "Nweta ruru $0.1 mgbe onye ị kpọbatara gbanwere ego mbụ ya.",
+  "referralsSubtitle": "Nweta ruo $0.5 mgbe onye ị kpọbatara mezuru swap mbụ tozuru etozu nke $10 ma ọ bụ karịa.",
   "yourReferralCode": "KOODU Ị KPỌBATARA",
   "myCode": "Koodu M",
   "myReferral": "Onye Kpọbatara M",

@@ -409,7 +409,7 @@
   "seedPhraseMismatch": "助记词不匹配，请重试。",
   "walletCreationError": "创建钱包出错：{error}",
   "referralsHeadline": "邀请好友，一起赚取奖励",
-  "referralsSubtitle": "当被推荐用户完成首次兑换时，你最多可获得 0.1 美元奖励。",
+  "referralsSubtitle": "当被推荐用户完成首次符合条件的 10 美元及以上兑换时，你最多可获得 0.5 美元奖励。",
   "yourReferralCode": "你的推荐码",
   "myCode": "我的推荐码",
   "myReferral": "我的推荐",

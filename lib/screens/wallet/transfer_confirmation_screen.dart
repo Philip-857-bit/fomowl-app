@@ -14,7 +14,7 @@ import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/value_formatter.dart';
-import '../../widgets/wallet_signing_sheet.dart';
+import '../../widgets/entrance_motion.dart';
 import '../transaction/transaction_processing_screen.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/confirm_button.dart';
@@ -91,6 +91,10 @@ class _TransferConfirmationScreenState
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final effectiveCoinId = blockchain.activeChain.coinGeckoId;
+      final token = _args?['token'] as Token?;
+      final toAddress = _args?['toAddress'] as String? ?? '';
+      final amountInBaseUnits =
+          _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
 
       double nativePrice = 0;
       if (effectiveCoinId != null && effectiveCoinId.isNotEmpty) {
@@ -98,9 +102,22 @@ class _TransferConfirmationScreenState
         nativePrice = prices[effectiveCoinId] ?? 0;
       }
 
-      final gasData = await blockchain.estimateGasFee(
-        nativePriceUsd: nativePrice,
-      );
+      final gasData =
+          _fromAddress != null &&
+              _fromAddress!.isNotEmpty &&
+              toAddress.isNotEmpty &&
+              amountInBaseUnits > BigInt.zero
+          ? await _walletService.estimateTransferFee(
+              fromAddress: _fromAddress!,
+              toAddress: toAddress,
+              amountInBaseUnits: amountInBaseUnits,
+              rpcUrl: blockchain.activeChain.rpcUrl,
+              tokenAddress: token?.contractAddress?.isNotEmpty == true
+                  ? token!.contractAddress
+                  : null,
+              nativePriceUsd: nativePrice,
+            )
+          : await blockchain.estimateGasFee(nativePriceUsd: nativePrice);
       if (mounted) {
         setState(() {
           _gasPriceGwei = gasData['gasGwei'] ?? 20;
@@ -155,7 +172,13 @@ class _TransferConfirmationScreenState
         : value >= 0.0001
         ? 8
         : 10;
-    return '${value.toStringAsFixed(decimals)} $symbol';
+    final formatted = value
+        .toStringAsFixed(decimals)
+        .replaceFirst(RegExp(r'0+$'), '');
+    final normalized = formatted.endsWith('.')
+        ? formatted.substring(0, formatted.length - 1)
+        : formatted;
+    return '$normalized $symbol';
   }
 
   String? _transactionDetailsUrl(String hash, BlockchainService blockchain) {
@@ -191,35 +214,6 @@ class _TransferConfirmationScreenState
     return controller;
   }
 
-  Future<bool> _requestTransferSignature({
-    required BlockchainService blockchain,
-    required String toAddress,
-    required String amountText,
-    required String symbol,
-  }) {
-    final networkName = blockchain.activeChain.name;
-    final gasLabel = _gasEstimationFailed
-        ? 'Gas estimate unavailable'
-        : '${_gasFeeEth.toStringAsFixed(6)} ${blockchain.activeChain.symbol}';
-
-    return WalletSigningSheet.show(
-      context,
-      title: 'Sign transfer',
-      confirmLabel: 'Sign',
-      subtitle:
-          'Review the transfer details below. This signature is created locally on this device.',
-      note:
-          'Only sign if the recipient address and amount are correct. Signed transfers cannot be reversed.',
-      fields: [
-        WalletSigningField(label: 'From', value: _shortenAddress(_fromAddress)),
-        WalletSigningField(label: 'To', value: _shortenAddress(toAddress)),
-        WalletSigningField(label: 'Amount', value: '$amountText $symbol'),
-        WalletSigningField(label: 'Network', value: networkName),
-        WalletSigningField(label: 'Est. gas', value: gasLabel),
-      ],
-    );
-  }
-
   Future<void> _confirmTransfer() async {
     if (_isConfirming) {
       return;
@@ -232,18 +226,6 @@ class _TransferConfirmationScreenState
     final amountText = _args?['amount'] as String? ?? '0';
     final token = _args?['token'] as Token?;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final approved = await _requestTransferSignature(
-      blockchain: blockchain,
-      toAddress: toAddress,
-      amountText: amountText,
-      symbol: token?.symbol ?? blockchain.activeChain.symbol,
-    );
-    if (!approved) {
-      if (mounted) {
-        setState(() => _isConfirming = false);
-      }
-      return;
-    }
 
     final progressController = _openProgressFlow();
     progressController.setPreparing();
@@ -259,24 +241,38 @@ class _TransferConfirmationScreenState
       final isNative =
           token?.contractAddress == null ||
           (token?.contractAddress?.isEmpty ?? true);
-      if (isNative && _fromAddress != null) {
+      if (_fromAddress != null) {
         final availableBalance = await blockchain.getNativeBalanceBaseUnits(
           _fromAddress!,
         );
-        if (amountInBaseUnits + _gasFeeWei > availableBalance) {
+        if (isNative && amountInBaseUnits + _gasFeeWei > availableBalance) {
           progressController.setError(
             'Insufficient ${chain.symbol} to cover the transfer amount and gas fee.',
           );
           return;
         }
+        if (!isNative && _gasFeeWei > availableBalance) {
+          progressController.setError(
+            'Insufficient ${chain.symbol} to cover the network gas fee for this token transfer.',
+          );
+          return;
+        }
       }
 
-      final txHash = await _walletService.sendNativeTransaction(
-        toAddress: toAddress,
-        amountInBaseUnits: amountInBaseUnits,
-        rpcUrl: chain.rpcUrl,
-        chainId: chain.chainId,
-      );
+      final txHash = isNative
+          ? await _walletService.sendNativeTransaction(
+              toAddress: toAddress,
+              amountInBaseUnits: amountInBaseUnits,
+              rpcUrl: chain.rpcUrl,
+              chainId: chain.chainId,
+            )
+          : await _walletService.sendTokenTransaction(
+              tokenAddress: token!.contractAddress!,
+              toAddress: toAddress,
+              amountInBaseUnits: amountInBaseUnits,
+              rpcUrl: chain.rpcUrl,
+              chainId: chain.chainId,
+            );
 
       final detailsUrl = _transactionDetailsUrl(txHash, blockchain);
       progressController.setSwapPending(
@@ -354,8 +350,8 @@ class _TransferConfirmationScreenState
         : '$amountText $symbol';
 
     final gasLabel = _gasEstimationFailed
-        ? '${l.gasFee} (${l.estimationFailed})'
-        : '${l.gasFee} (${_formatGasPriceGwei(_gasPriceGwei)} Gwei)';
+        ? '${l.networkFeeLabel} (${l.estimationFailed})'
+        : '${l.networkFeeLabel} (${_formatGasPriceGwei(_gasPriceGwei)} Gwei)';
 
     final gasValue = _gasEstimationFailed
         ? 'Error'
@@ -363,108 +359,124 @@ class _TransferConfirmationScreenState
 
     final gasValueUsd = _gasEstimationFailed
         ? ''
-        : '~${ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(_gasFeeUsd))}';
+        : ValueFormatter.formatUsdValueOrLessThanCent(
+            ValueFormatter.decimalFromNum(_gasFeeUsd),
+          );
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
-            TransferHeader(onBack: () => Navigator.pop(context)),
+            EntranceMotion(
+              beginOffset: const Offset(0, -0.04),
+              child: TransferHeader(onBack: () => Navigator.pop(context)),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardDark,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () => Navigator.pop(context),
-                                child: Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.1),
-                                    shape: BoxShape.circle,
+                    EntranceMotion(
+                      delay: const Duration(milliseconds: 70),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: AppColors.cardDark,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => Navigator.pop(context),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.1,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
                                   ),
-                                  child: const Icon(
-                                    Icons.close,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  l.confirmTransfer,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
                                     color: Colors.white,
-                                    size: 16,
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                l.confirmTransfer,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+                            AmountSummary(
+                              amountText: parsedAmount,
+                              symbol: symbol,
+                            ),
+                            const SizedBox(height: 28),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                l.transactionDetails,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  letterSpacing: 1,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withValues(alpha: 0.5),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 32),
-                          AmountSummary(
-                            amountText: parsedAmount,
-                            symbol: symbol,
-                          ),
-                          const SizedBox(height: 28),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              l.transactionDetails,
-                              style: TextStyle(
-                                fontSize: 11,
-                                letterSpacing: 1,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white.withValues(alpha: 0.5),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-                          TransactionDetailsCard(
-                            fromAddress: _shortenAddress(_fromAddress),
-                            toAddress: _shortenAddress(toAddress),
-                            network: network,
-                            token: token,
-                            chainId: blockchain.activeChain.chainId,
-                            isLoadingGas: _isLoadingGas,
-                            gasEstimationFailed: _gasEstimationFailed,
-                            gasLabel: gasLabel,
-                            gasValue: gasValue,
-                            gasValueUsd: gasValueUsd,
-                            totalLabel: isNative ? l.maxTotal : l.amount,
-                            maxTotalDisplay: maxTotalDisplay,
-                          ),
-                        ],
+                            const SizedBox(height: 14),
+                            TransactionDetailsCard(
+                              fromAddress: _shortenAddress(_fromAddress),
+                              toAddress: _shortenAddress(toAddress),
+                              network: network,
+                              token: token,
+                              chainId: blockchain.activeChain.chainId,
+                              isLoadingGas: _isLoadingGas,
+                              gasEstimationFailed: _gasEstimationFailed,
+                              gasLabel: gasLabel,
+                              gasValue: gasValue,
+                              gasValueUsd: gasValueUsd,
+                              totalLabel: isNative ? l.maxTotal : l.amount,
+                              maxTotalDisplay: maxTotalDisplay,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: WarningBanner(message: l.transferWarningMessage),
+                    EntranceMotion(
+                      delay: const Duration(milliseconds: 140),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: WarningBanner(message: l.transferWarningMessage),
+                      ),
                     ),
                     const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ConfirmButton(
-                isLoading: _isConfirming,
-                onPressed: _confirmTransfer,
-                label: l.confirmTransfer,
+            EntranceMotion(
+              delay: const Duration(milliseconds: 210),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: ConfirmButton(
+                  isLoading: _isConfirming,
+                  onPressed: _confirmTransfer,
+                  label: l.confirmTransfer,
+                ),
               ),
             ),
           ],

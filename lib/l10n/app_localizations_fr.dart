@@ -865,7 +865,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'Gagnez jusqu\'à 0,1 \$ lorsqu\'un utilisateur parrainé effectue son premier échange.';
+      'Gagnez jusqu\'à 0,5 \$ lorsqu\'un utilisateur parrainé effectue son premier swap qualifiant de 10 \$ ou plus.';
 
   @override
   String get yourReferralCode => 'VOTRE CODE DE RÉFÉRENCE';

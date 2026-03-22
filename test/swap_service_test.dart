@@ -62,6 +62,39 @@ void main() {
       },
     );
 
+    test('parses platformFeeUsd from backend quote response', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'buyAmount': '1000',
+            'allowanceTarget': '0xabc',
+            'platformFeeBps': 200,
+            'platformFeeUsd': 1.0,
+            'tokenMetadata': {
+              'buyToken': {'decimals': 6},
+            },
+          }),
+          200,
+        );
+      });
+      final service = SwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final quote = await service.get0xQuote(
+        chainId: 56,
+        fromTokenAddress: '0x55d398326f99059ff775485246999027b3197955',
+        toTokenAddress: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+        amountWei: '1000',
+        buyTokenDecimals: 6,
+        isGasless: false,
+      );
+
+      expect(quote, isNotNull);
+      expect(quote!.platformFeeBps, 200);
+      expect(quote.platformFeeUsd, 1.0);
+    });
+
     test('isChainSupported returns correct results for gasless vs normal', () {
       final service = SwapService();
 

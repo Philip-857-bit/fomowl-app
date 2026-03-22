@@ -864,7 +864,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'Gane hasta \$0,1 cuando un usuario recomendado complete su primer intercambio.';
+      'Gana hasta \$0,5 cuando un usuario referido complete su primera operación válida de \$10 o más.';
 
   @override
   String get yourReferralCode => 'SU CÓDIGO DE REFERENCIA';

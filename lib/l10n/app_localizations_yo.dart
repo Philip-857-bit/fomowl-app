@@ -842,7 +842,7 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get referralsSubtitle =>
-      'Gba to \$0.1 nigba ti ẹni to o pe ba ṣe paṣipaarọ akọkọ rẹ.';
+      'Gba to \$0.5 nigbati ẹni ti o pe ba pari swap akọkọ to yẹ ti \$10 tabi ju bẹẹ lọ.';
 
   @override
   String get yourReferralCode => 'KOODU ITỌKASI RẸ';

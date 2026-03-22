@@ -190,8 +190,8 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildNetworkImage(String url, {required Widget fallback}) {
-    final normalizedUrl = url.trim();
-    if (normalizedUrl.isEmpty || _knownMissingUrls.contains(normalizedUrl)) {
+    final normalizedUrl = normalizeNetworkImageUrl(url);
+    if (normalizedUrl == null || _knownMissingUrls.contains(normalizedUrl)) {
       return fallback;
     }
     return Image.network(
@@ -208,6 +208,24 @@ class TokenIcon extends StatelessWidget {
         return _buildPlaceholder();
       },
     );
+  }
+
+  @visibleForTesting
+  static String? normalizeNetworkImageUrl(String? rawUrl) {
+    final url = rawUrl?.trim();
+    if (url == null || url.isEmpty) {
+      return null;
+    }
+    if (url.startsWith('ipfs://ipfs/')) {
+      return 'https://ipfs.io/ipfs/${url.substring('ipfs://ipfs/'.length)}';
+    }
+    if (url.startsWith('ipfs://')) {
+      return 'https://ipfs.io/ipfs/${url.substring('ipfs://'.length)}';
+    }
+    if (url.startsWith('//')) {
+      return 'https:$url';
+    }
+    return url;
   }
 
   Widget _buildPlaceholder() {
