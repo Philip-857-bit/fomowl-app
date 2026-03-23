@@ -17,6 +17,7 @@ class SwapQuote {
   final String allowanceTarget;
   final String? allowanceSpender;
   final bool needsAllowance;
+  final bool gaslessApprovalAvailable;
   final bool hasBalanceIssue;
   final String? balanceNeeded;
   final String? balanceActual;
@@ -38,6 +39,7 @@ class SwapQuote {
     required this.allowanceTarget,
     required this.allowanceSpender,
     required this.needsAllowance,
+    this.gaslessApprovalAvailable = false,
     required this.hasBalanceIssue,
     required this.balanceNeeded,
     required this.balanceActual,
@@ -264,6 +266,8 @@ class SwapService {
           allowanceTarget: allowanceTarget,
           allowanceSpender: allowanceSpender,
           needsAllowance: needsAllowance,
+          gaslessApprovalAvailable:
+              isGasless && _asMap(data['approval']) != null,
           hasBalanceIssue: hasBalanceIssue,
           balanceNeeded: data['balanceNeeded']?.toString(),
           balanceActual: data['balanceActual']?.toString(),

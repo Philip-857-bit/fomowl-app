@@ -27,6 +27,7 @@ class SwapExecutionResult {
 class SwapExecutionService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
+  static const int _eip712SignatureType = 2;
 
   SwapExecutionService({
     WalletService? walletService,
@@ -217,6 +218,7 @@ class SwapExecutionService {
 
       // 0x Gasless Payload Extraction
       final trade = _asMap(quoteData['trade']);
+      final approval = _asMap(quoteData['approval']);
       final permit2 = _asMap(quoteData['permit2']);
       Map<String, dynamic>? eip712Data =
           _asMap(trade?['eip712']) ??
@@ -229,13 +231,25 @@ class SwapExecutionService {
         );
       }
 
-      // 2. Sign EIP-712 Payload
-      String signature;
+      // 2. Sign EIP-712 Payloads
+      String? approvalSignature;
+      final approvalEip712 = _asMap(approval?['eip712']);
+      if (approvalEip712 != null) {
+        try {
+          approvalSignature = await _walletService.signTypedData(
+            jsonEncode(approvalEip712),
+          );
+        } catch (e) {
+          throw Exception('Failed to sign gasless approval payload: $e');
+        }
+      }
+
+      String tradeSignature;
       try {
         final eip712JsonString = jsonEncode(eip712Data);
-        signature = await _walletService.signTypedData(eip712JsonString);
+        tradeSignature = await _walletService.signTypedData(eip712JsonString);
       } catch (e) {
-        throw Exception('Failed to sign gasless Permit2 payload: $e');
+        throw Exception('Failed to sign gasless trade payload: $e');
       }
 
       // 3. Submit Signed Order
@@ -245,7 +259,8 @@ class SwapExecutionService {
 
       final submitPayload = _buildFusionSubmitPayload(
         quoteData: quoteData,
-        signature: signature,
+        tradeSignature: tradeSignature,
+        approvalSignature: approvalSignature,
         chainId: blockchain.activeChain.chainId,
       );
 
@@ -327,21 +342,66 @@ class SwapExecutionService {
 
   Map<String, dynamic> _buildFusionSubmitPayload({
     required Map<String, dynamic> quoteData,
-    required String signature,
+    required String tradeSignature,
+    String? approvalSignature,
     required int chainId,
   }) {
-    final payload = Map<String, dynamic>.from(quoteData);
-    payload['chainId'] = '$chainId';
-
-    final trade = _asMap(payload['trade']);
+    final payload = <String, dynamic>{'chainId': '$chainId'};
+    final trade = _asMap(quoteData['trade']);
     if (trade != null) {
-      payload['trade'] = <String, dynamic>{...trade, 'signature': signature};
-      payload.remove('signature');
-      return payload;
+      payload['trade'] = _buildFusionSignedPayloadObject(
+        source: trade,
+        signature: tradeSignature,
+      );
     }
 
-    payload['signature'] = signature;
+    final approval = _asMap(quoteData['approval']);
+    if (approval != null && approvalSignature != null) {
+      payload['approval'] = _buildFusionSignedPayloadObject(
+        source: approval,
+        signature: approvalSignature,
+      );
+    }
+
     return payload;
+  }
+
+  Map<String, dynamic> _buildFusionSignedPayloadObject({
+    required Map<String, dynamic> source,
+    required String signature,
+  }) {
+    final payload = <String, dynamic>{};
+    final type = source['type']?.toString();
+    if (type != null && type.isNotEmpty) {
+      payload['type'] = type;
+    }
+    final eip712 = _asMap(source['eip712']);
+    if (eip712 != null) {
+      payload['eip712'] = eip712;
+    }
+    payload['signature'] = _splitSignature(signature);
+    return payload;
+  }
+
+  Map<String, dynamic> _splitSignature(String signature) {
+    final normalized = signature.startsWith('0x') ? signature : '0x$signature';
+    final hex = normalized.substring(2);
+    if (hex.length != 130) {
+      throw FormatException(
+        'Expected 65-byte signature, received ${hex.length ~/ 2} bytes.',
+      );
+    }
+
+    final r = hex.substring(0, 64).padLeft(64, '0');
+    final s = hex.substring(64, 128).padLeft(64, '0');
+    final v = int.parse(hex.substring(128, 130), radix: 16);
+
+    return <String, dynamic>{
+      'r': '0x$r',
+      's': '0x$s',
+      'v': v,
+      'signatureType': _eip712SignatureType,
+    };
   }
 
   /// Parse a numeric string that may be decimal ("1000000") or hex ("0x...").

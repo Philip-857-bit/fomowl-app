@@ -567,7 +567,10 @@ class _SwapScreenState extends State<SwapScreen> {
     required BlockchainService blockchain,
     required TransactionProgressController progressController,
   }) async {
-    if (!_isGasless || !quote.needsAllowance || _walletAddress == null) {
+    if (!_isGasless ||
+        !quote.needsAllowance ||
+        quote.gaslessApprovalAvailable ||
+        _walletAddress == null) {
       return true;
     }
 
@@ -1090,6 +1093,9 @@ class _SwapScreenState extends State<SwapScreen> {
     if (quote == null) {
       progressController.setError(l.noRouterQuoteAvailable);
       return false;
+    }
+    if (_isGasless && quote.gaslessApprovalAvailable) {
+      return true;
     }
     if (!quote.needsAllowance) {
       return true;
