@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -56,27 +57,80 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   // In-memory search cache: "chainId:query" → results
   final Map<String, List<Token>> _searchCache = {};
+  BlockchainService? _blockchain;
+  int? _observedChainId;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_handleSearchChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _attachBlockchainListener();
+      _loadData();
+    });
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _blockchain?.removeListener(_handleBlockchainChanged);
     _searchController
       ..removeListener(_handleSearchChanged)
       ..dispose();
     super.dispose();
   }
 
+  void _attachBlockchainListener() {
+    final blockchain = context.read<BlockchainService>();
+    if (identical(_blockchain, blockchain)) {
+      return;
+    }
+    _blockchain?.removeListener(_handleBlockchainChanged);
+    _blockchain = blockchain;
+    _observedChainId = blockchain.activeChain.chainId;
+    _blockchain?.addListener(_handleBlockchainChanged);
+  }
+
+  void _handleBlockchainChanged() {
+    final blockchain = _blockchain;
+    if (!mounted || blockchain == null) {
+      return;
+    }
+
+    final nextChainId = blockchain.activeChain.chainId;
+    if (_observedChainId != nextChainId) {
+      _observedChainId = nextChainId;
+      unawaited(_loadData(showSpinner: false));
+      return;
+    }
+
+    final nextTokens = List<Token>.from(blockchain.tokens);
+    final nextSignature = nextTokens
+        .map(
+          (token) =>
+              '${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
+        )
+        .toList();
+    final currentSignature = _walletTokens
+        .map(
+          (token) =>
+              '${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
+        )
+        .toList();
+    if (listEquals(nextSignature, currentSignature)) {
+      return;
+    }
+
+    setState(() {
+      _walletTokens = nextTokens;
+    });
+  }
+
   // ── Data Loading ───────────────────────────
 
   Future<void> _loadData({bool showSpinner = true}) async {
     final blockchain = context.read<BlockchainService>();
+    _attachBlockchainListener();
     if (!mounted) return;
     final chainId = blockchain.activeChain.chainId;
     if (showSpinner) {
@@ -87,12 +141,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final address = await _walletService.getCurrentWalletAddress();
     List<Token> fetched = blockchain.tokens;
     if (address != null && address.isNotEmpty) {
-      final cached = blockchain.getCachedWalletTokens(
-        address,
-        chainId: chainId,
-      );
+      final state = blockchain.getWalletTokenState(address, chainId: chainId);
+      final cached = state.tokens.isNotEmpty
+          ? state.tokens
+          : blockchain.getCachedWalletTokens(address, chainId: chainId);
       if (cached.isNotEmpty) {
-        fetched = cached;
+        fetched = List<Token>.from(cached);
       }
     }
     if (mounted) {

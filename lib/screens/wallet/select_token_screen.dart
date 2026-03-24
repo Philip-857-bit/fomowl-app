@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
@@ -32,21 +35,70 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   List<Token> _allTokens = [];
   List<Token> _filteredTokens = [];
   bool _isLoading = true;
+  BlockchainService? _blockchain;
+  int? _observedChainId;
 
   @override
   void initState() {
     super.initState();
-    _loadTokens();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _attachBlockchainListener();
+      _loadTokens();
+    });
   }
 
   @override
   void dispose() {
+    _blockchain?.removeListener(_handleBlockchainChanged);
     _searchController.dispose();
     super.dispose();
   }
 
+  void _attachBlockchainListener() {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (identical(_blockchain, blockchain)) {
+      return;
+    }
+    _blockchain?.removeListener(_handleBlockchainChanged);
+    _blockchain = blockchain;
+    _observedChainId = blockchain.activeChain.chainId;
+    _blockchain?.addListener(_handleBlockchainChanged);
+  }
+
+  void _handleBlockchainChanged() {
+    final blockchain = _blockchain;
+    if (!mounted || blockchain == null) {
+      return;
+    }
+    final nextChainId = blockchain.activeChain.chainId;
+    if (_observedChainId != nextChainId) {
+      _observedChainId = nextChainId;
+      unawaited(_loadTokens());
+      return;
+    }
+
+    final nextTokens = blockchain.tokens;
+    final nextSignature = nextTokens
+        .map(
+          (token) =>
+              '${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
+        )
+        .toList();
+    final currentSignature = _allTokens
+        .map(
+          (token) =>
+              '${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
+        )
+        .toList();
+    if (listEquals(nextSignature, currentSignature)) {
+      return;
+    }
+    _applyLoadedTokens(List<Token>.from(nextTokens), isLoading: false);
+  }
+
   Future<void> _loadTokens() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    _attachBlockchainListener();
     final chainId = blockchain.activeChain.chainId;
     setState(() => _isLoading = true);
     try {

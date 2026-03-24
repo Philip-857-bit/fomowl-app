@@ -715,6 +715,7 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<void> _trackGaslessOrder(
     String tradeHash, {
     required TransactionProgressController progressController,
+    required int chainId,
     bool rewardReferralOnSwap = false,
     double swapAmountUsd = 0.0,
   }) async {
@@ -752,6 +753,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
       final statusData = await _swapService.getGaslessStatus(
         tradeHash: tradeHash,
+        chainId: chainId,
       );
       if (statusData == null) {
         continue;
@@ -1218,6 +1220,7 @@ class _SwapScreenState extends State<SwapScreen> {
             await _trackGaslessOrder(
               result.tradeHash!,
               progressController: progressController,
+              chainId: blockchain.activeChain.chainId,
               rewardReferralOnSwap: true,
               swapAmountUsd: referralSwapAmountUsd,
             );
@@ -1239,6 +1242,7 @@ class _SwapScreenState extends State<SwapScreen> {
         await _trackGaslessOrder(
           result.tradeHash ?? result.transactionHash!,
           progressController: progressController,
+          chainId: blockchain.activeChain.chainId,
           rewardReferralOnSwap: true,
           swapAmountUsd: referralSwapAmountUsd,
         );

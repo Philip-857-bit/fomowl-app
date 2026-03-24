@@ -14,6 +14,7 @@ import 'storage_service.dart';
 import 'wallet_backend_auth_service.dart';
 import 'http_client_service.dart';
 import 'blockchain/token_portfolio_module.dart';
+import 'home_snapshot_service.dart';
 
 class _CircuitBreakerState {
   int failureCount = 0;
@@ -137,6 +138,7 @@ class BlockchainService extends ChangeNotifier {
   static const Duration _circuitBreakerInitialBackoff = Duration(seconds: 30);
   static const Duration _circuitBreakerMaxBackoff = Duration(minutes: 10);
   final StorageService _storageService = StorageService();
+  final HomeSnapshotService _homeSnapshotService = HomeSnapshotService();
 
   final WalletBackendAuthService _walletBackendAuthService =
       WalletBackendAuthService();
@@ -154,6 +156,7 @@ class BlockchainService extends ChangeNotifier {
   final Map<int, List<CustomTokenDefinition>> _customTokens = {};
   List<Token> _walletTokens = [];
   final Map<String, _WalletTokensCacheEntry> _walletTokensCache = {};
+  final Map<String, WalletTokenState> _walletTokenStates = {};
   final Map<String, Future<List<Token>>> _walletTokensInFlight = {};
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
   Timer? _livePriceTimer;
@@ -225,9 +228,28 @@ class BlockchainService extends ChangeNotifier {
     ];
   }
 
+  WalletTokenState getWalletTokenState(String walletAddress, {int? chainId}) {
+    final effectiveChainId = chainId ?? _activeChain.chainId;
+    final cacheKey = _walletTokenStateKey(effectiveChainId, walletAddress);
+    return _walletTokenStates[cacheKey] ??
+        WalletTokenState(
+          tokens: getCachedWalletTokens(
+            walletAddress,
+            chainId: effectiveChainId,
+          ),
+          source: 'none',
+          isLoading: false,
+          isStale: false,
+        );
+  }
+
   List<Token> getCachedWalletTokens(String walletAddress, {int? chainId}) {
     final effectiveChainId = chainId ?? _activeChain.chainId;
-    final cacheKey = '$effectiveChainId:${walletAddress.toLowerCase()}';
+    final cacheKey = _walletTokenStateKey(effectiveChainId, walletAddress);
+    final state = _walletTokenStates[cacheKey];
+    if (state != null && state.tokens.isNotEmpty) {
+      return List<Token>.from(state.tokens);
+    }
     final cached = _walletTokensCache[cacheKey];
     if (cached != null && cached.tokens.isNotEmpty) {
       return List<Token>.from(cached.tokens);
@@ -236,6 +258,52 @@ class BlockchainService extends ChangeNotifier {
       return List<Token>.from(_walletTokens);
     }
     return const [];
+  }
+
+  String _walletTokenStateKey(int chainId, String walletAddress) =>
+      '$chainId:${walletAddress.toLowerCase()}';
+
+  void _setWalletTokenState(
+    String cacheKey,
+    WalletTokenState state, {
+    required int chainId,
+    bool notify = false,
+  }) {
+    _walletTokenStates[cacheKey] = state;
+    if (_activeChain.chainId == chainId) {
+      _walletTokens = List<Token>.from(state.tokens);
+    }
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  Future<void> _syncHomeSnapshotForWallet(
+    String walletAddress,
+    int chainId,
+    List<Token> tokens,
+  ) async {
+    final existing = await _homeSnapshotService.loadSnapshot(
+      chainId,
+      walletAddress,
+    );
+    if (existing == null) {
+      return;
+    }
+    final totalBalance = tokens.fold<double>(
+      0,
+      (sum, token) => sum + token.totalValueUsd,
+    );
+    await _homeSnapshotService.saveSnapshot(
+      HomePortfolioSnapshot(
+        walletAddress: existing.walletAddress,
+        chainId: existing.chainId,
+        walletName: existing.walletName,
+        totalBalance: totalBalance,
+        tokens: tokens,
+        timestamp: DateTime.now(),
+      ),
+    );
   }
 
   /// Update dependencies from ProxyProvider
@@ -684,6 +752,35 @@ class BlockchainService extends ChangeNotifier {
     final addressRegex = RegExp(r'^0x[a-fA-F0-9]{40}$');
     if (!addressRegex.hasMatch(normalized)) return null;
 
+    final backendSearchResults = await searchTokensFromBackend(
+      normalized,
+      limit: 12,
+    );
+    for (final token in backendSearchResults) {
+      if ((token.contractAddress ?? '').toLowerCase() !=
+          normalized.toLowerCase()) {
+        continue;
+      }
+      if (token.symbol.trim().isEmpty || token.decimals <= 0) {
+        continue;
+      }
+      return CustomTokenDefinition(
+        symbol: token.symbol.toUpperCase(),
+        name: token.name,
+        address: normalized,
+        decimals: token.decimals,
+        coinGeckoId: token.coinGeckoId,
+        imageUrl:
+            token.imageUrl ??
+            _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+      );
+    }
+
+    final backendDetails = await _fetchBackendTokenMetadata(normalized);
+    if (backendDetails != null) {
+      return backendDetails;
+    }
+
     final symbol = await _ethCallString(normalized, '0x95d89b41');
     final name = await _ethCallString(normalized, '0x06fdde03');
     final decimalsRaw = await _ethCallUint(normalized, '0x313ce567');
@@ -706,8 +803,71 @@ class BlockchainService extends ChangeNotifier {
       address: normalized,
       decimals: decimals,
       coinGeckoId: null,
-      imageUrl: null,
+      imageUrl: _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
     );
+  }
+
+  Future<CustomTokenDefinition?> _fetchBackendTokenMetadata(
+    String contractAddress,
+  ) async {
+    final url = AppEnvironment.blockchain(
+      '/${_activeChain.chainId}/token-details/$contractAddress',
+    );
+
+    try {
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
+          .timeout(_backendDiscoveryTimeout);
+      if (response.statusCode != 200) {
+        return null;
+      }
+      final decoded = jsonDecode(response.body);
+      final data = _asMap(decoded);
+      if (data == null) {
+        return null;
+      }
+      final symbol = (data['symbol'] as String?)?.trim() ?? '';
+      final name = (data['name'] as String?)?.trim() ?? '';
+      final decimals = (_toInt(data['decimals']) ?? 0).clamp(0, 255);
+      if (symbol.isEmpty || decimals <= 0) {
+        return null;
+      }
+      return CustomTokenDefinition(
+        symbol: symbol.toUpperCase(),
+        name: name.isEmpty ? symbol.toUpperCase() : name,
+        address: contractAddress,
+        decimals: decimals,
+        coinGeckoId: (data['coinGeckoId'] as String?)?.trim(),
+        imageUrl: (data['imageUrl'] as String?)?.trim().isNotEmpty == true
+            ? (data['imageUrl'] as String?)?.trim()
+            : _buildTrustWalletTokenLogoUrl(
+                _activeChain.chainId,
+                contractAddress,
+              ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? _buildTrustWalletTokenLogoUrl(int chainId, String contractAddress) {
+    final normalized = contractAddress.trim().toLowerCase();
+    final folder = switch (chainId) {
+      1 => 'ethereum',
+      56 => 'smartchain',
+      137 => 'polygon',
+      42161 => 'arbitrum',
+      10 => 'optimism',
+      8453 => 'base',
+      43114 => 'avalanchec',
+      250 => 'fantom',
+      100 => 'xdai',
+      _ => null,
+    };
+    if (folder == null || normalized.length != 42) {
+      return null;
+    }
+    return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$folder/assets/$normalized/logo.png';
   }
 
   Future<String?> _ethCallString(
@@ -791,21 +951,57 @@ class BlockchainService extends ChangeNotifier {
 
   Future<List<Token>> fetchWalletTokens(String walletAddress) async {
     final requestedChainId = _activeChain.chainId;
-    final cacheKey = '$requestedChainId:${walletAddress.toLowerCase()}';
+    final cacheKey = _walletTokenStateKey(requestedChainId, walletAddress);
     final now = DateTime.now();
+    final existingState = _walletTokenStates[cacheKey];
 
     final cached = _walletTokensCache[cacheKey];
     if (cached != null &&
         now.difference(cached.fetchedAt) < _walletTokensCacheTtl) {
-      _walletTokens = cached.tokens;
-      notifyListeners();
+      _setWalletTokenState(
+        cacheKey,
+        WalletTokenState(
+          tokens: List<Token>.from(cached.tokens),
+          source: 'cache',
+          isLoading: false,
+          isStale: false,
+          lastUpdatedAt: cached.fetchedAt,
+          message: null,
+        ),
+        chainId: requestedChainId,
+        notify: true,
+      );
       return cached.tokens;
     }
 
     final inFlight = _walletTokensInFlight[cacheKey];
     if (inFlight != null) {
+      if (existingState != null && !existingState.isLoading) {
+        _setWalletTokenState(
+          cacheKey,
+          existingState.copyWith(isLoading: true),
+          chainId: requestedChainId,
+          notify: true,
+        );
+      }
       return inFlight;
     }
+
+    _setWalletTokenState(
+      cacheKey,
+      WalletTokenState(
+        tokens: List<Token>.from(
+          existingState?.tokens ?? cached?.tokens ?? const [],
+        ),
+        source: existingState?.source ?? (cached != null ? 'cache' : 'none'),
+        isLoading: true,
+        isStale: existingState?.isStale ?? (cached != null),
+        lastUpdatedAt: existingState?.lastUpdatedAt ?? cached?.fetchedAt,
+        message: existingState?.message,
+      ),
+      chainId: requestedChainId,
+      notify: true,
+    );
 
     final future = _fetchWalletTokensFresh(
       walletAddress,
@@ -822,6 +1018,10 @@ class BlockchainService extends ChangeNotifier {
     String cacheKey,
     int requestedChainId,
   ) async {
+    final previousState = _walletTokenStates[cacheKey];
+    final previousTokens = List<Token>.from(
+      previousState?.tokens ?? _walletTokensCache[cacheKey]?.tokens ?? const [],
+    );
     final discovered = await _fetchWalletTokensFromBackend(
       walletAddress,
       requestedChainId,
@@ -867,15 +1067,38 @@ class BlockchainService extends ChangeNotifier {
         }
       }
 
+      final nextTokens = merged.isEmpty && previousTokens.isNotEmpty
+          ? previousTokens
+          : merged;
+      final nextMessage = merged.isEmpty && previousTokens.isNotEmpty
+          ? (discovered.message ??
+                'Using cached wallet tokens because the latest backend refresh returned no token entries.')
+          : discovered.message;
+      final nextStale =
+          (merged.isEmpty && previousTokens.isNotEmpty) ||
+          discovered.partialFailure;
+      final fetchedAt = DateTime.now();
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
-        tokens: List<Token>.from(merged),
-        fetchedAt: DateTime.now(),
+        tokens: List<Token>.from(nextTokens),
+        fetchedAt: fetchedAt,
       );
-      if (_activeChain.chainId == requestedChainId) {
-        _walletTokens = merged;
-        notifyListeners();
-      }
-      return merged;
+      _setWalletTokenState(
+        cacheKey,
+        WalletTokenState(
+          tokens: List<Token>.from(nextTokens),
+          source: discovered.source,
+          isLoading: false,
+          isStale: nextStale,
+          lastUpdatedAt: fetchedAt,
+          message: nextMessage,
+        ),
+        chainId: requestedChainId,
+        notify: true,
+      );
+      unawaited(
+        _syncHomeSnapshotForWallet(walletAddress, requestedChainId, nextTokens),
+      );
+      return nextTokens;
     }
 
     final tokens = <Token>[];
@@ -999,15 +1222,37 @@ class BlockchainService extends ChangeNotifier {
       debugPrint('Error fetching tokens: $e');
     }
 
-    _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
-      tokens: List<Token>.from(tokens),
-      fetchedAt: DateTime.now(),
-    );
-    if (_activeChain.chainId == requestedChainId) {
-      _walletTokens = tokens;
-      notifyListeners();
+    var finalTokens = tokens;
+    String? fallbackMessage;
+    var isStale = false;
+    if (previousTokens.isNotEmpty && finalTokens.length <= 1) {
+      finalTokens = previousTokens;
+      fallbackMessage =
+          'Using cached wallet tokens while the latest live refresh is incomplete.';
+      isStale = true;
     }
-    return tokens;
+    final fetchedAt = DateTime.now();
+    _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+      tokens: List<Token>.from(finalTokens),
+      fetchedAt: fetchedAt,
+    );
+    _setWalletTokenState(
+      cacheKey,
+      WalletTokenState(
+        tokens: List<Token>.from(finalTokens),
+        source: 'fallback',
+        isLoading: false,
+        isStale: isStale,
+        lastUpdatedAt: fetchedAt,
+        message: fallbackMessage,
+      ),
+      chainId: requestedChainId,
+      notify: true,
+    );
+    unawaited(
+      _syncHomeSnapshotForWallet(walletAddress, requestedChainId, finalTokens),
+    );
+    return finalTokens;
   }
 
   Future<List<Token>> searchTokensFromBackend(
@@ -1062,12 +1307,79 @@ class BlockchainService extends ChangeNotifier {
             ),
           );
         }
-        if (parsed.isNotEmpty) return parsed;
+        if (parsed.isNotEmpty) {
+          return _deduplicateSearchTokens(parsed).take(safeLimit).toList();
+        }
       } catch (_) {
         continue;
       }
     }
-    return parsed;
+    return _localTokenSearchFallback(trimmed, safeLimit);
+  }
+
+  List<Token> _localTokenSearchFallback(String query, int limit) {
+    final normalized = query.toLowerCase();
+    final customTokens = (_customTokens[_activeChain.chainId] ?? const [])
+        .map(
+          (token) => Token(
+            symbol: token.symbol,
+            name: token.name,
+            contractAddress: token.address,
+            balance: 0,
+            valueUsd: 0,
+            changePercent24h: 0,
+            decimals: token.decimals,
+            imageUrl: token.imageUrl,
+            coinGeckoId: token.coinGeckoId,
+            isCertified: false,
+          ),
+        )
+        .toList();
+    final candidates = _deduplicateSearchTokens([
+      ..._walletTokens,
+      ...customTokens,
+      ...customTokensForActiveChain.map(
+        (token) => Token(
+          symbol: token.symbol,
+          name: token.name,
+          contractAddress: token.address,
+          balance: 0,
+          valueUsd: 0,
+          changePercent24h: 0,
+          decimals: token.decimals,
+          imageUrl: token.imageUrl,
+          coinGeckoId: token.coinGeckoId,
+          isCertified: false,
+        ),
+      ),
+    ]);
+
+    final filtered = candidates.where((token) {
+      if (normalized.isEmpty) {
+        return true;
+      }
+      return token.symbol.toLowerCase().contains(normalized) ||
+          token.name.toLowerCase().contains(normalized) ||
+          (token.contractAddress?.toLowerCase().contains(normalized) ?? false);
+    }).toList();
+    return filtered.take(limit).toList();
+  }
+
+  List<Token> _deduplicateSearchTokens(List<Token> tokens) {
+    final seen = <String>{};
+    final result = <Token>[];
+    for (final token in tokens) {
+      final key =
+          (token.contractAddress?.trim().isNotEmpty == true
+                  ? token.contractAddress
+                  : token.symbol)
+              ?.toLowerCase();
+      if (key == null || !seen.add(key)) {
+        continue;
+      }
+      result.add(token);
+    }
+    return result;
   }
 
   // ─── BACKEND DISCOVERY WITH CIRCUIT BREAKER ───────
@@ -1325,6 +1637,7 @@ class BlockchainService extends ChangeNotifier {
     list.add(token);
     await _saveCustomTokens();
     _applyCustomTokenMutationToLocalState(chainId, addedToken: token);
+    unawaited(_syncWalletTokenSnapshotsForChain(chainId));
     notifyListeners();
     return true;
   }
@@ -1335,6 +1648,7 @@ class BlockchainService extends ChangeNotifier {
     list.removeWhere((t) => t.address.toLowerCase() == address.toLowerCase());
     await _saveCustomTokens();
     _applyCustomTokenMutationToLocalState(chainId, removedAddress: address);
+    unawaited(_syncWalletTokenSnapshotsForChain(chainId));
     notifyListeners();
   }
 
@@ -1373,6 +1687,30 @@ class BlockchainService extends ChangeNotifier {
       _walletTokensCache.addAll(updatedCacheEntries);
     }
 
+    final updatedStates = <String, WalletTokenState>{};
+    for (final entry in _walletTokenStates.entries) {
+      if (!entry.key.startsWith('$chainId:')) {
+        continue;
+      }
+
+      var nextTokens = List<Token>.from(entry.value.tokens);
+      if (addedToken != null) {
+        nextTokens = _upsertCustomTokenIntoList(nextTokens, addedToken);
+      }
+      if (removedAddress != null && removedAddress.trim().isNotEmpty) {
+        nextTokens = _removeCustomTokenFromList(nextTokens, removedAddress);
+      }
+
+      updatedStates[entry.key] = entry.value.copyWith(
+        tokens: nextTokens,
+        lastUpdatedAt: now,
+      );
+    }
+
+    if (updatedStates.isNotEmpty) {
+      _walletTokenStates.addAll(updatedStates);
+    }
+
     if (_activeChain.chainId != chainId) {
       return;
     }
@@ -1387,6 +1725,24 @@ class BlockchainService extends ChangeNotifier {
       currentTokens = _removeCustomTokenFromList(currentTokens, removedAddress);
     }
     _walletTokens = currentTokens;
+  }
+
+  Future<void> _syncWalletTokenSnapshotsForChain(int chainId) async {
+    for (final entry in _walletTokenStates.entries) {
+      if (!entry.key.startsWith('$chainId:')) {
+        continue;
+      }
+      final separatorIndex = entry.key.indexOf(':');
+      if (separatorIndex <= 0 || separatorIndex >= entry.key.length - 1) {
+        continue;
+      }
+      final walletAddress = entry.key.substring(separatorIndex + 1);
+      await _syncHomeSnapshotForWallet(
+        walletAddress,
+        chainId,
+        entry.value.tokens,
+      );
+    }
   }
 
   List<Token> _upsertCustomTokenIntoList(
@@ -1616,6 +1972,42 @@ class _WalletTokensCacheEntry {
     required this.tokens,
     required this.fetchedAt,
   });
+}
+
+class WalletTokenState {
+  final List<Token> tokens;
+  final String source;
+  final bool isLoading;
+  final bool isStale;
+  final DateTime? lastUpdatedAt;
+  final String? message;
+
+  const WalletTokenState({
+    required this.tokens,
+    required this.source,
+    required this.isLoading,
+    required this.isStale,
+    this.lastUpdatedAt,
+    this.message,
+  });
+
+  WalletTokenState copyWith({
+    List<Token>? tokens,
+    String? source,
+    bool? isLoading,
+    bool? isStale,
+    DateTime? lastUpdatedAt,
+    String? message,
+  }) {
+    return WalletTokenState(
+      tokens: tokens ?? this.tokens,
+      source: source ?? this.source,
+      isLoading: isLoading ?? this.isLoading,
+      isStale: isStale ?? this.isStale,
+      lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
+      message: message ?? this.message,
+    );
+  }
 }
 
 class _BackendWalletTokensResponse {

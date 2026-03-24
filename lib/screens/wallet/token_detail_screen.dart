@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../constants/app_colors.dart';
+import '../../models/chain.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../models/token_market_data.dart';
@@ -111,9 +114,11 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         final tokens = service.tokens;
         _token = _findMatchingToken(tokens, passedToken) ?? passedToken;
       }
+      unawaited(_enrichTokenMetadataIfNeeded());
       _reloadTokenMarketData(force: true);
     } else {
       _refreshTokenFromService();
+      unawaited(_enrichTokenMetadataIfNeeded());
       _reloadTokenMarketData();
     }
   }
@@ -141,6 +146,53 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       });
       _reloadTokenMarketData(force: true);
     }
+  }
+
+  Future<void> _enrichTokenMetadataIfNeeded() async {
+    final current = _token;
+    final blockchain = _blockchain;
+    if (!mounted || current == null || blockchain == null) {
+      return;
+    }
+    final contract = current.contractAddress?.trim();
+    if (contract == null || contract.isEmpty) {
+      return;
+    }
+    final needsEnrichment =
+        (current.imageUrl == null || current.imageUrl!.trim().isEmpty) ||
+        (current.coinGeckoId == null || current.coinGeckoId!.trim().isEmpty) ||
+        current.name.trim().isEmpty;
+    if (!needsEnrichment) {
+      return;
+    }
+
+    final resolved = await blockchain.detectTokenByContract(contract);
+    if (!mounted || resolved == null) {
+      return;
+    }
+    setState(() {
+      _token = _mergeResolvedMetadata(current, resolved);
+    });
+  }
+
+  Token _mergeResolvedMetadata(Token current, CustomTokenDefinition resolved) {
+    return Token(
+      symbol: resolved.symbol.isNotEmpty ? resolved.symbol : current.symbol,
+      name: resolved.name.isNotEmpty ? resolved.name : current.name,
+      contractAddress: current.contractAddress,
+      balance: current.balance,
+      valueUsd: current.valueUsd,
+      priceUsd: current.priceUsd,
+      changePercent24h: current.changePercent24h,
+      decimals: resolved.decimals > 0 ? resolved.decimals : current.decimals,
+      imageUrl: (resolved.imageUrl?.trim().isNotEmpty ?? false)
+          ? resolved.imageUrl
+          : current.imageUrl,
+      coinGeckoId: (resolved.coinGeckoId?.trim().isNotEmpty ?? false)
+          ? resolved.coinGeckoId
+          : current.coinGeckoId,
+      isCertified: current.isCertified,
+    );
   }
 
   Token? _findMatchingToken(List<Token> tokens, Token target) {

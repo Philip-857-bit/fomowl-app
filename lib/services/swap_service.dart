@@ -109,10 +109,13 @@ class SwapService {
 
   Future<Map<String, dynamic>?> getGaslessStatus({
     required String tradeHash,
+    required int chainId,
   }) async {
     _lastError = null;
     try {
-      final url = AppEnvironment.swap('/fusion/status/$tradeHash');
+      final url = AppEnvironment.swap('/fusion/status/$tradeHash', {
+        'chainId': '$chainId',
+      });
       final response = await _httpClientService
           .sendWithRetry(() => _httpClientService.client.get(url))
           .timeout(const Duration(seconds: 15));
