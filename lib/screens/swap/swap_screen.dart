@@ -716,6 +716,11 @@ class _SwapScreenState extends State<SwapScreen> {
     String tradeHash, {
     required TransactionProgressController progressController,
     required int chainId,
+    required String fromAmountText,
+    required String fromSymbol,
+    required String toAmountText,
+    required String toSymbol,
+    required String networkName,
     bool rewardReferralOnSwap = false,
     double swapAmountUsd = 0.0,
   }) async {
@@ -774,6 +779,18 @@ class _SwapScreenState extends State<SwapScreen> {
         );
         if (!mounted) return;
         if (confirmed) {
+          if (_walletAddress != null) {
+            unawaited(
+              _walletNotificationService.notifySwapConfirmed(
+                walletAddress: _walletAddress!,
+                fromAmount: fromAmountText,
+                fromSymbol: fromSymbol,
+                toAmount: toAmountText,
+                toSymbol: toSymbol,
+                networkName: networkName,
+              ),
+            );
+          }
           progressController.setSuccess(
             reference: _shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
@@ -800,6 +817,18 @@ class _SwapScreenState extends State<SwapScreen> {
             // Referral crediting should not block successful swap UX.
             debugPrint('Referral reward-on-gasless-swap failed: $e');
           }
+        }
+        if (_walletAddress != null) {
+          unawaited(
+            _walletNotificationService.notifySwapConfirmed(
+              walletAddress: _walletAddress!,
+              fromAmount: fromAmountText,
+              fromSymbol: fromSymbol,
+              toAmount: toAmountText,
+              toSymbol: toSymbol,
+              networkName: networkName,
+            ),
+          );
         }
         progressController.setSuccess(reference: _shortHash(tradeHash));
         await _refreshWalletState();
@@ -1221,6 +1250,11 @@ class _SwapScreenState extends State<SwapScreen> {
               result.tradeHash!,
               progressController: progressController,
               chainId: blockchain.activeChain.chainId,
+              fromAmountText: fromAmountText,
+              fromSymbol: fromToken.symbol,
+              toAmountText: toAmountText,
+              toSymbol: toToken.symbol,
+              networkName: blockchain.activeChain.name,
               rewardReferralOnSwap: true,
               swapAmountUsd: referralSwapAmountUsd,
             );
@@ -1243,6 +1277,11 @@ class _SwapScreenState extends State<SwapScreen> {
           result.tradeHash ?? result.transactionHash!,
           progressController: progressController,
           chainId: blockchain.activeChain.chainId,
+          fromAmountText: fromAmountText,
+          fromSymbol: fromToken.symbol,
+          toAmountText: toAmountText,
+          toSymbol: toToken.symbol,
+          networkName: blockchain.activeChain.name,
           rewardReferralOnSwap: true,
           swapAmountUsd: referralSwapAmountUsd,
         );
