@@ -106,10 +106,7 @@ class WalletHistoryService {
     String type = 'all',
     int limit = 100,
   }) async {
-    final query = <String, String>{
-      'type': type,
-      'limit': '$limit',
-    };
+    final query = <String, String>{'type': type, 'limit': '$limit'};
     if (chainId != null) {
       query['chainId'] = '$chainId';
     }
