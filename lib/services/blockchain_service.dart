@@ -949,14 +949,19 @@ class BlockchainService extends ChangeNotifier {
 
   // ─── TOKEN LIST ──────────────────────────────────
 
-  Future<List<Token>> fetchWalletTokens(String walletAddress) async {
-    final requestedChainId = _activeChain.chainId;
+  Future<List<Token>> fetchWalletTokens(
+    String walletAddress, {
+    int? chainId,
+    bool forceRefresh = false,
+  }) async {
+    final requestedChainId = chainId ?? _activeChain.chainId;
     final cacheKey = _walletTokenStateKey(requestedChainId, walletAddress);
     final now = DateTime.now();
     final existingState = _walletTokenStates[cacheKey];
 
     final cached = _walletTokensCache[cacheKey];
-    if (cached != null &&
+    if (!forceRefresh &&
+        cached != null &&
         now.difference(cached.fetchedAt) < _walletTokensCacheTtl) {
       _setWalletTokenState(
         cacheKey,
@@ -975,7 +980,9 @@ class BlockchainService extends ChangeNotifier {
     }
 
     final inFlight = _walletTokensInFlight[cacheKey];
-    if (inFlight != null) {
+    if (forceRefresh && inFlight != null) {
+      await inFlight;
+    } else if (inFlight != null) {
       if (existingState != null && !existingState.isLoading) {
         _setWalletTokenState(
           cacheKey,
@@ -1011,6 +1018,17 @@ class BlockchainService extends ChangeNotifier {
     _walletTokensInFlight[cacheKey] = future;
     future.whenComplete(() => _walletTokensInFlight.remove(cacheKey));
     return future;
+  }
+
+  Future<List<Token>> refreshWalletTokens(
+    String walletAddress, {
+    int? chainId,
+  }) {
+    return fetchWalletTokens(
+      walletAddress,
+      chainId: chainId,
+      forceRefresh: true,
+    );
   }
 
   Future<List<Token>> _fetchWalletTokensFresh(

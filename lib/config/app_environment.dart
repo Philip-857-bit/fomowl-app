@@ -61,6 +61,10 @@ class AppEnvironment {
     return api('/history$path', queryParameters);
   }
 
+  static Uri prices(String path, [Map<String, String>? queryParameters]) {
+    return api('/prices$path', queryParameters);
+  }
+
   static Uri notifications(
     String path, [
     Map<String, String>? queryParameters,

@@ -503,35 +503,17 @@ class _ProcessingScaffold extends StatelessWidget {
             Expanded(
               child: EntranceMotion(
                 beginOffset: const Offset(0, 0.03),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 360),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(
-                      begin: const Offset(0, 0.035),
-                      end: Offset.zero,
-                    ).animate(animation);
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
-                    );
-                  },
-                  child: _ProcessingStageView(
-                    key: ValueKey<String>(
-                      '${state.flow.name}:${state.stage.name}:${state.reference ?? ''}:${state.message ?? ''}',
-                    ),
-                    state: state,
-                    title: _title(l),
-                    subtitle: _subtitle(l),
-                    icon: _icon,
-                    iconColor: _iconColor,
-                    orbColor: _orbColor,
-                    primaryActionLabel: _primaryActionLabel(l),
-                    onOpenDetails: () => _openDetails(context),
-                    onClose: () => _close(context),
-                    closeLabel: l.closeLabel,
-                  ),
+                child: _ProcessingStageView(
+                  state: state,
+                  title: _title(l),
+                  subtitle: _subtitle(l),
+                  icon: _icon,
+                  iconColor: _iconColor,
+                  orbColor: _orbColor,
+                  primaryActionLabel: _primaryActionLabel(l),
+                  onOpenDetails: () => _openDetails(context),
+                  onClose: () => _close(context),
+                  closeLabel: l.closeLabel,
                 ),
               ),
             ),
@@ -544,7 +526,6 @@ class _ProcessingScaffold extends StatelessWidget {
 
 class _ProcessingStageView extends StatelessWidget {
   const _ProcessingStageView({
-    super.key,
     required this.state,
     required this.title,
     required this.subtitle,
@@ -575,99 +556,45 @@ class _ProcessingStageView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Spacer(flex: 2),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0.94, end: 1),
-          duration: const Duration(milliseconds: 420),
-          curve: Curves.easeOutBack,
-          builder: (context, scale, child) {
-            return Transform.scale(scale: scale, child: child);
-          },
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  orbColor.withValues(alpha: 0.35),
-                  orbColor.withValues(alpha: 0.08),
-                  Colors.transparent,
-                ],
-                stops: const [0.3, 0.7, 1.0],
-              ),
-            ),
-            child: Center(
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: orbColor.withValues(alpha: 0.2),
+        Expanded(
+          child: Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 320),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ...previousChildren,
+                    ...?(currentChild == null ? null : [currentChild]),
+                  ],
+                );
+              },
+              transitionBuilder: (child, animation) {
+                final slide = Tween<Offset>(
+                  begin: const Offset(0, 0.03),
+                  end: Offset.zero,
+                ).animate(animation);
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(position: slide, child: child),
+                );
+              },
+              child: _ProcessingStatusContent(
+                key: ValueKey<String>(
+                  '${state.flow.name}:${state.stage.name}:${state.reference ?? ''}:${state.message ?? ''}',
                 ),
-                child: Icon(icon, color: iconColor, size: 40),
+                state: state,
+                title: title,
+                subtitle: subtitle,
+                icon: icon,
+                iconColor: iconColor,
+                orbColor: orbColor,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 40),
-        Text(
-          title,
-          style: GoogleFonts.outfit(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 48),
-          child: Text(
-            subtitle,
-            style: GoogleFonts.outfit(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.5),
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        if (state.reference != null && state.reference!.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
-              state.reference!,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.72),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-        if (state.hasProcessingState) ...[
-          const SizedBox(height: 18),
-          TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.85, end: 1),
-            duration: const Duration(milliseconds: 320),
-            curve: Curves.easeOutCubic,
-            builder: (context, scale, child) {
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: const SizedBox(
-              width: 28,
-              height: 28,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.4,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentRed),
-              ),
-            ),
-          ),
-        ],
-        const Spacer(flex: 3),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
           child: Column(
@@ -711,6 +638,130 @@ class _ProcessingStageView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ProcessingStatusContent extends StatelessWidget {
+  const _ProcessingStatusContent({
+    super.key,
+    required this.state,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.iconColor,
+    required this.orbColor,
+  });
+
+  final TransactionProgressState state;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color iconColor;
+  final Color orbColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.94, end: 1),
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeOutBack,
+            builder: (context, scale, child) {
+              return Transform.scale(scale: scale, child: child);
+            },
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    orbColor.withValues(alpha: 0.35),
+                    orbColor.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.3, 0.7, 1.0],
+                ),
+              ),
+              child: Center(
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: orbColor.withValues(alpha: 0.2),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 40),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: Text(
+              subtitle,
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: Colors.white.withValues(alpha: 0.5),
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          if (state.reference != null && state.reference!.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Text(
+                state.reference!,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+          if (state.hasProcessingState) ...[
+            const SizedBox(height: 18),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.85, end: 1),
+              duration: const Duration(milliseconds: 320),
+              curve: Curves.easeOutCubic,
+              builder: (context, scale, child) {
+                return Transform.scale(scale: scale, child: child);
+              },
+              child: const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.accentRed,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

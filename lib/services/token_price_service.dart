@@ -21,6 +21,29 @@ class TokenPriceService extends BaseService {
   Future<Map<String, double>> getTokenPrices(List<String> tokenIds) async {
     if (tokenIds.isEmpty) return {};
     try {
+      final normalizedIds = tokenIds
+          .map((id) => id.trim().toLowerCase())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+      if (normalizedIds.isEmpty) return {};
+
+      final backendUri = AppEnvironment.prices('/tokens', {
+        'ids': normalizedIds.join(','),
+        'vs_currencies': 'usd',
+      });
+      final backendResponse = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(backendUri))
+          .timeout(const Duration(seconds: 10));
+
+      if (backendResponse.statusCode == 200) {
+        return _parseSimplePriceMap(backendResponse.body);
+      }
+    } catch (e) {
+      debugPrint('Backend token price fetch failed, falling back direct: $e');
+    }
+
+    try {
       final ids = tokenIds.map((id) => Uri.encodeComponent(id)).join(',');
       final url =
           '$priceApiBase/simple/price?ids=$ids&vs_currencies=usd&include_24hr_change=true';
@@ -29,18 +52,7 @@ class TokenPriceService extends BaseService {
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final prices = <String, double>{};
-        data.forEach((key, value) {
-          if (value is Map && value['usd'] != null) {
-            prices[key] = (value['usd'] as num).toDouble();
-            if (value['usd_24h_change'] != null) {
-              prices['${key}_change'] = (value['usd_24h_change'] as num)
-                  .toDouble();
-            }
-          }
-        });
-        return prices;
+        return _parseSimplePriceMap(response.body);
       }
     } catch (e) {
       debugPrint('Error fetching token prices: $e');
@@ -191,6 +203,20 @@ class TokenPriceService extends BaseService {
     if (value is num) return value.toDouble();
     if (value is String) return double.tryParse(value);
     return null;
+  }
+
+  Map<String, double> _parseSimplePriceMap(String responseBody) {
+    final data = jsonDecode(responseBody) as Map<String, dynamic>;
+    final prices = <String, double>{};
+    data.forEach((key, value) {
+      if (value is Map && value['usd'] != null) {
+        prices[key] = (value['usd'] as num).toDouble();
+        if (value['usd_24h_change'] != null) {
+          prices['${key}_change'] = (value['usd_24h_change'] as num).toDouble();
+        }
+      }
+    });
+    return prices;
   }
 }
 

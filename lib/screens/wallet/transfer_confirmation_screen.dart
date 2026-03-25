@@ -8,6 +8,7 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/wallet_history_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../services/wallet_service.dart';
@@ -38,6 +39,7 @@ class _TransferConfirmationScreenState
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   final WalletNotificationService _walletNotificationService =
       WalletNotificationService();
+  final WalletHistoryService _walletHistoryService = WalletHistoryService();
   Map<String, dynamic>? _args;
   String? _fromAddress;
   bool _isConfirming = false;
@@ -214,6 +216,25 @@ class _TransferConfirmationScreenState
     return controller;
   }
 
+  Future<void> _refreshWalletStateAfterTransfer({
+    required BlockchainService blockchain,
+    required int chainId,
+  }) async {
+    final walletAddress = _fromAddress;
+    if (walletAddress == null || walletAddress.isEmpty) {
+      return;
+    }
+
+    await blockchain.refreshWalletTokens(walletAddress, chainId: chainId);
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 3), () async {
+        try {
+          await blockchain.refreshWalletTokens(walletAddress, chainId: chainId);
+        } catch (_) {}
+      }),
+    );
+  }
+
   Future<void> _confirmTransfer() async {
     if (_isConfirming) {
       return;
@@ -289,6 +310,10 @@ class _TransferConfirmationScreenState
       }
 
       if (confirmed) {
+        await _refreshWalletStateAfterTransfer(
+          blockchain: blockchain,
+          chainId: chain.chainId,
+        );
         if (_fromAddress != null && token != null) {
           unawaited(
             _walletNotificationService.notifySendConfirmed(
@@ -297,6 +322,18 @@ class _TransferConfirmationScreenState
               tokenSymbol: token.symbol,
               toAddress: toAddress,
               networkName: chain.name,
+            ),
+          );
+          unawaited(
+            _walletHistoryService.recordSendConfirmed(
+              walletAddress: _fromAddress!,
+              txHash: txHash,
+              chainId: chain.chainId,
+              networkName: chain.name,
+              tokenName: token.name,
+              tokenSymbol: token.symbol,
+              amountText: amountText,
+              toAddress: toAddress,
             ),
           );
         }

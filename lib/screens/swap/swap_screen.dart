@@ -13,6 +13,7 @@ import '../../services/swap_execution_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/referral_service.dart';
+import '../../services/wallet_history_service.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/toast_utils.dart';
@@ -47,6 +48,7 @@ class _SwapScreenState extends State<SwapScreen> {
       TokenVisibilityService();
   final WalletNotificationService _walletNotificationService =
       WalletNotificationService();
+  final WalletHistoryService _walletHistoryService = WalletHistoryService();
   late final TokenApprovalService _tokenApprovalService;
   late final SwapExecutionService _swapExecutionService;
   late final TransactionMonitor _transactionMonitor;
@@ -540,6 +542,34 @@ class _SwapScreenState extends State<SwapScreen> {
     return '$normalized/tx/$hash';
   }
 
+  void _recordSwapHistory({
+    required String fromAmount,
+    required String fromTokenName,
+    required String fromTokenSymbol,
+    required String toAmount,
+    required String toTokenSymbol,
+    required String networkName,
+    required int chainId,
+    String? txHash,
+  }) {
+    if (_walletAddress == null) {
+      return;
+    }
+    unawaited(
+      _walletHistoryService.recordSwapConfirmed(
+        walletAddress: _walletAddress!,
+        txHash: txHash,
+        chainId: chainId,
+        networkName: networkName,
+        fromTokenName: fromTokenName,
+        fromTokenSymbol: fromTokenSymbol,
+        fromAmount: fromAmount,
+        toAmount: toAmount,
+        toTokenSymbol: toTokenSymbol,
+      ),
+    );
+  }
+
   String _gaslessApprovalFundingMessage({
     required Token token,
     required BlockchainService blockchain,
@@ -696,18 +726,59 @@ class _SwapScreenState extends State<SwapScreen> {
       final nested = trade['status']?.toString();
       if (nested != null && nested.isNotEmpty) return nested;
     }
+    final result = data['result'];
+    if (result is Map<String, dynamic>) {
+      final nested = result['status']?.toString();
+      if (nested != null && nested.isNotEmpty) return nested;
+    }
     return null;
   }
 
   String? _extractGaslessTxHash(Map<String, dynamic> data) {
     final direct =
-        data['transactionHash']?.toString() ?? data['txHash']?.toString();
+        data['transactionHash']?.toString() ??
+        data['txHash']?.toString() ??
+        data['hash']?.toString();
     if (direct != null && direct.isNotEmpty) return direct;
     final trade = data['trade'];
     if (trade is Map<String, dynamic>) {
       final nested =
-          trade['transactionHash']?.toString() ?? trade['txHash']?.toString();
+          trade['transactionHash']?.toString() ??
+          trade['txHash']?.toString() ??
+          trade['hash']?.toString();
       if (nested != null && nested.isNotEmpty) return nested;
+      final transactions = trade['transactions'];
+      if (transactions is List) {
+        for (final entry in transactions) {
+          if (entry is Map<String, dynamic>) {
+            final txHash =
+                entry['transactionHash']?.toString() ??
+                entry['txHash']?.toString() ??
+                entry['hash']?.toString();
+            if (txHash != null && txHash.isNotEmpty) return txHash;
+          }
+        }
+      }
+    }
+    final result = data['result'];
+    if (result is Map<String, dynamic>) {
+      final nested =
+          result['transactionHash']?.toString() ??
+          result['txHash']?.toString() ??
+          result['hash']?.toString();
+      if (nested != null && nested.isNotEmpty) return nested;
+      final transactions = result['transactions'];
+      if (transactions is List) {
+        for (final entry in transactions) {
+          if (entry is Map<String, dynamic>) {
+            final txHash =
+                entry['transactionHash']?.toString() ??
+                entry['txHash']?.toString() ??
+                entry['hash']?.toString();
+            if (txHash != null && txHash.isNotEmpty) return txHash;
+          }
+        }
+      }
     }
     return null;
   }
@@ -752,6 +823,7 @@ class _SwapScreenState extends State<SwapScreen> {
       'invalid',
     };
 
+    var failedStatusStreak = 0;
     for (var attempt = 0; attempt < 20; attempt++) {
       await Future<void>.delayed(const Duration(seconds: 6));
       if (!mounted) return;
@@ -790,6 +862,16 @@ class _SwapScreenState extends State<SwapScreen> {
                 networkName: networkName,
               ),
             );
+            _recordSwapHistory(
+              txHash: txHash,
+              fromAmount: fromAmountText,
+              fromTokenName: fromSymbol,
+              fromTokenSymbol: fromSymbol,
+              toAmount: toAmountText,
+              toTokenSymbol: toSymbol,
+              networkName: networkName,
+              chainId: chainId,
+            );
           }
           progressController.setSuccess(
             reference: _shortHash(txHash),
@@ -806,6 +888,7 @@ class _SwapScreenState extends State<SwapScreen> {
       }
 
       if (status != null && successStates.contains(status)) {
+        failedStatusStreak = 0;
         if (rewardReferralOnSwap && _walletAddress != null) {
           try {
             await _referralService.rewardOnSwap(
@@ -829,6 +912,16 @@ class _SwapScreenState extends State<SwapScreen> {
               networkName: networkName,
             ),
           );
+          _recordSwapHistory(
+            txHash: _looksLikeTxHash(tradeHash) ? tradeHash : null,
+            fromAmount: fromAmountText,
+            fromTokenName: fromSymbol,
+            fromTokenSymbol: fromSymbol,
+            toAmount: toAmountText,
+            toTokenSymbol: toSymbol,
+            networkName: networkName,
+            chainId: chainId,
+          );
         }
         progressController.setSuccess(reference: _shortHash(tradeHash));
         await _refreshWalletState();
@@ -836,6 +929,10 @@ class _SwapScreenState extends State<SwapScreen> {
       }
 
       if (status != null && failedStates.contains(status)) {
+        failedStatusStreak += 1;
+        if (failedStatusStreak < 3 && attempt < 19) {
+          continue;
+        }
         progressController.setError(
           l.gaslessOrderFailedRetry,
           reference: _shortHash(tradeHash),
@@ -844,6 +941,7 @@ class _SwapScreenState extends State<SwapScreen> {
       }
 
       if (status == null || pendingStates.contains(status)) {
+        failedStatusStreak = 0;
         continue;
       }
     }
@@ -857,12 +955,25 @@ class _SwapScreenState extends State<SwapScreen> {
     final address = _walletAddress;
     if (address == null) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    await blockchain.fetchWalletTokens(address);
+    final chainId = blockchain.activeChain.chainId;
+    await blockchain.refreshWalletTokens(address, chainId: chainId);
     await _refreshTokenPrices();
     if (!mounted) return;
     setState(() {
       _syncSelectedTokens(_visibleTokens(blockchain.tokens));
     });
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 3), () async {
+        try {
+          await blockchain.refreshWalletTokens(address, chainId: chainId);
+          await _refreshTokenPrices();
+          if (!mounted) return;
+          setState(() {
+            _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+          });
+        } catch (_) {}
+      }),
+    );
   }
 
   Future<bool> _waitForTxConfirmation(
@@ -1311,6 +1422,16 @@ class _SwapScreenState extends State<SwapScreen> {
             toSymbol: toToken.symbol,
             networkName: blockchain.activeChain.name,
           ),
+        );
+        _recordSwapHistory(
+          txHash: txHash,
+          fromAmount: fromAmountText,
+          fromTokenName: fromToken.name,
+          fromTokenSymbol: fromToken.symbol,
+          toAmount: toAmountText,
+          toTokenSymbol: toToken.symbol,
+          networkName: blockchain.activeChain.name,
+          chainId: blockchain.activeChain.chainId,
         );
         progressController.setSuccess(
           reference: _shortHash(txHash),
