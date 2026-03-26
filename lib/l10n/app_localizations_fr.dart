@@ -230,7 +230,36 @@ class AppLocalizationsFr extends AppLocalizations {
   String get nftCollection => 'Collection NFT';
 
   @override
+  String get nftGalleryScanning => 'Recherche des NFT...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      'Votre collection NFT apparaîtra ici.\nAchetez ou recevez des NFT sur n\'importe quelle chaîne prise en charge.';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return 'La galerie NFT n\'est pas encore prise en charge sur $chain.\nPassez à Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism ou Base.';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => 'Échec du chargement des NFT';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return 'Échec du chargement des NFT : $error';
+  }
+
+  @override
+  String get officialProjectNft => 'NFT officiel du projet';
+
+  @override
   String get transactionHistory => 'Historique des Transactions';
+
+  @override
+  String get allLabel => 'Tout';
+
+  @override
+  String get allChains => 'Toutes les chaînes';
 
   @override
   String get notifications => 'Notifications';
@@ -262,6 +291,107 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get closeLabel => 'Fermer';
+
+  @override
+  String get viewOnExplorer => 'Voir dans l\'explorateur';
+
+  @override
+  String get unknownNetwork => 'Réseau inconnu';
+
+  @override
+  String get walletHistoryFallbackWarning =>
+      'Affichage de l\'historique de l\'explorateur pour la chaîne active pendant que l\'historique du portefeuille est indisponible.';
+
+  @override
+  String get walletHistoryLoadError =>
+      'Impossible de charger l\'historique du portefeuille pour le moment.';
+
+  @override
+  String get walletHistoryEmpty =>
+      'Aucun historique de portefeuille pour le moment';
+
+  @override
+  String get historyTransferReceived => 'Transfert reçu';
+
+  @override
+  String get historyTransferSent => 'Transfert envoyé';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return '$amount reçus sur $network.';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return '$amount envoyés sur $network.';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return 'Activité d\'échange sur $network.';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return 'Activité sur $network.';
+  }
+
+  @override
+  String get historyTimestampLabel => 'Horodatage';
+
+  @override
+  String get historyTransactionHashLabel => 'Hachage de la transaction';
+
+  @override
+  String get historyReceiptUnavailable =>
+      'Les détails du reçu ne sont pas encore disponibles pour cette entrée de l\'historique.';
+
+  @override
+  String get historyLoadingReceipt => 'Chargement des détails du reçu...';
+
+  @override
+  String get historyReceiptLoadError =>
+      'Impossible de charger les détails du reçu pour le moment.';
+
+  @override
+  String get historyReceiptPending =>
+      'Le reçu n\'est pas encore disponible. La transaction est peut-être encore en attente ou indisponible via ce RPC.';
+
+  @override
+  String get historyStatusLabel => 'Statut';
+
+  @override
+  String get historyBlockNumberLabel => 'Numéro de bloc';
+
+  @override
+  String get historyFromLabel => 'De';
+
+  @override
+  String get historyToLabel => 'À';
+
+  @override
+  String get historyGasUsedLabel => 'Gaz utilisé';
+
+  @override
+  String get historyGasPriceLabel => 'Prix du gaz';
+
+  @override
+  String get historyContractAddressLabel => 'Adresse du contrat';
+
+  @override
+  String get historyLogCountLabel => 'Journaux';
+
+  @override
+  String get tokenLabel => 'Jeton';
+
+  @override
+  String get confirmedLabel => 'Confirmé';
+
+  @override
+  String get failedLabel => 'Échoué';
+
+  @override
+  String get pendingLabel => 'En attente';
 
   @override
   String get swapPreparingTitle => 'Préparation du swap...';
@@ -332,6 +462,81 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get swapMissingHash =>
       'Le swap a été soumis, mais le hash de transaction n’a pas été renvoyé. Vérifiez l’activité plus tard.';
+
+  @override
+  String get transferPreparingTitle => 'Préparation du transfert...';
+
+  @override
+  String get transferApprovalPendingTitle =>
+      'Approbation du transfert en attente';
+
+  @override
+  String get transferSubmittingTitle => 'Envoi du transfert...';
+
+  @override
+  String get transferInProgressTitle => 'Transfert en cours';
+
+  @override
+  String get transferCompletedTitle => 'Transfert terminé';
+
+  @override
+  String get transferFailedTitle => 'Échec du transfert';
+
+  @override
+  String get transferPreparingSubtitle =>
+      'Votre transfert est en cours de préparation pour l\'envoi.';
+
+  @override
+  String get transferApprovalPendingSubtitle =>
+      'Veuillez patienter pendant que le réseau traite l\'approbation.';
+
+  @override
+  String get transferSubmittingSubtitle =>
+      'Votre transfert est en cours de diffusion sur le réseau.';
+
+  @override
+  String get transferInProgressSubtitle =>
+      'En attente de la confirmation du réseau pour votre transfert.';
+
+  @override
+  String get transferCompletedSubtitle =>
+      'Votre transfert a été confirmé avec succès.';
+
+  @override
+  String get genericTransactionPreparingTitle =>
+      'Préparation de la transaction...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => 'Approbation en attente';
+
+  @override
+  String get genericTransactionSubmittingTitle => 'Envoi de la transaction...';
+
+  @override
+  String get genericTransactionInProgressTitle => 'Transaction en cours';
+
+  @override
+  String get genericTransactionCompletedTitle => 'Transaction terminée';
+
+  @override
+  String get genericTransactionPreparingSubtitle =>
+      'Votre transaction est en cours de préparation.';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle =>
+      'Veuillez patienter pendant que le réseau traite l\'approbation.';
+
+  @override
+  String get genericTransactionSubmittingSubtitle =>
+      'Votre transaction est en cours de diffusion sur le réseau.';
+
+  @override
+  String get genericTransactionInProgressSubtitle =>
+      'En attente de la confirmation du réseau pour votre transaction.';
+
+  @override
+  String get genericTransactionCompletedSubtitle =>
+      'Votre transaction a été confirmée avec succès.';
 
   @override
   String get transferWarningMessage =>

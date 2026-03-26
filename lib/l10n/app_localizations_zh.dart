@@ -228,7 +228,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get nftCollection => 'NFT 收藏';
 
   @override
+  String get nftGalleryScanning => '正在扫描 NFT...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      '您的 NFT 收藏将显示在这里。\n在任何受支持的链上购买或接收 NFT。';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return '$chain 暂不支持 NFT 展示。\n请切换到 Ethereum、BNB Smart Chain、Polygon、Arbitrum、Optimism 或 Base。';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => '加载 NFT 失败';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return '加载 NFT 失败：$error';
+  }
+
+  @override
+  String get officialProjectNft => '官方项目 NFT';
+
+  @override
   String get transactionHistory => '交易历史';
+
+  @override
+  String get allLabel => '全部';
+
+  @override
+  String get allChains => '全部链';
 
   @override
   String get notifications => '通知';
@@ -259,6 +288,101 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get closeLabel => '关闭';
+
+  @override
+  String get viewOnExplorer => '在区块浏览器中查看';
+
+  @override
+  String get unknownNetwork => '未知网络';
+
+  @override
+  String get walletHistoryFallbackWarning => '钱包历史不可用时，将显示当前链的区块浏览器历史。';
+
+  @override
+  String get walletHistoryLoadError => '当前无法加载钱包历史。';
+
+  @override
+  String get walletHistoryEmpty => '暂无钱包历史';
+
+  @override
+  String get historyTransferReceived => '已收到转账';
+
+  @override
+  String get historyTransferSent => '已发送转账';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return '已在 $network 收到 $amount。';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return '已在 $network 发送 $amount。';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return '$network 上的兑换活动。';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return '$network 上的活动。';
+  }
+
+  @override
+  String get historyTimestampLabel => '时间';
+
+  @override
+  String get historyTransactionHashLabel => '交易哈希';
+
+  @override
+  String get historyReceiptUnavailable => '该历史记录项的回执详情暂不可用。';
+
+  @override
+  String get historyLoadingReceipt => '正在加载回执详情...';
+
+  @override
+  String get historyReceiptLoadError => '当前无法加载回执详情。';
+
+  @override
+  String get historyReceiptPending => '回执暂不可用。该交易可能仍在等待确认，或此 RPC 尚未返回回执。';
+
+  @override
+  String get historyStatusLabel => '状态';
+
+  @override
+  String get historyBlockNumberLabel => '区块号';
+
+  @override
+  String get historyFromLabel => '从';
+
+  @override
+  String get historyToLabel => '到';
+
+  @override
+  String get historyGasUsedLabel => 'Gas 用量';
+
+  @override
+  String get historyGasPriceLabel => 'Gas 单价';
+
+  @override
+  String get historyContractAddressLabel => '合约地址';
+
+  @override
+  String get historyLogCountLabel => '日志数';
+
+  @override
+  String get tokenLabel => '代币';
+
+  @override
+  String get confirmedLabel => '已确认';
+
+  @override
+  String get failedLabel => '失败';
+
+  @override
+  String get pendingLabel => '处理中';
 
   @override
   String get swapPreparingTitle => '正在准备兑换...';
@@ -319,6 +443,69 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get swapMissingHash => '兑换已提交，但未返回交易哈希。请稍后查看活动记录。';
+
+  @override
+  String get transferPreparingTitle => '正在准备转账...';
+
+  @override
+  String get transferApprovalPendingTitle => '转账授权待确认';
+
+  @override
+  String get transferSubmittingTitle => '正在提交转账...';
+
+  @override
+  String get transferInProgressTitle => '转账进行中';
+
+  @override
+  String get transferCompletedTitle => '转账已完成';
+
+  @override
+  String get transferFailedTitle => '转账失败';
+
+  @override
+  String get transferPreparingSubtitle => '您的转账正在准备提交。';
+
+  @override
+  String get transferApprovalPendingSubtitle => '请等待网络处理授权。';
+
+  @override
+  String get transferSubmittingSubtitle => '您的转账正在广播到网络。';
+
+  @override
+  String get transferInProgressSubtitle => '正在等待网络确认您的转账。';
+
+  @override
+  String get transferCompletedSubtitle => '您的转账已成功确认。';
+
+  @override
+  String get genericTransactionPreparingTitle => '正在准备交易...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => '授权待确认';
+
+  @override
+  String get genericTransactionSubmittingTitle => '正在提交交易...';
+
+  @override
+  String get genericTransactionInProgressTitle => '交易进行中';
+
+  @override
+  String get genericTransactionCompletedTitle => '交易已完成';
+
+  @override
+  String get genericTransactionPreparingSubtitle => '您的交易正在准备中。';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle => '请等待网络处理授权。';
+
+  @override
+  String get genericTransactionSubmittingSubtitle => '您的交易正在广播到网络。';
+
+  @override
+  String get genericTransactionInProgressSubtitle => '正在等待网络确认您的交易。';
+
+  @override
+  String get genericTransactionCompletedSubtitle => '您的交易已成功确认。';
 
   @override
   String get transferWarningMessage => '请仔细核对收款地址。交易是永久性的，无法撤销。';

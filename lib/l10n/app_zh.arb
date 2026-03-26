@@ -73,7 +73,25 @@
   "resetApp": "重置应用",
   "noNftsYet": "暂无 NFT",
   "nftCollection": "NFT 收藏",
+  "nftGalleryScanning": "正在扫描 NFT...",
+  "nftGalleryEmptyDescription": "您的 NFT 收藏将显示在这里。\n在任何受支持的链上购买或接收 NFT。",
+  "nftGalleryUnsupportedChain": "{chain} 暂不支持 NFT 展示。\n请切换到 Ethereum、BNB Smart Chain、Polygon、Arbitrum、Optimism 或 Base。",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "加载 NFT 失败",
+  "failedToLoadNftsWithError": "加载 NFT 失败：{error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "官方项目 NFT",
   "transactionHistory": "交易历史",
+  "allLabel": "全部",
+  "allChains": "全部链",
   "notifications": "通知",
   "notificationsSettings": "通知设置",
   "enablePushNotifications": "启用推送通知",
@@ -84,6 +102,57 @@
   "gasFee": "Gas 费用",
   "transactionDetails": "交易详情",
   "closeLabel": "关闭",
+  "viewOnExplorer": "在区块浏览器中查看",
+  "unknownNetwork": "未知网络",
+  "walletHistoryFallbackWarning": "钱包历史不可用时，将显示当前链的区块浏览器历史。",
+  "walletHistoryLoadError": "当前无法加载钱包历史。",
+  "walletHistoryEmpty": "暂无钱包历史",
+  "historyTransferReceived": "已收到转账",
+  "historyTransferSent": "已发送转账",
+  "historyReceivedAmountOnNetwork": "已在 {network} 收到 {amount}。",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "已在 {network} 发送 {amount}。",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "{network} 上的兑换活动。",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "{network} 上的活动。",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "时间",
+  "historyTransactionHashLabel": "交易哈希",
+  "historyReceiptUnavailable": "该历史记录项的回执详情暂不可用。",
+  "historyLoadingReceipt": "正在加载回执详情...",
+  "historyReceiptLoadError": "当前无法加载回执详情。",
+  "historyReceiptPending": "回执暂不可用。该交易可能仍在等待确认，或此 RPC 尚未返回回执。",
+  "historyStatusLabel": "状态",
+  "historyBlockNumberLabel": "区块号",
+  "historyFromLabel": "从",
+  "historyToLabel": "到",
+  "historyGasUsedLabel": "Gas 用量",
+  "historyGasPriceLabel": "Gas 单价",
+  "historyContractAddressLabel": "合约地址",
+  "historyLogCountLabel": "日志数",
+  "tokenLabel": "代币",
+  "confirmedLabel": "已确认",
+  "failedLabel": "失败",
+  "pendingLabel": "处理中",
   "swapPreparingTitle": "正在准备兑换...",
   "swapPreparingSubtitle": "我们正在准备你的兑换请求。",
   "swapApprovalProcessingTitle": "授权处理中...",
@@ -105,6 +174,27 @@
   "gaslessOrderFailedRetry": "免 Gas 订单失败，请重试。",
   "swapMissingHash": "兑换已提交，但未返回交易哈希。请稍后查看活动记录。",
   "transferWarningMessage": "请仔细核对收款地址。交易是永久性的，无法撤销。",
+  "transferPreparingTitle": "正在准备转账...",
+  "transferApprovalPendingTitle": "转账授权待确认",
+  "transferSubmittingTitle": "正在提交转账...",
+  "transferInProgressTitle": "转账进行中",
+  "transferCompletedTitle": "转账已完成",
+  "transferFailedTitle": "转账失败",
+  "transferPreparingSubtitle": "您的转账正在准备提交。",
+  "transferApprovalPendingSubtitle": "请等待网络处理授权。",
+  "transferSubmittingSubtitle": "您的转账正在广播到网络。",
+  "transferInProgressSubtitle": "正在等待网络确认您的转账。",
+  "transferCompletedSubtitle": "您的转账已成功确认。",
+  "genericTransactionPreparingTitle": "正在准备交易...",
+  "genericTransactionApprovalPendingTitle": "授权待确认",
+  "genericTransactionSubmittingTitle": "正在提交交易...",
+  "genericTransactionInProgressTitle": "交易进行中",
+  "genericTransactionCompletedTitle": "交易已完成",
+  "genericTransactionPreparingSubtitle": "您的交易正在准备中。",
+  "genericTransactionApprovalPendingSubtitle": "请等待网络处理授权。",
+  "genericTransactionSubmittingSubtitle": "您的交易正在广播到网络。",
+  "genericTransactionInProgressSubtitle": "正在等待网络确认您的交易。",
+  "genericTransactionCompletedSubtitle": "您的交易已成功确认。",
   "maxTotal": "最大总额",
   "amount": "金额",
   "estimationFailed": "估算失败",

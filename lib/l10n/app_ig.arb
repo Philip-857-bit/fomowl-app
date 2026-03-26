@@ -73,7 +73,25 @@
   "resetApp": "Tọgharịa App",
   "noNftsYet": "Enweghị NFT mbụ",
   "nftCollection": "Nchịkọta NFT",
+  "nftGalleryScanning": "Na-enyocha NFTs...",
+  "nftGalleryEmptyDescription": "Nchịkọta NFT gị ga-apụta ebe a.\nZụta ma ọ bụ nata NFTs na chain ọ bụla a na-akwado.",
+  "nftGalleryUnsupportedChain": "A naghị akwado NFT gallery na {chain} ugbu a.\nGbanwee gaa Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, ma ọ bụ Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "Enweghị ike ibudata NFTs",
+  "failedToLoadNftsWithError": "Enweghị ike ibudata NFTs: {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "NFT ọrụ gọọmentị",
   "transactionHistory": "Akụkọ Azụmahịa",
+  "allLabel": "Niile",
+  "allChains": "Chains niile",
   "notifications": "Ịma Ọkwa",
   "notificationsSettings": "Nhazi Ọkwa",
   "enablePushNotifications": "Mee ka Ọkwa Push rụọ ọrụ",
@@ -84,6 +102,57 @@
   "gasFee": "Ụgwọ Netwọk",
   "transactionDetails": "NKỌWA AZỤMAHỊA",
   "closeLabel": "Mechie",
+  "viewOnExplorer": "Lee na Explorer",
+  "unknownNetwork": "Network a na-amaghị",
+  "walletHistoryFallbackWarning": "A na-egosi explorer history nke chain na-arụ ọrụ mgbe wallet history adịghị.",
+  "walletHistoryLoadError": "Enweghị ike ibudata wallet history ugbu a.",
+  "walletHistoryEmpty": "Enweghị wallet history ugbu a",
+  "historyTransferReceived": "Anatara nnyefe",
+  "historyTransferSent": "E zigara nnyefe",
+  "historyReceivedAmountOnNetwork": "Anatara {amount} na {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "E zigara {amount} na {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "ọrụ mgbanwe na {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "ọrụ na {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "Oge",
+  "historyTransactionHashLabel": "Hash azụmahịa",
+  "historyReceiptUnavailable": "Nkọwa risiti adịghị maka ihe ndekọ a ugbu a.",
+  "historyLoadingReceipt": "Na-ebudata nkọwa risiti...",
+  "historyReceiptLoadError": "Enweghị ike ibudata nkọwa risiti ugbu a.",
+  "historyReceiptPending": "Risiti adịghị ugbu a. O nwere ike ịbụ na azụmahịa ka na-echere ma ọ bụ RPC a akabeghị inye ya.",
+  "historyStatusLabel": "Ọnọdụ",
+  "historyBlockNumberLabel": "Nọmba block",
+  "historyFromLabel": "Site na",
+  "historyToLabel": "Ruo",
+  "historyGasUsedLabel": "Gas ejiri",
+  "historyGasPriceLabel": "Ọnụ gas",
+  "historyContractAddressLabel": "Adịreshị nkwekọrịta",
+  "historyLogCountLabel": "Logs",
+  "tokenLabel": "Token",
+  "confirmedLabel": "Ekwadoro",
+  "failedLabel": "Dara",
+  "pendingLabel": "Na-echere",
   "swapPreparingTitle": "Na-akwadebe...",
   "swapPreparingSubtitle": "Anyị na-akwadebe nlegharị anya gị.",
   "swapApprovalProcessingTitle": "Na-achọ nkwado...",
@@ -105,6 +174,27 @@
   "gaslessOrderFailedRetry": "Nzipụ adaghị. Biko gbalịa ọzọ.",
   "swapMissingHash": "E ziri azụmahịa mana ahụghị koodu ya. Biko lelee ma e mesịa.",
   "transferWarningMessage": "Lelee adreesị onye ị na-eziri ego nke ọma. Azụmahịa emechara adịghị agbanwe agbanwe.",
+  "transferPreparingTitle": "Na-akwadebe nnyefe...",
+  "transferApprovalPendingTitle": "Nkwenye nnyefe ka na-echere",
+  "transferSubmittingTitle": "Na-eziga nnyefe...",
+  "transferInProgressTitle": "Nnyefe na-aga n'ihu",
+  "transferCompletedTitle": "Emechaala nnyefe",
+  "transferFailedTitle": "Nnyefe dara",
+  "transferPreparingSubtitle": "A na-akwadebe nnyefe gị maka iziga.",
+  "transferApprovalPendingSubtitle": "Biko chere ka network hazie nkwenye ahụ.",
+  "transferSubmittingSubtitle": "A na-ebufe nnyefe gị na network.",
+  "transferInProgressSubtitle": "Na-eche ka network kwado nnyefe gị.",
+  "transferCompletedSubtitle": "Ekwadoro nnyefe gị nke ọma.",
+  "genericTransactionPreparingTitle": "Na-akwadebe azụmahịa...",
+  "genericTransactionApprovalPendingTitle": "Nkwenye ka na-echere",
+  "genericTransactionSubmittingTitle": "Na-eziga azụmahịa...",
+  "genericTransactionInProgressTitle": "Azụmahịa na-aga n'ihu",
+  "genericTransactionCompletedTitle": "Emechaala azụmahịa",
+  "genericTransactionPreparingSubtitle": "A na-akwadebe azụmahịa gị.",
+  "genericTransactionApprovalPendingSubtitle": "Biko chere ka network hazie nkwenye ahụ.",
+  "genericTransactionSubmittingSubtitle": "A na-ebufe azụmahịa gị na network.",
+  "genericTransactionInProgressSubtitle": "Na-eche ka network kwado azụmahịa gị.",
+  "genericTransactionCompletedSubtitle": "Ekwadoro azụmahịa gị nke ọma.",
   "maxTotal": "EGO NIILE",
   "amount": "EGO",
   "estimationFailed": "Ihe atụ adaghị",

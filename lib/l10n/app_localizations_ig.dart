@@ -230,7 +230,36 @@ class AppLocalizationsIg extends AppLocalizations {
   String get nftCollection => 'Nchịkọta NFT';
 
   @override
+  String get nftGalleryScanning => 'Na-enyocha NFTs...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      'Nchịkọta NFT gị ga-apụta ebe a.\nZụta ma ọ bụ nata NFTs na chain ọ bụla a na-akwado.';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return 'A naghị akwado NFT gallery na $chain ugbu a.\nGbanwee gaa Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, ma ọ bụ Base.';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => 'Enweghị ike ibudata NFTs';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return 'Enweghị ike ibudata NFTs: $error';
+  }
+
+  @override
+  String get officialProjectNft => 'NFT ọrụ gọọmentị';
+
+  @override
   String get transactionHistory => 'Akụkọ Azụmahịa';
+
+  @override
+  String get allLabel => 'Niile';
+
+  @override
+  String get allChains => 'Chains niile';
 
   @override
   String get notifications => 'Ịma Ọkwa';
@@ -262,6 +291,106 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get closeLabel => 'Mechie';
+
+  @override
+  String get viewOnExplorer => 'Lee na Explorer';
+
+  @override
+  String get unknownNetwork => 'Network a na-amaghị';
+
+  @override
+  String get walletHistoryFallbackWarning =>
+      'A na-egosi explorer history nke chain na-arụ ọrụ mgbe wallet history adịghị.';
+
+  @override
+  String get walletHistoryLoadError =>
+      'Enweghị ike ibudata wallet history ugbu a.';
+
+  @override
+  String get walletHistoryEmpty => 'Enweghị wallet history ugbu a';
+
+  @override
+  String get historyTransferReceived => 'Anatara nnyefe';
+
+  @override
+  String get historyTransferSent => 'E zigara nnyefe';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return 'Anatara $amount na $network.';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return 'E zigara $amount na $network.';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return 'ọrụ mgbanwe na $network.';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return 'ọrụ na $network.';
+  }
+
+  @override
+  String get historyTimestampLabel => 'Oge';
+
+  @override
+  String get historyTransactionHashLabel => 'Hash azụmahịa';
+
+  @override
+  String get historyReceiptUnavailable =>
+      'Nkọwa risiti adịghị maka ihe ndekọ a ugbu a.';
+
+  @override
+  String get historyLoadingReceipt => 'Na-ebudata nkọwa risiti...';
+
+  @override
+  String get historyReceiptLoadError =>
+      'Enweghị ike ibudata nkọwa risiti ugbu a.';
+
+  @override
+  String get historyReceiptPending =>
+      'Risiti adịghị ugbu a. O nwere ike ịbụ na azụmahịa ka na-echere ma ọ bụ RPC a akabeghị inye ya.';
+
+  @override
+  String get historyStatusLabel => 'Ọnọdụ';
+
+  @override
+  String get historyBlockNumberLabel => 'Nọmba block';
+
+  @override
+  String get historyFromLabel => 'Site na';
+
+  @override
+  String get historyToLabel => 'Ruo';
+
+  @override
+  String get historyGasUsedLabel => 'Gas ejiri';
+
+  @override
+  String get historyGasPriceLabel => 'Ọnụ gas';
+
+  @override
+  String get historyContractAddressLabel => 'Adịreshị nkwekọrịta';
+
+  @override
+  String get historyLogCountLabel => 'Logs';
+
+  @override
+  String get tokenLabel => 'Token';
+
+  @override
+  String get confirmedLabel => 'Ekwadoro';
+
+  @override
+  String get failedLabel => 'Dara';
+
+  @override
+  String get pendingLabel => 'Na-echere';
 
   @override
   String get swapPreparingTitle => 'Na-akwadebe...';
@@ -326,6 +455,76 @@ class AppLocalizationsIg extends AppLocalizations {
   @override
   String get swapMissingHash =>
       'E ziri azụmahịa mana ahụghị koodu ya. Biko lelee ma e mesịa.';
+
+  @override
+  String get transferPreparingTitle => 'Na-akwadebe nnyefe...';
+
+  @override
+  String get transferApprovalPendingTitle => 'Nkwenye nnyefe ka na-echere';
+
+  @override
+  String get transferSubmittingTitle => 'Na-eziga nnyefe...';
+
+  @override
+  String get transferInProgressTitle => 'Nnyefe na-aga n\'ihu';
+
+  @override
+  String get transferCompletedTitle => 'Emechaala nnyefe';
+
+  @override
+  String get transferFailedTitle => 'Nnyefe dara';
+
+  @override
+  String get transferPreparingSubtitle => 'A na-akwadebe nnyefe gị maka iziga.';
+
+  @override
+  String get transferApprovalPendingSubtitle =>
+      'Biko chere ka network hazie nkwenye ahụ.';
+
+  @override
+  String get transferSubmittingSubtitle => 'A na-ebufe nnyefe gị na network.';
+
+  @override
+  String get transferInProgressSubtitle =>
+      'Na-eche ka network kwado nnyefe gị.';
+
+  @override
+  String get transferCompletedSubtitle => 'Ekwadoro nnyefe gị nke ọma.';
+
+  @override
+  String get genericTransactionPreparingTitle => 'Na-akwadebe azụmahịa...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => 'Nkwenye ka na-echere';
+
+  @override
+  String get genericTransactionSubmittingTitle => 'Na-eziga azụmahịa...';
+
+  @override
+  String get genericTransactionInProgressTitle => 'Azụmahịa na-aga n\'ihu';
+
+  @override
+  String get genericTransactionCompletedTitle => 'Emechaala azụmahịa';
+
+  @override
+  String get genericTransactionPreparingSubtitle =>
+      'A na-akwadebe azụmahịa gị.';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle =>
+      'Biko chere ka network hazie nkwenye ahụ.';
+
+  @override
+  String get genericTransactionSubmittingSubtitle =>
+      'A na-ebufe azụmahịa gị na network.';
+
+  @override
+  String get genericTransactionInProgressSubtitle =>
+      'Na-eche ka network kwado azụmahịa gị.';
+
+  @override
+  String get genericTransactionCompletedSubtitle =>
+      'Ekwadoro azụmahịa gị nke ọma.';
 
   @override
   String get transferWarningMessage =>

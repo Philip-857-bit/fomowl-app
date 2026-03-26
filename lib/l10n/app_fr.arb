@@ -73,7 +73,25 @@
   "resetApp": "Réinitialiser l’application",
   "noNftsYet": "Pas encore de NFTs",
   "nftCollection": "Collection NFT",
+  "nftGalleryScanning": "Recherche des NFT...",
+  "nftGalleryEmptyDescription": "Votre collection NFT apparaîtra ici.\nAchetez ou recevez des NFT sur n'importe quelle chaîne prise en charge.",
+  "nftGalleryUnsupportedChain": "La galerie NFT n'est pas encore prise en charge sur {chain}.\nPassez à Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism ou Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "Échec du chargement des NFT",
+  "failedToLoadNftsWithError": "Échec du chargement des NFT : {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "NFT officiel du projet",
   "transactionHistory": "Historique des Transactions",
+  "allLabel": "Tout",
+  "allChains": "Toutes les chaînes",
   "notifications": "Notifications",
   "notificationsSettings": "Paramètres de notifications",
   "enablePushNotifications": "Activer les notifications push",
@@ -84,6 +102,57 @@
   "gasFee": "Frais de Gas",
   "transactionDetails": "DÉTAILS DE LA TRANSACTION",
   "closeLabel": "Fermer",
+  "viewOnExplorer": "Voir dans l'explorateur",
+  "unknownNetwork": "Réseau inconnu",
+  "walletHistoryFallbackWarning": "Affichage de l'historique de l'explorateur pour la chaîne active pendant que l'historique du portefeuille est indisponible.",
+  "walletHistoryLoadError": "Impossible de charger l'historique du portefeuille pour le moment.",
+  "walletHistoryEmpty": "Aucun historique de portefeuille pour le moment",
+  "historyTransferReceived": "Transfert reçu",
+  "historyTransferSent": "Transfert envoyé",
+  "historyReceivedAmountOnNetwork": "{amount} reçus sur {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "{amount} envoyés sur {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "Activité d'échange sur {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "Activité sur {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "Horodatage",
+  "historyTransactionHashLabel": "Hachage de la transaction",
+  "historyReceiptUnavailable": "Les détails du reçu ne sont pas encore disponibles pour cette entrée de l'historique.",
+  "historyLoadingReceipt": "Chargement des détails du reçu...",
+  "historyReceiptLoadError": "Impossible de charger les détails du reçu pour le moment.",
+  "historyReceiptPending": "Le reçu n'est pas encore disponible. La transaction est peut-être encore en attente ou indisponible via ce RPC.",
+  "historyStatusLabel": "Statut",
+  "historyBlockNumberLabel": "Numéro de bloc",
+  "historyFromLabel": "De",
+  "historyToLabel": "À",
+  "historyGasUsedLabel": "Gaz utilisé",
+  "historyGasPriceLabel": "Prix du gaz",
+  "historyContractAddressLabel": "Adresse du contrat",
+  "historyLogCountLabel": "Journaux",
+  "tokenLabel": "Jeton",
+  "confirmedLabel": "Confirmé",
+  "failedLabel": "Échoué",
+  "pendingLabel": "En attente",
   "swapPreparingTitle": "Préparation du swap...",
   "swapPreparingSubtitle": "Nous préparons votre demande de swap.",
   "swapApprovalProcessingTitle": "L'approbation est en cours...",
@@ -105,6 +174,27 @@
   "gaslessOrderFailedRetry": "L'ordre gasless a échoué. Veuillez réessayer.",
   "swapMissingHash": "Le swap a été soumis, mais le hash de transaction n’a pas été renvoyé. Vérifiez l’activité plus tard.",
   "transferWarningMessage": "Vérifiez attentivement l'adresse du destinataire. Les transactions sont permanentes et ne peuvent pas être annulées.",
+  "transferPreparingTitle": "Préparation du transfert...",
+  "transferApprovalPendingTitle": "Approbation du transfert en attente",
+  "transferSubmittingTitle": "Envoi du transfert...",
+  "transferInProgressTitle": "Transfert en cours",
+  "transferCompletedTitle": "Transfert terminé",
+  "transferFailedTitle": "Échec du transfert",
+  "transferPreparingSubtitle": "Votre transfert est en cours de préparation pour l'envoi.",
+  "transferApprovalPendingSubtitle": "Veuillez patienter pendant que le réseau traite l'approbation.",
+  "transferSubmittingSubtitle": "Votre transfert est en cours de diffusion sur le réseau.",
+  "transferInProgressSubtitle": "En attente de la confirmation du réseau pour votre transfert.",
+  "transferCompletedSubtitle": "Votre transfert a été confirmé avec succès.",
+  "genericTransactionPreparingTitle": "Préparation de la transaction...",
+  "genericTransactionApprovalPendingTitle": "Approbation en attente",
+  "genericTransactionSubmittingTitle": "Envoi de la transaction...",
+  "genericTransactionInProgressTitle": "Transaction en cours",
+  "genericTransactionCompletedTitle": "Transaction terminée",
+  "genericTransactionPreparingSubtitle": "Votre transaction est en cours de préparation.",
+  "genericTransactionApprovalPendingSubtitle": "Veuillez patienter pendant que le réseau traite l'approbation.",
+  "genericTransactionSubmittingSubtitle": "Votre transaction est en cours de diffusion sur le réseau.",
+  "genericTransactionInProgressSubtitle": "En attente de la confirmation du réseau pour votre transaction.",
+  "genericTransactionCompletedSubtitle": "Votre transaction a été confirmée avec succès.",
   "maxTotal": "TOTAL MAXIMUM",
   "amount": "MONTANT",
   "estimationFailed": "Estimation échouée",

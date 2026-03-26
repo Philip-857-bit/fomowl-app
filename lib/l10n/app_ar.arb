@@ -73,7 +73,25 @@
   "resetApp": "إعادة تعيين التطبيق",
   "noNftsYet": "لا يوجد NFTs بعد",
   "nftCollection": "مجموعة NFT",
+  "nftGalleryScanning": "جارٍ البحث عن NFTs...",
+  "nftGalleryEmptyDescription": "ستظهر مجموعة NFT الخاصة بك هنا.\nاشترِ أو استلم NFTs على أي شبكة مدعومة.",
+  "nftGalleryUnsupportedChain": "معرض NFT غير مدعوم على {chain} بعد.\nانتقل إلى Ethereum أو BNB Smart Chain أو Polygon أو Arbitrum أو Optimism أو Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "تعذر تحميل NFTs",
+  "failedToLoadNftsWithError": "تعذر تحميل NFTs: {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "NFT رسمي للمشروع",
   "transactionHistory": "سجل المعاملات",
+  "allLabel": "الكل",
+  "allChains": "كل السلاسل",
   "notifications": "الإشعارات",
   "notificationsSettings": "إعدادات الإشعارات",
   "enablePushNotifications": "تفعيل تنبيهات الدفع",
@@ -84,6 +102,57 @@
   "gasFee": "رسوم الغاز",
   "transactionDetails": "تفاصيل المعاملة",
   "closeLabel": "إغلاق",
+  "viewOnExplorer": "عرض في المستكشف",
+  "unknownNetwork": "شبكة غير معروفة",
+  "walletHistoryFallbackWarning": "يتم عرض سجل المستكشف للشبكة النشطة بينما سجل المحفظة غير متاح.",
+  "walletHistoryLoadError": "تعذر تحميل سجل المحفظة الآن.",
+  "walletHistoryEmpty": "لا يوجد سجل للمحفظة بعد",
+  "historyTransferReceived": "تم استلام التحويل",
+  "historyTransferSent": "تم إرسال التحويل",
+  "historyReceivedAmountOnNetwork": "تم استلام {amount} على {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "تم إرسال {amount} على {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "نشاط مبادلة على {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "نشاط على {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "الوقت",
+  "historyTransactionHashLabel": "هاش المعاملة",
+  "historyReceiptUnavailable": "تفاصيل الإيصال غير متاحة لهذا السجل بعد.",
+  "historyLoadingReceipt": "جارٍ تحميل تفاصيل الإيصال...",
+  "historyReceiptLoadError": "تعذر تحميل تفاصيل الإيصال الآن.",
+  "historyReceiptPending": "الإيصال غير متاح بعد. قد تكون المعاملة ما تزال معلقة أو أن هذا الـ RPC لم يُرجعها بعد.",
+  "historyStatusLabel": "الحالة",
+  "historyBlockNumberLabel": "رقم الكتلة",
+  "historyFromLabel": "من",
+  "historyToLabel": "إلى",
+  "historyGasUsedLabel": "الغاز المستخدم",
+  "historyGasPriceLabel": "سعر الغاز",
+  "historyContractAddressLabel": "عنوان العقد",
+  "historyLogCountLabel": "السجلات",
+  "tokenLabel": "الرمز",
+  "confirmedLabel": "مؤكد",
+  "failedLabel": "فشل",
+  "pendingLabel": "قيد الانتظار",
   "swapPreparingTitle": "جارٍ تجهيز المبادلة...",
   "swapPreparingSubtitle": "نحن نجهز طلب المبادلة الخاص بك.",
   "swapApprovalProcessingTitle": "تجري معالجة الموافقة...",
@@ -105,6 +174,27 @@
   "gaslessOrderFailedRetry": "فشل الطلب بدون غاز. يرجى المحاولة مرة أخرى.",
   "swapMissingHash": "تم إرسال المبادلة لكن لم يتم إرجاع بصمة المعاملة. تحقق من النشاط لاحقًا.",
   "transferWarningMessage": "تحقق من عنوان المستلم بعناية. المعاملات دائمة ولا يمكن التراجع عنها.",
+  "transferPreparingTitle": "جارٍ تجهيز التحويل...",
+  "transferApprovalPendingTitle": "موافقة التحويل قيد الانتظار",
+  "transferSubmittingTitle": "جارٍ إرسال التحويل...",
+  "transferInProgressTitle": "التحويل قيد التنفيذ",
+  "transferCompletedTitle": "اكتمل التحويل",
+  "transferFailedTitle": "فشل التحويل",
+  "transferPreparingSubtitle": "يتم تجهيز تحويلك للإرسال.",
+  "transferApprovalPendingSubtitle": "يرجى الانتظار بينما تعالج الشبكة الموافقة.",
+  "transferSubmittingSubtitle": "يتم الآن بث تحويلك إلى الشبكة.",
+  "transferInProgressSubtitle": "جارٍ انتظار تأكيد الشبكة لتحويلك.",
+  "transferCompletedSubtitle": "تم تأكيد تحويلك بنجاح.",
+  "genericTransactionPreparingTitle": "جارٍ تجهيز المعاملة...",
+  "genericTransactionApprovalPendingTitle": "الموافقة معلقة",
+  "genericTransactionSubmittingTitle": "جارٍ إرسال المعاملة...",
+  "genericTransactionInProgressTitle": "المعاملة قيد التنفيذ",
+  "genericTransactionCompletedTitle": "اكتملت المعاملة",
+  "genericTransactionPreparingSubtitle": "يتم تجهيز معاملتك.",
+  "genericTransactionApprovalPendingSubtitle": "يرجى الانتظار بينما تعالج الشبكة الموافقة.",
+  "genericTransactionSubmittingSubtitle": "يتم الآن بث معاملتك إلى الشبكة.",
+  "genericTransactionInProgressSubtitle": "جارٍ انتظار تأكيد الشبكة لمعاملتك.",
+  "genericTransactionCompletedSubtitle": "تم تأكيد معاملتك بنجاح.",
   "maxTotal": "المجموع الأقصى",
   "amount": "المبلغ",
   "estimationFailed": "فشل التقدير",

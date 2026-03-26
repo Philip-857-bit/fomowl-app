@@ -73,7 +73,25 @@
   "resetApp": "Reset App",
   "noNftsYet": "No NFTs yet",
   "nftCollection": "NFT Collection",
+  "nftGalleryScanning": "Scanning for NFTs...",
+  "nftGalleryEmptyDescription": "Your NFT collection will appear here.\nBuy or receive NFTs on any supported chain.",
+  "nftGalleryUnsupportedChain": "NFT gallery is not supported on {chain} yet.\nSwitch to Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, or Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "Failed to load NFTs",
+  "failedToLoadNftsWithError": "Failed to load NFTs: {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "Official Project NFT",
   "transactionHistory": "Transaction History",
+  "allLabel": "All",
+  "allChains": "All Chains",
   "notifications": "Notifications",
   "notificationsSettings": "Notification Settings",
   "enablePushNotifications": "Enable Push Notifications",
@@ -84,6 +102,57 @@
   "gasFee": "Gas Fee",
   "transactionDetails": "TRANSACTION DETAILS",
   "closeLabel": "Close",
+  "viewOnExplorer": "View on Explorer",
+  "unknownNetwork": "Unknown network",
+  "walletHistoryFallbackWarning": "Showing explorer history for the active chain while wallet history is unavailable.",
+  "walletHistoryLoadError": "Unable to load wallet history right now.",
+  "walletHistoryEmpty": "No wallet history yet",
+  "historyTransferReceived": "Transfer received",
+  "historyTransferSent": "Transfer sent",
+  "historyReceivedAmountOnNetwork": "Received {amount} on {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "Sent {amount} on {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "Swap activity on {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "Activity on {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "Timestamp",
+  "historyTransactionHashLabel": "Transaction Hash",
+  "historyReceiptUnavailable": "Receipt details are not available for this history item yet.",
+  "historyLoadingReceipt": "Loading receipt details...",
+  "historyReceiptLoadError": "Unable to load receipt details right now.",
+  "historyReceiptPending": "Receipt not available yet. The transaction may still be pending or unavailable from this RPC.",
+  "historyStatusLabel": "Status",
+  "historyBlockNumberLabel": "Block Number",
+  "historyFromLabel": "From",
+  "historyToLabel": "To",
+  "historyGasUsedLabel": "Gas Used",
+  "historyGasPriceLabel": "Gas Price",
+  "historyContractAddressLabel": "Contract Address",
+  "historyLogCountLabel": "Logs",
+  "tokenLabel": "Token",
+  "confirmedLabel": "Confirmed",
+  "failedLabel": "Failed",
+  "pendingLabel": "Pending",
   "swapPreparingTitle": "Preparing swap...",
   "swapPreparingSubtitle": "We are preparing your swap request.",
   "swapApprovalProcessingTitle": "Approval is processing...",
@@ -104,6 +173,27 @@
   "transactionPendingConfirmation": "Transaction pending confirmation. Please check later.",
   "gaslessOrderFailedRetry": "Gasless order failed. Please try again.",
   "swapMissingHash": "Swap submitted but transaction hash was not returned. Please check activity later.",
+  "transferPreparingTitle": "Preparing transfer...",
+  "transferApprovalPendingTitle": "Transfer approval pending",
+  "transferSubmittingTitle": "Submitting transfer...",
+  "transferInProgressTitle": "Transfer in progress",
+  "transferCompletedTitle": "Transfer completed",
+  "transferFailedTitle": "Transfer failed",
+  "transferPreparingSubtitle": "Your transfer is being prepared for submission.",
+  "transferApprovalPendingSubtitle": "Please wait while the network processes the approval.",
+  "transferSubmittingSubtitle": "Your transfer is being broadcast to the network.",
+  "transferInProgressSubtitle": "Waiting for the network to confirm your transfer.",
+  "transferCompletedSubtitle": "Your transfer has been confirmed successfully.",
+  "genericTransactionPreparingTitle": "Preparing transaction...",
+  "genericTransactionApprovalPendingTitle": "Approval pending",
+  "genericTransactionSubmittingTitle": "Submitting transaction...",
+  "genericTransactionInProgressTitle": "Transaction in progress",
+  "genericTransactionCompletedTitle": "Transaction completed",
+  "genericTransactionPreparingSubtitle": "Your transaction is being prepared.",
+  "genericTransactionApprovalPendingSubtitle": "Please wait while the network processes the approval.",
+  "genericTransactionSubmittingSubtitle": "Your transaction is being broadcast to the network.",
+  "genericTransactionInProgressSubtitle": "Waiting for the network to confirm your transaction.",
+  "genericTransactionCompletedSubtitle": "Your transaction has been confirmed successfully.",
   "transferWarningMessage": "Verify the recipient address carefully. Transactions are permanent and cannot be reversed.",
   "maxTotal": "MAX TOTAL",
   "amount": "AMOUNT",

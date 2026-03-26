@@ -230,7 +230,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String get nftCollection => 'مجموعة NFT';
 
   @override
+  String get nftGalleryScanning => 'جارٍ البحث عن NFTs...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      'ستظهر مجموعة NFT الخاصة بك هنا.\nاشترِ أو استلم NFTs على أي شبكة مدعومة.';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return 'معرض NFT غير مدعوم على $chain بعد.\nانتقل إلى Ethereum أو BNB Smart Chain أو Polygon أو Arbitrum أو Optimism أو Base.';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => 'تعذر تحميل NFTs';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return 'تعذر تحميل NFTs: $error';
+  }
+
+  @override
+  String get officialProjectNft => 'NFT رسمي للمشروع';
+
+  @override
   String get transactionHistory => 'سجل المعاملات';
+
+  @override
+  String get allLabel => 'الكل';
+
+  @override
+  String get allChains => 'كل السلاسل';
 
   @override
   String get notifications => 'الإشعارات';
@@ -262,6 +291,104 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get closeLabel => 'إغلاق';
+
+  @override
+  String get viewOnExplorer => 'عرض في المستكشف';
+
+  @override
+  String get unknownNetwork => 'شبكة غير معروفة';
+
+  @override
+  String get walletHistoryFallbackWarning =>
+      'يتم عرض سجل المستكشف للشبكة النشطة بينما سجل المحفظة غير متاح.';
+
+  @override
+  String get walletHistoryLoadError => 'تعذر تحميل سجل المحفظة الآن.';
+
+  @override
+  String get walletHistoryEmpty => 'لا يوجد سجل للمحفظة بعد';
+
+  @override
+  String get historyTransferReceived => 'تم استلام التحويل';
+
+  @override
+  String get historyTransferSent => 'تم إرسال التحويل';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return 'تم استلام $amount على $network.';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return 'تم إرسال $amount على $network.';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return 'نشاط مبادلة على $network.';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return 'نشاط على $network.';
+  }
+
+  @override
+  String get historyTimestampLabel => 'الوقت';
+
+  @override
+  String get historyTransactionHashLabel => 'هاش المعاملة';
+
+  @override
+  String get historyReceiptUnavailable =>
+      'تفاصيل الإيصال غير متاحة لهذا السجل بعد.';
+
+  @override
+  String get historyLoadingReceipt => 'جارٍ تحميل تفاصيل الإيصال...';
+
+  @override
+  String get historyReceiptLoadError => 'تعذر تحميل تفاصيل الإيصال الآن.';
+
+  @override
+  String get historyReceiptPending =>
+      'الإيصال غير متاح بعد. قد تكون المعاملة ما تزال معلقة أو أن هذا الـ RPC لم يُرجعها بعد.';
+
+  @override
+  String get historyStatusLabel => 'الحالة';
+
+  @override
+  String get historyBlockNumberLabel => 'رقم الكتلة';
+
+  @override
+  String get historyFromLabel => 'من';
+
+  @override
+  String get historyToLabel => 'إلى';
+
+  @override
+  String get historyGasUsedLabel => 'الغاز المستخدم';
+
+  @override
+  String get historyGasPriceLabel => 'سعر الغاز';
+
+  @override
+  String get historyContractAddressLabel => 'عنوان العقد';
+
+  @override
+  String get historyLogCountLabel => 'السجلات';
+
+  @override
+  String get tokenLabel => 'الرمز';
+
+  @override
+  String get confirmedLabel => 'مؤكد';
+
+  @override
+  String get failedLabel => 'فشل';
+
+  @override
+  String get pendingLabel => 'قيد الانتظار';
 
   @override
   String get swapPreparingTitle => 'جارٍ تجهيز المبادلة...';
@@ -331,6 +458,73 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get swapMissingHash =>
       'تم إرسال المبادلة لكن لم يتم إرجاع بصمة المعاملة. تحقق من النشاط لاحقًا.';
+
+  @override
+  String get transferPreparingTitle => 'جارٍ تجهيز التحويل...';
+
+  @override
+  String get transferApprovalPendingTitle => 'موافقة التحويل قيد الانتظار';
+
+  @override
+  String get transferSubmittingTitle => 'جارٍ إرسال التحويل...';
+
+  @override
+  String get transferInProgressTitle => 'التحويل قيد التنفيذ';
+
+  @override
+  String get transferCompletedTitle => 'اكتمل التحويل';
+
+  @override
+  String get transferFailedTitle => 'فشل التحويل';
+
+  @override
+  String get transferPreparingSubtitle => 'يتم تجهيز تحويلك للإرسال.';
+
+  @override
+  String get transferApprovalPendingSubtitle =>
+      'يرجى الانتظار بينما تعالج الشبكة الموافقة.';
+
+  @override
+  String get transferSubmittingSubtitle => 'يتم الآن بث تحويلك إلى الشبكة.';
+
+  @override
+  String get transferInProgressSubtitle => 'جارٍ انتظار تأكيد الشبكة لتحويلك.';
+
+  @override
+  String get transferCompletedSubtitle => 'تم تأكيد تحويلك بنجاح.';
+
+  @override
+  String get genericTransactionPreparingTitle => 'جارٍ تجهيز المعاملة...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => 'الموافقة معلقة';
+
+  @override
+  String get genericTransactionSubmittingTitle => 'جارٍ إرسال المعاملة...';
+
+  @override
+  String get genericTransactionInProgressTitle => 'المعاملة قيد التنفيذ';
+
+  @override
+  String get genericTransactionCompletedTitle => 'اكتملت المعاملة';
+
+  @override
+  String get genericTransactionPreparingSubtitle => 'يتم تجهيز معاملتك.';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle =>
+      'يرجى الانتظار بينما تعالج الشبكة الموافقة.';
+
+  @override
+  String get genericTransactionSubmittingSubtitle =>
+      'يتم الآن بث معاملتك إلى الشبكة.';
+
+  @override
+  String get genericTransactionInProgressSubtitle =>
+      'جارٍ انتظار تأكيد الشبكة لمعاملتك.';
+
+  @override
+  String get genericTransactionCompletedSubtitle => 'تم تأكيد معاملتك بنجاح.';
 
   @override
   String get transferWarningMessage =>

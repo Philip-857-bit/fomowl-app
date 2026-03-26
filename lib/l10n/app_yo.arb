@@ -73,7 +73,25 @@
   "resetApp": "Tun ohun elo ṣeto",
   "noNftsYet": "Ko si NFT kankan",
   "nftCollection": "Akojọpọ NFT",
+  "nftGalleryScanning": "N ṣàwárí NFTs...",
+  "nftGalleryEmptyDescription": "Àkójọpọ̀ NFT rẹ yóò hàn níbí.\nRa tàbí gba NFTs lórí chain kankan tí a ń ṣe atilẹyin fún.",
+  "nftGalleryUnsupportedChain": "A kò tíì ṣe atilẹyin NFT gallery lórí {chain}.\nYí padà sí Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, tàbí Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "A kò le gba àwọn NFT",
+  "failedToLoadNftsWithError": "A kò le gba àwọn NFT: {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "NFT osìṣẹ́ agbese",
   "transactionHistory": "Itan Iṣowo",
+  "allLabel": "Gbogbo",
+  "allChains": "Gbogbo chain",
   "notifications": "Ìfitónilétí",
   "notificationsSettings": "Ètò Ìfitónilétí",
   "enablePushNotifications": "Mú Ìfitónilétí Push ṣiṣẹ",
@@ -84,6 +102,57 @@
   "gasFee": "Owo Nẹtiwọọki",
   "transactionDetails": "Awọn alaye ìṣòwò",
   "closeLabel": "Pa mọ",
+  "viewOnExplorer": "Wo lórí Explorer",
+  "unknownNetwork": "Nẹtiwọọki tí a kò mọ",
+  "walletHistoryFallbackWarning": "A ń fi explorer history chain tó ń ṣiṣẹ́ hàn nígbà tí wallet history kò sí.",
+  "walletHistoryLoadError": "A kò le gba wallet history báyìí.",
+  "walletHistoryEmpty": "Kò tíì sí wallet history",
+  "historyTransferReceived": "A ti gba gbigbe",
+  "historyTransferSent": "A ti fi gbigbe ránṣẹ́",
+  "historyReceivedAmountOnNetwork": "A gba {amount} lórí {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "A fi {amount} ránṣẹ́ lórí {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "Ìṣe swap lórí {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "Ìṣe lórí {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "Àkókò",
+  "historyTransactionHashLabel": "Hash ìṣòwò",
+  "historyReceiptUnavailable": "Alaye receipt kò tíì sí fún nkan itan yìí.",
+  "historyLoadingReceipt": "A ń gba alaye receipt...",
+  "historyReceiptLoadError": "A kò le gba alaye receipt báyìí.",
+  "historyReceiptPending": "Receipt kò tíì sí. Ó ṣeé ṣe kí ìṣòwò náà ṣì ń dúró tàbí RPC yìí kò tíì dá a padà.",
+  "historyStatusLabel": "Ipo",
+  "historyBlockNumberLabel": "Nọ́mbà block",
+  "historyFromLabel": "Láti",
+  "historyToLabel": "Sí",
+  "historyGasUsedLabel": "Gas tí a lò",
+  "historyGasPriceLabel": "Iye gas",
+  "historyContractAddressLabel": "Àdírẹ́sì contract",
+  "historyLogCountLabel": "Logs",
+  "tokenLabel": "Token",
+  "confirmedLabel": "Ti jẹ́rìí",
+  "failedLabel": "Ti kuna",
+  "pendingLabel": "Ń dúró",
   "swapPreparingTitle": "N murasilẹ...",
   "swapPreparingSubtitle": "A n pese ibeere paṣipaarọ rẹ.",
   "swapApprovalProcessingTitle": "N gba igbanilaaye...",
@@ -105,6 +174,27 @@
   "gaslessOrderFailedRetry": "Ibere laisi owo nẹtiwọọki kuna. Jọwọ gbiyanju lẹẹkan si.",
   "swapMissingHash": "A fi paṣipaarọ ranṣẹ ṣugbọn a ko ri koodu rẹ. Jọwọ ṣayẹwo nigbamii.",
   "transferWarningMessage": "Ṣayẹwo koodu ẹni ti o n gba owo daradara. Iṣowo ko ṣe iyipada.",
+  "transferPreparingTitle": "A ń pèsè gbigbe...",
+  "transferApprovalPendingTitle": "Ìfọwọ́sí gbigbe ń dúró",
+  "transferSubmittingTitle": "A ń fi gbigbe ránṣẹ́...",
+  "transferInProgressTitle": "Gbigbe ń lọ lọwọ",
+  "transferCompletedTitle": "Gbigbe ti parí",
+  "transferFailedTitle": "Gbigbe kuna",
+  "transferPreparingSubtitle": "A ń pèsè gbigbe rẹ fún fífi ránṣẹ́.",
+  "transferApprovalPendingSubtitle": "Jọ̀wọ́ dúró nígbà tí nẹtiwọọki ń ṣiṣẹ́ lórí ìfọwọ́sí náà.",
+  "transferSubmittingSubtitle": "A ń tan gbigbe rẹ ka sí nẹtiwọọki.",
+  "transferInProgressSubtitle": "A ń dúró de nẹtiwọọki láti jẹ́rìí gbigbe rẹ.",
+  "transferCompletedSubtitle": "A ti jẹ́rìí gbigbe rẹ ní àṣeyọrí.",
+  "genericTransactionPreparingTitle": "A ń pèsè ìṣòwò...",
+  "genericTransactionApprovalPendingTitle": "Ìfọwọ́sí ń dúró",
+  "genericTransactionSubmittingTitle": "A ń fi ìṣòwò ránṣẹ́...",
+  "genericTransactionInProgressTitle": "Ìṣòwò ń lọ lọwọ",
+  "genericTransactionCompletedTitle": "Ìṣòwò ti parí",
+  "genericTransactionPreparingSubtitle": "A ń pèsè ìṣòwò rẹ.",
+  "genericTransactionApprovalPendingSubtitle": "Jọ̀wọ́ dúró nígbà tí nẹtiwọọki ń ṣiṣẹ́ lórí ìfọwọ́sí náà.",
+  "genericTransactionSubmittingSubtitle": "A ń tan ìṣòwò rẹ ka sí nẹtiwọọki.",
+  "genericTransactionInProgressSubtitle": "A ń dúró de nẹtiwọọki láti jẹ́rìí ìṣòwò rẹ.",
+  "genericTransactionCompletedSubtitle": "A ti jẹ́rìí ìṣòwò rẹ ní àṣeyọrí.",
   "maxTotal": "APAPỌ OWO",
   "amount": "OWO",
   "estimationFailed": "Iṣiro kuna",

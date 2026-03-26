@@ -410,6 +410,14 @@ class WalletService {
     };
   }
 
+  Future<TransactionReceipt?> getTransactionReceipt({
+    required String txHash,
+    required String rpcUrl,
+  }) {
+    final client = _clientForRpc(rpcUrl);
+    return client.getTransactionReceipt(txHash);
+  }
+
   BigInt parseAmountToBaseUnits(String amount, {int decimals = 18}) {
     return AmountUtils.parseDecimalToBaseUnits(amount, decimals);
   }

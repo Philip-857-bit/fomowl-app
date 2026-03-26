@@ -230,7 +230,36 @@ class AppLocalizationsYo extends AppLocalizations {
   String get nftCollection => 'Akojọpọ NFT';
 
   @override
+  String get nftGalleryScanning => 'N ṣàwárí NFTs...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      'Àkójọpọ̀ NFT rẹ yóò hàn níbí.\nRa tàbí gba NFTs lórí chain kankan tí a ń ṣe atilẹyin fún.';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return 'A kò tíì ṣe atilẹyin NFT gallery lórí $chain.\nYí padà sí Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, tàbí Base.';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => 'A kò le gba àwọn NFT';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return 'A kò le gba àwọn NFT: $error';
+  }
+
+  @override
+  String get officialProjectNft => 'NFT osìṣẹ́ agbese';
+
+  @override
   String get transactionHistory => 'Itan Iṣowo';
+
+  @override
+  String get allLabel => 'Gbogbo';
+
+  @override
+  String get allChains => 'Gbogbo chain';
 
   @override
   String get notifications => 'Ìfitónilétí';
@@ -262,6 +291,104 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get closeLabel => 'Pa mọ';
+
+  @override
+  String get viewOnExplorer => 'Wo lórí Explorer';
+
+  @override
+  String get unknownNetwork => 'Nẹtiwọọki tí a kò mọ';
+
+  @override
+  String get walletHistoryFallbackWarning =>
+      'A ń fi explorer history chain tó ń ṣiṣẹ́ hàn nígbà tí wallet history kò sí.';
+
+  @override
+  String get walletHistoryLoadError => 'A kò le gba wallet history báyìí.';
+
+  @override
+  String get walletHistoryEmpty => 'Kò tíì sí wallet history';
+
+  @override
+  String get historyTransferReceived => 'A ti gba gbigbe';
+
+  @override
+  String get historyTransferSent => 'A ti fi gbigbe ránṣẹ́';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return 'A gba $amount lórí $network.';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return 'A fi $amount ránṣẹ́ lórí $network.';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return 'Ìṣe swap lórí $network.';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return 'Ìṣe lórí $network.';
+  }
+
+  @override
+  String get historyTimestampLabel => 'Àkókò';
+
+  @override
+  String get historyTransactionHashLabel => 'Hash ìṣòwò';
+
+  @override
+  String get historyReceiptUnavailable =>
+      'Alaye receipt kò tíì sí fún nkan itan yìí.';
+
+  @override
+  String get historyLoadingReceipt => 'A ń gba alaye receipt...';
+
+  @override
+  String get historyReceiptLoadError => 'A kò le gba alaye receipt báyìí.';
+
+  @override
+  String get historyReceiptPending =>
+      'Receipt kò tíì sí. Ó ṣeé ṣe kí ìṣòwò náà ṣì ń dúró tàbí RPC yìí kò tíì dá a padà.';
+
+  @override
+  String get historyStatusLabel => 'Ipo';
+
+  @override
+  String get historyBlockNumberLabel => 'Nọ́mbà block';
+
+  @override
+  String get historyFromLabel => 'Láti';
+
+  @override
+  String get historyToLabel => 'Sí';
+
+  @override
+  String get historyGasUsedLabel => 'Gas tí a lò';
+
+  @override
+  String get historyGasPriceLabel => 'Iye gas';
+
+  @override
+  String get historyContractAddressLabel => 'Àdírẹ́sì contract';
+
+  @override
+  String get historyLogCountLabel => 'Logs';
+
+  @override
+  String get tokenLabel => 'Token';
+
+  @override
+  String get confirmedLabel => 'Ti jẹ́rìí';
+
+  @override
+  String get failedLabel => 'Ti kuna';
+
+  @override
+  String get pendingLabel => 'Ń dúró';
 
   @override
   String get swapPreparingTitle => 'N murasilẹ...';
@@ -330,6 +457,75 @@ class AppLocalizationsYo extends AppLocalizations {
   @override
   String get swapMissingHash =>
       'A fi paṣipaarọ ranṣẹ ṣugbọn a ko ri koodu rẹ. Jọwọ ṣayẹwo nigbamii.';
+
+  @override
+  String get transferPreparingTitle => 'A ń pèsè gbigbe...';
+
+  @override
+  String get transferApprovalPendingTitle => 'Ìfọwọ́sí gbigbe ń dúró';
+
+  @override
+  String get transferSubmittingTitle => 'A ń fi gbigbe ránṣẹ́...';
+
+  @override
+  String get transferInProgressTitle => 'Gbigbe ń lọ lọwọ';
+
+  @override
+  String get transferCompletedTitle => 'Gbigbe ti parí';
+
+  @override
+  String get transferFailedTitle => 'Gbigbe kuna';
+
+  @override
+  String get transferPreparingSubtitle => 'A ń pèsè gbigbe rẹ fún fífi ránṣẹ́.';
+
+  @override
+  String get transferApprovalPendingSubtitle =>
+      'Jọ̀wọ́ dúró nígbà tí nẹtiwọọki ń ṣiṣẹ́ lórí ìfọwọ́sí náà.';
+
+  @override
+  String get transferSubmittingSubtitle => 'A ń tan gbigbe rẹ ka sí nẹtiwọọki.';
+
+  @override
+  String get transferInProgressSubtitle =>
+      'A ń dúró de nẹtiwọọki láti jẹ́rìí gbigbe rẹ.';
+
+  @override
+  String get transferCompletedSubtitle => 'A ti jẹ́rìí gbigbe rẹ ní àṣeyọrí.';
+
+  @override
+  String get genericTransactionPreparingTitle => 'A ń pèsè ìṣòwò...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => 'Ìfọwọ́sí ń dúró';
+
+  @override
+  String get genericTransactionSubmittingTitle => 'A ń fi ìṣòwò ránṣẹ́...';
+
+  @override
+  String get genericTransactionInProgressTitle => 'Ìṣòwò ń lọ lọwọ';
+
+  @override
+  String get genericTransactionCompletedTitle => 'Ìṣòwò ti parí';
+
+  @override
+  String get genericTransactionPreparingSubtitle => 'A ń pèsè ìṣòwò rẹ.';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle =>
+      'Jọ̀wọ́ dúró nígbà tí nẹtiwọọki ń ṣiṣẹ́ lórí ìfọwọ́sí náà.';
+
+  @override
+  String get genericTransactionSubmittingSubtitle =>
+      'A ń tan ìṣòwò rẹ ka sí nẹtiwọọki.';
+
+  @override
+  String get genericTransactionInProgressSubtitle =>
+      'A ń dúró de nẹtiwọọki láti jẹ́rìí ìṣòwò rẹ.';
+
+  @override
+  String get genericTransactionCompletedSubtitle =>
+      'A ti jẹ́rìí ìṣòwò rẹ ní àṣeyọrí.';
 
   @override
   String get transferWarningMessage =>

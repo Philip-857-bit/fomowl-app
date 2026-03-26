@@ -28,10 +28,15 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchNfts();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _fetchNfts();
+      }
+    });
   }
 
   Future<void> _fetchNfts() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -45,8 +50,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       if (!_nftService.isSupportedChain(chain.chainId)) {
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              'NFT gallery not supported on ${chain.name} yet.\nSwitch to Ethereum, Polygon, Arbitrum, Optimism, or Base.';
+          _errorMessage = l.nftGalleryUnsupportedChain(chain.name);
         });
         return;
       }
@@ -54,7 +58,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       if (address == null) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'No wallet found';
+          _errorMessage = l.noActiveWalletFound;
         });
         return;
       }
@@ -74,7 +78,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to load NFTs: $e';
+        _errorMessage = l.failedToLoadNftsWithError(e.toString());
       });
     }
   }
@@ -139,7 +143,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Scanning for NFTs...',
+                            l.nftGalleryScanning,
                             style: GoogleFonts.outfit(
                               fontSize: 14,
                               color: Colors.white54,
@@ -191,7 +195,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your NFT collection will appear here.\nBuy or receive NFTs on any supported chain.',
+              l.nftGalleryEmptyDescription,
               style: GoogleFonts.outfit(
                 fontSize: 14,
                 color: Colors.white54,
@@ -224,7 +228,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Refresh',
+                      l.refresh,
                       style: GoogleFonts.outfit(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -242,6 +246,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
   }
 
   Widget _buildErrorState() {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40),
@@ -255,7 +260,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Failed to load NFTs',
+              l.failedToLoadNftsTitle,
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
@@ -281,7 +286,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
-                  'Try Again',
+                  l.tryAgain,
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -359,7 +364,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   alignment: Alignment.center,
                   child: Text(
-                    'Official Project NFT',
+                    AppLocalizations.of(context).officialProjectNft,
                     style: GoogleFonts.outfit(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -384,7 +389,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${nft.count}x • ${nft.chainName}',
+                      '${nft.count}x - ${nft.chainName}',
                       style: GoogleFonts.outfit(
                         fontSize: 11,
                         color: Colors.white.withValues(alpha: 0.4),

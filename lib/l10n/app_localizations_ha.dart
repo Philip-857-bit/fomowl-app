@@ -230,7 +230,36 @@ class AppLocalizationsHa extends AppLocalizations {
   String get nftCollection => 'Tarin NFT';
 
   @override
+  String get nftGalleryScanning => 'Ana binciken NFTs...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      'Tarin NFT dinka zai bayyana a nan.\nSaya ko karɓi NFTs a kowace sarkar da ake tallafawa.';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return 'Ba a tallafawa dakin nunin NFT a $chain tukuna.\nCanja zuwa Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, ko Base.';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => 'An kasa loda NFTs';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return 'An kasa loda NFTs: $error';
+  }
+
+  @override
+  String get officialProjectNft => 'NFT na hukuma na aikin';
+
+  @override
   String get transactionHistory => 'Tarihin Ciniki';
+
+  @override
+  String get allLabel => 'Duka';
+
+  @override
+  String get allChains => 'Dukkan chains';
 
   @override
   String get notifications => 'Sanarwa';
@@ -262,6 +291,104 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get closeLabel => 'Rufe';
+
+  @override
+  String get viewOnExplorer => 'Duba a Explorer';
+
+  @override
+  String get unknownNetwork => 'Network da ba a sani ba';
+
+  @override
+  String get walletHistoryFallbackWarning =>
+      'Ana nuna tarihin explorer na sarkar da ke aiki yayin da tarihin walat ba ya samuwa.';
+
+  @override
+  String get walletHistoryLoadError => 'Ba a iya loda tarihin walat yanzu ba.';
+
+  @override
+  String get walletHistoryEmpty => 'Babu tarihin walat tukuna';
+
+  @override
+  String get historyTransferReceived => 'An karɓi canja wuri';
+
+  @override
+  String get historyTransferSent => 'An aika canja wuri';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return 'An karɓi $amount a kan $network.';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return 'An aika $amount a kan $network.';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return 'Ayyukan musanya a kan $network.';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return 'Aiki a kan $network.';
+  }
+
+  @override
+  String get historyTimestampLabel => 'Lokaci';
+
+  @override
+  String get historyTransactionHashLabel => 'Hash ɗin ciniki';
+
+  @override
+  String get historyReceiptUnavailable =>
+      'Bayanan rasit na wannan abin tarihin ba su samuwa tukuna.';
+
+  @override
+  String get historyLoadingReceipt => 'Ana loda bayanan rasit...';
+
+  @override
+  String get historyReceiptLoadError => 'Ba a iya loda bayanan rasit yanzu ba.';
+
+  @override
+  String get historyReceiptPending =>
+      'Rasit bai samuwa ba tukuna. Wataƙila mu\'amalar tana jiran tabbaci ko RPC ɗin nan bai dawo da ita ba.';
+
+  @override
+  String get historyStatusLabel => 'Matsayi';
+
+  @override
+  String get historyBlockNumberLabel => 'Lambar buloki';
+
+  @override
+  String get historyFromLabel => 'Daga';
+
+  @override
+  String get historyToLabel => 'Zuwa';
+
+  @override
+  String get historyGasUsedLabel => 'Gas da aka yi amfani da shi';
+
+  @override
+  String get historyGasPriceLabel => 'Farashin gas';
+
+  @override
+  String get historyContractAddressLabel => 'Adireshin kwangila';
+
+  @override
+  String get historyLogCountLabel => 'Logs';
+
+  @override
+  String get tokenLabel => 'Token';
+
+  @override
+  String get confirmedLabel => 'An tabbatar';
+
+  @override
+  String get failedLabel => 'Ya kasa';
+
+  @override
+  String get pendingLabel => 'Ana jira';
 
   @override
   String get swapPreparingTitle => 'Ana shiryawa...';
@@ -327,6 +454,78 @@ class AppLocalizationsHa extends AppLocalizations {
   @override
   String get swapMissingHash =>
       'An aika musanya amma ba a ga lambar tabbatarwa ba. Duba an jima.';
+
+  @override
+  String get transferPreparingTitle => 'Ana shirya canja wuri...';
+
+  @override
+  String get transferApprovalPendingTitle => 'Amincewar canja wuri na jira';
+
+  @override
+  String get transferSubmittingTitle => 'Ana aikawa da canja wuri...';
+
+  @override
+  String get transferInProgressTitle => 'Canja wuri na gudana';
+
+  @override
+  String get transferCompletedTitle => 'An kammala canja wuri';
+
+  @override
+  String get transferFailedTitle => 'Canja wuri ya kasa';
+
+  @override
+  String get transferPreparingSubtitle =>
+      'Ana shirya canja wurinka domin aikawa.';
+
+  @override
+  String get transferApprovalPendingSubtitle =>
+      'Da fatan za a jira yayin da sadarwar ke sarrafa amincewa.';
+
+  @override
+  String get transferSubmittingSubtitle =>
+      'Ana yaɗa canja wurinka zuwa sadarwar.';
+
+  @override
+  String get transferInProgressSubtitle =>
+      'Ana jiran sadarwar ta tabbatar da canja wurinka.';
+
+  @override
+  String get transferCompletedSubtitle =>
+      'An tabbatar da canja wurinka cikin nasara.';
+
+  @override
+  String get genericTransactionPreparingTitle => 'Ana shirya mu\'amala...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => 'Amincewa na jira';
+
+  @override
+  String get genericTransactionSubmittingTitle => 'Ana aikawa da mu\'amala...';
+
+  @override
+  String get genericTransactionInProgressTitle => 'Mu\'amala na gudana';
+
+  @override
+  String get genericTransactionCompletedTitle => 'An kammala mu\'amala';
+
+  @override
+  String get genericTransactionPreparingSubtitle => 'Ana shirya mu\'amalarka.';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle =>
+      'Da fatan za a jira yayin da sadarwar ke sarrafa amincewa.';
+
+  @override
+  String get genericTransactionSubmittingSubtitle =>
+      'Ana yaɗa mu\'amalarka zuwa sadarwar.';
+
+  @override
+  String get genericTransactionInProgressSubtitle =>
+      'Ana jiran sadarwar ta tabbatar da mu\'amalarka.';
+
+  @override
+  String get genericTransactionCompletedSubtitle =>
+      'An tabbatar da mu\'amalarka cikin nasara.';
 
   @override
   String get transferWarningMessage =>

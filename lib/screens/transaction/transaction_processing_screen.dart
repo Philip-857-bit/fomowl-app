@@ -280,7 +280,7 @@ class _ProcessingScaffold extends StatelessWidget {
       case TransactionProgressFlow.swap:
         return _swapTitle(l);
       case TransactionProgressFlow.transfer:
-        return _transferTitle();
+        return _transferTitle(l);
       case TransactionProgressFlow.generic:
         return _genericTitle(l);
     }
@@ -339,38 +339,38 @@ class _ProcessingScaffold extends StatelessWidget {
     }
   }
 
-  String _transferTitle() {
+  String _transferTitle(AppLocalizations l) {
     switch (state.stage) {
       case TransactionProgressStage.preparing:
-        return 'Preparing transfer...';
+        return l.transferPreparingTitle;
       case TransactionProgressStage.approvalPending:
-        return 'Transfer approval pending';
+        return l.transferApprovalPendingTitle;
       case TransactionProgressStage.swapSubmitting:
-        return 'Submitting transfer...';
+        return l.transferSubmittingTitle;
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
-        return 'Transfer in progress';
+        return l.transferInProgressTitle;
       case TransactionProgressStage.success:
-        return 'Transfer completed';
+        return l.transferCompletedTitle;
       case TransactionProgressStage.error:
-        return 'Transfer failed';
+        return l.transferFailedTitle;
     }
   }
 
   String _transferSubtitle(AppLocalizations l) {
     switch (state.stage) {
       case TransactionProgressStage.preparing:
-        return 'Your transfer is being prepared for submission.';
+        return l.transferPreparingSubtitle;
       case TransactionProgressStage.approvalPending:
-        return 'Please wait while the network processes the approval.';
+        return l.transferApprovalPendingSubtitle;
       case TransactionProgressStage.swapSubmitting:
-        return 'Your transfer is being broadcast to the network.';
+        return l.transferSubmittingSubtitle;
       case TransactionProgressStage.swapPending:
-        return 'Waiting for the network to confirm your transfer.';
+        return l.transferInProgressSubtitle;
       case TransactionProgressStage.gaslessPending:
-        return 'Waiting for the network to confirm your transfer.';
+        return l.transferInProgressSubtitle;
       case TransactionProgressStage.success:
-        return 'Your transfer has been confirmed successfully.';
+        return l.transferCompletedSubtitle;
       case TransactionProgressStage.error:
         return state.message ?? l.tryAgain;
     }
@@ -379,16 +379,16 @@ class _ProcessingScaffold extends StatelessWidget {
   String _genericTitle(AppLocalizations l) {
     switch (state.stage) {
       case TransactionProgressStage.preparing:
-        return 'Preparing transaction...';
+        return l.genericTransactionPreparingTitle;
       case TransactionProgressStage.approvalPending:
-        return 'Approval pending';
+        return l.genericTransactionApprovalPendingTitle;
       case TransactionProgressStage.swapSubmitting:
-        return 'Submitting transaction...';
+        return l.genericTransactionSubmittingTitle;
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
-        return 'Transaction in progress';
+        return l.genericTransactionInProgressTitle;
       case TransactionProgressStage.success:
-        return 'Transaction completed';
+        return l.genericTransactionCompletedTitle;
       case TransactionProgressStage.error:
         return l.transactionFailed;
     }
@@ -397,16 +397,16 @@ class _ProcessingScaffold extends StatelessWidget {
   String _genericSubtitle(AppLocalizations l) {
     switch (state.stage) {
       case TransactionProgressStage.preparing:
-        return 'Your transaction is being prepared.';
+        return l.genericTransactionPreparingSubtitle;
       case TransactionProgressStage.approvalPending:
-        return 'Please wait while the network processes the approval.';
+        return l.genericTransactionApprovalPendingSubtitle;
       case TransactionProgressStage.swapSubmitting:
-        return 'Your transaction is being broadcast to the network.';
+        return l.genericTransactionSubmittingSubtitle;
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
-        return 'Waiting for the network to confirm your transaction.';
+        return l.genericTransactionInProgressSubtitle;
       case TransactionProgressStage.success:
-        return 'Your transaction has been confirmed successfully.';
+        return l.genericTransactionCompletedSubtitle;
       case TransactionProgressStage.error:
         return state.message ?? l.tryAgain;
     }
@@ -461,7 +461,7 @@ class _ProcessingScaffold extends StatelessWidget {
     final hasDetailsUrl =
         state.detailsUrl != null && state.detailsUrl!.trim().isNotEmpty;
     if (hasDetailsUrl) {
-      return 'View on Explorer';
+      return l.viewOnExplorer;
     }
     if (state.isTerminal) {
       return l.closeLabel;

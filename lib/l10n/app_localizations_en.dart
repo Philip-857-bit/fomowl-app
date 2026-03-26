@@ -230,7 +230,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nftCollection => 'NFT Collection';
 
   @override
+  String get nftGalleryScanning => 'Scanning for NFTs...';
+
+  @override
+  String get nftGalleryEmptyDescription =>
+      'Your NFT collection will appear here.\nBuy or receive NFTs on any supported chain.';
+
+  @override
+  String nftGalleryUnsupportedChain(Object chain) {
+    return 'NFT gallery is not supported on $chain yet.\nSwitch to Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, or Base.';
+  }
+
+  @override
+  String get failedToLoadNftsTitle => 'Failed to load NFTs';
+
+  @override
+  String failedToLoadNftsWithError(Object error) {
+    return 'Failed to load NFTs: $error';
+  }
+
+  @override
+  String get officialProjectNft => 'Official Project NFT';
+
+  @override
   String get transactionHistory => 'Transaction History';
+
+  @override
+  String get allLabel => 'All';
+
+  @override
+  String get allChains => 'All Chains';
 
   @override
   String get notifications => 'Notifications';
@@ -262,6 +291,106 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get closeLabel => 'Close';
+
+  @override
+  String get viewOnExplorer => 'View on Explorer';
+
+  @override
+  String get unknownNetwork => 'Unknown network';
+
+  @override
+  String get walletHistoryFallbackWarning =>
+      'Showing explorer history for the active chain while wallet history is unavailable.';
+
+  @override
+  String get walletHistoryLoadError =>
+      'Unable to load wallet history right now.';
+
+  @override
+  String get walletHistoryEmpty => 'No wallet history yet';
+
+  @override
+  String get historyTransferReceived => 'Transfer received';
+
+  @override
+  String get historyTransferSent => 'Transfer sent';
+
+  @override
+  String historyReceivedAmountOnNetwork(Object amount, Object network) {
+    return 'Received $amount on $network.';
+  }
+
+  @override
+  String historySentAmountOnNetwork(Object amount, Object network) {
+    return 'Sent $amount on $network.';
+  }
+
+  @override
+  String historySwapOnNetwork(Object network) {
+    return 'Swap activity on $network.';
+  }
+
+  @override
+  String historyActivityOnNetwork(Object network) {
+    return 'Activity on $network.';
+  }
+
+  @override
+  String get historyTimestampLabel => 'Timestamp';
+
+  @override
+  String get historyTransactionHashLabel => 'Transaction Hash';
+
+  @override
+  String get historyReceiptUnavailable =>
+      'Receipt details are not available for this history item yet.';
+
+  @override
+  String get historyLoadingReceipt => 'Loading receipt details...';
+
+  @override
+  String get historyReceiptLoadError =>
+      'Unable to load receipt details right now.';
+
+  @override
+  String get historyReceiptPending =>
+      'Receipt not available yet. The transaction may still be pending or unavailable from this RPC.';
+
+  @override
+  String get historyStatusLabel => 'Status';
+
+  @override
+  String get historyBlockNumberLabel => 'Block Number';
+
+  @override
+  String get historyFromLabel => 'From';
+
+  @override
+  String get historyToLabel => 'To';
+
+  @override
+  String get historyGasUsedLabel => 'Gas Used';
+
+  @override
+  String get historyGasPriceLabel => 'Gas Price';
+
+  @override
+  String get historyContractAddressLabel => 'Contract Address';
+
+  @override
+  String get historyLogCountLabel => 'Logs';
+
+  @override
+  String get tokenLabel => 'Token';
+
+  @override
+  String get confirmedLabel => 'Confirmed';
+
+  @override
+  String get failedLabel => 'Failed';
+
+  @override
+  String get pendingLabel => 'Pending';
 
   @override
   String get swapPreparingTitle => 'Preparing swap...';
@@ -332,6 +461,79 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get swapMissingHash =>
       'Swap submitted but transaction hash was not returned. Please check activity later.';
+
+  @override
+  String get transferPreparingTitle => 'Preparing transfer...';
+
+  @override
+  String get transferApprovalPendingTitle => 'Transfer approval pending';
+
+  @override
+  String get transferSubmittingTitle => 'Submitting transfer...';
+
+  @override
+  String get transferInProgressTitle => 'Transfer in progress';
+
+  @override
+  String get transferCompletedTitle => 'Transfer completed';
+
+  @override
+  String get transferFailedTitle => 'Transfer failed';
+
+  @override
+  String get transferPreparingSubtitle =>
+      'Your transfer is being prepared for submission.';
+
+  @override
+  String get transferApprovalPendingSubtitle =>
+      'Please wait while the network processes the approval.';
+
+  @override
+  String get transferSubmittingSubtitle =>
+      'Your transfer is being broadcast to the network.';
+
+  @override
+  String get transferInProgressSubtitle =>
+      'Waiting for the network to confirm your transfer.';
+
+  @override
+  String get transferCompletedSubtitle =>
+      'Your transfer has been confirmed successfully.';
+
+  @override
+  String get genericTransactionPreparingTitle => 'Preparing transaction...';
+
+  @override
+  String get genericTransactionApprovalPendingTitle => 'Approval pending';
+
+  @override
+  String get genericTransactionSubmittingTitle => 'Submitting transaction...';
+
+  @override
+  String get genericTransactionInProgressTitle => 'Transaction in progress';
+
+  @override
+  String get genericTransactionCompletedTitle => 'Transaction completed';
+
+  @override
+  String get genericTransactionPreparingSubtitle =>
+      'Your transaction is being prepared.';
+
+  @override
+  String get genericTransactionApprovalPendingSubtitle =>
+      'Please wait while the network processes the approval.';
+
+  @override
+  String get genericTransactionSubmittingSubtitle =>
+      'Your transaction is being broadcast to the network.';
+
+  @override
+  String get genericTransactionInProgressSubtitle =>
+      'Waiting for the network to confirm your transaction.';
+
+  @override
+  String get genericTransactionCompletedSubtitle =>
+      'Your transaction has been confirmed successfully.';
 
   @override
   String get transferWarningMessage =>

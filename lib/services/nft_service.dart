@@ -25,7 +25,7 @@ class NftAsset {
 class NftService {
   static const String _projectNftAddress =
       '0x09A3Dc6ceB95D741E6445B0227B0939C27E5Dd52';
-  static const Set<int> supportedChainIds = {1, 137, 10, 42161, 8453};
+  static const Set<int> supportedChainIds = {1, 56, 137, 10, 42161, 8453};
 
   bool isSupportedChain(int chainId) => supportedChainIds.contains(chainId);
 

@@ -73,7 +73,25 @@
   "resetApp": "Restablecer App",
   "noNftsYet": "Todavía no hay NFTs",
   "nftCollection": "Colección NFT",
+  "nftGalleryScanning": "Buscando NFTs...",
+  "nftGalleryEmptyDescription": "Tu colección de NFT aparecerá aquí.\nCompra o recibe NFTs en cualquier red compatible.",
+  "nftGalleryUnsupportedChain": "La galería NFT aún no es compatible con {chain}.\nCambia a Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism o Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "No se pudieron cargar los NFTs",
+  "failedToLoadNftsWithError": "No se pudieron cargar los NFTs: {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "NFT oficial del proyecto",
   "transactionHistory": "Historial de Transacciones",
+  "allLabel": "Todo",
+  "allChains": "Todas las cadenas",
   "notifications": "Notificaciones",
   "notificationsSettings": "Ajustes de notificaciones",
   "enablePushNotifications": "Activar notificaciones push",
@@ -84,6 +102,57 @@
   "gasFee": "Tarifa de Gas",
   "transactionDetails": "DETALLES DE LA TRANSACCIÓN",
   "closeLabel": "Cerrar",
+  "viewOnExplorer": "Ver en el explorador",
+  "unknownNetwork": "Red desconocida",
+  "walletHistoryFallbackWarning": "Se muestra el historial del explorador de la red activa mientras el historial de la billetera no está disponible.",
+  "walletHistoryLoadError": "No se puede cargar el historial de la billetera en este momento.",
+  "walletHistoryEmpty": "Aún no hay historial de la billetera",
+  "historyTransferReceived": "Transferencia recibida",
+  "historyTransferSent": "Transferencia enviada",
+  "historyReceivedAmountOnNetwork": "Se recibieron {amount} en {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "Se enviaron {amount} en {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "Actividad de intercambio en {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "Actividad en {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "Fecha y hora",
+  "historyTransactionHashLabel": "Hash de la transacción",
+  "historyReceiptUnavailable": "Los detalles del recibo todavía no están disponibles para este elemento del historial.",
+  "historyLoadingReceipt": "Cargando detalles del recibo...",
+  "historyReceiptLoadError": "No se pueden cargar los detalles del recibo en este momento.",
+  "historyReceiptPending": "El recibo aún no está disponible. La transacción puede seguir pendiente o este RPC puede no haberlo devuelto todavía.",
+  "historyStatusLabel": "Estado",
+  "historyBlockNumberLabel": "Número de bloque",
+  "historyFromLabel": "Desde",
+  "historyToLabel": "Para",
+  "historyGasUsedLabel": "Gas usado",
+  "historyGasPriceLabel": "Precio del gas",
+  "historyContractAddressLabel": "Dirección del contrato",
+  "historyLogCountLabel": "Registros",
+  "tokenLabel": "Token",
+  "confirmedLabel": "Confirmada",
+  "failedLabel": "Fallida",
+  "pendingLabel": "Pendiente",
   "swapPreparingTitle": "Preparando intercambio...",
   "swapPreparingSubtitle": "Estamos preparando tu solicitud de intercambio.",
   "swapApprovalProcessingTitle": "La aprobación se está procesando...",
@@ -104,6 +173,27 @@
   "transactionPendingConfirmation": "La transacción sigue pendiente de confirmación. Vuelve a comprobar más tarde.",
   "gaslessOrderFailedRetry": "La orden sin gas falló. Inténtalo de nuevo.",
   "swapMissingHash": "El intercambio se envió, pero no se devolvió el hash de la transacción. Comprueba la actividad más tarde.",
+  "transferPreparingTitle": "Preparando transferencia...",
+  "transferApprovalPendingTitle": "Aprobación de transferencia pendiente",
+  "transferSubmittingTitle": "Enviando transferencia...",
+  "transferInProgressTitle": "Transferencia en curso",
+  "transferCompletedTitle": "Transferencia completada",
+  "transferFailedTitle": "Transferencia fallida",
+  "transferPreparingSubtitle": "Tu transferencia se está preparando para el envío.",
+  "transferApprovalPendingSubtitle": "Espera mientras la red procesa la aprobación.",
+  "transferSubmittingSubtitle": "Tu transferencia se está transmitiendo a la red.",
+  "transferInProgressSubtitle": "Esperando a que la red confirme tu transferencia.",
+  "transferCompletedSubtitle": "Tu transferencia se confirmó correctamente.",
+  "genericTransactionPreparingTitle": "Preparando transacción...",
+  "genericTransactionApprovalPendingTitle": "Aprobación pendiente",
+  "genericTransactionSubmittingTitle": "Enviando transacción...",
+  "genericTransactionInProgressTitle": "Transacción en curso",
+  "genericTransactionCompletedTitle": "Transacción completada",
+  "genericTransactionPreparingSubtitle": "Tu transacción se está preparando.",
+  "genericTransactionApprovalPendingSubtitle": "Espera mientras la red procesa la aprobación.",
+  "genericTransactionSubmittingSubtitle": "Tu transacción se está transmitiendo a la red.",
+  "genericTransactionInProgressSubtitle": "Esperando a que la red confirme tu transacción.",
+  "genericTransactionCompletedSubtitle": "Tu transacción se confirmó correctamente.",
   "transferWarningMessage": "Verifique la dirección del destinatario cuidadosamente. Las transacciones son permanentes y no se pueden revertir.",
   "maxTotal": "TOTAL MÁXIMO",
   "amount": "CANTIDAD",

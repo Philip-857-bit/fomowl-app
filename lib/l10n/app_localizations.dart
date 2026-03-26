@@ -548,11 +548,59 @@ abstract class AppLocalizations {
   /// **'NFT Collection'**
   String get nftCollection;
 
+  /// No description provided for @nftGalleryScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanning for NFTs...'**
+  String get nftGalleryScanning;
+
+  /// No description provided for @nftGalleryEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Your NFT collection will appear here.\nBuy or receive NFTs on any supported chain.'**
+  String get nftGalleryEmptyDescription;
+
+  /// No description provided for @nftGalleryUnsupportedChain.
+  ///
+  /// In en, this message translates to:
+  /// **'NFT gallery is not supported on {chain} yet.\nSwitch to Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, or Base.'**
+  String nftGalleryUnsupportedChain(Object chain);
+
+  /// No description provided for @failedToLoadNftsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load NFTs'**
+  String get failedToLoadNftsTitle;
+
+  /// No description provided for @failedToLoadNftsWithError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load NFTs: {error}'**
+  String failedToLoadNftsWithError(Object error);
+
+  /// No description provided for @officialProjectNft.
+  ///
+  /// In en, this message translates to:
+  /// **'Official Project NFT'**
+  String get officialProjectNft;
+
   /// No description provided for @transactionHistory.
   ///
   /// In en, this message translates to:
   /// **'Transaction History'**
   String get transactionHistory;
+
+  /// No description provided for @allLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get allLabel;
+
+  /// No description provided for @allChains.
+  ///
+  /// In en, this message translates to:
+  /// **'All Chains'**
+  String get allChains;
 
   /// No description provided for @notifications.
   ///
@@ -613,6 +661,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get closeLabel;
+
+  /// No description provided for @viewOnExplorer.
+  ///
+  /// In en, this message translates to:
+  /// **'View on Explorer'**
+  String get viewOnExplorer;
+
+  /// No description provided for @unknownNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown network'**
+  String get unknownNetwork;
+
+  /// No description provided for @walletHistoryFallbackWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing explorer history for the active chain while wallet history is unavailable.'**
+  String get walletHistoryFallbackWarning;
+
+  /// No description provided for @walletHistoryLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load wallet history right now.'**
+  String get walletHistoryLoadError;
+
+  /// No description provided for @walletHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No wallet history yet'**
+  String get walletHistoryEmpty;
+
+  /// No description provided for @historyTransferReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer received'**
+  String get historyTransferReceived;
+
+  /// No description provided for @historyTransferSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer sent'**
+  String get historyTransferSent;
+
+  /// No description provided for @historyReceivedAmountOnNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {amount} on {network}.'**
+  String historyReceivedAmountOnNetwork(Object amount, Object network);
+
+  /// No description provided for @historySentAmountOnNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {amount} on {network}.'**
+  String historySentAmountOnNetwork(Object amount, Object network);
+
+  /// No description provided for @historySwapOnNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap activity on {network}.'**
+  String historySwapOnNetwork(Object network);
+
+  /// No description provided for @historyActivityOnNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity on {network}.'**
+  String historyActivityOnNetwork(Object network);
+
+  /// No description provided for @historyTimestampLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Timestamp'**
+  String get historyTimestampLabel;
+
+  /// No description provided for @historyTransactionHashLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction Hash'**
+  String get historyTransactionHashLabel;
+
+  /// No description provided for @historyReceiptUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt details are not available for this history item yet.'**
+  String get historyReceiptUnavailable;
+
+  /// No description provided for @historyLoadingReceipt.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading receipt details...'**
+  String get historyLoadingReceipt;
+
+  /// No description provided for @historyReceiptLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load receipt details right now.'**
+  String get historyReceiptLoadError;
+
+  /// No description provided for @historyReceiptPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt not available yet. The transaction may still be pending or unavailable from this RPC.'**
+  String get historyReceiptPending;
+
+  /// No description provided for @historyStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get historyStatusLabel;
+
+  /// No description provided for @historyBlockNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Block Number'**
+  String get historyBlockNumberLabel;
+
+  /// No description provided for @historyFromLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get historyFromLabel;
+
+  /// No description provided for @historyToLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get historyToLabel;
+
+  /// No description provided for @historyGasUsedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas Used'**
+  String get historyGasUsedLabel;
+
+  /// No description provided for @historyGasPriceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas Price'**
+  String get historyGasPriceLabel;
+
+  /// No description provided for @historyContractAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract Address'**
+  String get historyContractAddressLabel;
+
+  /// No description provided for @historyLogCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs'**
+  String get historyLogCountLabel;
+
+  /// No description provided for @tokenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Token'**
+  String get tokenLabel;
+
+  /// No description provided for @confirmedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get confirmedLabel;
+
+  /// No description provided for @failedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get failedLabel;
+
+  /// No description provided for @pendingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get pendingLabel;
 
   /// No description provided for @swapPreparingTitle.
   ///
@@ -733,6 +955,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Swap submitted but transaction hash was not returned. Please check activity later.'**
   String get swapMissingHash;
+
+  /// No description provided for @transferPreparingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing transfer...'**
+  String get transferPreparingTitle;
+
+  /// No description provided for @transferApprovalPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer approval pending'**
+  String get transferApprovalPendingTitle;
+
+  /// No description provided for @transferSubmittingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting transfer...'**
+  String get transferSubmittingTitle;
+
+  /// No description provided for @transferInProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer in progress'**
+  String get transferInProgressTitle;
+
+  /// No description provided for @transferCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer completed'**
+  String get transferCompletedTitle;
+
+  /// No description provided for @transferFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer failed'**
+  String get transferFailedTitle;
+
+  /// No description provided for @transferPreparingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transfer is being prepared for submission.'**
+  String get transferPreparingSubtitle;
+
+  /// No description provided for @transferApprovalPendingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait while the network processes the approval.'**
+  String get transferApprovalPendingSubtitle;
+
+  /// No description provided for @transferSubmittingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transfer is being broadcast to the network.'**
+  String get transferSubmittingSubtitle;
+
+  /// No description provided for @transferInProgressSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the network to confirm your transfer.'**
+  String get transferInProgressSubtitle;
+
+  /// No description provided for @transferCompletedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transfer has been confirmed successfully.'**
+  String get transferCompletedSubtitle;
+
+  /// No description provided for @genericTransactionPreparingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing transaction...'**
+  String get genericTransactionPreparingTitle;
+
+  /// No description provided for @genericTransactionApprovalPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Approval pending'**
+  String get genericTransactionApprovalPendingTitle;
+
+  /// No description provided for @genericTransactionSubmittingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitting transaction...'**
+  String get genericTransactionSubmittingTitle;
+
+  /// No description provided for @genericTransactionInProgressTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction in progress'**
+  String get genericTransactionInProgressTitle;
+
+  /// No description provided for @genericTransactionCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction completed'**
+  String get genericTransactionCompletedTitle;
+
+  /// No description provided for @genericTransactionPreparingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transaction is being prepared.'**
+  String get genericTransactionPreparingSubtitle;
+
+  /// No description provided for @genericTransactionApprovalPendingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait while the network processes the approval.'**
+  String get genericTransactionApprovalPendingSubtitle;
+
+  /// No description provided for @genericTransactionSubmittingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transaction is being broadcast to the network.'**
+  String get genericTransactionSubmittingSubtitle;
+
+  /// No description provided for @genericTransactionInProgressSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for the network to confirm your transaction.'**
+  String get genericTransactionInProgressSubtitle;
+
+  /// No description provided for @genericTransactionCompletedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transaction has been confirmed successfully.'**
+  String get genericTransactionCompletedSubtitle;
 
   /// No description provided for @transferWarningMessage.
   ///

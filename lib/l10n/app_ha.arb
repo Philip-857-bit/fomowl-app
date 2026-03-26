@@ -73,7 +73,25 @@
   "resetApp": "Sake Saita App",
   "noNftsYet": "Babu NFT tukuna",
   "nftCollection": "Tarin NFT",
+  "nftGalleryScanning": "Ana binciken NFTs...",
+  "nftGalleryEmptyDescription": "Tarin NFT dinka zai bayyana a nan.\nSaya ko karɓi NFTs a kowace sarkar da ake tallafawa.",
+  "nftGalleryUnsupportedChain": "Ba a tallafawa dakin nunin NFT a {chain} tukuna.\nCanja zuwa Ethereum, BNB Smart Chain, Polygon, Arbitrum, Optimism, ko Base.",
+  "@nftGalleryUnsupportedChain": {
+    "placeholders": {
+      "chain": {}
+    }
+  },
+  "failedToLoadNftsTitle": "An kasa loda NFTs",
+  "failedToLoadNftsWithError": "An kasa loda NFTs: {error}",
+  "@failedToLoadNftsWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "officialProjectNft": "NFT na hukuma na aikin",
   "transactionHistory": "Tarihin Ciniki",
+  "allLabel": "Duka",
+  "allChains": "Dukkan chains",
   "notifications": "Sanarwa",
   "notificationsSettings": "Saitunan Sanarwa",
   "enablePushNotifications": "Kunna Sanarwar Turawa",
@@ -84,6 +102,57 @@
   "gasFee": "Kuɗin Hanyar Sadarwa",
   "transactionDetails": "BAYANIN CINIKI",
   "closeLabel": "Rufe",
+  "viewOnExplorer": "Duba a Explorer",
+  "unknownNetwork": "Network da ba a sani ba",
+  "walletHistoryFallbackWarning": "Ana nuna tarihin explorer na sarkar da ke aiki yayin da tarihin walat ba ya samuwa.",
+  "walletHistoryLoadError": "Ba a iya loda tarihin walat yanzu ba.",
+  "walletHistoryEmpty": "Babu tarihin walat tukuna",
+  "historyTransferReceived": "An karɓi canja wuri",
+  "historyTransferSent": "An aika canja wuri",
+  "historyReceivedAmountOnNetwork": "An karɓi {amount} a kan {network}.",
+  "@historyReceivedAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySentAmountOnNetwork": "An aika {amount} a kan {network}.",
+  "@historySentAmountOnNetwork": {
+    "placeholders": {
+      "amount": {},
+      "network": {}
+    }
+  },
+  "historySwapOnNetwork": "Ayyukan musanya a kan {network}.",
+  "@historySwapOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyActivityOnNetwork": "Aiki a kan {network}.",
+  "@historyActivityOnNetwork": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "historyTimestampLabel": "Lokaci",
+  "historyTransactionHashLabel": "Hash ɗin ciniki",
+  "historyReceiptUnavailable": "Bayanan rasit na wannan abin tarihin ba su samuwa tukuna.",
+  "historyLoadingReceipt": "Ana loda bayanan rasit...",
+  "historyReceiptLoadError": "Ba a iya loda bayanan rasit yanzu ba.",
+  "historyReceiptPending": "Rasit bai samuwa ba tukuna. Wataƙila mu'amalar tana jiran tabbaci ko RPC ɗin nan bai dawo da ita ba.",
+  "historyStatusLabel": "Matsayi",
+  "historyBlockNumberLabel": "Lambar buloki",
+  "historyFromLabel": "Daga",
+  "historyToLabel": "Zuwa",
+  "historyGasUsedLabel": "Gas da aka yi amfani da shi",
+  "historyGasPriceLabel": "Farashin gas",
+  "historyContractAddressLabel": "Adireshin kwangila",
+  "historyLogCountLabel": "Logs",
+  "tokenLabel": "Token",
+  "confirmedLabel": "An tabbatar",
+  "failedLabel": "Ya kasa",
+  "pendingLabel": "Ana jira",
   "swapPreparingTitle": "Ana shiryawa...",
   "swapPreparingSubtitle": "Muna shirya musayar ka.",
   "swapApprovalProcessingTitle": "Ana neman amincewa...",
@@ -107,6 +176,27 @@
   "transferWarningMessage": "Tabbatar da adireshin mai karɓa sosai. Cinikin da aka riga aka aika ba ya canzawa.",
   "maxTotal": "JIMILLAR KUƊI",
   "amount": "KUƊI",
+  "transferPreparingTitle": "Ana shirya canja wuri...",
+  "transferApprovalPendingTitle": "Amincewar canja wuri na jira",
+  "transferSubmittingTitle": "Ana aikawa da canja wuri...",
+  "transferInProgressTitle": "Canja wuri na gudana",
+  "transferCompletedTitle": "An kammala canja wuri",
+  "transferFailedTitle": "Canja wuri ya kasa",
+  "transferPreparingSubtitle": "Ana shirya canja wurinka domin aikawa.",
+  "transferApprovalPendingSubtitle": "Da fatan za a jira yayin da sadarwar ke sarrafa amincewa.",
+  "transferSubmittingSubtitle": "Ana yaɗa canja wurinka zuwa sadarwar.",
+  "transferInProgressSubtitle": "Ana jiran sadarwar ta tabbatar da canja wurinka.",
+  "transferCompletedSubtitle": "An tabbatar da canja wurinka cikin nasara.",
+  "genericTransactionPreparingTitle": "Ana shirya mu'amala...",
+  "genericTransactionApprovalPendingTitle": "Amincewa na jira",
+  "genericTransactionSubmittingTitle": "Ana aikawa da mu'amala...",
+  "genericTransactionInProgressTitle": "Mu'amala na gudana",
+  "genericTransactionCompletedTitle": "An kammala mu'amala",
+  "genericTransactionPreparingSubtitle": "Ana shirya mu'amalarka.",
+  "genericTransactionApprovalPendingSubtitle": "Da fatan za a jira yayin da sadarwar ke sarrafa amincewa.",
+  "genericTransactionSubmittingSubtitle": "Ana yaɗa mu'amalarka zuwa sadarwar.",
+  "genericTransactionInProgressSubtitle": "Ana jiran sadarwar ta tabbatar da mu'amalarka.",
+  "genericTransactionCompletedSubtitle": "An tabbatar da mu'amalarka cikin nasara.",
   "estimationFailed": "Lissafi ya gaza",
   "networkError": "Matsalar hanyar sadarwa",
   "connectionFailed": "Babu intanet. Duba haɗinka.",
