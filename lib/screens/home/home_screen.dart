@@ -591,29 +591,22 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final chain = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    ).activeChain;
-    if (!_nftService.isSupportedChain(chain.chainId)) {
-      if (mounted) {
-        setState(() {
-          _nftPreview = [];
-          _hasMoreNfts = false;
-          _isLoadingNfts = false;
-        });
-      }
-      return;
-    }
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
 
     if (mounted) {
       setState(() => _isLoadingNfts = true);
     }
 
     try {
-      final nfts = await _nftService.fetchOwnedNfts(
-        chainId: chain.chainId,
-        chainName: chain.name,
+      final activeChain = blockchain.activeChain;
+      final orderedChains = [
+        activeChain,
+        ...blockchain.allChains.where(
+          (chain) => chain.chainId != activeChain.chainId,
+        ),
+      ];
+      final nfts = await _nftService.fetchOwnedNftsAcrossChains(
+        chains: orderedChains,
         walletAddress: address,
       );
       if (!mounted) return;

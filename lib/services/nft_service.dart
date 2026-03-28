@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/app_environment.dart';
+import '../models/chain.dart';
 
 class NftAsset {
   final String name;
@@ -28,6 +29,56 @@ class NftService {
   static const Set<int> supportedChainIds = {1, 56, 137, 10, 42161, 8453};
 
   bool isSupportedChain(int chainId) => supportedChainIds.contains(chainId);
+
+  Future<List<NftAsset>> fetchOwnedNftsAcrossChains({
+    required Iterable<EvmChain> chains,
+    required String walletAddress,
+  }) async {
+    if (walletAddress.isEmpty) {
+      return const [];
+    }
+
+    final seenChainIds = <int>{};
+    final supportedChains = chains
+        .where((chain) {
+          return isSupportedChain(chain.chainId) &&
+              seenChainIds.add(chain.chainId);
+        })
+        .toList(growable: false);
+    if (supportedChains.isEmpty) {
+      return const [];
+    }
+
+    final results = await Future.wait(
+      supportedChains.map((chain) async {
+        try {
+          final nfts = await fetchOwnedNfts(
+            chainId: chain.chainId,
+            chainName: chain.name,
+            walletAddress: walletAddress,
+          );
+          return (nfts: nfts, failed: false);
+        } catch (_) {
+          return (nfts: const <NftAsset>[], failed: true);
+        }
+      }),
+    );
+
+    final aggregated = <NftAsset>[];
+    var successCount = 0;
+    for (final result in results) {
+      if (!result.failed) {
+        successCount += 1;
+      }
+      aggregated.addAll(result.nfts);
+    }
+
+    if (successCount == 0) {
+      throw Exception('NFT API error across supported chains');
+    }
+
+    return aggregated;
+  }
 
   Future<List<NftAsset>> fetchOwnedNfts({
     required int chainId,

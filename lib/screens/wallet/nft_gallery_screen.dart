@@ -44,16 +44,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final chain = blockchain.activeChain;
       final address = await _walletService.getCurrentWalletAddress();
-
-      if (!_nftService.isSupportedChain(chain.chainId)) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = l.nftGalleryUnsupportedChain(chain.name);
-        });
-        return;
-      }
 
       if (address == null) {
         setState(() {
@@ -63,9 +54,15 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
         return;
       }
 
-      final owned = await _nftService.fetchOwnedNfts(
-        chainId: chain.chainId,
-        chainName: chain.name,
+      final activeChain = blockchain.activeChain;
+      final orderedChains = [
+        activeChain,
+        ...blockchain.allChains.where(
+          (chain) => chain.chainId != activeChain.chainId,
+        ),
+      ];
+      final owned = await _nftService.fetchOwnedNftsAcrossChains(
+        chains: orderedChains,
         walletAddress: address,
       );
 
@@ -118,9 +115,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      Provider.of<BlockchainService>(
-                        context,
-                      ).activeChain.symbol,
+                      l.allChains,
                       style: GoogleFonts.outfit(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
