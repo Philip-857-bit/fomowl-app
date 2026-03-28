@@ -39,6 +39,8 @@ class SwapScreen extends StatefulWidget {
 class _SwapScreenState extends State<SwapScreen> {
   static const String _livePriceScope = 'swap_screen';
   static const Duration _quoteUiTimeout = Duration(seconds: 18);
+  static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
+  static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final SwapService _swapService = SwapService();
@@ -250,12 +252,15 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   List<Token> _visibleTokens(List<Token> tokens) {
-    final hiddenTokens = _tokenVisibilityService.getHiddenTokens(
-      Provider.of<BlockchainService>(
-        context,
-        listen: false,
-      ).activeChain.chainId,
-    );
+    final chainId = Provider.of<BlockchainService>(
+      context,
+      listen: false,
+    ).activeChain.chainId;
+    return _visibleTokensForChain(tokens, chainId);
+  }
+
+  List<Token> _visibleTokensForChain(List<Token> tokens, int chainId) {
+    final hiddenTokens = _tokenVisibilityService.getHiddenTokens(chainId);
     if (hiddenTokens.isEmpty) {
       return tokens;
     }
@@ -786,6 +791,7 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<void> _trackGaslessOrder(
     String tradeHash, {
     required TransactionProgressController progressController,
+    required BlockchainService blockchain,
     required int chainId,
     required String fromAmountText,
     required String fromSymbol,
@@ -825,7 +831,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     var failedStatusStreak = 0;
     for (var attempt = 0; attempt < 20; attempt++) {
-      await Future<void>.delayed(const Duration(seconds: 6));
+      await Future<void>.delayed(_gaslessStatusPollInterval);
       if (!mounted) return;
 
       final statusData = await _swapService.getGaslessStatus(
@@ -889,18 +895,6 @@ class _SwapScreenState extends State<SwapScreen> {
 
       if (status != null && successStates.contains(status)) {
         failedStatusStreak = 0;
-        if (rewardReferralOnSwap && _walletAddress != null) {
-          try {
-            await _referralService.rewardOnSwap(
-              walletAddress: _walletAddress!,
-              txHash: tradeHash,
-              swapAmountUsd: swapAmountUsd,
-            );
-          } catch (e) {
-            // Referral crediting should not block successful swap UX.
-            debugPrint('Referral reward-on-gasless-swap failed: $e');
-          }
-        }
         if (_walletAddress != null) {
           unawaited(
             _walletNotificationService.notifySwapConfirmed(
@@ -924,7 +918,14 @@ class _SwapScreenState extends State<SwapScreen> {
           );
         }
         progressController.setSuccess(reference: _shortHash(tradeHash));
-        await _refreshWalletState();
+        unawaited(
+          _runPostConfirmSwapSideEffects(
+            blockchain: blockchain,
+            txHash: tradeHash,
+            rewardReferralOnSwap: rewardReferralOnSwap,
+            swapAmountUsd: swapAmountUsd,
+          ),
+        );
         return;
       }
 
@@ -951,29 +952,55 @@ class _SwapScreenState extends State<SwapScreen> {
     }
   }
 
-  Future<void> _refreshWalletState() async {
+  Future<void> _refreshWalletState({BlockchainService? blockchain}) async {
     final address = _walletAddress;
     if (address == null) return;
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final chainId = blockchain.activeChain.chainId;
-    await blockchain.refreshWalletTokens(address, chainId: chainId);
+    final activeBlockchain =
+        blockchain ?? Provider.of<BlockchainService>(context, listen: false);
+    final chainId = activeBlockchain.activeChain.chainId;
+    await activeBlockchain.refreshWalletTokens(address, chainId: chainId);
     await _refreshTokenPrices();
     if (!mounted) return;
     setState(() {
-      _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+      _syncSelectedTokens(
+        _visibleTokensForChain(activeBlockchain.tokens, chainId),
+      );
     });
     unawaited(
-      Future<void>.delayed(const Duration(seconds: 3), () async {
+      Future<void>.delayed(_followUpWalletRefreshDelay, () async {
         try {
-          await blockchain.refreshWalletTokens(address, chainId: chainId);
+          await activeBlockchain.refreshWalletTokens(address, chainId: chainId);
           await _refreshTokenPrices();
           if (!mounted) return;
           setState(() {
-            _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+            _syncSelectedTokens(
+              _visibleTokensForChain(activeBlockchain.tokens, chainId),
+            );
           });
         } catch (_) {}
       }),
     );
+  }
+
+  Future<void> _runPostConfirmSwapSideEffects({
+    required BlockchainService blockchain,
+    required String txHash,
+    required bool rewardReferralOnSwap,
+    required double swapAmountUsd,
+  }) async {
+    if (rewardReferralOnSwap && _walletAddress != null) {
+      try {
+        await _referralService.rewardOnSwap(
+          walletAddress: _walletAddress!,
+          txHash: txHash,
+          swapAmountUsd: swapAmountUsd,
+        );
+      } catch (e) {
+        debugPrint('Referral reward-on-swap failed: $e');
+      }
+    }
+
+    await _refreshWalletState(blockchain: blockchain);
   }
 
   Future<bool> _waitForTxConfirmation(
@@ -986,21 +1013,15 @@ class _SwapScreenState extends State<SwapScreen> {
       txHash: txHash,
       blockchain: blockchain,
     );
-    if (!mounted) return false;
     if (confirmed) {
-      if (rewardReferralOnSwap && _walletAddress != null) {
-        try {
-          await _referralService.rewardOnSwap(
-            walletAddress: _walletAddress!,
-            txHash: txHash,
-            swapAmountUsd: swapAmountUsd,
-          );
-        } catch (e) {
-          // Referral crediting should not block successful swap UX.
-          debugPrint('Referral reward-on-swap failed: $e');
-        }
-      }
-      await _refreshWalletState();
+      unawaited(
+        _runPostConfirmSwapSideEffects(
+          blockchain: blockchain,
+          txHash: txHash,
+          rewardReferralOnSwap: rewardReferralOnSwap,
+          swapAmountUsd: swapAmountUsd,
+        ),
+      );
       return true;
     }
     return false;
@@ -1360,6 +1381,7 @@ class _SwapScreenState extends State<SwapScreen> {
             await _trackGaslessOrder(
               result.tradeHash!,
               progressController: progressController,
+              blockchain: blockchain,
               chainId: blockchain.activeChain.chainId,
               fromAmountText: fromAmountText,
               fromSymbol: fromToken.symbol,
@@ -1372,7 +1394,6 @@ class _SwapScreenState extends State<SwapScreen> {
           } else {
             progressController.setGaslessPending();
           }
-          await _refreshWalletState();
           return;
         }
         progressController.setError(l.swapMissingHash);
@@ -1387,6 +1408,7 @@ class _SwapScreenState extends State<SwapScreen> {
         await _trackGaslessOrder(
           result.tradeHash ?? result.transactionHash!,
           progressController: progressController,
+          blockchain: blockchain,
           chainId: blockchain.activeChain.chainId,
           fromAmountText: fromAmountText,
           fromSymbol: fromToken.symbol,
@@ -1396,7 +1418,6 @@ class _SwapScreenState extends State<SwapScreen> {
           rewardReferralOnSwap: true,
           swapAmountUsd: referralSwapAmountUsd,
         );
-        await _refreshWalletState();
         return;
       }
 

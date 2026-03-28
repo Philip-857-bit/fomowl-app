@@ -253,10 +253,6 @@ class _TransferConfirmationScreenState
 
     try {
       final chain = blockchain.activeChain;
-      await blockchain.refreshPricesBeforeConfirmation(
-        token == null ? const [] : [token],
-      );
-
       progressController.setSwapSubmitting();
 
       final isNative =
@@ -310,9 +306,15 @@ class _TransferConfirmationScreenState
       }
 
       if (confirmed) {
-        await _refreshWalletStateAfterTransfer(
-          blockchain: blockchain,
-          chainId: chain.chainId,
+        progressController.setSuccess(
+          reference: _shortHash(txHash),
+          detailsUrl: detailsUrl,
+        );
+        unawaited(
+          _refreshWalletStateAfterTransfer(
+            blockchain: blockchain,
+            chainId: chain.chainId,
+          ),
         );
         if (_fromAddress != null && token != null) {
           unawaited(
@@ -337,10 +339,6 @@ class _TransferConfirmationScreenState
             ),
           );
         }
-        progressController.setSuccess(
-          reference: _shortHash(txHash),
-          detailsUrl: detailsUrl,
-        );
       } else {
         progressController.setError(
           AppLocalizations.of(context).transactionPendingConfirmation,
