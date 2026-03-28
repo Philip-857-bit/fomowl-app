@@ -27,7 +27,16 @@ import 'widgets/settings_section_header.dart';
 import 'widgets/settings_wallet_header_card.dart';
 
 class DecentralizedProfileScreen extends StatefulWidget {
-  const DecentralizedProfileScreen({super.key});
+  const DecentralizedProfileScreen({
+    super.key,
+    this.showBottomNavigation = true,
+    this.walletService,
+    this.storageService,
+  });
+
+  final bool showBottomNavigation;
+  final WalletService? walletService;
+  final StorageService? storageService;
 
   @override
   State<DecentralizedProfileScreen> createState() =>
@@ -36,8 +45,8 @@ class DecentralizedProfileScreen extends StatefulWidget {
 
 class _DecentralizedProfileScreenState
     extends State<DecentralizedProfileScreen> {
-  final WalletService _walletService = WalletService();
-  final StorageService _storageService = StorageService();
+  late final WalletService _walletService;
+  late final StorageService _storageService;
 
   String _walletName = 'Main Wallet';
   String _walletAddress = '--';
@@ -48,6 +57,8 @@ class _DecentralizedProfileScreenState
   @override
   void initState() {
     super.initState();
+    _walletService = widget.walletService ?? WalletService();
+    _storageService = widget.storageService ?? StorageService();
     _load();
   }
 
@@ -399,10 +410,13 @@ class _DecentralizedProfileScreenState
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 2),
-      ),
+      bottomNavigationBar: widget.showBottomNavigation
+          ? BottomNavBar(
+              currentIndex: 2,
+              onTap: (index) =>
+                  BottomNavBar.handleNavigation(context, index, 2),
+            )
+          : null,
       body: SafeArea(
         child: _loading
             ? const Center(
@@ -526,6 +540,12 @@ class _DecentralizedProfileScreenState
                           title: l.feedback,
                           onTap: () =>
                               Navigator.pushNamed(context, '/feedback'),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.people_alt_outlined,
+                          title: l.referrals,
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/referrals'),
                         ),
                         SettingsItemTile(
                           icon: Icons.groups_2_outlined,
