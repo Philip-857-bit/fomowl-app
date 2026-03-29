@@ -27,7 +27,7 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
     var nextRoute = '/welcome';
     if (hasWallet) {
-      nextRoute = await _storage.hasPasscode() ? '/unlock' : '/home';
+      nextRoute = await _storage.hasPasscode() ? '/unlock' : '/shell';
     }
 
     if (!mounted) return;

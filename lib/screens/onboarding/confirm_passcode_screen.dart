@@ -71,7 +71,8 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
                   route.isFirst ||
                   route.settings.name == '/password-security' ||
                   route.settings.name == '/profile' ||
-                  route.settings.name == '/home',
+                  route.settings.name == '/home' ||
+                  route.settings.name == '/shell',
             );
           } else {
             Navigator.pushNamed(context, '/biometric-setup');

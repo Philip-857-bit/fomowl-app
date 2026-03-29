@@ -73,6 +73,7 @@ dependencies:
   rust_lib_fomowl_wallet:
     path: rust_builder
   flutter_rust_bridge: 2.11.1
+  flutter_inappwebview: ^6.1.5
 
 dev_dependencies:
   flutter_test:

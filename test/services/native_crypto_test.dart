@@ -14,20 +14,16 @@ void main() {
       );
     });
 
-    test(
-      'signTypedData triggers intentional Rust unimplemented stub error',
-      () async {
-        // EIP-712 is intentionally stubbed in Rust for now and relies on `EthSigUtil`
-        // on the Dart side, so NativeCrypto will always throw if called, allowing
-        // the wallet_service logic to catch the fallback properly.
-        expect(
-          () async => await NativeCrypto.signTypedData(
-            privateKeyHex: '0x123',
-            jsonData: '{}',
-          ),
-          throwsA(anyOf(isA<Exception>(), isA<Error>())),
-        );
-      },
-    );
+    test('signTypedData surfaces FFI absence in Dart-only tests', () async {
+      // flutter_test runs without the compiled host Rust binary here, so the
+      // FFI call still throws even though the Rust implementation exists.
+      expect(
+        () async => await NativeCrypto.signTypedData(
+          privateKeyHex: '0x123',
+          jsonData: '{}',
+        ),
+        throwsA(anyOf(isA<Exception>(), isA<Error>())),
+      );
+    });
   });
 }

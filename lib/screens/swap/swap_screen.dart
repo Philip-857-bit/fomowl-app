@@ -30,7 +30,9 @@ import 'widgets/swap_gasless_toggle.dart';
 
 /// Swap Screen — DEX token swap interface
 class SwapScreen extends StatefulWidget {
-  const SwapScreen({super.key});
+  const SwapScreen({super.key, this.showBottomNavigation = true});
+
+  final bool showBottomNavigation;
 
   @override
   State<SwapScreen> createState() => _SwapScreenState();
@@ -1578,10 +1580,13 @@ class _SwapScreenState extends State<SwapScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 1,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 1),
-      ),
+      bottomNavigationBar: widget.showBottomNavigation
+          ? BottomNavBar(
+              currentIndex: 1,
+              onTap: (index) =>
+                  BottomNavBar.handleNavigation(context, index, 1),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:hex/hex.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
@@ -270,13 +271,21 @@ class WalletService {
         ? privateKeyHex.substring(2)
         : privateKeyHex;
 
-    final signature = EthSigUtil.signTypedData(
-      privateKey: pk,
-      jsonData: jsonData,
-      version: TypedDataVersion.V4,
-    );
-
-    return signature;
+    try {
+      return await NativeCrypto.signTypedData(
+        privateKeyHex: pk,
+        jsonData: jsonData,
+      );
+    } catch (error) {
+      debugPrint(
+        '[WalletService] Falling back to Dart typed-data signer: $error',
+      );
+      return EthSigUtil.signTypedData(
+        privateKey: pk,
+        jsonData: jsonData,
+        version: TypedDataVersion.V4,
+      );
+    }
   }
 
   /// Get EthPrivateKey credentials for transactions
@@ -363,6 +372,37 @@ class WalletService {
     );
   }
 
+  Future<String> sendRawTransactionRequest({
+    required String rpcUrl,
+    required int chainId,
+    String? toAddress,
+    BigInt? valueInWei,
+    String? dataHex,
+    BigInt? gasPriceWei,
+    int? gasLimit,
+    int? nonce,
+  }) async {
+    final credentials = await getCredentials();
+    final client = _clientForRpc(rpcUrl);
+    final data = _decodeHexBytes(dataHex);
+
+    return client.sendTransaction(
+      credentials,
+      Transaction(
+        to: (toAddress == null || toAddress.isEmpty)
+            ? null
+            : EthereumAddress.fromHex(toAddress),
+        value: valueInWei == null ? null : EtherAmount.inWei(valueInWei),
+        data: data,
+        gasPrice: gasPriceWei == null ? null : EtherAmount.inWei(gasPriceWei),
+        maxGas: gasLimit,
+        nonce: nonce,
+      ),
+      chainId: chainId,
+      fetchChainIdFromNetworkId: false,
+    );
+  }
+
   Future<Map<String, dynamic>> estimateTransferFee({
     required String fromAddress,
     required String toAddress,
@@ -420,5 +460,19 @@ class WalletService {
 
   BigInt parseAmountToBaseUnits(String amount, {int decimals = 18}) {
     return AmountUtils.parseDecimalToBaseUnits(amount, decimals);
+  }
+
+  Uint8List? _decodeHexBytes(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty || trimmed == '0x') {
+      return null;
+    }
+    final normalized = trimmed.startsWith('0x')
+        ? trimmed.substring(2)
+        : trimmed;
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return Uint8List.fromList(HEX.decode(normalized));
   }
 }

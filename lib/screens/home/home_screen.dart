@@ -36,7 +36,9 @@ import '../../services/home_snapshot_service.dart';
 /// Home Screen - Main Wallet Dashboard
 /// Shows wallet balance, quick actions, and token list
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.showBottomNavigation = true});
+
+  final bool showBottomNavigation;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -775,8 +777,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               onSend: () =>
                                   Navigator.pushNamed(context, '/send-token'),
-                              onSwap: () =>
-                                  Navigator.pushNamed(context, '/swap'),
+                              onSwap: () => Navigator.pushNamedAndRemoveUntil(
+                                context,
+                                '/shell',
+                                (route) => false,
+                                arguments: 1,
+                              ),
                             ),
                             const SizedBox(height: 24),
                             SocialBannerCard(onTap: _openSocialLink),
@@ -820,10 +826,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 0,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 0),
-      ),
+      bottomNavigationBar: widget.showBottomNavigation
+          ? BottomNavBar(
+              currentIndex: 0,
+              onTap: (index) =>
+                  BottomNavBar.handleNavigation(context, index, 0),
+            )
+          : null,
     );
   }
 }

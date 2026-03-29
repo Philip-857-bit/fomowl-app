@@ -1,0 +1,77 @@
+name: Discover CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  flutter-discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Analyze Discover files
+        run: >
+          flutter analyze
+          lib/features/discover
+          test/browser_session_controller_test.dart
+          test/discover_url_utils_test.dart
+          test/discover_catalog_service_test.dart
+          test/discover_blocked_view_test.dart
+          test/discover_landing_view_test.dart
+          test/admin_dashboard_screen_test.dart
+          test/dapp_provider_bridge_test.dart
+          integration_test/discover_browser_flow_test.dart
+          integration_test/discover_smoke_test.dart
+
+      - name: Run focused Discover Flutter tests
+        run: >
+          flutter test
+          test/discover_url_utils_test.dart
+          test/discover_catalog_service_test.dart
+          test/browser_session_controller_test.dart
+          test/discover_blocked_view_test.dart
+          test/discover_landing_view_test.dart
+          test/admin_dashboard_screen_test.dart
+          test/dapp_provider_bridge_test.dart
+
+  android-discover-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Discover integration tests on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_7
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: flutter test integration_test/discover_browser_flow_test.dart -d emulator-5554

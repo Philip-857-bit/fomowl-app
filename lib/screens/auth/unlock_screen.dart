@@ -126,7 +126,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
           if (_returnToPrevious) {
             Navigator.pop(context, true);
           } else {
-            Navigator.pushReplacementNamed(context, '/home');
+            Navigator.pushReplacementNamed(context, '/shell');
           }
         }
       }
@@ -171,7 +171,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
         if (_returnToPrevious) {
           Navigator.pop(context, true);
         } else {
-          Navigator.pushReplacementNamed(context, '/home');
+          Navigator.pushReplacementNamed(context, '/shell');
         }
       }
     } else if (mounted) {

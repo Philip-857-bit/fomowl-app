@@ -18,6 +18,7 @@ enum _AdminSection {
   stats('Stats', Icons.stacked_line_chart_rounded),
   ops('Ops', Icons.monitor_heart_outlined),
   feedback('Feedback', Icons.forum_outlined),
+  dapps('DApps', Icons.explore_outlined),
   actions('Actions', Icons.bolt_outlined),
   push('Push', Icons.notifications_active_outlined),
   maintainers('Maintainers', Icons.groups_2_outlined),
@@ -69,6 +70,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _registryPage = 1;
   int _registryTotal = 0;
   bool _registryHasNext = false;
+  List<Map<String, dynamic>> _discoverDapps = const <Map<String, dynamic>>[];
+  String? _discoverEditingId;
+  bool _discoverIsActive = true;
 
   Map<String, dynamic>? _lastTestPushResult;
   Map<String, dynamic>? _lastBroadcastResult;
@@ -81,6 +85,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final TextEditingController _maintainerNameController =
       TextEditingController();
   final TextEditingController _registrySearchController =
+      TextEditingController();
+  final TextEditingController _discoverSlugController = TextEditingController();
+  final TextEditingController _discoverLaunchUrlController =
+      TextEditingController();
+  final TextEditingController _discoverTitleController =
+      TextEditingController();
+  final TextEditingController _discoverSubtitleController =
+      TextEditingController();
+  final TextEditingController _discoverLogoUrlController =
+      TextEditingController();
+  final TextEditingController _discoverHeroImageUrlController =
+      TextEditingController();
+  final TextEditingController _discoverBadgeController =
+      TextEditingController();
+  final TextEditingController _discoverCategoriesController =
+      TextEditingController();
+  final TextEditingController _discoverChainIdsController =
+      TextEditingController();
+  final TextEditingController _discoverFeaturedRankController =
+      TextEditingController();
+  final TextEditingController _discoverTrendingRankController =
       TextEditingController();
   final TextEditingController _testPushWalletController =
       TextEditingController();
@@ -128,6 +153,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _maintainerAddressController.dispose();
     _maintainerNameController.dispose();
     _registrySearchController.dispose();
+    _discoverSlugController.dispose();
+    _discoverLaunchUrlController.dispose();
+    _discoverTitleController.dispose();
+    _discoverSubtitleController.dispose();
+    _discoverLogoUrlController.dispose();
+    _discoverHeroImageUrlController.dispose();
+    _discoverBadgeController.dispose();
+    _discoverCategoriesController.dispose();
+    _discoverChainIdsController.dispose();
+    _discoverFeaturedRankController.dispose();
+    _discoverTrendingRankController.dispose();
     _testPushWalletController.dispose();
     _testPushTitleController.dispose();
     _testPushMessageController.dispose();
@@ -157,10 +193,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _registryPage = 1;
       _registryTotal = 0;
       _registryHasNext = false;
+      _discoverDapps = const <Map<String, dynamic>>[];
+      _discoverEditingId = null;
+      _discoverIsActive = true;
       _lastTestPushResult = null;
       _lastBroadcastResult = null;
       _lastSyncedAt = null;
     });
+    _resetDiscoverForm();
   }
 
   int get _activeChainId => _observedChainId ?? 1;
@@ -188,6 +228,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           break;
         case _AdminSection.feedback:
           await _loadFeedback(page: force ? 1 : _feedbackPage);
+          break;
+        case _AdminSection.dapps:
+          await _loadDiscoverDapps();
           break;
         case _AdminSection.actions:
         case _AdminSection.push:
@@ -308,6 +351,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _registryTotal = response['total'] as int? ?? tokens.length;
       _registryHasNext = response['hasNext'] == true;
     });
+  }
+
+  Future<void> _loadDiscoverDapps() async {
+    final dapps = await _apiService.fetchDiscoverDapps();
+    if (!mounted) return;
+    setState(() => _discoverDapps = dapps);
   }
 
   Future<void> _refreshCurrentSection() async {
@@ -498,6 +547,160 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  void _resetDiscoverForm() {
+    _discoverEditingId = null;
+    _discoverIsActive = true;
+    _discoverSlugController.clear();
+    _discoverLaunchUrlController.clear();
+    _discoverTitleController.clear();
+    _discoverSubtitleController.clear();
+    _discoverLogoUrlController.clear();
+    _discoverHeroImageUrlController.clear();
+    _discoverBadgeController.clear();
+    _discoverCategoriesController.clear();
+    _discoverChainIdsController.clear();
+    _discoverFeaturedRankController.clear();
+    _discoverTrendingRankController.clear();
+  }
+
+  Future<void> _submitDiscoverDapp() async {
+    final slug = _discoverSlugController.text.trim();
+    final launchUrl = _discoverLaunchUrlController.text.trim();
+    final title = _discoverTitleController.text.trim();
+    if (launchUrl.isEmpty) {
+      _showSnackBar('Launch URL is required.');
+      return;
+    }
+
+    final payload = <String, dynamic>{
+      if (slug.isNotEmpty) 'slug': slug,
+      'launchUrl': launchUrl,
+      if (title.isNotEmpty) 'title': title,
+      'subtitle': _trimmedOrNull(_discoverSubtitleController.text),
+      'logoUrl': _trimmedOrNull(_discoverLogoUrlController.text),
+      'heroImageUrl': _trimmedOrNull(_discoverHeroImageUrlController.text),
+      'badgeText': _trimmedOrNull(_discoverBadgeController.text),
+      'categories': _csvValues(_discoverCategoriesController.text),
+      'supportedChainIds': _csvInts(_discoverChainIdsController.text),
+      'featuredRank': _parseOptionalInt(_discoverFeaturedRankController.text),
+      'trendingRank': _parseOptionalInt(_discoverTrendingRankController.text),
+      'isActive': _discoverIsActive,
+    };
+
+    setState(() => _loadingSections.add(_AdminSection.dapps));
+    try {
+      if (_discoverEditingId == null) {
+        await _apiService.createDiscoverDapp(payload: payload);
+        _showSnackBar('Discover DApp created.');
+      } else {
+        await _apiService.updateDiscoverDapp(
+          id: _discoverEditingId!,
+          payload: payload,
+        );
+        _showSnackBar('Discover DApp updated.');
+      }
+      _resetDiscoverForm();
+      await _loadDiscoverDapps();
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to save Discover DApp.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.dapps));
+      }
+    }
+  }
+
+  void _startEditingDiscoverDapp(Map<String, dynamic> dapp) {
+    setState(() {
+      _discoverEditingId = dapp['id']?.toString();
+      _discoverIsActive = dapp['isActive'] != false;
+      _discoverSlugController.text = dapp['slug']?.toString() ?? '';
+      _discoverLaunchUrlController.text = dapp['launchUrl']?.toString() ?? '';
+      _discoverTitleController.text = dapp['title']?.toString() ?? '';
+      _discoverSubtitleController.text = dapp['subtitle']?.toString() ?? '';
+      _discoverLogoUrlController.text = dapp['logoUrl']?.toString() ?? '';
+      _discoverHeroImageUrlController.text =
+          dapp['heroImageUrl']?.toString() ?? '';
+      _discoverBadgeController.text = dapp['badgeText']?.toString() ?? '';
+      _discoverCategoriesController.text =
+          (dapp['categories'] as List<dynamic>? ?? const <dynamic>[])
+              .map((value) => value.toString())
+              .join(', ');
+      _discoverChainIdsController.text =
+          (dapp['supportedChainIds'] as List<dynamic>? ?? const <dynamic>[])
+              .map((value) => value.toString())
+              .join(', ');
+      _discoverFeaturedRankController.text =
+          dapp['featuredRank']?.toString() ?? '';
+      _discoverTrendingRankController.text =
+          dapp['trendingRank']?.toString() ?? '';
+    });
+  }
+
+  Future<void> _toggleDiscoverDappActive(
+    Map<String, dynamic> dapp,
+    bool nextValue,
+  ) async {
+    final id = dapp['id']?.toString();
+    if (id == null || id.isEmpty) {
+      return;
+    }
+    setState(() => _loadingSections.add(_AdminSection.dapps));
+    try {
+      await _apiService.updateDiscoverDapp(
+        id: id,
+        payload: {'isActive': nextValue},
+      );
+      await _loadDiscoverDapps();
+      _showSnackBar(nextValue ? 'DApp activated.' : 'DApp deactivated.');
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to update Discover DApp.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.dapps));
+      }
+    }
+  }
+
+  String? _trimmedOrNull(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  List<String> _csvValues(String value) {
+    return value
+        .split(',')
+        .map((entry) => entry.trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  List<int> _csvInts(String value) {
+    return value
+        .split(',')
+        .map((entry) => int.tryParse(entry.trim()))
+        .whereType<int>()
+        .toList(growable: false);
+  }
+
+  int? _parseOptionalInt(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return int.tryParse(trimmed);
+  }
+
   void _showSnackBar(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -629,6 +832,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return _ops != null || _errorLogs.isNotEmpty;
       case _AdminSection.feedback:
         return _feedbackItems.isNotEmpty;
+      case _AdminSection.dapps:
+        return _discoverDapps.isNotEmpty || _discoverEditingId != null;
       case _AdminSection.actions:
       case _AdminSection.push:
         return true;
@@ -679,6 +884,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           onNextPage: _feedbackHasNext
               ? () => _loadFeedback(page: _feedbackPage + 1)
               : null,
+        );
+      case _AdminSection.dapps:
+        return AdminDiscoverDappsSection(
+          isLoading: _isLoading(_AdminSection.dapps),
+          isSubmitting: _isLoading(_AdminSection.dapps),
+          isEditing: _discoverEditingId != null,
+          slugController: _discoverSlugController,
+          launchUrlController: _discoverLaunchUrlController,
+          titleController: _discoverTitleController,
+          subtitleController: _discoverSubtitleController,
+          logoUrlController: _discoverLogoUrlController,
+          heroImageUrlController: _discoverHeroImageUrlController,
+          badgeController: _discoverBadgeController,
+          categoriesController: _discoverCategoriesController,
+          chainIdsController: _discoverChainIdsController,
+          featuredRankController: _discoverFeaturedRankController,
+          trendingRankController: _discoverTrendingRankController,
+          isActive: _discoverIsActive,
+          onActiveChanged: (value) => setState(() => _discoverIsActive = value),
+          onSubmit: _submitDiscoverDapp,
+          onReset: () => setState(_resetDiscoverForm),
+          dapps: _discoverDapps,
+          onEdit: _startEditingDiscoverDapp,
+          onToggleActive: _toggleDiscoverDappActive,
         );
       case _AdminSection.actions:
         return AdminActionsSection(

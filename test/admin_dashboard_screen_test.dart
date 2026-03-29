@@ -69,6 +69,28 @@ class _FakeAdminApiService extends AdminApiService {
     'total': 1,
     'hasNext': false,
   };
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchDiscoverDapps() async => [
+    {
+      'id': 'discover-uniswap',
+      'slug': 'uniswap',
+      'origin': 'https://app.uniswap.org',
+      'launchUrl': 'https://app.uniswap.org',
+      'title': 'Uniswap',
+      'subtitle': 'Swap tokens',
+      'logoUrl': 'https://app.uniswap.org/favicon.ico',
+      'heroImageUrl': 'https://app.uniswap.org/hero.png',
+      'badgeText': 'DEX',
+      'categories': ['dex', 'defi'],
+      'supportedChainIds': [1, 8453],
+      'featuredRank': 1,
+      'trendingRank': 1,
+      'isActive': true,
+      'createdAt': '2026-03-28T00:00:00Z',
+      'updatedAt': '2026-03-28T00:00:00Z',
+    },
+  ];
 }
 
 void main() {
@@ -108,5 +130,41 @@ void main() {
     expect(find.text('Token registry'), findsOneWidget);
     expect(find.text('Tether USD'), findsOneWidget);
     expect(find.text('USDT'), findsWidgets);
+  });
+
+  testWidgets('admin dashboard switches to discover dapps section', (
+    tester,
+  ) async {
+    final blockchainService = BlockchainService();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<BlockchainService>.value(
+        value: blockchainService,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AdminDashboardScreen(
+            adminSecret: 'secret',
+            apiService: _FakeAdminApiService(),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final sectionStrip = find.byWidgetPredicate(
+      (widget) =>
+          widget is ListView && widget.scrollDirection == Axis.horizontal,
+    );
+    await tester.drag(sectionStrip, const Offset(-350, 0));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('DApps'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Discover DApps'), findsOneWidget);
+    expect(find.text('Uniswap'), findsWidgets);
+    expect(find.textContaining('auto when blank'), findsWidgets);
   });
 }

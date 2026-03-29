@@ -155,6 +155,48 @@ class RpcService extends BaseService {
       return false;
     }
   }
+
+  Future<int?> getChainIdForRpcUrl(String rpcUrl) async {
+    final requestId = _nextRequestId++;
+    try {
+      final response = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              Uri.parse(rpcUrl),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'jsonrpc': '2.0',
+                'method': 'eth_chainId',
+                'params': [],
+                'id': requestId,
+              }),
+            ),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data['id'] != requestId || data['error'] != null) {
+        return null;
+      }
+
+      final result = data['result']?.toString();
+      if (result == null || !result.startsWith('0x')) {
+        return null;
+      }
+      return int.tryParse(result.substring(2), radix: 16);
+    } catch (e) {
+      _lastError = RpcCallException(
+        method: 'eth_chainId',
+        rpcUrl: rpcUrl,
+        message: e.toString(),
+      );
+      return null;
+    }
+  }
 }
 
 class RpcCallException implements Exception {

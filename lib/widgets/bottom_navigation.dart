@@ -98,21 +98,28 @@ class BottomNavBar extends StatelessWidget {
 
     switch (index) {
       case 0: // Wallet
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/shell',
+          (route) => false,
+          arguments: 0,
+        );
         break;
       case 1: // Swap
-        if (currentScreenIndex == 0) {
-          Navigator.pushNamed(context, '/swap');
-        } else {
-          Navigator.pushReplacementNamed(context, '/swap');
-        }
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/shell',
+          (route) => false,
+          arguments: 1,
+        );
         break;
       case 2: // Me
-        if (currentScreenIndex == 0) {
-          Navigator.pushNamed(context, '/profile');
-        } else {
-          Navigator.pushReplacementNamed(context, '/profile');
-        }
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/shell',
+          (route) => false,
+          arguments: 3,
+        );
         break;
     }
   }

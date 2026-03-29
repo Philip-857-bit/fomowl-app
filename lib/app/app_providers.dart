@@ -1,6 +1,7 @@
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
+import '../features/shell/app_shell_controller.dart';
 import '../services/blockchain_service.dart';
 import '../services/currency_controller.dart';
 import '../services/language_controller.dart';
@@ -11,6 +12,7 @@ import '../services/http_client_service.dart';
 List<SingleChildWidget> buildAppProviders() {
   return [
     Provider(create: (_) => HttpClientService()),
+    ChangeNotifierProvider(create: (_) => AppShellController()),
     ChangeNotifierProvider(create: (_) => RpcService()),
     ChangeNotifierProvider(create: (_) => TokenPriceService()),
     ChangeNotifierProvider(create: (_) => CurrencyController()..init()),

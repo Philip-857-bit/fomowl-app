@@ -57,6 +57,10 @@ class AppEnvironment {
     return api('/feedback$path', queryParameters);
   }
 
+  static Uri discover(String path, [Map<String, String>? queryParameters]) {
+    return api('/discover$path', queryParameters);
+  }
+
   static Uri history(String path, [Map<String, String>? queryParameters]) {
     return api('/history$path', queryParameters);
   }

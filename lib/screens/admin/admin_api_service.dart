@@ -211,6 +211,46 @@ class AdminApiService {
     );
   }
 
+  Future<List<Map<String, dynamic>>> fetchDiscoverDapps() async {
+    final response = await _getMap(
+      AppEnvironment.discover('/admin/dapps'),
+      fallback: 'Unable to load Discover DApps.',
+    );
+    final dapps = response['dapps'];
+    if (dapps is List) {
+      return dapps
+          .whereType<Map>()
+          .map((item) => item.cast<String, dynamic>())
+          .toList();
+    }
+    return const <Map<String, dynamic>>[];
+  }
+
+  Future<Map<String, dynamic>> createDiscoverDapp({
+    required Map<String, dynamic> payload,
+  }) async {
+    return _postMap(
+      AppEnvironment.discover('/admin/dapps'),
+      body: payload,
+      fallback: 'Unable to create Discover DApp.',
+    );
+  }
+
+  Future<Map<String, dynamic>> updateDiscoverDapp({
+    required String id,
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _client.patch(
+      AppEnvironment.discover('/admin/dapps/$id'),
+      headers: buildHeaders(json: true),
+      body: jsonEncode(payload),
+    );
+    return _decodeMapResponse(
+      response,
+      fallback: 'Unable to update Discover DApp.',
+    );
+  }
+
   Future<Map<String, dynamic>> _getMap(
     Uri uri, {
     required String fallback,

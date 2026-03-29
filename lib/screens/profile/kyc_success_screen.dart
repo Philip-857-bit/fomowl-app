@@ -74,7 +74,7 @@ class KycSuccessScreen extends StatelessWidget {
                   // E.g., go to home or pop
                   Navigator.pushNamedAndRemoveUntil(
                     context,
-                    '/home',
+                    '/shell',
                     (route) => false,
                   );
                 },

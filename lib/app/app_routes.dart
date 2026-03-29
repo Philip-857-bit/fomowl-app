@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../features/shell/app_shell_controller.dart';
+import '../features/shell/app_shell_screen.dart';
+import '../features/shell/shell_route_redirect.dart';
 import '../screens/auth/unlock_screen.dart';
 import '../screens/earn/earn_coming_soon_screen.dart';
-import '../screens/home/home_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/onboarding/biometric_setup_screen.dart';
 import '../screens/onboarding/congratulations_screen.dart';
@@ -20,13 +22,11 @@ import '../screens/onboarding/verify_phrase_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/payments/bill_payment_screen.dart';
 import '../screens/payments/electricity_suppliers_screen.dart';
-import '../screens/payments/payments_screen.dart';
 import '../screens/profile/add_network_screen.dart';
 import '../screens/profile/backup_seed_phrase_screen.dart';
 import '../screens/profile/coming_soon_overlay.dart';
 import '../screens/profile/coming_soon_screen.dart';
 import '../screens/profile/community_links_screen.dart';
-import '../screens/profile/decentralized_profile_screen.dart';
 import '../screens/profile/feedback_screen.dart';
 import '../screens/profile/kyc_success_screen.dart';
 import '../screens/profile/login_profile_screen.dart';
@@ -35,7 +35,6 @@ import '../screens/profile/privacy_policy_screen.dart';
 import '../screens/profile/referrals_screen.dart';
 import '../screens/profile/register_profile_screen.dart';
 import '../screens/profile/terms_and_conditions_screen.dart';
-import '../screens/swap/swap_screen.dart';
 import '../screens/transaction/transaction_processing_screen.dart';
 import '../screens/transaction/transactions_screen.dart';
 import '../screens/transaction/withdraw_to_bank_screen.dart';
@@ -68,17 +67,18 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/face-id-verification': (_) => const FaceIdVerificationScreen(),
     '/fingerprint-verification': (_) => const FingerprintVerificationScreen(),
     '/congratulations': (_) => const CongratulationsScreen(),
-    '/home': (_) => const HomeScreen(),
+    '/shell': (_) => const AppShellScreen(),
+    '/home': (_) => const ShellRouteRedirect(tab: AppShellTab.wallet),
     '/earn': (_) => const EarnComingSoonScreen(),
     '/wallets': (_) => const WalletsScreen(),
-    '/swap': (_) => const SwapScreen(),
+    '/swap': (_) => const ShellRouteRedirect(tab: AppShellTab.swap),
     '/select-token': (_) => const SelectTokenScreen(),
     '/send-token': (_) => const SendTokenScreen(),
     '/transfer-confirmation': (_) => const TransferConfirmationScreen(),
     '/token-detail': (_) => const TokenDetailScreen(),
     '/token-management': (_) => const TokenManagementScreen(),
     '/nft-gallery': (_) => NftGalleryScreen(),
-    '/profile': (_) => const DecentralizedProfileScreen(),
+    '/profile': (_) => const ShellRouteRedirect(tab: AppShellTab.settings),
     '/notifications': (_) => const NotificationsScreen(),
     '/receive-token': (_) => const ReceiveTokenScreen(),
     '/qr-scanner': (_) => const QrScannerScreen(),
@@ -95,8 +95,6 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/add-network': (_) => const AddNetworkScreen(),
     '/transaction-processing': (_) => const TransactionProcessingScreen(),
     '/transactions': (_) => const TransactionsScreen(),
-    '/payments': (_) =>
-        const ComingSoonOverlay(title: 'Payments', child: PaymentsScreen()),
     '/bill-payment': (_) => const BillPaymentScreen(),
     '/withdraw-to-bank': (_) => const ComingSoonOverlay(
       title: 'Withdraw to Bank',

@@ -207,7 +207,7 @@ class _TransferConfirmationScreenState
             '/transaction-processing',
             arguments: TransactionProcessingArguments(
               controller: controller,
-              terminalRouteName: '/home',
+              terminalRouteName: '/shell',
               clearStackOnTerminalRoute: true,
             ),
           )

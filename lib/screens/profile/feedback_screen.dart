@@ -8,10 +8,18 @@ import '../../services/feedback_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
-import '../../widgets/bottom_navigation.dart';
 
 class FeedbackScreen extends StatefulWidget {
-  const FeedbackScreen({super.key});
+  const FeedbackScreen({
+    super.key,
+    this.initialCategory = 'general',
+    this.initialSubject,
+    this.initialMessage,
+  });
+
+  final String initialCategory;
+  final String? initialSubject;
+  final String? initialMessage;
 
   @override
   State<FeedbackScreen> createState() => _FeedbackScreenState();
@@ -79,14 +87,18 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _category = widget.initialCategory;
+    _subjectController.text = widget.initialSubject?.trim() ?? '';
+    _messageController.text = widget.initialMessage?.trim() ?? '';
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 4,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 4),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -147,6 +159,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   DropdownMenuItem(
                     value: 'design',
                     child: Text(l.feedbackCategoryDesign),
+                  ),
+                  const DropdownMenuItem(
+                    value: 'dapp_request',
+                    child: Text('DApp request'),
                   ),
                 ],
                 onChanged: (value) =>
