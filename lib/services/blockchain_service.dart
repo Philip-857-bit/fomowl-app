@@ -1047,7 +1047,10 @@ class BlockchainService extends ChangeNotifier {
       return;
     }
 
-    final existingTokens = getCachedWalletTokens(walletAddress, chainId: chainId);
+    final existingTokens = getCachedWalletTokens(
+      walletAddress,
+      chainId: chainId,
+    );
     final updatedTokens = _applyOptimisticSwapToTokens(
       existingTokens,
       fromToken: fromToken,
@@ -1083,7 +1086,9 @@ class BlockchainService extends ChangeNotifier {
       notify: true,
     );
 
-    unawaited(_syncHomeSnapshotForWallet(walletAddress, chainId, updatedTokens));
+    unawaited(
+      _syncHomeSnapshotForWallet(walletAddress, chainId, updatedTokens),
+    );
   }
 
   List<Token> _applyOptimisticSwapToTokens(
@@ -1110,7 +1115,10 @@ class BlockchainService extends ChangeNotifier {
       final toIndex = next.indexWhere((token) => _tokensMatch(token, toToken));
       if (toIndex >= 0) {
         final current = next[toIndex];
-        next[toIndex] = _copyTokenWithBalance(current, current.balance + toAmount);
+        next[toIndex] = _copyTokenWithBalance(
+          current,
+          current.balance + toAmount,
+        );
       } else {
         next.add(_copyTokenWithBalance(toToken, toAmount));
       }
@@ -1135,7 +1143,9 @@ class BlockchainService extends ChangeNotifier {
       name: token.name,
       contractAddress: token.contractAddress,
       balance: nextBalance,
-      valueUsd: nextUnitPrice > 0 ? nextBalance * nextUnitPrice : token.valueUsd,
+      valueUsd: nextUnitPrice > 0
+          ? nextBalance * nextUnitPrice
+          : token.valueUsd,
       priceUsd: token.priceUsd,
       changePercent24h: token.changePercent24h,
       decimals: token.decimals,
