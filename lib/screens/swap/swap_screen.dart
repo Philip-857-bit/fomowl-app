@@ -740,52 +740,88 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String? _extractGaslessTxHash(Map<String, dynamic> data) {
-    final direct =
-        data['transactionHash']?.toString() ??
-        data['txHash']?.toString() ??
-        data['hash']?.toString();
-    if (direct != null && direct.isNotEmpty) return direct;
+    final direct = _extractExplicitGaslessTxHash(data);
+    if (direct != null) return direct;
     final trade = data['trade'];
     if (trade is Map<String, dynamic>) {
-      final nested =
-          trade['transactionHash']?.toString() ??
-          trade['txHash']?.toString() ??
-          trade['hash']?.toString();
-      if (nested != null && nested.isNotEmpty) return nested;
-      final transactions = trade['transactions'];
-      if (transactions is List) {
-        for (final entry in transactions) {
-          if (entry is Map<String, dynamic>) {
-            final txHash =
-                entry['transactionHash']?.toString() ??
-                entry['txHash']?.toString() ??
-                entry['hash']?.toString();
-            if (txHash != null && txHash.isNotEmpty) return txHash;
-          }
-        }
-      }
+      final nested = _extractExplicitGaslessTxHash(trade);
+      if (nested != null) return nested;
+      final listed = _extractTransactionListHash(trade['transactions']);
+      if (listed != null) return listed;
     }
     final result = data['result'];
     if (result is Map<String, dynamic>) {
-      final nested =
-          result['transactionHash']?.toString() ??
-          result['txHash']?.toString() ??
-          result['hash']?.toString();
-      if (nested != null && nested.isNotEmpty) return nested;
-      final transactions = result['transactions'];
-      if (transactions is List) {
-        for (final entry in transactions) {
-          if (entry is Map<String, dynamic>) {
-            final txHash =
-                entry['transactionHash']?.toString() ??
-                entry['txHash']?.toString() ??
-                entry['hash']?.toString();
-            if (txHash != null && txHash.isNotEmpty) return txHash;
-          }
-        }
+      final nested = _extractExplicitGaslessTxHash(result);
+      if (nested != null) return nested;
+      final listed = _extractTransactionListHash(result['transactions']);
+      if (listed != null) return listed;
+    }
+    return null;
+  }
+
+  String? _extractExplicitGaslessTxHash(Map<String, dynamic> data) {
+    const candidateKeys = [
+      'transactionHash',
+      'txHash',
+      'settlementTxHash',
+      'settledTxHash',
+      'fillTxHash',
+    ];
+    for (final key in candidateKeys) {
+      final value = data[key]?.toString();
+      if (value != null && _looksLikeTxHash(value)) {
+        return value;
       }
     }
     return null;
+  }
+
+  String? _extractTransactionListHash(dynamic transactions) {
+    if (transactions is! List) {
+      return null;
+    }
+    for (final entry in transactions) {
+      if (entry is! Map<String, dynamic>) {
+        continue;
+      }
+      final explicit = _extractExplicitGaslessTxHash(entry);
+      if (explicit != null) {
+        return explicit;
+      }
+      final listedHash = entry['hash']?.toString();
+      if (listedHash != null && _looksLikeTxHash(listedHash)) {
+        return listedHash;
+      }
+    }
+    return null;
+  }
+
+  void _applyOptimisticSwapResult({
+    required BlockchainService blockchain,
+    required Token fromToken,
+    required Token toToken,
+    required String fromAmountText,
+    required String toAmountText,
+  }) {
+    final address = _walletAddress;
+    if (address == null || address.isEmpty) {
+      return;
+    }
+    final chainId = blockchain.activeChain.chainId;
+    blockchain.applyOptimisticSwap(
+      walletAddress: address,
+      chainId: chainId,
+      fromToken: fromToken,
+      toToken: toToken,
+      fromAmountText: fromAmountText,
+      toAmountText: toAmountText,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _syncSelectedTokens(_visibleTokensForChain(blockchain.tokens, chainId));
+    });
   }
 
   Future<void> _trackGaslessOrder(
@@ -793,6 +829,8 @@ class _SwapScreenState extends State<SwapScreen> {
     required TransactionProgressController progressController,
     required BlockchainService blockchain,
     required int chainId,
+    required Token fromToken,
+    required Token toToken,
     required String fromAmountText,
     required String fromSymbol,
     required String toAmountText,
@@ -852,11 +890,18 @@ class _SwapScreenState extends State<SwapScreen> {
         );
         final confirmed = await _waitForTxConfirmation(
           txHash,
-          rewardReferralOnSwap: true,
+          rewardReferralOnSwap: rewardReferralOnSwap,
           swapAmountUsd: swapAmountUsd,
         );
         if (!mounted) return;
         if (confirmed) {
+          _applyOptimisticSwapResult(
+            blockchain: blockchain,
+            fromToken: fromToken,
+            toToken: toToken,
+            fromAmountText: fromAmountText,
+            toAmountText: toAmountText,
+          );
           if (_walletAddress != null) {
             unawaited(
               _walletNotificationService.notifySwapConfirmed(
@@ -895,6 +940,13 @@ class _SwapScreenState extends State<SwapScreen> {
 
       if (status != null && successStates.contains(status)) {
         failedStatusStreak = 0;
+        _applyOptimisticSwapResult(
+          blockchain: blockchain,
+          fromToken: fromToken,
+          toToken: toToken,
+          fromAmountText: fromAmountText,
+          toAmountText: toAmountText,
+        );
         if (_walletAddress != null) {
           unawaited(
             _walletNotificationService.notifySwapConfirmed(
@@ -921,7 +973,7 @@ class _SwapScreenState extends State<SwapScreen> {
         unawaited(
           _runPostConfirmSwapSideEffects(
             blockchain: blockchain,
-            txHash: tradeHash,
+            txHash: null,
             rewardReferralOnSwap: rewardReferralOnSwap,
             swapAmountUsd: swapAmountUsd,
           ),
@@ -984,11 +1036,14 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Future<void> _runPostConfirmSwapSideEffects({
     required BlockchainService blockchain,
-    required String txHash,
+    required String? txHash,
     required bool rewardReferralOnSwap,
     required double swapAmountUsd,
   }) async {
-    if (rewardReferralOnSwap && _walletAddress != null) {
+    if (rewardReferralOnSwap &&
+        _walletAddress != null &&
+        txHash != null &&
+        _looksLikeTxHash(txHash)) {
       try {
         await _referralService.rewardOnSwap(
           walletAddress: _walletAddress!,
@@ -1383,6 +1438,8 @@ class _SwapScreenState extends State<SwapScreen> {
               progressController: progressController,
               blockchain: blockchain,
               chainId: blockchain.activeChain.chainId,
+              fromToken: fromToken,
+              toToken: toToken,
               fromAmountText: fromAmountText,
               fromSymbol: fromToken.symbol,
               toAmountText: toAmountText,
@@ -1410,6 +1467,8 @@ class _SwapScreenState extends State<SwapScreen> {
           progressController: progressController,
           blockchain: blockchain,
           chainId: blockchain.activeChain.chainId,
+          fromToken: fromToken,
+          toToken: toToken,
           fromAmountText: fromAmountText,
           fromSymbol: fromToken.symbol,
           toAmountText: toAmountText,
@@ -1434,6 +1493,13 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
       if (confirmed) {
+        _applyOptimisticSwapResult(
+          blockchain: blockchain,
+          fromToken: fromToken,
+          toToken: toToken,
+          fromAmountText: fromAmountText,
+          toAmountText: toAmountText,
+        );
         unawaited(
           _walletNotificationService.notifySwapConfirmed(
             walletAddress: _walletAddress!,

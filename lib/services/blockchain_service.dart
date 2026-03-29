@@ -1031,6 +1031,128 @@ class BlockchainService extends ChangeNotifier {
     );
   }
 
+  void applyOptimisticSwap({
+    required String walletAddress,
+    required int chainId,
+    required Token fromToken,
+    required Token toToken,
+    required String fromAmountText,
+    required String toAmountText,
+  }) {
+    final cacheKey = _walletTokenStateKey(chainId, walletAddress);
+    final now = DateTime.now();
+    final fromAmount = _parseOptimisticTokenAmount(fromAmountText);
+    final toAmount = _parseOptimisticTokenAmount(toAmountText);
+    if (fromAmount <= 0 && toAmount <= 0) {
+      return;
+    }
+
+    final existingTokens = getCachedWalletTokens(walletAddress, chainId: chainId);
+    final updatedTokens = _applyOptimisticSwapToTokens(
+      existingTokens,
+      fromToken: fromToken,
+      toToken: toToken,
+      fromAmount: fromAmount,
+      toAmount: toAmount,
+    );
+
+    _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+      tokens: List<Token>.from(updatedTokens),
+      fetchedAt: now,
+    );
+
+    final existingState = _walletTokenStates[cacheKey];
+    _setWalletTokenState(
+      cacheKey,
+      (existingState ??
+              const WalletTokenState(
+                tokens: [],
+                source: 'optimistic',
+                isLoading: false,
+                isStale: true,
+              ))
+          .copyWith(
+            tokens: updatedTokens,
+            source: 'optimistic',
+            isLoading: false,
+            isStale: true,
+            lastUpdatedAt: now,
+            message: 'Refreshing wallet balances...',
+          ),
+      chainId: chainId,
+      notify: true,
+    );
+
+    unawaited(_syncHomeSnapshotForWallet(walletAddress, chainId, updatedTokens));
+  }
+
+  List<Token> _applyOptimisticSwapToTokens(
+    List<Token> source, {
+    required Token fromToken,
+    required Token toToken,
+    required double fromAmount,
+    required double toAmount,
+  }) {
+    final next = List<Token>.from(source);
+
+    if (fromAmount > 0) {
+      final fromIndex = next.indexWhere(
+        (token) => _tokensMatch(token, fromToken),
+      );
+      if (fromIndex >= 0) {
+        final current = next[fromIndex];
+        final nextBalance = max(0.0, current.balance - fromAmount);
+        next[fromIndex] = _copyTokenWithBalance(current, nextBalance);
+      }
+    }
+
+    if (toAmount > 0) {
+      final toIndex = next.indexWhere((token) => _tokensMatch(token, toToken));
+      if (toIndex >= 0) {
+        final current = next[toIndex];
+        next[toIndex] = _copyTokenWithBalance(current, current.balance + toAmount);
+      } else {
+        next.add(_copyTokenWithBalance(toToken, toAmount));
+      }
+    }
+
+    return next;
+  }
+
+  bool _tokensMatch(Token a, Token b) {
+    final aAddress = (a.contractAddress ?? '').trim().toLowerCase();
+    final bAddress = (b.contractAddress ?? '').trim().toLowerCase();
+    if (aAddress.isNotEmpty || bAddress.isNotEmpty) {
+      return aAddress.isNotEmpty && aAddress == bAddress;
+    }
+    return a.symbol.trim().toLowerCase() == b.symbol.trim().toLowerCase();
+  }
+
+  Token _copyTokenWithBalance(Token token, double nextBalance) {
+    final nextUnitPrice = token.unitPriceUsd;
+    return Token(
+      symbol: token.symbol,
+      name: token.name,
+      contractAddress: token.contractAddress,
+      balance: nextBalance,
+      valueUsd: nextUnitPrice > 0 ? nextBalance * nextUnitPrice : token.valueUsd,
+      priceUsd: token.priceUsd,
+      changePercent24h: token.changePercent24h,
+      decimals: token.decimals,
+      imageUrl: token.imageUrl,
+      coinGeckoId: token.coinGeckoId,
+      isCertified: token.isCertified,
+    );
+  }
+
+  double _parseOptimisticTokenAmount(String rawValue) {
+    final normalized = rawValue.trim().replaceAll(',', '');
+    if (normalized.isEmpty) {
+      return 0.0;
+    }
+    return double.tryParse(normalized) ?? 0.0;
+  }
+
   Future<List<Token>> _fetchWalletTokensFresh(
     String walletAddress,
     String cacheKey,
