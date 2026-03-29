@@ -1,12 +1,16 @@
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../utils/value_formatter.dart';
+import '../home_portfolio_metrics.dart';
 
 /// Displays the wallet balance, eye-toggle, and history access.
 class BalanceCard extends StatelessWidget {
   final String formattedBalance;
+  final HomePortfolioMetrics portfolioMetrics;
   final bool isBalanceVisible;
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
@@ -15,15 +19,57 @@ class BalanceCard extends StatelessWidget {
   const BalanceCard({
     super.key,
     required this.formattedBalance,
+    required this.portfolioMetrics,
     required this.isBalanceVisible,
     required this.isLoadingBalances,
     required this.onToggleVisibility,
     required this.onHistoryTap,
   });
 
+  Color _changeColor() {
+    if (portfolioMetrics.hasPositiveChange) {
+      return AppColors.success;
+    }
+    if (portfolioMetrics.hasNegativeChange) {
+      return AppColors.accentRed;
+    }
+    return Colors.white.withValues(alpha: 0.72);
+  }
+
+  IconData _changeIcon() {
+    if (portfolioMetrics.hasPositiveChange) {
+      return Icons.trending_up;
+    }
+    if (portfolioMetrics.hasNegativeChange) {
+      return Icons.trending_down;
+    }
+    return Icons.remove;
+  }
+
+  String _formatChangeText() {
+    if (!isBalanceVisible) {
+      return '****';
+    }
+
+    final amount = portfolioMetrics.changeAmountUsd24h;
+    final absoluteAmount = amount < Decimal.zero ? -amount : amount;
+    final formattedAmount = ValueFormatter.formatCurrencyWithGrouping(
+      absoluteAmount,
+    );
+
+    if (portfolioMetrics.hasPositiveChange) {
+      return '+$formattedAmount (+${portfolioMetrics.changePercent24h.toStringAsFixed(2)}%)';
+    }
+    if (portfolioMetrics.hasNegativeChange) {
+      return '-$formattedAmount (${portfolioMetrics.changePercent24h.toStringAsFixed(2)}%)';
+    }
+    return '$formattedAmount (${portfolioMetrics.changePercent24h.toStringAsFixed(2)}%)';
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final changeColor = _changeColor();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.only(bottom: 24),
@@ -119,14 +165,14 @@ class BalanceCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.trending_up, size: 14, color: AppColors.success),
+                    Icon(_changeIcon(), size: 14, color: changeColor),
                     const SizedBox(width: 4),
                     Text(
-                      isBalanceVisible ? '+\$0.00 (+0.00%)' : '••••',
+                      _formatChangeText(),
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
-                        color: AppColors.success,
+                        color: changeColor,
                       ),
                     ),
                   ],

@@ -22,6 +22,8 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
+import 'home_portfolio_metrics.dart';
+import 'home_portfolio_metrics_calculator.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/home_top_bar.dart';
@@ -58,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   bool _isLoadingBalances = false;
   bool _isLoadingNfts = false;
-  double _totalBalance = 0.0;
+  HomePortfolioMetrics _portfolioMetrics = HomePortfolioMetrics.zero();
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
@@ -159,21 +161,13 @@ class _HomeScreenState extends State<HomeScreen> {
         .join('|');
   }
 
-  double _sumTokenUsdValue(List<Token> tokens) {
-    var total = ValueFormatter.decimalFromNum(0);
-    for (final token in tokens) {
-      total += token.totalValueUsdDecimal;
-    }
-    return ValueFormatter.doubleFromDecimal(total);
-  }
-
   void _replaceDisplayedTokens(
     List<Token> tokens, {
     required bool isUsingCachedData,
   }) {
     final nextTokens = List<Token>.from(tokens);
     _tokens = nextTokens;
-    _totalBalance = _sumTokenUsdValue(nextTokens);
+    _portfolioMetrics = HomePortfolioMetricsCalculator.fromTokens(nextTokens);
     _lastTokenSignature = _buildTokenSignature(nextTokens);
     _isUsingCachedData = isUsingCachedData;
   }
@@ -447,7 +441,9 @@ class _HomeScreenState extends State<HomeScreen> {
             walletAddress: address,
             chainId: _lastChainId!,
             walletName: name ?? l.mainWallet,
-            totalBalance: _totalBalance,
+            totalBalance: ValueFormatter.doubleFromDecimal(
+              _portfolioMetrics.totalBalanceUsd,
+            ),
             tokens: _tokens,
             timestamp: DateTime.now(),
           ),
@@ -629,7 +625,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String get _formattedTotalBalance {
     if (!_balanceVisible) return '******';
     return ValueFormatter.formatCurrencyWithGrouping(
-      ValueFormatter.decimalFromNum(_totalBalance),
+      _portfolioMetrics.totalBalanceUsd,
     );
   }
 
@@ -762,6 +758,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 8),
                             BalanceCard(
                               formattedBalance: _formattedTotalBalance,
+                              portfolioMetrics: _portfolioMetrics,
                               isBalanceVisible: _balanceVisible,
                               isLoadingBalances: _isLoadingBalances,
                               onToggleVisibility: () => setState(
