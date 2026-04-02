@@ -9,6 +9,8 @@ import 'browser_history_entry.dart';
 
 enum DiscoverViewState { landing, browser, blocked }
 
+enum DiscoverBrowserAccessMode { generalWeb, allowlistedDapp }
+
 class BrowserSessionController extends ChangeNotifier {
   BrowserSessionController({required DiscoverCatalogService catalogService})
     : _catalogService = catalogService;
@@ -36,14 +38,23 @@ class BrowserSessionController extends ChangeNotifier {
   bool get loadingCatalog => _loadingCatalog;
   String? get catalogError => _catalogError;
   List<BrowserHistoryEntry> get history => List.unmodifiable(_history);
+  DiscoverBrowserAccessMode get browserAccessMode {
+    final currentUri = _currentUri;
+    if (currentUri != null &&
+        findDappByOrigin(normalizeOriginFromUri(currentUri)) != null) {
+      return DiscoverBrowserAccessMode.allowlistedDapp;
+    }
+    return DiscoverBrowserAccessMode.generalWeb;
+  }
 
   List<DiscoverDappEntry> get filteredDapps {
     final dapps = _snapshot?.dapps ?? const <DiscoverDappEntry>[];
-    if (_query.trim().isEmpty) {
+    final query = _query.trim();
+    if (query.isEmpty) {
       return dapps;
     }
     return dapps
-        .where((entry) => entry.matchesQuery(_query))
+        .where((entry) => entry.matchesQuery(query))
         .toList(growable: false);
   }
 
@@ -89,7 +100,12 @@ class BrowserSessionController extends ChangeNotifier {
       _snapshot = await _catalogService.getSnapshot(forceRefresh: forceRefresh);
     } catch (error) {
       _catalogError = error.toString();
-      _snapshot ??= await _catalogService.loadCachedSnapshot();
+      try {
+        _snapshot ??= await _catalogService.loadCachedSnapshot();
+      } catch (cacheError) {
+        _catalogError =
+            '$_catalogError | cached snapshot load failed: $cacheError';
+      }
     } finally {
       _loadingCatalog = false;
       notifyListeners();
@@ -113,81 +129,56 @@ class BrowserSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void openDapp(DiscoverDappEntry dapp) {
+  void openDapp(
+    DiscoverDappEntry dapp, {
+    String invalidLaunchUrlReason = 'The DApp launch URL is invalid.',
+  }) {
     final uri = Uri.tryParse(dapp.launchUrl);
     if (uri == null) {
       showBlocked(
         BlockedNavigationState(
           url: dapp.launchUrl,
           origin: dapp.origin,
-          reason: 'The DApp launch URL is invalid.',
+          reason: invalidLaunchUrlReason,
         ),
       );
       return;
     }
-    _activeDapp = dapp;
-    _currentUri = uri;
-    _blockedState = null;
-    _pageTitle = dapp.title;
-    _viewState = DiscoverViewState.browser;
-    _recordHistory(uri, title: dapp.title);
-    notifyListeners();
+    _beginBrowsing(uri, activeDapp: dapp, title: dapp.title);
   }
 
-  void openManualInput(String value) {
-    final uri = normalizeDiscoverUri(value);
-    if (uri == null) {
+  void openManualInput(
+    String value, {
+    String invalidInputReason = 'Enter a valid website or search term.',
+    String webSearchTitle = 'DuckDuckGo search',
+  }) {
+    final target = resolveDiscoverInput(value);
+    if (target == null) {
       showBlocked(
-        const BlockedNavigationState(
-          url: '',
-          origin: '',
-          reason: 'Enter a valid allowlisted URL.',
-        ),
+        BlockedNavigationState(url: '', origin: '', reason: invalidInputReason),
       );
       return;
     }
 
-    final matchingDapp = findDappByOrigin(normalizeOriginFromUri(uri));
-    if (matchingDapp == null) {
-      showBlocked(
-        BlockedNavigationState(
-          url: uri.toString(),
-          origin: normalizeOriginFromUri(uri),
-          reason: 'This DApp is not approved for the in-app browser.',
-        ),
-      );
-      return;
-    }
-
-    _activeDapp = matchingDapp;
-    _currentUri = uri;
-    _blockedState = null;
-    _pageTitle = matchingDapp.title;
-    _viewState = DiscoverViewState.browser;
-    _recordHistory(uri, title: matchingDapp.title);
-    notifyListeners();
+    final matchingDapp = findDappByOrigin(normalizeOriginFromUri(target.uri));
+    final title = switch (target.type) {
+      DiscoverInputType.url => matchingDapp?.title ?? target.uri.host,
+      DiscoverInputType.webSearch => webSearchTitle,
+    };
+    _beginBrowsing(target.uri, activeDapp: matchingDapp, title: title);
   }
 
-  bool allowsNavigation(Uri uri) {
-    if (_snapshot == null || !(_snapshot?.isFresh ?? false)) {
+  bool allowsNavigation(
+    Uri uri, {
+    String unsupportedSchemeReason =
+        'This website scheme is not supported in the in-app browser.',
+  }) {
+    if (!isSupportedDiscoverWebUri(uri)) {
       showBlocked(
         BlockedNavigationState(
           url: uri.toString(),
-          origin: normalizeOriginFromUri(uri),
-          reason:
-              'The Discover allowlist snapshot is unavailable or expired. Refresh Discover before opening DApps.',
-        ),
-      );
-      return false;
-    }
-
-    final origin = normalizeOriginFromUri(uri);
-    if (findDappByOrigin(origin) == null) {
-      showBlocked(
-        BlockedNavigationState(
-          url: uri.toString(),
-          origin: origin,
-          reason: 'This DApp origin is not on the Owllet allowlist.',
+          origin: uri.host.isEmpty ? '' : normalizeOriginFromUri(uri),
+          reason: unsupportedSchemeReason,
         ),
       );
       return false;
@@ -206,6 +197,13 @@ class BrowserSessionController extends ChangeNotifier {
     return findDappByOrigin(normalizeOriginFromUri(uri)) != null;
   }
 
+  bool shouldInjectDappDetectorFor(Uri uri) {
+    if (!isSupportedDiscoverWebUri(uri) || uri.toString() == 'about:blank') {
+      return false;
+    }
+    return !canInjectProviderFor(uri);
+  }
+
   DiscoverDappEntry? findDappByOrigin(String origin) {
     for (final dapp in _snapshot?.dapps ?? const <DiscoverDappEntry>[]) {
       if (dapp.origin == origin) {
@@ -217,13 +215,27 @@ class BrowserSessionController extends ChangeNotifier {
 
   void updateLoadedPage(Uri uri, {String? title}) {
     _currentUri = uri;
-    _activeDapp ??= findDappByOrigin(normalizeOriginFromUri(uri));
+    _activeDapp = findDappByOrigin(normalizeOriginFromUri(uri));
     _pageTitle = title?.trim().isNotEmpty == true ? title!.trim() : _pageTitle;
     _recordHistory(uri, title: title);
     if (_viewState != DiscoverViewState.browser) {
       _viewState = DiscoverViewState.browser;
     }
     notifyListeners();
+  }
+
+  void blockDetectedDapp(
+    Uri uri, {
+    required String trigger,
+    required String reason,
+  }) {
+    showBlocked(
+      BlockedNavigationState(
+        url: uri.toString(),
+        origin: normalizeOriginFromUri(uri),
+        reason: reason.replaceFirst('{trigger}', trigger),
+      ),
+    );
   }
 
   void showBlocked(BlockedNavigationState state) {
@@ -245,5 +257,19 @@ class BrowserSessionController extends ChangeNotifier {
     if (_history.length > 20) {
       _history.removeRange(20, _history.length);
     }
+  }
+
+  void _beginBrowsing(
+    Uri uri, {
+    required DiscoverDappEntry? activeDapp,
+    required String title,
+  }) {
+    _activeDapp = activeDapp;
+    _currentUri = uri;
+    _blockedState = null;
+    _pageTitle = title;
+    _viewState = DiscoverViewState.browser;
+    _recordHistory(uri, title: title);
+    notifyListeners();
   }
 }

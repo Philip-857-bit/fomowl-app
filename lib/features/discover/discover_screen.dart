@@ -3,12 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
+import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
+import '../../utils/app_error_utils.dart';
 import 'browser/browser_session_controller.dart';
 import 'browser/widgets/discover_blocked_view.dart';
 import 'browser/widgets/discover_browser_view.dart';
 import 'catalog/discover_catalog_service.dart';
 import 'catalog/widgets/discover_landing_view.dart';
+import 'market/discover_trending_token.dart';
+import 'market/discover_trending_token_service.dart';
 import 'permissions/dapp_permission_service.dart';
 import 'provider/dapp_provider_bridge.dart';
 
@@ -21,15 +25,20 @@ class DiscoverScreen extends StatefulWidget {
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
   late final DiscoverCatalogService _catalogService;
+  late final DiscoverTrendingTokenService _trendingTokenService;
   late final BrowserSessionController _sessionController;
   late final DappPermissionService _permissionService;
   late final DappProviderBridge _providerBridge;
   final TextEditingController _searchController = TextEditingController();
+  List<DiscoverTrendingToken> _trendingTokens = const <DiscoverTrendingToken>[];
+  bool _loadingTrendingTokens = false;
+  String? _trendingTokensError;
 
   @override
   void initState() {
     super.initState();
     _catalogService = DiscoverCatalogService();
+    _trendingTokenService = DiscoverTrendingTokenService();
     _permissionService = DappPermissionService();
     _sessionController = BrowserSessionController(
       catalogService: _catalogService,
@@ -41,6 +50,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     _sessionController.addListener(_syncSearchField);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _sessionController.loadCatalog();
+      _loadTrendingTokens();
     });
   }
 
@@ -85,6 +95,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Widget _buildHeader() {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
       child: Column(
@@ -93,7 +104,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           Row(
             children: [
               Text(
-                'Discover',
+                l.discoverTitle,
                 style: GoogleFonts.outfit(
                   color: Colors.white,
                   fontSize: 28,
@@ -102,8 +113,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               ),
               const Spacer(),
               IconButton(
-                onPressed: () =>
-                    _sessionController.loadCatalog(forceRefresh: true),
+                onPressed: _refreshLandingData,
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white),
               ),
             ],
@@ -112,10 +122,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           TextField(
             controller: _searchController,
             onChanged: _sessionController.updateQuery,
-            onSubmitted: _sessionController.openManualInput,
+            onSubmitted: (value) => _sessionController.openManualInput(
+              value,
+              invalidInputReason: l.discoverManualInputInvalid,
+              webSearchTitle: l.discoverWebSearchTitle,
+            ),
             style: GoogleFonts.outfit(color: Colors.white),
             decoration: InputDecoration(
-              hintText: 'Search approved DApps or enter allowlisted URL',
+              hintText: l.discoverSearchHint,
               hintStyle: GoogleFonts.outfit(color: Colors.white38),
               prefixIcon: const Icon(
                 Icons.search_rounded,
@@ -170,16 +184,69 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           onCancel: _sessionController.returnToLanding,
         );
       case DiscoverViewState.landing:
+        final l = AppLocalizations.of(context);
         return DiscoverLandingView(
           featuredDapps: _sessionController.featuredDapps,
           trendingDapps: _sessionController.trendingDapps,
           filteredDapps: _sessionController.filteredDapps,
           categories: _sessionController.categories,
+          trendingTokens: _trendingTokens,
+          loadingTrendingTokens: _loadingTrendingTokens,
+          trendingTokensError: _trendingTokensError,
           loading: _sessionController.loadingCatalog,
-          error: _sessionController.catalogError,
-          onRefresh: () => _sessionController.loadCatalog(forceRefresh: true),
-          onOpenDapp: _sessionController.openDapp,
+          error: _sessionController.catalogError == null
+              ? null
+              : l.discoverCatalogLoadError,
+          onRefresh: _refreshLandingData,
+          onOpenDapp: (dapp) => _sessionController.openDapp(
+            dapp,
+            invalidLaunchUrlReason: l.discoverInvalidLaunchUrl,
+          ),
         );
+    }
+  }
+
+  Future<void> _refreshLandingData() async {
+    await Future.wait<void>([
+      _sessionController.loadCatalog(forceRefresh: true),
+      _loadTrendingTokens(),
+    ]);
+  }
+
+  Future<void> _loadTrendingTokens() async {
+    if (_loadingTrendingTokens) {
+      return;
+    }
+    setState(() {
+      _loadingTrendingTokens = true;
+      _trendingTokensError = null;
+    });
+    try {
+      final tokens = await _trendingTokenService.fetchTrendingTokens();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _trendingTokens = tokens;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _trendingTokensError = AppErrorUtils.userMessage(
+          error,
+          fallback: AppLocalizations.of(
+            context,
+          ).discoverTrendingTokensLoadError,
+        );
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingTrendingTokens = false;
+        });
+      }
     }
   }
 
@@ -199,9 +266,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       MaterialPageRoute<void>(
         builder: (_) => FeedbackScreen(
           initialCategory: 'dapp_request',
-          initialSubject: 'Discover allowlist request',
-          initialMessage:
-              'Please review this DApp for Owllet Discover.\n\nOrigin: ${state.origin}\nURL: ${state.url}\nReason shown: ${state.reason}',
+          initialSubject: AppLocalizations.of(context).discoverSupportSubject,
+          initialMessage: AppLocalizations.of(
+            context,
+          ).discoverSupportMessage(state.origin, state.url, state.reason),
         ),
       ),
     );

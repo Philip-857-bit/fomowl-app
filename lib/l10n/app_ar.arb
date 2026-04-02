@@ -69,6 +69,63 @@
   "privacyPolicy": "سياسة الخصوصية",
   "termsOfService": "شروط الخدمة",
   "feedback": "ملاحظات",
+  "discoverTitle": "اكتشف تطبيقات DApp",
+  "discoverSearchHint": "ابحث عن تطبيقات DApp أو في الويب",
+  "discoverWebSearchTitle": "بحث DuckDuckGo",
+  "discoverBrowserFallbackTitle": "اكتشف",
+  "discoverCatalogLoadError": "يتعذر تحميل قسم الاكتشاف الآن.",
+  "discoverTrendingTokensLoadError": "يتعذر تحميل الرموز الرائجة الآن.",
+  "discoverBlockedTitle": "تم الحظر في Owllet",
+  "discoverRequestSupport": "طلب دعم",
+  "discoverOpenExternalBrowser": "فتح المتصفح الخارجي",
+  "discoverCancel": "إلغاء",
+  "discoverTrendingTokensTitle": "الرموز الرائجة",
+  "discoverTrendingTokensSubtitle": "تحركات السوق المباشرة من تسعير Owllet.",
+  "discoverFeaturedDappsTitle": "تطبيقات DApp المميزة",
+  "discoverFeaturedDappsSubtitle": "تطبيقات DApp منسقة ومعتمدة للوصول إلى محفظة Owllet.",
+  "discoverTrendingDappsTitle": "الرائجة",
+  "discoverTrendingDappsSubtitle": "وجهات شائعة ضمن القائمة المسموح بها.",
+  "discoverCategoriesTitle": "الفئات",
+  "discoverCategoriesSubtitle": "فئات منسقة لتطبيقات DApp المعتمدة والمفعّل فيها الوصول إلى المحفظة.",
+  "discoverAllApprovedDappsTitle": "كل تطبيقات DApp المعتمدة",
+  "discoverAllApprovedDappsNoMatches": "لم يتم العثور على تطبيقات DApp مطابقة لبحثك.",
+  "discoverAllApprovedDappsCount": "{count} وجهات مدرجة في القائمة المسموح بها.",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "تحقق KYC لمرة واحدة",
+  "discoverCashInTitle": "إيداع",
+  "discoverCashInDescription": "اشترِ العملات الرقمية أو أضف أموالًا عندما يصبح مسار الإيداع جاهزًا.",
+  "discoverGoLabel": "اذهب",
+  "discoverNoTrendingTokens": "لا توجد رموز رائجة متاحة الآن.",
+  "discoverManualInputInvalid": "أدخل موقعًا أو عبارة بحث صالحة.",
+  "discoverInvalidLaunchUrl": "رابط تشغيل تطبيق DApp غير صالح.",
+  "discoverUnsupportedScheme": "هذا المخطط غير مدعوم في المتصفح داخل التطبيق.",
+  "discoverBlockedReason": "حاول هذا الموقع الوصول إلى واجهات برمجة محفظة Owllet عبر {trigger}، لكن هذا النطاق غير معتمد للوصول إلى المحفظة داخل التطبيق.",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "الوصول إلى مزود المحفظة",
+  "discoverSupportSubject": "طلب إدراج في Discover",
+  "discoverSupportMessage": "يرجى مراجعة تطبيق DApp هذا لقسم Discover في Owllet.\n\nالنطاق: {origin}\nالرابط: {url}\nسبب الحظر: {reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "المنصات",
+  "discoverCategoryDefi": "التمويل اللامركزي",
+  "discoverCategorySwap": "المبادلات",
+  "discoverCategoryLending": "الإقراض",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "السوق",
+  "discoverCategoryCollectibles": "المقتنيات",
   "joinOurCommunity": "انضم إلى مجتمعنا",
   "resetApp": "إعادة تعيين التطبيق",
   "noNftsYet": "لا يوجد NFTs بعد",
@@ -257,6 +314,7 @@
   "feedbackCategoryBug": "تقرير الأخطاء",
   "feedbackCategoryFeature": "طلب الميزة",
   "feedbackCategoryDesign": "ردود الفعل التصميم",
+  "feedbackCategoryDappRequest": "??? DApp",
   "feedbackSubjectHint": "ملخص قصير",
   "feedbackMessageHint": "أخبرنا بما حدث أو ما تحتاجه",
   "feedbackEmailHint": "you@example.com",
@@ -355,9 +413,25 @@
   "rewardsEarned": "المكافآت المكتسبة",
   "referredUsers": "المستخدمون المُحالون",
   "referredUsersCount": "{count} المستخدمين",
+  "claimableRewards": "المكافآت القابلة للمطالبة",
+  "claimReferralRewards": "استلام مكافآت الإحالة",
+  "referralPayoutsUnavailable": "مدفوعات الإحالة غير متاحة بعد.",
+  "referralClaimThreshold": "الحد الأدنى للمطالبة: ${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "تم إرسال مكافأة إحالة بقيمة ${amount} إلى محفظتك",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "أضف الإحالة",
   "enterReferralCode": "أدخل رمز الإحالة",
   "unableToLoadReferrals": "غير قادر على تحميل الإحالات",
+  "unableToClaimReferralRewards": "يتعذر استلام مكافآت الإحالة",
   "enterReferralCodePrompt": "أدخل رمز الإحالة",
   "ownReferralCodeError": "لا يمكنك استخدام رمز الإحالة الخاص بك",
   "referralAdded": "تمت إضافة الإحالة",
@@ -525,6 +599,8 @@
   "networkLabel": "الشبكة",
   "noNotificationsYet": "لا توجد إشعارات بعد",
   "availableBalance": "الرصيد المتاح",
+  "totalNetWorth": "إجمالي صافي الثروة",
+  "portfolio": "المحفظة",
   "history": "السجل",
   "followSocialhq": "تابع @fomowlhq على X للحصول على التحديثات",
   "socialhqHandle": "x.com/fomowlhq"

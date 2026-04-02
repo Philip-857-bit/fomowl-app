@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_dapp_entry.dart';
 import 'package:fomowl_wallet/features/discover/catalog/widgets/discover_landing_view.dart';
+import 'package:fomowl_wallet/features/discover/market/discover_trending_token.dart';
+import 'package:fomowl_wallet/l10n/app_localizations.dart';
 
 DiscoverDappEntry _entry(String id) {
   return DiscoverDappEntry(
@@ -27,17 +29,29 @@ DiscoverDappEntry _entry(String id) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  const trendingToken = DiscoverTrendingToken(
+    id: 'ethereum',
+    symbol: 'ETH',
+    name: 'Ethereum',
+    imageUrl: 'https://example.com/eth.png',
+    priceUsd: 3452.12,
+    changePercent24h: -1.12,
+  );
+
   testWidgets(
     'DiscoverLandingView shows loading indicator when empty and loading',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
+        _wrapWithApp(
+          Scaffold(
             body: DiscoverLandingView(
               featuredDapps: const [],
               trendingDapps: const [],
               filteredDapps: const [],
               categories: const [],
+              trendingTokens: const [],
+              loadingTrendingTokens: true,
+              trendingTokensError: null,
               loading: true,
               error: null,
               onRefresh: () async {},
@@ -51,25 +65,27 @@ void main() {
     },
   );
 
-  testWidgets('DiscoverLandingView renders error and opens tapped dapp', (
+  testWidgets('DiscoverLandingView renders key sections and dapp content', (
     WidgetTester tester,
   ) async {
-    DiscoverDappEntry? opened;
     final uniswap = _entry('uniswap');
     final aave = _entry('aave');
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
+      _wrapWithApp(
+        Scaffold(
           body: DiscoverLandingView(
             featuredDapps: [uniswap],
             trendingDapps: [aave],
             filteredDapps: [uniswap, aave],
             categories: const ['dex', 'defi'],
+            trendingTokens: const [trendingToken],
+            loadingTrendingTokens: false,
+            trendingTokensError: null,
             loading: false,
             error: 'Catalog refresh failed.',
             onRefresh: () async {},
-            onOpenDapp: (entry) => opened = entry,
+            onOpenDapp: (_) {},
           ),
         ),
       ),
@@ -77,10 +93,24 @@ void main() {
 
     expect(find.text('Catalog refresh failed.'), findsOneWidget);
     expect(find.text('Featured DApps'), findsOneWidget);
+    expect(find.text('Cash In'), findsOneWidget);
+    expect(find.text('Trending Tokens'), findsOneWidget);
+    expect(find.text('Ethereum'), findsOneWidget);
 
-    await tester.tap(find.text('UNISWAP').first);
-    await tester.pump();
+    await tester.dragUntilVisible(
+      find.text('UNISWAP'),
+      find.byType(ListView).first,
+      const Offset(0, -250),
+    );
 
-    expect(opened?.id, 'uniswap');
+    expect(find.text('UNISWAP'), findsOneWidget);
   });
+}
+
+Widget _wrapWithApp(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
 }

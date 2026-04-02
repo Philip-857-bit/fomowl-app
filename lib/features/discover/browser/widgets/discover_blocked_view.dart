@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
+import '../../../../l10n/app_localizations.dart';
 import '../blocked_navigation_state.dart';
 
 class DiscoverBlockedView extends StatelessWidget {
@@ -20,6 +21,7 @@ class DiscoverBlockedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -48,7 +50,7 @@ class DiscoverBlockedView extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                'Blocked in Owllet',
+                l.discoverBlockedTitle,
                 style: GoogleFonts.outfit(
                   color: Colors.white,
                   fontSize: 24,
@@ -81,7 +83,7 @@ class DiscoverBlockedView extends StatelessWidget {
                     backgroundColor: AppColors.accentRed,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Request support'),
+                  child: Text(l.discoverRequestSupport),
                 ),
               ),
               const SizedBox(height: 10),
@@ -89,7 +91,7 @@ class DiscoverBlockedView extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: onOpenExternal,
-                  child: const Text('Open external browser'),
+                  child: Text(l.discoverOpenExternalBrowser),
                 ),
               ),
               const SizedBox(height: 8),
@@ -97,7 +99,7 @@ class DiscoverBlockedView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: TextButton(
                   onPressed: onCancel,
-                  child: const Text('Cancel'),
+                  child: Text(l.discoverCancel),
                 ),
               ),
             ],

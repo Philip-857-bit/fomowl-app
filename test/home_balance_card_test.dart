@@ -14,6 +14,7 @@ void main() {
     WidgetTester tester, {
     required HomePortfolioMetrics metrics,
     bool isBalanceVisible = true,
+    String formattedBalance = '\$222.62',
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -21,7 +22,8 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: BalanceCard(
-            formattedBalance: '\$222.62',
+            titleText: 'TOTAL NET WORTH',
+            formattedBalance: formattedBalance,
             portfolioMetrics: metrics,
             isBalanceVisible: isBalanceVisible,
             isLoadingBalances: false,
@@ -48,6 +50,12 @@ void main() {
 
     final textWidget = tester.widget<Text>(find.text('+\$12.34 (+5.67%)'));
     expect(textWidget.style?.color, AppColors.success);
+  });
+
+  testWidgets('renders the provided title text', (tester) async {
+    await pumpCard(tester, metrics: HomePortfolioMetrics.zero());
+
+    expect(find.text('TOTAL NET WORTH'), findsOneWidget);
   });
 
   testWidgets('renders negative portfolio change', (tester) async {
@@ -101,5 +109,22 @@ void main() {
 
     final textWidget = tester.widget<Text>(find.text('\$0.00 (0.00%)'));
     expect(textWidget.style?.color, Colors.white.withValues(alpha: 0.72));
+  });
+
+  testWidgets('renders the full grouped balance without compact suffixes', (
+    tester,
+  ) async {
+    await pumpCard(
+      tester,
+      formattedBalance: '\$1,090.00',
+      metrics: HomePortfolioMetrics(
+        totalBalanceUsd: Decimal.parse('1090'),
+        changeAmountUsd24h: Decimal.parse('12.34'),
+        changePercent24h: 1.14,
+      ),
+    );
+
+    expect(find.text('\$1,090.00'), findsOneWidget);
+    expect(find.text('\$1.09K'), findsNothing);
   });
 }

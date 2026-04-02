@@ -216,6 +216,132 @@ class AppLocalizationsZh extends AppLocalizations {
   String get feedback => '反馈';
 
   @override
+  String get discoverTitle => '发现 DApp';
+
+  @override
+  String get discoverSearchHint => '搜索 DApp 或网页';
+
+  @override
+  String get discoverWebSearchTitle => 'DuckDuckGo 搜索';
+
+  @override
+  String get discoverBrowserFallbackTitle => '发现';
+
+  @override
+  String get discoverCatalogLoadError => '暂时无法加载 Discover。';
+
+  @override
+  String get discoverTrendingTokensLoadError => '暂时无法加载热门代币。';
+
+  @override
+  String get discoverBlockedTitle => '已在 Owllet 中拦截';
+
+  @override
+  String get discoverRequestSupport => '请求支持';
+
+  @override
+  String get discoverOpenExternalBrowser => '在外部浏览器中打开';
+
+  @override
+  String get discoverCancel => '取消';
+
+  @override
+  String get discoverTrendingTokensTitle => '热门代币';
+
+  @override
+  String get discoverTrendingTokensSubtitle => '来自 Owllet 定价的实时市场动态。';
+
+  @override
+  String get discoverFeaturedDappsTitle => '精选 DApp';
+
+  @override
+  String get discoverFeaturedDappsSubtitle => '已为 Owllet 钱包访问批准的精选 DApp。';
+
+  @override
+  String get discoverTrendingDappsTitle => '热门';
+
+  @override
+  String get discoverTrendingDappsSubtitle => '热门的白名单目标站点。';
+
+  @override
+  String get discoverCategoriesTitle => '分类';
+
+  @override
+  String get discoverCategoriesSubtitle => '为已批准的钱包可用 DApp 精选的分类。';
+
+  @override
+  String get discoverAllApprovedDappsTitle => '所有已批准的 DApp';
+
+  @override
+  String get discoverAllApprovedDappsNoMatches => '没有 DApp 与你的搜索匹配。';
+
+  @override
+  String discoverAllApprovedDappsCount(Object count) {
+    return '$count 个白名单目标。';
+  }
+
+  @override
+  String get discoverCashInBadge => '一次性 KYC';
+
+  @override
+  String get discoverCashInTitle => '入金';
+
+  @override
+  String get discoverCashInDescription => '当充值流程就绪后即可购买加密货币或转入资金。';
+
+  @override
+  String get discoverGoLabel => '前往';
+
+  @override
+  String get discoverNoTrendingTokens => '当前没有可用的热门代币。';
+
+  @override
+  String get discoverManualInputInvalid => '请输入有效的网站或搜索词。';
+
+  @override
+  String get discoverInvalidLaunchUrl => 'DApp 启动链接无效。';
+
+  @override
+  String get discoverUnsupportedScheme => '应用内浏览器不支持这种网站协议。';
+
+  @override
+  String discoverBlockedReason(Object trigger) {
+    return '此网站尝试通过 $trigger 访问 Owllet 钱包 API，但该来源未获批准在应用内访问钱包。';
+  }
+
+  @override
+  String get discoverWalletApiAccessTrigger => '钱包提供程序访问';
+
+  @override
+  String get discoverSupportSubject => 'Discover 白名单请求';
+
+  @override
+  String discoverSupportMessage(Object origin, Object url, Object reason) {
+    return '请审核此 DApp 是否可加入 Owllet Discover。\n\n来源：$origin\nURL：$url\n显示原因：$reason';
+  }
+
+  @override
+  String get discoverCategoryDex => '交易所';
+
+  @override
+  String get discoverCategoryDefi => 'DeFi';
+
+  @override
+  String get discoverCategorySwap => '兑换';
+
+  @override
+  String get discoverCategoryLending => '借贷';
+
+  @override
+  String get discoverCategoryNft => 'NFT';
+
+  @override
+  String get discoverCategoryMarketplace => '市场';
+
+  @override
+  String get discoverCategoryCollectibles => '收藏品';
+
+  @override
   String get joinOurCommunity => '加入社区';
 
   @override
@@ -707,6 +833,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get feedbackCategoryDesign => '设计反馈';
 
   @override
+  String get feedbackCategoryDappRequest => 'DApp ??';
+
+  @override
   String get feedbackSubjectHint => '简要概述';
 
   @override
@@ -1016,11 +1145,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get rewardsEarned => '已获得奖励';
 
   @override
+  String get claimableRewards => '可领取奖励';
+
+  @override
   String get referredUsers => '已推荐用户';
 
   @override
   String referredUsersCount(Object count) {
     return '$count 位用户';
+  }
+
+  @override
+  String get claimReferralRewards => '领取推荐奖励';
+
+  @override
+  String get referralPayoutsUnavailable => '推荐奖励发放暂不可用。';
+
+  @override
+  String referralClaimThreshold(Object amount) {
+    return '最低可领取金额：\$$amount';
+  }
+
+  @override
+  String referralClaimSuccess(Object amount) {
+    return '价值 \$$amount 的推荐奖励已发送到你的钱包';
   }
 
   @override
@@ -1031,6 +1179,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get unableToLoadReferrals => '无法加载推荐信息';
+
+  @override
+  String get unableToClaimReferralRewards => '无法领取推荐奖励';
 
   @override
   String get enterReferralCodePrompt => '请输入推荐码';
@@ -1562,6 +1713,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get availableBalance => '可用余额';
+
+  @override
+  String get totalNetWorth => '净资产总额';
+
+  @override
+  String get portfolio => '投资组合';
 
   @override
   String get history => '历史';

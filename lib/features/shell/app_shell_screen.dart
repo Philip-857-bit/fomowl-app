@@ -25,7 +25,12 @@ class _AppShellScreenState extends State<AppShellScreen> {
       return;
     }
     _appliedInitialArgs = true;
-    final initialIndex = ModalRoute.of(context)?.settings.arguments as int?;
+    final args = ModalRoute.of(context)?.settings.arguments;
+    final initialIndex = switch (args) {
+      int value => value,
+      String value => int.tryParse(value),
+      _ => null,
+    };
     if (initialIndex != null) {
       context.read<AppShellController>().selectIndex(initialIndex);
     }

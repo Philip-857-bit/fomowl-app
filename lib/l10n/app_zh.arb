@@ -69,6 +69,63 @@
   "privacyPolicy": "隐私政策",
   "termsOfService": "服务条款",
   "feedback": "反馈",
+  "discoverTitle": "发现 DApp",
+  "discoverSearchHint": "搜索 DApp 或网页",
+  "discoverWebSearchTitle": "DuckDuckGo 搜索",
+  "discoverBrowserFallbackTitle": "发现",
+  "discoverCatalogLoadError": "暂时无法加载 Discover。",
+  "discoverTrendingTokensLoadError": "暂时无法加载热门代币。",
+  "discoverBlockedTitle": "已在 Owllet 中拦截",
+  "discoverRequestSupport": "请求支持",
+  "discoverOpenExternalBrowser": "在外部浏览器中打开",
+  "discoverCancel": "取消",
+  "discoverTrendingTokensTitle": "热门代币",
+  "discoverTrendingTokensSubtitle": "来自 Owllet 定价的实时市场动态。",
+  "discoverFeaturedDappsTitle": "精选 DApp",
+  "discoverFeaturedDappsSubtitle": "已为 Owllet 钱包访问批准的精选 DApp。",
+  "discoverTrendingDappsTitle": "热门",
+  "discoverTrendingDappsSubtitle": "热门的白名单目标站点。",
+  "discoverCategoriesTitle": "分类",
+  "discoverCategoriesSubtitle": "为已批准的钱包可用 DApp 精选的分类。",
+  "discoverAllApprovedDappsTitle": "所有已批准的 DApp",
+  "discoverAllApprovedDappsNoMatches": "没有 DApp 与你的搜索匹配。",
+  "discoverAllApprovedDappsCount": "{count} 个白名单目标。",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "一次性 KYC",
+  "discoverCashInTitle": "入金",
+  "discoverCashInDescription": "当充值流程就绪后即可购买加密货币或转入资金。",
+  "discoverGoLabel": "前往",
+  "discoverNoTrendingTokens": "当前没有可用的热门代币。",
+  "discoverManualInputInvalid": "请输入有效的网站或搜索词。",
+  "discoverInvalidLaunchUrl": "DApp 启动链接无效。",
+  "discoverUnsupportedScheme": "应用内浏览器不支持这种网站协议。",
+  "discoverBlockedReason": "此网站尝试通过 {trigger} 访问 Owllet 钱包 API，但该来源未获批准在应用内访问钱包。",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "钱包提供程序访问",
+  "discoverSupportSubject": "Discover 白名单请求",
+  "discoverSupportMessage": "请审核此 DApp 是否可加入 Owllet Discover。\n\n来源：{origin}\nURL：{url}\n显示原因：{reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "交易所",
+  "discoverCategoryDefi": "DeFi",
+  "discoverCategorySwap": "兑换",
+  "discoverCategoryLending": "借贷",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "市场",
+  "discoverCategoryCollectibles": "收藏品",
   "joinOurCommunity": "加入社区",
   "resetApp": "重置应用",
   "noNftsYet": "暂无 NFT",
@@ -409,6 +466,7 @@
   "feedbackCategoryBug": "Bug 反馈",
   "feedbackCategoryFeature": "功能建议",
   "feedbackCategoryDesign": "设计反馈",
+  "feedbackCategoryDappRequest": "DApp ??",
   "feedbackSubjectHint": "简要概述",
   "feedbackMessageHint": "请告诉我们发生了什么，或你需要什么帮助",
   "feedbackEmailHint": "you@example.com",
@@ -507,9 +565,25 @@
   "rewardsEarned": "已获得奖励",
   "referredUsers": "已推荐用户",
   "referredUsersCount": "{count} 位用户",
+  "claimableRewards": "可领取奖励",
+  "claimReferralRewards": "领取推荐奖励",
+  "referralPayoutsUnavailable": "推荐奖励发放暂不可用。",
+  "referralClaimThreshold": "最低可领取金额：${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "价值 ${amount} 的推荐奖励已发送到你的钱包",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "添加推荐码",
   "enterReferralCode": "输入推荐码",
   "unableToLoadReferrals": "无法加载推荐信息",
+  "unableToClaimReferralRewards": "无法领取推荐奖励",
   "enterReferralCodePrompt": "请输入推荐码",
   "ownReferralCodeError": "你不能使用自己的推荐码",
   "referralAdded": "推荐码已添加",
@@ -528,6 +602,8 @@
   "backupSeedPhraseIntro": "你的 12 个单词恢复短语是找回钱包的唯一方式，如果你丢失手机或忘记密码。",
   "noNotificationsYet": "暂无通知",
   "availableBalance": "可用余额",
+  "totalNetWorth": "净资产总额",
+  "portfolio": "投资组合",
   "history": "历史",
   "followSocialhq": "在X上关注@fomowlhq获取即时更新",
   "socialhqHandle": "x.com/fomowlhq"

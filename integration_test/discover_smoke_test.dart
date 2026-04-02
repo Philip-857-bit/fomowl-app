@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_dapp_entry.dart';
 import 'package:fomowl_wallet/features/discover/catalog/widgets/discover_landing_view.dart';
+import 'package:fomowl_wallet/features/discover/market/discover_trending_token.dart';
 import 'package:integration_test/integration_test.dart';
 
 void main() {
@@ -30,6 +31,14 @@ void main() {
       createdAt: '2026-03-28T00:00:00Z',
       updatedAt: '2026-03-28T00:00:00Z',
     );
+    const trendingToken = DiscoverTrendingToken(
+      id: 'ethereum',
+      symbol: 'ETH',
+      name: 'Ethereum',
+      imageUrl: 'https://example.com/eth.png',
+      priceUsd: 3452.12,
+      changePercent24h: -1.12,
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -39,6 +48,9 @@ void main() {
             trendingDapps: [entry],
             filteredDapps: [entry],
             categories: const ['dex', 'defi'],
+            trendingTokens: const [trendingToken],
+            loadingTrendingTokens: false,
+            trendingTokensError: null,
             loading: false,
             error: null,
             onRefresh: () async {},
@@ -51,6 +63,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Featured DApps'), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text('Uniswap'),
+      find.byType(ListView).first,
+      const Offset(0, -250),
+    );
     expect(find.text('Uniswap'), findsWidgets);
 
     await tester.tap(find.text('Uniswap').first);

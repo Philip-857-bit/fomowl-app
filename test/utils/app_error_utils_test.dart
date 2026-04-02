@@ -91,5 +91,24 @@ void main() {
       // Body-level denylist fires before extraction — returns main fallback
       expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
     });
+    test('returns fallback when backend message exposes a remote URL', () {
+      const body =
+          '{"message": "Request to https://fomowl-backend.onrender.com/api failed"}';
+      expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
+    });
+  });
+
+  group('AppErrorUtils.userMessage', () {
+    const fallback = 'Something went wrong.';
+
+    test('returns fallback when raw error exposes backend URL', () {
+      expect(
+        AppErrorUtils.userMessage(
+          'https://fomowl-backend.onrender.com/api/swap/quote failed',
+          fallback: fallback,
+        ),
+        fallback,
+      );
+    });
   });
 }

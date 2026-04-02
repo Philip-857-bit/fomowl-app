@@ -7,9 +7,11 @@ import '../../l10n/app_localizations.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/nft_service.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/app_error_utils.dart';
+import 'widgets/nft_detail_sheet.dart';
 
 /// NFT Gallery Screen
-/// Shows NFTs owned by the wallet on the active chain
+/// Shows NFTs owned by the wallet across supported chains.
 class NftGalleryScreen extends StatefulWidget {
   const NftGalleryScreen({super.key});
 
@@ -75,7 +77,10 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = l.failedToLoadNftsWithError(e.toString());
+        _errorMessage = AppErrorUtils.userMessage(
+          e,
+          fallback: l.failedToLoadNftsTitle,
+        );
       });
     }
   }
@@ -308,95 +313,113 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       itemCount: _nfts.length,
       itemBuilder: (context, index) {
         final nft = _nfts[index];
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
             borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: nft.imageUrl.isNotEmpty
-                        ? Image.network(
-                            nft.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Center(
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    size: 48,
-                                    color: Colors.white.withValues(alpha: 0.15),
-                                  ),
+            onTap: () => _showNftDetails(nft),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.04),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(16),
+                        ),
+                        child: nft.imageUrl.isNotEmpty
+                            ? Image.network(
+                                nft.imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Center(
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        size: 48,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.15,
+                                        ),
+                                      ),
+                                    ),
+                              )
+                            : Center(
+                                child: Icon(
+                                  Icons.image,
+                                  size: 48,
+                                  color: Colors.white.withValues(alpha: 0.15),
                                 ),
-                          )
-                        : Center(
-                            child: Icon(
-                              Icons.image,
-                              size: 48,
-                              color: Colors.white.withValues(alpha: 0.15),
-                            ),
+                              ),
+                      ),
+                    ),
+                  ),
+                  if (nft.isProjectNft)
+                    Container(
+                      width: double.infinity,
+                      color: AppColors.accentRed,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      alignment: Alignment.center,
+                      child: Text(
+                        AppLocalizations.of(context).officialProjectNft,
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nft.name,
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
-                  ),
-                ),
-              ),
-              if (nft.isProjectNft)
-                Container(
-                  width: double.infinity,
-                  color: AppColors.accentRed,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  alignment: Alignment.center,
-                  child: Text(
-                    AppLocalizations.of(context).officialProjectNft,
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${nft.count}x - ${nft.chainName}',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.4),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nft.name,
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${nft.count}x - ${nft.chainName}',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        color: Colors.white.withValues(alpha: 0.4),
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showNftDetails(NftAsset nft) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => NftDetailSheet(nft: nft),
     );
   }
 }

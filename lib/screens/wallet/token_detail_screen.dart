@@ -420,12 +420,8 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                             TokenActionData(
                               icon: Icons.sync_alt_rounded,
                               label: 'Swap',
-                              onTap: () => Navigator.pushNamedAndRemoveUntil(
-                                context,
-                                '/shell',
-                                (route) => false,
-                                arguments: 1,
-                              ),
+                              onTap: () =>
+                                  Navigator.pushNamed(context, '/swap'),
                             ),
                           ],
                         ),

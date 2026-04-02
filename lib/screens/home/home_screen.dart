@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
+import '../../features/shell/app_shell_controller.dart';
 import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
@@ -22,8 +23,10 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
+import 'home_portfolio_data.dart';
 import 'home_portfolio_metrics.dart';
-import 'home_portfolio_metrics_calculator.dart';
+import 'home_portfolio_repository.dart';
+import 'home_portfolio_snapshot_service.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/connectivity_banner.dart';
 import 'widgets/home_top_bar.dart';
@@ -56,13 +59,19 @@ class _HomeScreenState extends State<HomeScreen> {
       PushNotificationRegistrationService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   final HomeSnapshotService _snapshotService = HomeSnapshotService();
+  final HomePortfolioRepository _portfolioRepository =
+      const HomePortfolioRepository();
+  final HomePortfolioSnapshotService _portfolioSnapshotService =
+      HomePortfolioSnapshotService();
   BlockchainService? _blockchain;
 
   String? _walletName;
   bool _isLoading = true;
   bool _isLoadingBalances = false;
+  bool _isLoadingPortfolio = false;
   bool _isLoadingNfts = false;
   HomePortfolioMetrics _portfolioMetrics = HomePortfolioMetrics.zero();
+  List<HomePortfolioSection> _portfolioSections = const [];
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
@@ -84,10 +93,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _tokenVisibilitySubscription = _tokenVisibilityService.changes.listen((
       change,
     ) {
-      if (!mounted || change.chainId != _lastChainId) {
+      if (!mounted) {
         return;
       }
-      setState(() => _hiddenTokenKeys = change.hiddenTokens);
+      if (change.chainId == _lastChainId) {
+        setState(() => _hiddenTokenKeys = change.hiddenTokens);
+      }
+      unawaited(_reloadPortfolioFromCachedTokens());
     });
     _notificationEventSubscription = AppNotificationService().events.listen((
       event,
@@ -169,9 +181,141 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     final nextTokens = List<Token>.from(tokens);
     _tokens = nextTokens;
-    _portfolioMetrics = HomePortfolioMetricsCalculator.fromTokens(nextTokens);
     _lastTokenSignature = _buildTokenSignature(nextTokens);
     _isUsingCachedData = isUsingCachedData;
+  }
+
+  void _applyPortfolioData(HomePortfolioData data) {
+    _portfolioSections = List<HomePortfolioSection>.from(data.sections);
+    _portfolioMetrics = data.metrics;
+  }
+
+  HomePortfolioData _fallbackPortfolioData() {
+    if (_tokens.isEmpty || _lastChainId == null || _blockchain == null) {
+      return HomePortfolioData.empty();
+    }
+
+    final chain = _blockchain!.allChains.firstWhere(
+      (candidate) => candidate.chainId == _lastChainId,
+      orElse: () => _blockchain!.activeChain,
+    );
+    final visibleTokens =
+        _tokens.where((token) => !_isTokenHidden(token)).toList()..sort(
+          (left, right) =>
+              right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
+        );
+    if (visibleTokens.isEmpty) {
+      return HomePortfolioData.empty();
+    }
+
+    return HomePortfolioData.fromSections([
+      HomePortfolioSection(chain: chain, tokens: visibleTokens),
+    ]);
+  }
+
+  Future<void> _fetchPortfolioData(
+    String walletAddress, {
+    bool forceRefresh = false,
+  }) async {
+    if (!mounted || walletAddress.isEmpty) {
+      return;
+    }
+
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    setState(() => _isLoadingPortfolio = true);
+
+    try {
+      final data = await _portfolioRepository.loadPortfolio(
+        walletAddress: walletAddress,
+        chains: blockchain.allChains,
+        fetchTokens: (chainId) => blockchain.fetchWalletTokens(
+          walletAddress,
+          chainId: chainId,
+          forceRefresh: forceRefresh,
+        ),
+        loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _applyPortfolioData(data);
+        _isLoadingPortfolio = false;
+      });
+
+      if (data.sections.isNotEmpty) {
+        await _portfolioSnapshotService.saveSnapshot(
+          HomeAggregatedPortfolioSnapshot(
+            walletAddress: walletAddress,
+            sections: data.sections,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('Error fetching portfolio data: $error');
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isLoadingPortfolio = false);
+    }
+  }
+
+  Future<void> _reloadPortfolioFromCachedTokens() async {
+    final blockchain = _blockchain;
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (!mounted ||
+        blockchain == null ||
+        walletAddress == null ||
+        walletAddress.isEmpty) {
+      return;
+    }
+
+    final data = await _portfolioRepository.loadPortfolio(
+      walletAddress: walletAddress,
+      chains: blockchain.allChains,
+      fetchTokens: (chainId) async =>
+          blockchain.getCachedWalletTokens(walletAddress, chainId: chainId),
+      loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _applyPortfolioData(
+        data.sections.isNotEmpty ? data : _fallbackPortfolioData(),
+      );
+    });
+  }
+
+  Future<void> _applyPortfolioSnapshot(String walletAddress) async {
+    final snapshot = await _portfolioSnapshotService.loadSnapshot(
+      walletAddress,
+    );
+    if (!mounted) {
+      return;
+    }
+
+    if (snapshot != null) {
+      setState(() {
+        _applyPortfolioData(
+          HomePortfolioData.fromSections(
+            List<HomePortfolioSection>.from(snapshot.sections),
+          ),
+        );
+      });
+      return;
+    }
+
+    if (_portfolioSections.isEmpty) {
+      setState(() {
+        _applyPortfolioData(_fallbackPortfolioData());
+      });
+    }
   }
 
   Future<void> _checkConnectivity() async {
@@ -240,6 +384,8 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
+        await _applyPortfolioSnapshot(address);
+
         if (mounted) {
           final l = AppLocalizations.of(context);
           setState(() {
@@ -251,12 +397,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
         debugPrint('[OWLLET] Triggering background data sync...');
         unawaited(_fetchRealBalances(address));
+        unawaited(_fetchPortfolioData(address, forceRefresh: true));
         _scheduleDeferredHomeTasks(address);
       } else {
         if (mounted) {
           final l = AppLocalizations.of(context);
           setState(() {
             _walletName = name ?? l.mainWallet;
+            _applyPortfolioData(HomePortfolioData.empty());
             _isLoading = false;
           });
         }
@@ -266,7 +414,12 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint('[OWLLET] ERROR in _loadWalletData: $e');
       debugPrint('[OWLLET] STACKTRACE: $stack');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          if (_portfolioSections.isEmpty) {
+            _applyPortfolioData(_fallbackPortfolioData());
+          }
+        });
       }
     }
   }
@@ -450,6 +603,8 @@ class _HomeScreenState extends State<HomeScreen> {
             timestamp: DateTime.now(),
           ),
         );
+
+        unawaited(_reloadPortfolioFromCachedTokens());
       }
     } catch (e) {
       debugPrint('Error fetching balances: $e');
@@ -495,6 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _replaceDisplayedTokens(nextTokens, isUsingCachedData: false);
       });
       blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
+      unawaited(_reloadPortfolioFromCachedTokens());
       return;
     }
 
@@ -519,7 +675,9 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
+      await _applyPortfolioSnapshot(address);
       _fetchRealBalances(address);
+      unawaited(_fetchPortfolioData(address, forceRefresh: true));
       _scheduleDeferredHomeTasks(address);
     });
   }
@@ -652,6 +810,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final address = await _walletService.getCurrentWalletAddress();
       if (address != null && address.isNotEmpty) {
         unawaited(_fetchRealBalances(address));
+        unawaited(_fetchPortfolioData(address, forceRefresh: true));
       }
     }
   }
@@ -759,10 +918,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             const SizedBox(height: 8),
                             BalanceCard(
+                              titleText: l.totalNetWorth,
                               formattedBalance: _formattedTotalBalance,
                               portfolioMetrics: _portfolioMetrics,
                               isBalanceVisible: _balanceVisible,
-                              isLoadingBalances: _isLoadingBalances,
+                              isLoadingBalances:
+                                  _isLoadingBalances || _isLoadingPortfolio,
                               onToggleVisibility: () => setState(
                                 () => _balanceVisible = !_balanceVisible,
                               ),
@@ -777,20 +938,25 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               onSend: () =>
                                   Navigator.pushNamed(context, '/send-token'),
-                              onSwap: () => Navigator.pushNamedAndRemoveUntil(
-                                context,
-                                '/shell',
-                                (route) => false,
-                                arguments: 1,
-                              ),
+                              onSwap: () {
+                                if (widget.showBottomNavigation) {
+                                  Navigator.pushNamed(context, '/swap');
+                                  return;
+                                }
+                                context.read<AppShellController>().selectTab(
+                                  AppShellTab.swap,
+                                );
+                              },
                             ),
                             const SizedBox(height: 24),
                             SocialBannerCard(onTap: _openSocialLink),
                             const SizedBox(height: 28),
                             TokensSection(
                               tokens: _tokens,
+                              portfolioSections: _portfolioSections,
                               isLoading:
                                   _isLoadingBalances && !_isUsingCachedData,
+                              isLoadingPortfolio: _isLoadingPortfolio,
                               isLoadingNfts: _isLoadingNfts,
                               nftPreview: _nftPreview,
                               hasMoreNfts: _hasMoreNfts,

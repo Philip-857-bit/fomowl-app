@@ -69,6 +69,63 @@
   "privacyPolicy": "Tsarin Sirri",
   "termsOfService": "Sharuɗɗan Sabis",
   "feedback": "Ra'ayi",
+  "discoverTitle": "Gano DApps",
+  "discoverSearchHint": "Nemi DApps ko yanar gizo",
+  "discoverWebSearchTitle": "Binciken DuckDuckGo",
+  "discoverBrowserFallbackTitle": "Gano",
+  "discoverCatalogLoadError": "Ba a iya loda Discover yanzu ba.",
+  "discoverTrendingTokensLoadError": "Ba a iya loda tokunan da ke trending yanzu ba.",
+  "discoverBlockedTitle": "An toshe a Owllet",
+  "discoverRequestSupport": "Nemi tallafi",
+  "discoverOpenExternalBrowser": "Buɗe browser na waje",
+  "discoverCancel": "Soke",
+  "discoverTrendingTokensTitle": "Tokunan da ke trending",
+  "discoverTrendingTokensSubtitle": "Canje-canje na kasuwa kai tsaye daga farashin Owllet.",
+  "discoverFeaturedDappsTitle": "Fitattun DApps",
+  "discoverFeaturedDappsSubtitle": "Zaɓaɓɓun DApps da aka amince da su don shiga walat ɗin Owllet.",
+  "discoverTrendingDappsTitle": "Masu tashe",
+  "discoverTrendingDappsSubtitle": "Shahararrun wuraren da aka amince da su.",
+  "discoverCategoriesTitle": "Rukuni",
+  "discoverCategoriesSubtitle": "Rukunai da aka zaɓa don DApps da aka amince da su masu samun walat.",
+  "discoverAllApprovedDappsTitle": "Dukkan DApps da aka amince da su",
+  "discoverAllApprovedDappsNoMatches": "Babu DApp da ya dace da bincikenka.",
+  "discoverAllApprovedDappsCount": "Wurare {count} da aka amince da su.",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "KYC SAU ƊAYA",
+  "discoverCashInTitle": "Saka kuɗi",
+  "discoverCashInDescription": "Saya crypto ko saka kuɗi da zarar hanyar ajiya ta shirya.",
+  "discoverGoLabel": "Je",
+  "discoverNoTrendingTokens": "Babu tokunan da ke trending a yanzu.",
+  "discoverManualInputInvalid": "Shigar da ingantaccen shafin yanar gizo ko kalmar bincike.",
+  "discoverInvalidLaunchUrl": "URL ɗin ƙaddamar da DApp ba ingantacce ba ne.",
+  "discoverUnsupportedScheme": "Wannan irin hanyar shafin ba a goyon baya a browser na cikin app ba.",
+  "discoverBlockedReason": "Wannan shafin ya yi ƙoƙarin shiga APIs na walat ɗin Owllet ta hanyar {trigger}, amma ba a amince da asalinsa don samun walat a cikin app ba.",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "shigar mai bada walat",
+  "discoverSupportSubject": "Buƙatar allowlist ta Discover",
+  "discoverSupportMessage": "Da fatan za a duba wannan DApp don Owllet Discover.\n\nAsali: {origin}\nURL: {url}\nDalilin da aka nuna: {reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "Musaya",
+  "discoverCategoryDefi": "DeFi",
+  "discoverCategorySwap": "Swaps",
+  "discoverCategoryLending": "Bashi",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "Kasuwar kaya",
+  "discoverCategoryCollectibles": "Abubuwan tarawa",
   "joinOurCommunity": "Shiga cikin Al'ummar mu",
   "resetApp": "Sake Saita App",
   "noNftsYet": "Babu NFT tukuna",
@@ -257,6 +314,7 @@
   "feedbackCategoryBug": "Rahoton Matsala",
   "feedbackCategoryFeature": "Neman Sabon Abu",
   "feedbackCategoryDesign": "Ra'ayi kan Tsari",
+  "feedbackCategoryDappRequest": "Neman DApp",
   "feedbackSubjectHint": "Taƙaitaccen bayani",
   "feedbackMessageHint": "Faɗi mana abin da ya faru ko abin da kake buƙata",
   "feedbackEmailHint": "suna@misali.com",
@@ -355,9 +413,25 @@
   "rewardsEarned": "Ladoyin da Na Samu",
   "referredUsers": "Mutanen da Na Gayyata",
   "referredUsersCount": "Mutane {count}",
+  "claimableRewards": "Ladan da za a iya karɓa",
+  "claimReferralRewards": "Karɓi ladan gayyata",
+  "referralPayoutsUnavailable": "Biyan ladan gayyata bai samu ba tukuna.",
+  "referralClaimThreshold": "Mafi ƙarancin adadin karɓa: ${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "An tura ladan gayyata na ${amount} zuwa walat ɗinka",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "Ƙara Wanda Ya Gayyace Ka",
   "enterReferralCode": "Saka lambar gayyata",
   "unableToLoadReferrals": "An kasa loda mutanen da ka gayyata",
+  "unableToClaimReferralRewards": "An kasa karɓar ladan gayyata",
   "enterReferralCodePrompt": "Saka lambar gayyata",
   "ownReferralCodeError": "Ba zaka iya amfani da lambar ka ba",
   "referralAdded": "An ƙara wanda ya gayyace ka",
@@ -525,6 +599,8 @@
   "networkLabel": "Cibiyar sadarwa",
   "noNotificationsYet": "Babu sanarwa tukuna",
   "availableBalance": "KUƊIN DA AKE DA SU",
+  "totalNetWorth": "JIMILLAR DARAJAR DUKIYA",
+  "portfolio": "Fayil na kadarori",
   "history": "Tarihi",
   "followSocialhq": "Bi @fomowlhq a X don samun sababbin labarai",
   "socialhqHandle": "x.com/fomowlhq"

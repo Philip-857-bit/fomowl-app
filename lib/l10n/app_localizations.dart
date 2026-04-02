@@ -524,6 +524,246 @@ abstract class AppLocalizations {
   /// **'Feedback'**
   String get feedback;
 
+  /// No description provided for @discoverTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover DApps'**
+  String get discoverTitle;
+
+  /// No description provided for @discoverSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search DApps or the web'**
+  String get discoverSearchHint;
+
+  /// No description provided for @discoverWebSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'DuckDuckGo search'**
+  String get discoverWebSearchTitle;
+
+  /// No description provided for @discoverBrowserFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get discoverBrowserFallbackTitle;
+
+  /// No description provided for @discoverCatalogLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load Discover right now.'**
+  String get discoverCatalogLoadError;
+
+  /// No description provided for @discoverTrendingTokensLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load trending tokens right now.'**
+  String get discoverTrendingTokensLoadError;
+
+  /// No description provided for @discoverBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked in Owllet'**
+  String get discoverBlockedTitle;
+
+  /// No description provided for @discoverRequestSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Request support'**
+  String get discoverRequestSupport;
+
+  /// No description provided for @discoverOpenExternalBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open external browser'**
+  String get discoverOpenExternalBrowser;
+
+  /// No description provided for @discoverCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get discoverCancel;
+
+  /// No description provided for @discoverTrendingTokensTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending Tokens'**
+  String get discoverTrendingTokensTitle;
+
+  /// No description provided for @discoverTrendingTokensSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live market movers pulled from Owllet pricing.'**
+  String get discoverTrendingTokensSubtitle;
+
+  /// No description provided for @discoverFeaturedDappsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured DApps'**
+  String get discoverFeaturedDappsTitle;
+
+  /// No description provided for @discoverFeaturedDappsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated DApps approved for Owllet wallet access.'**
+  String get discoverFeaturedDappsSubtitle;
+
+  /// No description provided for @discoverTrendingDappsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get discoverTrendingDappsTitle;
+
+  /// No description provided for @discoverTrendingDappsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular allowlisted destinations.'**
+  String get discoverTrendingDappsSubtitle;
+
+  /// No description provided for @discoverCategoriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get discoverCategoriesTitle;
+
+  /// No description provided for @discoverCategoriesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated categories for approved wallet-enabled DApps.'**
+  String get discoverCategoriesSubtitle;
+
+  /// No description provided for @discoverAllApprovedDappsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All approved DApps'**
+  String get discoverAllApprovedDappsTitle;
+
+  /// No description provided for @discoverAllApprovedDappsNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No DApps matched your search.'**
+  String get discoverAllApprovedDappsNoMatches;
+
+  /// No description provided for @discoverAllApprovedDappsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} allowlisted destinations.'**
+  String discoverAllApprovedDappsCount(Object count);
+
+  /// No description provided for @discoverCashInBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'ONE-TIME KYC'**
+  String get discoverCashInBadge;
+
+  /// No description provided for @discoverCashInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash In'**
+  String get discoverCashInTitle;
+
+  /// No description provided for @discoverCashInDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Buy crypto or move funds in once the deposit flow is ready.'**
+  String get discoverCashInDescription;
+
+  /// No description provided for @discoverGoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Go'**
+  String get discoverGoLabel;
+
+  /// No description provided for @discoverNoTrendingTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'No trending tokens are available right now.'**
+  String get discoverNoTrendingTokens;
+
+  /// No description provided for @discoverManualInputInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid website or search term.'**
+  String get discoverManualInputInvalid;
+
+  /// No description provided for @discoverInvalidLaunchUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'The DApp launch URL is invalid.'**
+  String get discoverInvalidLaunchUrl;
+
+  /// No description provided for @discoverUnsupportedScheme.
+  ///
+  /// In en, this message translates to:
+  /// **'This website scheme is not supported in the in-app browser.'**
+  String get discoverUnsupportedScheme;
+
+  /// No description provided for @discoverBlockedReason.
+  ///
+  /// In en, this message translates to:
+  /// **'This site attempted to access Owllet wallet APIs through {trigger}, but the origin is not approved for in-app wallet access.'**
+  String discoverBlockedReason(Object trigger);
+
+  /// No description provided for @discoverWalletApiAccessTrigger.
+  ///
+  /// In en, this message translates to:
+  /// **'wallet provider access'**
+  String get discoverWalletApiAccessTrigger;
+
+  /// No description provided for @discoverSupportSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover allowlist request'**
+  String get discoverSupportSubject;
+
+  /// No description provided for @discoverSupportMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Please review this DApp for Owllet Discover.\n\nOrigin: {origin}\nURL: {url}\nReason shown: {reason}'**
+  String discoverSupportMessage(Object origin, Object url, Object reason);
+
+  /// No description provided for @discoverCategoryDex.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchanges'**
+  String get discoverCategoryDex;
+
+  /// No description provided for @discoverCategoryDefi.
+  ///
+  /// In en, this message translates to:
+  /// **'DeFi'**
+  String get discoverCategoryDefi;
+
+  /// No description provided for @discoverCategorySwap.
+  ///
+  /// In en, this message translates to:
+  /// **'Swaps'**
+  String get discoverCategorySwap;
+
+  /// No description provided for @discoverCategoryLending.
+  ///
+  /// In en, this message translates to:
+  /// **'Lending'**
+  String get discoverCategoryLending;
+
+  /// No description provided for @discoverCategoryNft.
+  ///
+  /// In en, this message translates to:
+  /// **'NFT'**
+  String get discoverCategoryNft;
+
+  /// No description provided for @discoverCategoryMarketplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Marketplace'**
+  String get discoverCategoryMarketplace;
+
+  /// No description provided for @discoverCategoryCollectibles.
+  ///
+  /// In en, this message translates to:
+  /// **'Collectibles'**
+  String get discoverCategoryCollectibles;
+
   /// No description provided for @joinOurCommunity.
   ///
   /// In en, this message translates to:
@@ -1460,6 +1700,12 @@ abstract class AppLocalizations {
   /// **'Design Feedback'**
   String get feedbackCategoryDesign;
 
+  /// No description provided for @feedbackCategoryDappRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'DApp request'**
+  String get feedbackCategoryDappRequest;
+
   /// No description provided for @feedbackSubjectHint.
   ///
   /// In en, this message translates to:
@@ -2036,6 +2282,12 @@ abstract class AppLocalizations {
   /// **'Rewards Earned'**
   String get rewardsEarned;
 
+  /// No description provided for @claimableRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimable Rewards'**
+  String get claimableRewards;
+
   /// No description provided for @referredUsers.
   ///
   /// In en, this message translates to:
@@ -2047,6 +2299,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} users'**
   String referredUsersCount(Object count);
+
+  /// No description provided for @claimReferralRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim Referral Rewards'**
+  String get claimReferralRewards;
+
+  /// No description provided for @referralPayoutsUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral payouts are not available yet.'**
+  String get referralPayoutsUnavailable;
+
+  /// No description provided for @referralClaimThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum payout: \${amount}'**
+  String referralClaimThreshold(Object amount);
+
+  /// No description provided for @referralClaimSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Referral payout of \${amount} sent to your wallet'**
+  String referralClaimSuccess(Object amount);
 
   /// No description provided for @addReferral.
   ///
@@ -2065,6 +2341,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to load referrals'**
   String get unableToLoadReferrals;
+
+  /// No description provided for @unableToClaimReferralRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to claim referral rewards'**
+  String get unableToClaimReferralRewards;
 
   /// No description provided for @enterReferralCodePrompt.
   ///
@@ -3067,6 +3349,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'AVAILABLE BALANCE'**
   String get availableBalance;
+
+  /// No description provided for @totalNetWorth.
+  ///
+  /// In en, this message translates to:
+  /// **'TOTAL NET WORTH'**
+  String get totalNetWorth;
+
+  /// No description provided for @portfolio.
+  ///
+  /// In en, this message translates to:
+  /// **'Portfolio'**
+  String get portfolio;
 
   /// No description provided for @history.
   ///

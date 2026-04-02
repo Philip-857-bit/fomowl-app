@@ -16,6 +16,7 @@ import '../../services/referral_service.dart';
 import '../../services/wallet_history_service.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../widgets/token_selector_modal.dart';
@@ -722,7 +723,10 @@ class _SwapScreenState extends State<SwapScreen> {
     if (lower.contains('nonce too low')) {
       return 'Transaction nonce is too low. Please wait for pending transactions to finish.';
     }
-    return 'Swap failed: $raw';
+    return AppErrorUtils.userMessage(
+      raw,
+      fallback: 'Swap failed. Please try again.',
+    );
   }
 
   String? _extractGaslessStatusValue(Map<String, dynamic> data) {

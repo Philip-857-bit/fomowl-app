@@ -69,6 +69,63 @@
   "privacyPolicy": "Iwu Nzuzo",
   "termsOfService": "Usoro Ọrụ",
   "feedback": "Nzaghachi",
+  "discoverTitle": "Chọpụta DApps",
+  "discoverSearchHint": "Chọọ DApps ma ọ bụ weebụ",
+  "discoverWebSearchTitle": "Nchọ DuckDuckGo",
+  "discoverBrowserFallbackTitle": "Chọpụta",
+  "discoverCatalogLoadError": "Enweghị ike ibudata Discover ugbu a.",
+  "discoverTrendingTokensLoadError": "Enweghị ike ibudata token ndị na-eme trend ugbu a.",
+  "discoverBlockedTitle": "Egbobiri ya na Owllet",
+  "discoverRequestSupport": "Rịọ nkwado",
+  "discoverOpenExternalBrowser": "Meghee browser dị n'èzí",
+  "discoverCancel": "Kagbuo",
+  "discoverTrendingTokensTitle": "Token ndị na-eme trend",
+  "discoverTrendingTokensSubtitle": "Mmegharị ahịa ozugbo sitere na ọnụahịa Owllet.",
+  "discoverFeaturedDappsTitle": "DApps a họpụtara",
+  "discoverFeaturedDappsSubtitle": "DApps a họpụtara ma kwado ha maka ịnweta wallet Owllet.",
+  "discoverTrendingDappsTitle": "Na-eme trend",
+  "discoverTrendingDappsSubtitle": "Ebe ndị a ma ama dị na allowlist.",
+  "discoverCategoriesTitle": "Ụdị",
+  "discoverCategoriesSubtitle": "Ụdị a họpụtara maka DApps akwadoro nwere ohere ịnweta wallet.",
+  "discoverAllApprovedDappsTitle": "DApps niile akwadoro",
+  "discoverAllApprovedDappsNoMatches": "Ọ nweghị DApp dabara na nchọ gị.",
+  "discoverAllApprovedDappsCount": "Ebe {count} dị na allowlist.",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "KYC OTU OGE",
+  "discoverCashInTitle": "Tinye ego",
+  "discoverCashInDescription": "Zụta crypto ma ọ bụ tinye ego mgbe usoro ntinye ego dị njikere.",
+  "discoverGoLabel": "Gaa",
+  "discoverNoTrendingTokens": "Enweghị token ndị na-eme trend ugbu a.",
+  "discoverManualInputInvalid": "Tinye weebụsaịtị ma ọ bụ okwu nchọ ziri ezi.",
+  "discoverInvalidLaunchUrl": "URL mmalite DApp ezighi ezi.",
+  "discoverUnsupportedScheme": "A naghị akwado ụdị adreesị weebụ a na browser nke dị n'ime app.",
+  "discoverBlockedReason": "Saịtị a nwara ịnweta API wallet Owllet site na {trigger}, mana enweghị nkwado maka origin a iji nweta wallet n'ime app.",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "nnweta onye na-eweta wallet",
+  "discoverSupportSubject": "Arịrịọ allowlist Discover",
+  "discoverSupportMessage": "Biko nyochaa DApp a maka Owllet Discover.\n\nOrigin: {origin}\nURL: {url}\nIhe e gosiri: {reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "Mgbanwe ego",
+  "discoverCategoryDefi": "DeFi",
+  "discoverCategorySwap": "Swaps",
+  "discoverCategoryLending": "Ịgbazinye ego",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "Ahịa",
+  "discoverCategoryCollectibles": "Ihe anakọtara",
   "joinOurCommunity": "Soro anyị n'otu",
   "resetApp": "Tọgharịa App",
   "noNftsYet": "Enweghị NFT mbụ",
@@ -257,6 +314,7 @@
   "feedbackCategoryBug": "Akụkọ Maka Nsogbu",
   "feedbackCategoryFeature": "Ihe Ị Chọrọ ka A Tinye",
   "feedbackCategoryDesign": "Maka Otú Ihe Dị",
+  "feedbackCategoryDappRequest": "Ar?r?? DApp",
   "feedbackSubjectHint": "Mkpụmkpụ ihe ọ gbasara",
   "feedbackMessageHint": "Gwa anyị ihe merenụ ma ọ bụ ihe ị chọrọ",
   "feedbackEmailHint": "aha@omume.com",
@@ -355,9 +413,25 @@
   "rewardsEarned": "Ere M Nwetara",
   "referredUsers": "Ndị M Kpọbatara",
   "referredUsersCount": "Mmadụ {count}",
+  "claimableRewards": "Ụgwọ ọrụ ị nwere ike ịnata",
+  "claimReferralRewards": "Nata ụgwọ ọrụ ịkpọbata mmadụ",
+  "referralPayoutsUnavailable": "Ịkwụ ụgwọ ọrụ ịkpọbata mmadụ adịghị ugbu a.",
+  "referralClaimThreshold": "Ọnụ kacha nta a ga-anata: ${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "E zigara ụgwọ ọrụ ịkpọbata mmadụ nke ${amount} na walet gị",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "Tinye Onye Kpọbatara Gị",
   "enterReferralCode": "Tinye koodu ị kpọbatara",
   "unableToLoadReferrals": "Enweghị ike ibupụta ndị a kpọbatara",
+  "unableToClaimReferralRewards": "Enweghị ike ịnata ụgwọ ọrụ ịkpọbata mmadụ",
   "enterReferralCodePrompt": "Tinye koodu ndapụta",
   "ownReferralCodeError": "I nweghị ike iji koodu gị n'onwe gị",
   "referralAdded": "Etinyela onye kpọrọ gị",
@@ -525,6 +599,8 @@
   "networkLabel": "Netwọk",
   "noNotificationsYet": "Enweghị ọkwa ọ bụla ugbu a",
   "availableBalance": "EGO DỊ",
+  "totalNetWorth": "MKPỌRỤTA URU ZURU EZU",
+  "portfolio": "Pọtụfoliyo",
   "history": "Akụkọ",
   "followSocialhq": "Soro @fomowlhq na X maka ozi ọhụrụ",
   "socialhqHandle": "x.com/fomowlhq"

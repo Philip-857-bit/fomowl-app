@@ -160,9 +160,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     value: 'design',
                     child: Text(l.feedbackCategoryDesign),
                   ),
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: 'dapp_request',
-                    child: Text('DApp request'),
+                    child: Text(l.feedbackCategoryDappRequest),
                   ),
                 ],
                 onChanged: (value) =>

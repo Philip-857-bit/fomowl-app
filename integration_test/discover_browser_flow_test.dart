@@ -68,7 +68,12 @@ void main() {
     required DiscoverTestDappServer server,
     required String scenario,
     required List<int> supportedChainIds,
+    bool allowlisted = true,
+    bool generalSite = false,
   }) async {
+    final launchUrl = generalSite
+        ? server.generalUrlForScenario(scenario)
+        : server.urlForScenario(scenario);
     final entry = entryForHarness(
       origin: server.origin(),
       launchUrl: server.urlForScenario(scenario),
@@ -77,13 +82,13 @@ void main() {
     final controller = BrowserSessionController(
       catalogService: FakeDiscoverCatalogService(
         snapshot: DiscoverCatalogSnapshot(
-          dapps: [entry],
+          dapps: allowlisted ? [entry] : const [],
           fetchedAt: DateTime.now().toUtc(),
         ),
       ),
     );
     await controller.loadCatalog();
-    controller.openManualInput(server.urlForScenario(scenario));
+    controller.openManualInput(launchUrl);
 
     final blockchainService = FakeBlockchainService();
     final providerBridge = DappProviderBridge(
@@ -129,7 +134,7 @@ void main() {
     expect(harness.controller.pageTitle, 'provider:yes');
   });
 
-  testWidgets('blocks navigation when approved origin redirects away', (
+  testWidgets('keeps normal non-allowlisted websites browseable', (
     tester,
   ) async {
     final server = DiscoverTestDappServer();
@@ -139,8 +144,35 @@ void main() {
     final harness = await pumpHarness(
       tester,
       server: server,
-      scenario: 'blocked-redirect',
-      supportedChainIds: const [1, 56, 11155111],
+      scenario: 'plain',
+      supportedChainIds: const [1],
+      allowlisted: false,
+      generalSite: true,
+    );
+
+    await waitForCondition(
+      tester,
+      () => harness.controller.pageTitle == 'plain:ok',
+    );
+
+    expect(harness.controller.viewState, DiscoverViewState.browser);
+    expect(harness.controller.activeDapp, isNull);
+  });
+
+  testWidgets('blocks a non-allowlisted site when it probes window.ethereum', (
+    tester,
+  ) async {
+    final server = DiscoverTestDappServer();
+    await server.start();
+    addTearDown(server.close);
+
+    final harness = await pumpHarness(
+      tester,
+      server: server,
+      scenario: 'probe',
+      supportedChainIds: const [1],
+      allowlisted: false,
+      generalSite: true,
     );
 
     await waitForCondition(
@@ -148,8 +180,37 @@ void main() {
       () => harness.controller.viewState == DiscoverViewState.blocked,
     );
 
-    expect(harness.controller.blockedState?.origin, 'https://blocked.example');
+    expect(
+      harness.controller.blockedState?.reason,
+      contains('window.ethereum'),
+    );
   });
+
+  testWidgets(
+    'blocks when an approved page redirects into a non-allowlisted dapp probe',
+    (tester) async {
+      final server = DiscoverTestDappServer();
+      await server.start();
+      addTearDown(server.close);
+
+      final harness = await pumpHarness(
+        tester,
+        server: server,
+        scenario: 'blocked-redirect',
+        supportedChainIds: const [1, 56, 11155111],
+      );
+
+      await waitForCondition(
+        tester,
+        () => harness.controller.viewState == DiscoverViewState.blocked,
+      );
+
+      expect(
+        harness.controller.blockedState?.reason,
+        contains('window.ethereum'),
+      );
+    },
+  );
 
   testWidgets('connect approval returns the active wallet address', (
     tester,

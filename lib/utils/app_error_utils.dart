@@ -76,6 +76,10 @@ class AppErrorUtils {
       return fallback;
     }
 
+    if (_containsSensitiveEndpoint(raw, lowered)) {
+      return fallback;
+    }
+
     return raw.length > 160 ? fallback : raw;
   }
 
@@ -128,5 +132,21 @@ class AppErrorUtils {
       if (value.contains(needle)) return true;
     }
     return false;
+  }
+
+  static bool _containsSensitiveEndpoint(String raw, String lowered) {
+    final hasUrl = RegExp(r'https?://', caseSensitive: false).hasMatch(raw);
+    final hasLocalHost = _containsAny(lowered, const [
+      'localhost',
+      '127.0.0.1',
+      '10.0.2.2',
+      '10.0.3.2',
+      'onrender.com',
+    ]);
+    final hasInfraShape = RegExp(
+      r'\b\d{1,3}(\.\d{1,3}){3}:\d+\b',
+    ).hasMatch(raw);
+
+    return hasUrl || hasLocalHost || hasInfraShape;
   }
 }

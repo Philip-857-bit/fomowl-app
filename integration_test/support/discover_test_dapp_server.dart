@@ -22,6 +22,12 @@ class DiscoverTestDappServer {
         .toString();
   }
 
+  String generalUrlForScenario(String scenario) {
+    return originUri
+        .replace(path: '/general', queryParameters: {'scenario': scenario})
+        .toString();
+  }
+
   Future<void> start() async {
     _server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     _server!.listen(_handleRequest);
@@ -42,12 +48,22 @@ class DiscoverTestDappServer {
       return;
     }
 
+    if (path == '/general') {
+      final scenario = request.uri.queryParameters['scenario'] ?? 'plain';
+      request.response.headers.contentType = ContentType.html;
+      request.response.write(
+        _pageForScenario(scenario, requireProvider: false),
+      );
+      await request.response.close();
+      return;
+    }
+
     request.response.statusCode = HttpStatus.notFound;
     request.response.write('not found');
     await request.response.close();
   }
 
-  String _pageForScenario(String scenario) {
+  String _pageForScenario(String scenario, {bool requireProvider = true}) {
     final config = jsonEncode(<String, Object?>{
       'scenario': scenario,
       'switchChainId': '0x38',
@@ -65,9 +81,8 @@ class DiscoverTestDappServer {
         'blockExplorerUrls': <String>['https://sepolia.etherscan.io'],
         'nativeCurrency': <String, String>{'symbol': 'ETH'},
       },
-      'blockedRedirectUrl': 'https://blocked.example/landing',
+      'blockedRedirectUrl': generalUrlForScenario('probe'),
     });
-
     return '''
 <!DOCTYPE html>
 <html>
@@ -99,15 +114,24 @@ class DiscoverTestDappServer {
 
       async function runScenario() {
         try {
-          const provider = await waitForProvider();
           switch (config.scenario) {
-            case 'provider':
+            case 'provider': {
+              const provider = ${requireProvider ? 'await waitForProvider()' : '(window.ethereum || null)'};
               setResult(
                 provider ? 'provider:yes' : 'provider:no',
                 provider ? 'provider detected' : 'provider missing',
               );
               return;
+            }
+            case 'plain':
+              setResult('plain:ok', 'plain site loaded');
+              return;
+            case 'probe':
+              void window.ethereum;
+              setTimeout(() => setResult('probe:unexpected', 'probe unexpectedly allowed'), 500);
+              return;
             case 'connect': {
+              const provider = await waitForProvider();
               const accounts = await provider.request({
                 method: 'eth_requestAccounts',
                 params: [],
@@ -116,6 +140,7 @@ class DiscoverTestDappServer {
               return;
             }
             case 'switch': {
+              const provider = await waitForProvider();
               await provider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: config.switchChainId }],
@@ -128,6 +153,7 @@ class DiscoverTestDappServer {
               return;
             }
             case 'addchain': {
+              const provider = await waitForProvider();
               await provider.request({
                 method: 'wallet_addEthereumChain',
                 params: [config.addChain],
@@ -136,6 +162,7 @@ class DiscoverTestDappServer {
               return;
             }
             case 'addchain-invalid': {
+              const provider = await waitForProvider();
               await provider.request({
                 method: 'wallet_addEthereumChain',
                 params: [config.invalidAddChain],

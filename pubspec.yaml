@@ -73,6 +73,7 @@ dependencies:
   rust_lib_fomowl_wallet:
     path: rust_builder
   flutter_rust_bridge: 2.11.1
+  # Curated Discover DApp browser only; see docs/discover_browser_security.md.
   flutter_inappwebview: ^6.1.5
 
 dev_dependencies:

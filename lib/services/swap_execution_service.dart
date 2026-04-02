@@ -5,6 +5,7 @@ import 'package:web3dart/crypto.dart';
 
 import '../config/app_environment.dart';
 import '../models/token.dart';
+import '../utils/app_error_utils.dart';
 import 'blockchain_service.dart';
 import 'swap_service.dart'; // Still needed for SwapQuote
 import 'wallet_service.dart';
@@ -68,7 +69,13 @@ class SwapExecutionService {
       }
     } catch (e) {
       debugPrint('Swap execution failed: $e');
-      return SwapExecutionResult(success: false, error: e.toString());
+      return SwapExecutionResult(
+        success: false,
+        error: AppErrorUtils.userMessage(
+          e,
+          fallback: 'Swap execution failed. Please try again.',
+        ),
+      );
     }
   }
 
@@ -309,23 +316,18 @@ class SwapExecutionService {
       );
     } catch (e) {
       debugPrint('Fusion execution failed: $e');
-      return SwapExecutionResult(success: false, error: e.toString());
+      return SwapExecutionResult(
+        success: false,
+        error: AppErrorUtils.userMessage(
+          e,
+          fallback: 'Gasless swap failed. Please try again.',
+        ),
+      );
     }
   }
 
   String _extractBackendMessage(String body, String fallback) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final message = decoded['message']?.toString();
-        if (message != null && message.isNotEmpty) {
-          return message;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error decoding backend message: $e');
-    }
-    return fallback;
+    return AppErrorUtils.backendMessage(body, fallback: fallback);
   }
 
   Map<String, dynamic>? _asMap(dynamic value) {

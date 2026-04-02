@@ -8,17 +8,23 @@ import '../models/chain.dart';
 class NftAsset {
   final String name;
   final String collection;
+  final String description;
   final int count;
   final String chainName;
   final String imageUrl;
+  final String contractAddress;
+  final String tokenId;
   final bool isProjectNft;
 
   const NftAsset({
     required this.name,
     required this.collection,
+    required this.description,
     required this.count,
     required this.chainName,
     required this.imageUrl,
+    required this.contractAddress,
+    required this.tokenId,
     required this.isProjectNft,
   });
 }
@@ -101,6 +107,7 @@ class NftService {
       final nft = raw as Map<String, dynamic>;
       final contract = nft['contract'] as Map<String, dynamic>? ?? const {};
       final image = nft['image'] as Map<String, dynamic>? ?? const {};
+      final id = nft['id'] as Map<String, dynamic>? ?? const {};
       final contractAddress = contract['address']?.toString() ?? '';
 
       return NftAsset(
@@ -109,11 +116,14 @@ class NftService {
             contract['name']?.toString() ??
             'Unknown Token',
         collection: contract['name']?.toString() ?? 'Unknown Collection',
+        description: nft['description']?.toString().trim() ?? '',
         count: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
         chainName: chainName,
         imageUrl: normalizeImageUrl(
           image['cachedUrl']?.toString() ?? image['originalUrl']?.toString(),
         ),
+        contractAddress: contractAddress,
+        tokenId: normalizeTokenId(id['tokenId']?.toString()),
         isProjectNft:
             contractAddress.toLowerCase() == _projectNftAddress.toLowerCase(),
       );
@@ -129,5 +139,20 @@ class NftService {
       parsed = parsed.replaceFirst('ar://', 'https://arweave.net/');
     }
     return parsed;
+  }
+
+  String normalizeTokenId(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return '';
+    }
+    final trimmed = value.trim();
+    if (trimmed.startsWith('0x')) {
+      try {
+        return BigInt.parse(trimmed.substring(2), radix: 16).toString();
+      } catch (_) {
+        return trimmed;
+      }
+    }
+    return trimmed;
   }
 }

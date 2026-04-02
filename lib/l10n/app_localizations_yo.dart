@@ -218,6 +218,142 @@ class AppLocalizationsYo extends AppLocalizations {
   String get feedback => 'Esi';
 
   @override
+  String get discoverTitle => 'Ṣàwárí DApps';
+
+  @override
+  String get discoverSearchHint => 'Wa DApps tàbí wẹẹbu';
+
+  @override
+  String get discoverWebSearchTitle => 'Ìwádìí DuckDuckGo';
+
+  @override
+  String get discoverBrowserFallbackTitle => 'Ṣàwárí';
+
+  @override
+  String get discoverCatalogLoadError => 'A kò lè gbé Discover kalẹ bayii.';
+
+  @override
+  String get discoverTrendingTokensLoadError =>
+      'A kò lè gbé àwọn token tó ń gbajúgbajà kalẹ bayii.';
+
+  @override
+  String get discoverBlockedTitle => 'A ti dènà rẹ ninu Owllet';
+
+  @override
+  String get discoverRequestSupport => 'Bẹ̀rẹ̀ ìrànlọ́wọ́';
+
+  @override
+  String get discoverOpenExternalBrowser => 'Ṣí aṣàwákiri ita';
+
+  @override
+  String get discoverCancel => 'Fagilé';
+
+  @override
+  String get discoverTrendingTokensTitle => 'Àwọn token tó ń gbajúgbajà';
+
+  @override
+  String get discoverTrendingTokensSubtitle =>
+      'Ìyípadà ọjà lásìkò gidi láti owó iye Owllet.';
+
+  @override
+  String get discoverFeaturedDappsTitle => 'DApps àfihàn';
+
+  @override
+  String get discoverFeaturedDappsSubtitle =>
+      'DApps tí a yan tí a sì fọwọ́si fún ìwọle sí wallet Owllet.';
+
+  @override
+  String get discoverTrendingDappsTitle => 'Tó ń gbajúgbajà';
+
+  @override
+  String get discoverTrendingDappsSubtitle =>
+      'Àwọn ibi tí a fọwọ́si tó gbajúgbajà.';
+
+  @override
+  String get discoverCategoriesTitle => 'Àwọn ẹ̀ka';
+
+  @override
+  String get discoverCategoriesSubtitle =>
+      'Àwọn ẹ̀ka tí a yan fún DApps tí a fọwọ́si tí ó ní ìwọle sí wallet.';
+
+  @override
+  String get discoverAllApprovedDappsTitle => 'Gbogbo DApps tí a fọwọ́si';
+
+  @override
+  String get discoverAllApprovedDappsNoMatches =>
+      'Kò sí DApp tó ba ìwádìí rẹ mu.';
+
+  @override
+  String discoverAllApprovedDappsCount(Object count) {
+    return 'Àwọn ibi $count tí a fọwọ́si.';
+  }
+
+  @override
+  String get discoverCashInBadge => 'KYC LẸ́Ẹ̀KAN';
+
+  @override
+  String get discoverCashInTitle => 'Fi owó wọlé';
+
+  @override
+  String get discoverCashInDescription =>
+      'Ra crypto tàbí fi owó wọlé nígbà tí ìlànà ìdógó bá ti ṣetan.';
+
+  @override
+  String get discoverGoLabel => 'Lọ';
+
+  @override
+  String get discoverNoTrendingTokens =>
+      'Kò sí àwọn token tó ń gbajúgbajà bayii.';
+
+  @override
+  String get discoverManualInputInvalid =>
+      'Tẹ ojúlé tàbí ọ̀rọ̀ ìwádìí tó tọ́ sílẹ̀.';
+
+  @override
+  String get discoverInvalidLaunchUrl => 'URL ìbẹ̀rẹ̀ DApp kò tọ́.';
+
+  @override
+  String get discoverUnsupportedScheme =>
+      'Ìrú scheme ojúlé yìí kò ni atilẹyin ninu aṣàwákiri inú app.';
+
+  @override
+  String discoverBlockedReason(Object trigger) {
+    return 'Ojúlé yìí gbìyànjú láti wọle sí APIs wallet Owllet nípasẹ̀ $trigger, ṣùgbọ́n a kò fọwọ́si origin náà fún ìwọle wallet nínú app.';
+  }
+
+  @override
+  String get discoverWalletApiAccessTrigger => 'ìwọle sí provider wallet';
+
+  @override
+  String get discoverSupportSubject => 'Ìbéèrè allowlist Discover';
+
+  @override
+  String discoverSupportMessage(Object origin, Object url, Object reason) {
+    return 'Jọ̀wọ́ ṣàyẹ̀wò DApp yìí fún Owllet Discover.\n\nOrigin: $origin\nURL: $url\nÌdí tí a fi hàn: $reason';
+  }
+
+  @override
+  String get discoverCategoryDex => 'Àwọn paṣípààrọ̀';
+
+  @override
+  String get discoverCategoryDefi => 'DeFi';
+
+  @override
+  String get discoverCategorySwap => 'Swaps';
+
+  @override
+  String get discoverCategoryLending => 'Ìyálẹ́nu owó';
+
+  @override
+  String get discoverCategoryNft => 'NFT';
+
+  @override
+  String get discoverCategoryMarketplace => 'Ọjà';
+
+  @override
+  String get discoverCategoryCollectibles => 'Ohun ìkójọpọ̀';
+
+  @override
   String get joinOurCommunity => 'Darapọ mọ wa';
 
   @override
@@ -734,6 +870,9 @@ class AppLocalizationsYo extends AppLocalizations {
   String get feedbackCategoryDesign => 'Esi lori Irisi';
 
   @override
+  String get feedbackCategoryDappRequest => '?b??r? DApp';
+
+  @override
   String get feedbackSubjectHint => 'Afoyemọ kukuru';
 
   @override
@@ -1056,11 +1195,30 @@ class AppLocalizationsYo extends AppLocalizations {
   String get rewardsEarned => 'Ere ti mo ti gba';
 
   @override
+  String get claimableRewards => 'Awọn ere ti o le gba';
+
+  @override
   String get referredUsers => 'Awọn eniyan ti mo pe';
 
   @override
   String referredUsersCount(Object count) {
     return 'Eniyan $count';
+  }
+
+  @override
+  String get claimReferralRewards => 'Gba ere itọkasi';
+
+  @override
+  String get referralPayoutsUnavailable => 'Sisan ere itọkasi ko tii wa sibẹ.';
+
+  @override
+  String referralClaimThreshold(Object amount) {
+    return 'Iye to kere ju fun gbigba: \$$amount';
+  }
+
+  @override
+  String referralClaimSuccess(Object amount) {
+    return 'A ti fi ere itọkasi \$$amount ranṣẹ si apamọwọ rẹ';
   }
 
   @override
@@ -1071,6 +1229,9 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get unableToLoadReferrals => 'A ko le gbe awọn itọkasi jade';
+
+  @override
+  String get unableToClaimReferralRewards => 'A ko le gba ere itọkasi';
 
   @override
   String get enterReferralCodePrompt => 'Tẹ koodu itọkasi rẹ';
@@ -1622,6 +1783,12 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get availableBalance => 'IWỌN TO WA';
+
+  @override
+  String get totalNetWorth => 'APAPỌ IYE NẸTI';
+
+  @override
+  String get portfolio => 'Pọ́tífóliò';
 
   @override
   String get history => 'Itan';

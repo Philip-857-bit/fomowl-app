@@ -175,16 +175,33 @@ class RpcService extends BaseService {
           .timeout(const Duration(seconds: 8));
 
       if (response.statusCode != 200) {
+        _lastError = RpcCallException(
+          method: 'eth_chainId',
+          rpcUrl: rpcUrl,
+          message: 'Unexpected HTTP ${response.statusCode}',
+        );
         return null;
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (data['id'] != requestId || data['error'] != null) {
+        _lastError = RpcCallException(
+          method: 'eth_chainId',
+          rpcUrl: rpcUrl,
+          message: data['error'] != null
+              ? 'RPC error: ${data['error']}'
+              : 'RPC ID mismatch: expected $requestId, got ${data['id']}',
+        );
         return null;
       }
 
       final result = data['result']?.toString();
       if (result == null || !result.startsWith('0x')) {
+        _lastError = RpcCallException(
+          method: 'eth_chainId',
+          rpcUrl: rpcUrl,
+          message: 'Invalid eth_chainId result: ${data['result']}',
+        );
         return null;
       }
       return int.tryParse(result.substring(2), radix: 16);

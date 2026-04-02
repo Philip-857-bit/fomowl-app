@@ -5,13 +5,17 @@ import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../services/nft_service.dart';
-import '../../../widgets/token_icon.dart';
+import '../home_portfolio_data.dart';
+import 'home_token_list_item.dart';
+import 'portfolio_tab_content.dart';
 
-enum _AssetTab { tokens, nfts }
+enum HomeAssetTab { tokens, portfolio, nfts }
 
 class TokensSection extends StatefulWidget {
   final List<Token> tokens;
+  final List<HomePortfolioSection> portfolioSections;
   final bool isLoading;
+  final bool isLoadingPortfolio;
   final bool isLoadingNfts;
   final List<NftAsset> nftPreview;
   final bool hasMoreNfts;
@@ -21,11 +25,14 @@ class TokensSection extends StatefulWidget {
   final bool Function(Token token) isTokenHidden;
   final void Function(Token token) onSelectToken;
   final int? chainId;
+  final HomeAssetTab initialTab;
 
   const TokensSection({
     super.key,
     required this.tokens,
+    required this.portfolioSections,
     required this.isLoading,
+    required this.isLoadingPortfolio,
     required this.isLoadingNfts,
     required this.nftPreview,
     required this.hasMoreNfts,
@@ -35,6 +42,7 @@ class TokensSection extends StatefulWidget {
     required this.isTokenHidden,
     required this.onSelectToken,
     this.chainId,
+    this.initialTab = HomeAssetTab.portfolio,
   });
 
   @override
@@ -42,7 +50,13 @@ class TokensSection extends StatefulWidget {
 }
 
 class _TokensSectionState extends State<TokensSection> {
-  _AssetTab _selectedTab = _AssetTab.tokens;
+  late HomeAssetTab _selectedTab;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedTab = widget.initialTab;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,15 +71,15 @@ class _TokensSectionState extends State<TokensSection> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => setState(() => _selectedTab = _AssetTab.tokens),
+                onTap: () => setState(() => _selectedTab = HomeAssetTab.tokens),
                 child: Text(
                   widget.localization.tokens,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
-                    fontWeight: _selectedTab == _AssetTab.tokens
+                    fontWeight: _selectedTab == HomeAssetTab.tokens
                         ? FontWeight.w600
                         : FontWeight.w400,
-                    color: _selectedTab == _AssetTab.tokens
+                    color: _selectedTab == HomeAssetTab.tokens
                         ? AppColors.accentRed
                         : Colors.white.withValues(alpha: 0.5),
                   ),
@@ -73,22 +87,39 @@ class _TokensSectionState extends State<TokensSection> {
               ),
               const SizedBox(width: 20),
               GestureDetector(
-                onTap: () => setState(() => _selectedTab = _AssetTab.nfts),
+                onTap: () =>
+                    setState(() => _selectedTab = HomeAssetTab.portfolio),
+                child: Text(
+                  widget.localization.portfolio,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: _selectedTab == HomeAssetTab.portfolio
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: _selectedTab == HomeAssetTab.portfolio
+                        ? AppColors.accentRed
+                        : Colors.white.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              GestureDetector(
+                onTap: () => setState(() => _selectedTab = HomeAssetTab.nfts),
                 child: Text(
                   widget.localization.nfts,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
-                    fontWeight: _selectedTab == _AssetTab.nfts
+                    fontWeight: _selectedTab == HomeAssetTab.nfts
                         ? FontWeight.w600
                         : FontWeight.w400,
-                    color: _selectedTab == _AssetTab.nfts
+                    color: _selectedTab == HomeAssetTab.nfts
                         ? AppColors.accentRed
                         : Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
               ),
               const Spacer(),
-              if (_selectedTab == _AssetTab.tokens)
+              if (_selectedTab == HomeAssetTab.tokens)
                 IconButton(
                   icon: Icon(
                     Icons.tune,
@@ -102,7 +133,7 @@ class _TokensSectionState extends State<TokensSection> {
                     minHeight: 36,
                   ),
                 )
-              else if (widget.hasMoreNfts)
+              else if (_selectedTab == HomeAssetTab.nfts && widget.hasMoreNfts)
                 GestureDetector(
                   onTap: widget.onOpenNfts,
                   child: Text(
@@ -118,8 +149,15 @@ class _TokensSectionState extends State<TokensSection> {
           ),
         ),
         const SizedBox(height: 8),
-        if (_selectedTab == _AssetTab.tokens)
+        if (_selectedTab == HomeAssetTab.tokens)
           ..._buildTokensContent(visibleTokens)
+        else if (_selectedTab == HomeAssetTab.portfolio)
+          PortfolioTabContent(
+            sections: widget.portfolioSections,
+            isLoading: widget.isLoadingPortfolio,
+            localization: widget.localization,
+            onSelectToken: widget.onSelectToken,
+          )
         else
           _buildNftsContent(),
       ],
@@ -170,7 +208,7 @@ class _TokensSectionState extends State<TokensSection> {
 
     return visibleTokens
         .map(
-          (token) => _TokenListItem(
+          (token) => HomeTokenListItem(
             token: token,
             onTap: () => widget.onSelectToken(token),
             chainId: widget.chainId,
@@ -431,92 +469,6 @@ class _NftPreviewStrip extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TokenListItem extends StatelessWidget {
-  final Token token;
-  final VoidCallback onTap;
-  final int? chainId;
-
-  const _TokenListItem({
-    required this.token,
-    required this.onTap,
-    this.chainId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            TokenIcon(
-              tokenSymbol: token.symbol,
-              tokenAddress: token.contractAddress,
-              tokenImageUrl: token.imageUrl,
-              size: 40,
-              chainId: chainId,
-              isCertified: token.isCertified,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    token.name,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    token.formattedBalance,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  token.formattedValue,
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  token.formattedChange,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: token.isPositiveChange
-                        ? AppColors.success
-                        : AppColors.error,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

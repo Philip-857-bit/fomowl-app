@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../config/app_environment.dart';
 import '../utils/amount_utils.dart';
+import '../utils/app_error_utils.dart';
 import 'http_client_service.dart';
 
 /// Swap Quote Model
@@ -129,7 +130,10 @@ class SwapService {
       );
       return null;
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = AppErrorUtils.userMessage(
+        e,
+        fallback: 'Unable to fetch gasless order status right now.',
+      );
       debugPrint('SwapService gasless status exception: $e');
       return null;
     }
@@ -293,7 +297,10 @@ class SwapService {
         return null;
       }
     } catch (e) {
-      _lastError = e.toString();
+      _lastError = AppErrorUtils.userMessage(
+        e,
+        fallback: 'Unable to fetch a swap quote right now.',
+      );
       debugPrint('SwapService Exception: $e');
       return null;
     }
@@ -338,18 +345,7 @@ class SwapService {
   }
 
   String _extractBackendMessage(String body, {required String fallback}) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map<String, dynamic>) {
-        final message = decoded['message']?.toString();
-        if (message != null && message.isNotEmpty) {
-          return message;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error decoding backend message: $e');
-    }
-    return fallback;
+    return AppErrorUtils.backendMessage(body, fallback: fallback);
   }
 
   Map<String, dynamic>? _asMap(dynamic value) {

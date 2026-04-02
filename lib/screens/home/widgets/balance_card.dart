@@ -9,6 +9,7 @@ import '../home_portfolio_metrics.dart';
 
 /// Displays the wallet balance, eye-toggle, and history access.
 class BalanceCard extends StatelessWidget {
+  final String titleText;
   final String formattedBalance;
   final HomePortfolioMetrics portfolioMetrics;
   final bool isBalanceVisible;
@@ -18,6 +19,7 @@ class BalanceCard extends StatelessWidget {
 
   const BalanceCard({
     super.key,
+    required this.titleText,
     required this.formattedBalance,
     required this.portfolioMetrics,
     required this.isBalanceVisible,
@@ -87,7 +89,7 @@ class BalanceCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      l.availableBalance,
+                      titleText,
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
@@ -154,12 +156,20 @@ class BalanceCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  formattedBalance,
-                  style: GoogleFonts.outfit(
-                    fontSize: 36,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formattedBalance,
+                      maxLines: 1,
+                      style: GoogleFonts.outfit(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),

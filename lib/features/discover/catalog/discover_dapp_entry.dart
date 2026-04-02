@@ -36,12 +36,20 @@ class DiscoverDappEntry {
   final String updatedAt;
 
   factory DiscoverDappEntry.fromJson(Map<String, dynamic> json) {
+    String requireTextField(String key) {
+      final value = json[key]?.toString().trim() ?? '';
+      if (value.isEmpty) {
+        throw FormatException('Discover DApp is missing required field: $key');
+      }
+      return value;
+    }
+
     return DiscoverDappEntry(
-      id: (json['id'] ?? '').toString(),
-      slug: (json['slug'] ?? '').toString(),
-      origin: (json['origin'] ?? '').toString(),
-      launchUrl: (json['launchUrl'] ?? '').toString(),
-      title: (json['title'] ?? '').toString(),
+      id: requireTextField('id'),
+      slug: requireTextField('slug'),
+      origin: requireTextField('origin'),
+      launchUrl: requireTextField('launchUrl'),
+      title: requireTextField('title'),
       subtitle: json['subtitle']?.toString(),
       logoUrl: json['logoUrl']?.toString(),
       heroImageUrl: json['heroImageUrl']?.toString(),
@@ -63,8 +71,8 @@ class DiscoverDappEntry {
       featuredRank: _asInt(json['featuredRank']),
       trendingRank: _asInt(json['trendingRank']),
       isActive: json['isActive'] != false,
-      createdAt: (json['createdAt'] ?? '').toString(),
-      updatedAt: (json['updatedAt'] ?? '').toString(),
+      createdAt: requireTextField('createdAt'),
+      updatedAt: requireTextField('updatedAt'),
     );
   }
 

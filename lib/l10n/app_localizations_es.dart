@@ -218,6 +218,144 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedback => 'Comentarios';
 
   @override
+  String get discoverTitle => 'Descubre DApps';
+
+  @override
+  String get discoverSearchHint => 'Buscar DApps o en la web';
+
+  @override
+  String get discoverWebSearchTitle => 'Búsqueda de DuckDuckGo';
+
+  @override
+  String get discoverBrowserFallbackTitle => 'Descubrir';
+
+  @override
+  String get discoverCatalogLoadError =>
+      'No se puede cargar Discover en este momento.';
+
+  @override
+  String get discoverTrendingTokensLoadError =>
+      'No se pueden cargar los tokens en tendencia en este momento.';
+
+  @override
+  String get discoverBlockedTitle => 'Bloqueado en Owllet';
+
+  @override
+  String get discoverRequestSupport => 'Solicitar ayuda';
+
+  @override
+  String get discoverOpenExternalBrowser => 'Abrir navegador externo';
+
+  @override
+  String get discoverCancel => 'Cancelar';
+
+  @override
+  String get discoverTrendingTokensTitle => 'Tokens en tendencia';
+
+  @override
+  String get discoverTrendingTokensSubtitle =>
+      'Movimientos del mercado en tiempo real obtenidos de los precios de Owllet.';
+
+  @override
+  String get discoverFeaturedDappsTitle => 'DApps destacadas';
+
+  @override
+  String get discoverFeaturedDappsSubtitle =>
+      'DApps seleccionadas y aprobadas para el acceso a la billetera Owllet.';
+
+  @override
+  String get discoverTrendingDappsTitle => 'Tendencias';
+
+  @override
+  String get discoverTrendingDappsSubtitle => 'Destinos populares aprobados.';
+
+  @override
+  String get discoverCategoriesTitle => 'Categorías';
+
+  @override
+  String get discoverCategoriesSubtitle =>
+      'Categorías seleccionadas para DApps aprobadas con acceso a la billetera.';
+
+  @override
+  String get discoverAllApprovedDappsTitle => 'Todas las DApps aprobadas';
+
+  @override
+  String get discoverAllApprovedDappsNoMatches =>
+      'Ninguna DApp coincide con tu búsqueda.';
+
+  @override
+  String discoverAllApprovedDappsCount(Object count) {
+    return '$count destinos aprobados.';
+  }
+
+  @override
+  String get discoverCashInBadge => 'KYC ÚNICO';
+
+  @override
+  String get discoverCashInTitle => 'Ingresar fondos';
+
+  @override
+  String get discoverCashInDescription =>
+      'Compra cripto o ingresa fondos cuando el flujo de depósito esté listo.';
+
+  @override
+  String get discoverGoLabel => 'Ir';
+
+  @override
+  String get discoverNoTrendingTokens =>
+      'No hay tokens en tendencia disponibles en este momento.';
+
+  @override
+  String get discoverManualInputInvalid =>
+      'Introduce un sitio web o término de búsqueda válido.';
+
+  @override
+  String get discoverInvalidLaunchUrl =>
+      'La URL de inicio de la DApp no es válida.';
+
+  @override
+  String get discoverUnsupportedScheme =>
+      'Este esquema de sitio web no es compatible con el navegador integrado.';
+
+  @override
+  String discoverBlockedReason(Object trigger) {
+    return 'Este sitio intentó acceder a las API de la billetera Owllet mediante $trigger, pero el origen no está aprobado para el acceso a la billetera dentro de la app.';
+  }
+
+  @override
+  String get discoverWalletApiAccessTrigger => 'acceso al proveedor de cartera';
+
+  @override
+  String get discoverSupportSubject =>
+      'Solicitud de lista permitida de Discover';
+
+  @override
+  String discoverSupportMessage(Object origin, Object url, Object reason) {
+    return 'Revisa esta DApp para Owllet Discover.\n\nOrigen: $origin\nURL: $url\nMotivo mostrado: $reason';
+  }
+
+  @override
+  String get discoverCategoryDex => 'Intercambios';
+
+  @override
+  String get discoverCategoryDefi => 'DeFi';
+
+  @override
+  String get discoverCategorySwap => 'Swaps';
+
+  @override
+  String get discoverCategoryLending => 'Préstamos';
+
+  @override
+  String get discoverCategoryNft => 'NFT';
+
+  @override
+  String get discoverCategoryMarketplace => 'Marketplace';
+
+  @override
+  String get discoverCategoryCollectibles => 'Coleccionables';
+
+  @override
   String get joinOurCommunity => 'Únete a Nuestra Comunidad';
 
   @override
@@ -756,6 +894,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedbackCategoryDesign => 'Comentarios de diseño';
 
   @override
+  String get feedbackCategoryDappRequest => 'Solicitud de DApp';
+
+  @override
   String get feedbackSubjectHint => 'Breve resumen';
 
   @override
@@ -1085,11 +1226,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get rewardsEarned => 'Recompensas obtenidas';
 
   @override
+  String get claimableRewards => 'Recompensas disponibles para reclamar';
+
+  @override
   String get referredUsers => 'Usuarios referidos';
 
   @override
   String referredUsersCount(Object count) {
     return '$count usuarios';
+  }
+
+  @override
+  String get claimReferralRewards => 'Reclamar recompensas por referidos';
+
+  @override
+  String get referralPayoutsUnavailable =>
+      'Los pagos por referidos aún no están disponibles.';
+
+  @override
+  String referralClaimThreshold(Object amount) {
+    return 'Monto mínimo para reclamar: \$$amount';
+  }
+
+  @override
+  String referralClaimSuccess(Object amount) {
+    return 'Se envió a tu billetera un pago por referido de \$$amount';
   }
 
   @override
@@ -1100,6 +1261,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get unableToLoadReferrals => 'No se pueden cargar referencias';
+
+  @override
+  String get unableToClaimReferralRewards =>
+      'No se pueden reclamar las recompensas por referidos';
 
   @override
   String get enterReferralCodePrompt => 'Ingrese un código de referencia';
@@ -1660,6 +1825,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get availableBalance => 'SALDO DISPONIBLE';
+
+  @override
+  String get totalNetWorth => 'PATRIMONIO NETO TOTAL';
+
+  @override
+  String get portfolio => 'Portafolio';
 
   @override
   String get history => 'Historial';

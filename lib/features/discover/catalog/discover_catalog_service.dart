@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -68,9 +69,15 @@ class DiscoverCatalogService {
 
     final dapps = (decoded['dapps'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map>()
-        .map(
-          (entry) => DiscoverDappEntry.fromJson(entry.cast<String, dynamic>()),
-        )
+        .map((entry) {
+          try {
+            return DiscoverDappEntry.fromJson(entry.cast<String, dynamic>());
+          } on FormatException catch (error) {
+            debugPrint('Skipping invalid Discover DApp entry: $error');
+            return null;
+          }
+        })
+        .whereType<DiscoverDappEntry>()
         .where(
           (entry) =>
               entry.isActive &&

@@ -157,24 +157,42 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       });
     }
 
-    if (address != null) {
-      try {
-        fetched = await blockchain.fetchWalletTokens(address);
-      } catch (e) {
-        debugPrint('Error fetching tokens in manager: $e');
-      }
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _walletTokens = fetched;
-      _hiddenKeys = hidden;
-      _isLoading = false;
-    });
-
     // Load suggested tokens in background (non-blocking first paint)
     _loadSuggestedTokens();
     _checkClipboardForTokenSuggestion();
+    if (address != null) {
+      unawaited(
+        _refreshWalletTokensInBackground(
+          blockchain,
+          walletAddress: address,
+          chainId: chainId,
+          hidden: hidden,
+        ),
+      );
+    }
+  }
+
+  Future<void> _refreshWalletTokensInBackground(
+    BlockchainService blockchain, {
+    required String walletAddress,
+    required int chainId,
+    required Set<String> hidden,
+  }) async {
+    try {
+      final fetched = await blockchain.refreshWalletTokens(
+        walletAddress,
+        chainId: chainId,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _walletTokens = fetched;
+        _hiddenKeys = hidden;
+      });
+    } catch (e) {
+      debugPrint('Error refreshing tokens in manager: $e');
+    }
   }
 
   Future<void> _loadSuggestedTokens() async {

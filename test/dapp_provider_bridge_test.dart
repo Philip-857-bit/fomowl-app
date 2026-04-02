@@ -266,6 +266,101 @@ void main() {
       );
     });
 
+    testWidgets('personal_sign rejects when no param matches active wallet', (
+      tester,
+    ) async {
+      final entry = entryForTestDapp(
+        origin: 'https://app.example',
+        supportedChainIds: [1],
+      );
+      final controller = await controllerForEntry(entry);
+      final context = await pumpBridgeHarness(
+        tester,
+        blockchainService: FakeBlockchainService(),
+        rpcService: FakeRpcService(),
+      );
+      final bridge = DappProviderBridge(
+        sessionController: controller,
+        permissionService: FakeDappPermissionService(),
+        walletService: FakeWalletService(),
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
+      );
+
+      final response = await bridge.handleRequest(
+        context: context,
+        origin: entry.origin,
+        payload: const {
+          'method': 'personal_sign',
+          'params': [
+            '0x68656c6c6f',
+            '0x0000000000000000000000000000000000000001',
+          ],
+        },
+        evaluateJavaScript: (_) async {},
+      );
+
+      expect(response['error']['code'], -32602);
+      expect(response['error']['message'], contains('active wallet'));
+    });
+
+    testWidgets('eth_signTypedData_v4 accepts structured map payloads', (
+      tester,
+    ) async {
+      final entry = entryForTestDapp(
+        origin: 'https://app.example',
+        supportedChainIds: [1],
+      );
+      final controller = await controllerForEntry(entry);
+      final walletService = FakeWalletService();
+      final context = await pumpBridgeHarness(
+        tester,
+        blockchainService: FakeBlockchainService(),
+        rpcService: FakeRpcService(),
+      );
+      final bridge = DappProviderBridge(
+        sessionController: controller,
+        permissionService: FakeDappPermissionService(),
+        walletService: walletService,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
+      );
+
+      final response = await bridge.handleRequest(
+        context: context,
+        origin: entry.origin,
+        payload: {
+          'method': 'eth_signTypedData_v4',
+          'params': [
+            '0xbF75A6D2F5824A42b0BF946c15580A5f504c8c5F',
+            {
+              'types': {
+                'EIP712Domain': [
+                  {'name': 'name', 'type': 'string'},
+                ],
+                'Mail': [
+                  {'name': 'contents', 'type': 'string'},
+                ],
+              },
+              'primaryType': 'Mail',
+              'domain': {'name': 'Test DApp'},
+              'message': {'contents': 'Hello'},
+            },
+          ],
+        },
+        evaluateJavaScript: (_) async {},
+      );
+
+      expect(response['result'], isNotNull);
+      expect(walletService.lastTypedData, contains('"primaryType":"Mail"'));
+    });
+
     testWidgets('eth_sendTransaction rejects a non-active from address', (
       tester,
     ) async {

@@ -218,6 +218,143 @@ class AppLocalizationsHa extends AppLocalizations {
   String get feedback => 'Ra\'ayi';
 
   @override
+  String get discoverTitle => 'Gano DApps';
+
+  @override
+  String get discoverSearchHint => 'Nemi DApps ko yanar gizo';
+
+  @override
+  String get discoverWebSearchTitle => 'Binciken DuckDuckGo';
+
+  @override
+  String get discoverBrowserFallbackTitle => 'Gano';
+
+  @override
+  String get discoverCatalogLoadError => 'Ba a iya loda Discover yanzu ba.';
+
+  @override
+  String get discoverTrendingTokensLoadError =>
+      'Ba a iya loda tokunan da ke trending yanzu ba.';
+
+  @override
+  String get discoverBlockedTitle => 'An toshe a Owllet';
+
+  @override
+  String get discoverRequestSupport => 'Nemi tallafi';
+
+  @override
+  String get discoverOpenExternalBrowser => 'Buɗe browser na waje';
+
+  @override
+  String get discoverCancel => 'Soke';
+
+  @override
+  String get discoverTrendingTokensTitle => 'Tokunan da ke trending';
+
+  @override
+  String get discoverTrendingTokensSubtitle =>
+      'Canje-canje na kasuwa kai tsaye daga farashin Owllet.';
+
+  @override
+  String get discoverFeaturedDappsTitle => 'Fitattun DApps';
+
+  @override
+  String get discoverFeaturedDappsSubtitle =>
+      'Zaɓaɓɓun DApps da aka amince da su don shiga walat ɗin Owllet.';
+
+  @override
+  String get discoverTrendingDappsTitle => 'Masu tashe';
+
+  @override
+  String get discoverTrendingDappsSubtitle =>
+      'Shahararrun wuraren da aka amince da su.';
+
+  @override
+  String get discoverCategoriesTitle => 'Rukuni';
+
+  @override
+  String get discoverCategoriesSubtitle =>
+      'Rukunai da aka zaɓa don DApps da aka amince da su masu samun walat.';
+
+  @override
+  String get discoverAllApprovedDappsTitle =>
+      'Dukkan DApps da aka amince da su';
+
+  @override
+  String get discoverAllApprovedDappsNoMatches =>
+      'Babu DApp da ya dace da bincikenka.';
+
+  @override
+  String discoverAllApprovedDappsCount(Object count) {
+    return 'Wurare $count da aka amince da su.';
+  }
+
+  @override
+  String get discoverCashInBadge => 'KYC SAU ƊAYA';
+
+  @override
+  String get discoverCashInTitle => 'Saka kuɗi';
+
+  @override
+  String get discoverCashInDescription =>
+      'Saya crypto ko saka kuɗi da zarar hanyar ajiya ta shirya.';
+
+  @override
+  String get discoverGoLabel => 'Je';
+
+  @override
+  String get discoverNoTrendingTokens => 'Babu tokunan da ke trending a yanzu.';
+
+  @override
+  String get discoverManualInputInvalid =>
+      'Shigar da ingantaccen shafin yanar gizo ko kalmar bincike.';
+
+  @override
+  String get discoverInvalidLaunchUrl =>
+      'URL ɗin ƙaddamar da DApp ba ingantacce ba ne.';
+
+  @override
+  String get discoverUnsupportedScheme =>
+      'Wannan irin hanyar shafin ba a goyon baya a browser na cikin app ba.';
+
+  @override
+  String discoverBlockedReason(Object trigger) {
+    return 'Wannan shafin ya yi ƙoƙarin shiga APIs na walat ɗin Owllet ta hanyar $trigger, amma ba a amince da asalinsa don samun walat a cikin app ba.';
+  }
+
+  @override
+  String get discoverWalletApiAccessTrigger => 'shigar mai bada walat';
+
+  @override
+  String get discoverSupportSubject => 'Buƙatar allowlist ta Discover';
+
+  @override
+  String discoverSupportMessage(Object origin, Object url, Object reason) {
+    return 'Da fatan za a duba wannan DApp don Owllet Discover.\n\nAsali: $origin\nURL: $url\nDalilin da aka nuna: $reason';
+  }
+
+  @override
+  String get discoverCategoryDex => 'Musaya';
+
+  @override
+  String get discoverCategoryDefi => 'DeFi';
+
+  @override
+  String get discoverCategorySwap => 'Swaps';
+
+  @override
+  String get discoverCategoryLending => 'Bashi';
+
+  @override
+  String get discoverCategoryNft => 'NFT';
+
+  @override
+  String get discoverCategoryMarketplace => 'Kasuwar kaya';
+
+  @override
+  String get discoverCategoryCollectibles => 'Abubuwan tarawa';
+
+  @override
   String get joinOurCommunity => 'Shiga cikin Al\'ummar mu';
 
   @override
@@ -737,6 +874,9 @@ class AppLocalizationsHa extends AppLocalizations {
   String get feedbackCategoryDesign => 'Ra\'ayi kan Tsari';
 
   @override
+  String get feedbackCategoryDappRequest => 'Neman DApp';
+
+  @override
   String get feedbackSubjectHint => 'Taƙaitaccen bayani';
 
   @override
@@ -1059,11 +1199,31 @@ class AppLocalizationsHa extends AppLocalizations {
   String get rewardsEarned => 'Ladoyin da Na Samu';
 
   @override
+  String get claimableRewards => 'Ladan da za a iya karɓa';
+
+  @override
   String get referredUsers => 'Mutanen da Na Gayyata';
 
   @override
   String referredUsersCount(Object count) {
     return 'Mutane $count';
+  }
+
+  @override
+  String get claimReferralRewards => 'Karɓi ladan gayyata';
+
+  @override
+  String get referralPayoutsUnavailable =>
+      'Biyan ladan gayyata bai samu ba tukuna.';
+
+  @override
+  String referralClaimThreshold(Object amount) {
+    return 'Mafi ƙarancin adadin karɓa: \$$amount';
+  }
+
+  @override
+  String referralClaimSuccess(Object amount) {
+    return 'An tura ladan gayyata na \$$amount zuwa walat ɗinka';
   }
 
   @override
@@ -1074,6 +1234,9 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get unableToLoadReferrals => 'An kasa loda mutanen da ka gayyata';
+
+  @override
+  String get unableToClaimReferralRewards => 'An kasa karɓar ladan gayyata';
 
   @override
   String get enterReferralCodePrompt => 'Saka lambar gayyata';
@@ -1628,6 +1791,12 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get availableBalance => 'KUƊIN DA AKE DA SU';
+
+  @override
+  String get totalNetWorth => 'JIMILLAR DARAJAR DUKIYA';
+
+  @override
+  String get portfolio => 'Fayil na kadarori';
 
   @override
   String get history => 'Tarihi';

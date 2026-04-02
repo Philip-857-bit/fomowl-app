@@ -5,14 +5,25 @@ import 'package:fomowl_wallet/features/discover/catalog/discover_catalog_snapsho
 import 'package:fomowl_wallet/features/discover/catalog/discover_dapp_entry.dart';
 
 class _FakeDiscoverCatalogService extends DiscoverCatalogService {
-  _FakeDiscoverCatalogService({this.snapshot, this.cachedSnapshot, this.error});
+  _FakeDiscoverCatalogService({
+    this.snapshot,
+    this.cachedSnapshot,
+    this.error,
+    this.cacheError,
+  });
 
   final DiscoverCatalogSnapshot? snapshot;
   final DiscoverCatalogSnapshot? cachedSnapshot;
   final Object? error;
+  final Object? cacheError;
 
   @override
-  Future<DiscoverCatalogSnapshot?> loadCachedSnapshot() async => cachedSnapshot;
+  Future<DiscoverCatalogSnapshot?> loadCachedSnapshot() async {
+    if (cacheError != null) {
+      throw cacheError!;
+    }
+    return cachedSnapshot;
+  }
 
   @override
   Future<DiscoverCatalogSnapshot> getSnapshot({
@@ -129,32 +140,58 @@ void main() {
       },
     );
 
-    test('openManualInput blocks non-allowlisted URL', () async {
-      final controller = BrowserSessionController(
-        catalogService: _FakeDiscoverCatalogService(
-          snapshot: DiscoverCatalogSnapshot(
-            dapps: [
-              _entry(
-                id: 'uniswap',
-                origin: 'https://app.uniswap.org',
-                launchUrl: 'https://app.uniswap.org',
-                categories: const ['dex'],
-              ),
-            ],
-            fetchedAt: DateTime.now().toUtc(),
+    test(
+      'loadCatalog keeps both live and cached failure details when fallback fails',
+      () async {
+        final controller = BrowserSessionController(
+          catalogService: _FakeDiscoverCatalogService(
+            error: StateError('catalog fetch failed'),
+            cacheError: StateError('cache fetch failed'),
           ),
-        ),
-      );
-      await controller.loadCatalog();
+        );
 
-      controller.openManualInput('https://example.com');
+        await controller.loadCatalog();
 
-      expect(controller.viewState, DiscoverViewState.blocked);
-      expect(controller.blockedState?.origin, 'https://example.com');
-    });
+        expect(controller.snapshot, isNull);
+        expect(controller.catalogError, contains('catalog fetch failed'));
+        expect(controller.catalogError, contains('cache fetch failed'));
+      },
+    );
 
     test(
-      'allowsNavigation rejects stale snapshot and marks blocked state',
+      'openManualInput opens non-allowlisted URL in general web mode',
+      () async {
+        final controller = BrowserSessionController(
+          catalogService: _FakeDiscoverCatalogService(
+            snapshot: DiscoverCatalogSnapshot(
+              dapps: [
+                _entry(
+                  id: 'uniswap',
+                  origin: 'https://app.uniswap.org',
+                  launchUrl: 'https://app.uniswap.org',
+                  categories: const ['dex'],
+                ),
+              ],
+              fetchedAt: DateTime.now().toUtc(),
+            ),
+          ),
+        );
+        await controller.loadCatalog();
+
+        controller.openManualInput('https://example.com');
+
+        expect(controller.viewState, DiscoverViewState.browser);
+        expect(controller.currentUri?.toString(), 'https://example.com');
+        expect(controller.activeDapp, isNull);
+        expect(
+          controller.browserAccessMode,
+          DiscoverBrowserAccessMode.generalWeb,
+        );
+      },
+    );
+
+    test(
+      'allowsNavigation allows general browsing even when snapshot is stale',
       () async {
         final controller = BrowserSessionController(
           catalogService: _FakeDiscoverCatalogService(
@@ -178,9 +215,8 @@ void main() {
         final allowed = controller.allowsNavigation(
           Uri.parse('https://app.uniswap.org'),
         );
-        expect(allowed, isFalse);
-        expect(controller.viewState, DiscoverViewState.blocked);
-        expect(controller.blockedState?.reason, contains('expired'));
+        expect(allowed, isTrue);
+        expect(controller.viewState, DiscoverViewState.landing);
       },
     );
 
@@ -221,6 +257,77 @@ void main() {
         expect(
           controller.canInjectProviderFor(Uri.parse('https://example.com')),
           isFalse,
+        );
+        expect(
+          controller.shouldInjectDappDetectorFor(
+            Uri.parse('https://example.com'),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test('openManualInput submits DuckDuckGo search for plain text', () async {
+      final controller = BrowserSessionController(
+        catalogService: _FakeDiscoverCatalogService(
+          snapshot: DiscoverCatalogSnapshot(
+            dapps: const [],
+            fetchedAt: DateTime.now().toUtc(),
+          ),
+        ),
+      );
+      await controller.loadCatalog();
+
+      controller.openManualInput('best bridge for base');
+
+      expect(controller.viewState, DiscoverViewState.browser);
+      expect(
+        controller.currentUri?.toString(),
+        'https://duckduckgo.com/?q=best+bridge+for+base',
+      );
+      expect(
+        controller.browserAccessMode,
+        DiscoverBrowserAccessMode.generalWeb,
+      );
+    });
+
+    test(
+      'updateLoadedPage clears active dapp after leaving allowlisted origin',
+      () async {
+        final controller = BrowserSessionController(
+          catalogService: _FakeDiscoverCatalogService(
+            snapshot: DiscoverCatalogSnapshot(
+              dapps: [
+                _entry(
+                  id: 'uniswap',
+                  origin: 'https://app.uniswap.org',
+                  launchUrl: 'https://app.uniswap.org',
+                  categories: const ['dex'],
+                ),
+              ],
+              fetchedAt: DateTime.now().toUtc(),
+            ),
+          ),
+        );
+        await controller.loadCatalog();
+        controller.openDapp(
+          _entry(
+            id: 'uniswap',
+            origin: 'https://app.uniswap.org',
+            launchUrl: 'https://app.uniswap.org',
+            categories: const ['dex'],
+          ),
+        );
+
+        controller.updateLoadedPage(
+          Uri.parse('https://example.com'),
+          title: 'Example',
+        );
+
+        expect(controller.activeDapp, isNull);
+        expect(
+          controller.browserAccessMode,
+          DiscoverBrowserAccessMode.generalWeb,
         );
       },
     );

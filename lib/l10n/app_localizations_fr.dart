@@ -218,6 +218,145 @@ class AppLocalizationsFr extends AppLocalizations {
   String get feedback => 'Retour';
 
   @override
+  String get discoverTitle => 'Découvrir les DApps';
+
+  @override
+  String get discoverSearchHint => 'Rechercher des DApps ou sur le web';
+
+  @override
+  String get discoverWebSearchTitle => 'Recherche DuckDuckGo';
+
+  @override
+  String get discoverBrowserFallbackTitle => 'Découvrir';
+
+  @override
+  String get discoverCatalogLoadError =>
+      'Impossible de charger Discover pour le moment.';
+
+  @override
+  String get discoverTrendingTokensLoadError =>
+      'Impossible de charger les tokens tendance pour le moment.';
+
+  @override
+  String get discoverBlockedTitle => 'Bloqué dans Owllet';
+
+  @override
+  String get discoverRequestSupport => 'Demander de l\'aide';
+
+  @override
+  String get discoverOpenExternalBrowser => 'Ouvrir le navigateur externe';
+
+  @override
+  String get discoverCancel => 'Annuler';
+
+  @override
+  String get discoverTrendingTokensTitle => 'Tokens tendance';
+
+  @override
+  String get discoverTrendingTokensSubtitle =>
+      'Mouvements du marché en direct issus des prix Owllet.';
+
+  @override
+  String get discoverFeaturedDappsTitle => 'DApps en vedette';
+
+  @override
+  String get discoverFeaturedDappsSubtitle =>
+      'DApps sélectionnées et approuvées pour l\'accès au portefeuille Owllet.';
+
+  @override
+  String get discoverTrendingDappsTitle => 'Tendance';
+
+  @override
+  String get discoverTrendingDappsSubtitle =>
+      'Destinations populaires figurant sur la liste autorisée.';
+
+  @override
+  String get discoverCategoriesTitle => 'Catégories';
+
+  @override
+  String get discoverCategoriesSubtitle =>
+      'Catégories sélectionnées pour les DApps approuvées avec accès au portefeuille.';
+
+  @override
+  String get discoverAllApprovedDappsTitle => 'Toutes les DApps approuvées';
+
+  @override
+  String get discoverAllApprovedDappsNoMatches =>
+      'Aucune DApp ne correspond à votre recherche.';
+
+  @override
+  String discoverAllApprovedDappsCount(Object count) {
+    return '$count destinations autorisées.';
+  }
+
+  @override
+  String get discoverCashInBadge => 'KYC UNIQUE';
+
+  @override
+  String get discoverCashInTitle => 'Ajouter des fonds';
+
+  @override
+  String get discoverCashInDescription =>
+      'Achetez des cryptos ou ajoutez des fonds une fois que le dépôt sera prêt.';
+
+  @override
+  String get discoverGoLabel => 'Aller';
+
+  @override
+  String get discoverNoTrendingTokens =>
+      'Aucun token tendance n\'est disponible pour le moment.';
+
+  @override
+  String get discoverManualInputInvalid =>
+      'Saisissez un site web ou un terme de recherche valide.';
+
+  @override
+  String get discoverInvalidLaunchUrl =>
+      'L\'URL de lancement de la DApp est invalide.';
+
+  @override
+  String get discoverUnsupportedScheme =>
+      'Ce schéma de site n\'est pas pris en charge dans le navigateur intégré.';
+
+  @override
+  String discoverBlockedReason(Object trigger) {
+    return 'Ce site a tenté d\'accéder aux API du portefeuille Owllet via $trigger, mais cette origine n\'est pas approuvée pour l\'accès au portefeuille dans l\'application.';
+  }
+
+  @override
+  String get discoverWalletApiAccessTrigger =>
+      'l\'accès au fournisseur du portefeuille';
+
+  @override
+  String get discoverSupportSubject => 'Demande d\'ajout à la liste Discover';
+
+  @override
+  String discoverSupportMessage(Object origin, Object url, Object reason) {
+    return 'Veuillez examiner cette DApp pour Owllet Discover.\n\nOrigine : $origin\nURL : $url\nRaison affichée : $reason';
+  }
+
+  @override
+  String get discoverCategoryDex => 'Échanges';
+
+  @override
+  String get discoverCategoryDefi => 'DeFi';
+
+  @override
+  String get discoverCategorySwap => 'Swaps';
+
+  @override
+  String get discoverCategoryLending => 'Prêt';
+
+  @override
+  String get discoverCategoryNft => 'NFT';
+
+  @override
+  String get discoverCategoryMarketplace => 'Marketplace';
+
+  @override
+  String get discoverCategoryCollectibles => 'Objets de collection';
+
+  @override
   String get joinOurCommunity => 'Rejoignez Notre Communauté';
 
   @override
@@ -753,6 +892,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get feedbackCategoryDesign => 'Commentaires sur la conception';
 
   @override
+  String get feedbackCategoryDappRequest => 'Demande de DApp';
+
+  @override
   String get feedbackSubjectHint => 'Bref résumé';
 
   @override
@@ -1088,11 +1230,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get rewardsEarned => 'Récompenses gagnées';
 
   @override
+  String get claimableRewards => 'Récompenses pouvant être réclamées';
+
+  @override
   String get referredUsers => 'Utilisateurs référés';
 
   @override
   String referredUsersCount(Object count) {
     return '$count utilisateurs';
+  }
+
+  @override
+  String get claimReferralRewards => 'Réclamer les récompenses de parrainage';
+
+  @override
+  String get referralPayoutsUnavailable =>
+      'Les paiements de parrainage ne sont pas encore disponibles.';
+
+  @override
+  String referralClaimThreshold(Object amount) {
+    return 'Montant minimum à réclamer : \$$amount';
+  }
+
+  @override
+  String referralClaimSuccess(Object amount) {
+    return 'Un paiement de parrainage de \$$amount a été envoyé vers votre portefeuille';
   }
 
   @override
@@ -1103,6 +1265,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get unableToLoadReferrals => 'Impossible de charger les références';
+
+  @override
+  String get unableToClaimReferralRewards =>
+      'Impossible de réclamer les récompenses de parrainage';
 
   @override
   String get enterReferralCodePrompt => 'Entrez un code de parrainage';
@@ -1664,6 +1830,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get availableBalance => 'SOLDE DISPONIBLE';
+
+  @override
+  String get totalNetWorth => 'PATRIMOINE NET TOTAL';
+
+  @override
+  String get portfolio => 'Portefeuille';
 
   @override
   String get history => 'Historique';

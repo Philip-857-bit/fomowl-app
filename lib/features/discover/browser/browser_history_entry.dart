@@ -2,7 +2,7 @@ class BrowserHistoryEntry {
   const BrowserHistoryEntry({
     required this.url,
     required this.origin,
-    required this.title,
+    this.title,
     required this.visitedAt,
   });
 

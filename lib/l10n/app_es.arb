@@ -69,6 +69,63 @@
   "privacyPolicy": "Política de Privacidad",
   "termsOfService": "Términos de Servicio",
   "feedback": "Comentarios",
+  "discoverTitle": "Descubre DApps",
+  "discoverSearchHint": "Buscar DApps o en la web",
+  "discoverWebSearchTitle": "Búsqueda de DuckDuckGo",
+  "discoverBrowserFallbackTitle": "Descubrir",
+  "discoverCatalogLoadError": "No se puede cargar Discover en este momento.",
+  "discoverTrendingTokensLoadError": "No se pueden cargar los tokens en tendencia en este momento.",
+  "discoverBlockedTitle": "Bloqueado en Owllet",
+  "discoverRequestSupport": "Solicitar ayuda",
+  "discoverOpenExternalBrowser": "Abrir navegador externo",
+  "discoverCancel": "Cancelar",
+  "discoverTrendingTokensTitle": "Tokens en tendencia",
+  "discoverTrendingTokensSubtitle": "Movimientos del mercado en tiempo real obtenidos de los precios de Owllet.",
+  "discoverFeaturedDappsTitle": "DApps destacadas",
+  "discoverFeaturedDappsSubtitle": "DApps seleccionadas y aprobadas para el acceso a la billetera Owllet.",
+  "discoverTrendingDappsTitle": "Tendencias",
+  "discoverTrendingDappsSubtitle": "Destinos populares aprobados.",
+  "discoverCategoriesTitle": "Categorías",
+  "discoverCategoriesSubtitle": "Categorías seleccionadas para DApps aprobadas con acceso a la billetera.",
+  "discoverAllApprovedDappsTitle": "Todas las DApps aprobadas",
+  "discoverAllApprovedDappsNoMatches": "Ninguna DApp coincide con tu búsqueda.",
+  "discoverAllApprovedDappsCount": "{count} destinos aprobados.",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "KYC ÚNICO",
+  "discoverCashInTitle": "Ingresar fondos",
+  "discoverCashInDescription": "Compra cripto o ingresa fondos cuando el flujo de depósito esté listo.",
+  "discoverGoLabel": "Ir",
+  "discoverNoTrendingTokens": "No hay tokens en tendencia disponibles en este momento.",
+  "discoverManualInputInvalid": "Introduce un sitio web o término de búsqueda válido.",
+  "discoverInvalidLaunchUrl": "La URL de inicio de la DApp no es válida.",
+  "discoverUnsupportedScheme": "Este esquema de sitio web no es compatible con el navegador integrado.",
+  "discoverBlockedReason": "Este sitio intentó acceder a las API de la billetera Owllet mediante {trigger}, pero el origen no está aprobado para el acceso a la billetera dentro de la app.",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "acceso al proveedor de cartera",
+  "discoverSupportSubject": "Solicitud de lista permitida de Discover",
+  "discoverSupportMessage": "Revisa esta DApp para Owllet Discover.\n\nOrigen: {origin}\nURL: {url}\nMotivo mostrado: {reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "Intercambios",
+  "discoverCategoryDefi": "DeFi",
+  "discoverCategorySwap": "Swaps",
+  "discoverCategoryLending": "Préstamos",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "Marketplace",
+  "discoverCategoryCollectibles": "Coleccionables",
   "joinOurCommunity": "Únete a Nuestra Comunidad",
   "resetApp": "Restablecer App",
   "noNftsYet": "Todavía no hay NFTs",
@@ -257,6 +314,7 @@
   "feedbackCategoryBug": "Informe de error",
   "feedbackCategoryFeature": "Solicitud de función",
   "feedbackCategoryDesign": "Comentarios de diseño",
+  "feedbackCategoryDappRequest": "Solicitud de DApp",
   "feedbackSubjectHint": "Breve resumen",
   "feedbackMessageHint": "Cuéntanos qué pasó o qué necesitas",
   "feedbackEmailHint": "you@example.com",
@@ -355,9 +413,25 @@
   "rewardsEarned": "Recompensas obtenidas",
   "referredUsers": "Usuarios referidos",
   "referredUsersCount": "{count} usuarios",
+  "claimableRewards": "Recompensas disponibles para reclamar",
+  "claimReferralRewards": "Reclamar recompensas por referidos",
+  "referralPayoutsUnavailable": "Los pagos por referidos aún no están disponibles.",
+  "referralClaimThreshold": "Monto mínimo para reclamar: ${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "Se envió a tu billetera un pago por referido de ${amount}",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "Agregar referencia",
   "enterReferralCode": "Ingrese el código de referencia",
   "unableToLoadReferrals": "No se pueden cargar referencias",
+  "unableToClaimReferralRewards": "No se pueden reclamar las recompensas por referidos",
   "enterReferralCodePrompt": "Ingrese un código de referencia",
   "ownReferralCodeError": "No puedes usar tu propio código de referencia",
   "referralAdded": "Referencia agregada",
@@ -525,6 +599,8 @@
   "networkLabel": "Red",
   "noNotificationsYet": "Aún no hay notificaciones",
   "availableBalance": "SALDO DISPONIBLE",
+  "totalNetWorth": "PATRIMONIO NETO TOTAL",
+  "portfolio": "Portafolio",
   "history": "Historial",
   "followSocialhq": "Siga a @fomowlhq en X para actualizaciones",
   "socialhqHandle": "x.com/fomowlhq"

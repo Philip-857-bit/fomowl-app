@@ -218,6 +218,140 @@ class AppLocalizationsAr extends AppLocalizations {
   String get feedback => 'ملاحظات';
 
   @override
+  String get discoverTitle => 'اكتشف تطبيقات DApp';
+
+  @override
+  String get discoverSearchHint => 'ابحث عن تطبيقات DApp أو في الويب';
+
+  @override
+  String get discoverWebSearchTitle => 'بحث DuckDuckGo';
+
+  @override
+  String get discoverBrowserFallbackTitle => 'اكتشف';
+
+  @override
+  String get discoverCatalogLoadError => 'يتعذر تحميل قسم الاكتشاف الآن.';
+
+  @override
+  String get discoverTrendingTokensLoadError =>
+      'يتعذر تحميل الرموز الرائجة الآن.';
+
+  @override
+  String get discoverBlockedTitle => 'تم الحظر في Owllet';
+
+  @override
+  String get discoverRequestSupport => 'طلب دعم';
+
+  @override
+  String get discoverOpenExternalBrowser => 'فتح المتصفح الخارجي';
+
+  @override
+  String get discoverCancel => 'إلغاء';
+
+  @override
+  String get discoverTrendingTokensTitle => 'الرموز الرائجة';
+
+  @override
+  String get discoverTrendingTokensSubtitle =>
+      'تحركات السوق المباشرة من تسعير Owllet.';
+
+  @override
+  String get discoverFeaturedDappsTitle => 'تطبيقات DApp المميزة';
+
+  @override
+  String get discoverFeaturedDappsSubtitle =>
+      'تطبيقات DApp منسقة ومعتمدة للوصول إلى محفظة Owllet.';
+
+  @override
+  String get discoverTrendingDappsTitle => 'الرائجة';
+
+  @override
+  String get discoverTrendingDappsSubtitle =>
+      'وجهات شائعة ضمن القائمة المسموح بها.';
+
+  @override
+  String get discoverCategoriesTitle => 'الفئات';
+
+  @override
+  String get discoverCategoriesSubtitle =>
+      'فئات منسقة لتطبيقات DApp المعتمدة والمفعّل فيها الوصول إلى المحفظة.';
+
+  @override
+  String get discoverAllApprovedDappsTitle => 'كل تطبيقات DApp المعتمدة';
+
+  @override
+  String get discoverAllApprovedDappsNoMatches =>
+      'لم يتم العثور على تطبيقات DApp مطابقة لبحثك.';
+
+  @override
+  String discoverAllApprovedDappsCount(Object count) {
+    return '$count وجهات مدرجة في القائمة المسموح بها.';
+  }
+
+  @override
+  String get discoverCashInBadge => 'تحقق KYC لمرة واحدة';
+
+  @override
+  String get discoverCashInTitle => 'إيداع';
+
+  @override
+  String get discoverCashInDescription =>
+      'اشترِ العملات الرقمية أو أضف أموالًا عندما يصبح مسار الإيداع جاهزًا.';
+
+  @override
+  String get discoverGoLabel => 'اذهب';
+
+  @override
+  String get discoverNoTrendingTokens => 'لا توجد رموز رائجة متاحة الآن.';
+
+  @override
+  String get discoverManualInputInvalid => 'أدخل موقعًا أو عبارة بحث صالحة.';
+
+  @override
+  String get discoverInvalidLaunchUrl => 'رابط تشغيل تطبيق DApp غير صالح.';
+
+  @override
+  String get discoverUnsupportedScheme =>
+      'هذا المخطط غير مدعوم في المتصفح داخل التطبيق.';
+
+  @override
+  String discoverBlockedReason(Object trigger) {
+    return 'حاول هذا الموقع الوصول إلى واجهات برمجة محفظة Owllet عبر $trigger، لكن هذا النطاق غير معتمد للوصول إلى المحفظة داخل التطبيق.';
+  }
+
+  @override
+  String get discoverWalletApiAccessTrigger => 'الوصول إلى مزود المحفظة';
+
+  @override
+  String get discoverSupportSubject => 'طلب إدراج في Discover';
+
+  @override
+  String discoverSupportMessage(Object origin, Object url, Object reason) {
+    return 'يرجى مراجعة تطبيق DApp هذا لقسم Discover في Owllet.\n\nالنطاق: $origin\nالرابط: $url\nسبب الحظر: $reason';
+  }
+
+  @override
+  String get discoverCategoryDex => 'المنصات';
+
+  @override
+  String get discoverCategoryDefi => 'التمويل اللامركزي';
+
+  @override
+  String get discoverCategorySwap => 'المبادلات';
+
+  @override
+  String get discoverCategoryLending => 'الإقراض';
+
+  @override
+  String get discoverCategoryNft => 'NFT';
+
+  @override
+  String get discoverCategoryMarketplace => 'السوق';
+
+  @override
+  String get discoverCategoryCollectibles => 'المقتنيات';
+
+  @override
   String get joinOurCommunity => 'انضم إلى مجتمعنا';
 
   @override
@@ -740,6 +874,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get feedbackCategoryDesign => 'ردود الفعل التصميم';
 
   @override
+  String get feedbackCategoryDappRequest => '??? DApp';
+
+  @override
   String get feedbackSubjectHint => 'ملخص قصير';
 
   @override
@@ -1064,11 +1201,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get rewardsEarned => 'المكافآت المكتسبة';
 
   @override
+  String get claimableRewards => 'المكافآت القابلة للمطالبة';
+
+  @override
   String get referredUsers => 'المستخدمون المُحالون';
 
   @override
   String referredUsersCount(Object count) {
     return '$count المستخدمين';
+  }
+
+  @override
+  String get claimReferralRewards => 'استلام مكافآت الإحالة';
+
+  @override
+  String get referralPayoutsUnavailable => 'مدفوعات الإحالة غير متاحة بعد.';
+
+  @override
+  String referralClaimThreshold(Object amount) {
+    return 'الحد الأدنى للمطالبة: \$$amount';
+  }
+
+  @override
+  String referralClaimSuccess(Object amount) {
+    return 'تم إرسال مكافأة إحالة بقيمة \$$amount إلى محفظتك';
   }
 
   @override
@@ -1079,6 +1235,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get unableToLoadReferrals => 'غير قادر على تحميل الإحالات';
+
+  @override
+  String get unableToClaimReferralRewards => 'يتعذر استلام مكافآت الإحالة';
 
   @override
   String get enterReferralCodePrompt => 'أدخل رمز الإحالة';
@@ -1630,6 +1789,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get availableBalance => 'الرصيد المتاح';
+
+  @override
+  String get totalNetWorth => 'إجمالي صافي الثروة';
+
+  @override
+  String get portfolio => 'المحفظة';
 
   @override
   String get history => 'السجل';

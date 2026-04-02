@@ -28,6 +28,7 @@ class DappProviderBridge {
   final DiscoverProviderApprovalHandler? _approvalHandler;
 
   static const String handlerName = 'owlletProvider';
+  static const String detectorHandlerName = 'owlletDappDetector';
 
   static String providerInjectionScript() =>
       '''
@@ -56,9 +57,6 @@ class DappProviderBridge {
       if (payload.method === 'eth_requestAccounts' || payload.method === 'eth_accounts') {
         this.selectedAddress = Array.isArray(result) && result.length > 0 ? result[0] : null;
       }
-      if (payload.method === 'wallet_switchEthereumChain' && payload.params && payload.params[0]) {
-        this._emit('chainChanged', [payload.params[0].chainId]);
-      }
       return result;
     }
     on(eventName, listener) {
@@ -83,6 +81,50 @@ class DappProviderBridge {
 })();
 ''';
 
+  static String providerDetectionScript() =>
+      '''
+(function() {
+  if (window.__owlletDappDetectorInstalled) return;
+  window.__owlletDappDetectorInstalled = true;
+
+  let reported = false;
+  function report(trigger) {
+    if (reported) return;
+    reported = true;
+    try {
+      window.flutter_inappwebview.callHandler('$detectorHandlerName', {
+        trigger: trigger,
+        href: window.location.href
+      });
+    } catch (_) {}
+  }
+
+  function installProbe(name, label) {
+    let storedValue;
+    Object.defineProperty(window, name, {
+      configurable: true,
+      enumerable: false,
+      get() {
+        report(label);
+        return storedValue;
+      },
+      set(value) {
+        storedValue = value;
+        report(label);
+      }
+    });
+  }
+
+  if (!('ethereum' in window)) {
+    installProbe('ethereum', 'window.ethereum');
+  }
+
+  if (!('web3' in window)) {
+    installProbe('web3', 'window.web3');
+  }
+})();
+''';
+
   Future<Map<String, dynamic>> handleRequest({
     required BuildContext context,
     required String origin,
@@ -90,6 +132,12 @@ class DappProviderBridge {
     required Future<void> Function(String source) evaluateJavaScript,
   }) async {
     try {
+      final originUri = Uri.tryParse(origin);
+      if (originUri == null ||
+          !sessionController.canInjectProviderFor(originUri)) {
+        return _error(4100, 'Provider is unavailable for this origin.');
+      }
+
       final method = payload['method']?.toString() ?? '';
       final params = payload['params'] is List<dynamic>
           ? (payload['params'] as List<dynamic>)
@@ -265,6 +313,12 @@ class DappProviderBridge {
       );
     }
 
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        4001,
+        'The network switch request was rejected.',
+      );
+    }
     final approved = await _confirmAction(
       context,
       title: 'Switch network',
@@ -355,6 +409,12 @@ class DappProviderBridge {
       }
     }
 
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        4001,
+        'The add-network request was rejected.',
+      );
+    }
     final approved = await _confirmAction(
       context,
       title: 'Add network',
@@ -384,7 +444,14 @@ class DappProviderBridge {
       );
     }
 
-    await blockchain.addCustomChain(
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final refreshedBlockchain = context.read<BlockchainService>();
+    await refreshedBlockchain.addCustomChain(
       EvmChain(
         name: chainName,
         symbol: symbol.toUpperCase(),
@@ -449,7 +516,7 @@ class DappProviderBridge {
       );
     }
     final address = params[0]?.toString().trim() ?? '';
-    final jsonData = params[1]?.toString() ?? '';
+    final jsonData = _normalizeTypedDataPayload(params[1]);
     if (address.toLowerCase() != walletAddress.toLowerCase() ||
         jsonData.isEmpty) {
       throw _ProviderBridgeException(
@@ -545,16 +612,25 @@ class DappProviderBridge {
       );
     }
 
-    final txHash = await _walletService.sendRawTransactionRequest(
-      rpcUrl: activeChain.rpcUrl,
-      chainId: activeChain.chainId,
-      toAddress: to,
-      valueInWei: valueWei,
-      dataHex: dataHex,
-      gasPriceWei: gasPriceWei,
-      gasLimit: gasLimit,
-      nonce: nonce,
-    );
+    late final String txHash;
+    try {
+      txHash = await _walletService.sendRawTransactionRequest(
+        rpcUrl: activeChain.rpcUrl,
+        chainId: activeChain.chainId,
+        toAddress: to,
+        valueInWei: valueWei,
+        dataHex: dataHex,
+        gasPriceWei: gasPriceWei,
+        gasLimit: gasLimit,
+        nonce: nonce,
+      );
+    } on FormatException catch (error) {
+      final message = error.message.toString();
+      throw _ProviderBridgeException(
+        -32602,
+        message.isNotEmpty ? message : 'Invalid transaction data.',
+      );
+    }
     return txHash.startsWith('0x') ? txHash : '0x$txHash';
   }
 
@@ -656,12 +732,43 @@ class DappProviderBridge {
     }
     final first = params[0]?.toString() ?? '';
     final second = params[1]?.toString() ?? '';
-    final isFirstAddress = first.toLowerCase() == walletAddress.toLowerCase();
+    final normalizedWallet = walletAddress.toLowerCase();
+    final isFirstAddress = first.toLowerCase() == normalizedWallet;
+    final isSecondAddress = second.toLowerCase() == normalizedWallet;
+    if (!isFirstAddress && !isSecondAddress) {
+      throw _ProviderBridgeException(
+        -32602,
+        'personal_sign requires the active wallet address.',
+      );
+    }
     final payload = isFirstAddress ? second : first;
     final preview = payload.length > 240
         ? '${payload.substring(0, 240)}...'
         : payload;
     return _ResolvedSignPayload(payload: payload, preview: preview);
+  }
+
+  String _normalizeTypedDataPayload(Object? value) {
+    final jsonData = switch (value) {
+      String stringValue => stringValue.trim(),
+      Map<dynamic, dynamic> mapValue => jsonEncode(mapValue),
+      List<dynamic> listValue => jsonEncode(listValue),
+      null => '',
+      _ => value.toString().trim(),
+    };
+    if (jsonData.isEmpty) {
+      return '';
+    }
+    try {
+      final decoded = jsonDecode(jsonData);
+      if (decoded is Map<String, dynamic> || decoded is List<dynamic>) {
+        return jsonData;
+      }
+    } catch (_) {}
+    throw _ProviderBridgeException(
+      -32602,
+      'Invalid typed-data signing request.',
+    );
   }
 
   String _typedDataSummary(String jsonData) {

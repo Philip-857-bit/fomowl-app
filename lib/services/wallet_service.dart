@@ -473,6 +473,16 @@ class WalletService {
     if (normalized.isEmpty) {
       return null;
     }
+    if (normalized.length.isOdd) {
+      throw const FormatException(
+        'Invalid transaction data hex: expected an even number of characters.',
+      );
+    }
+    if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(normalized)) {
+      throw const FormatException(
+        'Invalid transaction data hex: contains non-hex characters.',
+      );
+    }
     return Uint8List.fromList(HEX.decode(normalized));
   }
 }

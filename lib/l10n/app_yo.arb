@@ -69,6 +69,63 @@
   "privacyPolicy": "Ilana Asiri",
   "termsOfService": "Awọn ofin Iṣẹ",
   "feedback": "Esi",
+  "discoverTitle": "Ṣàwárí DApps",
+  "discoverSearchHint": "Wa DApps tàbí wẹẹbu",
+  "discoverWebSearchTitle": "Ìwádìí DuckDuckGo",
+  "discoverBrowserFallbackTitle": "Ṣàwárí",
+  "discoverCatalogLoadError": "A kò lè gbé Discover kalẹ bayii.",
+  "discoverTrendingTokensLoadError": "A kò lè gbé àwọn token tó ń gbajúgbajà kalẹ bayii.",
+  "discoverBlockedTitle": "A ti dènà rẹ ninu Owllet",
+  "discoverRequestSupport": "Bẹ̀rẹ̀ ìrànlọ́wọ́",
+  "discoverOpenExternalBrowser": "Ṣí aṣàwákiri ita",
+  "discoverCancel": "Fagilé",
+  "discoverTrendingTokensTitle": "Àwọn token tó ń gbajúgbajà",
+  "discoverTrendingTokensSubtitle": "Ìyípadà ọjà lásìkò gidi láti owó iye Owllet.",
+  "discoverFeaturedDappsTitle": "DApps àfihàn",
+  "discoverFeaturedDappsSubtitle": "DApps tí a yan tí a sì fọwọ́si fún ìwọle sí wallet Owllet.",
+  "discoverTrendingDappsTitle": "Tó ń gbajúgbajà",
+  "discoverTrendingDappsSubtitle": "Àwọn ibi tí a fọwọ́si tó gbajúgbajà.",
+  "discoverCategoriesTitle": "Àwọn ẹ̀ka",
+  "discoverCategoriesSubtitle": "Àwọn ẹ̀ka tí a yan fún DApps tí a fọwọ́si tí ó ní ìwọle sí wallet.",
+  "discoverAllApprovedDappsTitle": "Gbogbo DApps tí a fọwọ́si",
+  "discoverAllApprovedDappsNoMatches": "Kò sí DApp tó ba ìwádìí rẹ mu.",
+  "discoverAllApprovedDappsCount": "Àwọn ibi {count} tí a fọwọ́si.",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "KYC LẸ́Ẹ̀KAN",
+  "discoverCashInTitle": "Fi owó wọlé",
+  "discoverCashInDescription": "Ra crypto tàbí fi owó wọlé nígbà tí ìlànà ìdógó bá ti ṣetan.",
+  "discoverGoLabel": "Lọ",
+  "discoverNoTrendingTokens": "Kò sí àwọn token tó ń gbajúgbajà bayii.",
+  "discoverManualInputInvalid": "Tẹ ojúlé tàbí ọ̀rọ̀ ìwádìí tó tọ́ sílẹ̀.",
+  "discoverInvalidLaunchUrl": "URL ìbẹ̀rẹ̀ DApp kò tọ́.",
+  "discoverUnsupportedScheme": "Ìrú scheme ojúlé yìí kò ni atilẹyin ninu aṣàwákiri inú app.",
+  "discoverBlockedReason": "Ojúlé yìí gbìyànjú láti wọle sí APIs wallet Owllet nípasẹ̀ {trigger}, ṣùgbọ́n a kò fọwọ́si origin náà fún ìwọle wallet nínú app.",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "ìwọle sí provider wallet",
+  "discoverSupportSubject": "Ìbéèrè allowlist Discover",
+  "discoverSupportMessage": "Jọ̀wọ́ ṣàyẹ̀wò DApp yìí fún Owllet Discover.\n\nOrigin: {origin}\nURL: {url}\nÌdí tí a fi hàn: {reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "Àwọn paṣípààrọ̀",
+  "discoverCategoryDefi": "DeFi",
+  "discoverCategorySwap": "Swaps",
+  "discoverCategoryLending": "Ìyálẹ́nu owó",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "Ọjà",
+  "discoverCategoryCollectibles": "Ohun ìkójọpọ̀",
   "joinOurCommunity": "Darapọ mọ wa",
   "resetApp": "Tun ohun elo ṣeto",
   "noNftsYet": "Ko si NFT kankan",
@@ -257,6 +314,7 @@
   "feedbackCategoryBug": "Iroyin Aṣiṣe",
   "feedbackCategoryFeature": "Ibeere fun Nkan Tuntun",
   "feedbackCategoryDesign": "Esi lori Irisi",
+  "feedbackCategoryDappRequest": "?b??r? DApp",
   "feedbackSubjectHint": "Afoyemọ kukuru",
   "feedbackMessageHint": "Sọ ohun to ṣẹlẹ fun wa tabi ohun to nilo",
   "feedbackEmailHint": "oruko@apeere.com",
@@ -355,9 +413,25 @@
   "rewardsEarned": "Ere ti mo ti gba",
   "referredUsers": "Awọn eniyan ti mo pe",
   "referredUsersCount": "Eniyan {count}",
+  "claimableRewards": "Awọn ere ti o le gba",
+  "claimReferralRewards": "Gba ere itọkasi",
+  "referralPayoutsUnavailable": "Sisan ere itọkasi ko tii wa sibẹ.",
+  "referralClaimThreshold": "Iye to kere ju fun gbigba: ${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "A ti fi ere itọkasi ${amount} ranṣẹ si apamọwọ rẹ",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "Fi Itọkasi kun",
   "enterReferralCode": "Tẹ koodu itọkasi rẹ",
   "unableToLoadReferrals": "A ko le gbe awọn itọkasi jade",
+  "unableToClaimReferralRewards": "A ko le gba ere itọkasi",
   "enterReferralCodePrompt": "Tẹ koodu itọkasi rẹ",
   "ownReferralCodeError": "O ko le lo koodu itọkasi rẹ fúnra rẹ",
   "referralAdded": "A ti fi itọkasi kun",
@@ -525,6 +599,8 @@
   "networkLabel": "Nẹtiwọ̀kì",
   "noNotificationsYet": "Ko si ìfitónilétí sibẹsibẹ",
   "availableBalance": "IWỌN TO WA",
+  "totalNetWorth": "APAPỌ IYE NẸTI",
+  "portfolio": "Pọ́tífóliò",
   "history": "Itan",
   "followSocialhq": "Tẹle @fomowlhq lori X fun awọn imudojuiwọn",
   "socialhqHandle": "x.com/fomowlhq"

@@ -6,6 +6,7 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/referral_service.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/bottom_navigation.dart';
 import 'widgets/settings_group_card.dart';
@@ -27,6 +28,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   String? _walletAddress;
   bool _loading = true;
   bool _submitting = false;
+  bool _claiming = false;
 
   @override
   void initState() {
@@ -96,11 +98,8 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       await _loadProfile();
     } catch (e) {
       debugPrint('Unable to add referral: $e');
-      final message = e.toString().replaceFirst('Exception: ', '').trim();
       ToastUtils.showError(
-        message.isEmpty || message == e.toString()
-            ? l.unableToAddReferral
-            : message,
+        AppErrorUtils.userMessage(e, fallback: l.unableToAddReferral),
       );
     } finally {
       if (mounted) {
@@ -115,6 +114,46 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     if (code == null || code.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: code));
     ToastUtils.showSuccess(l.referralCodeCopied);
+  }
+
+  Future<void> _claimRewards() async {
+    final l = AppLocalizations.of(context);
+    final walletAddress = _walletAddress;
+    final profile = _profile;
+    if (walletAddress == null || walletAddress.isEmpty || profile == null) {
+      ToastUtils.showError(l.unableToLoadReferrals);
+      return;
+    }
+    if (!profile.payoutsEnabled) {
+      ToastUtils.showInfo(l.referralPayoutsUnavailable);
+      return;
+    }
+    if (!profile.canClaim) {
+      ToastUtils.showInfo(
+        l.referralClaimThreshold(profile.minPayoutUsd.toStringAsFixed(2)),
+      );
+      return;
+    }
+
+    setState(() => _claiming = true);
+    try {
+      final result = await _referralService.claimRewards(
+        walletAddress: walletAddress,
+      );
+      ToastUtils.showSuccess(
+        l.referralClaimSuccess(result.amountUsd.toStringAsFixed(2)),
+      );
+      await _loadProfile();
+    } catch (e) {
+      debugPrint('Unable to claim referral rewards: $e');
+      ToastUtils.showError(
+        AppErrorUtils.userMessage(e, fallback: l.unableToClaimReferralRewards),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _claiming = false);
+      }
+    }
   }
 
   @override
@@ -261,6 +300,12 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               '\$${(_profile?.totalRewardsUsd ?? 0).toStringAsFixed(2)}',
                         ),
                         SettingsItemTile(
+                          icon: Icons.payments_outlined,
+                          title: l.claimableRewards,
+                          subtitle:
+                              '\$${(_profile?.claimableRewardsUsd ?? 0).toStringAsFixed(2)}',
+                        ),
+                        SettingsItemTile(
                           icon: Icons.groups_2_outlined,
                           title: l.referredUsers,
                           subtitle: l.referredUsersCount(
@@ -268,6 +313,71 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardDark,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: AppColors.divider.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _profile?.payoutsEnabled == true
+                                ? l.referralClaimThreshold(
+                                    (_profile?.minPayoutUsd ?? 5)
+                                        .toStringAsFixed(2),
+                                  )
+                                : l.referralPayoutsUnavailable,
+                            style: GoogleFonts.outfit(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed:
+                                _claiming ||
+                                    !(_profile?.payoutsEnabled ?? false) ||
+                                    !(_profile?.canClaim ?? false)
+                                ? null
+                                : _claimRewards,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(52),
+                              backgroundColor: AppColors.accentRed,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: AppColors.cardDark,
+                              disabledForegroundColor: AppColors.textSecondary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                            child: _claiming
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    l.claimReferralRewards,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Container(

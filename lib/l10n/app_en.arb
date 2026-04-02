@@ -69,6 +69,63 @@
   "privacyPolicy": "Privacy Policy",
   "termsOfService": "Terms of Service",
   "feedback": "Feedback",
+  "discoverTitle": "Discover DApps",
+  "discoverSearchHint": "Search DApps or the web",
+  "discoverWebSearchTitle": "DuckDuckGo search",
+  "discoverBrowserFallbackTitle": "Discover",
+  "discoverCatalogLoadError": "Unable to load Discover right now.",
+  "discoverTrendingTokensLoadError": "Unable to load trending tokens right now.",
+  "discoverBlockedTitle": "Blocked in Owllet",
+  "discoverRequestSupport": "Request support",
+  "discoverOpenExternalBrowser": "Open external browser",
+  "discoverCancel": "Cancel",
+  "discoverTrendingTokensTitle": "Trending Tokens",
+  "discoverTrendingTokensSubtitle": "Live market movers pulled from Owllet pricing.",
+  "discoverFeaturedDappsTitle": "Featured DApps",
+  "discoverFeaturedDappsSubtitle": "Curated DApps approved for Owllet wallet access.",
+  "discoverTrendingDappsTitle": "Trending",
+  "discoverTrendingDappsSubtitle": "Popular allowlisted destinations.",
+  "discoverCategoriesTitle": "Categories",
+  "discoverCategoriesSubtitle": "Curated categories for approved wallet-enabled DApps.",
+  "discoverAllApprovedDappsTitle": "All approved DApps",
+  "discoverAllApprovedDappsNoMatches": "No DApps matched your search.",
+  "discoverAllApprovedDappsCount": "{count} allowlisted destinations.",
+  "@discoverAllApprovedDappsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "discoverCashInBadge": "ONE-TIME KYC",
+  "discoverCashInTitle": "Cash In",
+  "discoverCashInDescription": "Buy crypto or move funds in once the deposit flow is ready.",
+  "discoverGoLabel": "Go",
+  "discoverNoTrendingTokens": "No trending tokens are available right now.",
+  "discoverManualInputInvalid": "Enter a valid website or search term.",
+  "discoverInvalidLaunchUrl": "The DApp launch URL is invalid.",
+  "discoverUnsupportedScheme": "This website scheme is not supported in the in-app browser.",
+  "discoverBlockedReason": "This site attempted to access Owllet wallet APIs through {trigger}, but the origin is not approved for in-app wallet access.",
+  "@discoverBlockedReason": {
+    "placeholders": {
+      "trigger": {}
+    }
+  },
+  "discoverWalletApiAccessTrigger": "wallet provider access",
+  "discoverSupportSubject": "Discover allowlist request",
+  "discoverSupportMessage": "Please review this DApp for Owllet Discover.\n\nOrigin: {origin}\nURL: {url}\nReason shown: {reason}",
+  "@discoverSupportMessage": {
+    "placeholders": {
+      "origin": {},
+      "url": {},
+      "reason": {}
+    }
+  },
+  "discoverCategoryDex": "Exchanges",
+  "discoverCategoryDefi": "DeFi",
+  "discoverCategorySwap": "Swaps",
+  "discoverCategoryLending": "Lending",
+  "discoverCategoryNft": "NFT",
+  "discoverCategoryMarketplace": "Marketplace",
+  "discoverCategoryCollectibles": "Collectibles",
   "joinOurCommunity": "Join Our Community",
   "resetApp": "Reset App",
   "noNftsYet": "No NFTs yet",
@@ -257,6 +314,7 @@
   "feedbackCategoryBug": "Bug Report",
   "feedbackCategoryFeature": "Feature Request",
   "feedbackCategoryDesign": "Design Feedback",
+  "feedbackCategoryDappRequest": "DApp request",
   "feedbackSubjectHint": "Short summary",
   "feedbackMessageHint": "Tell us what happened or what you need",
   "feedbackEmailHint": "you@example.com",
@@ -353,11 +411,27 @@
   "myReferral": "My Referral",
   "noReferral": "No referral",
   "rewardsEarned": "Rewards Earned",
+  "claimableRewards": "Claimable Rewards",
   "referredUsers": "Referred Users",
   "referredUsersCount": "{count} users",
+  "claimReferralRewards": "Claim Referral Rewards",
+  "referralPayoutsUnavailable": "Referral payouts are not available yet.",
+  "referralClaimThreshold": "Minimum payout: ${amount}",
+  "@referralClaimThreshold": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "referralClaimSuccess": "Referral payout of ${amount} sent to your wallet",
+  "@referralClaimSuccess": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
   "addReferral": "Add Referral",
   "enterReferralCode": "Enter referral code",
   "unableToLoadReferrals": "Unable to load referrals",
+  "unableToClaimReferralRewards": "Unable to claim referral rewards",
   "enterReferralCodePrompt": "Enter a referral code",
   "ownReferralCodeError": "You cannot use your own referral code",
   "referralAdded": "Referral added",
@@ -525,6 +599,8 @@
   "networkLabel": "Network",
   "noNotificationsYet": "No notifications yet",
   "availableBalance": "AVAILABLE BALANCE",
+  "totalNetWorth": "TOTAL NET WORTH",
+  "portfolio": "Portfolio",
   "history": "History",
   "followSocialhq": "Follow @fomowlhq on X for live updates",
   "socialhqHandle": "x.com/fomowlhq"
