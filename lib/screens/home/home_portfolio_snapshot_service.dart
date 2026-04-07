@@ -12,11 +12,19 @@ class HomeAggregatedPortfolioSnapshot {
     required this.walletAddress,
     required this.sections,
     required this.timestamp,
+    this.source = 'cache',
+    this.isStale = false,
+    this.partialFailure = false,
+    this.chainsPending = const [],
   });
 
   final String walletAddress;
   final List<HomePortfolioSection> sections;
   final DateTime timestamp;
+  final String source;
+  final bool isStale;
+  final bool partialFailure;
+  final List<int> chainsPending;
 
   Map<String, dynamic> toJson() => {
     'walletAddress': walletAddress,
@@ -29,6 +37,10 @@ class HomeAggregatedPortfolioSnapshot {
         )
         .toList(),
     'timestamp': timestamp.toIso8601String(),
+    'source': source,
+    'isStale': isStale,
+    'partialFailure': partialFailure,
+    'chainsPending': chainsPending,
   };
 
   factory HomeAggregatedPortfolioSnapshot.fromJson(Map<String, dynamic> json) {
@@ -51,10 +63,36 @@ class HomeAggregatedPortfolioSnapshot {
         );
       }).toList(),
       timestamp: _parseTimestamp(json['timestamp']),
+      source: json['source'] as String? ?? 'cache',
+      isStale: json['isStale'] == true,
+      partialFailure: json['partialFailure'] == true,
+      chainsPending: (json['chainsPending'] as List? ?? const [])
+          .map((value) => (value as num).toInt())
+          .toList(),
     );
   }
 
-  bool get isStale => DateTime.now().difference(timestamp).inHours > 24;
+  HomeAggregatedPortfolioSnapshot copyWith({
+    String? source,
+    bool? isStale,
+    bool? partialFailure,
+    List<int>? chainsPending,
+    List<HomePortfolioSection>? sections,
+    DateTime? timestamp,
+  }) {
+    return HomeAggregatedPortfolioSnapshot(
+      walletAddress: walletAddress,
+      sections: sections ?? this.sections,
+      timestamp: timestamp ?? this.timestamp,
+      source: source ?? this.source,
+      isStale: isStale ?? this.isStale,
+      partialFailure: partialFailure ?? this.partialFailure,
+      chainsPending: chainsPending ?? this.chainsPending,
+    );
+  }
+
+  bool get isExpired =>
+      DateTime.now().difference(timestamp) > const Duration(minutes: 5);
 }
 
 class HomePortfolioSnapshotService {
@@ -90,7 +128,7 @@ class HomePortfolioSnapshotService {
       }
 
       final snapshot = HomeAggregatedPortfolioSnapshot.fromJson(decoded);
-      if (snapshot.isStale) {
+      if (snapshot.isExpired) {
         await prefs.remove(_key(walletAddress));
         return null;
       }

@@ -43,7 +43,8 @@ class HomePortfolioSnapshot {
     );
   }
 
-  bool get isStale => DateTime.now().difference(timestamp).inHours > 24;
+  bool get isStale =>
+      DateTime.now().difference(timestamp) > const Duration(minutes: 5);
 }
 
 DateTime _parseTimestamp(Object? rawValue) {

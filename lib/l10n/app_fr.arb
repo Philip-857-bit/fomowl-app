@@ -601,6 +601,14 @@
   "availableBalance": "SOLDE DISPONIBLE",
   "totalNetWorth": "PATRIMOINE NET TOTAL",
   "portfolio": "Portefeuille",
+  "balanceSyncingStatus": "Synchronisation des soldes",
+  "balanceMayBeOutdatedStatus": "Les soldes peuvent être obsolètes",
+  "balanceUpdatedAt": "Mis à jour à {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "Historique",
   "followSocialhq": "Suivez @fomowlhq sur X pour les mises à jour",
   "socialhqHandle": "x.com/fomowlhq"

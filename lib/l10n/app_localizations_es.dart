@@ -1833,6 +1833,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get portfolio => 'Portafolio';
 
   @override
+  String get balanceSyncingStatus => 'Sincronizando saldos';
+
+  @override
+  String get balanceMayBeOutdatedStatus =>
+      'Los saldos pueden estar desactualizados';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'Actualizado a las $time';
+  }
+
+  @override
   String get history => 'Historial';
 
   @override

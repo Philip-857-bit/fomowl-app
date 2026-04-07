@@ -15,6 +15,7 @@ void main() {
     required HomePortfolioMetrics metrics,
     bool isBalanceVisible = true,
     String formattedBalance = '\$222.62',
+    String? statusText,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -25,6 +26,7 @@ void main() {
             titleText: 'TOTAL NET WORTH',
             formattedBalance: formattedBalance,
             portfolioMetrics: metrics,
+            statusText: statusText,
             isBalanceVisible: isBalanceVisible,
             isLoadingBalances: false,
             onToggleVisibility: () {},
@@ -126,5 +128,15 @@ void main() {
 
     expect(find.text('\$1,090.00'), findsOneWidget);
     expect(find.text('\$1.09K'), findsNothing);
+  });
+
+  testWidgets('renders status text when provided', (tester) async {
+    await pumpCard(
+      tester,
+      metrics: HomePortfolioMetrics.zero(),
+      statusText: 'Updated 10:30',
+    );
+
+    expect(find.text('Updated 10:30'), findsOneWidget);
   });
 }

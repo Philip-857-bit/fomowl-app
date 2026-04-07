@@ -1838,6 +1838,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get portfolio => 'Portefeuille';
 
   @override
+  String get balanceSyncingStatus => 'Synchronisation des soldes';
+
+  @override
+  String get balanceMayBeOutdatedStatus => 'Les soldes peuvent être obsolètes';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'Mis à jour à $time';
+  }
+
+  @override
   String get history => 'Historique';
 
   @override

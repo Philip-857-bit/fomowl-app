@@ -1797,6 +1797,17 @@ class AppLocalizationsAr extends AppLocalizations {
   String get portfolio => 'المحفظة';
 
   @override
+  String get balanceSyncingStatus => 'جارٍ مزامنة الأرصدة';
+
+  @override
+  String get balanceMayBeOutdatedStatus => 'قد تكون الأرصدة غير محدثة';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'تم التحديث في $time';
+  }
+
+  @override
   String get history => 'السجل';
 
   @override

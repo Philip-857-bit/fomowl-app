@@ -3362,6 +3362,24 @@ abstract class AppLocalizations {
   /// **'Portfolio'**
   String get portfolio;
 
+  /// No description provided for @balanceSyncingStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing balances'**
+  String get balanceSyncingStatus;
+
+  /// No description provided for @balanceMayBeOutdatedStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Balances may be outdated'**
+  String get balanceMayBeOutdatedStatus;
+
+  /// No description provided for @balanceUpdatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {time}'**
+  String balanceUpdatedAt(Object time);
+
   /// No description provided for @history.
   ///
   /// In en, this message translates to:

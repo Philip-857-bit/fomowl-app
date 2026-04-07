@@ -601,6 +601,14 @@
   "availableBalance": "AVAILABLE BALANCE",
   "totalNetWorth": "TOTAL NET WORTH",
   "portfolio": "Portfolio",
+  "balanceSyncingStatus": "Syncing balances",
+  "balanceMayBeOutdatedStatus": "Balances may be outdated",
+  "balanceUpdatedAt": "Updated {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "History",
   "followSocialhq": "Follow @fomowlhq on X for live updates",
   "socialhqHandle": "x.com/fomowlhq"

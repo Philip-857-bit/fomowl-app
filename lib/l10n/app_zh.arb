@@ -604,6 +604,14 @@
   "availableBalance": "可用余额",
   "totalNetWorth": "净资产总额",
   "portfolio": "投资组合",
+  "balanceSyncingStatus": "正在同步余额",
+  "balanceMayBeOutdatedStatus": "余额可能不是最新的",
+  "balanceUpdatedAt": "更新时间：{time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "历史",
   "followSocialhq": "在X上关注@fomowlhq获取即时更新",
   "socialhqHandle": "x.com/fomowlhq"

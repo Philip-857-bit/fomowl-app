@@ -6,6 +6,27 @@ import 'home_portfolio_data.dart';
 class HomePortfolioRepository {
   const HomePortfolioRepository();
 
+  Future<HomePortfolioData> filterSections({
+    required List<HomePortfolioSection> sections,
+    required Future<Set<String>> Function(int chainId) loadHiddenTokens,
+  }) async {
+    final visibleSections = await Future.wait(
+      sections.map(
+        (section) => _filterSection(
+          section: section,
+          loadHiddenTokens: loadHiddenTokens,
+        ),
+      ),
+    );
+
+    final filtered = visibleSections.whereType<HomePortfolioSection>().toList()
+      ..sort(
+        (left, right) => right.totalBalanceUsd.compareTo(left.totalBalanceUsd),
+      );
+
+    return HomePortfolioData.fromSections(filtered);
+  }
+
   Future<HomePortfolioData> loadPortfolio({
     required String walletAddress,
     required List<EvmChain> chains,
@@ -26,12 +47,10 @@ class HomePortfolioRepository {
       ),
     );
 
-    final visibleSections = sections.whereType<HomePortfolioSection>().toList()
-      ..sort(
-        (left, right) => right.totalBalanceUsd.compareTo(left.totalBalanceUsd),
-      );
-
-    return HomePortfolioData.fromSections(visibleSections);
+    return filterSections(
+      sections: sections.whereType<HomePortfolioSection>().toList(),
+      loadHiddenTokens: loadHiddenTokens,
+    );
   }
 
   Future<HomePortfolioSection?> _loadSection({
@@ -40,29 +59,39 @@ class HomePortfolioRepository {
     required Future<Set<String>> Function(int chainId) loadHiddenTokens,
   }) async {
     try {
-      final hiddenTokenKeys = await loadHiddenTokens(chain.chainId);
       final tokens = await fetchTokens(chain.chainId);
-      final visibleTokens =
-          tokens
-              .where(
-                (token) => !hiddenTokenKeys.contains(
-                  TokenVisibilityUtils.identifier(token),
-                ),
-              )
-              .toList()
-            ..sort(
-              (left, right) => right.totalValueUsdDecimal.compareTo(
-                left.totalValueUsdDecimal,
-              ),
-            );
-
-      if (visibleTokens.isEmpty) {
-        return null;
-      }
-
-      return HomePortfolioSection(chain: chain, tokens: visibleTokens);
+      return _filterSection(
+        section: HomePortfolioSection(chain: chain, tokens: tokens),
+        loadHiddenTokens: loadHiddenTokens,
+      );
     } catch (_) {
       return null;
     }
+  }
+
+  Future<HomePortfolioSection?> _filterSection({
+    required HomePortfolioSection section,
+    required Future<Set<String>> Function(int chainId) loadHiddenTokens,
+  }) async {
+    final hiddenTokenKeys = await loadHiddenTokens(section.chain.chainId);
+    final visibleTokens =
+        section.tokens
+            .where(
+              (token) => !hiddenTokenKeys.contains(
+                TokenVisibilityUtils.identifier(token),
+              ),
+            )
+            .where((token) => token.balance > 0 || token.totalValueUsd > 0)
+            .toList()
+          ..sort(
+            (left, right) =>
+                right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
+          );
+
+    if (visibleTokens.isEmpty) {
+      return null;
+    }
+
+    return HomePortfolioSection(chain: section.chain, tokens: visibleTokens);
   }
 }

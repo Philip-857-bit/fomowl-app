@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/token.dart';
+import 'package:fomowl_wallet/screens/home/home_portfolio_data.dart';
 import 'package:fomowl_wallet/screens/home/home_portfolio_repository.dart';
 import 'package:fomowl_wallet/utils/value_formatter.dart';
 
@@ -157,5 +158,36 @@ void main() {
         expect(data.metrics.changeAmountUsd24h, Decimal.zero);
       },
     );
+
+    test('filters preloaded remote sections with hidden tokens', () async {
+      final data = await repository.filterSections(
+        sections: [
+          HomePortfolioSection(
+            chain: chain(name: 'Ethereum', symbol: 'ETH', chainId: 1),
+            tokens: [
+              token(
+                symbol: 'ETH',
+                name: 'Ethereum',
+                contractAddress: '0xeth',
+                valueUsd: 100,
+                changePercent24h: 10,
+              ),
+              token(
+                symbol: 'USDC',
+                name: 'USD Coin',
+                contractAddress: '0xhidden',
+                valueUsd: 200,
+                changePercent24h: 0,
+              ),
+            ],
+          ),
+        ],
+        loadHiddenTokens: (_) async => {'0xhidden'},
+      );
+
+      expect(data.sections, hasLength(1));
+      expect(data.sections.single.tokens, hasLength(1));
+      expect(data.sections.single.tokens.single.symbol, 'ETH');
+    });
   });
 }

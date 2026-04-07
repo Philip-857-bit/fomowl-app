@@ -601,6 +601,14 @@
   "availableBalance": "KUƊIN DA AKE DA SU",
   "totalNetWorth": "JIMILLAR DARAJAR DUKIYA",
   "portfolio": "Fayil na kadarori",
+  "balanceSyncingStatus": "Ana daidaita ma'aunai",
+  "balanceMayBeOutdatedStatus": "Ma'aunan na iya tsufa",
+  "balanceUpdatedAt": "An sabunta da {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "Tarihi",
   "followSocialhq": "Bi @fomowlhq a X don samun sababbin labarai",
   "socialhqHandle": "x.com/fomowlhq"

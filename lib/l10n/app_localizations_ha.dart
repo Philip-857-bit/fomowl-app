@@ -1799,6 +1799,17 @@ class AppLocalizationsHa extends AppLocalizations {
   String get portfolio => 'Fayil na kadarori';
 
   @override
+  String get balanceSyncingStatus => 'Ana daidaita ma\'aunai';
+
+  @override
+  String get balanceMayBeOutdatedStatus => 'Ma\'aunan na iya tsufa';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'An sabunta da $time';
+  }
+
+  @override
   String get history => 'Tarihi';
 
   @override

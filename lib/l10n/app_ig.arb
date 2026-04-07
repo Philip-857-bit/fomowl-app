@@ -601,6 +601,14 @@
   "availableBalance": "EGO DỊ",
   "totalNetWorth": "MKPỌRỤTA URU ZURU EZU",
   "portfolio": "Pọtụfoliyo",
+  "balanceSyncingStatus": "Na-emekọrịta ego fọdụrụ",
+  "balanceMayBeOutdatedStatus": "Ego fọdụrụ nwere ike ịbụ nke ochie",
+  "balanceUpdatedAt": "Emelitere na {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "Akụkọ",
   "followSocialhq": "Soro @fomowlhq na X maka ozi ọhụrụ",
   "socialhqHandle": "x.com/fomowlhq"

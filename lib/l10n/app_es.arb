@@ -601,6 +601,14 @@
   "availableBalance": "SALDO DISPONIBLE",
   "totalNetWorth": "PATRIMONIO NETO TOTAL",
   "portfolio": "Portafolio",
+  "balanceSyncingStatus": "Sincronizando saldos",
+  "balanceMayBeOutdatedStatus": "Los saldos pueden estar desactualizados",
+  "balanceUpdatedAt": "Actualizado a las {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "Historial",
   "followSocialhq": "Siga a @fomowlhq en X para actualizaciones",
   "socialhqHandle": "x.com/fomowlhq"

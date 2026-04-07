@@ -1793,6 +1793,17 @@ class AppLocalizationsIg extends AppLocalizations {
   String get portfolio => 'Pọtụfoliyo';
 
   @override
+  String get balanceSyncingStatus => 'Na-emekọrịta ego fọdụrụ';
+
+  @override
+  String get balanceMayBeOutdatedStatus => 'Ego fọdụrụ nwere ike ịbụ nke ochie';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'Emelitere na $time';
+  }
+
+  @override
   String get history => 'Akụkọ';
 
   @override

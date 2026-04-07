@@ -601,6 +601,14 @@
   "availableBalance": "IWỌN TO WA",
   "totalNetWorth": "APAPỌ IYE NẸTI",
   "portfolio": "Pọ́tífóliò",
+  "balanceSyncingStatus": "N mu iwọntunwọnsi ṣiṣẹpọ",
+  "balanceMayBeOutdatedStatus": "Awọn iwọntunwọnsi le ti darugbo",
+  "balanceUpdatedAt": "Ti ni imudojuiwọn ni {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "Itan",
   "followSocialhq": "Tẹle @fomowlhq lori X fun awọn imudojuiwọn",
   "socialhqHandle": "x.com/fomowlhq"

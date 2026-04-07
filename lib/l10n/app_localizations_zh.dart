@@ -1721,6 +1721,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get portfolio => '投资组合';
 
   @override
+  String get balanceSyncingStatus => '正在同步余额';
+
+  @override
+  String get balanceMayBeOutdatedStatus => '余额可能不是最新的';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return '更新时间：$time';
+  }
+
+  @override
   String get history => '历史';
 
   @override

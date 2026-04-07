@@ -1,3 +1,19 @@
+enum ChainFamily { evm, solana }
+
+extension ChainFamilyCodec on ChainFamily {
+  String get wireValue => switch (this) {
+    ChainFamily.evm => 'evm',
+    ChainFamily.solana => 'solana',
+  };
+
+  static ChainFamily fromWireValue(String? value) {
+    return switch (value?.trim().toLowerCase()) {
+      'solana' => ChainFamily.solana,
+      _ => ChainFamily.evm,
+    };
+  }
+}
+
 /// EVM Chain configuration
 class EvmChain {
   final String name;
@@ -8,6 +24,7 @@ class EvmChain {
   final String? explorerUrl;
   final String? logoUrl;
   final bool isCustom;
+  final ChainFamily family;
 
   const EvmChain({
     required this.name,
@@ -18,6 +35,7 @@ class EvmChain {
     this.explorerUrl,
     this.logoUrl,
     this.isCustom = false,
+    this.family = ChainFamily.evm,
   });
 
   Map<String, dynamic> toJson() => {
@@ -29,6 +47,7 @@ class EvmChain {
     'explorerUrl': explorerUrl,
     'logoUrl': logoUrl,
     'isCustom': isCustom,
+    'family': family.wireValue,
   };
 
   factory EvmChain.fromJson(Map<String, dynamic> json) => EvmChain(
@@ -40,6 +59,54 @@ class EvmChain {
     explorerUrl: json['explorerUrl'] as String?,
     logoUrl: json['logoUrl'] as String?,
     isCustom: json['isCustom'] as bool? ?? false,
+    family: ChainFamilyCodec.fromWireValue(json['family'] as String?),
+  );
+}
+
+/// Solana chain metadata scaffold for future multi-family wallet support.
+class SolanaChain {
+  final String name;
+  final String symbol;
+  final String cluster;
+  final String rpcUrl;
+  final String? coinGeckoId;
+  final String? explorerUrl;
+  final String? logoUrl;
+  final ChainFamily family;
+
+  const SolanaChain({
+    required this.name,
+    required this.symbol,
+    required this.cluster,
+    required this.rpcUrl,
+    this.coinGeckoId,
+    this.explorerUrl,
+    this.logoUrl,
+    this.family = ChainFamily.solana,
+  });
+
+  bool get isMainnet => cluster == 'mainnet-beta';
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'symbol': symbol,
+    'cluster': cluster,
+    'rpcUrl': rpcUrl,
+    'coinGeckoId': coinGeckoId,
+    'explorerUrl': explorerUrl,
+    'logoUrl': logoUrl,
+    'family': family.wireValue,
+  };
+
+  factory SolanaChain.fromJson(Map<String, dynamic> json) => SolanaChain(
+    name: json['name'] as String,
+    symbol: json['symbol'] as String,
+    cluster: json['cluster'] as String,
+    rpcUrl: json['rpcUrl'] as String,
+    coinGeckoId: json['coinGeckoId'] as String?,
+    explorerUrl: json['explorerUrl'] as String?,
+    logoUrl: json['logoUrl'] as String?,
+    family: ChainFamilyCodec.fromWireValue(json['family'] as String?),
   );
 }
 

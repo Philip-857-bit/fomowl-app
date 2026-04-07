@@ -601,6 +601,14 @@
   "availableBalance": "الرصيد المتاح",
   "totalNetWorth": "إجمالي صافي الثروة",
   "portfolio": "المحفظة",
+  "balanceSyncingStatus": "جارٍ مزامنة الأرصدة",
+  "balanceMayBeOutdatedStatus": "قد تكون الأرصدة غير محدثة",
+  "balanceUpdatedAt": "تم التحديث في {time}",
+  "@balanceUpdatedAt": {
+    "placeholders": {
+      "time": {}
+    }
+  },
   "history": "السجل",
   "followSocialhq": "تابع @fomowlhq على X للحصول على التحديثات",
   "socialhqHandle": "x.com/fomowlhq"

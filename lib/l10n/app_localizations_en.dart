@@ -1805,6 +1805,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get portfolio => 'Portfolio';
 
   @override
+  String get balanceSyncingStatus => 'Syncing balances';
+
+  @override
+  String get balanceMayBeOutdatedStatus => 'Balances may be outdated';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'Updated $time';
+  }
+
+  @override
   String get history => 'History';
 
   @override

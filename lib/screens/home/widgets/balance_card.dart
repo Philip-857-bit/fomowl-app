@@ -12,6 +12,7 @@ class BalanceCard extends StatelessWidget {
   final String titleText;
   final String formattedBalance;
   final HomePortfolioMetrics portfolioMetrics;
+  final String? statusText;
   final bool isBalanceVisible;
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
@@ -22,6 +23,7 @@ class BalanceCard extends StatelessWidget {
     required this.titleText,
     required this.formattedBalance,
     required this.portfolioMetrics,
+    this.statusText,
     required this.isBalanceVisible,
     required this.isLoadingBalances,
     required this.onToggleVisibility,
@@ -156,6 +158,17 @@ class BalanceCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (statusText != null && statusText!.trim().isNotEmpty) ...[
+                  Text(
+                    statusText!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.68),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: FittedBox(

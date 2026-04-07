@@ -1791,6 +1791,17 @@ class AppLocalizationsYo extends AppLocalizations {
   String get portfolio => 'Pọ́tífóliò';
 
   @override
+  String get balanceSyncingStatus => 'N mu iwọntunwọnsi ṣiṣẹpọ';
+
+  @override
+  String get balanceMayBeOutdatedStatus => 'Awọn iwọntunwọnsi le ti darugbo';
+
+  @override
+  String balanceUpdatedAt(Object time) {
+    return 'Ti ni imudojuiwọn ni $time';
+  }
+
+  @override
   String get history => 'Itan';
 
   @override

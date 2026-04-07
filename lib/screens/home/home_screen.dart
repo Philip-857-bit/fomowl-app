@@ -24,6 +24,7 @@ import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
 import 'home_portfolio_data.dart';
+import 'home_portfolio_api_service.dart';
 import 'home_portfolio_metrics.dart';
 import 'home_portfolio_repository.dart';
 import 'home_portfolio_snapshot_service.dart';
@@ -61,6 +62,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final HomeSnapshotService _snapshotService = HomeSnapshotService();
   final HomePortfolioRepository _portfolioRepository =
       const HomePortfolioRepository();
+  final HomePortfolioApiService _portfolioApiService =
+      HomePortfolioApiService();
   final HomePortfolioSnapshotService _portfolioSnapshotService =
       HomePortfolioSnapshotService();
   BlockchainService? _blockchain;
@@ -72,6 +75,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingNfts = false;
   HomePortfolioMetrics _portfolioMetrics = HomePortfolioMetrics.zero();
   List<HomePortfolioSection> _portfolioSections = const [];
+  List<HomePortfolioSection> _portfolioRawSections = const [];
+  DateTime? _portfolioUpdatedAt;
+  bool _portfolioIsStale = false;
+  bool _portfolioPartialFailure = false;
+  List<int> _portfolioChainsPending = const [];
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
@@ -190,6 +198,66 @@ class _HomeScreenState extends State<HomeScreen> {
     _portfolioMetrics = data.metrics;
   }
 
+  Future<HomePortfolioData> _buildPortfolioDataFromSections(
+    List<HomePortfolioSection> sections,
+  ) {
+    return _portfolioRepository.filterSections(
+      sections: sections,
+      loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+    );
+  }
+
+  void _hydrateActiveTokensFromPortfolio({required bool isUsingCachedData}) {
+    final currentChainId = _lastChainId;
+    if (currentChainId == null) {
+      return;
+    }
+
+    HomePortfolioSection? section;
+    for (final candidate in _portfolioSections) {
+      if (candidate.chain.chainId == currentChainId) {
+        section = candidate;
+        break;
+      }
+    }
+    if (section == null) {
+      return;
+    }
+
+    if (_tokens.isNotEmpty && !_isUsingCachedData && !isUsingCachedData) {
+      return;
+    }
+
+    _replaceDisplayedTokens(
+      section.tokens,
+      isUsingCachedData: isUsingCachedData,
+    );
+  }
+
+  Future<void> _applyPortfolioSnapshotState(
+    HomeAggregatedPortfolioSnapshot snapshot, {
+    required bool isUsingCachedData,
+  }) async {
+    _portfolioRawSections = List<HomePortfolioSection>.from(snapshot.sections);
+    final data = await _buildPortfolioDataFromSections(_portfolioRawSections);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _applyPortfolioData(
+        data.sections.isNotEmpty ? data : _fallbackPortfolioData(),
+      );
+      _portfolioUpdatedAt = snapshot.timestamp;
+      _portfolioIsStale = snapshot.isStale;
+      _portfolioPartialFailure = snapshot.partialFailure;
+      _portfolioChainsPending = List<int>.from(snapshot.chainsPending);
+      _hydrateActiveTokensFromPortfolio(
+        isUsingCachedData: isUsingCachedData || snapshot.isStale,
+      );
+    });
+  }
+
   HomePortfolioData _fallbackPortfolioData() {
     if (_tokens.isEmpty || _lastChainId == null || _blockchain == null) {
       return HomePortfolioData.empty();
@@ -215,45 +283,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchPortfolioData(
     String walletAddress, {
-    bool forceRefresh = false,
+    bool sync = false,
   }) async {
     if (!mounted || walletAddress.isEmpty) {
       return;
     }
 
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
     setState(() => _isLoadingPortfolio = true);
 
     try {
-      final data = await _portfolioRepository.loadPortfolio(
-        walletAddress: walletAddress,
-        chains: blockchain.allChains,
-        fetchTokens: (chainId) => blockchain.fetchWalletTokens(
-          walletAddress,
-          chainId: chainId,
-          forceRefresh: forceRefresh,
-        ),
-        loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+      final snapshot = await _portfolioApiService.fetchPortfolio(
+        walletAddress,
+        sync: sync,
       );
-
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _applyPortfolioData(data);
-        _isLoadingPortfolio = false;
-      });
-
-      if (data.sections.isNotEmpty) {
-        await _portfolioSnapshotService.saveSnapshot(
-          HomeAggregatedPortfolioSnapshot(
-            walletAddress: walletAddress,
-            sections: data.sections,
-            timestamp: DateTime.now(),
-          ),
-        );
+      await _applyPortfolioSnapshotState(
+        snapshot,
+        isUsingCachedData: snapshot.isStale,
+      );
+      if (mounted) {
+        setState(() => _isLoadingPortfolio = false);
       }
+      await _portfolioSnapshotService.saveSnapshot(snapshot);
     } catch (error) {
       debugPrint('Error fetching portfolio data: $error');
       if (!mounted) {
@@ -273,13 +327,17 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final data = await _portfolioRepository.loadPortfolio(
-      walletAddress: walletAddress,
-      chains: blockchain.allChains,
-      fetchTokens: (chainId) async =>
-          blockchain.getCachedWalletTokens(walletAddress, chainId: chainId),
-      loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
-    );
+    final data = _portfolioRawSections.isNotEmpty
+        ? await _buildPortfolioDataFromSections(_portfolioRawSections)
+        : await _portfolioRepository.loadPortfolio(
+            walletAddress: walletAddress,
+            chains: blockchain.allChains,
+            fetchTokens: (chainId) async => blockchain.getCachedWalletTokens(
+              walletAddress,
+              chainId: chainId,
+            ),
+            loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+          );
 
     if (!mounted) {
       return;
@@ -289,6 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _applyPortfolioData(
         data.sections.isNotEmpty ? data : _fallbackPortfolioData(),
       );
+      _hydrateActiveTokensFromPortfolio(isUsingCachedData: _isUsingCachedData);
     });
   }
 
@@ -301,19 +360,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (snapshot != null) {
-      setState(() {
-        _applyPortfolioData(
-          HomePortfolioData.fromSections(
-            List<HomePortfolioSection>.from(snapshot.sections),
-          ),
-        );
-      });
+      await _applyPortfolioSnapshotState(snapshot, isUsingCachedData: true);
       return;
     }
 
     if (_portfolioSections.isEmpty) {
       setState(() {
         _applyPortfolioData(_fallbackPortfolioData());
+        _portfolioUpdatedAt = null;
+        _portfolioIsStale = false;
+        _portfolioPartialFailure = false;
+        _portfolioChainsPending = const [];
       });
     }
   }
@@ -342,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadWalletData() async {
+  Future<void> _loadWalletData({bool forcePortfolioSync = false}) async {
     if (!mounted) return;
     debugPrint('[OWLLET] Starting wallet data load...');
     setState(() => _isLoading = true);
@@ -397,7 +454,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         debugPrint('[OWLLET] Triggering background data sync...');
         unawaited(_fetchRealBalances(address));
-        unawaited(_fetchPortfolioData(address, forceRefresh: true));
+        unawaited(_fetchPortfolioData(address, sync: forcePortfolioSync));
         _scheduleDeferredHomeTasks(address);
       } else {
         if (mounted) {
@@ -604,7 +661,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
 
-        unawaited(_reloadPortfolioFromCachedTokens());
+        if (_portfolioRawSections.isEmpty) {
+          unawaited(_reloadPortfolioFromCachedTokens());
+        }
       }
     } catch (e) {
       debugPrint('Error fetching balances: $e');
@@ -650,7 +709,9 @@ class _HomeScreenState extends State<HomeScreen> {
         _replaceDisplayedTokens(nextTokens, isUsingCachedData: false);
       });
       blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
-      unawaited(_reloadPortfolioFromCachedTokens());
+      if (_portfolioRawSections.isEmpty) {
+        unawaited(_reloadPortfolioFromCachedTokens());
+      }
       return;
     }
 
@@ -677,7 +738,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       await _applyPortfolioSnapshot(address);
       _fetchRealBalances(address);
-      unawaited(_fetchPortfolioData(address, forceRefresh: true));
+      unawaited(_fetchPortfolioData(address, sync: false));
       _scheduleDeferredHomeTasks(address);
     });
   }
@@ -789,6 +850,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String? _balanceStatusText(AppLocalizations l) {
+    if (_isLoadingPortfolio || _isLoadingBalances) {
+      return l.balanceSyncingStatus;
+    }
+    if (_portfolioIsStale ||
+        _portfolioPartialFailure ||
+        _portfolioChainsPending.isNotEmpty) {
+      return l.balanceMayBeOutdatedStatus;
+    }
+    final updatedAt = _portfolioUpdatedAt;
+    if (updatedAt == null) {
+      return null;
+    }
+    final time = MaterialLocalizations.of(
+      context,
+    ).formatTimeOfDay(TimeOfDay.fromDateTime(updatedAt));
+    return l.balanceUpdatedAt(time);
+  }
+
   Future<void> _openSocialLink() async {
     final uri = Uri.parse('https://x.com/fomowlhq');
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -810,7 +890,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final address = await _walletService.getCurrentWalletAddress();
       if (address != null && address.isNotEmpty) {
         unawaited(_fetchRealBalances(address));
-        unawaited(_fetchPortfolioData(address, forceRefresh: true));
+        unawaited(_fetchPortfolioData(address, sync: true));
       }
     }
   }
@@ -870,7 +950,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Expanded(
                     child: RefreshIndicator(
                       color: AppColors.accentRed,
-                      onRefresh: _loadWalletData,
+                      onRefresh: () =>
+                          _loadWalletData(forcePortfolioSync: true),
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: Column(
@@ -921,6 +1002,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               titleText: l.totalNetWorth,
                               formattedBalance: _formattedTotalBalance,
                               portfolioMetrics: _portfolioMetrics,
+                              statusText: _balanceStatusText(l),
                               isBalanceVisible: _balanceVisible,
                               isLoadingBalances:
                                   _isLoadingBalances || _isLoadingPortfolio,
