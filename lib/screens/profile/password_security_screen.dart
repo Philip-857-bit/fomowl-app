@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../widgets/bottom_navigation.dart';
@@ -19,8 +20,10 @@ class PasswordSecurityScreen extends StatefulWidget {
 
 class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   final StorageService _storage = StorageService();
+  final AuthService _authService = AuthService();
 
   bool _biometricEnabled = false;
+  bool _twoFactorEnabled = false;
   int _autoLockMinutes = 1;
   bool _lockOnBackground = true;
   bool _loading = true;
@@ -42,9 +45,13 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       final biometric = await _storage.isBiometricEnabled();
       final autoLock = await _storage.getAutoLockMinutes();
       final lockOnBackground = await _storage.isLockOnBackgroundEnabled();
+      final twoFactorStatus = await _authService.fetchTwoFactorStatus();
       if (!mounted) return;
       setState(() {
         _biometricEnabled = biometric;
+        _twoFactorEnabled = twoFactorStatus['success'] == true
+            ? twoFactorStatus['enabled'] == true
+            : false;
         _autoLockMinutes = autoLock;
         _lockOnBackground = lockOnBackground;
         _preferencesLoadFailed = false;
@@ -183,6 +190,12 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
     );
   }
 
+  Future<void> _openTwoFactorSetup() async {
+    await Navigator.pushNamed(context, '/two-factor-setup');
+    if (!mounted) return;
+    await _loadState();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -253,6 +266,14 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                                 ? null
                                 : _setBiometric,
                           ),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.shield_outlined,
+                          title: l.twoFactorAuth,
+                          subtitle: _twoFactorEnabled
+                              ? 'Owllet Authenticator is active'
+                              : 'Set up Owllet Authenticator for sign-in',
+                          onTap: _openTwoFactorSetup,
                         ),
                       ],
                     ),

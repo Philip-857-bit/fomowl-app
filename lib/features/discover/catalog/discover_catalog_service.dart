@@ -50,7 +50,9 @@ class DiscoverCatalogService {
       if (cached != null && cached.isFresh) {
         return cached;
       }
-      rethrow;
+      final fallback = _bundledSnapshot();
+      await _saveSnapshot(fallback);
+      return fallback;
     }
   }
 
@@ -95,5 +97,85 @@ class DiscoverCatalogService {
   Future<void> _saveSnapshot(DiscoverCatalogSnapshot snapshot) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_cacheKey, jsonEncode(snapshot.toJson()));
+  }
+
+  DiscoverCatalogSnapshot _bundledSnapshot() {
+    return DiscoverCatalogSnapshot(
+      fetchedAt: DateTime.now().toUtc(),
+      dapps: const <DiscoverDappEntry>[
+        DiscoverDappEntry(
+          id: 'discover-uniswap',
+          slug: 'uniswap',
+          origin: 'https://app.uniswap.org',
+          launchUrl: 'https://app.uniswap.org',
+          title: 'Uniswap',
+          subtitle: 'Swap tokens across top EVM networks',
+          logoUrl: null,
+          heroImageUrl: null,
+          badgeText: 'DEX',
+          categories: <String>['dex', 'defi', 'swap'],
+          supportedChainIds: <int>[1, 56, 137, 10, 42161, 8453],
+          featuredRank: 1,
+          trendingRank: 1,
+          isActive: true,
+          createdAt: '2026-04-07T00:00:00Z',
+          updatedAt: '2026-04-07T00:00:00Z',
+        ),
+        DiscoverDappEntry(
+          id: 'discover-pancakeswap',
+          slug: 'pancakeswap',
+          origin: 'https://pancakeswap.finance',
+          launchUrl: 'https://pancakeswap.finance',
+          title: 'PancakeSwap',
+          subtitle: 'Trade and earn across BNB Chain and beyond',
+          logoUrl: null,
+          heroImageUrl: null,
+          badgeText: 'DEX',
+          categories: <String>['dex', 'defi', 'swap'],
+          supportedChainIds: <int>[56, 1, 42161, 8453],
+          featuredRank: 2,
+          trendingRank: 2,
+          isActive: true,
+          createdAt: '2026-04-07T00:00:00Z',
+          updatedAt: '2026-04-07T00:00:00Z',
+        ),
+        DiscoverDappEntry(
+          id: 'discover-aave',
+          slug: 'aave',
+          origin: 'https://app.aave.com',
+          launchUrl: 'https://app.aave.com',
+          title: 'Aave',
+          subtitle: 'Lend and borrow on major EVM networks',
+          logoUrl: null,
+          heroImageUrl: null,
+          badgeText: 'LENDING',
+          categories: <String>['defi', 'lending'],
+          supportedChainIds: <int>[1, 137, 42161, 10, 8453],
+          featuredRank: 3,
+          trendingRank: 3,
+          isActive: true,
+          createdAt: '2026-04-07T00:00:00Z',
+          updatedAt: '2026-04-07T00:00:00Z',
+        ),
+        DiscoverDappEntry(
+          id: 'discover-opensea',
+          slug: 'opensea',
+          origin: 'https://opensea.io',
+          launchUrl: 'https://opensea.io',
+          title: 'OpenSea',
+          subtitle: 'Browse and trade NFTs',
+          logoUrl: null,
+          heroImageUrl: null,
+          badgeText: 'NFT',
+          categories: <String>['nft', 'marketplace', 'collectibles'],
+          supportedChainIds: <int>[1, 137, 8453, 56],
+          featuredRank: 4,
+          trendingRank: 4,
+          isActive: true,
+          createdAt: '2026-04-07T00:00:00Z',
+          updatedAt: '2026-04-07T00:00:00Z',
+        ),
+      ],
+    );
   }
 }

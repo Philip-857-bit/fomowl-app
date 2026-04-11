@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_dapp_entry.dart';
 import 'package:fomowl_wallet/features/discover/catalog/widgets/discover_landing_view.dart';
 import 'package:fomowl_wallet/features/discover/market/discover_trending_token.dart';
+import 'package:fomowl_wallet/l10n/app_localizations.dart';
 import 'package:integration_test/integration_test.dart';
 
 void main() {
@@ -42,8 +43,11 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: DiscoverLandingView(
+            query: '',
             featuredDapps: [entry],
             trendingDapps: [entry],
             filteredDapps: [entry],
@@ -63,6 +67,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Featured DApps'), findsOneWidget);
+    expect(find.text('Bulk Pay'), findsOneWidget);
     await tester.dragUntilVisible(
       find.text('Uniswap'),
       find.byType(ListView).first,

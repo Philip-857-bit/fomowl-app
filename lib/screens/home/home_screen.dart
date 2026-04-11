@@ -310,11 +310,73 @@ class _HomeScreenState extends State<HomeScreen> {
       await _portfolioSnapshotService.saveSnapshot(snapshot);
     } catch (error) {
       debugPrint('Error fetching portfolio data: $error');
+      final fallbackSnapshot = await _buildPortfolioFallbackSnapshot(
+        walletAddress,
+      );
+      if (!mounted) {
+        return;
+      }
+      if (fallbackSnapshot != null) {
+        await _applyPortfolioSnapshotState(
+          fallbackSnapshot,
+          isUsingCachedData: false,
+        );
+        await _portfolioSnapshotService.saveSnapshot(fallbackSnapshot);
+      }
       if (!mounted) {
         return;
       }
       setState(() => _isLoadingPortfolio = false);
     }
+  }
+
+  Future<HomeAggregatedPortfolioSnapshot?> _buildPortfolioFallbackSnapshot(
+    String walletAddress,
+  ) async {
+    final blockchain =
+        _blockchain ?? Provider.of<BlockchainService>(context, listen: false);
+
+    final rawSections = await Future.wait(
+      blockchain.allChains.map((chain) async {
+        try {
+          final tokens = await blockchain.fetchWalletTokens(
+            walletAddress,
+            chainId: chain.chainId,
+          );
+          final visibleTokens = tokens
+              .where((token) => token.balance > 0 || token.totalValueUsd > 0)
+              .toList();
+          if (visibleTokens.isEmpty) {
+            return null;
+          }
+          return HomePortfolioSection(chain: chain, tokens: visibleTokens);
+        } catch (error) {
+          debugPrint(
+            'Portfolio fallback fetch failed for chain ${chain.chainId}: $error',
+          );
+          return null;
+        }
+      }),
+    );
+
+    final sections = rawSections.whereType<HomePortfolioSection>().toList()
+      ..sort(
+        (left, right) => right.totalBalanceUsd.compareTo(left.totalBalanceUsd),
+      );
+
+    if (sections.isEmpty) {
+      return null;
+    }
+
+    return HomeAggregatedPortfolioSnapshot(
+      walletAddress: walletAddress,
+      sections: sections,
+      timestamp: DateTime.now().toUtc(),
+      source: 'client-fallback',
+      isStale: false,
+      partialFailure: false,
+      chainsPending: const <int>[],
+    );
   }
 
   Future<void> _reloadPortfolioFromCachedTokens() async {

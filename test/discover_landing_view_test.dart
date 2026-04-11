@@ -45,6 +45,7 @@ void main() {
         _wrapWithApp(
           Scaffold(
             body: DiscoverLandingView(
+              query: '',
               featuredDapps: const [],
               trendingDapps: const [],
               filteredDapps: const [],
@@ -75,6 +76,7 @@ void main() {
       _wrapWithApp(
         Scaffold(
           body: DiscoverLandingView(
+            query: '',
             featuredDapps: [uniswap],
             trendingDapps: [aave],
             filteredDapps: [uniswap, aave],
@@ -91,11 +93,15 @@ void main() {
       ),
     );
 
-    expect(find.text('Catalog refresh failed.'), findsOneWidget);
     expect(find.text('Featured DApps'), findsOneWidget);
     expect(find.text('Cash In'), findsOneWidget);
+    expect(find.text('Bulk Pay'), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text('Trending Tokens'),
+      find.byType(ListView).first,
+      const Offset(0, -250),
+    );
     expect(find.text('Trending Tokens'), findsOneWidget);
-    expect(find.text('Ethereum'), findsOneWidget);
 
     await tester.dragUntilVisible(
       find.text('UNISWAP'),

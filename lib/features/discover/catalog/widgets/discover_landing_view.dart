@@ -10,6 +10,7 @@ import '../discover_dapp_entry.dart';
 class DiscoverLandingView extends StatelessWidget {
   const DiscoverLandingView({
     super.key,
+    required this.query,
     required this.featuredDapps,
     required this.trendingDapps,
     required this.filteredDapps,
@@ -21,8 +22,10 @@ class DiscoverLandingView extends StatelessWidget {
     required this.error,
     required this.onRefresh,
     required this.onOpenDapp,
+    this.onOpenCashIn,
   });
 
+  final String query;
   final List<DiscoverDappEntry> featuredDapps;
   final List<DiscoverDappEntry> trendingDapps;
   final List<DiscoverDappEntry> filteredDapps;
@@ -34,10 +37,24 @@ class DiscoverLandingView extends StatelessWidget {
   final String? error;
   final Future<void> Function() onRefresh;
   final ValueChanged<DiscoverDappEntry> onOpenDapp;
+  final VoidCallback? onOpenCashIn;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final trimmedQuery = query.trim();
+    final isSearching = trimmedQuery.isNotEmpty;
+    final visibleFeaturedDapps = featuredDapps.isNotEmpty
+        ? featuredDapps
+        : filteredDapps.take(6).toList(growable: false);
+    final bulkPayDapp = trendingDapps.isNotEmpty
+        ? trendingDapps.first
+        : (filteredDapps.isNotEmpty ? filteredDapps.first : null);
+    final shouldShowCatalogError =
+        !isSearching &&
+        error != null &&
+        error!.trim().isNotEmpty &&
+        visibleFeaturedDapps.isEmpty;
     if (loading && featuredDapps.isEmpty && filteredDapps.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.accentRed),
@@ -50,9 +67,18 @@ class DiscoverLandingView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          const _CashInCard(),
-          const SizedBox(height: 20),
-          if (error != null && error!.trim().isNotEmpty) ...[
+          if (!isSearching) ...[
+            _CashInCard(onTap: onOpenCashIn),
+            const SizedBox(height: 18),
+            _SecondaryPromoCard(
+              title: 'Bulk Pay',
+              subtitle: 'Pay team/staffs in USDT/USDC one-click',
+              badgeText: 'FOR BUSINESSES',
+              onTap: bulkPayDapp == null ? null : () => onOpenDapp(bulkPayDapp),
+            ),
+            const SizedBox(height: 24),
+          ],
+          if (shouldShowCatalogError) ...[
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -69,55 +95,42 @@ class DiscoverLandingView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          _SectionHeader(
-            title: l.discoverTrendingTokensTitle,
-            subtitle: l.discoverTrendingTokensSubtitle,
-          ),
-          const SizedBox(height: 12),
-          _TrendingTokenSection(
-            tokens: trendingTokens,
-            loading: loadingTrendingTokens,
-            error: trendingTokensError,
-          ),
-          const SizedBox(height: 20),
-          if (featuredDapps.isNotEmpty) ...[
+          if (isSearching) ...[
+            _SectionHeader(
+              title: l.discoverAllApprovedDappsTitle,
+              subtitle: filteredDapps.isEmpty
+                  ? l.discoverAllApprovedDappsNoMatches
+                  : l.discoverAllApprovedDappsCount(filteredDapps.length),
+            ),
+            const SizedBox(height: 12),
+            ...filteredDapps.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _CompactDappCard(
+                  key: ValueKey('discover-all-${entry.id}'),
+                  entry: entry,
+                  onTap: () => onOpenDapp(entry),
+                ),
+              ),
+            ),
+          ] else ...[
             _SectionHeader(
               title: l.discoverFeaturedDappsTitle,
               subtitle: l.discoverFeaturedDappsSubtitle,
             ),
             const SizedBox(height: 14),
-            ...featuredDapps
-                .take(3)
-                .map(
-                  (entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _FeaturedDappCard(
-                      key: ValueKey('discover-featured-${entry.id}'),
-                      entry: entry,
-                      onTap: () => onOpenDapp(entry),
-                    ),
-                  ),
-                ),
-            const SizedBox(height: 12),
-          ],
-          if (trendingDapps.isNotEmpty) ...[
-            _SectionHeader(
-              title: l.discoverTrendingDappsTitle,
-              subtitle: l.discoverTrendingDappsSubtitle,
-            ),
-            const SizedBox(height: 12),
             SizedBox(
               height: 210,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                itemCount: trendingDapps.length.clamp(0, 10),
+                itemCount: visibleFeaturedDapps.length.clamp(0, 10),
                 separatorBuilder: (_, _) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
-                  final entry = trendingDapps[index];
+                  final entry = visibleFeaturedDapps[index];
                   return SizedBox(
-                    width: 220,
+                    width: 240,
                     child: _CompactDappCard(
-                      key: ValueKey('discover-trending-${entry.id}'),
+                      key: ValueKey('discover-featured-${entry.id}'),
                       entry: entry,
                       onTap: () => onOpenDapp(entry),
                     ),
@@ -125,81 +138,22 @@ class DiscoverLandingView extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 20),
-          ],
-          if (categories.isNotEmpty) ...[
+            const SizedBox(height: 24),
             _SectionHeader(
-              title: l.discoverCategoriesTitle,
-              subtitle: l.discoverCategoriesSubtitle,
+              title: l.discoverTrendingTokensTitle,
+              subtitle: l.discoverTrendingTokensSubtitle,
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: categories
-                  .map(
-                    (category) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardDark,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: AppColors.divider),
-                      ),
-                      child: Text(
-                        _localizedCategoryLabel(context, category),
-                        style: GoogleFonts.outfit(color: Colors.white70),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
+            const SizedBox(height: 12),
+            _TrendingTokenSection(
+              tokens: trendingTokens,
+              loading: loadingTrendingTokens,
+              error: trendingTokensError,
             ),
             const SizedBox(height: 20),
           ],
-          _SectionHeader(
-            title: l.discoverAllApprovedDappsTitle,
-            subtitle: filteredDapps.isEmpty
-                ? l.discoverAllApprovedDappsNoMatches
-                : l.discoverAllApprovedDappsCount(filteredDapps.length),
-          ),
-          const SizedBox(height: 12),
-          ...filteredDapps.map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _CompactDappCard(
-                key: ValueKey('discover-all-${entry.id}'),
-                entry: entry,
-                onTap: () => onOpenDapp(entry),
-              ),
-            ),
-          ),
         ],
       ),
     );
-  }
-}
-
-String _localizedCategoryLabel(BuildContext context, String category) {
-  final l = AppLocalizations.of(context);
-  switch (category.trim().toLowerCase()) {
-    case 'dex':
-      return l.discoverCategoryDex;
-    case 'defi':
-      return l.discoverCategoryDefi;
-    case 'swap':
-      return l.discoverCategorySwap;
-    case 'lending':
-      return l.discoverCategoryLending;
-    case 'nft':
-      return l.discoverCategoryNft;
-    case 'marketplace':
-      return l.discoverCategoryMarketplace;
-    case 'collectibles':
-      return l.discoverCategoryCollectibles;
-    default:
-      return category;
   }
 }
 
@@ -236,83 +190,177 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _CashInCard extends StatelessWidget {
-  const _CashInCard();
+  const _CashInCard({this.onTap});
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0E5C46), Color(0xFF1A7C66), Color(0xFF275E4B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0E5C46), Color(0xFF1A7C66), Color(0xFF275E4B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0E5C46).withValues(alpha: 0.22),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  l.discoverCashInBadge,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 22),
+              Text(
+                l.discoverCashInTitle,
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l.discoverCashInDescription,
+                style: GoogleFonts.outfit(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 15,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 22),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Text(
+                  l.discoverGoLabel,
+                  style: GoogleFonts.outfit(
+                    color: const Color(0xFF0E5C46),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0E5C46).withValues(alpha: 0.22),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
+    );
+  }
+}
+
+class _SecondaryPromoCard extends StatelessWidget {
+  const _SecondaryPromoCard({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0E3B9D), Color(0xFF245BD6), Color(0xFF1F3D8B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: Text(
-              l.discoverCashInBadge,
-              style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  badgeText,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            l.discoverCashInTitle,
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            l.discoverCashInDescription,
-            style: GoogleFonts.outfit(
-              color: Colors.white.withValues(alpha: 0.82),
-              fontSize: 15,
-              height: 1.45,
-            ),
-          ),
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Text(
-              l.discoverGoLabel,
-              style: GoogleFonts.outfit(
-                color: const Color(0xFF0E5C46),
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+              const SizedBox(height: 20),
+              Text(
+                title,
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: GoogleFonts.outfit(
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontSize: 15,
+                  height: 1.45,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -489,95 +537,6 @@ class _TrendingTokenRow extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _FeaturedDappCard extends StatelessWidget {
-  const _FeaturedDappCard({
-    super.key,
-    required this.entry,
-    required this.onTap,
-  });
-
-  final DiscoverDappEntry entry;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(28),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF0B523C),
-              const Color(0xFF114E73),
-              const Color(0xFF191228),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if ((entry.badgeText ?? '').trim().isNotEmpty) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        entry.badgeText!,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  Text(
-                    entry.title,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if ((entry.subtitle ?? '').trim().isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      entry.subtitle!,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white70,
-                        fontSize: 15,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            _DappArtwork(entry: entry, size: 72),
-          ],
-        ),
-      ),
     );
   }
 }

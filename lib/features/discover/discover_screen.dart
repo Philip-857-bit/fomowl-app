@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
+import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
 import '../../utils/app_error_utils.dart';
@@ -79,46 +80,84 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     return AnimatedBuilder(
       animation: _sessionController,
       builder: (context, _) {
+        final isBrowser =
+            _sessionController.viewState == DiscoverViewState.browser;
         return Scaffold(
           backgroundColor: AppColors.background,
           body: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(child: _buildBody()),
-              ],
-            ),
+            child: isBrowser
+                ? _buildBody()
+                : Column(
+                    children: [
+                      _buildLandingHeader(),
+                      Expanded(child: _buildBody()),
+                    ],
+                  ),
           ),
         );
       },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildLandingHeader() {
     final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                l.discoverTitle,
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0B1018),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF120708),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.all(5),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      l.discoverTitle,
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF69A9FF),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
               IconButton(
-                onPressed: _refreshLandingData,
-                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                onPressed: () {},
+                icon: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           TextField(
             controller: _searchController,
             onChanged: _sessionController.updateQuery,
@@ -130,7 +169,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             style: GoogleFonts.outfit(color: Colors.white),
             decoration: InputDecoration(
               hintText: l.discoverSearchHint,
-              hintStyle: GoogleFonts.outfit(color: Colors.white38),
+              hintStyle: GoogleFonts.outfit(
+                color: Colors.white38,
+                fontSize: 15,
+              ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
                 color: Colors.white54,
@@ -142,20 +184,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       icon: const Icon(Icons.close_rounded),
                     ),
               filled: true,
-              fillColor: AppColors.cardDark,
+              fillColor: const Color(0xFF152234),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide(
                   color: Colors.white.withValues(alpha: 0.06),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: const BorderSide(color: AppColors.accentRed),
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFF284A73)),
               ),
             ),
           ),
@@ -186,6 +228,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       case DiscoverViewState.landing:
         final l = AppLocalizations.of(context);
         return DiscoverLandingView(
+          query: _sessionController.query,
           featuredDapps: _sessionController.featuredDapps,
           trendingDapps: _sessionController.trendingDapps,
           filteredDapps: _sessionController.filteredDapps,
@@ -201,6 +244,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           onOpenDapp: (dapp) => _sessionController.openDapp(
             dapp,
             invalidLaunchUrlReason: l.discoverInvalidLaunchUrl,
+          ),
+          onOpenCashIn: () => Navigator.of(context).pushNamed(
+            '/cash-in',
+            arguments: const MiniAppHostArguments(
+              miniAppId: 'cash_in',
+              launchSource: 'discover',
+            ),
           ),
         );
     }

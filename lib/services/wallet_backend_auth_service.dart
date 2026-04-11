@@ -9,6 +9,9 @@ import 'wallet_service.dart';
 import 'http_client_service.dart';
 
 class WalletBackendAuthService {
+  static final Map<String, Future<String>> _inflightSessionRequests =
+      <String, Future<String>>{};
+
   WalletBackendAuthService({
     StorageService? storageService,
     WalletService? walletService,
@@ -33,9 +36,59 @@ class WalletBackendAuthService {
   }
 
   Future<String> ensureWalletSession(String walletAddress) async {
-    final cached = await getValidSessionToken(walletAddress);
+    final normalizedWalletAddress = walletAddress.trim().toLowerCase();
+    final cached = await getValidSessionToken(normalizedWalletAddress);
     if (cached != null) return cached;
 
+    final inFlight = _inflightSessionRequests[normalizedWalletAddress];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final sessionFuture = _createWalletSession(normalizedWalletAddress);
+    _inflightSessionRequests[normalizedWalletAddress] = sessionFuture;
+
+    try {
+      return await sessionFuture;
+    } finally {
+      if (identical(
+        _inflightSessionRequests[normalizedWalletAddress],
+        sessionFuture,
+      )) {
+        _inflightSessionRequests.remove(normalizedWalletAddress);
+      }
+    }
+  }
+
+  Future<void> invalidateSession(String walletAddress) {
+    return _storageService.clearBackendSession(walletAddress);
+  }
+
+  Future<http.Response> sendAuthorized(
+    String walletAddress,
+    Future<http.Response> Function(Map<String, String> headers) send,
+    Map<String, String> headers,
+  ) async {
+    final initialHeaders = await _buildAuthHeaders(walletAddress, headers);
+    final firstResponse = await send(initialHeaders);
+    if (firstResponse.statusCode != 401) {
+      return firstResponse;
+    }
+
+    await invalidateSession(walletAddress);
+    final retryHeaders = await _buildAuthHeaders(walletAddress, headers);
+    return send(retryHeaders);
+  }
+
+  Future<Map<String, String>> _buildAuthHeaders(
+    String walletAddress,
+    Map<String, String> headers,
+  ) async {
+    final token = await ensureWalletSession(walletAddress);
+    return {...headers, 'Authorization': 'Bearer $token'};
+  }
+
+  Future<String> _createWalletSession(String walletAddress) async {
     final challengeResponse = await _httpClientService
         .sendWithRetry(
           () => _httpClientService.client.post(
@@ -110,34 +163,6 @@ class WalletBackendAuthService {
       expiresAt: expiresAt,
     );
     return token;
-  }
-
-  Future<void> invalidateSession(String walletAddress) {
-    return _storageService.clearBackendSession(walletAddress);
-  }
-
-  Future<http.Response> sendAuthorized(
-    String walletAddress,
-    Future<http.Response> Function(Map<String, String> headers) send,
-    Map<String, String> headers,
-  ) async {
-    final initialHeaders = await _buildAuthHeaders(walletAddress, headers);
-    final firstResponse = await send(initialHeaders);
-    if (firstResponse.statusCode != 401) {
-      return firstResponse;
-    }
-
-    await invalidateSession(walletAddress);
-    final retryHeaders = await _buildAuthHeaders(walletAddress, headers);
-    return send(retryHeaders);
-  }
-
-  Future<Map<String, String>> _buildAuthHeaders(
-    String walletAddress,
-    Map<String, String> headers,
-  ) async {
-    final token = await ensureWalletSession(walletAddress);
-    return {...headers, 'Authorization': 'Bearer $token'};
   }
 
   String _extractError(String body, String fallback) {

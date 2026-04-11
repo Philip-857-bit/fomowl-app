@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../features/mini_apps/mini_app_host_screen.dart';
 import '../features/shell/app_shell_controller.dart';
 import '../features/shell/app_shell_screen.dart';
 import '../features/shell/shell_route_redirect.dart';
@@ -35,6 +36,7 @@ import '../screens/profile/privacy_policy_screen.dart';
 import '../screens/profile/referrals_screen.dart';
 import '../screens/profile/register_profile_screen.dart';
 import '../screens/profile/terms_and_conditions_screen.dart';
+import '../screens/profile/two_factor_setup_screen.dart';
 import '../screens/transaction/transaction_processing_screen.dart';
 import '../screens/transaction/transactions_screen.dart';
 import '../screens/transaction/withdraw_to_bank_screen.dart';
@@ -89,6 +91,9 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/terms-and-conditions': (_) => const TermsAndConditionsScreen(),
     '/backup-seed-phrase': (_) => const BackupSeedPhraseScreen(),
     '/password-security': (_) => const PasswordSecurityScreen(),
+    '/two-factor-setup': (_) => const TwoFactorSetupScreen(),
+    '/cash-in': (context) => MiniAppHostScreen.fromRoute(context),
+    '/mini-app-host': (context) => MiniAppHostScreen.fromRoute(context),
     '/referrals': (_) => const ReferralsScreen(),
     '/feedback': (_) => const FeedbackScreen(),
     '/community': (_) => const CommunityLinksScreen(),

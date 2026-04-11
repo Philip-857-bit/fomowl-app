@@ -20,6 +20,10 @@ class AppEnvironment {
       _resolvePushNotificationsEnabled();
   static final FirebaseOptions? firebaseOptions =
       _resolveFirebaseOptionsForCurrentPlatform();
+  static final String? cashInMiniAppUrl = _optionalEnv('CASH_IN_MINI_APP_URL');
+  static final List<String> cashInMiniAppAllowedOrigins = _csvEnv(
+    'CASH_IN_MINI_APP_ALLOWED_ORIGINS',
+  );
 
   static Future<void> initializeFirebaseApp() async {
     if (Firebase.apps.isNotEmpty) {
@@ -195,5 +199,17 @@ class AppEnvironment {
   static String? _optionalEnv(String key) {
     final value = String.fromEnvironment(key).trim();
     return value.isEmpty ? null : value;
+  }
+
+  static List<String> _csvEnv(String key) {
+    final value = String.fromEnvironment(key).trim();
+    if (value.isEmpty) {
+      return const <String>[];
+    }
+    return value
+        .split(',')
+        .map((entry) => entry.trim())
+        .where((entry) => entry.isNotEmpty)
+        .toList(growable: false);
   }
 }
