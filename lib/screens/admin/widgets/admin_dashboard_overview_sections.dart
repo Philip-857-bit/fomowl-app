@@ -36,7 +36,7 @@ class AdminOverviewSection extends StatelessWidget {
         AdminSectionHeading(
           title: 'Operational overview',
           subtitle:
-            'Quick health snapshot for ${activeChain.name}, activity volume, and delivery readiness.',
+              'Quick health snapshot for ${activeChain.name}, activity volume, and delivery readiness.',
         ),
         AdminCard(
           child: Column(
@@ -147,7 +147,7 @@ class AdminStatsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Key metrics',
           subtitle:
-            'Live adoption and reliability counters for support and release decisions.',
+              'Live adoption and reliability counters for support and release decisions.',
         ),
         GridView.count(
           shrinkWrap: true,
@@ -228,7 +228,7 @@ class AdminOpsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Ops and error audit',
           subtitle:
-            'Traffic, limits, push readiness, and recent backend error signals.',
+              'Traffic, limits, push readiness, and recent backend error signals.',
         ),
         AdminCard(
           child: Column(

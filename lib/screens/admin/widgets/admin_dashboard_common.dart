@@ -45,9 +45,7 @@ InputDecoration adminInputDecoration({
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: BorderSide(
-        color: AppColors.divider.withValues(alpha: 0.72),
-      ),
+      borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.72)),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),

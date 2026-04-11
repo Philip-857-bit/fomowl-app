@@ -36,7 +36,7 @@ class AdminFeedbackSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Feedback queue',
           subtitle:
-            'Review incoming reports, filter by wallet, and export the visible queue.',
+              'Review incoming reports, filter by wallet, and export the visible queue.',
         ),
         AdminCard(
           child: Column(
@@ -146,7 +146,7 @@ class AdminActionsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Manual actions',
           subtitle:
-            'Run one-off checks and test wallet push delivery from a single place.',
+              'Run one-off checks and test wallet push delivery from a single place.',
         ),
         AdminCard(
           child: Column(
@@ -239,7 +239,7 @@ class AdminPushSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Broadcast push',
           subtitle:
-            'Publish one message to all wallets with registered devices in one action.',
+              'Publish one message to all wallets with registered devices in one action.',
         ),
         AdminCard(
           child: Column(

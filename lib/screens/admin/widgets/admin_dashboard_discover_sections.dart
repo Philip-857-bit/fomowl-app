@@ -60,7 +60,7 @@ class AdminDiscoverDappsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Discover DApps',
           subtitle:
-            'Manage the global Discover DApp directory. Launch URL is required; slug, title, and artwork can autofill from the site.',
+              'Manage the global Discover DApp directory. Launch URL is required; slug, title, and artwork can autofill from the site.',
         ),
         AdminCard(
           child: Column(

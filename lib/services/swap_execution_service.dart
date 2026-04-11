@@ -291,8 +291,7 @@ class SwapExecutionService {
 
       final submitData = _decodeJsonMap(
         submitResponse.body,
-        fallback:
-            'Gasless order response was incomplete. Please try again.',
+        fallback: 'Gasless order response was incomplete. Please try again.',
       );
       final String? transactionHash =
           submitData['transactionHash']?.toString() ??
@@ -342,10 +341,7 @@ class SwapExecutionService {
     return null;
   }
 
-  Map<String, dynamic> _decodeJsonMap(
-    String body, {
-    required String fallback,
-  }) {
+  Map<String, dynamic> _decodeJsonMap(String body, {required String fallback}) {
     final trimmed = body.trim();
     if (trimmed.isEmpty) {
       throw Exception(fallback);

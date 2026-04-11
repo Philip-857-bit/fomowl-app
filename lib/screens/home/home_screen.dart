@@ -370,13 +370,14 @@ class _HomeScreenState extends State<HomeScreen> {
       orElse: () => blockchain.activeChain,
     );
 
-    final visibleTokens = chainTokens
-        .where((token) => token.balance > 0 || token.totalValueUsd > 0)
-        .toList()
-      ..sort(
-        (left, right) =>
-            right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
-      );
+    final visibleTokens =
+        chainTokens
+            .where((token) => token.balance > 0 || token.totalValueUsd > 0)
+            .toList()
+          ..sort(
+            (left, right) =>
+                right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
+          );
     if (visibleTokens.isEmpty) {
       return;
     }

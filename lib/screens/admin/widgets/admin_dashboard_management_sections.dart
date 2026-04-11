@@ -34,7 +34,7 @@ class AdminMaintainersSection extends StatelessWidget {
         AdminSectionHeading(
           title: l10n.adminMaintainers,
           subtitle:
-            'Manage privileged wallets for admin actions. Added maintainers can use the panel immediately.',
+              'Manage privileged wallets for admin actions. Added maintainers can use the panel immediately.',
         ),
         AdminCard(
           child: Column(
@@ -139,7 +139,7 @@ class AdminRegistrySection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Token registry',
           subtitle:
-            'Search discovered tokens and approve trusted assets for wallet display.',
+              'Search discovered tokens and approve trusted assets for wallet display.',
         ),
         AdminCard(
           child: Column(

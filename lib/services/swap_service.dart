@@ -214,10 +214,12 @@ class SwapService {
       if (response.statusCode == 200) {
         final data = _decodeMapBody(
           response.body,
-          fallbackMessage: 'Swap quote response was incomplete. Please try again.',
+          fallbackMessage:
+              'Swap quote response was incomplete. Please try again.',
         );
         if (data == null) {
-          _lastError ??= 'Swap quote response was incomplete. Please try again.';
+          _lastError ??=
+              'Swap quote response was incomplete. Please try again.';
           return null;
         }
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';

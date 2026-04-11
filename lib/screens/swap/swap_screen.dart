@@ -963,8 +963,9 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmountText: toAmountText,
         );
         if (_walletAddress != null) {
-          final notificationTxHash =
-              _looksLikeTxHash(tradeHash) ? tradeHash : null;
+          final notificationTxHash = _looksLikeTxHash(tradeHash)
+              ? tradeHash
+              : null;
           if (notificationTxHash != null) {
             unawaited(
               _walletNotificationService.notifySwapConfirmed(
