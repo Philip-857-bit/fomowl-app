@@ -131,26 +131,34 @@ class SwapExecutionService {
 
       // 2. Prepare Web3 Transaction
       if (txData['to'] == null) {
-        throw Exception('Backend returned tx object with missing "to" field');
+        throw Exception(
+          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+        );
       }
       final toAddress = EthereumAddress.fromHex(txData['to'].toString());
 
       final gasPriceStr = txData['gasPrice']?.toString();
       final gasPrice = gasPriceStr != null ? _parseBigInt(gasPriceStr) : null;
       if (gasPrice == null) {
-        throw Exception('Invalid or missing gasPrice in txData: $gasPriceStr');
+        throw Exception(
+          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+        );
       }
 
       final dataStr = txData['data']?.toString();
       if (dataStr == null) {
-        throw Exception('Missing "data" field in txData');
+        throw Exception(
+          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+        );
       }
       final dataBytes = hexToBytes(dataStr.replaceFirst('0x', ''));
 
       final valueStr = txData['value']?.toString();
       final valueWei = valueStr != null ? _parseBigInt(valueStr) : null;
       if (valueWei == null) {
-        throw Exception('Invalid or missing value in txData: $valueStr');
+        throw Exception(
+          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+        );
       }
 
       final tx = Transaction(

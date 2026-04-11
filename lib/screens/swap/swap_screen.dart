@@ -1249,6 +1249,71 @@ class _SwapScreenState extends State<SwapScreen> {
     _activateSwapLiveTracking();
   }
 
+  Future<SwapQuote?> _refreshExecutionQuote({
+    required Token fromToken,
+    required Token toToken,
+    required String fromAmountWei,
+  }) async {
+    if (_isGasless) {
+      return _currentQuote;
+    }
+
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final quote = await _swapService
+        .get0xQuote(
+          chainId: blockchain.activeChain.chainId,
+          fromTokenAddress: fromToken.contractAddress ?? '',
+          toTokenAddress: toToken.contractAddress ?? '',
+          amountWei: fromAmountWei,
+          buyTokenDecimals: toToken.decimals,
+          isGasless: false,
+          walletAddress: _walletAddress,
+          slippageBps: _slippageBps,
+          useFirmQuote: true,
+        )
+        .timeout(_quoteUiTimeout);
+
+    if (quote == null || !mounted) {
+      return quote;
+    }
+
+    final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
+    final inAmount = _parseAmount(_fromController);
+    final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
+    var feeNative = quote.networkFeeNative;
+    var feeUsd = quote.networkFeeUsd > 0
+        ? quote.networkFeeUsd
+        : quote.networkFeeNative * _nativeTokenPriceUsd;
+
+    if (feeNative <= 0 && feeUsd <= 0) {
+      var nativePrice = _nativeTokenPriceUsd;
+      if (nativePrice <= 0) {
+        await _refreshTokenPrices();
+        nativePrice = _nativeTokenPriceUsd;
+      }
+      final estimate = await blockchain.estimateGasFee(
+        nativePriceUsd: nativePrice,
+      );
+      feeNative = estimate['totalFeeEth'] ?? 0.0;
+      feeUsd = estimate['totalFeeUsd'] ?? 0.0;
+    }
+
+    if (!mounted) {
+      return quote;
+    }
+
+    setState(() {
+      _pricing = _formatRateText(unitRate);
+      _toController.text = quote.amountOutFormatted;
+      _currentQuote = quote;
+      _feeNative = feeNative;
+      _feeUsd = feeUsd;
+      _platformFeeUsd = quote.platformFeeUsd;
+    });
+
+    return quote;
+  }
+
   void _executeSwap() async {
     final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
@@ -1297,6 +1362,19 @@ class _SwapScreenState extends State<SwapScreen> {
 
     final progressController = _openProgressFlow();
     progressController.setPreparing();
+
+    final executionQuote = await _refreshExecutionQuote(
+      fromToken: fromToken,
+      toToken: toToken,
+      fromAmountWei: fromAmountWei,
+    );
+    if (!mounted) return;
+    if (executionQuote == null) {
+      progressController.setError(
+        _mapErrorMessage(_swapService.lastError ?? l.noQuoteAvailable),
+      );
+      return;
+    }
 
     if (_tokenRequiresApproval(fromToken)) {
       final approvalOk = await _handleTokenApproval(

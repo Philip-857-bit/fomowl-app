@@ -161,6 +161,7 @@ class SwapService {
     required bool isGasless,
     String? walletAddress,
     int slippageBps = 50,
+    bool useFirmQuote = false,
   }) async {
     _lastError = null;
     if (!isChainSupported(chainId, isGasless: isGasless)) {
@@ -176,7 +177,9 @@ class SwapService {
     }
 
     try {
-      final endpoint = isGasless ? 'fusion/quote' : 'price';
+      final endpoint = isGasless
+          ? 'fusion/quote'
+          : (useFirmQuote ? 'quote' : 'price');
 
       // Native ETH/token addresses for 0x (uses WETH/WBNB address implicitly or 0xeeee...)
       final src = fromTokenAddress.isEmpty
