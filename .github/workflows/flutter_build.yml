@@ -189,20 +189,6 @@ jobs:
           readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
           flutter build apk --split-per-abi --release "${DART_DEFINES[@]}"
 
-      - name: Build APK (Universal)
-        shell: bash
-        run: |
-          set -euo pipefail
-          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
-          flutter build apk --release "${DART_DEFINES[@]}"
-        
-      - name: Build App Bundle (AAB)
-        shell: bash
-        run: |
-          set -euo pipefail
-          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
-          flutter build appbundle --release "${DART_DEFINES[@]}"
-        
       - name: Upload Artifacts to Dropbox
         env:
           DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
@@ -252,12 +238,4 @@ jobs:
           
           if [ -f "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" ]; then
             upload_to_dropbox "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk" "owllet.apk"
-          fi
-
-          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-            upload_to_dropbox "build/app/outputs/flutter-apk/app-release.apk" "owlletuni.apk"
-          fi
-          
-          if [ -f "build/app/outputs/bundle/release/app-release.aab" ]; then
-            upload_to_dropbox "build/app/outputs/bundle/release/app-release.aab" "owllet.aab"
           fi
