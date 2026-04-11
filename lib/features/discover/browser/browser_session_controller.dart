@@ -188,13 +188,14 @@ class BrowserSessionController extends ChangeNotifier {
   }
 
   bool canInjectProviderFor(Uri uri) {
-    if (!(_snapshot?.isFresh ?? false)) {
-      return false;
-    }
     if (!isDiscoverInjectableUri(uri)) {
       return false;
     }
-    return findDappByOrigin(normalizeOriginFromUri(uri)) != null;
+    final origin = normalizeOriginFromUri(uri);
+    if (findDappByOrigin(origin) != null) {
+      return true;
+    }
+    return _activeDapp?.origin == origin;
   }
 
   bool shouldInjectDappDetectorFor(Uri uri) {

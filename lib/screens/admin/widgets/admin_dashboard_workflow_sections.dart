@@ -36,7 +36,7 @@ class AdminFeedbackSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Feedback queue',
           subtitle:
-              'Search wallet-specific feedback, review incoming reports, and export the current queue.',
+            'Review incoming reports, filter by wallet, and export the visible queue.',
         ),
         AdminCard(
           child: Column(
@@ -76,7 +76,7 @@ class AdminFeedbackSection extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Page $feedbackPage - ${feedbackItems.length} of $feedbackTotal',
+                'Showing ${feedbackItems.length} of $feedbackTotal reports · Page $feedbackPage',
                 style: GoogleFonts.outfit(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -146,7 +146,7 @@ class AdminActionsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Manual actions',
           subtitle:
-              'Run targeted admin actions without leaving the dashboard. Use test push to validate device delivery and notification persistence.',
+            'Run one-off checks and test wallet push delivery from a single place.',
         ),
         AdminCard(
           child: Column(
@@ -239,7 +239,7 @@ class AdminPushSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Broadcast push',
           subtitle:
-              'Create a stored notification for all wallets with registered devices and trigger FCM delivery in the same action.',
+            'Publish one message to all wallets with registered devices in one action.',
         ),
         AdminCard(
           child: Column(

@@ -47,9 +47,6 @@ class DiscoverLandingView extends StatelessWidget {
     final visibleFeaturedDapps = featuredDapps.isNotEmpty
         ? featuredDapps
         : filteredDapps.take(6).toList(growable: false);
-    final bulkPayDapp = trendingDapps.isNotEmpty
-        ? trendingDapps.first
-        : (filteredDapps.isNotEmpty ? filteredDapps.first : null);
     final shouldShowCatalogError =
         !isSearching &&
         error != null &&
@@ -69,13 +66,6 @@ class DiscoverLandingView extends StatelessWidget {
         children: [
           if (!isSearching) ...[
             _CashInCard(onTap: onOpenCashIn),
-            const SizedBox(height: 18),
-            _SecondaryPromoCard(
-              title: 'Bulk Pay',
-              subtitle: 'Pay team/staffs in USDT/USDC one-click',
-              badgeText: 'FOR BUSINESSES',
-              onTap: bulkPayDapp == null ? null : () => onOpenDapp(bulkPayDapp),
-            ),
             const SizedBox(height: 24),
           ],
           if (shouldShowCatalogError) ...[
@@ -203,7 +193,7 @@ class _CashInCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(28),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(28),
             gradient: const LinearGradient(
@@ -225,8 +215,8 @@ class _CashInCard extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+                  horizontal: 11,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
@@ -242,120 +232,41 @@ class _CashInCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
               Text(
                 l.discoverCashInTitle,
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 34,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                l.discoverCashInDescription,
-                style: GoogleFonts.outfit(
-                  color: Colors.white.withValues(alpha: 0.82),
-                  fontSize: 15,
-                  height: 1.45,
-                ),
-              ),
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                  l.discoverGoLabel,
-                  style: GoogleFonts.outfit(
-                    color: const Color(0xFF0E5C46),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SecondaryPromoCard extends StatelessWidget {
-  const _SecondaryPromoCard({
-    required this.title,
-    required this.subtitle,
-    required this.badgeText,
-    this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final String badgeText;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(28),
-        child: Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0E3B9D), Color(0xFF245BD6), Color(0xFF1F3D8B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  badgeText,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                title,
                 style: GoogleFonts.outfit(
                   color: Colors.white,
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
-                subtitle,
+                l.discoverCashInDescription,
                 style: GoogleFonts.outfit(
                   color: Colors.white.withValues(alpha: 0.82),
-                  fontSize: 15,
-                  height: 1.45,
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  l.discoverGoLabel,
+                  style: GoogleFonts.outfit(
+                    color: const Color(0xFF0E5C46),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -625,11 +536,24 @@ class _DappArtwork extends StatelessWidget {
   final DiscoverDappEntry entry;
   final double size;
 
+  String? _resolveImageUrl() {
+    final logoUrl = entry.logoUrl?.trim();
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return logoUrl;
+    }
+    final heroImageUrl = entry.heroImageUrl?.trim();
+    if (heroImageUrl != null && heroImageUrl.isNotEmpty) {
+      return heroImageUrl;
+    }
+    if (entry.slug.toLowerCase() == 'opensea') {
+      return 'https://storage.googleapis.com/opensea-static/Logomark/Logomark-Blue.png';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final imageUrl = (entry.logoUrl?.trim().isNotEmpty == true)
-        ? entry.logoUrl
-        : entry.heroImageUrl;
+    final imageUrl = _resolveImageUrl();
     return Container(
       width: size,
       height: size,

@@ -94,6 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
+  HomeAssetTab _selectedAssetTab = HomeAssetTab.portfolio;
+  DateTime? _latestLiveBalanceAt;
+  String? _latestLiveBalanceWallet;
 
   @override
   void initState() {
@@ -296,6 +299,12 @@ class _HomeScreenState extends State<HomeScreen> {
         walletAddress,
         sync: sync,
       );
+      if (!_shouldAcceptPortfolioSnapshot(snapshot, isUsingCachedData: false)) {
+        if (mounted) {
+          setState(() => _isLoadingPortfolio = false);
+        }
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -328,6 +337,79 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       setState(() => _isLoadingPortfolio = false);
     }
+  }
+
+  bool _shouldAcceptPortfolioSnapshot(
+    HomeAggregatedPortfolioSnapshot snapshot, {
+    required bool isUsingCachedData,
+  }) {
+    if (isUsingCachedData) {
+      return true;
+    }
+    final latestLiveBalanceAt = _latestLiveBalanceAt;
+    if (latestLiveBalanceAt == null) {
+      return true;
+    }
+    final snapshotWallet = snapshot.walletAddress.trim().toLowerCase();
+    final latestWallet = _latestLiveBalanceWallet;
+    if (latestWallet == null || latestWallet != snapshotWallet) {
+      return true;
+    }
+    return !snapshot.timestamp.toUtc().isBefore(latestLiveBalanceAt.toUtc());
+  }
+
+  Future<void> _upsertLiveChainPortfolioSection(List<Token> chainTokens) async {
+    final blockchain = _blockchain;
+    final currentChainId = _lastChainId;
+    if (!mounted || blockchain == null || currentChainId == null) {
+      return;
+    }
+
+    final sectionChain = blockchain.allChains.firstWhere(
+      (chain) => chain.chainId == currentChainId,
+      orElse: () => blockchain.activeChain,
+    );
+
+    final visibleTokens = chainTokens
+        .where((token) => token.balance > 0 || token.totalValueUsd > 0)
+        .toList()
+      ..sort(
+        (left, right) =>
+            right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
+      );
+    if (visibleTokens.isEmpty) {
+      return;
+    }
+
+    final nextSections = List<HomePortfolioSection>.from(_portfolioRawSections);
+    final nextSection = HomePortfolioSection(
+      chain: sectionChain,
+      tokens: visibleTokens,
+    );
+    final existingIndex = nextSections.indexWhere(
+      (section) => section.chain.chainId == currentChainId,
+    );
+    if (existingIndex >= 0) {
+      nextSections[existingIndex] = nextSection;
+    } else {
+      nextSections.add(nextSection);
+    }
+
+    final data = await _buildPortfolioDataFromSections(nextSections);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _portfolioRawSections = nextSections;
+      _applyPortfolioData(
+        data.sections.isNotEmpty ? data : _fallbackPortfolioData(),
+      );
+      _portfolioUpdatedAt = DateTime.now().toUtc();
+      _portfolioIsStale = false;
+      _portfolioPartialFailure = false;
+      _portfolioChainsPending = const [];
+    });
   }
 
   Future<HomeAggregatedPortfolioSnapshot?> _buildPortfolioFallbackSnapshot(
@@ -696,15 +778,19 @@ class _HomeScreenState extends State<HomeScreen> {
       final realTokens = await blockchain.fetchWalletTokens(address);
 
       if (mounted) {
+        final now = DateTime.now().toUtc();
         setState(() {
           _replaceDisplayedTokens(realTokens, isUsingCachedData: false);
           _isLoadingBalances = false;
+          _latestLiveBalanceAt = now;
+          _latestLiveBalanceWallet = address.toLowerCase();
         });
         blockchain.setLivePriceTrackingForTokens(
           _tokens,
           scope: _livePriceScope,
         );
         _lastChainId = blockchain.activeChain.chainId;
+        await _upsertLiveChainPortfolioSection(realTokens);
 
         // Save fresh snapshot
         final name = await _storage.getWalletName();
@@ -1061,7 +1147,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             const SizedBox(height: 8),
                             BalanceCard(
-                              titleText: l.totalNetWorth,
+                              titleText:
+                                  _selectedAssetTab == HomeAssetTab.tokens
+                                  ? l.availableBalance
+                                  : l.totalNetWorth,
                               formattedBalance: _formattedTotalBalance,
                               portfolioMetrics: _portfolioMetrics,
                               statusText: _balanceStatusText(l),
@@ -1119,6 +1208,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                               isTokenHidden: _isTokenHidden,
                               chainId: _lastChainId,
+                              onTabChanged: (tab) {
+                                if (!mounted || _selectedAssetTab == tab) {
+                                  return;
+                                }
+                                setState(() => _selectedAssetTab = tab);
+                              },
                               onSelectToken: (token) {
                                 Navigator.pushNamed(
                                   context,

@@ -617,7 +617,7 @@ abstract class AppLocalizations {
   /// No description provided for @discoverTrendingDappsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Popular allowlisted destinations.'**
+  /// **'Popular trusted destinations.'**
   String get discoverTrendingDappsSubtitle;
 
   /// No description provided for @discoverCategoriesTitle.
@@ -647,7 +647,7 @@ abstract class AppLocalizations {
   /// No description provided for @discoverAllApprovedDappsCount.
   ///
   /// In en, this message translates to:
-  /// **'{count} allowlisted destinations.'**
+  /// **'{count} trusted destinations.'**
   String discoverAllApprovedDappsCount(Object count);
 
   /// No description provided for @discoverCashInBadge.
@@ -713,7 +713,7 @@ abstract class AppLocalizations {
   /// No description provided for @discoverSupportSubject.
   ///
   /// In en, this message translates to:
-  /// **'Discover allowlist request'**
+  /// **'Discover access request'**
   String get discoverSupportSubject;
 
   /// No description provided for @discoverSupportMessage.

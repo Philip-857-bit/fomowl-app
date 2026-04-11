@@ -266,8 +266,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverTrendingDappsTitle => 'Trending';
 
   @override
-  String get discoverTrendingDappsSubtitle =>
-      'Popular allowlisted destinations.';
+  String get discoverTrendingDappsSubtitle => 'Popular trusted destinations.';
 
   @override
   String get discoverCategoriesTitle => 'Categories';
@@ -285,7 +284,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String discoverAllApprovedDappsCount(Object count) {
-    return '$count allowlisted destinations.';
+    return '$count trusted destinations.';
   }
 
   @override
@@ -325,7 +324,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverWalletApiAccessTrigger => 'wallet provider access';
 
   @override
-  String get discoverSupportSubject => 'Discover allowlist request';
+  String get discoverSupportSubject => 'Discover access request';
 
   @override
   String discoverSupportMessage(Object origin, Object url, Object reason) {

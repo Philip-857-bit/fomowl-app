@@ -15,6 +15,8 @@ class WalletNotificationService {
 
   Future<void> notifySendConfirmed({
     required String walletAddress,
+    required int chainId,
+    required String txHash,
     required String amountText,
     required String tokenSymbol,
     required String toAddress,
@@ -25,11 +27,14 @@ class WalletNotificationService {
       title: 'Transfer confirmed',
       message:
           'Sent $amountText $tokenSymbol to ${_shortAddress(toAddress)} on $networkName.',
+      dedupeKey: _buildTxDedupeKey(chainId: chainId, txHash: txHash),
     );
   }
 
   Future<void> notifySwapConfirmed({
     required String walletAddress,
+    required int chainId,
+    String? txHash,
     required String fromAmount,
     required String fromSymbol,
     required String toAmount,
@@ -41,6 +46,7 @@ class WalletNotificationService {
       title: 'Swap confirmed',
       message:
           'Swapped $fromAmount $fromSymbol for $toAmount $toSymbol on $networkName.',
+      dedupeKey: _buildOptionalTxDedupeKey(chainId: chainId, txHash: txHash),
     );
   }
 
@@ -48,18 +54,22 @@ class WalletNotificationService {
     required String walletAddress,
     required String title,
     required String message,
+    String? dedupeKey,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'wallet_address': walletAddress,
+        'title': title,
+        'message': message,
+        ...?dedupeKey == null ? null : {'dedupeKey': dedupeKey},
+      };
+
       final response = await _httpClientService
           .sendWithRetry(
             () => _httpClientService.client.post(
               AppEnvironment.notifications('/add'),
               headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'wallet_address': walletAddress,
-                'title': title,
-                'message': message,
-              }),
+              body: jsonEncode(payload),
             ),
           )
           .timeout(const Duration(seconds: 8));
@@ -85,5 +95,21 @@ class WalletNotificationService {
       return normalized;
     }
     return '${normalized.substring(0, 6)}...${normalized.substring(normalized.length - 4)}';
+  }
+
+  String _buildTxDedupeKey({required int chainId, required String txHash}) {
+    final normalizedHash = txHash.trim().toLowerCase();
+    return 'tx:$chainId:$normalizedHash';
+  }
+
+  String? _buildOptionalTxDedupeKey({required int chainId, String? txHash}) {
+    if (txHash == null) {
+      return null;
+    }
+    final normalizedHash = txHash.trim();
+    if (normalizedHash.isEmpty) {
+      return null;
+    }
+    return _buildTxDedupeKey(chainId: chainId, txHash: normalizedHash);
   }
 }

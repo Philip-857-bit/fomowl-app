@@ -669,12 +669,19 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _mapErrorMessage(String? raw) {
+    final l = AppLocalizations.of(context);
     if (raw == null || raw.isEmpty) {
-      return 'Something went wrong. Please try again.';
+      return '${l.swapFailedTitle}. ${l.tryAgain}.';
     }
     final lower = raw.toLowerCase();
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final nativeSymbol = blockchain.activeChain.symbol;
+    if (lower.contains('unable to fetch a swap price right now') ||
+        lower.contains('upstream request failed') ||
+        lower.contains('unable to fetch a swap quote right now') ||
+        lower.contains('unable to prepare the swap transaction right now')) {
+      return l.noQuoteAvailable;
+    }
     if (_isGasless &&
         _currentQuote?.needsAllowance == true &&
         (lower.contains('insufficient funds') ||
@@ -699,7 +706,7 @@ class _SwapScreenState extends State<SwapScreen> {
       return 'You do not have enough $tokenSymbol for this swap amount.';
     }
     if (lower.contains('invalid chain id')) {
-      return 'Swap is not available on this network yet.';
+      return l.noQuoteAvailable;
     }
     if (lower.contains('connection refused') ||
         lower.contains('socketexception') ||
@@ -725,7 +732,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     return AppErrorUtils.userMessage(
       raw,
-      fallback: 'Swap failed. Please try again.',
+      fallback: '${l.swapFailedTitle}. ${l.tryAgain}.',
     );
   }
 
@@ -912,6 +919,8 @@ class _SwapScreenState extends State<SwapScreen> {
             unawaited(
               _walletNotificationService.notifySwapConfirmed(
                 walletAddress: _walletAddress!,
+                chainId: chainId,
+                txHash: txHash,
                 fromAmount: fromAmountText,
                 fromSymbol: fromSymbol,
                 toAmount: toAmountText,
@@ -954,16 +963,22 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmountText: toAmountText,
         );
         if (_walletAddress != null) {
-          unawaited(
-            _walletNotificationService.notifySwapConfirmed(
-              walletAddress: _walletAddress!,
-              fromAmount: fromAmountText,
-              fromSymbol: fromSymbol,
-              toAmount: toAmountText,
-              toSymbol: toSymbol,
-              networkName: networkName,
-            ),
-          );
+          final notificationTxHash =
+              _looksLikeTxHash(tradeHash) ? tradeHash : null;
+          if (notificationTxHash != null) {
+            unawaited(
+              _walletNotificationService.notifySwapConfirmed(
+                walletAddress: _walletAddress!,
+                chainId: chainId,
+                txHash: notificationTxHash,
+                fromAmount: fromAmountText,
+                fromSymbol: fromSymbol,
+                toAmount: toAmountText,
+                toSymbol: toSymbol,
+                networkName: networkName,
+              ),
+            );
+          }
           _recordSwapHistory(
             txHash: _looksLikeTxHash(tradeHash) ? tradeHash : null,
             fromAmount: fromAmountText,
@@ -1509,6 +1524,8 @@ class _SwapScreenState extends State<SwapScreen> {
         unawaited(
           _walletNotificationService.notifySwapConfirmed(
             walletAddress: _walletAddress!,
+            chainId: blockchain.activeChain.chainId,
+            txHash: txHash,
             fromAmount: fromAmountText,
             fromSymbol: fromToken.symbol,
             toAmount: toAmountText,

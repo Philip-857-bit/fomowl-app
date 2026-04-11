@@ -121,8 +121,15 @@ class SwapService {
           .sendWithRetry(() => _httpClientService.client.get(url))
           .timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data is Map<String, dynamic> ? data : null;
+        final data = _decodeMapBody(
+          response.body,
+          fallbackMessage:
+              'Gasless status response was incomplete. Please try again.',
+        );
+        if (data == null) {
+          return null;
+        }
+        return data;
       }
       _lastError = _extractBackendMessage(
         response.body,
@@ -130,7 +137,7 @@ class SwapService {
       );
       return null;
     } catch (e) {
-      _lastError = AppErrorUtils.userMessage(
+      _lastError ??= AppErrorUtils.userMessage(
         e,
         fallback: 'Unable to fetch gasless order status right now.',
       );
@@ -205,9 +212,12 @@ class SwapService {
           .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final data = _asMap(jsonDecode(response.body));
+        final data = _decodeMapBody(
+          response.body,
+          fallbackMessage: 'Swap quote response was incomplete. Please try again.',
+        );
         if (data == null) {
-          _lastError = 'Swap quote response was malformed.';
+          _lastError ??= 'Swap quote response was incomplete. Please try again.';
           return null;
         }
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';
@@ -297,7 +307,7 @@ class SwapService {
         return null;
       }
     } catch (e) {
-      _lastError = AppErrorUtils.userMessage(
+      _lastError ??= AppErrorUtils.userMessage(
         e,
         fallback: 'Unable to fetch a swap quote right now.',
       );
@@ -358,5 +368,23 @@ class SwapService {
       );
     }
     return null;
+  }
+
+  Map<String, dynamic>? _decodeMapBody(
+    String body, {
+    required String fallbackMessage,
+  }) {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) {
+      _lastError = fallbackMessage;
+      return null;
+    }
+
+    try {
+      return _asMap(jsonDecode(trimmed));
+    } on FormatException {
+      _lastError = fallbackMessage;
+      return null;
+    }
   }
 }

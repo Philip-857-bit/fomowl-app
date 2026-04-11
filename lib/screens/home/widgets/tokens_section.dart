@@ -26,6 +26,7 @@ class TokensSection extends StatefulWidget {
   final void Function(Token token) onSelectToken;
   final int? chainId;
   final HomeAssetTab initialTab;
+  final ValueChanged<HomeAssetTab>? onTabChanged;
 
   const TokensSection({
     super.key,
@@ -43,6 +44,7 @@ class TokensSection extends StatefulWidget {
     required this.onSelectToken,
     this.chainId,
     this.initialTab = HomeAssetTab.portfolio,
+    this.onTabChanged,
   });
 
   @override
@@ -58,6 +60,14 @@ class _TokensSectionState extends State<TokensSection> {
     _selectedTab = widget.initialTab;
   }
 
+  void _setTab(HomeAssetTab tab) {
+    if (_selectedTab == tab) {
+      return;
+    }
+    setState(() => _selectedTab = tab);
+    widget.onTabChanged?.call(tab);
+  }
+
   @override
   Widget build(BuildContext context) {
     final visibleTokens = widget.tokens
@@ -71,7 +81,7 @@ class _TokensSectionState extends State<TokensSection> {
           child: Row(
             children: [
               GestureDetector(
-                onTap: () => setState(() => _selectedTab = HomeAssetTab.tokens),
+                onTap: () => _setTab(HomeAssetTab.tokens),
                 child: Text(
                   widget.localization.tokens,
                   style: GoogleFonts.outfit(
@@ -87,8 +97,7 @@ class _TokensSectionState extends State<TokensSection> {
               ),
               const SizedBox(width: 20),
               GestureDetector(
-                onTap: () =>
-                    setState(() => _selectedTab = HomeAssetTab.portfolio),
+                onTap: () => _setTab(HomeAssetTab.portfolio),
                 child: Text(
                   widget.localization.portfolio,
                   style: GoogleFonts.outfit(
@@ -104,7 +113,7 @@ class _TokensSectionState extends State<TokensSection> {
               ),
               const SizedBox(width: 20),
               GestureDetector(
-                onTap: () => setState(() => _selectedTab = HomeAssetTab.nfts),
+                onTap: () => _setTab(HomeAssetTab.nfts),
                 child: Text(
                   widget.localization.nfts,
                   style: GoogleFonts.outfit(

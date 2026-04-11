@@ -283,7 +283,7 @@ class _DecentralizedProfileScreenState
           .timeout(const Duration(seconds: 10));
 
       if (verifyResponse.statusCode != 200) {
-        if (verifyResponse.statusCode == 403) {
+        if (verifyResponse.statusCode == 401 || verifyResponse.statusCode == 403) {
           if (mounted) {
             ScaffoldMessenger.of(
               context,
@@ -293,7 +293,7 @@ class _DecentralizedProfileScreenState
         }
         final errorMessage = AppErrorUtils.backendMessage(
           verifyResponse.body,
-          fallback: 'Admin access denied.',
+          fallback: l.networkError,
         );
         throw Exception(errorMessage);
       }

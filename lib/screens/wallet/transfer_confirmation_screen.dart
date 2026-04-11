@@ -320,6 +320,8 @@ class _TransferConfirmationScreenState
           unawaited(
             _walletNotificationService.notifySendConfirmed(
               walletAddress: _fromAddress!,
+              chainId: chain.chainId,
+              txHash: txHash,
               amountText: amountText,
               tokenSymbol: token.symbol,
               toAddress: toAddress,

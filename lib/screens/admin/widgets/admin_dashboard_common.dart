@@ -38,14 +38,16 @@ InputDecoration adminInputDecoration({
     hintStyle: const TextStyle(color: Colors.white38),
     prefixIcon: Icon(icon, color: Colors.white60),
     filled: true,
-    fillColor: AppColors.inputBackground,
+    fillColor: const Color(0xFF16161C),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide.none,
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: AppColors.divider),
+      borderSide: BorderSide(
+        color: AppColors.divider.withValues(alpha: 0.72),
+      ),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
@@ -123,7 +125,7 @@ class AdminHeroCard extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1F0909), Color(0xFF16070A), Color(0xFF0D0D10)],
+          colors: [Color(0xFF2A0E11), Color(0xFF1B1017), Color(0xFF111318)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -153,7 +155,7 @@ class AdminHeroCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Production admin workspace',
+                      'Admin Mission Control',
                       style: GoogleFonts.outfit(
                         color: Colors.white,
                         fontSize: 18,
@@ -162,7 +164,7 @@ class AdminHeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      chainName,
+                      '$chainName network',
                       style: GoogleFonts.outfit(
                         color: AppColors.textSecondary,
                         fontSize: 13,
@@ -197,8 +199,8 @@ class AdminHeroCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             lastSyncedAt == null
-                ? 'Waiting for first admin sync.'
-                : 'Last synced ${AdminHeroCard._formatTime(lastSyncedAt!)}',
+                ? 'Waiting for the first sync result.'
+                : 'Synced ${AdminHeroCard._formatTime(lastSyncedAt!)}',
             style: GoogleFonts.outfit(
               color: AppColors.textSecondary,
               fontSize: 13,
@@ -241,11 +243,26 @@ class AdminSectionChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accentRed : AppColors.cardDark,
+          color: selected ? null : AppColors.cardDark,
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFFD44949), Color(0xFF9F2F47)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? AppColors.accentRed : AppColors.divider,
           ),
+          boxShadow: [
+            if (selected)
+              BoxShadow(
+                color: AppColors.accentRed.withValues(alpha: 0.3),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+          ],
         ),
         child: Row(
           children: [
@@ -280,7 +297,11 @@ class AdminCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF17171F), Color(0xFF13131A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.divider),
       ),
@@ -306,7 +327,11 @@ class AdminMetricTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF181820), Color(0xFF13141A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.divider),
       ),
@@ -314,7 +339,7 @@ class AdminMetricTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: AppColors.accentRed),
+          Icon(icon, color: const Color(0xFFFF7B72)),
           const SizedBox(height: 12),
           Text(
             value,

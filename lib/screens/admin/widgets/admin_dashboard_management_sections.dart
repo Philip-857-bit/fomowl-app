@@ -34,7 +34,7 @@ class AdminMaintainersSection extends StatelessWidget {
         AdminSectionHeading(
           title: l10n.adminMaintainers,
           subtitle:
-              'Control which wallets have privileged admin access. New maintainers are activated immediately after validation.',
+            'Manage privileged wallets for admin actions. Added maintainers can use the panel immediately.',
         ),
         AdminCard(
           child: Column(
@@ -78,7 +78,7 @@ class AdminMaintainersSection extends StatelessWidget {
           const AdminEmptyState(
             title: 'No maintainers loaded',
             message:
-                'Refresh the maintainers section to load the current access list.',
+                'No maintainer records were returned yet. Try refreshing this section.',
           )
         else
           ...maintainers.map(
@@ -139,7 +139,7 @@ class AdminRegistrySection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Token registry',
           subtitle:
-              'Review discovered tokens, search by symbol or contract, and manage certification without leaving the dashboard.',
+            'Search discovered tokens and approve trusted assets for wallet display.',
         ),
         AdminCard(
           child: Column(
@@ -174,7 +174,7 @@ class AdminRegistrySection extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Page $registryPage - ${registryTokens.length} of $registryTotal',
+                'Showing ${registryTokens.length} of $registryTotal tokens · Page $registryPage',
                 style: GoogleFonts.outfit(
                   color: AppColors.textSecondary,
                   fontSize: 13,
@@ -188,7 +188,7 @@ class AdminRegistrySection extends StatelessWidget {
           const AdminEmptyState(
             title: 'No registry tokens found',
             message:
-                'Try a broader search or refresh after new tokens are discovered.',
+                'No tokens matched the current filter. Clear search or refresh the list.',
           )
         else
           ...registryTokens.map(

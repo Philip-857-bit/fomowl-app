@@ -36,7 +36,7 @@ class AdminOverviewSection extends StatelessWidget {
         AdminSectionHeading(
           title: 'Operational overview',
           subtitle:
-              'Live admin summary for ${activeChain.name}, backend health, notifications, and registry coverage.',
+            'Quick health snapshot for ${activeChain.name}, activity volume, and delivery readiness.',
         ),
         AdminCard(
           child: Column(
@@ -147,7 +147,7 @@ class AdminStatsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Key metrics',
           subtitle:
-              'Live counts for wallet adoption, transactions, notifications, feedback, and operational load.',
+            'Live adoption and reliability counters for support and release decisions.',
         ),
         GridView.count(
           shrinkWrap: true,
@@ -228,7 +228,7 @@ class AdminOpsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Ops and error audit',
           subtitle:
-              'Current throughput, rate-limit posture, push readiness, and recent server-side errors.',
+            'Traffic, limits, push readiness, and recent backend error signals.',
         ),
         AdminCard(
           child: Column(
@@ -285,7 +285,7 @@ class AdminOpsSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Server error audit',
+                'Error timeline',
                 style: GoogleFonts.outfit(
                   color: Colors.white,
                   fontSize: 16,
@@ -294,7 +294,7 @@ class AdminOpsSection extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Page $errorLogsPage - ${errorLogs.length} of $errorLogsTotal',
+                'Showing ${errorLogs.length} of $errorLogsTotal records · Page $errorLogsPage',
                 style: GoogleFonts.outfit(
                   color: AppColors.textSecondary,
                   fontSize: 13,

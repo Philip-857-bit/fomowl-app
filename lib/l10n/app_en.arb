@@ -84,12 +84,12 @@
   "discoverFeaturedDappsTitle": "Featured DApps",
   "discoverFeaturedDappsSubtitle": "Curated DApps approved for Owllet wallet access.",
   "discoverTrendingDappsTitle": "Trending",
-  "discoverTrendingDappsSubtitle": "Popular allowlisted destinations.",
+  "discoverTrendingDappsSubtitle": "Popular trusted destinations.",
   "discoverCategoriesTitle": "Categories",
   "discoverCategoriesSubtitle": "Curated categories for approved wallet-enabled DApps.",
   "discoverAllApprovedDappsTitle": "All approved DApps",
   "discoverAllApprovedDappsNoMatches": "No DApps matched your search.",
-  "discoverAllApprovedDappsCount": "{count} allowlisted destinations.",
+  "discoverAllApprovedDappsCount": "{count} trusted destinations.",
   "@discoverAllApprovedDappsCount": {
     "placeholders": {
       "count": {}
@@ -110,7 +110,7 @@
     }
   },
   "discoverWalletApiAccessTrigger": "wallet provider access",
-  "discoverSupportSubject": "Discover allowlist request",
+  "discoverSupportSubject": "Discover access request",
   "discoverSupportMessage": "Please review this DApp for Owllet Discover.\n\nOrigin: {origin}\nURL: {url}\nReason shown: {reason}",
   "@discoverSupportMessage": {
     "placeholders": {

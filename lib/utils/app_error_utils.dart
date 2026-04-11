@@ -57,6 +57,17 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
+      'unexpected end of input',
+      'unexpected character',
+      'invalid portfolio response payload',
+      'response was incomplete',
+      'response was malformed',
+      'invalid json',
+    ])) {
+      return fallback;
+    }
+
+    if (_containsAny(lowered, const [
       'type \'string\' is not a subtype of type \'int\' of \'index\'',
       'type \'string\' is not a subtype of type \'int\'',
     ])) {

@@ -164,8 +164,10 @@ class DiscoverCatalogService {
           launchUrl: 'https://opensea.io',
           title: 'OpenSea',
           subtitle: 'Browse and trade NFTs',
-          logoUrl: null,
-          heroImageUrl: null,
+          logoUrl:
+            'https://storage.googleapis.com/opensea-static/Logomark/Logomark-Blue.png',
+          heroImageUrl:
+            'https://storage.googleapis.com/opensea-static/Logomark/Logomark-Blue.png',
           badgeText: 'NFT',
           categories: <String>['nft', 'marketplace', 'collectibles'],
           supportedChainIds: <int>[1, 137, 8453, 56],

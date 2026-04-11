@@ -123,12 +123,11 @@ class SwapExecutionService {
         );
       }
 
-      final decoded = jsonDecode(response.body);
-      final data = _asMap(decoded);
-      final txData = _asMap(data?['transaction']) ?? data;
-      if (txData == null) {
-        throw Exception('Backend returned null tx object');
-      }
+      final data = _decodeJsonMap(
+        response.body,
+        fallback: 'Swap execution response was incomplete. Please try again.',
+      );
+      final txData = _asMap(data['transaction']) ?? data;
 
       // 2. Prepare Web3 Transaction
       if (txData['to'] == null) {
@@ -218,10 +217,10 @@ class SwapExecutionService {
         );
       }
 
-      final quoteData = jsonDecode(quoteResponse.body);
-      if (quoteData is! Map<String, dynamic>) {
-        throw Exception('Backend gasless quote response was malformed.');
-      }
+      final quoteData = _decodeJsonMap(
+        quoteResponse.body,
+        fallback: 'Gasless quote response was incomplete. Please try again.',
+      );
 
       // 0x Gasless Payload Extraction
       final trade = _asMap(quoteData['trade']);
@@ -290,10 +289,11 @@ class SwapExecutionService {
         );
       }
 
-      final submitData = _asMap(jsonDecode(submitResponse.body));
-      if (submitData == null) {
-        throw Exception('Backend submission response was malformed.');
-      }
+      final submitData = _decodeJsonMap(
+        submitResponse.body,
+        fallback:
+            'Gasless order response was incomplete. Please try again.',
+      );
       final String? transactionHash =
           submitData['transactionHash']?.toString() ??
           submitData['txHash']?.toString();
@@ -340,6 +340,26 @@ class SwapExecutionService {
       );
     }
     return null;
+  }
+
+  Map<String, dynamic> _decodeJsonMap(
+    String body, {
+    required String fallback,
+  }) {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) {
+      throw Exception(fallback);
+    }
+
+    try {
+      final decoded = _asMap(jsonDecode(trimmed));
+      if (decoded == null) {
+        throw Exception(fallback);
+      }
+      return decoded;
+    } on FormatException {
+      throw Exception(fallback);
+    }
   }
 
   Map<String, dynamic> _buildFusionSubmitPayload({

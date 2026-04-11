@@ -60,14 +60,14 @@ class AdminDiscoverDappsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Discover DApps',
           subtitle:
-              'Manage the global Discover allowlist. Launch URL is required; slug, title, and artwork can autofill from the site.',
+            'Manage the global Discover DApp directory. Launch URL is required; slug, title, and artwork can autofill from the site.',
         ),
         AdminCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isEditing ? 'Edit allowlisted DApp' : 'Create allowlisted DApp',
+                isEditing ? 'Edit approved DApp' : 'Create approved DApp',
                 style: GoogleFonts.outfit(
                   color: Colors.white,
                   fontSize: 18,
@@ -237,7 +237,7 @@ class AdminDiscoverDappsSection extends StatelessWidget {
         Row(
           children: [
             Text(
-              'Allowlisted DApps',
+              'Approved DApps',
               style: GoogleFonts.outfit(
                 color: Colors.white,
                 fontSize: 18,
@@ -261,7 +261,7 @@ class AdminDiscoverDappsSection extends StatelessWidget {
           const AdminEmptyState(
             title: 'No Discover DApps yet',
             message:
-                'Create the first allowlisted DApp above and it will start appearing in the in-app Discover browser.',
+                'Create the first approved DApp above and it will start appearing in the in-app Discover browser.',
           )
         else
           ...dapps.map(
