@@ -89,6 +89,15 @@ void main() {
   }
 
   group('DappProviderBridge', () {
+    test('provider injection script announces Owllet and legacy providers', () {
+      final script = DappProviderBridge.providerInjectionScript();
+
+      expect(script, contains('eip6963:announceProvider'));
+      expect(script, contains('window.web3.currentProvider'));
+      expect(script, contains("name: 'Owllet'"));
+      expect(script, contains('isMetaMask = true'));
+    });
+
     testWidgets('eth_requestAccounts returns 4001 when approval is rejected', (
       tester,
     ) async {
@@ -402,6 +411,55 @@ void main() {
 
       expect(response['error']['code'], 4100);
       expect(response['error']['message'], contains('active wallet'));
+    });
+
+    testWidgets('eth_sendTransaction uses resolved RPC URL fallback', (
+      tester,
+    ) async {
+      final entry = entryForTestDapp(
+        origin: 'https://app.example',
+        supportedChainIds: [1],
+      );
+      final controller = await controllerForEntry(entry);
+      final walletService = FakeWalletService();
+      final blockchainService = FakeBlockchainService();
+      final context = await pumpBridgeHarness(
+        tester,
+        blockchainService: blockchainService,
+        rpcService: FakeRpcService(
+          resolvedUrlsByChainId: const {1: 'https://rpc.fallback.test'},
+        ),
+      );
+      final bridge = DappProviderBridge(
+        sessionController: controller,
+        permissionService: FakeDappPermissionService(),
+        walletService: walletService,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
+      );
+
+      final response = await bridge.handleRequest(
+        context: context,
+        origin: entry.origin,
+        payload: const {
+          'method': 'eth_sendTransaction',
+          'params': [
+            {
+              'from': '0xbF75A6D2F5824A42b0BF946c15580A5f504c8c5F',
+              'to': '0x0000000000000000000000000000000000000002',
+              'value': '0x1',
+            },
+          ],
+        },
+        evaluateJavaScript: (_) async {},
+      );
+
+      expect(response['result'], isNotNull);
+      expect(walletService.lastRpcUrl, 'https://rpc.fallback.test');
+      expect(walletService.lastChainId, blockchainService.activeChain.chainId);
     });
   });
 }

@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../services/blockchain_service.dart';
 import '../../discover_url_utils.dart';
 import '../../provider/dapp_provider_bridge.dart';
 import '../browser_session_controller.dart';
@@ -149,10 +151,24 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
               final next = url?.uriValue;
               if (next != null) {
                 final title = await controller.getTitle();
+                if (!context.mounted) {
+                  return;
+                }
+                final chainId = context
+                    .read<BlockchainService>()
+                    .activeChain
+                    .chainId;
                 widget.sessionController.updateLoadedPage(next, title: title);
                 if (widget.sessionController.canInjectProviderFor(next)) {
                   await controller.evaluateJavascript(
                     source: DappProviderBridge.providerInjectionScript(),
+                  );
+                  await controller.evaluateJavascript(
+                    source: await widget.providerBridge
+                        .buildProviderStateSyncScript(
+                          chainId: chainId,
+                          origin: normalizeOriginFromUri(next),
+                        ),
                   );
                 }
               }

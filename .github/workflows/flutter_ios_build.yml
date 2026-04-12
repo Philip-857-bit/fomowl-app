@@ -1,0 +1,225 @@
+name: Flutter iOS Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_ios:
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: fomowl_wallet
+    env:
+      BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://fomowl-backend.onrender.com' }}
+      COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
+      CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
+      PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+      FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY || '' }}
+      FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID || '' }}
+      FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID || secrets.FIREBASE_IOS_APP_ID || '' }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID || '' }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
+      FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || 'com.fomowl.fomowlWallet' }}
+      GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+      IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD || secrets.IOS_EXPORT_METHOD || 'ad-hoc' }}
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID || '' }}
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust iOS targets
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+
+      - name: Ensure CocoaPods is available
+        shell: bash
+        run: |
+          set -euo pipefail
+          pod --version
+
+      - name: Validate Firebase config for iOS push
+        shell: bash
+        run: |
+          set -euo pipefail
+          enabled="$(printf '%s' "${PUSH_NOTIFICATIONS_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+          if [ "$enabled" != "true" ]; then
+            echo "Push notifications disabled for this build; skipping Firebase validation."
+            exit 0
+          fi
+
+          required=(
+            FIREBASE_API_KEY
+            FIREBASE_IOS_APP_ID
+            FIREBASE_MESSAGING_SENDER_ID
+            FIREBASE_PROJECT_ID
+            FIREBASE_IOS_BUNDLE_ID
+          )
+
+          missing=0
+          for key in "${required[@]}"; do
+            value="${!key:-}"
+            if [ -z "$value" ]; then
+              echo "Missing required Firebase env: $key" >&2
+              missing=1
+            fi
+          done
+
+          if [ -z "${GOOGLE_SERVICE_INFO_PLIST_BASE64:-}" ]; then
+            echo "::warning::Missing GOOGLE_SERVICE_INFO_PLIST_BASE64 while push is enabled." >&2
+            missing=1
+          fi
+
+          if [ "$missing" -ne 0 ]; then
+            echo "::warning::Missing required iOS Firebase configuration. Continuing build, but push may not work."
+            exit 0
+          fi
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Configure Firebase iOS services
+        if: env.GOOGLE_SERVICE_INFO_PLIST_BASE64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+
+      - name: Install iOS pods
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ios
+          pod install --repo-update
+
+      - name: Prepare Flutter dart-defines
+        id: dart_defines
+        shell: bash
+        run: |
+          set -euo pipefail
+          sanitize() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+
+          {
+            echo "args<<EOF"
+            echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
+            echo "--dart-define=COINGECKO_API_BASE_URL=$(sanitize "$COINGECKO_API_BASE_URL")"
+            echo "--dart-define=CONNECTIVITY_CHECK_URL=$(sanitize "$CONNECTIVITY_CHECK_URL")"
+            echo "--dart-define=PUSH_NOTIFICATIONS_ENABLED=$(sanitize "$PUSH_NOTIFICATIONS_ENABLED")"
+            echo "--dart-define=FIREBASE_API_KEY=$(sanitize "$FIREBASE_API_KEY")"
+            echo "--dart-define=FIREBASE_ANDROID_APP_ID=$(sanitize "$FIREBASE_ANDROID_APP_ID")"
+            echo "--dart-define=FIREBASE_IOS_APP_ID=$(sanitize "$FIREBASE_IOS_APP_ID")"
+            echo "--dart-define=FIREBASE_MESSAGING_SENDER_ID=$(sanitize "$FIREBASE_MESSAGING_SENDER_ID")"
+            echo "--dart-define=FIREBASE_PROJECT_ID=$(sanitize "$FIREBASE_PROJECT_ID")"
+            echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
+            echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure iOS code signing assets
+        if: env.IOS_CERTIFICATE_BASE64 != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != '' && env.APPLE_TEAM_ID != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/ios_certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/owllet.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/owllet-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+
+          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/owllet.mobileprovision"
+
+          {
+            echo "KEYCHAIN_PATH=$KEYCHAIN_PATH"
+            echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Create ExportOptions.plist
+        if: env.IOS_CERTIFICATE_BASE64 != '' && env.IOS_PROVISIONING_PROFILE_BASE64 != '' && env.APPLE_TEAM_ID != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>compileBitcode</key>
+            <false/>
+            <key>method</key>
+            <string>${IOS_EXPORT_METHOD}</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>thinning</key>
+            <string>&lt;none&gt;</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build iOS IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          if [ -f "$RUNNER_TEMP/ExportOptions.plist" ]; then
+            flutter build ipa --release --export-options-plist="$RUNNER_TEMP/ExportOptions.plist" "${DART_DEFINES[@]}"
+          else
+            flutter build ipa --release --no-codesign "${DART_DEFINES[@]}"
+          fi
+
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: owllet-ios-build
+          path: |
+            fomowl_wallet/build/ios/ipa/*.ipa
+            fomowl_wallet/build/ios/archive/*.xcarchive
+
+      - name: Upload IPA to App Store Connect
+        if: env.APP_STORE_CONNECT_KEY_ID != '' && env.APP_STORE_CONNECT_ISSUER_ID != '' && env.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA_PATH="$(find build/ios/ipa -name '*.ipa' | head -n 1)"
+          if [ -z "$IPA_PATH" ]; then
+            echo "No IPA found to upload." >&2
+            exit 1
+          fi
+
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+          echo "$APP_STORE_CONNECT_PRIVATE_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$IPA_PATH" \
+            --apiKey "$APP_STORE_CONNECT_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"

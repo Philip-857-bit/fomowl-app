@@ -8,6 +8,7 @@ class RpcService extends BaseService {
   int _nextRequestId = 1;
   RpcCallException? _lastError;
   final HttpClientService _httpClientService = HttpClientService();
+  final Map<String, String> _resolvedRpcUrlCache = {};
 
   RpcCallException? get lastError => _lastError;
 
@@ -213,6 +214,28 @@ class RpcService extends BaseService {
       );
       return null;
     }
+  }
+
+  Future<String> resolveWorkingRpcUrl({
+    required int chainId,
+    required String primaryRpcUrl,
+  }) async {
+    final cacheKey = '$chainId|$primaryRpcUrl';
+    final cached = _resolvedRpcUrlCache[cacheKey];
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    final candidates = <String>{primaryRpcUrl, ...(_publicRpcFallbacks[chainId] ?? const [])};
+    for (final rpcUrl in candidates) {
+      final resolvedChainId = await getChainIdForRpcUrl(rpcUrl);
+      if (resolvedChainId == chainId) {
+        _resolvedRpcUrlCache[cacheKey] = rpcUrl;
+        return rpcUrl;
+      }
+    }
+
+    return primaryRpcUrl;
   }
 }
 

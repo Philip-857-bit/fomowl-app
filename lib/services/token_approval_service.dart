@@ -2,6 +2,7 @@ import 'package:web3dart/web3dart.dart';
 
 import '../models/token.dart';
 import 'blockchain_service.dart';
+import 'rpc_service.dart';
 import 'swap_service.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
@@ -26,6 +27,7 @@ class TokenApprovalResult {
 class TokenApprovalService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
+  final RpcService _rpcService = RpcService();
   static final ContractAbi _erc20ApprovalAbi = ContractAbi.fromJson('''[
         {
           "constant": true,
@@ -54,6 +56,13 @@ class TokenApprovalService {
     SwapService? swapService, // signature compat
   }) : _walletService = walletService ?? WalletService();
 
+  Future<String> _resolveRpcUrl(BlockchainService blockchain) {
+    return _rpcService.resolveWorkingRpcUrl(
+      chainId: blockchain.activeChain.chainId,
+      primaryRpcUrl: blockchain.activeChain.rpcUrl,
+    );
+  }
+
   Future<BigInt?> estimateApprovalFeeWei({
     required Token token,
     required String ownerAddress,
@@ -67,10 +76,8 @@ class TokenApprovalService {
       return BigInt.zero;
     }
 
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
+    final rpcUrl = await _resolveRpcUrl(blockchain);
+    final client = Web3Client(rpcUrl, _httpClientService.client);
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
@@ -117,10 +124,8 @@ class TokenApprovalService {
       );
     }
 
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
+    final rpcUrl = await _resolveRpcUrl(blockchain);
+    final client = Web3Client(rpcUrl, _httpClientService.client);
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);

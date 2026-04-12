@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import '../services/app_patch_service.dart';
 import '../services/language_controller.dart';
 import '../services/storage_service.dart';
 import '../services/wallet_service.dart';
@@ -55,6 +56,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
       return;
     }
     if (state == AppLifecycleState.resumed) {
+      unawaited(AppPatchService.instance.handleAppResumed());
       _maybeRequireUnlock();
     }
   }

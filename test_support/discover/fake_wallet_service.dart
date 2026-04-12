@@ -17,6 +17,8 @@ class FakeWalletService extends WalletService {
   String? lastSignedMessage;
   String? lastTypedData;
   String? lastTransactionTo;
+  String? lastRpcUrl;
+  int? lastChainId;
 
   @override
   Future<String?> getCurrentWalletAddress() async => walletAddress;
@@ -47,6 +49,8 @@ class FakeWalletService extends WalletService {
     int? gasLimit,
     int? nonce,
   }) async {
+    lastRpcUrl = rpcUrl;
+    lastChainId = chainId;
     lastTransactionTo = toAddress;
     return transactionHash;
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -10,6 +12,7 @@ import 'app/app_providers.dart';
 import 'app/owllet_app.dart';
 import 'constants/app_colors.dart';
 import 'services/app_notification_service.dart';
+import 'services/app_patch_service.dart';
 
 const bool kEnableRustBridge = bool.fromEnvironment(
   'ENABLE_RUST_BRIDGE',
@@ -30,6 +33,7 @@ Future<void> main() async {
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   RemoteMessage? initialPushMessage;
   final appNotificationService = AppNotificationService();
+  final appPatchService = AppPatchService.instance;
   await appNotificationService.initialize();
 
   if (AppEnvironment.pushNotificationsEnabled) {
@@ -84,6 +88,8 @@ Future<void> main() async {
   runApp(
     MultiProvider(providers: buildAppProviders(), child: const OwlletApp()),
   );
+
+  unawaited(appPatchService.initialize());
 
   if (initialPushMessage != null) {
     appNotificationService.announceInboxChanged(

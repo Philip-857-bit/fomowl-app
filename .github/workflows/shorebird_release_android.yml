@@ -1,0 +1,256 @@
+name: Shorebird Android Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release_android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      FLUTTER_VERSION: 3.38.6
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+      SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
+      GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
+      BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://fomowl-backend.onrender.com' }}
+      COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
+      CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
+      PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+      FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY || '' }}
+      FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID || '' }}
+      FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID || secrets.FIREBASE_IOS_APP_ID || '' }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID || '' }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
+      FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || '' }}
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust Android targets
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Setup Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Validate Shorebird release inputs
+        run: |
+          set -euo pipefail
+          required=(
+            SHOREBIRD_TOKEN
+            SHOREBIRD_APP_ID
+            SHOREBIRD_PATCH_PUBLIC_KEY_BASE64
+            KEYSTORE_BASE64
+            KEYSTORE_PASSWORD
+            KEY_ALIAS
+            KEY_PASSWORD
+          )
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required secret or variable: $key" >&2
+              exit 1
+            fi
+          done
+
+      - name: Render Shorebird config
+        run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
+
+      - name: Validate Firebase config for Android push
+        run: |
+          set -euo pipefail
+          enabled="$(printf '%s' "${PUSH_NOTIFICATIONS_ENABLED:-false}" | tr '[:upper:]' '[:lower:]')"
+          if [ "$enabled" != "true" ]; then
+            echo "Push notifications disabled for this release."
+            exit 0
+          fi
+
+          required=(
+            FIREBASE_API_KEY
+            FIREBASE_ANDROID_APP_ID
+            FIREBASE_MESSAGING_SENDER_ID
+            FIREBASE_PROJECT_ID
+            GOOGLE_SERVICES_JSON_BASE64
+          )
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing Firebase configuration: $key" >&2
+              exit 1
+            fi
+          done
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Configure Android signing
+        run: |
+          set -euo pipefail
+          mkdir -p keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > keystore/owllet-release.jks
+          cat > android/key.properties <<EOF
+          storeFile=../keystore/owllet-release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Configure Firebase Android services
+        if: env.GOOGLE_SERVICES_JSON_BASE64 != ''
+        run: |
+          set -euo pipefail
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+
+      - name: Prepare Flutter dart-defines
+        id: dart_defines
+        run: |
+          set -euo pipefail
+          sanitize() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+
+          {
+            echo "args<<EOF"
+            echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
+            echo "--dart-define=COINGECKO_API_BASE_URL=$(sanitize "$COINGECKO_API_BASE_URL")"
+            echo "--dart-define=CONNECTIVITY_CHECK_URL=$(sanitize "$CONNECTIVITY_CHECK_URL")"
+            echo "--dart-define=PUSH_NOTIFICATIONS_ENABLED=$(sanitize "$PUSH_NOTIFICATIONS_ENABLED")"
+            echo "--dart-define=FIREBASE_API_KEY=$(sanitize "$FIREBASE_API_KEY")"
+            echo "--dart-define=FIREBASE_ANDROID_APP_ID=$(sanitize "$FIREBASE_ANDROID_APP_ID")"
+            echo "--dart-define=FIREBASE_IOS_APP_ID=$(sanitize "$FIREBASE_IOS_APP_ID")"
+            echo "--dart-define=FIREBASE_MESSAGING_SENDER_ID=$(sanitize "$FIREBASE_MESSAGING_SENDER_ID")"
+            echo "--dart-define=FIREBASE_PROJECT_ID=$(sanitize "$FIREBASE_PROJECT_ID")"
+            echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
+            echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Shorebird patch-signing public key
+        run: |
+          set -euo pipefail
+          echo "$SHOREBIRD_PATCH_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/shorebird_public.pem"
+
+      - name: Create Shorebird Android release
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          set +o pipefail
+          printf 'y\n' | shorebird release android \
+            --flutter-version="$FLUTTER_VERSION" \
+            --artifact apk \
+            --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
+            -- "${DART_DEFINES[@]}"
+          status=$?
+          set -o pipefail
+          exit $status
+
+      - name: Generate release manifest
+        id: manifest
+        run: |
+          set -euo pipefail
+          python scripts/shorebird_release_manifest.py \
+            --repo-root . \
+            --platform android \
+            --flutter-version "$FLUTTER_VERSION" \
+            --output "$RUNNER_TEMP/shorebird-release-manifest.json"
+          release_version="$(python - <<'PY'
+          import pathlib
+          import re
+
+          pubspec = pathlib.Path('pubspec.yaml').read_text(encoding='utf-8').splitlines()
+          for line in pubspec:
+              match = re.match(r'^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)\s*$', line.strip())
+              if match:
+                  print(f"{match.group(1)}+{match.group(2)}")
+                  break
+          PY
+          )"
+          echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shorebird-android-release-${{ steps.manifest.outputs.release_version }}
+          path: |
+            build/app/outputs/**/*.aab
+            build/app/outputs/**/*.apk
+          if-no-files-found: error
+
+      - name: Upload release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: shorebird-release-manifest-android-${{ steps.manifest.outputs.release_version }}
+          path: ${{ runner.temp }}/shorebird-release-manifest.json
+          if-no-files-found: error
+
+  validate_release_lineage:
+    runs-on: ubuntu-latest
+    needs: release_android
+    defaults:
+      run:
+        shell: bash
+    env:
+      FLUTTER_VERSION: 3.38.6
+      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Render Shorebird config
+        run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
+
+      - name: Download release manifest
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/shorebird-manifest
+          pattern: shorebird-release-manifest-android-*
+          merge-multiple: true
+
+      - name: Verify release-line OTA safety
+        run: |
+          set -euo pipefail
+          python scripts/shorebird_patch_guard.py \
+            --repo-root . \
+            --manifest "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --flutter-version "$FLUTTER_VERSION" \
+            --allow-empty-diff

@@ -7,6 +7,7 @@ import '../config/app_environment.dart';
 import '../models/token.dart';
 import '../utils/app_error_utils.dart';
 import 'blockchain_service.dart';
+import 'rpc_service.dart';
 import 'swap_service.dart'; // Still needed for SwapQuote
 import 'wallet_service.dart';
 import 'http_client_service.dart';
@@ -28,12 +29,20 @@ class SwapExecutionResult {
 class SwapExecutionService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
+  final RpcService _rpcService = RpcService();
   static const int _eip712SignatureType = 2;
 
   SwapExecutionService({
     WalletService? walletService,
     SwapService? swapService, // Kept constructor sig for compatibility
   }) : _walletService = walletService ?? WalletService();
+
+  Future<String> _resolveRpcUrl(BlockchainService blockchain) {
+    return _rpcService.resolveWorkingRpcUrl(
+      chainId: blockchain.activeChain.chainId,
+      primaryRpcUrl: blockchain.activeChain.rpcUrl,
+    );
+  }
 
   /// Builds calldata via backend and broadcasts the swap transaction.
   Future<SwapExecutionResult> execute({
@@ -87,10 +96,8 @@ class SwapExecutionService {
     required BlockchainService blockchain,
     required String walletAddress,
   }) async {
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
+    final rpcUrl = await _resolveRpcUrl(blockchain);
+    final client = Web3Client(rpcUrl, _httpClientService.client);
     try {
       // Always fetch a fresh firm quote close to broadcast to avoid stale RFQ data.
       final src = fromToken.contractAddress?.isNotEmpty == true

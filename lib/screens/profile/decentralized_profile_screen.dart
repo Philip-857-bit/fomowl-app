@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/app_patch_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
 import '../../services/storage_service.dart';
@@ -51,7 +51,6 @@ class _DecentralizedProfileScreenState
   String _walletName = 'Main Wallet';
   String _walletAddress = '--';
   String _currency = 'USD';
-  String _versionLabel = 'Owllet v1.0.0';
   bool _loading = true;
 
   @override
@@ -88,12 +87,6 @@ class _DecentralizedProfileScreenState
     final walletName = await _storageService.getWalletName();
     final walletAddress = await _walletService.getCurrentWalletAddress();
     final currency = await _storageService.getCurrency();
-    try {
-      final info = await PackageInfo.fromPlatform();
-      _versionLabel = 'Owllet v${info.version}';
-    } catch (_) {
-      _versionLabel = 'Owllet v1.0.0';
-    }
 
     if (!mounted) return;
 
@@ -403,6 +396,7 @@ class _DecentralizedProfileScreenState
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
+    final patchService = context.watch<AppPatchService>();
     final localeName =
         LanguageUtils.languageNamesByCode[Localizations.localeOf(
           context,
@@ -561,12 +555,27 @@ class _DecentralizedProfileScreenState
                       child: GestureDetector(
                         onTap: _handleAdminTrigger,
                         onLongPress: _handleAdminTrigger,
-                        child: Text(
-                          _versionLabel,
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textSecondary,
-                            fontSize: 15,
-                          ),
+                        child: Column(
+                          children: [
+                            Text(
+                              patchService.supportVersionLabel,
+                              style: GoogleFonts.outfit(
+                                color: AppColors.textSecondary,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              patchService.supportStatusLabel,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                color: AppColors.textSecondary.withValues(
+                                  alpha: 0.8,
+                                ),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

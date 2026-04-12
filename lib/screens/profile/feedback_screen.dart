@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/app_patch_service.dart';
 import '../../services/feedback_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
@@ -46,21 +47,25 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   Future<void> _submit() async {
     final l = AppLocalizations.of(context);
+    final enterFeedbackMessage = l.enterFeedbackMessage;
+    final noActiveWalletFound = l.noActiveWalletFound;
+    final feedbackSubmitted = l.feedbackSubmitted;
+    final feedbackSubmitFailed = l.feedbackSubmitFailed;
     final message = _messageController.text.trim();
     if (message.isEmpty) {
-      ToastUtils.showError(l.enterFeedbackMessage);
+      ToastUtils.showError(enterFeedbackMessage);
       return;
     }
 
+    final patchReportVersion = context.read<AppPatchService>().reportVersion;
     final walletAddress = await _walletService.getCurrentWalletAddress();
     if (walletAddress == null || walletAddress.isEmpty) {
-      ToastUtils.showError(l.noActiveWalletFound);
+      ToastUtils.showError(noActiveWalletFound);
       return;
     }
 
     setState(() => _submitting = true);
     try {
-      final info = await PackageInfo.fromPlatform();
       final languageCode = await _storage.getLanguage();
       await _feedbackService.submitFeedback(
         walletAddress: walletAddress,
@@ -72,15 +77,15 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         contactEmail: _emailController.text.trim().isEmpty
             ? null
             : _emailController.text.trim(),
-        appVersion: info.version,
+        appVersion: patchReportVersion,
         languageCode: languageCode,
       );
       if (!mounted) return;
-      ToastUtils.showSuccess(l.feedbackSubmitted);
+      ToastUtils.showSuccess(feedbackSubmitted);
       Navigator.pop(context);
     } catch (e) {
       debugPrint('Unable to submit feedback: $e');
-      ToastUtils.showError(l.feedbackSubmitFailed);
+      ToastUtils.showError(feedbackSubmitFailed);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -97,6 +102,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final patchService = context.watch<AppPatchService>();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -134,6 +140,22 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 style: GoogleFonts.outfit(
                   color: AppColors.textSecondary,
                   fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'App build ${patchService.reportVersion}',
+                style: GoogleFonts.outfit(
+                  color: AppColors.textSecondary.withValues(alpha: 0.85),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                patchService.supportStatusLabel,
+                style: GoogleFonts.outfit(
+                  color: AppColors.textSecondary.withValues(alpha: 0.72),
+                  fontSize: 11,
                 ),
               ),
               const SizedBox(height: 18),

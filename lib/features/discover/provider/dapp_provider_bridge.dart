@@ -33,14 +33,31 @@ class DappProviderBridge {
   static String providerInjectionScript() =>
       '''
 (function() {
-  if (window.__owlletProviderInstalled) return;
-  window.__owlletProviderInstalled = true;
+  const owlletInfo = Object.freeze({
+    uuid: 'owllet-mobile-wallet',
+    name: 'Owllet',
+    icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"%3E%3Crect width="96" height="96" rx="24" fill="%23050505"/%3E%3Cpath d="M24 25c0-3.3 2.7-6 6-6h17c15.46 0 28 12.54 28 28v24c0 3.3-2.7 6-6 6H52.5C36.76 77 24 64.24 24 48.5V25zm12 6v17.5C36 57.61 43.39 65 52.5 65H63V47c0-8.84-7.16-16-16-16H36zm11.75 6.5c4.56 0 8.25 3.69 8.25 8.25S52.31 54 47.75 54 39.5 50.31 39.5 45.75s3.69-8.25 8.25-8.25zm0 4.5a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" fill="%2307a36c"/%3E%3C/svg%3E',
+    rdns: 'com.fomowl.owllet'
+  });
+  if (window.__owlletProviderInstalled && window.__owlletAnnounceProvider) {
+    window.__owlletAnnounceProvider();
+    try { window.dispatchEvent(new Event('ethereum#initialized')); } catch (_) {}
+    return;
+  }
+
   class OwlletProvider {
     constructor() {
       this.isOwllet = true;
-      this.isMetaMask = false;
+      this.isMetaMask = true;
+      this.providers = [this];
+      this.chainId = null;
+      this.networkVersion = null;
       this._events = {};
       this.selectedAddress = null;
+      this._connected = false;
+      this._metamask = {
+        isUnlocked: async () => !!this.selectedAddress
+      };
     }
     async request(args) {
       const payload = {
@@ -55,31 +72,136 @@ class DappProviderBridge {
       }
       const result = response ? response.result : null;
       if (payload.method === 'eth_requestAccounts' || payload.method === 'eth_accounts') {
-        this.selectedAddress = Array.isArray(result) && result.length > 0 ? result[0] : null;
+        this._setAccounts(Array.isArray(result) ? result : []);
+      }
+      if (payload.method === 'eth_chainId') {
+        this._setChainId(typeof result === 'string' ? result : null);
+      }
+      if (payload.method === 'wallet_switchEthereumChain' || payload.method === 'wallet_addEthereumChain') {
+        const nextChainId = payload.params && payload.params[0] ? payload.params[0].chainId : null;
+        this._setChainId(typeof nextChainId === 'string' ? nextChainId : null);
       }
       return result;
+    }
+    send(methodOrPayload, callbackOrParams) {
+      if (typeof methodOrPayload === 'string') {
+        return this.request({
+          method: methodOrPayload,
+          params: Array.isArray(callbackOrParams) ? callbackOrParams : []
+        });
+      }
+      if (methodOrPayload && typeof methodOrPayload === 'object') {
+        const payload = methodOrPayload;
+        const promise = this.request({
+          method: payload.method,
+          params: Array.isArray(payload.params) ? payload.params : []
+        }).then((result) => ({
+          jsonrpc: '2.0',
+          id: payload.id ?? null,
+          result: result
+        }));
+        if (typeof callbackOrParams === 'function') {
+          promise.then((value) => callbackOrParams(null, value)).catch((error) => callbackOrParams(error, null));
+          return;
+        }
+        return promise;
+      }
+      return Promise.reject(new Error('Invalid provider request arguments'));
+    }
+    sendAsync(payload, callback) {
+      return this.send(payload, callback);
     }
     on(eventName, listener) {
       this._events[eventName] = this._events[eventName] || [];
       this._events[eventName].push(listener);
     }
+    once(eventName, listener) {
+      const wrapped = (...args) => {
+        this.removeListener(eventName, wrapped);
+        listener.apply(null, args);
+      };
+      this.on(eventName, wrapped);
+    }
     removeListener(eventName, listener) {
       this._events[eventName] = (this._events[eventName] || []).filter((item) => item !== listener);
+    }
+    removeAllListeners(eventName) {
+      if (eventName) {
+        this._events[eventName] = [];
+      } else {
+        this._events = {};
+      }
     }
     enable() {
       return this.request({ method: 'eth_requestAccounts', params: [] });
     }
-    isConnected() { return true; }
+    isConnected() { return this._connected; }
+    _setAccounts(accounts) {
+      const normalized = Array.isArray(accounts) ? accounts : [];
+      this.selectedAddress = normalized.length > 0 ? normalized[0] : null;
+      this._connected = normalized.length > 0;
+      this._emit('accountsChanged', [normalized]);
+      if (this._connected && this.chainId) {
+        this._emit('connect', [{ chainId: this.chainId }]);
+      }
+    }
+    _setChainId(chainId) {
+      if (typeof chainId !== 'string' || !chainId) return;
+      this.chainId = chainId;
+      try {
+        this.networkVersion = parseInt(chainId, 16).toString();
+      } catch (_) {
+        this.networkVersion = null;
+      }
+      this._emit('chainChanged', [chainId]);
+      if (this._connected) {
+        this._emit('connect', [{ chainId: chainId }]);
+      }
+    }
     _emit(eventName, payload) {
       (this._events[eventName] || []).forEach((listener) => {
         try { listener.apply(null, payload || []); } catch (_) {}
       });
     }
   }
-  window.ethereum = new OwlletProvider();
+  const provider = new OwlletProvider();
+  provider.info = owlletInfo;
+  window.__owlletAnnounceProvider = function() {
+    try {
+      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {
+        detail: Object.freeze({ info: owlletInfo, provider: provider })
+      }));
+    } catch (_) {}
+  };
+  window.addEventListener('eip6963:requestProvider', window.__owlletAnnounceProvider);
+  window.ethereum = provider;
+  window.web3 = window.web3 || {};
+  window.web3.currentProvider = provider;
+  window.__owlletProvider = provider;
+  window.__owlletAnnounceProvider();
+  setTimeout(window.__owlletAnnounceProvider, 0);
+  setTimeout(window.__owlletAnnounceProvider, 250);
   window.dispatchEvent(new Event('ethereum#initialized'));
 })();
 ''';
+
+  Future<String> buildProviderStateSyncScript({
+    required int chainId,
+    required String origin,
+  }) async {
+    final accounts = await _ethAccounts(origin);
+    return '''
+(() => {
+  if (!window.ethereum || !window.ethereum.isOwllet) return;
+  if (typeof window.ethereum._setChainId === 'function') {
+    window.ethereum._setChainId('${_hexQuantity(chainId)}');
+  }
+  if (typeof window.ethereum._setAccounts === 'function') {
+    window.ethereum._setAccounts(${jsonEncode(accounts)});
+  }
+})();
+''';
+  }
 
   static String providerDetectionScript() =>
       '''
@@ -245,7 +367,7 @@ class DappProviderBridge {
 
     final accounts = <String>[walletAddress];
     await evaluateJavaScript(
-      "window.ethereum && window.ethereum._emit('accountsChanged', ${jsonEncode(accounts)});",
+      "window.ethereum && typeof window.ethereum._setAccounts === 'function' && window.ethereum._setAccounts(${jsonEncode(accounts)});",
     );
     return accounts;
   }
@@ -334,7 +456,7 @@ class DappProviderBridge {
 
     blockchain.setActiveChainByChainId(chainId);
     await evaluateJavaScript(
-      "window.ethereum && window.ethereum._emit('chainChanged', ['${_hexQuantity(chainId)}']);",
+      "window.ethereum && typeof window.ethereum._setChainId === 'function' && window.ethereum._setChainId('${_hexQuantity(chainId)}');",
     );
   }
 
@@ -584,6 +706,7 @@ class DappProviderBridge {
       );
     }
     final blockchain = context.read<BlockchainService>();
+    final rpcService = context.read<RpcService>();
     final activeChain = blockchain.activeChain;
     final to = request['to']?.toString().trim();
     final valueWei = _parseBigIntQuantity(request['value']);
@@ -614,8 +737,12 @@ class DappProviderBridge {
 
     late final String txHash;
     try {
+      final resolvedRpcUrl = await rpcService.resolveWorkingRpcUrl(
+        chainId: activeChain.chainId,
+        primaryRpcUrl: activeChain.rpcUrl,
+      );
       txHash = await _walletService.sendRawTransactionRequest(
-        rpcUrl: activeChain.rpcUrl,
+        rpcUrl: resolvedRpcUrl,
         chainId: activeChain.chainId,
         toAddress: to,
         valueInWei: valueWei,
