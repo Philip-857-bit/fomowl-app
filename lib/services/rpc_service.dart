@@ -226,7 +226,10 @@ class RpcService extends BaseService {
       return cached;
     }
 
-    final candidates = <String>{primaryRpcUrl, ...(_publicRpcFallbacks[chainId] ?? const [])};
+    final candidates = <String>{
+      primaryRpcUrl,
+      ...(_publicRpcFallbacks[chainId] ?? const []),
+    };
     for (final rpcUrl in candidates) {
       final resolvedChainId = await getChainIdForRpcUrl(rpcUrl);
       if (resolvedChainId == chainId) {

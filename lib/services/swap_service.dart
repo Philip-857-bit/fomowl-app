@@ -57,6 +57,65 @@ class SwapQuote {
   double get platformFeePercent => platformFeeBps / 100.0;
 }
 
+class LimitOrderResult {
+  final String id;
+  final String status;
+  final String? orderHash;
+
+  const LimitOrderResult({
+    required this.id,
+    required this.status,
+    this.orderHash,
+  });
+}
+
+class LimitOrderSummary {
+  final String id;
+  final String walletAddress;
+  final int chainId;
+  final String sellToken;
+  final String buyToken;
+  final String sellAmount;
+  final String buyAmount;
+  final String targetPrice;
+  final int expiry;
+  final String status;
+  final String? orderHash;
+  final String? txHash;
+
+  const LimitOrderSummary({
+    required this.id,
+    required this.walletAddress,
+    required this.chainId,
+    required this.sellToken,
+    required this.buyToken,
+    required this.sellAmount,
+    required this.buyAmount,
+    required this.targetPrice,
+    required this.expiry,
+    required this.status,
+    this.orderHash,
+    this.txHash,
+  });
+
+  factory LimitOrderSummary.fromJson(Map<String, dynamic> json) {
+    return LimitOrderSummary(
+      id: json['id']?.toString() ?? '',
+      walletAddress: json['walletAddress']?.toString() ?? '',
+      chainId: int.tryParse(json['chainId']?.toString() ?? '') ?? 0,
+      sellToken: json['sellToken']?.toString() ?? '',
+      buyToken: json['buyToken']?.toString() ?? '',
+      sellAmount: json['sellAmount']?.toString() ?? '',
+      buyAmount: json['buyAmount']?.toString() ?? '',
+      targetPrice: json['targetPrice']?.toString() ?? '',
+      expiry: int.tryParse(json['expiry']?.toString() ?? '') ?? 0,
+      status: json['status']?.toString() ?? '',
+      orderHash: json['orderHash']?.toString(),
+      txHash: json['txHash']?.toString(),
+    );
+  }
+}
+
 /// Swap Service
 /// Routes all swap intents through the secure Rust backend for 0x swap and gasless flows.
 class SwapService {
@@ -107,6 +166,151 @@ class SwapService {
   String? _lastError;
 
   String? get lastError => _lastError;
+
+  Future<LimitOrderResult?> createLimitOrder({
+    required int chainId,
+    required String walletAddress,
+    required Map<String, dynamic> order,
+    required String signature,
+    String? targetPrice,
+  }) async {
+    _lastError = null;
+    try {
+      final url = AppEnvironment.swap('/limit/orders');
+      final optionalFields = targetPrice == null
+          ? <String, dynamic>{}
+          : <String, dynamic>{'targetPrice': targetPrice};
+      final payload = {
+        'chainId': chainId,
+        'walletAddress': walletAddress,
+        'order': order,
+        'signature': signature,
+        ...optionalFields,
+      };
+
+      final response = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            ),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = _decodeMapBody(
+          response.body,
+          fallbackMessage: 'Limit order response was incomplete.',
+        );
+        if (data == null) {
+          return null;
+        }
+        return LimitOrderResult(
+          id: data['id']?.toString() ?? '',
+          status: data['status']?.toString() ?? '',
+          orderHash: data['orderHash']?.toString(),
+        );
+      }
+
+      _lastError = _extractBackendMessage(
+        response.body,
+        fallback: 'Unable to place limit order right now.',
+      );
+      return null;
+    } catch (e) {
+      _lastError ??= AppErrorUtils.userMessage(
+        e,
+        fallback: 'Unable to place limit order right now.',
+      );
+      debugPrint('SwapService limit order exception: $e');
+      return null;
+    }
+  }
+
+  Future<List<LimitOrderSummary>> getLimitOrders({
+    required String walletAddress,
+  }) async {
+    _lastError = null;
+    try {
+      final url = AppEnvironment.swap('/limit/orders', {
+        'wallet': walletAddress,
+      });
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(url))
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = _decodeMapBody(
+          response.body,
+          fallbackMessage: 'Limit order response was incomplete.',
+        );
+        if (data == null) return [];
+        final list = data['orders'];
+        if (list is List) {
+          return list
+              .whereType<Map>()
+              .map(
+                (entry) => LimitOrderSummary.fromJson(
+                  entry.map((key, value) => MapEntry(key.toString(), value)),
+                ),
+              )
+              .toList();
+        }
+        return [];
+      }
+
+      _lastError = _extractBackendMessage(
+        response.body,
+        fallback: 'Unable to fetch limit orders right now.',
+      );
+      return [];
+    } catch (e) {
+      _lastError ??= AppErrorUtils.userMessage(
+        e,
+        fallback: 'Unable to fetch limit orders right now.',
+      );
+      debugPrint('SwapService limit order list exception: $e');
+      return [];
+    }
+  }
+
+  Future<bool> cancelLimitOrder({
+    required String orderId,
+    required String walletAddress,
+  }) async {
+    _lastError = null;
+    try {
+      final url = AppEnvironment.swap('/limit/orders/$orderId/cancel');
+      final payload = {'walletAddress': walletAddress};
+      final response = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              url,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            ),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return true;
+      }
+
+      _lastError = _extractBackendMessage(
+        response.body,
+        fallback: 'Unable to cancel limit order right now.',
+      );
+      return false;
+    } catch (e) {
+      _lastError ??= AppErrorUtils.userMessage(
+        e,
+        fallback: 'Unable to cancel limit order right now.',
+      );
+      debugPrint('SwapService limit order cancel exception: $e');
+      return false;
+    }
+  }
 
   Future<Map<String, dynamic>?> getGaslessStatus({
     required String tradeHash,

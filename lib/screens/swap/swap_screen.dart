@@ -20,14 +20,13 @@ import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../widgets/token_selector_modal.dart';
+import 'dart:convert';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
-import 'widgets/swap_from_card.dart';
-import 'widgets/swap_to_card.dart';
-import 'widgets/swap_direction_button.dart';
-import 'widgets/swap_price_details_card.dart';
-import 'widgets/swap_primary_button.dart';
-import 'widgets/swap_gasless_toggle.dart';
+import 'widgets/swap_limit_widgets.dart';
+import 'widgets/swap_tab_content.dart';
+
+enum _LimitExpiryOption { hours24, days7, never, custom }
 
 /// Swap Screen — DEX token swap interface
 class SwapScreen extends StatefulWidget {
@@ -46,6 +45,7 @@ class _SwapScreenState extends State<SwapScreen> {
   static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
+  final TextEditingController _limitPriceController = TextEditingController();
   final SwapService _swapService = SwapService();
   final WalletService _walletService = WalletService();
   final ReferralService _referralService = ReferralService();
@@ -65,6 +65,10 @@ class _SwapScreenState extends State<SwapScreen> {
   Token? _toToken;
   int? _lastChainId;
   int _quoteRequestId = 0;
+  SwapTab _activeTab = SwapTab.swap;
+  _LimitExpiryOption _limitExpiryOption = _LimitExpiryOption.hours24;
+  DateTime? _customExpiryDate;
+  bool _isSubmittingLimit = false;
 
   @override
   void didChangeDependencies() {
@@ -303,7 +307,11 @@ class _SwapScreenState extends State<SwapScreen> {
       });
       // Refresh prices so USD values are immediately available for new token
       _refreshTokenPrices();
-      _getQuote();
+      if (_activeTab == SwapTab.limit) {
+        _updateLimitPreview();
+      } else {
+        _getQuote();
+      }
       // Reactivate live tracking for new token pair
       _activateSwapLiveTracking();
     }
@@ -313,6 +321,7 @@ class _SwapScreenState extends State<SwapScreen> {
   void dispose() {
     _fromController.dispose();
     _toController.dispose();
+    _limitPriceController.dispose();
     _debounceTimer?.cancel();
     // Clear only swap-owned tracking so Home continues receiving updates.
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -348,7 +357,13 @@ class _SwapScreenState extends State<SwapScreen> {
           ? _formatDecimalInput(amount, displayDecimals)
           : '0';
     });
-    if (amount > Decimal.zero) _getQuote();
+    if (amount > Decimal.zero) {
+      if (_activeTab == SwapTab.limit) {
+        _updateLimitPreview();
+      } else {
+        _getQuote();
+      }
+    }
   }
 
   void _onFromAmountChanged(String value) {
@@ -362,7 +377,13 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
     _debounceTimer = Timer(const Duration(milliseconds: 600), () {
-      if (value.isNotEmpty) _getQuote();
+      if (value.isNotEmpty) {
+        if (_activeTab == SwapTab.limit) {
+          _updateLimitPreview();
+        } else {
+          _getQuote();
+        }
+      }
     });
   }
 
@@ -1247,6 +1268,262 @@ class _SwapScreenState extends State<SwapScreen> {
     });
     // Reactivate live tracking for swapped token pair
     _activateSwapLiveTracking();
+    if (_activeTab == SwapTab.limit) {
+      _updateLimitPreview();
+    }
+  }
+
+  void _updateLimitPreview() {
+    final from = _fromToken;
+    final to = _toToken;
+    if (from == null || to == null) {
+      _toController.clear();
+      return;
+    }
+    final fromAmount = _parseDecimalAmount(_fromController.text);
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (fromAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
+      _toController.clear();
+      return;
+    }
+    final toAmount = fromAmount * limitPrice;
+    final displayDecimals = to.decimals > 6 ? 6 : to.decimals;
+    _toController.text = _formatDecimalInput(toAmount, displayDecimals);
+  }
+
+  int _resolveLimitExpirySeconds() {
+    final now = DateTime.now();
+    switch (_limitExpiryOption) {
+      case _LimitExpiryOption.hours24:
+        return now.add(const Duration(hours: 24)).millisecondsSinceEpoch ~/
+            1000;
+      case _LimitExpiryOption.days7:
+        return now.add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
+      case _LimitExpiryOption.never:
+        return now.add(const Duration(days: 365)).millisecondsSinceEpoch ~/
+            1000;
+      case _LimitExpiryOption.custom:
+        final custom = _customExpiryDate ?? now.add(const Duration(days: 1));
+        final normalized = DateTime(
+          custom.year,
+          custom.month,
+          custom.day,
+          23,
+          59,
+        );
+        return normalized.millisecondsSinceEpoch ~/ 1000;
+    }
+  }
+
+  String _limitExpiryLabel() {
+    switch (_limitExpiryOption) {
+      case _LimitExpiryOption.hours24:
+        return '24H';
+      case _LimitExpiryOption.days7:
+        return '7D';
+      case _LimitExpiryOption.never:
+        return 'Never';
+      case _LimitExpiryOption.custom:
+        final custom = _customExpiryDate;
+        if (custom == null) return 'Custom';
+        return '${custom.day}/${custom.month}/${custom.year}';
+    }
+  }
+
+  Future<void> _pickCustomExpiry() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _customExpiryDate ?? now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    setState(() {
+      _customExpiryDate = picked;
+      _limitExpiryOption = _LimitExpiryOption.custom;
+    });
+  }
+
+  Future<void> _submitLimitOrder() async {
+    final l = AppLocalizations.of(context);
+    if (_walletAddress == null || _walletAddress!.isEmpty) {
+      _showError(l.noActiveWalletFound);
+      return;
+    }
+    final from = _fromToken;
+    final to = _toToken;
+    if (from == null || to == null) {
+      _showError(l.selectTokenTitle);
+      return;
+    }
+    if (_tokensAreIdentical(from, to)) {
+      _showError(l.tryAgain);
+      return;
+    }
+    if ((from.contractAddress ?? '').isEmpty ||
+        (to.contractAddress ?? '').isEmpty) {
+      _showError('Limit orders require ERC-20 tokens.');
+      return;
+    }
+    final makerAmount = _parseDecimalAmount(_fromController.text);
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (makerAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
+      _showError(l.enterValidAmount);
+      return;
+    }
+    final makerAmountWei = _toWeiAmount(_fromController.text, from.decimals);
+    if (makerAmountWei == null || makerAmountWei == '0') {
+      _showError(l.enterValidAmount);
+      return;
+    }
+    final takerAmountDecimal = makerAmount * limitPrice;
+    final takerAmountWei = AmountUtils.parseDecimalToBaseUnits(
+      takerAmountDecimal.toString(),
+      to.decimals,
+    ).toString();
+    if (takerAmountWei == '0') {
+      _showError(l.enterValidAmount);
+      return;
+    }
+
+    if (_isSubmittingLimit) return;
+    setState(() => _isSubmittingLimit = true);
+    try {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final chainId = blockchain.activeChain.chainId;
+      final verifyingContract = _exchangeProxyForChain(chainId);
+      final order = _buildLimitOrderPayload(
+        chainId: chainId,
+        maker: _walletAddress!,
+        makerToken: from.contractAddress!,
+        takerToken: to.contractAddress!,
+        makerAmount: makerAmountWei,
+        takerAmount: takerAmountWei,
+        expiry: _resolveLimitExpirySeconds(),
+        verifyingContract: verifyingContract,
+      );
+
+      final typedData = _buildLimitOrderTypedData(
+        chainId: chainId,
+        verifyingContract: verifyingContract,
+        order: order['order'] as Map<String, dynamic>,
+      );
+      final signature = await _walletService.signTypedData(
+        jsonEncode(typedData),
+      );
+
+      final result = await _swapService.createLimitOrder(
+        chainId: chainId,
+        walletAddress: _walletAddress!,
+        order: order['orderbook'] as Map<String, dynamic>,
+        signature: signature,
+        targetPrice: limitPrice.toString(),
+      );
+
+      if (result == null) {
+        _showError(_swapService.lastError ?? l.tryAgain);
+        return;
+      }
+      ToastUtils.showSuccess('Limit order submitted');
+    } catch (e) {
+      _showError(_mapErrorMessage(e.toString()));
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingLimit = false);
+      }
+    }
+  }
+
+  Map<String, dynamic> _buildLimitOrderPayload({
+    required int chainId,
+    required String maker,
+    required String makerToken,
+    required String takerToken,
+    required String makerAmount,
+    required String takerAmount,
+    required int expiry,
+    required String verifyingContract,
+  }) {
+    final salt = DateTime.now().microsecondsSinceEpoch.toString();
+    const zeroAddress = '0x0000000000000000000000000000000000000000';
+    const zeroBytes32 =
+        '0x0000000000000000000000000000000000000000000000000000000000000000';
+    final order = {
+      'makerToken': makerToken,
+      'takerToken': takerToken,
+      'makerAmount': makerAmount,
+      'takerAmount': takerAmount,
+      'takerTokenFeeAmount': '0',
+      'maker': maker,
+      'taker': zeroAddress,
+      'sender': zeroAddress,
+      'feeRecipient': zeroAddress,
+      'pool': zeroBytes32,
+      'expiry': expiry,
+      'salt': salt,
+    };
+    final orderbookOrder = {
+      ...order,
+      'chainId': chainId,
+      'verifyingContract': verifyingContract,
+    };
+    return {'order': order, 'orderbook': orderbookOrder};
+  }
+
+  Map<String, dynamic> _buildLimitOrderTypedData({
+    required int chainId,
+    required String verifyingContract,
+    required Map<String, dynamic> order,
+  }) {
+    return {
+      'types': {
+        'EIP712Domain': [
+          {'name': 'name', 'type': 'string'},
+          {'name': 'version', 'type': 'string'},
+          {'name': 'chainId', 'type': 'uint256'},
+          {'name': 'verifyingContract', 'type': 'address'},
+        ],
+        'LimitOrder': [
+          {'name': 'makerToken', 'type': 'address'},
+          {'name': 'takerToken', 'type': 'address'},
+          {'name': 'makerAmount', 'type': 'uint128'},
+          {'name': 'takerAmount', 'type': 'uint128'},
+          {'name': 'takerTokenFeeAmount', 'type': 'uint128'},
+          {'name': 'maker', 'type': 'address'},
+          {'name': 'taker', 'type': 'address'},
+          {'name': 'sender', 'type': 'address'},
+          {'name': 'feeRecipient', 'type': 'address'},
+          {'name': 'pool', 'type': 'bytes32'},
+          {'name': 'expiry', 'type': 'uint64'},
+          {'name': 'salt', 'type': 'uint256'},
+        ],
+      },
+      'primaryType': 'LimitOrder',
+      'domain': {
+        'name': '0x Protocol',
+        'version': '4',
+        'chainId': chainId,
+        'verifyingContract': verifyingContract,
+      },
+      'message': order,
+    };
+  }
+
+  String _exchangeProxyForChain(int chainId) {
+    switch (chainId) {
+      case 1:
+      case 10:
+      case 56:
+      case 137:
+      case 42161:
+      case 8453:
+      case 43114:
+      case 59144:
+        return '0xdef1c0ded9bec7f1a1670819833240f027b25eff';
+      default:
+        return '0xdef1c0ded9bec7f1a1670819833240f027b25eff';
+    }
   }
 
   Future<SwapQuote?> _refreshExecutionQuote({
@@ -1707,72 +1984,115 @@ class _SwapScreenState extends State<SwapScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    const SizedBox(height: 8),
-                    SwapFromCard(
-                      controller: _fromController,
-                      token: _fromToken,
-                      usdValue: fromUsdValue,
-                      balance: _fromToken?.balance ?? 0,
-                      selectedPercentage: _selectedPercentage,
-                      onAmountChanged: _onFromAmountChanged,
-                      onSelectToken: () => _showTokenSelector(true),
-                      onPercentSelected: _setPercentage,
-                      chainId: blockchain.activeChain.chainId,
+                    const SizedBox(height: 12),
+                    SwapTabSelector(
+                      activeTab: _activeTab,
+                      onChanged: (tab) {
+                        if (_activeTab == tab) return;
+                        setState(() => _activeTab = tab);
+                        if (tab == SwapTab.swap) {
+                          _getQuote();
+                        } else {
+                          _updateLimitPreview();
+                        }
+                      },
                     ),
-                    const SizedBox(height: 4),
-                    SwapDirectionButton(onPressed: _swapTokens),
-                    const SizedBox(height: 4),
-                    SwapToCard(
-                      token: _toToken,
-                      amountText: _toController.text,
-                      usdValue: toUsdValue,
-                      balance: _toToken?.balance ?? 0,
-                      isCalculating: _isCalculating,
-                      onSelectToken: () => _showTokenSelector(false),
-                      chainId: blockchain.activeChain.chainId,
-                    ),
-                    const SizedBox(height: 24),
-                    SwapPriceDetailsCard(
-                      priceText: priceText,
-                      platformFeePercent:
-                          _currentQuote?.platformFeePercent ?? 1.0,
-                      platformFeeUsd: _platformFeeUsd,
-                      feeAmountUsd: _feeUsd,
-                      feeAmountNative: _feeNative,
-                      nativeFeeSymbol: blockchain.activeChain.symbol,
-                      receiveText: receiveText,
-                      priceSeparator: _priceSeparator,
-                      swapAmountUsd: fromUsdValue,
-                      gaslessFeeCovered: _isGasless,
-                      nativePriceUsd:
-                          _tokenPriceCache[blockchain
-                              .activeChain
-                              .coinGeckoId] ??
-                          0.0,
-                    ),
-                    const SizedBox(height: 24),
-                    SwapPrimaryButton(
-                      enabled: swapEnabled,
-                      isBusy: swapBusy,
-                      onPressed: _executeSwap,
-                      label: buttonLabel,
-                    ),
-                    if (_canOfferGaslessToggle) ...[
-                      const SizedBox(height: 20),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: SwapGaslessToggle(
-                          value: _isGasless,
-                          onChanged: (val) {
-                            setState(() {
-                              _isGasless = val;
-                              _resetQuoteState();
-                            });
-                            _getQuote();
-                          },
+                    const SizedBox(height: 16),
+                    NetworkCard(chain: blockchain.activeChain),
+                    const SizedBox(height: 16),
+                    if (_activeTab == SwapTab.swap)
+                      SwapTabContent(
+                        blockchain: blockchain,
+                        fromController: _fromController,
+                        fromToken: _fromToken,
+                        fromUsdValue: fromUsdValue,
+                        selectedPercentage: _selectedPercentage,
+                        onAmountChanged: _onFromAmountChanged,
+                        onSelectFromToken: () => _showTokenSelector(true),
+                        onPercentSelected: _setPercentage,
+                        onSwapTokens: _swapTokens,
+                        toToken: _toToken,
+                        toAmountText: _toController.text,
+                        toUsdValue: toUsdValue,
+                        toBalance: _toToken?.balance ?? 0,
+                        isCalculating: _isCalculating,
+                        onSelectToToken: () => _showTokenSelector(false),
+                        currentQuote: _currentQuote,
+                        platformFeeUsd: _platformFeeUsd,
+                        feeUsd: _feeUsd,
+                        feeNative: _feeNative,
+                        priceText: priceText,
+                        receiveText: receiveText,
+                        priceSeparator: _priceSeparator,
+                        nativePriceUsd:
+                            _tokenPriceCache[blockchain
+                                .activeChain
+                                .coinGeckoId] ??
+                            0.0,
+                        gaslessFeeCovered: _isGasless,
+                        swapEnabled: swapEnabled,
+                        swapBusy: swapBusy,
+                        onSwapPressed: _executeSwap,
+                        buttonLabel: buttonLabel,
+                        showGaslessToggle: _canOfferGaslessToggle,
+                        isGasless: _isGasless,
+                        onGaslessChanged: (val) {
+                          setState(() {
+                            _isGasless = val;
+                            _resetQuoteState();
+                          });
+                          _getQuote();
+                        },
+                      )
+                    else
+                      LimitTabContent(
+                        blockchain: blockchain,
+                        fromController: _fromController,
+                        fromToken: _fromToken,
+                        fromUsdValue: fromUsdValue,
+                        selectedPercentage: _selectedPercentage,
+                        onAmountChanged: _onFromAmountChanged,
+                        onSelectFromToken: () => _showTokenSelector(true),
+                        onPercentSelected: _setPercentage,
+                        onSwapTokens: _swapTokens,
+                        toToken: _toToken,
+                        toAmountText: _toController.text,
+                        toUsdValue: toUsdValue,
+                        toBalance: _toToken?.balance ?? 0,
+                        onSelectToToken: () => _showTokenSelector(false),
+                        limitBusy: _isSubmittingLimit,
+                        limitEnabled: _limitEnabled(),
+                        limitPriceController: _limitPriceController,
+                        onLimitPriceChanged: (_) => _updateLimitPreview(),
+                        priceSeparator: _priceSeparator,
+                        executionPriceText: _limitExecutionPriceText(),
+                        receiveText: _toController.text.isNotEmpty
+                            ? '${_toController.text} ${_toToken?.symbol ?? ''}'
+                            : '--',
+                        nativePriceUsd:
+                            _tokenPriceCache[blockchain
+                                .activeChain
+                                .coinGeckoId] ??
+                            0.0,
+                        onSubmitLimit: _submitLimitOrder,
+                        expiryLabel: _limitExpiryLabel(),
+                        onSelect24h: () => setState(
+                          () => _limitExpiryOption = _LimitExpiryOption.hours24,
                         ),
+                        onSelect7d: () => setState(
+                          () => _limitExpiryOption = _LimitExpiryOption.days7,
+                        ),
+                        onSelectNever: () => setState(
+                          () => _limitExpiryOption = _LimitExpiryOption.never,
+                        ),
+                        onPickCustomExpiry: _pickCustomExpiry,
+                        is24hSelected:
+                            _limitExpiryOption == _LimitExpiryOption.hours24,
+                        is7dSelected:
+                            _limitExpiryOption == _LimitExpiryOption.days7,
+                        isNeverSelected:
+                            _limitExpiryOption == _LimitExpiryOption.never,
                       ),
-                    ],
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -1782,5 +2102,26 @@ class _SwapScreenState extends State<SwapScreen> {
         ),
       ),
     );
+  }
+
+  bool _limitEnabled() {
+    final fromAmount = _parseDecimalAmount(_fromController.text);
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    return fromAmount > Decimal.zero &&
+        limitPrice > Decimal.zero &&
+        !_tokensAreIdentical(_fromToken, _toToken) &&
+        _fromToken != null &&
+        _toToken != null &&
+        (_fromToken?.contractAddress ?? '').isNotEmpty &&
+        (_toToken?.contractAddress ?? '').isNotEmpty &&
+        !_isSubmittingLimit;
+  }
+
+  String _limitExecutionPriceText() {
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (limitPrice <= Decimal.zero) {
+      return '--';
+    }
+    return '1 ${_fromToken?.symbol ?? ''} $_priceSeparator ${limitPrice.toString()} ${_toToken?.symbol ?? ''}';
   }
 }
