@@ -61,18 +61,34 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     final setup = await _authService.beginTwoFactorSetup();
     if (!mounted) return;
 
+    final setupSucceeded = setup['success'] == true;
+    final setupSecret =
+        setup['secret']?.toString() ?? setup['base32Secret']?.toString();
+    final setupOtpAuthUrl =
+        setup['otpauth_url']?.toString() ??
+        setup['otpauthUrl']?.toString() ??
+        setup['otpAuthUrl']?.toString();
+
     setState(() {
       _enabled = false;
       _loading = false;
-      if (setup['success'] == true) {
-        _secret = setup['secret']?.toString();
-        _otpauthUrl = setup['otpauth_url']?.toString();
+      if (setupSucceeded) {
+        _secret = setupSecret;
+        _otpauthUrl = setupOtpAuthUrl;
       }
     });
 
-    if (setup['success'] != true) {
+    if (!setupSucceeded) {
       ToastUtils.showError(
-        setup['error']?.toString() ?? 'Unable to start Owllet Authenticator.',
+        setup['error']?.toString() ??
+            'Unable to start Owllet Shield 2FA right now.',
+      );
+      return;
+    }
+
+    if ((_secret ?? '').isEmpty || (_otpauthUrl ?? '').isEmpty) {
+      ToastUtils.showError(
+        'Unable to start Owllet Shield 2FA right now. Please try again.',
       );
     }
   }
@@ -85,6 +101,13 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
   }
 
   Future<void> _activate() async {
+    if ((_secret ?? '').isEmpty || (_otpauthUrl ?? '').isEmpty) {
+      ToastUtils.showError(
+        '2FA setup is incomplete. Re-open this screen and scan again.',
+      );
+      return;
+    }
+
     final code = _codeController.text.trim();
     if (code.length < 6) {
       ToastUtils.showError('Enter the 6-digit code from your authenticator.');
@@ -98,7 +121,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
 
     if (result['success'] == true) {
       setState(() => _enabled = true);
-      ToastUtils.showSuccess('Owllet Authenticator is now active.');
+      ToastUtils.showSuccess('Owllet Shield 2FA is now active.');
       return;
     }
 
@@ -114,7 +137,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardDark,
         title: Text(
-          'Disable Owllet Authenticator',
+          'Disable Owllet Shield 2FA',
           style: GoogleFonts.outfit(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -125,6 +148,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
           autofocus: true,
           keyboardType: TextInputType.number,
           maxLength: 6,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(6),
+          ],
           style: GoogleFonts.outfit(color: AppColors.textPrimary),
           decoration: InputDecoration(
             counterText: '',
@@ -142,7 +169,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.success),
+              borderSide: const BorderSide(color: AppColors.accentRed),
             ),
           ),
         ),
@@ -155,7 +182,9 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
             ),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.success),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.accentRed,
+            ),
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: Text(
               'Disable',
@@ -195,13 +224,13 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
         title: Text(
-          'Owllet Authenticator',
+          'Owllet Shield 2FA',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
         ),
       ),
       body: _loading
           ? const Center(
-              child: CircularProgressIndicator(color: AppColors.success),
+              child: CircularProgressIndicator(color: AppColors.accentRed),
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
@@ -226,12 +255,12 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                             width: 76,
                             height: 76,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0B1711),
+                              color: const Color(0xFF1B0A0D),
                               borderRadius: BorderRadius.circular(22),
                             ),
                             alignment: Alignment.center,
                             child: Image.asset(
-                              'assets/images/owl_wallet.png',
+                              'assets/images/splash_logo.png',
                               width: 48,
                               height: 48,
                               fit: BoxFit.contain,
@@ -241,8 +270,8 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                         const SizedBox(height: 20),
                         Text(
                           _enabled
-                              ? 'Owllet Authenticator is enabled'
-                              : 'Protect your sign-in with Owllet Authenticator',
+                              ? 'Owllet Shield 2FA is enabled'
+                              : 'Protect your sign-in with Owllet Shield 2FA',
                           style: GoogleFonts.outfit(
                             color: AppColors.textPrimary,
                             fontSize: 28,
@@ -323,13 +352,13 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                       onPressed: _copySecret,
                       icon: const Icon(
                         Icons.copy_outlined,
-                        color: AppColors.success,
+                        color: AppColors.accentRed,
                         size: 18,
                       ),
                       label: Text(
                         'Copy',
                         style: GoogleFonts.outfit(
-                          color: AppColors.success,
+                          color: AppColors.accentRed,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -342,6 +371,10 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                 controller: _codeController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(6),
+                ],
                 style: GoogleFonts.outfit(
                   color: AppColors.textPrimary,
                   fontSize: 22,
@@ -368,7 +401,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: AppColors.success),
+                    borderSide: const BorderSide(color: AppColors.accentRed),
                   ),
                 ),
               ),
@@ -420,12 +453,12 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
                 width: 52,
                 height: 52,
                 decoration: const BoxDecoration(
-                  color: Color(0xFF0E2B22),
+                  color: Color(0xFF2A0D12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.verified_user_outlined,
-                  color: AppColors.success,
+                  color: AppColors.accentRed,
                 ),
               ),
               const SizedBox(width: 14),
@@ -484,7 +517,7 @@ class _PrimaryActionButton extends StatelessWidget {
       width: double.infinity,
       child: FilledButton(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.success,
+          backgroundColor: AppColors.accentRed,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(

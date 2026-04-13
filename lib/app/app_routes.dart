@@ -28,6 +28,7 @@ import '../screens/profile/backup_seed_phrase_screen.dart';
 import '../screens/profile/coming_soon_overlay.dart';
 import '../screens/profile/coming_soon_screen.dart';
 import '../screens/profile/community_links_screen.dart';
+import '../screens/profile/connected_apps_screen.dart';
 import '../screens/profile/feedback_screen.dart';
 import '../screens/profile/kyc_success_screen.dart';
 import '../screens/profile/login_profile_screen.dart';
@@ -97,6 +98,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/referrals': (_) => const ReferralsScreen(),
     '/feedback': (_) => const FeedbackScreen(),
     '/community': (_) => const CommunityLinksScreen(),
+    '/connected-apps': (_) => const ConnectedAppsScreen(),
     '/add-network': (_) => const AddNetworkScreen(),
     '/transaction-processing': (_) => const TransactionProcessingScreen(),
     '/transactions': (_) => const TransactionsScreen(),

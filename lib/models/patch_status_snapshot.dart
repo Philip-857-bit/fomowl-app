@@ -47,9 +47,9 @@ class PatchStatusSnapshot {
   String get displayVersionLabel {
     final patch = patchNumber;
     if (patch == null || patch <= 0) {
-      return 'Owllet v$releaseVersion';
+      return 'Owllet v$appVersion';
     }
-    return 'Owllet v$releaseVersion | patch $patch';
+    return 'Owllet v$appVersion | patch $patch';
   }
 
   PatchStatusSnapshot copyWith({

@@ -160,8 +160,10 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                     .chainId;
                 widget.sessionController.updateLoadedPage(next, title: title);
                 if (widget.sessionController.canInjectProviderFor(next)) {
+                  final providerScript = await widget.providerBridge
+                      .providerInjectionScript();
                   await controller.evaluateJavascript(
-                    source: DappProviderBridge.providerInjectionScript(),
+                    source: providerScript,
                   );
                   await controller.evaluateJavascript(
                     source: await widget.providerBridge
@@ -234,10 +236,12 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     );
 
     if (widget.sessionController.canInjectProviderFor(uri)) {
+      final providerScript = await widget.providerBridge
+          .providerInjectionScript();
       await controller.addUserScript(
         userScript: UserScript(
           groupName: _providerScriptGroup,
-          source: DappProviderBridge.providerInjectionScript(),
+          source: providerScript,
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
       );

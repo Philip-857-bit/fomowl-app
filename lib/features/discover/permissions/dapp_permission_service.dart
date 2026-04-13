@@ -75,6 +75,31 @@ class DappPermissionService {
     await _savePermissions(permissions);
   }
 
+  Future<List<DappPermissionRecord>> loadPermissionsForWallet(
+    String walletAddress,
+  ) async {
+    final normalizedWallet = walletAddress.trim().toLowerCase();
+    if (normalizedWallet.isEmpty) {
+      return const <DappPermissionRecord>[];
+    }
+
+    final filtered = (await loadPermissions())
+        .where((record) => record.walletAddress == normalizedWallet)
+        .toList(growable: false);
+    filtered.sort((left, right) => right.connectedAt.compareTo(left.connectedAt));
+    return filtered;
+  }
+
+  Future<void> revokeAllForWallet(String walletAddress) async {
+    final normalizedWallet = walletAddress.trim().toLowerCase();
+    if (normalizedWallet.isEmpty) {
+      return;
+    }
+    final permissions = (await loadPermissions()).toList(growable: true)
+      ..removeWhere((record) => record.walletAddress == normalizedWallet);
+    await _savePermissions(permissions);
+  }
+
   Future<void> _savePermissions(List<DappPermissionRecord> permissions) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(

@@ -271,8 +271,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           icon: Icons.shield_outlined,
                           title: l.twoFactorAuth,
                           subtitle: _twoFactorEnabled
-                              ? 'Owllet Authenticator is active'
-                              : 'Set up Owllet Authenticator for sign-in',
+                              ? 'Owllet Shield 2FA is active'
+                              : 'Set up Owllet Shield 2FA for sign-in',
                           onTap: _openTwoFactorSetup,
                         ),
                       ],

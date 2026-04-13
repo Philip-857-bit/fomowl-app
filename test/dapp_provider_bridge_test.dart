@@ -89,8 +89,20 @@ void main() {
   }
 
   group('DappProviderBridge', () {
-    test('provider injection script announces Owllet and legacy providers', () {
-      final script = DappProviderBridge.providerInjectionScript();
+    test('provider injection script announces Owllet and legacy providers', () async {
+      final bridge = DappProviderBridge(
+        sessionController: BrowserSessionController(
+          catalogService: FakeDiscoverCatalogService(
+            snapshot: DiscoverCatalogSnapshot(
+              dapps: const <DiscoverDappEntry>[],
+              fetchedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+            ),
+          ),
+        ),
+        permissionService: FakeDappPermissionService(),
+        walletService: FakeWalletService(),
+      );
+      final script = await bridge.providerInjectionScript();
 
       expect(script, contains('eip6963:announceProvider'));
       expect(script, contains('window.web3.currentProvider'));

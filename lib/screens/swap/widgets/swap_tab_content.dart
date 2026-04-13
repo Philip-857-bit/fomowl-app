@@ -167,6 +167,7 @@ class LimitTabContent extends StatelessWidget {
   final ValueChanged<String> onLimitPriceChanged;
   final String priceSeparator;
   final String executionPriceText;
+  final String executionPriceUsdLabel;
   final String receiveText;
   final double nativePriceUsd;
   final VoidCallback onSubmitLimit;
@@ -203,6 +204,7 @@ class LimitTabContent extends StatelessWidget {
     required this.onLimitPriceChanged,
     required this.priceSeparator,
     required this.executionPriceText,
+    required this.executionPriceUsdLabel,
     required this.receiveText,
     required this.nativePriceUsd,
     required this.onSubmitLimit,
@@ -273,6 +275,7 @@ class LimitTabContent extends StatelessWidget {
           onChanged: onLimitPriceChanged,
           fromTokenSymbol: fromToken?.symbol ?? '',
           toToken: toToken,
+          targetPriceUsdLabel: executionPriceUsdLabel,
           chainId: blockchain.activeChain.chainId,
         ),
         const SizedBox(height: 20),

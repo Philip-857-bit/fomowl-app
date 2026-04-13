@@ -500,6 +500,13 @@ class _DecentralizedProfileScreenState
                           ),
                         ),
                         SettingsItemTile(
+                          icon: Icons.shield_outlined,
+                          title: l.twoFactorAuth,
+                          subtitle: 'Owllet Shield 2FA',
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/two-factor-setup'),
+                        ),
+                        SettingsItemTile(
                           icon: Icons.vpn_key_rounded,
                           title: l.seedPhraseBackup,
                           subtitle: l.actionRequired,
@@ -529,6 +536,13 @@ class _DecentralizedProfileScreenState
                             context,
                             '/terms-and-conditions',
                           ),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.link_rounded,
+                          title: 'Connected Apps',
+                          subtitle: 'Manage dapp wallet access',
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/connected-apps'),
                         ),
                         SettingsItemTile(
                           icon: Icons.chat_bubble_outline_rounded,
@@ -562,17 +576,6 @@ class _DecentralizedProfileScreenState
                               style: GoogleFonts.outfit(
                                 color: AppColors.textSecondary,
                                 fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              patchService.supportStatusLabel,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
-                                color: AppColors.textSecondary.withValues(
-                                  alpha: 0.8,
-                                ),
-                                fontSize: 11,
                               ),
                             ),
                           ],

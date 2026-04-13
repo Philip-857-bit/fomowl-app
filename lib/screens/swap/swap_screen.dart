@@ -1390,19 +1390,30 @@ class _SwapScreenState extends State<SwapScreen> {
   void _updateLimitPreview() {
     final from = _fromToken;
     final to = _toToken;
+    var nextToAmount = '';
     if (from == null || to == null) {
-      _toController.clear();
+    } else {
+      final fromAmount = _parseDecimalAmount(_fromController.text);
+      final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+      if (fromAmount > Decimal.zero && limitPrice > Decimal.zero) {
+        final toAmount = fromAmount * limitPrice;
+        final displayDecimals = to.decimals > 6 ? 6 : to.decimals;
+        nextToAmount = _formatDecimalInput(toAmount, displayDecimals);
+      }
+    }
+
+    if (_toController.text == nextToAmount) {
       return;
     }
-    final fromAmount = _parseDecimalAmount(_fromController.text);
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
-    if (fromAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
-      _toController.clear();
+
+    if (!mounted) {
+      _toController.text = nextToAmount;
       return;
     }
-    final toAmount = fromAmount * limitPrice;
-    final displayDecimals = to.decimals > 6 ? 6 : to.decimals;
-    _toController.text = _formatDecimalInput(toAmount, displayDecimals);
+
+    setState(() {
+      _toController.text = nextToAmount;
+    });
   }
 
   int _resolveLimitExpirySeconds() {
@@ -2189,6 +2200,7 @@ class _SwapScreenState extends State<SwapScreen> {
                         onLimitPriceChanged: (_) => _updateLimitPreview(),
                         priceSeparator: _priceSeparator,
                         executionPriceText: _limitExecutionPriceText(),
+                        executionPriceUsdLabel: _limitExecutionPriceUsdText(),
                         receiveText: _toController.text.isNotEmpty
                             ? '${_toController.text} ${_toToken?.symbol ?? ''}'
                             : '--',
@@ -2247,5 +2259,21 @@ class _SwapScreenState extends State<SwapScreen> {
       return '--';
     }
     return '1 ${_fromToken?.symbol ?? ''} $_priceSeparator ${limitPrice.toString()} ${_toToken?.symbol ?? ''}';
+  }
+
+  String _limitExecutionPriceUsdText() {
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (limitPrice <= Decimal.zero) {
+      return '\$0.00';
+    }
+    final limitPriceValue = double.tryParse(limitPrice.toString()) ?? 0.0;
+    if (limitPriceValue <= 0) {
+      return '\$0.00';
+    }
+    final usdValue = _usdValueFor(_toToken, limitPriceValue);
+    if (usdValue <= 0) {
+      return '\$0.00';
+    }
+    return '\$${usdValue.toStringAsFixed(2)}';
   }
 }

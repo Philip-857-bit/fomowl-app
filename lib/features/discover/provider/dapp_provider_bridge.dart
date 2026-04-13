@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -29,16 +30,64 @@ class DappProviderBridge {
 
   static const String handlerName = 'owlletProvider';
   static const String detectorHandlerName = 'owlletDappDetector';
+  static const String _walletConnectIconAssetPath =
+      'assets/images/splash_logo.png';
+  static const String _fallbackWalletConnectIconDataUri =
+      'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"%3E%3Crect width="96" height="96" rx="24" fill="%23050505"/%3E%3Cpath d="M24 25c0-3.3 2.7-6 6-6h17c15.46 0 28 12.54 28 28v24c0 3.3-2.7 6-6 6H52.5C36.76 77 24 64.24 24 48.5V25zm12 6v17.5C36 57.61 43.39 65 52.5 65H63V47c0-8.84-7.16-16-16-16H36zm11.75 6.5c4.56 0 8.25 3.69 8.25 8.25S52.31 54 47.75 54 39.5 50.31 39.5 45.75s3.69-8.25 8.25-8.25zm0 4.5a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" fill="%23ff3344"/%3E%3C/svg%3E';
+  static String? _providerInjectionScriptCache;
+  static Future<String>? _providerInjectionScriptInFlight;
 
-  static String providerInjectionScript() =>
-      '''
+  Future<String> providerInjectionScript() async {
+    final cached = _providerInjectionScriptCache;
+    if (cached != null) {
+      return cached;
+    }
+
+    final loader =
+        _providerInjectionScriptInFlight ??= _buildProviderInjectionScript();
+    final script = await loader;
+    _providerInjectionScriptCache = script;
+    if (identical(_providerInjectionScriptInFlight, loader)) {
+      _providerInjectionScriptInFlight = null;
+    }
+    return script;
+  }
+
+  static Future<String> _buildProviderInjectionScript() async {
+    final iconDataUri = await _loadWalletConnectIconDataUri();
+    final iconLiteral = jsonEncode(iconDataUri);
+    return '''
 (function() {
   const owlletInfo = Object.freeze({
     uuid: 'owllet-mobile-wallet',
     name: 'Owllet',
-    icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"%3E%3Crect width="96" height="96" rx="24" fill="%23050505"/%3E%3Cpath d="M24 25c0-3.3 2.7-6 6-6h17c15.46 0 28 12.54 28 28v24c0 3.3-2.7 6-6 6H52.5C36.76 77 24 64.24 24 48.5V25zm12 6v17.5C36 57.61 43.39 65 52.5 65H63V47c0-8.84-7.16-16-16-16H36zm11.75 6.5c4.56 0 8.25 3.69 8.25 8.25S52.31 54 47.75 54 39.5 50.31 39.5 45.75s3.69-8.25 8.25-8.25zm0 4.5a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" fill="%23ff3344"/%3E%3C/svg%3E',
+    icon: $iconLiteral,
     rdns: 'com.fomowl.owllet'
   });
+  const OWLLET_PROVIDER_TIMEOUT_MS = 20000;
+
+  function normalizeParams(params) {
+    if (Array.isArray(params)) {
+      return params;
+    }
+    if (params === undefined || params === null) {
+      return [];
+    }
+    return [params];
+  }
+
+  async function callFlutterHandler(payload) {
+    const callPromise = window.flutter_inappwebview.callHandler('$handlerName', payload);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        const timeoutError = new Error('Provider request timed out.');
+        timeoutError.code = -32002;
+        reject(timeoutError);
+      }, OWLLET_PROVIDER_TIMEOUT_MS);
+    });
+    return Promise.race([callPromise, timeoutPromise]);
+  }
+
   if (window.__owlletProviderInstalled && window.__owlletAnnounceProvider) {
     window.__owlletAnnounceProvider();
     try { window.dispatchEvent(new Event('ethereum#initialized')); } catch (_) {}
@@ -60,11 +109,31 @@ class DappProviderBridge {
       };
     }
     async request(args) {
-      const payload = {
-        method: args && args.method ? args.method : '',
-        params: Array.isArray(args && args.params) ? args.params : []
-      };
-      const response = await window.flutter_inappwebview.callHandler('$handlerName', payload);
+      let method = '';
+      let params = [];
+      if (typeof args === 'string') {
+        method = args;
+      } else if (args && typeof args === 'object') {
+        method = typeof args.method === 'string' ? args.method : '';
+        params = normalizeParams(args.params);
+      }
+      if (!method) {
+        const invalidArgsError = new Error('Invalid provider request arguments');
+        invalidArgsError.code = -32602;
+        throw invalidArgsError;
+      }
+      const payload = { method: method, params: params };
+      let response;
+      try {
+        response = await callFlutterHandler(payload);
+      } catch (error) {
+        if (error && typeof error === 'object' && Object.prototype.hasOwnProperty.call(error, 'code')) {
+          throw error;
+        }
+        const wrappedError = new Error(error && error.message ? error.message : 'Provider request failed');
+        wrappedError.code = -32603;
+        throw wrappedError;
+      }
       if (response && response.error) {
         const error = new Error(response.error.message || 'Provider request failed');
         error.code = response.error.code;
@@ -85,16 +154,21 @@ class DappProviderBridge {
     }
     send(methodOrPayload, callbackOrParams) {
       if (typeof methodOrPayload === 'string') {
-        return this.request({
+        const promise = this.request({
           method: methodOrPayload,
-          params: Array.isArray(callbackOrParams) ? callbackOrParams : []
+          params: normalizeParams(callbackOrParams)
         });
+        if (typeof callbackOrParams === 'function') {
+          promise.then((value) => callbackOrParams(null, value)).catch((error) => callbackOrParams(error, null));
+          return;
+        }
+        return promise;
       }
       if (methodOrPayload && typeof methodOrPayload === 'object') {
         const payload = methodOrPayload;
         const promise = this.request({
           method: payload.method,
-          params: Array.isArray(payload.params) ? payload.params : []
+          params: normalizeParams(payload.params)
         }).then((result) => ({
           jsonrpc: '2.0',
           id: payload.id ?? null,
@@ -138,9 +212,13 @@ class DappProviderBridge {
     isConnected() { return this._connected; }
     _setAccounts(accounts) {
       const normalized = Array.isArray(accounts) ? accounts : [];
+      const wasConnected = this._connected;
       this.selectedAddress = normalized.length > 0 ? normalized[0] : null;
       this._connected = normalized.length > 0;
       this._emit('accountsChanged', [normalized]);
+      if (!this._connected && wasConnected) {
+        this._emit('disconnect', [{ code: 4900, message: 'Disconnected' }]);
+      }
       if (this._connected && this.chainId) {
         this._emit('connect', [{ chainId: this.chainId }]);
       }
@@ -184,6 +262,20 @@ class DappProviderBridge {
   window.dispatchEvent(new Event('ethereum#initialized'));
 })();
 ''';
+  }
+
+  static Future<String> _loadWalletConnectIconDataUri() async {
+    try {
+      final bytes = await rootBundle.load(_walletConnectIconAssetPath);
+      final buffer = bytes.buffer.asUint8List();
+      if (buffer.isEmpty) {
+        return _fallbackWalletConnectIconDataUri;
+      }
+      return 'data:image/png;base64,${base64Encode(buffer)}';
+    } catch (_) {
+      return _fallbackWalletConnectIconDataUri;
+    }
+  }
 
   Future<String> buildProviderStateSyncScript({
     required int chainId,
@@ -276,12 +368,17 @@ class DappProviderBridge {
           );
         case 'eth_accounts':
           return _result(await _ethAccounts(origin));
+        case 'eth_coinbase':
+          final accounts = await _ethAccounts(origin);
+          return _result(accounts.isEmpty ? null : accounts.first);
         case 'eth_requestAccounts':
           return _result(
             await _ethRequestAccounts(context, origin, evaluateJavaScript),
           );
         case 'wallet_getPermissions':
           return _result(await _walletGetPermissions(origin));
+        case 'wallet_getCapabilities':
+          return _result(await _walletGetCapabilities(origin));
         case 'wallet_requestPermissions':
           return _result(
             await _walletRequestPermissions(
@@ -291,6 +388,9 @@ class DappProviderBridge {
               evaluateJavaScript,
             ),
           );
+        case 'wallet_revokePermissions':
+          await _walletRevokePermissions(origin, params, evaluateJavaScript);
+          return _result(null);
         case 'wallet_switchEthereumChain':
           await _walletSwitchEthereumChain(context, params, evaluateJavaScript);
           return _result(null);
@@ -384,6 +484,23 @@ class DappProviderBridge {
     ];
   }
 
+  Future<Map<String, dynamic>> _walletGetCapabilities(String origin) async {
+    final accounts = await _ethAccounts(origin);
+    if (accounts.isEmpty) {
+      return const <String, dynamic>{};
+    }
+    final account = accounts.first.toLowerCase();
+    return <String, dynamic>{
+      account: const <String, dynamic>{
+        'eth_accounts': <String, dynamic>{},
+        'eth_sendTransaction': <String, dynamic>{},
+        'eth_signTypedData_v4': <String, dynamic>{},
+        'personal_sign': <String, dynamic>{},
+        'wallet_switchEthereumChain': <String, dynamic>{},
+      },
+    };
+  }
+
   Future<List<Map<String, dynamic>>> _walletRequestPermissions(
     BuildContext context,
     String origin,
@@ -401,6 +518,27 @@ class DappProviderBridge {
     return const <Map<String, dynamic>>[
       <String, dynamic>{'parentCapability': 'eth_accounts'},
     ];
+  }
+
+  Future<void> _walletRevokePermissions(
+    String origin,
+    List<dynamic> params,
+    Future<void> Function(String source) evaluateJavaScript,
+  ) async {
+    final requested = params.isNotEmpty ? params.first : null;
+    if (requested is Map && !requested.containsKey('eth_accounts')) {
+      return;
+    }
+
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (walletAddress == null || walletAddress.isEmpty) {
+      return;
+    }
+
+    await permissionService.revokeConnectionApproval(origin, walletAddress);
+    await evaluateJavaScript(
+      "window.ethereum && typeof window.ethereum._setAccounts === 'function' && window.ethereum._setAccounts([]);",
+    );
   }
 
   Future<void> _walletSwitchEthereumChain(

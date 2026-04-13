@@ -180,6 +180,7 @@ class LimitExecutionCard extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final String fromTokenSymbol;
   final Token? toToken;
+  final String targetPriceUsdLabel;
   final int? chainId;
 
   const LimitExecutionCard({
@@ -188,6 +189,7 @@ class LimitExecutionCard extends StatelessWidget {
     required this.onChanged,
     required this.fromTokenSymbol,
     required this.toToken,
+    required this.targetPriceUsdLabel,
     this.chainId,
   });
 
@@ -243,7 +245,7 @@ class LimitExecutionCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '\$0.00',
+            targetPriceUsdLabel,
             style: GoogleFonts.outfit(
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.4),
