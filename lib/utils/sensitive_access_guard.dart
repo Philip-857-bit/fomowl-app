@@ -17,25 +17,55 @@ class SensitiveAccessGuard {
   /// Returns true if the user successfully authenticates (or no auth is required).
   static Future<bool> verify(BuildContext context, {String? reason}) async {
     final l = AppLocalizations.of(context);
+    var primaryAuthenticated = false;
+
     // Prefer biometrics when the user has opted in.
     final biometricEnabled = await _biometricService.isBiometricEnabled();
     if (biometricEnabled) {
       final success = await _biometricService.authenticate(
         localizedReason: reason ?? l.unlockWalletReason,
       );
-      if (success) return true;
+      if (success) {
+        primaryAuthenticated = true;
+      }
     }
 
     // Fall back to passcode if configured. When no passcode is set, allow access.
-    if (!await _storage.hasPasscode()) {
+    final hasPasscode = await _storage.hasPasscode();
+    if (!primaryAuthenticated) {
+      if (!hasPasscode) {
+        primaryAuthenticated = true;
+      } else {
+        if (!context.mounted) return false;
+        primaryAuthenticated = await _promptForPasscode(context);
+      }
+    }
+
+    if (!primaryAuthenticated) {
+      return false;
+    }
+
+    final twoFactorEnabled = await _storage.isTwoFactorEnabled();
+    if (!twoFactorEnabled) {
       return true;
     }
 
-    if (!context.mounted) return false;
-    return _promptForPasscode(context);
+    if (!hasPasscode || !context.mounted) {
+      return false;
+    }
+
+    return _promptForPasscode(
+      context,
+      title: 'Wallet Shield 2FA',
+      subtitle: 'Confirm this protected wallet action.',
+    );
   }
 
-  static Future<bool> _promptForPasscode(BuildContext context) async {
+  static Future<bool> _promptForPasscode(
+    BuildContext context, {
+    String? title,
+    String? subtitle,
+  }) async {
     final l = AppLocalizations.of(context);
     final controller = TextEditingController();
     return await showDialog<bool>(
@@ -47,19 +77,35 @@ class SensitiveAccessGuard {
               builder: (context, setState) => AlertDialog(
                 backgroundColor: AppColors.cardDark,
                 title: Text(
-                  l.enterPasscodeTitle,
+                  title ?? l.enterPasscodeTitle,
                   style: GoogleFonts.outfit(color: Colors.white),
                 ),
-                content: TextField(
-                  controller: controller,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: l.passcodeHint,
-                    hintStyle: GoogleFonts.outfit(color: Colors.white38),
-                    errorText: hasError ? l.incorrectPasscode : null,
-                  ),
-                  style: GoogleFonts.outfit(color: Colors.white),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (subtitle != null && subtitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            subtitle,
+                            style: GoogleFonts.outfit(color: Colors.white70),
+                          ),
+                        ),
+                      ),
+                    TextField(
+                      controller: controller,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: l.passcodeHint,
+                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                        errorText: hasError ? l.incorrectPasscode : null,
+                      ),
+                      style: GoogleFonts.outfit(color: Colors.white),
+                    ),
+                  ],
                 ),
                 actions: [
                   TextButton(

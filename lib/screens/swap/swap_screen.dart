@@ -26,7 +26,15 @@ import '../transaction/transaction_processing_screen.dart';
 import 'widgets/swap_limit_widgets.dart';
 import 'widgets/swap_tab_content.dart';
 
-enum _LimitExpiryOption { hours24, days7, never, custom }
+enum _LimitExpiryOption {
+  minutes15,
+  hour1,
+  hours4,
+  hours24,
+  days7,
+  never,
+  custom,
+}
 
 /// Swap Screen — DEX token swap interface
 class SwapScreen extends StatefulWidget {
@@ -1419,6 +1427,13 @@ class _SwapScreenState extends State<SwapScreen> {
   int _resolveLimitExpirySeconds() {
     final now = DateTime.now();
     switch (_limitExpiryOption) {
+      case _LimitExpiryOption.minutes15:
+        return now.add(const Duration(minutes: 15)).millisecondsSinceEpoch ~/
+            1000;
+      case _LimitExpiryOption.hour1:
+        return now.add(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000;
+      case _LimitExpiryOption.hours4:
+        return now.add(const Duration(hours: 4)).millisecondsSinceEpoch ~/ 1000;
       case _LimitExpiryOption.hours24:
         return now.add(const Duration(hours: 24)).millisecondsSinceEpoch ~/
             1000;
@@ -1442,6 +1457,12 @@ class _SwapScreenState extends State<SwapScreen> {
 
   String _limitExpiryLabel() {
     switch (_limitExpiryOption) {
+      case _LimitExpiryOption.minutes15:
+        return '15M';
+      case _LimitExpiryOption.hour1:
+        return '1H';
+      case _LimitExpiryOption.hours4:
+        return '4H';
       case _LimitExpiryOption.hours24:
         return '24H';
       case _LimitExpiryOption.days7:
@@ -2211,6 +2232,16 @@ class _SwapScreenState extends State<SwapScreen> {
                             0.0,
                         onSubmitLimit: _submitLimitOrder,
                         expiryLabel: _limitExpiryLabel(),
+                        onSelect15m: () => setState(
+                          () =>
+                              _limitExpiryOption = _LimitExpiryOption.minutes15,
+                        ),
+                        onSelect1h: () => setState(
+                          () => _limitExpiryOption = _LimitExpiryOption.hour1,
+                        ),
+                        onSelect4h: () => setState(
+                          () => _limitExpiryOption = _LimitExpiryOption.hours4,
+                        ),
                         onSelect24h: () => setState(
                           () => _limitExpiryOption = _LimitExpiryOption.hours24,
                         ),
@@ -2221,6 +2252,12 @@ class _SwapScreenState extends State<SwapScreen> {
                           () => _limitExpiryOption = _LimitExpiryOption.never,
                         ),
                         onPickCustomExpiry: _pickCustomExpiry,
+                        is15mSelected:
+                            _limitExpiryOption == _LimitExpiryOption.minutes15,
+                        is1hSelected:
+                            _limitExpiryOption == _LimitExpiryOption.hour1,
+                        is4hSelected:
+                            _limitExpiryOption == _LimitExpiryOption.hours4,
                         is24hSelected:
                             _limitExpiryOption == _LimitExpiryOption.hours24,
                         is7dSelected:

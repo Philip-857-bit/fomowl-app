@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
-import '../../services/auth_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../widgets/bottom_navigation.dart';
@@ -20,7 +19,6 @@ class PasswordSecurityScreen extends StatefulWidget {
 
 class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
   final StorageService _storage = StorageService();
-  final AuthService _authService = AuthService();
 
   bool _biometricEnabled = false;
   bool _twoFactorEnabled = false;
@@ -45,13 +43,11 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       final biometric = await _storage.isBiometricEnabled();
       final autoLock = await _storage.getAutoLockMinutes();
       final lockOnBackground = await _storage.isLockOnBackgroundEnabled();
-      final twoFactorStatus = await _authService.fetchTwoFactorStatus();
+      final walletTwoFactorEnabled = await _storage.isTwoFactorEnabled();
       if (!mounted) return;
       setState(() {
         _biometricEnabled = biometric;
-        _twoFactorEnabled = twoFactorStatus['success'] == true
-            ? twoFactorStatus['enabled'] == true
-            : false;
+        _twoFactorEnabled = walletTwoFactorEnabled;
         _autoLockMinutes = autoLock;
         _lockOnBackground = lockOnBackground;
         _preferencesLoadFailed = false;
@@ -271,8 +267,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           icon: Icons.shield_outlined,
                           title: l.twoFactorAuth,
                           subtitle: _twoFactorEnabled
-                              ? 'Owllet Shield 2FA is active'
-                              : 'Set up Owllet Shield 2FA for sign-in',
+                              ? 'Owllet Shield 2FA protects critical wallet actions'
+                              : 'Enable Wallet Shield 2FA for sensitive wallet actions',
                           onTap: _openTwoFactorSetup,
                         ),
                       ],

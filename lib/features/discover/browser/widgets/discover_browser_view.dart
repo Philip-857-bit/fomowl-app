@@ -9,6 +9,7 @@ import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../services/blockchain_service.dart';
 import '../../discover_url_utils.dart';
+import '../../permissions/dapp_permission_service.dart';
 import '../../provider/dapp_provider_bridge.dart';
 import '../browser_session_controller.dart';
 
@@ -30,6 +31,7 @@ class DiscoverBrowserView extends StatefulWidget {
 
 class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   static const String _providerScriptGroup = 'owllet-provider';
+  static const String _providerStateScriptGroup = 'owllet-provider-state';
   static const String _detectorScriptGroup = 'owllet-provider-detector';
 
   InAppWebViewController? _controller;
@@ -37,6 +39,26 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   bool _canGoForward = false;
   int _progress = 0;
   String? _lastLoadedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    DappPermissionService.permissionRevision.addListener(
+      _onPermissionRevisionChanged,
+    );
+  }
+
+  @override
+  void dispose() {
+    DappPermissionService.permissionRevision.removeListener(
+      _onPermissionRevisionChanged,
+    );
+    super.dispose();
+  }
+
+  void _onPermissionRevisionChanged() {
+    unawaited(_syncInjectedProviderState());
+  }
 
   @override
   void didUpdateWidget(covariant DiscoverBrowserView oldWidget) {
@@ -230,16 +252,32 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
       groupName: _providerScriptGroup,
     );
     await controller.removeUserScriptsByGroupName(
+      groupName: _providerStateScriptGroup,
+    );
+    await controller.removeUserScriptsByGroupName(
       groupName: _detectorScriptGroup,
     );
 
     if (widget.sessionController.canInjectProviderFor(uri)) {
       final providerScript = await widget.providerBridge
           .providerInjectionScript();
+      final chainId = context.read<BlockchainService>().activeChain.chainId;
+      final providerStateScript = await widget.providerBridge
+          .buildProviderStateSyncScript(
+            chainId: chainId,
+            origin: normalizeOriginFromUri(uri),
+          );
       await controller.addUserScript(
         userScript: UserScript(
           groupName: _providerScriptGroup,
           source: providerScript,
+          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+        ),
+      );
+      await controller.addUserScript(
+        userScript: UserScript(
+          groupName: _providerStateScriptGroup,
+          source: providerStateScript,
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
       );
@@ -255,6 +293,25 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
         ),
       );
     }
+  }
+
+  Future<void> _syncInjectedProviderState() async {
+    final controller = _controller;
+    final currentUri = widget.sessionController.currentUri;
+    if (controller == null || currentUri == null || !mounted) {
+      return;
+    }
+    if (!widget.sessionController.canInjectProviderFor(currentUri)) {
+      return;
+    }
+
+    final chainId = context.read<BlockchainService>().activeChain.chainId;
+    await controller.evaluateJavascript(
+      source: await widget.providerBridge.buildProviderStateSyncScript(
+        chainId: chainId,
+        origin: normalizeOriginFromUri(currentUri),
+      ),
+    );
   }
 
   Widget _buildChrome() {

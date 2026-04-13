@@ -31,7 +31,7 @@ class DappProviderBridge {
   static const String handlerName = 'owlletProvider';
   static const String detectorHandlerName = 'owlletDappDetector';
   static const String _walletConnectIconAssetPath =
-      'assets/images/splash_logo.png';
+      'assets/images/launcher_icon.png';
   static const String _fallbackWalletConnectIconDataUri =
       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"%3E%3Crect width="96" height="96" rx="24" fill="%23050505"/%3E%3Cpath d="M24 25c0-3.3 2.7-6 6-6h17c15.46 0 28 12.54 28 28v24c0 3.3-2.7 6-6 6H52.5C36.76 77 24 64.24 24 48.5V25zm12 6v17.5C36 57.61 43.39 65 52.5 65H63V47c0-8.84-7.16-16-16-16H36zm11.75 6.5c4.56 0 8.25 3.69 8.25 8.25S52.31 54 47.75 54 39.5 50.31 39.5 45.75s3.69-8.25 8.25-8.25zm0 4.5a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" fill="%23ff3344"/%3E%3C/svg%3E';
   static String? _providerInjectionScriptCache;
@@ -64,7 +64,17 @@ class DappProviderBridge {
     icon: $iconLiteral,
     rdns: 'com.fomowl.owllet'
   });
-  const OWLLET_PROVIDER_TIMEOUT_MS = 20000;
+  const OWLLET_PROVIDER_TIMEOUT_MS = 30000;
+  const OWLLET_PROVIDER_INTERACTIVE_TIMEOUT_MS = 180000;
+  const interactiveMethods = new Set([
+    'eth_requestAccounts',
+    'wallet_requestPermissions',
+    'wallet_switchEthereumChain',
+    'wallet_addEthereumChain',
+    'personal_sign',
+    'eth_signTypedData_v4',
+    'eth_sendTransaction'
+  ]);
 
   function normalizeParams(params) {
     if (Array.isArray(params)) {
@@ -76,14 +86,17 @@ class DappProviderBridge {
     return [params];
   }
 
-  async function callFlutterHandler(payload) {
+  async function callFlutterHandler(method, payload) {
+    const timeoutMs = interactiveMethods.has(method)
+      ? OWLLET_PROVIDER_INTERACTIVE_TIMEOUT_MS
+      : OWLLET_PROVIDER_TIMEOUT_MS;
     const callPromise = window.flutter_inappwebview.callHandler('$handlerName', payload);
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => {
         const timeoutError = new Error('Provider request timed out.');
         timeoutError.code = -32002;
         reject(timeoutError);
-      }, OWLLET_PROVIDER_TIMEOUT_MS);
+      }, timeoutMs);
     });
     return Promise.race([callPromise, timeoutPromise]);
   }
@@ -125,7 +138,7 @@ class DappProviderBridge {
       const payload = { method: method, params: params };
       let response;
       try {
-        response = await callFlutterHandler(payload);
+        response = await callFlutterHandler(method, payload);
       } catch (error) {
         if (error && typeof error === 'object' && Object.prototype.hasOwnProperty.call(error, 'code')) {
           throw error;
@@ -246,9 +259,11 @@ class DappProviderBridge {
   provider.info = owlletInfo;
   window.__owlletAnnounceProvider = function() {
     try {
-      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {
-        detail: Object.freeze({ info: owlletInfo, provider: provider })
-      }));
+      const detail = Object.freeze({ info: owlletInfo, provider: provider });
+      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: detail }));
+      if (typeof document !== 'undefined' && document.dispatchEvent) {
+        document.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: detail }));
+      }
     } catch (_) {}
   };
   window.addEventListener('eip6963:requestProvider', window.__owlletAnnounceProvider);
@@ -259,6 +274,16 @@ class DappProviderBridge {
   window.__owlletAnnounceProvider();
   setTimeout(window.__owlletAnnounceProvider, 0);
   setTimeout(window.__owlletAnnounceProvider, 250);
+  setTimeout(window.__owlletAnnounceProvider, 1000);
+  setTimeout(window.__owlletAnnounceProvider, 3000);
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        window.__owlletAnnounceProvider();
+      }
+    });
+    document.addEventListener('DOMContentLoaded', window.__owlletAnnounceProvider);
+  }
   window.dispatchEvent(new Event('ethereum#initialized'));
 })();
 ''';
@@ -916,6 +941,22 @@ class DappProviderBridge {
     required String message,
     required String confirmLabel,
   }) async {
+    final originSource =
+        sessionController.currentUri?.toString() ??
+        sessionController.activeDapp?.origin ??
+        '';
+    final parsedOrigin = Uri.tryParse(originSource);
+    final originHost = parsedOrigin?.host;
+    final dappLabel =
+        sessionController.activeDapp?.title ??
+        ((originHost != null && originHost.isNotEmpty) ? originHost : 'DApp');
+    final blockchain = context.read<BlockchainService>();
+    final activeChainName = blockchain.activeChain.name;
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    final walletLabel = walletAddress == null || walletAddress.isEmpty
+        ? 'No active wallet'
+        : _shortAddress(walletAddress);
+
     final request = DiscoverProviderApprovalRequest(
       title: title,
       message: message,
@@ -929,38 +970,135 @@ class DappProviderBridge {
       context: context,
       backgroundColor: AppColors.cardDark,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheetContext) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  request.title,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.inputBackground,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.all(7),
+                            child: Image.asset(
+                              'assets/images/launcher_icon.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Owllet Wallet',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$dappLabel • $activeChainName',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        request.title,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          height: 1.05,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        request.message,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Text(
+                          'Wallet: $walletLabel',
+                          style: GoogleFonts.robotoMono(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  request.message,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white70,
-                    fontSize: 14,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(sheetContext).pop(false),
-                        child: const Text('Reject'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.35),
+                          ),
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                        ),
+                        child: Text(
+                          'Reject',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -970,8 +1108,18 @@ class DappProviderBridge {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentRed,
                           foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(54),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
                         ),
-                        child: Text(request.confirmLabel),
+                        child: Text(
+                          request.confirmLabel,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
                     ),
                   ],

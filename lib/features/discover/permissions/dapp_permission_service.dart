@@ -1,11 +1,15 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dapp_permission_record.dart';
 
 class DappPermissionService {
   static const String _storageKey = 'discover_dapp_permissions_v1';
+  static final ValueNotifier<int> _permissionRevision = ValueNotifier<int>(0);
+
+  static ValueListenable<int> get permissionRevision => _permissionRevision;
 
   Future<List<DappPermissionRecord>> loadPermissions() async {
     final prefs = await SharedPreferences.getInstance();
@@ -108,5 +112,6 @@ class DappPermissionService {
       _storageKey,
       jsonEncode(permissions.map((record) => record.toJson()).toList()),
     );
+    _permissionRevision.value = _permissionRevision.value + 1;
   }
 }

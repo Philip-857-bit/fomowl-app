@@ -172,10 +172,16 @@ class LimitTabContent extends StatelessWidget {
   final double nativePriceUsd;
   final VoidCallback onSubmitLimit;
   final String expiryLabel;
+  final VoidCallback onSelect15m;
+  final VoidCallback onSelect1h;
+  final VoidCallback onSelect4h;
   final VoidCallback onSelect24h;
   final VoidCallback onSelect7d;
   final VoidCallback onSelectNever;
   final VoidCallback onPickCustomExpiry;
+  final bool is15mSelected;
+  final bool is1hSelected;
+  final bool is4hSelected;
   final bool is24hSelected;
   final bool is7dSelected;
   final bool isNeverSelected;
@@ -209,10 +215,16 @@ class LimitTabContent extends StatelessWidget {
     required this.nativePriceUsd,
     required this.onSubmitLimit,
     required this.expiryLabel,
+    required this.onSelect15m,
+    required this.onSelect1h,
+    required this.onSelect4h,
     required this.onSelect24h,
     required this.onSelect7d,
     required this.onSelectNever,
     required this.onPickCustomExpiry,
+    required this.is15mSelected,
+    required this.is1hSelected,
+    required this.is4hSelected,
     required this.is24hSelected,
     required this.is7dSelected,
     required this.isNeverSelected,
@@ -288,8 +300,25 @@ class LimitTabContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
           children: [
+            LimitExpiryChip(
+              label: '15M',
+              selected: is15mSelected,
+              onTap: onSelect15m,
+            ),
+            LimitExpiryChip(
+              label: '1H',
+              selected: is1hSelected,
+              onTap: onSelect1h,
+            ),
+            LimitExpiryChip(
+              label: '4H',
+              selected: is4hSelected,
+              onTap: onSelect4h,
+            ),
             LimitExpiryChip(
               label: '24H',
               selected: is24hSelected,
@@ -307,7 +336,6 @@ class LimitTabContent extends StatelessWidget {
               selected: isNeverSelected,
               onTap: onSelectNever,
             ),
-            const Spacer(),
             GestureDetector(
               onTap: onPickCustomExpiry,
               child: Container(

@@ -16,6 +16,7 @@ import '../../services/wallet_service.dart';
 import '../../services/language_controller.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/language_utils.dart';
+import '../../utils/sensitive_access_guard.dart';
 
 import '../../widgets/bottom_navigation.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -318,6 +319,14 @@ class _DecentralizedProfileScreenState
 
   Future<void> _confirmReset() async {
     final l = AppLocalizations.of(context);
+    final authenticated = await SensitiveAccessGuard.verify(
+      context,
+      reason: 'Confirm to reset app data',
+    );
+    if (!authenticated || !mounted) {
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -390,6 +399,17 @@ class _DecentralizedProfileScreenState
     }
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/welcome', (route) => false);
+  }
+
+  Future<void> _openSeedPhraseBackup() async {
+    final authenticated = await SensitiveAccessGuard.verify(
+      context,
+      reason: 'Authenticate to access seed phrase backup',
+    );
+    if (!authenticated || !mounted) {
+      return;
+    }
+    await Navigator.pushNamed(context, '/backup-seed-phrase');
   }
 
   @override
@@ -511,10 +531,7 @@ class _DecentralizedProfileScreenState
                           title: l.seedPhraseBackup,
                           subtitle: l.actionRequired,
                           attention: true,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/backup-seed-phrase',
-                          ),
+                          onTap: _openSeedPhraseBackup,
                         ),
                       ],
                     ),

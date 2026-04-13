@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../constants/app_colors.dart';
-import '../../services/auth_service.dart';
+import '../../services/storage_service.dart';
+import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
 
 class TwoFactorSetupScreen extends StatefulWidget {
@@ -15,14 +14,12 @@ class TwoFactorSetupScreen extends StatefulWidget {
 }
 
 class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
-  final AuthService _authService = AuthService();
-  final TextEditingController _codeController = TextEditingController();
+  final StorageService _storage = StorageService();
 
   bool _loading = true;
   bool _submitting = false;
   bool _enabled = false;
-  String? _secret;
-  String? _otpauthUrl;
+  bool _hasPasscode = false;
 
   @override
   void initState() {
@@ -30,186 +27,56 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
     _bootstrap();
   }
 
-  @override
-  void dispose() {
-    _codeController.dispose();
-    super.dispose();
-  }
-
   Future<void> _bootstrap() async {
     setState(() => _loading = true);
-    final status = await _authService.fetchTwoFactorStatus();
+    final enabled = await _storage.isTwoFactorEnabled();
+    final hasPasscode = await _storage.hasPasscode();
     if (!mounted) return;
+    setState(() {
+      _enabled = enabled;
+      _hasPasscode = hasPasscode;
+      _loading = false;
+    });
+  }
 
-    if (status['success'] != true) {
-      setState(() => _loading = false);
+  Future<void> _setWalletShield2fa(bool enabled) async {
+    if (_submitting) {
+      return;
+    }
+
+    final hasPasscode = await _storage.hasPasscode();
+    if (!hasPasscode) {
       ToastUtils.showError(
-        status['error']?.toString() ?? 'Unable to load your 2FA status.',
+        'Set a wallet passcode first before enabling Wallet Shield 2FA.',
       );
       return;
     }
 
-    final enabled = status['enabled'] == true;
-    if (enabled) {
-      setState(() {
-        _enabled = true;
-        _loading = false;
-      });
+    setState(() => _submitting = true);
+    final authenticated = await SensitiveAccessGuard.verify(
+      context,
+      reason: enabled
+          ? 'Confirm to enable Wallet Shield 2FA'
+          : 'Confirm to disable Wallet Shield 2FA',
+    );
+
+    if (!mounted) return;
+
+    if (!authenticated) {
+      setState(() => _submitting = false);
       return;
     }
 
-    final setup = await _authService.beginTwoFactorSetup();
-    if (!mounted) return;
-
-    final setupSucceeded = setup['success'] == true;
-    final setupSecret =
-        setup['secret']?.toString() ?? setup['base32Secret']?.toString();
-    final setupOtpAuthUrl =
-        setup['otpauth_url']?.toString() ??
-        setup['otpauthUrl']?.toString() ??
-        setup['otpAuthUrl']?.toString();
-
+    await _storage.setTwoFactorEnabled(enabled);
     setState(() {
-      _enabled = false;
-      _loading = false;
-      if (setupSucceeded) {
-        _secret = setupSecret;
-        _otpauthUrl = setupOtpAuthUrl;
-      }
+      _enabled = enabled;
+      _submitting = false;
     });
 
-    if (!setupSucceeded) {
-      ToastUtils.showError(
-        setup['error']?.toString() ??
-            'Unable to start Owllet Shield 2FA right now.',
-      );
-      return;
-    }
-
-    if ((_secret ?? '').isEmpty || (_otpauthUrl ?? '').isEmpty) {
-      ToastUtils.showError(
-        'Unable to start Owllet Shield 2FA right now. Please try again.',
-      );
-    }
-  }
-
-  Future<void> _copySecret() async {
-    final secret = _secret;
-    if (secret == null || secret.isEmpty) return;
-    await Clipboard.setData(ClipboardData(text: secret));
-    ToastUtils.showSuccess('Authenticator secret copied.');
-  }
-
-  Future<void> _activate() async {
-    if ((_secret ?? '').isEmpty || (_otpauthUrl ?? '').isEmpty) {
-      ToastUtils.showError(
-        '2FA setup is incomplete. Re-open this screen and scan again.',
-      );
-      return;
-    }
-
-    final code = _codeController.text.trim();
-    if (code.length < 6) {
-      ToastUtils.showError('Enter the 6-digit code from your authenticator.');
-      return;
-    }
-
-    setState(() => _submitting = true);
-    final result = await _authService.verifyTwoFactorSetup(code: code);
-    if (!mounted) return;
-    setState(() => _submitting = false);
-
-    if (result['success'] == true) {
-      setState(() => _enabled = true);
-      ToastUtils.showSuccess('Owllet Shield 2FA is now active.');
-      return;
-    }
-
-    ToastUtils.showError(
-      result['error']?.toString() ?? 'Unable to activate 2FA right now.',
-    );
-  }
-
-  Future<void> _disable() async {
-    final controller = TextEditingController();
-    final code = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        title: Text(
-          'Disable Owllet Shield 2FA',
-          style: GoogleFonts.outfit(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(6),
-          ],
-          style: GoogleFonts.outfit(color: AppColors.textPrimary),
-          decoration: InputDecoration(
-            counterText: '',
-            hintText: 'Enter current 6-digit code',
-            hintStyle: GoogleFonts.outfit(color: AppColors.textSecondary),
-            filled: true,
-            fillColor: AppColors.inputBackground,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.divider),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.divider),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.accentRed),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.outfit(color: AppColors.textSecondary),
-            ),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.accentRed),
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: Text(
-              'Disable',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-
-    if (code == null || code.isEmpty) return;
-
-    setState(() => _submitting = true);
-    final result = await _authService.disableTwoFactor(code: code);
-    if (!mounted) return;
-    setState(() => _submitting = false);
-
-    if (result['success'] == true) {
-      _codeController.clear();
-      ToastUtils.showSuccess('Two-factor authentication has been disabled.');
-      await _bootstrap();
-      return;
-    }
-
-    ToastUtils.showError(
-      result['error']?.toString() ?? 'Unable to disable 2FA right now.',
+    ToastUtils.showSuccess(
+      enabled
+          ? 'Wallet Shield 2FA is now enabled.'
+          : 'Wallet Shield 2FA has been disabled.',
     );
   }
 
@@ -235,265 +102,195 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardDark,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1B0A0D),
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            alignment: Alignment.center,
-                            child: Image.asset(
-                              'assets/images/splash_logo.png',
-                              width: 48,
-                              height: 48,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          _enabled
-                              ? 'Owllet Shield 2FA is enabled'
-                              : 'Protect your sign-in with Owllet Shield 2FA',
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textPrimary,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            height: 1.15,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          _enabled
-                              ? 'Every sign-in will now require a 6-digit authenticator code in addition to your password.'
-                              : 'Scan the QR code with Google Authenticator, Microsoft Authenticator, Authy, or any TOTP-compatible app, then enter the 6-digit code to activate it.',
-                          style: GoogleFonts.outfit(
-                            color: AppColors.textSecondary,
-                            fontSize: 15,
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildHeroCard(),
+                  const SizedBox(height: 16),
+                  _buildWhatIsProtectedCard(),
+                  const SizedBox(height: 16),
+                  _buildStatusCard(),
                   const SizedBox(height: 18),
-                  if (_enabled) _buildEnabledState() else _buildSetupState(),
+                  _PrimaryActionButton(
+                    label: _enabled
+                        ? 'Disable Wallet Shield 2FA'
+                        : 'Enable Wallet Shield 2FA',
+                    loading: _submitting,
+                    onPressed: () => _setWalletShield2fa(!_enabled),
+                  ),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildSetupState() {
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-          ),
-          child: Column(
-            children: [
-              if (_otpauthUrl != null && _otpauthUrl!.isNotEmpty)
-                QrImageView(
-                  data: _otpauthUrl!,
-                  backgroundColor: Colors.white,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: Colors.black,
-                  ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.square,
-                    color: Colors.black,
-                  ),
-                  size: 192,
-                ),
-              const SizedBox(height: 18),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.inputBackground,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _secret ?? '--',
-                        style: GoogleFonts.robotoMono(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _copySecret,
-                      icon: const Icon(
-                        Icons.copy_outlined,
-                        color: AppColors.accentRed,
-                        size: 18,
-                      ),
-                      label: Text(
-                        'Copy',
-                        style: GoogleFonts.outfit(
-                          color: AppColors.accentRed,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+  Widget _buildHeroCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A0A0A),
+                borderRadius: BorderRadius.circular(22),
               ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _codeController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(6),
-                ],
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 4,
-                ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: '000000',
-                  hintStyle: GoogleFonts.outfit(
-                    color: AppColors.textSecondary,
-                    fontSize: 22,
-                    letterSpacing: 4,
-                  ),
-                  filled: true,
-                  fillColor: AppColors.inputBackground,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: AppColors.divider),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: AppColors.divider),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: AppColors.accentRed),
-                  ),
-                ),
+              alignment: Alignment.center,
+              child: Image.asset(
+                'assets/images/launcher_icon.png',
+                width: 46,
+                height: 46,
+                fit: BoxFit.contain,
               ),
-              const SizedBox(height: 18),
-              _PrimaryActionButton(
-                label: 'Verify & Activate',
-                loading: _submitting,
-                onPressed: _activate,
-              ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          const SizedBox(height: 20),
+          Text(
+            _enabled
+                ? 'Wallet Shield 2FA is enabled'
+                : 'Protect critical wallet actions with Wallet Shield 2FA',
+            style: GoogleFonts.outfit(
+              color: AppColors.textPrimary,
+              fontSize: 30,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
+            ),
           ),
-          child: Text(
-            'Use an authenticator app you trust. Keep your recovery options in a safe place. If you lose access to 2FA and your device, account recovery may take longer.',
+          const SizedBox(height: 10),
+          Text(
+            'Wallet Shield 2FA adds an extra security confirmation for sensitive wallet actions. This is wallet protection, not website sign-in protection.',
             style: GoogleFonts.outfit(
               color: AppColors.textSecondary,
-              fontSize: 14,
-              height: 1.5,
+              fontSize: 15,
+              height: 1.45,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildEnabledState() {
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+  Widget _buildWhatIsProtectedCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Protected actions',
+            style: GoogleFonts.outfit(
+              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2A0D12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.verified_user_outlined,
-                  color: AppColors.accentRed,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Authenticator App Active',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Your Owllet account requires a 6-digit authenticator code when signing in.',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          const SizedBox(height: 10),
+          _bullet('Reset app and wallet removal actions'),
+          _bullet('Change password and security settings'),
+          _bullet('View seed phrase and private keys'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusCard() {
+    final canEnable = _hasPasscode;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: _enabled
+                  ? AppColors.accentRed.withValues(alpha: 0.2)
+                  : Colors.white.withValues(alpha: 0.06),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              _enabled ? Icons.verified_user_rounded : Icons.security_rounded,
+              color: _enabled ? AppColors.accentRed : AppColors.textSecondary,
+            ),
           ),
-        ),
-        const SizedBox(height: 18),
-        _PrimaryActionButton(
-          label: 'Disable 2FA',
-          loading: _submitting,
-          onPressed: _disable,
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _enabled ? 'Enabled' : 'Not enabled',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  canEnable
+                      ? 'Passcode found. Wallet Shield 2FA can be used.'
+                      : 'Set a wallet passcode first to use Wallet Shield 2FA.',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(top: 8),
+            decoration: const BoxDecoration(
+              color: AppColors.accentRed,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.outfit(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
