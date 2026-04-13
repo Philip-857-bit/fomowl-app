@@ -86,6 +86,9 @@ class _SwapScreenState extends State<SwapScreen> {
       final tokens = _visibleTokens(blockchain.tokens);
       _syncSelectedTokens(tokens);
     }
+    if (_activeTab == SwapTab.limit) {
+      _ensureLimitEligiblePair();
+    }
   }
 
   bool _isCalculating = false;
@@ -113,6 +116,104 @@ class _SwapScreenState extends State<SwapScreen> {
       return outAmount.toStringAsFixed(6);
     }
     return '1 $from $_priceSeparator ${outAmount.toStringAsFixed(6)} $to';
+  }
+
+  List<Token> _limitOrderEligibleTokens(List<Token> tokens) {
+    return tokens
+        .where((token) => _tokenRequiresApproval(token))
+        .toList(growable: false);
+  }
+
+  bool _ensureLimitEligiblePair() {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final eligible = _limitOrderEligibleTokens(_visibleTokens(blockchain.tokens));
+    if (eligible.isEmpty) {
+      return false;
+    }
+
+    final currentFrom = _fromToken;
+    final currentTo = _toToken;
+    Token resolvedFrom =
+        currentFrom != null && _tokenRequiresApproval(currentFrom)
+        ? currentFrom
+        : eligible.first;
+    Token resolvedTo = currentTo != null && _tokenRequiresApproval(currentTo)
+        ? currentTo
+        : eligible.first;
+
+    if (_tokensAreIdentical(resolvedFrom, resolvedTo)) {
+      final alternative = eligible
+          .where((token) => !_tokensAreIdentical(token, resolvedFrom))
+          .toList(growable: false);
+      if (alternative.isNotEmpty) {
+        resolvedTo = alternative.first;
+      }
+    }
+
+    final changed =
+        !_tokensAreIdentical(resolvedFrom, currentFrom) ||
+        !_tokensAreIdentical(resolvedTo, currentTo);
+    if (!changed) {
+      return false;
+    }
+
+    _fromToken = resolvedFrom;
+    _toToken = resolvedTo;
+    _selectedPercentage = -1;
+    _fromController.clear();
+    _toController.clear();
+    _limitPriceController.clear();
+    return true;
+  }
+
+  String _limitButtonLabel() {
+    if (_isSubmittingLimit) {
+      return 'Submitting...';
+    }
+    if ((_walletAddress ?? '').isEmpty) {
+      return 'Connect Wallet';
+    }
+    if (_fromToken == null || _toToken == null) {
+      return 'Select Tokens';
+    }
+    if (_tokensAreIdentical(_fromToken, _toToken)) {
+      return 'Choose Different Tokens';
+    }
+    if (!_tokenRequiresApproval(_fromToken!) || !_tokenRequiresApproval(_toToken!)) {
+      return 'Use ERC-20 Tokens';
+    }
+    if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
+      return 'Enter Sell Amount';
+    }
+    if (_parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
+      return 'Set Target Price';
+    }
+    return 'Place Limit Order';
+  }
+
+  String _limitStatusMessage() {
+    if ((_walletAddress ?? '').isEmpty) {
+      return 'Connect your wallet to create limit orders.';
+    }
+    if (_fromToken == null || _toToken == null) {
+      return 'Select both sell and receive tokens to continue.';
+    }
+    if (_tokensAreIdentical(_fromToken, _toToken)) {
+      return 'Choose two different tokens for the limit pair.';
+    }
+    if (!_tokenRequiresApproval(_fromToken!) || !_tokenRequiresApproval(_toToken!)) {
+      return 'Limit orders currently support ERC-20 token pairs only.';
+    }
+    if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
+      return 'Enter how much you want to sell.';
+    }
+    if (_parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
+      return 'Set the execution price that should trigger this order.';
+    }
+    if (_isSubmittingLimit) {
+      return 'Submitting your signed limit order to the backend...';
+    }
+    return 'Limit orders execute when the target price is hit. Fees are only deducted on successful execution.';
   }
 
   bool get _isGaslessSupported {
@@ -282,7 +383,14 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Future<void> _showTokenSelector(bool isFrom) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final tokens = _visibleTokens(blockchain.tokens);
+    final allTokens = _visibleTokens(blockchain.tokens);
+    final tokens = _activeTab == SwapTab.limit
+        ? _limitOrderEligibleTokens(allTokens)
+        : allTokens;
+    if (tokens.isEmpty) {
+      _showError('No ERC-20 tokens available for limit orders on this network.');
+      return;
+    }
     final selectedToken = await showDialog<Token>(
       context: context,
       builder: (ctx) => TokenSelectorDialog(
@@ -1949,6 +2057,8 @@ class _SwapScreenState extends State<SwapScreen> {
         !_tokensAreIdentical(_fromToken, _toToken) &&
         !_isGaslessSourceUnsupported() &&
         !swapBusy;
+    final limitButtonLabel = _limitButtonLabel();
+    final limitStatusMessage = _limitStatusMessage();
 
     String? buttonLabel;
     if (hasQuote && !hasBalance) {
@@ -1989,7 +2099,12 @@ class _SwapScreenState extends State<SwapScreen> {
                       activeTab: _activeTab,
                       onChanged: (tab) {
                         if (_activeTab == tab) return;
-                        setState(() => _activeTab = tab);
+                        setState(() {
+                          _activeTab = tab;
+                          if (tab == SwapTab.limit) {
+                            _ensureLimitEligiblePair();
+                          }
+                        });
                         if (tab == SwapTab.swap) {
                           _getQuote();
                         } else {
@@ -2062,6 +2177,8 @@ class _SwapScreenState extends State<SwapScreen> {
                         onSelectToToken: () => _showTokenSelector(false),
                         limitBusy: _isSubmittingLimit,
                         limitEnabled: _limitEnabled(),
+                        limitButtonLabel: limitButtonLabel,
+                        limitStatusMessage: limitStatusMessage,
                         limitPriceController: _limitPriceController,
                         onLimitPriceChanged: (_) => _updateLimitPreview(),
                         priceSeparator: _priceSeparator,
@@ -2107,7 +2224,8 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _limitEnabled() {
     final fromAmount = _parseDecimalAmount(_fromController.text);
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
-    return fromAmount > Decimal.zero &&
+    return (_walletAddress ?? '').isNotEmpty &&
+      fromAmount > Decimal.zero &&
         limitPrice > Decimal.zero &&
         !_tokensAreIdentical(_fromToken, _toToken) &&
         _fromToken != null &&
