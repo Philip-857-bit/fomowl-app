@@ -126,7 +126,9 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool _ensureLimitEligiblePair() {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final eligible = _limitOrderEligibleTokens(_visibleTokens(blockchain.tokens));
+    final eligible = _limitOrderEligibleTokens(
+      _visibleTokens(blockchain.tokens),
+    );
     if (eligible.isEmpty) {
       return false;
     }
@@ -179,7 +181,8 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_tokensAreIdentical(_fromToken, _toToken)) {
       return 'Choose Different Tokens';
     }
-    if (!_tokenRequiresApproval(_fromToken!) || !_tokenRequiresApproval(_toToken!)) {
+    if (!_tokenRequiresApproval(_fromToken!) ||
+        !_tokenRequiresApproval(_toToken!)) {
       return 'Use ERC-20 Tokens';
     }
     if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
@@ -201,7 +204,8 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_tokensAreIdentical(_fromToken, _toToken)) {
       return 'Choose two different tokens for the limit pair.';
     }
-    if (!_tokenRequiresApproval(_fromToken!) || !_tokenRequiresApproval(_toToken!)) {
+    if (!_tokenRequiresApproval(_fromToken!) ||
+        !_tokenRequiresApproval(_toToken!)) {
       return 'Limit orders currently support ERC-20 token pairs only.';
     }
     if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
@@ -388,7 +392,9 @@ class _SwapScreenState extends State<SwapScreen> {
         ? _limitOrderEligibleTokens(allTokens)
         : allTokens;
     if (tokens.isEmpty) {
-      _showError('No ERC-20 tokens available for limit orders on this network.');
+      _showError(
+        'No ERC-20 tokens available for limit orders on this network.',
+      );
       return;
     }
     final selectedToken = await showDialog<Token>(
@@ -2225,7 +2231,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final fromAmount = _parseDecimalAmount(_fromController.text);
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
     return (_walletAddress ?? '').isNotEmpty &&
-      fromAmount > Decimal.zero &&
+        fromAmount > Decimal.zero &&
         limitPrice > Decimal.zero &&
         !_tokensAreIdentical(_fromToken, _toToken) &&
         _fromToken != null &&
