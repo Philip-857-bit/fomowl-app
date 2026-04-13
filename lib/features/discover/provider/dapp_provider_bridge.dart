@@ -43,8 +43,8 @@ class DappProviderBridge {
       return cached;
     }
 
-    final loader =
-        _providerInjectionScriptInFlight ??= _buildProviderInjectionScript();
+    final loader = _providerInjectionScriptInFlight ??=
+        _buildProviderInjectionScript();
     final script = await loader;
     _providerInjectionScriptCache = script;
     if (identical(_providerInjectionScriptInFlight, loader)) {

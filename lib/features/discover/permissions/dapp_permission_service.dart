@@ -86,7 +86,9 @@ class DappPermissionService {
     final filtered = (await loadPermissions())
         .where((record) => record.walletAddress == normalizedWallet)
         .toList(growable: false);
-    filtered.sort((left, right) => right.connectedAt.compareTo(left.connectedAt));
+    filtered.sort(
+      (left, right) => right.connectedAt.compareTo(left.connectedAt),
+    );
     return filtered;
   }
 

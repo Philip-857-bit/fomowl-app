@@ -162,9 +162,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                 if (widget.sessionController.canInjectProviderFor(next)) {
                   final providerScript = await widget.providerBridge
                       .providerInjectionScript();
-                  await controller.evaluateJavascript(
-                    source: providerScript,
-                  );
+                  await controller.evaluateJavascript(source: providerScript);
                   await controller.evaluateJavascript(
                     source: await widget.providerBridge
                         .buildProviderStateSyncScript(

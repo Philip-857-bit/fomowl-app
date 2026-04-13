@@ -182,9 +182,7 @@ class _TwoFactorSetupScreenState extends State<TwoFactorSetupScreen> {
             ),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accentRed,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.accentRed),
             onPressed: () => Navigator.of(context).pop(controller.text.trim()),
             child: Text(
               'Disable',
