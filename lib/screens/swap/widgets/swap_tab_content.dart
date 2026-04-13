@@ -161,6 +161,8 @@ class LimitTabContent extends StatelessWidget {
   final VoidCallback onSelectToToken;
   final bool limitBusy;
   final bool limitEnabled;
+  final String limitButtonLabel;
+  final String limitStatusMessage;
   final TextEditingController limitPriceController;
   final ValueChanged<String> onLimitPriceChanged;
   final String priceSeparator;
@@ -195,6 +197,8 @@ class LimitTabContent extends StatelessWidget {
     required this.onSelectToToken,
     required this.limitBusy,
     required this.limitEnabled,
+    required this.limitButtonLabel,
+    required this.limitStatusMessage,
     required this.limitPriceController,
     required this.onLimitPriceChanged,
     required this.priceSeparator,
@@ -349,11 +353,11 @@ class LimitTabContent extends StatelessWidget {
           enabled: limitEnabled,
           isBusy: limitBusy,
           onPressed: onSubmitLimit,
-          label: 'Place Limit Order',
+          label: limitButtonLabel,
         ),
         const SizedBox(height: 12),
         Text(
-          'Limit orders execute when the target price is hit. Fees are only deducted on successful execution.',
+          limitStatusMessage,
           textAlign: TextAlign.center,
           style: GoogleFonts.outfit(
             fontSize: 12,

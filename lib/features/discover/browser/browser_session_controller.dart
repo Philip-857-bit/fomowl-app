@@ -191,6 +191,13 @@ class BrowserSessionController extends ChangeNotifier {
     if (!isDiscoverInjectableUri(uri)) {
       return false;
     }
+
+    // Allow provider availability for secure browser sessions.
+    // Account exposure is still gated per-origin by explicit eth_requestAccounts approval.
+    if (_viewState == DiscoverViewState.browser) {
+      return true;
+    }
+
     final origin = normalizeOriginFromUri(uri);
     if (findDappByOrigin(origin) != null) {
       return true;
