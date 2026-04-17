@@ -851,7 +851,10 @@ class DappProviderBridge {
     List<dynamic> params,
   ) async {
     if (!_isForwardableRpcMethod(method)) {
-      throw _ProviderBridgeException(4200, 'Unsupported provider method: $method');
+      throw _ProviderBridgeException(
+        4200,
+        'Unsupported provider method: $method',
+      );
     }
 
     final blockchain = context.read<BlockchainService>();
@@ -869,10 +872,7 @@ class DappProviderBridge {
     );
     final rpcError = rpcService.lastError;
     if (result == null && rpcError != null) {
-      throw _ProviderBridgeException(
-        rpcError.code ?? -32603,
-        rpcError.message,
-      );
+      throw _ProviderBridgeException(rpcError.code ?? -32603, rpcError.message);
     }
     return result;
   }

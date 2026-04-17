@@ -140,8 +140,9 @@ class HomePortfolioRepository {
     if (current.isCertified != next.isCertified) {
       return next.isCertified;
     }
-    final valueComparison =
-        next.totalValueUsdDecimal.compareTo(current.totalValueUsdDecimal);
+    final valueComparison = next.totalValueUsdDecimal.compareTo(
+      current.totalValueUsdDecimal,
+    );
     if (valueComparison != 0) {
       return valueComparison > 0;
     }
