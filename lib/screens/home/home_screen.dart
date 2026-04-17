@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
@@ -23,17 +25,20 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
+import 'home_banner_item.dart';
+import 'home_banner_service.dart';
 import 'home_portfolio_data.dart';
 import 'home_portfolio_api_service.dart';
 import 'home_portfolio_metrics.dart';
+import 'home_portfolio_metrics_calculator.dart';
 import 'home_portfolio_repository.dart';
 import 'home_portfolio_snapshot_service.dart';
 import 'widgets/balance_card.dart';
 import 'widgets/connectivity_banner.dart';
+import 'widgets/home_promo_carousel.dart';
 import 'widgets/home_top_bar.dart';
 import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
-import 'widgets/social_banner_card.dart';
 import 'widgets/tokens_section.dart';
 import '../../services/home_snapshot_service.dart';
 
@@ -50,6 +55,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   static const String _livePriceScope = 'home_screen';
+  static const String _homeShowcaseSeenKey = 'home_showcase_seen_v1';
   List<Token> _tokens = [];
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
@@ -60,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
       PushNotificationRegistrationService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   final HomeSnapshotService _snapshotService = HomeSnapshotService();
+  final HomeBannerService _homeBannerService = HomeBannerService();
   final HomePortfolioRepository _portfolioRepository =
       const HomePortfolioRepository();
   final HomePortfolioApiService _portfolioApiService =
@@ -91,12 +98,22 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _clipboardChecked = false;
   bool _isUsingCachedData = false;
   int _deferredLoadGeneration = 0;
+  bool _isLoadingHomeBanners = false;
+  bool _homeShowcaseScheduled = false;
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
   HomeAssetTab _selectedAssetTab = HomeAssetTab.portfolio;
-  DateTime? _latestLiveBalanceAt;
   String? _latestLiveBalanceWallet;
+  List<HomeBannerItem> _homeBanners = const [];
+  int _homeBannerIndex = 0;
+  Timer? _homeBannerRotationTimer;
+  final PageController _homeBannerPageController = PageController();
+  final GlobalKey _walletSwitcherShowcaseKey = GlobalKey();
+  final GlobalKey _balanceShowcaseKey = GlobalKey();
+  final GlobalKey _quickActionsShowcaseKey = GlobalKey();
+  final GlobalKey _promoCarouselShowcaseKey = GlobalKey();
+  final GlobalKey _assetTabsShowcaseKey = GlobalKey();
 
   @override
   void initState() {
@@ -121,7 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       unawaited(_screenCaptureGuard.disableProtection());
       unawaited(_checkConnectivity());
-      unawaited(_loadWalletData());
+      unawaited(_loadWalletData(forcePortfolioSync: true));
+      unawaited(_loadHomeBanners());
     });
   }
 
@@ -144,6 +162,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _deferredLoadGeneration++;
+    _homeBannerRotationTimer?.cancel();
+    _homeBannerPageController.dispose();
+    _homeBannerService.dispose();
     _blockchain?.clearLivePriceTracking(scope: _livePriceScope);
     _blockchain?.removeListener(_handleBlockchainChange);
     _tokenVisibilitySubscription?.cancel();
@@ -199,6 +220,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _applyPortfolioData(HomePortfolioData data) {
     _portfolioSections = List<HomePortfolioSection>.from(data.sections);
     _portfolioMetrics = data.metrics;
+  }
+
+  List<Token> _displayableTokens(List<Token> tokens) {
+    return _portfolioRepository.prepareVisibleTokens(tokens, _hiddenTokenKeys);
   }
 
   Future<HomePortfolioData> _buildPortfolioDataFromSections(
@@ -270,11 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (candidate) => candidate.chainId == _lastChainId,
       orElse: () => _blockchain!.activeChain,
     );
-    final visibleTokens =
-        _tokens.where((token) => !_isTokenHidden(token)).toList()..sort(
-          (left, right) =>
-              right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
-        );
+    final visibleTokens = _displayableTokens(_tokens);
     if (visibleTokens.isEmpty) {
       return HomePortfolioData.empty();
     }
@@ -295,16 +316,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoadingPortfolio = true);
 
     try {
-      final snapshot = await _portfolioApiService.fetchPortfolio(
-        walletAddress,
-        sync: sync,
+      final snapshot = _mergePortfolioSnapshotWithLiveChain(
+        await _portfolioApiService.fetchPortfolio(walletAddress, sync: sync),
       );
-      if (!_shouldAcceptPortfolioSnapshot(snapshot, isUsingCachedData: false)) {
-        if (mounted) {
-          setState(() => _isLoadingPortfolio = false);
-        }
-        return;
-      }
       if (!mounted) {
         return;
       }
@@ -339,23 +353,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  bool _shouldAcceptPortfolioSnapshot(
-    HomeAggregatedPortfolioSnapshot snapshot, {
-    required bool isUsingCachedData,
-  }) {
-    if (isUsingCachedData) {
-      return true;
+  HomeAggregatedPortfolioSnapshot _mergePortfolioSnapshotWithLiveChain(
+    HomeAggregatedPortfolioSnapshot snapshot,
+  ) {
+    final blockchain = _blockchain;
+    final currentChainId = _lastChainId;
+    final latestLiveWallet = _latestLiveBalanceWallet;
+    if (blockchain == null ||
+        currentChainId == null ||
+        latestLiveWallet == null ||
+        snapshot.walletAddress.trim().toLowerCase() != latestLiveWallet) {
+      return snapshot;
     }
-    final latestLiveBalanceAt = _latestLiveBalanceAt;
-    if (latestLiveBalanceAt == null) {
-      return true;
+
+    final chain = blockchain.allChains.firstWhere(
+      (candidate) => candidate.chainId == currentChainId,
+      orElse: () => blockchain.activeChain,
+    );
+    final mergedSections = snapshot.sections
+        .where((section) => section.chain.chainId != currentChainId)
+        .toList(growable: true);
+    final liveTokens = _displayableTokens(_tokens);
+    if (liveTokens.isNotEmpty) {
+      mergedSections.add(
+        HomePortfolioSection(chain: chain, tokens: liveTokens),
+      );
     }
-    final snapshotWallet = snapshot.walletAddress.trim().toLowerCase();
-    final latestWallet = _latestLiveBalanceWallet;
-    if (latestWallet == null || latestWallet != snapshotWallet) {
-      return true;
-    }
-    return !snapshot.timestamp.toUtc().isBefore(latestLiveBalanceAt.toUtc());
+    mergedSections.sort(
+      (left, right) => right.totalBalanceUsd.compareTo(left.totalBalanceUsd),
+    );
+
+    return snapshot.copyWith(sections: mergedSections);
   }
 
   Future<void> _upsertLiveChainPortfolioSection(List<Token> chainTokens) async {
@@ -370,30 +398,26 @@ class _HomeScreenState extends State<HomeScreen> {
       orElse: () => blockchain.activeChain,
     );
 
-    final visibleTokens =
-        chainTokens
-            .where((token) => token.balance > 0 || token.totalValueUsd > 0)
-            .toList()
-          ..sort(
-            (left, right) =>
-                right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
-          );
-    if (visibleTokens.isEmpty) {
-      return;
-    }
-
     final nextSections = List<HomePortfolioSection>.from(_portfolioRawSections);
-    final nextSection = HomePortfolioSection(
-      chain: sectionChain,
-      tokens: visibleTokens,
-    );
     final existingIndex = nextSections.indexWhere(
       (section) => section.chain.chainId == currentChainId,
     );
-    if (existingIndex >= 0) {
-      nextSections[existingIndex] = nextSection;
+    final visibleTokens = _displayableTokens(chainTokens);
+
+    if (visibleTokens.isEmpty) {
+      if (existingIndex >= 0) {
+        nextSections.removeAt(existingIndex);
+      }
     } else {
-      nextSections.add(nextSection);
+      final nextSection = HomePortfolioSection(
+        chain: sectionChain,
+        tokens: visibleTokens,
+      );
+      if (existingIndex >= 0) {
+        nextSections[existingIndex] = nextSection;
+      } else {
+        nextSections.add(nextSection);
+      }
     }
 
     final data = await _buildPortfolioDataFromSections(nextSections);
@@ -426,9 +450,12 @@ class _HomeScreenState extends State<HomeScreen> {
             walletAddress,
             chainId: chain.chainId,
           );
-          final visibleTokens = tokens
-              .where((token) => token.balance > 0 || token.totalValueUsd > 0)
-              .toList();
+          final hiddenTokenKeys = await _tokenVisibilityService
+              .loadHiddenTokens(chain.chainId);
+          final visibleTokens = _portfolioRepository.prepareVisibleTokens(
+            tokens,
+            hiddenTokenKeys,
+          );
           if (visibleTokens.isEmpty) {
             return null;
           }
@@ -779,11 +806,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final realTokens = await blockchain.fetchWalletTokens(address);
 
       if (mounted) {
-        final now = DateTime.now().toUtc();
         setState(() {
           _replaceDisplayedTokens(realTokens, isUsingCachedData: false);
           _isLoadingBalances = false;
-          _latestLiveBalanceAt = now;
           _latestLiveBalanceWallet = address.toLowerCase();
         });
         blockchain.setLivePriceTrackingForTokens(
@@ -887,7 +912,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       await _applyPortfolioSnapshot(address);
       _fetchRealBalances(address);
-      unawaited(_fetchPortfolioData(address, sync: false));
+      unawaited(_fetchPortfolioData(address, sync: true));
       _scheduleDeferredHomeTasks(address);
     });
   }
@@ -994,9 +1019,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String get _formattedTotalBalance {
     if (!_balanceVisible) return '******';
-    return ValueFormatter.formatCurrencyWithGrouping(
-      _portfolioMetrics.totalBalanceUsd,
-    );
+    final metrics = _selectedAssetTab == HomeAssetTab.tokens
+        ? HomePortfolioMetricsCalculator.fromTokens(_displayableTokens(_tokens))
+        : _portfolioMetrics;
+    return ValueFormatter.formatCurrencyWithGrouping(metrics.totalBalanceUsd);
   }
 
   String? _balanceStatusText(AppLocalizations l) {
@@ -1018,13 +1044,93 @@ class _HomeScreenState extends State<HomeScreen> {
     return l.balanceUpdatedAt(time);
   }
 
-  Future<void> _openSocialLink() async {
-    final uri = Uri.parse('https://x.com/fomowlhq');
+  Future<void> _openHomeBanner(HomeBannerItem banner) async {
+    final uri = Uri.tryParse(banner.linkUrl);
+    if (uri == null) {
+      return;
+    }
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!mounted) return;
     if (!opened) {
-      ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink('X'));
+      ToastUtils.showError(
+        AppLocalizations.of(context).unableToOpenLink(banner.title),
+      );
     }
+  }
+
+  Future<void> _loadHomeBanners() async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _isLoadingHomeBanners = true);
+    try {
+      final banners = await _homeBannerService.fetchHomeBanners();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _homeBanners = banners.take(4).toList(growable: false);
+        _homeBannerIndex = 0;
+        _isLoadingHomeBanners = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _homeBanners = const [];
+        _homeBannerIndex = 0;
+        _isLoadingHomeBanners = false;
+      });
+    }
+    _configureHomeBannerRotation();
+  }
+
+  void _configureHomeBannerRotation() {
+    _homeBannerRotationTimer?.cancel();
+    if (_homeBanners.length < 2) {
+      return;
+    }
+
+    _homeBannerRotationTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!mounted || !_homeBannerPageController.hasClients) {
+        return;
+      }
+      final nextIndex = (_homeBannerIndex + 1) % _homeBanners.length;
+      _homeBannerPageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  Future<void> _startHomeShowcaseIfNeeded() async {
+    if (_homeShowcaseScheduled || !widget.showBottomNavigation || !mounted) {
+      return;
+    }
+    _homeShowcaseScheduled = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenShowcase = prefs.getBool(_homeShowcaseSeenKey) ?? false;
+    if (hasSeenShowcase || !mounted) {
+      return;
+    }
+    await prefs.setBool(_homeShowcaseSeenKey, true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      ShowcaseView.get().startShowCase(<GlobalKey>[
+        _walletSwitcherShowcaseKey,
+        _balanceShowcaseKey,
+        _quickActionsShowcaseKey,
+        _promoCarouselShowcaseKey,
+        _assetTabsShowcaseKey,
+      ]);
+    });
   }
 
   Future<void> _openTokenManager() async {
@@ -1072,6 +1178,9 @@ class _HomeScreenState extends State<HomeScreen> {
     context.select<CurrencyController, String>((c) => c.currencyCode);
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
+    if (!_isLoading) {
+      unawaited(_startHomeShowcaseIfNeeded());
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isLoading
@@ -1081,26 +1190,36 @@ class _HomeScreenState extends State<HomeScreen> {
           : SafeArea(
               child: Column(
                 children: [
-                  HomeTopBar(
-                    walletName: _walletName ?? l.mainWallet,
-                    onWalletTap: () async {
-                      await Navigator.pushNamed(context, '/wallets');
-                      await _loadWalletData();
-                    },
-                    chainSymbol: blockchain.activeChain.symbol,
-                    chainLogoUrl: blockchain.activeChain.logoUrl,
-                    onChainTap: _showNetworkSelector,
-                    showNotificationDot: _hasUnreadNotifications,
-                    onNotificationsTap: () async {
-                      await Navigator.pushNamed(context, '/notifications');
-                      await _refreshNotificationDot();
-                    },
+                  Showcase(
+                    key: _walletSwitcherShowcaseKey,
+                    title: 'Wallet and network',
+                    description:
+                        'Switch wallets, confirm the active chain, and reach notifications from here.',
+                    child: HomeTopBar(
+                      walletName: _walletName ?? l.mainWallet,
+                      onWalletTap: () async {
+                        await Navigator.pushNamed(context, '/wallets');
+                        await _loadWalletData();
+                      },
+                      chainSymbol: blockchain.activeChain.symbol,
+                      chainLogoUrl: blockchain.activeChain.logoUrl,
+                      onChainTap: _showNetworkSelector,
+                      showNotificationDot: _hasUnreadNotifications,
+                      onNotificationsTap: () async {
+                        await Navigator.pushNamed(context, '/notifications');
+                        await _refreshNotificationDot();
+                      },
+                    ),
                   ),
                   Expanded(
                     child: RefreshIndicator(
                       color: AppColors.accentRed,
-                      onRefresh: () =>
+                      onRefresh: () async {
+                        await Future.wait<void>([
                           _loadWalletData(forcePortfolioSync: true),
+                          _loadHomeBanners(),
+                        ]);
+                      },
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         child: Column(
@@ -1147,81 +1266,129 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             const SizedBox(height: 8),
-                            BalanceCard(
-                              titleText:
-                                  _selectedAssetTab == HomeAssetTab.tokens
-                                  ? l.availableBalance
-                                  : l.totalNetWorth,
-                              formattedBalance: _formattedTotalBalance,
-                              portfolioMetrics: _portfolioMetrics,
-                              statusText: _balanceStatusText(l),
-                              isBalanceVisible: _balanceVisible,
-                              isLoadingBalances:
-                                  _isLoadingBalances || _isLoadingPortfolio,
-                              onToggleVisibility: () => setState(
-                                () => _balanceVisible = !_balanceVisible,
-                              ),
-                              onHistoryTap: () =>
-                                  Navigator.pushNamed(context, '/transactions'),
-                            ),
-                            const SizedBox(height: 24),
-                            QuickActionsRow(
-                              onReceive: () => Navigator.pushNamed(
-                                context,
-                                '/receive-token',
-                              ),
-                              onSend: () =>
-                                  Navigator.pushNamed(context, '/send-token'),
-                              onSwap: () {
-                                if (widget.showBottomNavigation) {
-                                  Navigator.pushNamed(context, '/swap');
-                                  return;
-                                }
-                                context.read<AppShellController>().selectTab(
-                                  AppShellTab.swap,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 24),
-                            SocialBannerCard(onTap: _openSocialLink),
-                            const SizedBox(height: 28),
-                            TokensSection(
-                              tokens: _tokens,
-                              portfolioSections: _portfolioSections,
-                              isLoading:
-                                  _isLoadingBalances && !_isUsingCachedData,
-                              isLoadingPortfolio: _isLoadingPortfolio,
-                              isLoadingNfts: _isLoadingNfts,
-                              nftPreview: _nftPreview,
-                              hasMoreNfts: _hasMoreNfts,
-                              localization: l,
-                              onManageTokens: _openTokenManager,
-                              onOpenNfts: () {
-                                if (_hasMoreNfts) {
-                                  Navigator.pushNamed(context, '/nft-gallery');
-                                  return;
-                                }
-                                if (_nftPreview.isEmpty) {
-                                  ToastUtils.showInfo(l.noNftsToDisplay);
-                                } else {
-                                  ToastUtils.showInfo(l.moreNftsAvailable);
-                                }
-                              },
-                              isTokenHidden: _isTokenHidden,
-                              chainId: _lastChainId,
-                              onTabChanged: (tab) {
-                                if (!mounted || _selectedAssetTab == tab) {
-                                  return;
-                                }
-                                setState(() => _selectedAssetTab = tab);
-                              },
-                              onSelectToken: (token) {
-                                Navigator.pushNamed(
+                            Showcase(
+                              key: _balanceShowcaseKey,
+                              title: 'Portfolio status',
+                              description:
+                                  'Use this card to track live value, hide balances, and jump into transaction history.',
+                              child: BalanceCard(
+                                titleText:
+                                    _selectedAssetTab == HomeAssetTab.tokens
+                                    ? l.availableBalance
+                                    : l.totalNetWorth,
+                                formattedBalance: _formattedTotalBalance,
+                                portfolioMetrics:
+                                    _selectedAssetTab == HomeAssetTab.tokens
+                                    ? HomePortfolioMetricsCalculator.fromTokens(
+                                        _displayableTokens(_tokens),
+                                      )
+                                    : _portfolioMetrics,
+                                statusText: _balanceStatusText(l),
+                                isBalanceVisible: _balanceVisible,
+                                isLoadingBalances:
+                                    _isLoadingBalances || _isLoadingPortfolio,
+                                onToggleVisibility: () => setState(
+                                  () => _balanceVisible = !_balanceVisible,
+                                ),
+                                onHistoryTap: () => Navigator.pushNamed(
                                   context,
-                                  '/token-detail',
-                                  arguments: token,
-                                );
-                              },
+                                  '/transactions',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Showcase(
+                              key: _quickActionsShowcaseKey,
+                              title: 'Core wallet actions',
+                              description:
+                                  'Receive, send, and swap stay visible on the home screen for the main wallet flow.',
+                              child: QuickActionsRow(
+                                onReceive: () => Navigator.pushNamed(
+                                  context,
+                                  '/receive-token',
+                                ),
+                                onSend: () =>
+                                    Navigator.pushNamed(context, '/send-token'),
+                                onSwap: () {
+                                  if (widget.showBottomNavigation) {
+                                    Navigator.pushNamed(context, '/swap');
+                                    return;
+                                  }
+                                  context.read<AppShellController>().selectTab(
+                                    AppShellTab.swap,
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Showcase(
+                              key: _promoCarouselShowcaseKey,
+                              title: 'Promotions and campaigns',
+                              description:
+                                  'Admins can rotate up to four partner campaigns and product spotlights in this carousel.',
+                              child: HomePromoCarousel(
+                                banners: _homeBanners,
+                                activeIndex: _homeBannerIndex,
+                                pageController: _homeBannerPageController,
+                                isLoading: _isLoadingHomeBanners,
+                                onPageChanged: (index) {
+                                  if (!mounted) {
+                                    return;
+                                  }
+                                  setState(() => _homeBannerIndex = index);
+                                },
+                                onTapBanner: (banner) {
+                                  unawaited(_openHomeBanner(banner));
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            Showcase(
+                              key: _assetTabsShowcaseKey,
+                              title: 'Asset views',
+                              description:
+                                  'Move between Tokens, Portfolio, and NFTs without leaving the dashboard.',
+                              child: TokensSection(
+                                tokens: _displayableTokens(_tokens),
+                                portfolioSections: _portfolioSections,
+                                isLoading:
+                                    _isLoadingBalances && !_isUsingCachedData,
+                                isLoadingPortfolio: _isLoadingPortfolio,
+                                isLoadingNfts: _isLoadingNfts,
+                                nftPreview: _nftPreview,
+                                hasMoreNfts: _hasMoreNfts,
+                                localization: l,
+                                onManageTokens: _openTokenManager,
+                                onOpenNfts: () {
+                                  if (_hasMoreNfts) {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/nft-gallery',
+                                    );
+                                    return;
+                                  }
+                                  if (_nftPreview.isEmpty) {
+                                    ToastUtils.showInfo(l.noNftsToDisplay);
+                                  } else {
+                                    ToastUtils.showInfo(l.moreNftsAvailable);
+                                  }
+                                },
+                                isTokenHidden: _isTokenHidden,
+                                chainId: _lastChainId,
+                                onTabChanged: (tab) {
+                                  if (!mounted || _selectedAssetTab == tab) {
+                                    return;
+                                  }
+                                  setState(() => _selectedAssetTab = tab);
+                                },
+                                onSelectToken: (token) {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/token-detail',
+                                    arguments: token,
+                                  );
+                                },
+                              ),
                             ),
                             const SizedBox(height: 20),
                           ],

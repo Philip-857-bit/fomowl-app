@@ -19,32 +19,66 @@ class HomeTokenListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            TokenIcon(
-              tokenSymbol: token.symbol,
-              tokenAddress: token.contractAddress,
-              tokenImageUrl: token.imageUrl,
-              size: 40,
-              chainId: chainId,
-              isCertified: token.isCertified,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.cardDark,
+                Colors.white.withValues(alpha: 0.03),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Row(
+            children: [
+              TokenIcon(
+                tokenSymbol: token.symbol,
+                tokenAddress: token.contractAddress,
+                tokenImageUrl: token.imageUrl,
+                size: 40,
+                chainId: chainId,
+                isCertified: token.isCertified,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      token.name,
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      token.formattedBalance,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.54),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    token.name,
+                    token.formattedValue,
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -53,39 +87,24 @@ class HomeTokenListItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    token.formattedBalance,
+                    token.formattedChange,
                     style: GoogleFonts.outfit(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: token.isPositiveChange
+                          ? AppColors.success
+                          : AppColors.error,
                     ),
                   ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  token.formattedValue,
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  token.formattedChange,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: token.isPositiveChange
-                        ? AppColors.success
-                        : AppColors.error,
-                  ),
-                ),
-              ],
-            ),
-          ],
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.32),
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

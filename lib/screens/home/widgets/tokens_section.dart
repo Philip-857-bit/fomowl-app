@@ -79,85 +79,60 @@ class _TokensSectionState extends State<TokensSection> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: () => _setTab(HomeAssetTab.tokens),
-                child: Text(
-                  widget.localization.tokens,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: _selectedTab == HomeAssetTab.tokens
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: _selectedTab == HomeAssetTab.tokens
-                        ? AppColors.accentRed
-                        : Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 20),
-              GestureDetector(
-                onTap: () => _setTab(HomeAssetTab.portfolio),
-                child: Text(
-                  widget.localization.portfolio,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: _selectedTab == HomeAssetTab.portfolio
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: _selectedTab == HomeAssetTab.portfolio
-                        ? AppColors.accentRed
-                        : Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 20),
-              GestureDetector(
-                onTap: () => _setTab(HomeAssetTab.nfts),
-                child: Text(
-                  widget.localization.nfts,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: _selectedTab == HomeAssetTab.nfts
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: _selectedTab == HomeAssetTab.nfts
-                        ? AppColors.accentRed
-                        : Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-              const Spacer(),
-              if (_selectedTab == HomeAssetTab.tokens)
-                IconButton(
-                  icon: Icon(
-                    Icons.tune,
-                    color: Colors.white.withValues(alpha: 0.5),
-                    size: 20,
-                  ),
-                  onPressed: widget.onManageTokens,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 36,
-                    minHeight: 36,
-                  ),
-                )
-              else if (_selectedTab == HomeAssetTab.nfts && widget.hasMoreNfts)
-                GestureDetector(
-                  onTap: widget.onOpenNfts,
-                  child: Text(
-                    widget.localization.viewAll,
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: AppColors.accentRed,
-                      fontWeight: FontWeight.w600,
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
                     ),
                   ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _AssetTabChip(
+                          label: widget.localization.tokens,
+                          selected: _selectedTab == HomeAssetTab.tokens,
+                          onTap: () => _setTab(HomeAssetTab.tokens),
+                        ),
+                      ),
+                      Expanded(
+                        child: _AssetTabChip(
+                          label: widget.localization.portfolio,
+                          selected: _selectedTab == HomeAssetTab.portfolio,
+                          onTap: () => _setTab(HomeAssetTab.portfolio),
+                        ),
+                      ),
+                      Expanded(
+                        child: _AssetTabChip(
+                          label: widget.localization.nfts,
+                          selected: _selectedTab == HomeAssetTab.nfts,
+                          onTap: () => _setTab(HomeAssetTab.nfts),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (_selectedTab == HomeAssetTab.tokens)
+                _AssetToolbarButton(
+                  icon: Icons.tune_rounded,
+                  onTap: widget.onManageTokens,
+                )
+              else if (_selectedTab == HomeAssetTab.nfts && widget.hasMoreNfts)
+                _AssetTextButton(
+                  label: widget.localization.viewAll,
+                  onTap: widget.onOpenNfts,
                 ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         if (_selectedTab == HomeAssetTab.tokens)
           ..._buildTokensContent(visibleTokens)
         else if (_selectedTab == HomeAssetTab.portfolio)
@@ -351,6 +326,107 @@ class _TokensSectionState extends State<TokensSection> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AssetTabChip extends StatelessWidget {
+  const _AssetTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.darkRed.withValues(alpha: 0.48) : null,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected
+                ? AppColors.accentRed.withValues(alpha: 0.22)
+                : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.outfit(
+            fontSize: 15,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected
+                ? AppColors.accentRed
+                : Colors.white.withValues(alpha: 0.62),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AssetToolbarButton extends StatelessWidget {
+  const _AssetToolbarButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white.withValues(alpha: 0.75),
+          size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+class _AssetTextButton extends StatelessWidget {
+  const _AssetTextButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            color: AppColors.accentRed,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

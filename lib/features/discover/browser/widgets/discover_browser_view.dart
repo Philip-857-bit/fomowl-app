@@ -248,6 +248,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     if (controller == null) {
       return;
     }
+    final chainId = context.read<BlockchainService>().activeChain.chainId;
     await controller.removeUserScriptsByGroupName(
       groupName: _providerScriptGroup,
     );
@@ -261,7 +262,6 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     if (widget.sessionController.canInjectProviderFor(uri)) {
       final providerScript = await widget.providerBridge
           .providerInjectionScript();
-      final chainId = context.read<BlockchainService>().activeChain.chainId;
       final providerStateScript = await widget.providerBridge
           .buildProviderStateSyncScript(
             chainId: chainId,

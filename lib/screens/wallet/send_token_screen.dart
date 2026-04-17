@@ -127,9 +127,12 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   }
 
   void _setMax() {
+    final decimals = _selectedToken?.decimals ?? 18;
     setState(() {
-      _amountController.text = _availableBalance.toStringAsFixed(
-        _availableBalance < 1 ? 6 : 2,
+      _amountController.text = AmountUtils.formatBaseUnits(
+        _availableBalanceBaseUnits,
+        decimals,
+        maxFractionDigits: decimals,
       );
     });
   }

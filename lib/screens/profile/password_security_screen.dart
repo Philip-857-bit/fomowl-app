@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/storage_service.dart';
+import '../../services/wallet_two_factor_service.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../widgets/bottom_navigation.dart';
 import 'widgets/settings_group_card.dart';
@@ -18,6 +19,8 @@ class PasswordSecurityScreen extends StatefulWidget {
 }
 
 class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
+  final WalletTwoFactorService _walletTwoFactorService =
+      WalletTwoFactorService();
   final StorageService _storage = StorageService();
 
   bool _biometricEnabled = false;
@@ -43,7 +46,13 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       final biometric = await _storage.isBiometricEnabled();
       final autoLock = await _storage.getAutoLockMinutes();
       final lockOnBackground = await _storage.isLockOnBackgroundEnabled();
-      final walletTwoFactorEnabled = await _storage.isTwoFactorEnabled();
+      final cachedTwoFactorEnabled = await _storage.isTwoFactorEnabled();
+      final twoFactorStatus = await _walletTwoFactorService
+          .fetchTwoFactorStatus();
+      final walletTwoFactorEnabled = twoFactorStatus['success'] == true
+          ? twoFactorStatus['enabled'] == true
+          : cachedTwoFactorEnabled;
+      await _storage.setTwoFactorEnabled(walletTwoFactorEnabled);
       if (!mounted) return;
       setState(() {
         _biometricEnabled = biometric;
@@ -267,8 +276,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
                           icon: Icons.shield_outlined,
                           title: l.twoFactorAuth,
                           subtitle: _twoFactorEnabled
-                              ? 'Owllet Shield 2FA protects critical wallet actions'
-                              : 'Enable Wallet Shield 2FA for sensitive wallet actions',
+                              ? 'Authenticator codes now protect sensitive wallet actions'
+                              : 'Enable authenticator-based 2FA for sensitive wallet actions',
                           onTap: _openTwoFactorSetup,
                         ),
                       ],

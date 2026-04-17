@@ -1,3 +1,5 @@
+import 'package:decimal/decimal.dart';
+
 import '../../models/chain.dart';
 import '../../models/token.dart';
 import '../../utils/token_visibility_utils.dart';
@@ -5,6 +7,13 @@ import 'home_portfolio_data.dart';
 
 class HomePortfolioRepository {
   const HomePortfolioRepository();
+
+  static final Decimal _minVisibleUncertifiedUsd = Decimal.parse('0.01');
+
+  List<Token> prepareVisibleTokens(
+    List<Token> tokens,
+    Set<String> hiddenTokenKeys,
+  ) => _prepareVisibleTokens(tokens, hiddenTokenKeys);
 
   Future<HomePortfolioData> filterSections({
     required List<HomePortfolioSection> sections,
@@ -74,24 +83,68 @@ class HomePortfolioRepository {
     required Future<Set<String>> Function(int chainId) loadHiddenTokens,
   }) async {
     final hiddenTokenKeys = await loadHiddenTokens(section.chain.chainId);
-    final visibleTokens =
-        section.tokens
-            .where(
-              (token) => !hiddenTokenKeys.contains(
-                TokenVisibilityUtils.identifier(token),
-              ),
-            )
-            .where((token) => token.balance > 0 || token.totalValueUsd > 0)
-            .toList()
-          ..sort(
-            (left, right) =>
-                right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
-          );
+    final visibleTokens = _prepareVisibleTokens(
+      section.tokens,
+      hiddenTokenKeys,
+    );
 
     if (visibleTokens.isEmpty) {
       return null;
     }
 
     return HomePortfolioSection(chain: section.chain, tokens: visibleTokens);
+  }
+
+  List<Token> _prepareVisibleTokens(
+    List<Token> tokens,
+    Set<String> hiddenTokenKeys,
+  ) {
+    final deduped = <String, Token>{};
+    for (final token in tokens) {
+      if (hiddenTokenKeys.contains(TokenVisibilityUtils.identifier(token))) {
+        continue;
+      }
+      if (token.balance <= 0 && token.totalValueUsd <= 0) {
+        continue;
+      }
+      if (!token.isCertified) {
+        final totalValueUsd = token.totalValueUsdDecimal;
+        final unitPriceUsd = token.unitPriceUsdDecimal;
+        if (unitPriceUsd <= Decimal.zero ||
+            totalValueUsd < _minVisibleUncertifiedUsd) {
+          continue;
+        }
+      }
+
+      final key =
+          (token.contractAddress?.trim().isNotEmpty == true
+                  ? token.contractAddress
+                  : token.symbol)
+              ?.toLowerCase() ??
+          token.name.toLowerCase();
+      final existing = deduped[key];
+      if (existing == null || _shouldReplaceToken(existing, token)) {
+        deduped[key] = token;
+      }
+    }
+
+    final visibleTokens = deduped.values.toList()
+      ..sort(
+        (left, right) =>
+            right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
+      );
+    return visibleTokens;
+  }
+
+  bool _shouldReplaceToken(Token current, Token next) {
+    if (current.isCertified != next.isCertified) {
+      return next.isCertified;
+    }
+    final valueComparison =
+        next.totalValueUsdDecimal.compareTo(current.totalValueUsdDecimal);
+    if (valueComparison != 0) {
+      return valueComparison > 0;
+    }
+    return next.balanceDecimal.compareTo(current.balanceDecimal) > 0;
   }
 }

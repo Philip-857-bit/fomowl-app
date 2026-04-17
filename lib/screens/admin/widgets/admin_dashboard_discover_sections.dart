@@ -23,6 +23,7 @@ class AdminDiscoverDappsSection extends StatelessWidget {
     required this.trendingRankController,
     required this.isActive,
     required this.onActiveChanged,
+    required this.onRefreshMetadata,
     required this.onSubmit,
     required this.onReset,
     required this.dapps,
@@ -46,6 +47,7 @@ class AdminDiscoverDappsSection extends StatelessWidget {
   final TextEditingController trendingRankController;
   final bool isActive;
   final ValueChanged<bool> onActiveChanged;
+  final VoidCallback onRefreshMetadata;
   final VoidCallback onSubmit;
   final VoidCallback onReset;
   final List<Map<String, dynamic>> dapps;
@@ -62,6 +64,12 @@ class AdminDiscoverDappsSection extends StatelessWidget {
           subtitle:
               'Manage the global Discover DApp directory. Launch URL is required; slug, title, and artwork can autofill from the site.',
         ),
+        const AdminBanner(
+          title: 'URL-first onboarding',
+          message:
+              'Paste the live site URL first. Owllet will fill the title, icon, hero artwork, and related metadata unless you override them below.',
+        ),
+        const SizedBox(height: 14),
         AdminCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,15 +84,6 @@ class AdminDiscoverDappsSection extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               TextField(
-                controller: slugController,
-                decoration: adminInputDecoration(
-                  label: 'Slug',
-                  hint: 'uniswap (optional, auto when blank)',
-                  icon: Icons.tag_rounded,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
                 controller: launchUrlController,
                 decoration: adminInputDecoration(
                   label: 'Launch URL',
@@ -92,94 +91,46 @@ class AdminDiscoverDappsSection extends StatelessWidget {
                   icon: Icons.link_rounded,
                 ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: titleController,
-                decoration: adminInputDecoration(
-                  label: 'Title',
-                  hint: 'Uniswap (optional, auto when blank)',
-                  icon: Icons.title_rounded,
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.035),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.06),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: subtitleController,
-                decoration: adminInputDecoration(
-                  label: 'Subtitle',
-                  hint: 'Swap tokens across supported chains',
-                  icon: Icons.short_text_rounded,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: logoUrlController,
-                decoration: adminInputDecoration(
-                  label: 'Logo URL',
-                  hint: 'Optional; fetched from site icon when blank',
-                  icon: Icons.image_outlined,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: heroImageUrlController,
-                decoration: adminInputDecoration(
-                  label: 'Hero image URL',
-                  hint: 'Optional; fetched from OG/Twitter image when blank',
-                  icon: Icons.landscape_outlined,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: badgeController,
-                decoration: adminInputDecoration(
-                  label: 'Badge',
-                  hint: 'FEATURED',
-                  icon: Icons.sell_outlined,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: categoriesController,
-                decoration: adminInputDecoration(
-                  label: 'Categories',
-                  hint: 'dex, defi, swaps',
-                  icon: Icons.grid_view_rounded,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: chainIdsController,
-                decoration: adminInputDecoration(
-                  label: 'Supported chain IDs',
-                  hint: '1, 56, 8453',
-                  icon: Icons.hub_outlined,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: featuredRankController,
-                      decoration: adminInputDecoration(
-                        label: 'Featured rank',
-                        hint: '1',
-                        icon: Icons.star_outline_rounded,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: AppColors.accentRed.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: AppColors.accentRed,
+                        size: 18,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: trendingRankController,
-                      decoration: adminInputDecoration(
-                        label: 'Trending rank',
-                        hint: '2',
-                        icon: Icons.local_fire_department_outlined,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'If you only have the URL, that is enough. Slug, title, logo, artwork, and rankings can be left blank unless you want to override the fetched values.',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          height: 1.45,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
               Row(
@@ -198,6 +149,155 @@ class AdminDiscoverDappsSection extends StatelessWidget {
                     onChanged: onActiveChanged,
                   ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              Theme(
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(bottom: 4),
+                  iconColor: Colors.white70,
+                  collapsedIconColor: Colors.white54,
+                  initiallyExpanded:
+                      isEditing ||
+                      slugController.text.trim().isNotEmpty ||
+                      titleController.text.trim().isNotEmpty ||
+                      subtitleController.text.trim().isNotEmpty ||
+                      logoUrlController.text.trim().isNotEmpty ||
+                      heroImageUrlController.text.trim().isNotEmpty ||
+                      badgeController.text.trim().isNotEmpty ||
+                      categoriesController.text.trim().isNotEmpty ||
+                      chainIdsController.text.trim().isNotEmpty ||
+                      featuredRankController.text.trim().isNotEmpty ||
+                      trendingRankController.text.trim().isNotEmpty,
+                  title: Text(
+                    'Advanced overrides',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Leave these blank and Owllet will keep the site-derived metadata.',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
+                  ),
+                  children: [
+                    if (isEditing) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: isSubmitting ? null : onRefreshMetadata,
+                          icon: const Icon(Icons.refresh_rounded, size: 18),
+                          label: const Text('Refresh metadata from URL'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: titleController,
+                      decoration: adminInputDecoration(
+                        label: 'Title',
+                        hint: 'Uniswap',
+                        icon: Icons.title_rounded,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: slugController,
+                      decoration: adminInputDecoration(
+                        label: 'Slug',
+                        hint: 'uniswap',
+                        icon: Icons.tag_rounded,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: subtitleController,
+                      decoration: adminInputDecoration(
+                        label: 'Subtitle',
+                        hint: 'Swap tokens across supported chains',
+                        icon: Icons.short_text_rounded,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: logoUrlController,
+                      decoration: adminInputDecoration(
+                        label: 'Logo URL',
+                        hint: 'Fetched from site icon when blank',
+                        icon: Icons.image_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: heroImageUrlController,
+                      decoration: adminInputDecoration(
+                        label: 'Hero image URL',
+                        hint: 'Fetched from OG or Twitter image when blank',
+                        icon: Icons.landscape_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: badgeController,
+                      decoration: adminInputDecoration(
+                        label: 'Badge',
+                        hint: 'FEATURED',
+                        icon: Icons.sell_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: categoriesController,
+                      decoration: adminInputDecoration(
+                        label: 'Categories',
+                        hint: 'dex, defi, swaps',
+                        icon: Icons.grid_view_rounded,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: chainIdsController,
+                      decoration: adminInputDecoration(
+                        label: 'Supported chain IDs',
+                        hint: '1, 56, 8453',
+                        icon: Icons.hub_outlined,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: featuredRankController,
+                            decoration: adminInputDecoration(
+                              label: 'Featured rank',
+                              hint: '1',
+                              icon: Icons.star_outline_rounded,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: trendingRankController,
+                            decoration: adminInputDecoration(
+                              label: 'Trending rank',
+                              hint: '2',
+                              icon: Icons.local_fire_department_outlined,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 10),
               Row(

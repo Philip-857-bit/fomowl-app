@@ -71,6 +71,8 @@ dependencies:
   firebase_core: ^4.5.0
   firebase_messaging: ^16.1.2
   flutter_local_notifications: ^19.4.0
+  showcaseview: ^5.0.1
+  file_picker: ^11.0.2
   rust_lib_fomowl_wallet:
     path: rust_builder
   flutter_rust_bridge: 2.11.1

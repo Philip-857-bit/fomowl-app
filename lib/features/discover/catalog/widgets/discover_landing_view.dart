@@ -537,6 +537,9 @@ class _DappArtwork extends StatelessWidget {
   final double size;
 
   String? _resolveImageUrl() {
+    if (entry.slug.toLowerCase() == 'opensea') {
+      return 'https://storage.googleapis.com/opensea-static/Logomark/Logomark-Blue.png';
+    }
     final logoUrl = entry.logoUrl?.trim();
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return logoUrl;
@@ -545,8 +548,11 @@ class _DappArtwork extends StatelessWidget {
     if (heroImageUrl != null && heroImageUrl.isNotEmpty) {
       return heroImageUrl;
     }
-    if (entry.slug.toLowerCase() == 'opensea') {
-      return 'https://storage.googleapis.com/opensea-static/Logomark/Logomark-Blue.png';
+    final fallbackSource = entry.launchUrl.trim().isNotEmpty
+        ? entry.launchUrl.trim()
+        : entry.origin.trim();
+    if (fallbackSource.isNotEmpty) {
+      return 'https://www.google.com/s2/favicons?sz=128&domain_url=${Uri.encodeComponent(fallbackSource)}';
     }
     return null;
   }

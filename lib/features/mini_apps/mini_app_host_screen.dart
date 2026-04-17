@@ -42,8 +42,8 @@ class MiniAppHostScreen extends StatefulWidget {
     final definition = OwlletMiniApps.byId(parsed.miniAppId);
     if (definition == null) {
       return const _MiniAppUnavailableScreen(
-        title: 'Mini app unavailable',
-        message: 'This Owllet mini app is not registered in the mobile host.',
+        title: 'Coming soon',
+        message: 'This Owllet mini app is coming soon.',
       );
     }
     return MiniAppHostScreen(
@@ -143,8 +143,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     if (launchUri == null) {
       return _MiniAppUnavailableScreen(
         title: '${widget.definition.title} coming soon',
-        message:
-            'The hosted mini app URL is not configured yet. Set CASH_IN_MINI_APP_URL when the web app is ready.',
+        message: 'This Owllet mini app is coming soon.',
       );
     }
     if (_loadingContext) {

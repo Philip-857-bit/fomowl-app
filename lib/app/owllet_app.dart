@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
@@ -35,6 +36,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ShowcaseView.register(enableAutoScroll: true, blurValue: 1);
     _foregroundLockTimer = Timer.periodic(
       const Duration(seconds: 15),
       (_) => _maybeRequireForegroundUnlock(),
@@ -44,6 +46,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _foregroundLockTimer?.cancel();
+    ShowcaseView.get().unregister();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -202,7 +205,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
             onPointerDown: (_) => _recordInteraction(),
             onPointerMove: (_) => _recordInteraction(),
             onPointerSignal: (_) => _recordInteraction(),
-            child: child,
+            child: child ?? const SizedBox.shrink(),
           ),
           home: const AppBootstrapper(),
           routes: buildAppRoutes(),

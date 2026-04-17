@@ -5,12 +5,15 @@ import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
+import '../services/wallet_two_factor_service.dart';
 
 /// Centralized helper that enforces biometric/passcode verification
 /// before revealing sensitive wallet information (seed phrase, private key, etc.).
 class SensitiveAccessGuard {
   SensitiveAccessGuard._();
 
+  static final WalletTwoFactorService _walletTwoFactorService =
+      WalletTwoFactorService();
   static final BiometricService _biometricService = BiometricService();
   static final StorageService _storage = StorageService();
 
@@ -54,10 +57,10 @@ class SensitiveAccessGuard {
       return false;
     }
 
-    return _promptForPasscode(
+    return _promptForTwoFactorCode(
       context,
-      title: 'Wallet Shield 2FA',
-      subtitle: 'Confirm this protected wallet action.',
+      title: 'Owllet Authenticator',
+      subtitle: 'Enter the 6-digit authenticator code to continue.',
     );
   }
 
@@ -131,6 +134,116 @@ class SensitiveAccessGuard {
                       l.confirm,
                       style: GoogleFonts.outfit(color: AppColors.accentRed),
                     ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ) ??
+        false;
+  }
+
+  static Future<bool> _promptForTwoFactorCode(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+  }) async {
+    final controller = TextEditingController();
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) {
+            var errorText = '';
+            var submitting = false;
+            return StatefulBuilder(
+              builder: (dialogContext, setState) => AlertDialog(
+                backgroundColor: AppColors.cardDark,
+                title: Text(
+                  title,
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.outfit(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: '123456',
+                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                        errorText: errorText.isEmpty ? null : errorText,
+                      ),
+                      style: GoogleFonts.outfit(color: Colors.white),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: submitting
+                        ? null
+                        : () => Navigator.pop(dialogContext, false),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.outfit(color: Colors.white54),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            final code = controller.text.trim();
+                            if (code.length != 6) {
+                              setState(() {
+                                errorText =
+                                    'Enter the 6-digit code from your authenticator app.';
+                              });
+                              return;
+                            }
+
+                            setState(() {
+                              submitting = true;
+                              errorText = '';
+                            });
+                            final result = await _walletTwoFactorService
+                                .confirmTwoFactorCode(code: code);
+                            if (!dialogContext.mounted) {
+                              return;
+                            }
+                            if (result['success'] == true) {
+                              Navigator.pop(dialogContext, true);
+                              return;
+                            }
+                            setState(() {
+                              submitting = false;
+                              errorText =
+                                  result['error']?.toString() ??
+                                  'Invalid authenticator code.';
+                            });
+                          },
+                    child: submitting
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.accentRed,
+                            ),
+                          )
+                        : Text(
+                            'Verify',
+                            style: GoogleFonts.outfit(
+                              color: AppColors.accentRed,
+                            ),
+                          ),
                   ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
@@ -19,6 +20,7 @@ enum _AdminSection {
   ops('Ops', Icons.monitor_heart_outlined),
   feedback('Feedback', Icons.forum_outlined),
   dapps('DApps', Icons.explore_outlined),
+  promos('Promos', Icons.view_carousel_outlined),
   actions('Actions', Icons.bolt_outlined),
   push('Push', Icons.notifications_active_outlined),
   maintainers('Maintainers', Icons.groups_2_outlined),
@@ -71,8 +73,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _registryTotal = 0;
   bool _registryHasNext = false;
   List<Map<String, dynamic>> _discoverDapps = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _homeBanners = const <Map<String, dynamic>>[];
   String? _discoverEditingId;
+  String? _homeBannerEditingId;
   bool _discoverIsActive = true;
+  bool _homeBannerIsActive = true;
+  bool _homeBannerImageUploadInFlight = false;
 
   Map<String, dynamic>? _lastTestPushResult;
   Map<String, dynamic>? _lastBroadcastResult;
@@ -107,6 +113,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       TextEditingController();
   final TextEditingController _discoverTrendingRankController =
       TextEditingController();
+  final TextEditingController _homeBannerTitleController =
+      TextEditingController();
+  final TextEditingController _homeBannerDescriptionController =
+      TextEditingController();
+  final TextEditingController _homeBannerLinkUrlController =
+      TextEditingController();
+  final TextEditingController _homeBannerImageUrlController =
+      TextEditingController();
+  final TextEditingController _homeBannerCtaLabelController =
+      TextEditingController();
+  final TextEditingController _homeBannerSortOrderController =
+      TextEditingController(text: '0');
   final TextEditingController _testPushWalletController =
       TextEditingController();
   final TextEditingController _testPushTitleController = TextEditingController(
@@ -164,6 +182,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _discoverChainIdsController.dispose();
     _discoverFeaturedRankController.dispose();
     _discoverTrendingRankController.dispose();
+    _homeBannerTitleController.dispose();
+    _homeBannerDescriptionController.dispose();
+    _homeBannerLinkUrlController.dispose();
+    _homeBannerImageUrlController.dispose();
+    _homeBannerCtaLabelController.dispose();
+    _homeBannerSortOrderController.dispose();
     _testPushWalletController.dispose();
     _testPushTitleController.dispose();
     _testPushMessageController.dispose();
@@ -194,13 +218,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _registryTotal = 0;
       _registryHasNext = false;
       _discoverDapps = const <Map<String, dynamic>>[];
+      _homeBanners = const <Map<String, dynamic>>[];
       _discoverEditingId = null;
+      _homeBannerEditingId = null;
       _discoverIsActive = true;
+      _homeBannerIsActive = true;
+      _homeBannerImageUploadInFlight = false;
       _lastTestPushResult = null;
       _lastBroadcastResult = null;
       _lastSyncedAt = null;
     });
     _resetDiscoverForm();
+    _resetHomeBannerForm();
   }
 
   int get _activeChainId => _observedChainId ?? 1;
@@ -231,6 +260,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           break;
         case _AdminSection.dapps:
           await _loadDiscoverDapps();
+          break;
+        case _AdminSection.promos:
+          await _loadHomeBanners();
           break;
         case _AdminSection.actions:
         case _AdminSection.push:
@@ -357,6 +389,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final dapps = await _apiService.fetchDiscoverDapps();
     if (!mounted) return;
     setState(() => _discoverDapps = dapps);
+  }
+
+  Future<void> _loadHomeBanners() async {
+    final banners = await _apiService.fetchHomeBanners();
+    if (!mounted) return;
+    setState(() => _homeBanners = banners);
   }
 
   Future<void> _refreshCurrentSection() async {
@@ -563,6 +601,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _discoverTrendingRankController.clear();
   }
 
+  void _resetHomeBannerForm() {
+    _homeBannerEditingId = null;
+    _homeBannerIsActive = true;
+    _homeBannerTitleController.clear();
+    _homeBannerDescriptionController.clear();
+    _homeBannerLinkUrlController.clear();
+    _homeBannerImageUrlController.clear();
+    _homeBannerCtaLabelController.clear();
+    _homeBannerSortOrderController.text = '0';
+  }
+
   Future<void> _submitDiscoverDapp() async {
     final slug = _discoverSlugController.text.trim();
     final launchUrl = _discoverLaunchUrlController.text.trim();
@@ -611,6 +660,182 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     } finally {
       if (mounted) {
         setState(() => _loadingSections.remove(_AdminSection.dapps));
+      }
+    }
+  }
+
+  Future<void> _refreshDiscoverMetadata() async {
+    final id = _discoverEditingId;
+    if (id == null || id.isEmpty) {
+      _showSnackBar('Pick an existing DApp before refreshing metadata.');
+      return;
+    }
+
+    setState(() => _loadingSections.add(_AdminSection.dapps));
+    try {
+      final response = await _apiService.refreshDiscoverDappMetadata(id: id);
+      final dapp = response['dapp'];
+      if (dapp is Map<String, dynamic>) {
+        _startEditingDiscoverDapp(dapp);
+      } else if (dapp is Map) {
+        _startEditingDiscoverDapp(dapp.cast<String, dynamic>());
+      }
+      await _loadDiscoverDapps();
+      _showSnackBar('Site metadata refreshed.');
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to refresh Discover metadata.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.dapps));
+      }
+    }
+  }
+
+  Future<void> _submitHomeBanner() async {
+    final description = _homeBannerDescriptionController.text.trim();
+    final linkUrl = _homeBannerLinkUrlController.text.trim();
+    if (description.isEmpty || linkUrl.isEmpty) {
+      _showSnackBar('Description and link URL are required.');
+      return;
+    }
+
+    final payload = <String, dynamic>{
+      'title': _trimmedOrNull(_homeBannerTitleController.text),
+      'description': description,
+      'linkUrl': linkUrl,
+      'imageUrl': _trimmedOrNull(_homeBannerImageUrlController.text),
+      'ctaLabel': _trimmedOrNull(_homeBannerCtaLabelController.text),
+      'sortOrder': _parseOptionalInt(_homeBannerSortOrderController.text) ?? 0,
+      'isActive': _homeBannerIsActive,
+    };
+
+    setState(() => _loadingSections.add(_AdminSection.promos));
+    try {
+      if (_homeBannerEditingId == null) {
+        await _apiService.createHomeBanner(payload: payload);
+        _showSnackBar('Home promo created.');
+      } else {
+        await _apiService.updateHomeBanner(
+          id: _homeBannerEditingId!,
+          payload: payload,
+        );
+        _showSnackBar('Home promo updated.');
+      }
+      _resetHomeBannerForm();
+      await _loadHomeBanners();
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to save the home promo.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.promos));
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadHomeBannerImage() async {
+    try {
+      final selection = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const <String>['png', 'jpg', 'jpeg', 'webp'],
+        allowMultiple: false,
+        withData: true,
+      );
+      if (selection == null || selection.files.isEmpty) {
+        return;
+      }
+
+      final file = selection.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showSnackBar('Unable to read the selected image.');
+        return;
+      }
+
+      setState(() => _homeBannerImageUploadInFlight = true);
+      final response = await _apiService.uploadHomeBannerImage(
+        bytes: bytes,
+        filename: file.name,
+      );
+      final asset = response['asset'];
+      final publicUrl = asset is Map<String, dynamic>
+          ? asset['publicUrl']?.toString()
+          : asset is Map
+          ? asset['publicUrl']?.toString()
+          : null;
+
+      if (publicUrl == null || publicUrl.trim().isEmpty) {
+        throw Exception('Upload completed without a public image URL.');
+      }
+
+      if (!mounted) return;
+      setState(() => _homeBannerImageUrlController.text = publicUrl.trim());
+      _showSnackBar('Banner image uploaded.');
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to upload the home promo image.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _homeBannerImageUploadInFlight = false);
+      }
+    }
+  }
+
+  void _startEditingHomeBanner(Map<String, dynamic> banner) {
+    setState(() {
+      _homeBannerEditingId = banner['id']?.toString();
+      _homeBannerIsActive = banner['isActive'] != false;
+      _homeBannerTitleController.text = banner['title']?.toString() ?? '';
+      _homeBannerDescriptionController.text =
+          banner['description']?.toString() ?? '';
+      _homeBannerLinkUrlController.text = banner['linkUrl']?.toString() ?? '';
+      _homeBannerImageUrlController.text = banner['imageUrl']?.toString() ?? '';
+      _homeBannerCtaLabelController.text = banner['ctaLabel']?.toString() ?? '';
+      _homeBannerSortOrderController.text =
+          banner['sortOrder']?.toString() ?? '0';
+    });
+  }
+
+  Future<void> _toggleHomeBannerActive(
+    Map<String, dynamic> banner,
+    bool nextValue,
+  ) async {
+    final id = banner['id']?.toString();
+    if (id == null || id.isEmpty) {
+      return;
+    }
+
+    setState(() => _loadingSections.add(_AdminSection.promos));
+    try {
+      await _apiService.updateHomeBanner(
+        id: id,
+        payload: {'isActive': nextValue},
+      );
+      await _loadHomeBanners();
+      _showSnackBar(nextValue ? 'Promo activated.' : 'Promo deactivated.');
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to update the home promo.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.promos));
       }
     }
   }
@@ -767,22 +992,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 isRefreshing: _isLoading(_selectedSection),
               ),
             ),
-            SizedBox(
-              height: 46,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                scrollDirection: Axis.horizontal,
-                itemBuilder: (context, index) {
-                  final section = _AdminSection.values[index];
-                  return AdminSectionChip(
-                    label: section.label,
-                    icon: section.icon,
-                    selected: section == _selectedSection,
-                    onTap: () => _selectSection(section),
-                  );
-                },
-                separatorBuilder: (_, index) => const SizedBox(width: 10),
-                itemCount: _AdminSection.values.length,
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              ),
+              child: SizedBox(
+                height: 50,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  scrollDirection: Axis.horizontal,
+                  itemBuilder: (context, index) {
+                    final section = _AdminSection.values[index];
+                    return AdminSectionChip(
+                      label: section.label,
+                      icon: section.icon,
+                      selected: section == _selectedSection,
+                      onTap: () => _selectSection(section),
+                    );
+                  },
+                  separatorBuilder: (_, index) => const SizedBox(width: 10),
+                  itemCount: _AdminSection.values.length,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -834,6 +1068,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return _feedbackItems.isNotEmpty;
       case _AdminSection.dapps:
         return _discoverDapps.isNotEmpty || _discoverEditingId != null;
+      case _AdminSection.promos:
+        return _homeBanners.isNotEmpty || _homeBannerEditingId != null;
       case _AdminSection.actions:
       case _AdminSection.push:
         return true;
@@ -903,11 +1139,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           trendingRankController: _discoverTrendingRankController,
           isActive: _discoverIsActive,
           onActiveChanged: (value) => setState(() => _discoverIsActive = value),
+          onRefreshMetadata: _refreshDiscoverMetadata,
           onSubmit: _submitDiscoverDapp,
           onReset: () => setState(_resetDiscoverForm),
           dapps: _discoverDapps,
           onEdit: _startEditingDiscoverDapp,
           onToggleActive: _toggleDiscoverDappActive,
+        );
+      case _AdminSection.promos:
+        return AdminHomeBannersSection(
+          isLoading: _isLoading(_AdminSection.promos),
+          isSubmitting: _isLoading(_AdminSection.promos),
+          isUploadingImage: _homeBannerImageUploadInFlight,
+          isEditing: _homeBannerEditingId != null,
+          titleController: _homeBannerTitleController,
+          descriptionController: _homeBannerDescriptionController,
+          linkUrlController: _homeBannerLinkUrlController,
+          imageUrlController: _homeBannerImageUrlController,
+          ctaLabelController: _homeBannerCtaLabelController,
+          sortOrderController: _homeBannerSortOrderController,
+          isActive: _homeBannerIsActive,
+          onActiveChanged: (value) =>
+              setState(() => _homeBannerIsActive = value),
+          onUploadImage: _pickAndUploadHomeBannerImage,
+          onSubmit: _submitHomeBanner,
+          onReset: () => setState(_resetHomeBannerForm),
+          banners: _homeBanners,
+          onEdit: _startEditingHomeBanner,
+          onToggleActive: _toggleHomeBannerActive,
         );
       case _AdminSection.actions:
         return AdminActionsSection(

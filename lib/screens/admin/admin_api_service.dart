@@ -251,6 +251,77 @@ class AdminApiService {
     );
   }
 
+  Future<Map<String, dynamic>> refreshDiscoverDappMetadata({
+    required String id,
+  }) async {
+    return _postMap(
+      AppEnvironment.discover('/admin/dapps/$id/refresh-metadata'),
+      body: const <String, dynamic>{},
+      fallback: 'Unable to refresh DApp metadata.',
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> fetchHomeBanners() async {
+    final response = await _getMap(
+      AppEnvironment.content('/admin/home-banners'),
+      fallback: 'Unable to load home promos.',
+    );
+    final banners = response['banners'];
+    if (banners is List) {
+      return banners
+          .whereType<Map>()
+          .map((item) => item.cast<String, dynamic>())
+          .toList();
+    }
+    return const <Map<String, dynamic>>[];
+  }
+
+  Future<Map<String, dynamic>> createHomeBanner({
+    required Map<String, dynamic> payload,
+  }) async {
+    return _postMap(
+      AppEnvironment.content('/admin/home-banners'),
+      body: payload,
+      fallback: 'Unable to create home promo.',
+    );
+  }
+
+  Future<Map<String, dynamic>> updateHomeBanner({
+    required String id,
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _client.patch(
+      AppEnvironment.content('/admin/home-banners/$id'),
+      headers: buildHeaders(json: true),
+      body: jsonEncode(payload),
+    );
+    return _decodeMapResponse(
+      response,
+      fallback: 'Unable to update home promo.',
+    );
+  }
+
+  Future<Map<String, dynamic>> uploadHomeBannerImage({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final request = http.MultipartRequest(
+      'POST',
+      AppEnvironment.content('/admin/home-banners/upload'),
+    );
+    request.headers.addAll(buildHeaders());
+    request.files.add(
+      http.MultipartFile.fromBytes('file', bytes, filename: filename),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    return _decodeMapResponse(
+      response,
+      fallback: 'Unable to upload home promo image.',
+    );
+  }
+
   Future<Map<String, dynamic>> _getMap(
     Uri uri, {
     required String fallback,

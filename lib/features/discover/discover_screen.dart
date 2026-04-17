@@ -50,7 +50,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
     _sessionController.addListener(_syncSearchField);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _sessionController.loadCatalog();
+      _sessionController.loadCatalog(forceRefresh: true);
       _loadTrendingTokens();
     });
   }

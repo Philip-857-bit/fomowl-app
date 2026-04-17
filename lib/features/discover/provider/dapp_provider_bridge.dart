@@ -34,6 +34,24 @@ class DappProviderBridge {
       'assets/images/launcher_icon.png';
   static const String _fallbackWalletConnectIconDataUri =
       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"%3E%3Crect width="96" height="96" rx="24" fill="%23050505"/%3E%3Cpath d="M24 25c0-3.3 2.7-6 6-6h17c15.46 0 28 12.54 28 28v24c0 3.3-2.7 6-6 6H52.5C36.76 77 24 64.24 24 48.5V25zm12 6v17.5C36 57.61 43.39 65 52.5 65H63V47c0-8.84-7.16-16-16-16H36zm11.75 6.5c4.56 0 8.25 3.69 8.25 8.25S52.31 54 47.75 54 39.5 50.31 39.5 45.75s3.69-8.25 8.25-8.25zm0 4.5a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" fill="%23ff3344"/%3E%3C/svg%3E';
+  static const Set<String> _blockedRpcPassthroughMethods = {
+    'eth_requestAccounts',
+    'eth_accounts',
+    'eth_coinbase',
+    'eth_sendTransaction',
+    'eth_sendRawTransaction',
+    'eth_sign',
+    'eth_signTransaction',
+    'eth_signTypedData',
+    'eth_signTypedData_v3',
+    'eth_signTypedData_v4',
+    'personal_sign',
+    'wallet_addEthereumChain',
+    'wallet_switchEthereumChain',
+    'wallet_requestPermissions',
+    'wallet_revokePermissions',
+    'wallet_watchAsset',
+  };
   static String? _providerInjectionScriptCache;
   static Future<String>? _providerInjectionScriptInFlight;
 
@@ -116,7 +134,8 @@ class DappProviderBridge {
       this.networkVersion = null;
       this._events = {};
       this.selectedAddress = null;
-      this._connected = false;
+      this._connected = true;
+      this._hasAnnouncedConnect = false;
       this._metamask = {
         isUnlocked: async () => !!this.selectedAddress
       };
@@ -222,19 +241,12 @@ class DappProviderBridge {
     enable() {
       return this.request({ method: 'eth_requestAccounts', params: [] });
     }
-    isConnected() { return this._connected; }
+    isConnected() { return true; }
     _setAccounts(accounts) {
       const normalized = Array.isArray(accounts) ? accounts : [];
-      const wasConnected = this._connected;
       this.selectedAddress = normalized.length > 0 ? normalized[0] : null;
-      this._connected = normalized.length > 0;
       this._emit('accountsChanged', [normalized]);
-      if (!this._connected && wasConnected) {
-        this._emit('disconnect', [{ code: 4900, message: 'Disconnected' }]);
-      }
-      if (this._connected && this.chainId) {
-        this._emit('connect', [{ chainId: this.chainId }]);
-      }
+      this._announceConnectIfNeeded();
     }
     _setChainId(chainId) {
       if (typeof chainId !== 'string' || !chainId) return;
@@ -245,9 +257,12 @@ class DappProviderBridge {
         this.networkVersion = null;
       }
       this._emit('chainChanged', [chainId]);
-      if (this._connected) {
-        this._emit('connect', [{ chainId: chainId }]);
-      }
+      this._announceConnectIfNeeded();
+    }
+    _announceConnectIfNeeded() {
+      if (this._hasAnnouncedConnect || !this.chainId) return;
+      this._hasAnnouncedConnect = true;
+      this._emit('connect', [{ chainId: this.chainId }]);
     }
     _emit(eventName, payload) {
       (this._events[eventName] || []).forEach((listener) => {
@@ -422,14 +437,18 @@ class DappProviderBridge {
         case 'wallet_addEthereumChain':
           await _walletAddEthereumChain(context, params);
           return _result(null);
+        case 'wallet_watchAsset':
+          return _result(await _walletWatchAsset(context, params));
         case 'personal_sign':
           return _result(await _personalSign(context, params));
+        case 'eth_signTypedData':
+        case 'eth_signTypedData_v3':
         case 'eth_signTypedData_v4':
           return _result(await _signTypedData(context, params));
         case 'eth_sendTransaction':
           return _result(await _sendTransaction(context, params));
         default:
-          return _error(4200, 'Unsupported provider method: $method');
+          return _result(await _forwardRpcRequest(context, method, params));
       }
     } on _ProviderBridgeException catch (error) {
       return _error(error.code, error.message);
@@ -748,6 +767,128 @@ class DappProviderBridge {
     );
   }
 
+  Future<bool> _walletWatchAsset(
+    BuildContext context,
+    List<dynamic> params,
+  ) async {
+    final request = params.isNotEmpty ? params.first : null;
+    if (request is! Map) {
+      throw _ProviderBridgeException(
+        -32602,
+        'wallet_watchAsset requires a request object.',
+      );
+    }
+
+    final type = request['type']?.toString().trim().toUpperCase();
+    if (type != 'ERC20') {
+      throw _ProviderBridgeException(
+        4200,
+        'Only ERC20 assets are supported for wallet_watchAsset.',
+      );
+    }
+
+    final options = request['options'];
+    if (options is! Map) {
+      throw _ProviderBridgeException(
+        -32602,
+        'wallet_watchAsset requires an options object.',
+      );
+    }
+
+    final address = options['address']?.toString().trim() ?? '';
+    final symbol = options['symbol']?.toString().trim() ?? '';
+    final name = options['name']?.toString().trim();
+    final decimals = int.tryParse(options['decimals']?.toString() ?? '');
+    final image = options['image']?.toString().trim();
+    if (!address.startsWith('0x') || address.length != 42) {
+      throw _ProviderBridgeException(
+        -32602,
+        'wallet_watchAsset requires a valid token address.',
+      );
+    }
+    if (symbol.isEmpty || decimals == null || decimals < 0) {
+      throw _ProviderBridgeException(
+        -32602,
+        'wallet_watchAsset requires a token symbol and decimals.',
+      );
+    }
+
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+
+    final blockchain = context.read<BlockchainService>();
+    final activeChain = blockchain.activeChain;
+    final approved = await _confirmAction(
+      context,
+      title: 'Add token',
+      message: 'Add $symbol to Owllet on ${activeChain.name}?',
+      confirmLabel: 'Add token',
+    );
+    if (!approved) {
+      return false;
+    }
+
+    final added = await blockchain.addCustomToken(
+      chainId: activeChain.chainId,
+      token: CustomTokenDefinition(
+        symbol: symbol.toUpperCase(),
+        name: (name == null || name.isEmpty) ? symbol.toUpperCase() : name,
+        address: address,
+        decimals: decimals,
+        imageUrl: image == null || image.isEmpty ? null : image,
+      ),
+    );
+    return added;
+  }
+
+  Future<dynamic> _forwardRpcRequest(
+    BuildContext context,
+    String method,
+    List<dynamic> params,
+  ) async {
+    if (!_isForwardableRpcMethod(method)) {
+      throw _ProviderBridgeException(4200, 'Unsupported provider method: $method');
+    }
+
+    final blockchain = context.read<BlockchainService>();
+    final rpcService = context.read<RpcService>();
+    final activeChain = blockchain.activeChain;
+    final resolvedRpcUrl = await rpcService.resolveWorkingRpcUrl(
+      chainId: activeChain.chainId,
+      primaryRpcUrl: activeChain.rpcUrl,
+    );
+    final result = await rpcService.rpcCall(
+      chainId: activeChain.chainId,
+      primaryRpcUrl: resolvedRpcUrl,
+      method: method,
+      params: params,
+    );
+    final rpcError = rpcService.lastError;
+    if (result == null && rpcError != null) {
+      throw _ProviderBridgeException(
+        rpcError.code ?? -32603,
+        rpcError.message,
+      );
+    }
+    return result;
+  }
+
+  bool _isForwardableRpcMethod(String method) {
+    if (method.isEmpty || _blockedRpcPassthroughMethods.contains(method)) {
+      return false;
+    }
+    if (method.startsWith('wallet_')) {
+      return false;
+    }
+    return method.startsWith('eth_') ||
+        method.startsWith('net_') ||
+        method.startsWith('web3_');
+  }
+
   Future<String> _personalSign(
     BuildContext context,
     List<dynamic> params,
@@ -953,6 +1094,9 @@ class DappProviderBridge {
     final blockchain = context.read<BlockchainService>();
     final activeChainName = blockchain.activeChain.name;
     final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (!context.mounted) {
+      return false;
+    }
     final walletLabel = walletAddress == null || walletAddress.isEmpty
         ? 'No active wallet'
         : _shortAddress(walletAddress);

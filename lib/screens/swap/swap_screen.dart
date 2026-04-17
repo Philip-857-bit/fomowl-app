@@ -1647,8 +1647,8 @@ class _SwapScreenState extends State<SwapScreen> {
       },
       'primaryType': 'LimitOrder',
       'domain': {
-        'name': '0x Protocol',
-        'version': '4',
+        'name': 'ZeroEx',
+        'version': '1.0.0',
         'chainId': chainId,
         'verifyingContract': verifyingContract,
       },

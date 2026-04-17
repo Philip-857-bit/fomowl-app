@@ -466,6 +466,45 @@ class AuthService {
     }
   }
 
+  Future<Map<String, dynamic>> confirmTwoFactorCode({
+    required String code,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null || token.isEmpty) {
+        return {'success': false, 'error': 'You need to sign in again.'};
+      }
+
+      final response = await http
+          .post(
+            AppEnvironment.profile('/2fa/confirm'),
+            headers: _jsonHeaders(token),
+            body: jsonEncode({'code': code}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      }
+
+      return {
+        'success': false,
+        'error': AppErrorUtils.backendMessage(
+          response.body,
+          fallback: 'Unable to verify the authenticator code right now.',
+        ),
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'error': AppErrorUtils.userMessage(
+          e,
+          fallback: 'Unable to verify the authenticator code right now.',
+        ),
+      };
+    }
+  }
+
   Future<Map<String, dynamic>> disableTwoFactor({required String code}) async {
     try {
       final token = await getToken();
