@@ -106,61 +106,59 @@ class _PortfolioTabContentState extends State<PortfolioTabContent> {
 
   Widget _buildChainSection(HomePortfolioSection section) {
     final isExpanded = _expandedChainIds.contains(section.chain.chainId);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
       child: Column(
         children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: () {
-              setState(() {
-                if (isExpanded) {
-                  _expandedChainIds.remove(section.chain.chainId);
-                } else {
-                  _expandedChainIds.add(section.chain.chainId);
-                }
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-              child: Row(
-                children: [
-                  _ChainMarker(chainLogoUrl: section.chain.logoUrl),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      section.chain.name.toUpperCase(),
-                      style: GoogleFonts.outfit(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.82),
-                        letterSpacing: 0.7,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () {
+                setState(() {
+                  if (isExpanded) {
+                    _expandedChainIds.remove(section.chain.chainId);
+                  } else {
+                    _expandedChainIds.add(section.chain.chainId);
+                  }
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    _ChainMarker(chainLogoUrl: section.chain.logoUrl),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        section.chain.name.toUpperCase(),
+                        style: GoogleFonts.outfit(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.82),
+                          letterSpacing: 0.7,
+                        ),
                       ),
                     ),
-                  ),
-                  Text(
-                    ValueFormatter.formatCurrencyWithGrouping(
-                      section.totalBalanceUsd,
+                    Text(
+                      ValueFormatter.formatCurrencyWithGrouping(
+                        section.totalBalanceUsd,
+                      ),
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
                     ),
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                    const SizedBox(width: 8),
+                    Icon(
+                      isExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -172,7 +170,7 @@ class _PortfolioTabContentState extends State<PortfolioTabContent> {
                 onTap: () => widget.onSelectToken(token),
               ),
             ),
-          if (isExpanded) const SizedBox(height: 6),
+          if (isExpanded) const SizedBox(height: 4),
         ],
       ),
     );

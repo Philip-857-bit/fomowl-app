@@ -27,13 +27,13 @@ class HomeTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Row(
         children: [
           GestureDetector(
             onTap: onWalletTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -57,11 +57,11 @@ class HomeTopBar extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 28,
-                    height: 28,
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: AppColors.accentRed.withValues(alpha: 0.16),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: AppColors.accentRed.withValues(alpha: 0.28),
                       ),
@@ -79,7 +79,7 @@ class HomeTopBar extends StatelessWidget {
                       walletName,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -99,10 +99,10 @@ class HomeTopBar extends StatelessWidget {
           GestureDetector(
             onTap: onChainTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
               decoration: BoxDecoration(
                 gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.accentRed.withValues(alpha: 0.22),
@@ -125,7 +125,8 @@ class HomeTopBar extends StatelessWidget {
                         ? Image.network(
                             chainLogoUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => _symbolFallback(),
+                            errorBuilder: (context, error, stackTrace) =>
+                                _symbolFallback(),
                           )
                         : _symbolFallback(),
                   ),
@@ -145,8 +146,8 @@ class HomeTopBar extends StatelessWidget {
               GestureDetector(
                 onTap: onNotificationsTap,
                 child: Container(
-                  width: 42,
-                  height: 42,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: AppColors.cardDark,
                     borderRadius: BorderRadius.circular(16),

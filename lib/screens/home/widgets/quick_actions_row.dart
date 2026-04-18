@@ -68,29 +68,22 @@ class _QuickActionButton extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                width: 74,
-                height: 74,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Colors.white.withValues(alpha: 0.04),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: Colors.white.withValues(alpha: 0.05),
                   ),
                 ),
-                child: Container(
-                  margin: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentRed.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: AppColors.accentRed, size: 24),
-                ),
+                child: Icon(icon, color: AppColors.accentRed, size: 27),
               ),
               const SizedBox(height: 10),
               Text(
                 label,
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w600,
                   color: Colors.white.withValues(alpha: 0.88),
                 ),

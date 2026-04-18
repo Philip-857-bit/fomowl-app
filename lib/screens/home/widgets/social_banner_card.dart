@@ -24,7 +24,7 @@ class SocialBannerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         child: Container(
           margin: margin,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -40,8 +40,8 @@ class SocialBannerCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: AppColors.accentRed.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
@@ -50,7 +50,7 @@ class SocialBannerCard extends StatelessWidget {
                   ),
                 ),
                 child: const Icon(
-                  Icons.rocket_launch,
+                  Icons.campaign_rounded,
                   color: AppColors.accentRed,
                   size: 22,
                 ),
@@ -63,7 +63,7 @@ class SocialBannerCard extends StatelessWidget {
                     Text(
                       l.followSocialhq,
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -72,7 +72,7 @@ class SocialBannerCard extends StatelessWidget {
                     Text(
                       l.socialhqHandle,
                       style: GoogleFonts.outfit(
-                        fontSize: 12,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                         color: AppColors.warning,
                       ),
@@ -81,8 +81,8 @@ class SocialBannerCard extends StatelessWidget {
                 ),
               ),
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(14),

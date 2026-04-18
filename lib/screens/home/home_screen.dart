@@ -10,7 +10,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
-import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
@@ -1315,17 +1314,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   context,
                                   '/transactions',
                                 ),
-                                primaryActionLabel: 'Deposit Funds',
-                                onPrimaryAction: () => Navigator.pushNamed(
-                                  context,
-                                  '/cash-in',
-                                  arguments: const MiniAppHostArguments(
-                                    miniAppId: 'cash_in',
-                                  ),
-                                ),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 20),
                             Showcase(
                               key: _quickActionsShowcaseKey,
                               title: 'Core wallet actions',
@@ -1349,7 +1340,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 18),
                             if (_shouldShowHomePromoSection) ...[
                               Showcase(
                                 key: _promoCarouselShowcaseKey,
@@ -1376,7 +1367,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       _openFallbackSocialBanner,
                                 ),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 22),
                             ],
                             Showcase(
                               key: _assetTabsShowcaseKey,

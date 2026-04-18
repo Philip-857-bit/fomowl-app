@@ -333,26 +333,18 @@ class _AssetTabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? AppColors.accentRed : Colors.transparent,
-              width: 3,
-            ),
-          ),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 4),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: GoogleFonts.outfit(
-            fontSize: 15,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 16,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             color: selected
                 ? AppColors.accentRed
                 : Colors.white.withValues(alpha: 0.62),
+            letterSpacing: 0.1,
           ),
         ),
       ),
@@ -371,8 +363,8 @@ class _AssetToolbarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 48,
-        height: 48,
+        width: 46,
+        height: 46,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.03),
           shape: BoxShape.circle,
@@ -398,17 +390,12 @@ class _AssetTextButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Text(
           label,
           style: GoogleFonts.outfit(
-            fontSize: 13,
+            fontSize: 13.5,
             color: AppColors.accentRed,
             fontWeight: FontWeight.w600,
           ),

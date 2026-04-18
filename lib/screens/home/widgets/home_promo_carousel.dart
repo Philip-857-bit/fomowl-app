@@ -34,36 +34,37 @@ class HomePromoCarousel extends StatelessWidget {
 
     return Column(
       children: [
-        SizedBox(
-          height: 116,
-          child: isLoading
-              ? const _PromoSkeletonCard()
-              : shouldShowPager
-              ? PageView.builder(
-                  controller: pageController,
-                  itemCount: banners.length,
-                  onPageChanged: onPageChanged,
-                  itemBuilder: (context, index) {
-                    final banner = banners[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _PromoBannerCard(
-                        banner: banner,
-                        onTap: () => onTapBanner(banner),
-                      ),
-                    );
-                  },
-                )
-              : shouldShowFallback
-              ? Padding(
+        if (isLoading)
+          const SizedBox(height: 98, child: _PromoSkeletonCard())
+        else if (shouldShowPager)
+          SizedBox(
+            height: 98,
+            child: PageView.builder(
+              controller: pageController,
+              itemCount: banners.length,
+              onPageChanged: onPageChanged,
+              itemBuilder: (context, index) {
+                final banner = banners[index];
+                return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SocialBannerCard(
-                    margin: EdgeInsets.zero,
-                    onTap: onTapFallbackSocialBanner,
+                  child: _PromoBannerCard(
+                    banner: banner,
+                    onTap: () => onTapBanner(banner),
                   ),
-                )
-              : const SizedBox.shrink(),
-        ),
+                );
+              },
+            ),
+          )
+        else if (shouldShowFallback)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SocialBannerCard(
+              margin: EdgeInsets.zero,
+              onTap: onTapFallbackSocialBanner,
+            ),
+          )
+        else
+          const SizedBox.shrink(),
         if (!isLoading && banners.length > 1) ...[
           const SizedBox(height: 10),
           Row(
@@ -120,40 +121,52 @@ class _PromoBannerCard extends StatelessWidget {
             border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRed.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.accentRed.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.campaign_rounded,
+                                  color: AppColors.accentRed,
+                                  size: 22,
+                                ),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.campaign_rounded,
+                          color: AppColors.accentRed,
+                          size: 22,
+                        ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          'FEATURED',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white70,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
                       Text(
                         banner.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -164,64 +177,42 @@ class _PromoBannerCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
                           color: Colors.white70,
-                          fontSize: 12.5,
-                          height: 1.35,
+                          fontSize: 12.2,
+                          height: 1.28,
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            ctaLabel,
-                            style: GoogleFonts.outfit(
-                              color: AppColors.success,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          const Icon(
-                            Icons.open_in_new_rounded,
-                            color: AppColors.success,
-                            size: 15,
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                if (imageUrl != null && imageUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(18),
-                    child: Image.network(
-                      imageUrl,
-                      width: 92,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox.shrink(),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 92,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      gradient: const LinearGradient(
-                        colors: [Color(0x33FF4D67), Color(0x1400D084)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      ctaLabel,
+                      style: GoogleFonts.outfit(
+                        color: AppColors.warning,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.campaign_rounded,
-                      color: Colors.white70,
-                      size: 28,
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.open_in_new_rounded,
+                        color: Colors.white.withValues(alpha: 0.74),
+                        size: 17,
+                      ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -251,19 +242,20 @@ class _PromoSkeletonCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.accentRed.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 76,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const Spacer(),
                   Container(
                     width: 140,
                     height: 18,
@@ -284,12 +276,12 @@ class _PromoSkeletonCard extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
             Container(
-              width: 92,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ],

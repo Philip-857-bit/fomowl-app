@@ -23,10 +23,10 @@ class HomeTokenListItem extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          padding: const EdgeInsets.all(14),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -36,8 +36,8 @@ class HomeTokenListItem extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           ),
           child: Row(
             children: [
@@ -45,7 +45,7 @@ class HomeTokenListItem extends StatelessWidget {
                 tokenSymbol: token.symbol,
                 tokenAddress: token.contractAddress,
                 tokenImageUrl: token.imageUrl,
-                size: 40,
+                size: 44,
                 chainId: chainId,
                 isCertified: token.isCertified,
               ),
@@ -57,7 +57,7 @@ class HomeTokenListItem extends StatelessWidget {
                     Text(
                       token.name,
                       style: GoogleFonts.outfit(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
@@ -66,7 +66,7 @@ class HomeTokenListItem extends StatelessWidget {
                     Text(
                       token.formattedBalance,
                       style: GoogleFonts.outfit(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Colors.white.withValues(alpha: 0.54),
                       ),
                     ),
@@ -80,7 +80,7 @@ class HomeTokenListItem extends StatelessWidget {
                   Text(
                     token.formattedValue,
                     style: GoogleFonts.outfit(
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
@@ -89,7 +89,7 @@ class HomeTokenListItem extends StatelessWidget {
                   Text(
                     token.formattedChange,
                     style: GoogleFonts.outfit(
-                      fontSize: 12,
+                      fontSize: 13,
                       color: token.isPositiveChange
                           ? AppColors.success
                           : AppColors.error,
@@ -97,11 +97,11 @@ class HomeTokenListItem extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Icon(
                 Icons.chevron_right_rounded,
                 color: Colors.white.withValues(alpha: 0.32),
-                size: 20,
+                size: 18,
               ),
             ],
           ),
