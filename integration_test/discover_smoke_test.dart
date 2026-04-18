@@ -59,6 +59,7 @@ void main() {
             error: null,
             onRefresh: () async {},
             onOpenDapp: (value) => opened = value,
+            onOpenTrendingToken: (_) {},
           ),
         ),
       ),

@@ -6,6 +6,7 @@ class DiscoverTrendingToken {
     required this.imageUrl,
     required this.priceUsd,
     required this.changePercent24h,
+    this.marketUrl,
   });
 
   final String id;
@@ -14,6 +15,15 @@ class DiscoverTrendingToken {
   final String imageUrl;
   final double priceUsd;
   final double changePercent24h;
+  final String? marketUrl;
+
+  String get resolvedMarketUrl {
+    final trimmed = marketUrl?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+    return 'https://www.coingecko.com/en/coins/${Uri.encodeComponent(id)}';
+  }
 
   factory DiscoverTrendingToken.fromJson(Map<String, dynamic> json) {
     String requireTextField(String key) {
@@ -44,6 +54,7 @@ class DiscoverTrendingToken {
       imageUrl: requireTextField('imageUrl'),
       priceUsd: parseDoubleField('priceUsd'),
       changePercent24h: parseDoubleField('changePercent24h'),
+      marketUrl: json['marketUrl']?.toString(),
     );
   }
 }

@@ -29,6 +29,16 @@ class HomeBannerItem {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'description': description,
+    'linkUrl': linkUrl,
+    'imageUrl': imageUrl,
+    'ctaLabel': ctaLabel,
+    'sortOrder': sortOrder,
+  };
+
   static String? _optionalString(Object? value) {
     final normalized = value?.toString().trim();
     if (normalized == null || normalized.isEmpty) {
@@ -56,4 +66,26 @@ class HomeBannerFeed {
 
   final List<HomeBannerItem> banners;
   final bool showFallbackSocialBanner;
+
+  Map<String, dynamic> toJson() => {
+    'banners': banners.map((item) => item.toJson()).toList(growable: false),
+    'showFallbackSocialBanner': showFallbackSocialBanner,
+  };
+
+  factory HomeBannerFeed.fromJson(Map<String, dynamic> json) {
+    final items = json['banners'];
+    return HomeBannerFeed(
+      banners: items is List
+          ? items
+                .whereType<Map>()
+                .map(
+                  (item) =>
+                      HomeBannerItem.fromJson(item.cast<String, dynamic>()),
+                )
+                .where((item) => item.id.isNotEmpty)
+                .toList(growable: false)
+          : const <HomeBannerItem>[],
+      showFallbackSocialBanner: json['showFallbackSocialBanner'] != false,
+    );
+  }
 }

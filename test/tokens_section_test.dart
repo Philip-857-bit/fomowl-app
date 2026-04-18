@@ -58,7 +58,7 @@ void main() {
     );
   }
 
-  testWidgets('renders tabs in order and opens on portfolio by default', (
+  testWidgets('renders tabs in order and opens on tokens by default', (
     tester,
   ) async {
     await pumpSection(tester);
@@ -66,8 +66,8 @@ void main() {
     expect(find.text('Tokens'), findsOneWidget);
     expect(find.text('Portfolio'), findsOneWidget);
     expect(find.text('NFTs'), findsOneWidget);
-    expect(find.text('ETHEREUM'), findsOneWidget);
-    expect(find.byIcon(Icons.tune), findsNothing);
+    expect(find.byIcon(Icons.tune), findsOneWidget);
+    expect(find.text('Ethereum'), findsOneWidget);
   });
 
   testWidgets('shows manage icon on tokens tab and keeps nft tab intact', (

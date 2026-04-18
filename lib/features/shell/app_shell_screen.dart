@@ -29,8 +29,20 @@ class _AppShellScreenState extends State<AppShellScreen> {
     final initialIndex = switch (args) {
       int value => value,
       String value => int.tryParse(value),
+      Map<String, dynamic> value => switch (value['tab']) {
+        int tab => tab,
+        String tab => int.tryParse(tab),
+        _ => null,
+      },
       _ => null,
     };
+    final initialDiscoverUrl = switch (args) {
+      Map<String, dynamic> value => value['discoverUrl']?.toString(),
+      _ => null,
+    };
+    if (initialDiscoverUrl != null && initialDiscoverUrl.trim().isNotEmpty) {
+      context.read<AppShellController>().openDiscoverUrl(initialDiscoverUrl);
+    }
     if (initialIndex != null) {
       context.read<AppShellController>().selectIndex(initialIndex);
     }

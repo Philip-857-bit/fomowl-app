@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../services/auth_service.dart';
+import '../../utils/in_app_link_router.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
@@ -384,7 +384,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   }
 
   Future<void> _openExternal(Uri uri) async {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await InAppLinkRouter.open(context, uri.toString());
   }
 
   Future<void> _refreshNavigationState() async {

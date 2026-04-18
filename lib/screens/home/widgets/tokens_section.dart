@@ -45,7 +45,7 @@ class TokensSection extends StatefulWidget {
     required this.onSelectToken,
     required this.onSelectNft,
     this.chainId,
-    this.initialTab = HomeAssetTab.portfolio,
+    this.initialTab = HomeAssetTab.tokens,
     this.onTabChanged,
   });
 
@@ -60,6 +60,15 @@ class _TokensSectionState extends State<TokensSection> {
   void initState() {
     super.initState();
     _selectedTab = widget.initialTab;
+  }
+
+  @override
+  void didUpdateWidget(covariant TokensSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTab != widget.initialTab &&
+        widget.initialTab != _selectedTab) {
+      _selectedTab = widget.initialTab;
+    }
   }
 
   void _setTab(HomeAssetTab tab) {
@@ -81,35 +90,28 @@ class _TokensSectionState extends State<TokensSection> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    _AssetTabChip(
-                      label: widget.localization.tokens,
-                      selected: _selectedTab == HomeAssetTab.tokens,
-                      onTap: () => _setTab(HomeAssetTab.tokens),
-                    ),
-                    const SizedBox(width: 20),
-                    _AssetTabChip(
-                      label: widget.localization.portfolio,
-                      selected: _selectedTab == HomeAssetTab.portfolio,
-                      onTap: () => _setTab(HomeAssetTab.portfolio),
-                    ),
-                    const SizedBox(width: 20),
-                    _AssetTabChip(
-                      label: widget.localization.nfts,
-                      selected: _selectedTab == HomeAssetTab.nfts,
-                      onTap: () => _setTab(HomeAssetTab.nfts),
-                    ),
-                  ],
-                ),
+              _AssetTabChip(
+                label: widget.localization.tokens,
+                selected: _selectedTab == HomeAssetTab.tokens,
+                onTap: () => _setTab(HomeAssetTab.tokens),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 20),
+              _AssetTabChip(
+                label: widget.localization.portfolio,
+                selected: _selectedTab == HomeAssetTab.portfolio,
+                onTap: () => _setTab(HomeAssetTab.portfolio),
+              ),
+              const SizedBox(width: 20),
+              _AssetTabChip(
+                label: widget.localization.nfts,
+                selected: _selectedTab == HomeAssetTab.nfts,
+                onTap: () => _setTab(HomeAssetTab.nfts),
+              ),
+              const Spacer(),
               if (_selectedTab == HomeAssetTab.tokens)
                 _AssetToolbarButton(
-                  icon: Icons.tune_rounded,
+                  icon: Icons.tune,
                   onTap: widget.onManageTokens,
                 )
               else if (_selectedTab == HomeAssetTab.nfts && widget.hasMoreNfts)
@@ -120,7 +122,7 @@ class _TokensSectionState extends State<TokensSection> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         if (_selectedTab == HomeAssetTab.tokens)
           ..._buildTokensContent(visibleTokens)
         else if (_selectedTab == HomeAssetTab.portfolio)
@@ -336,19 +338,14 @@ class _AssetTabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected
-                ? AppColors.accentRed
-                : Colors.white.withValues(alpha: 0.62),
-            letterSpacing: 0.1,
-          ),
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(
+          fontSize: 16,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          color: selected
+              ? AppColors.accentRed
+              : Colors.white.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -363,22 +360,11 @@ class _AssetToolbarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-        child: Icon(
-          icon,
-          color: Colors.white.withValues(alpha: 0.75),
-          size: 20,
-        ),
-      ),
+    return IconButton(
+      icon: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 20),
+      onPressed: onTap,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
     );
   }
 }
@@ -398,7 +384,7 @@ class _AssetTextButton extends StatelessWidget {
         child: Text(
           label,
           style: GoogleFonts.outfit(
-            fontSize: 13.5,
+            fontSize: 13,
             color: AppColors.accentRed,
             fontWeight: FontWeight.w600,
           ),

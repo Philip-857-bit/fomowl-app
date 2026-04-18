@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
@@ -25,7 +24,9 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../../utils/in_app_link_router.dart';
 import 'home_banner_item.dart';
+import 'home_banner_snapshot_service.dart';
 import 'home_banner_service.dart';
 import 'home_portfolio_data.dart';
 import 'home_portfolio_api_service.dart';
@@ -68,6 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   final HomeSnapshotService _snapshotService = HomeSnapshotService();
   final HomeBannerService _homeBannerService = HomeBannerService();
+  final HomeBannerSnapshotService _homeBannerSnapshotService =
+      HomeBannerSnapshotService();
   final HomePortfolioRepository _portfolioRepository =
       const HomePortfolioRepository();
   final HomePortfolioApiService _portfolioApiService =
@@ -105,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
-  HomeAssetTab _selectedAssetTab = HomeAssetTab.portfolio;
+  HomeAssetTab _selectedAssetTab = HomeAssetTab.tokens;
   String? _latestLiveBalanceWallet;
   List<HomeBannerItem> _homeBanners = const [];
   int _homeBannerIndex = 0;
@@ -1027,6 +1030,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return ValueFormatter.formatCurrencyWithGrouping(metrics.totalBalanceUsd);
   }
 
+  String _balanceTitleText(AppLocalizations l) {
+    return _selectedAssetTab == HomeAssetTab.portfolio
+        ? l.totalNetWorth
+        : l.availableBalance;
+  }
+
   String? _balanceStatusText(AppLocalizations l) {
     if (_isLoadingPortfolio || _isLoadingBalances) {
       return l.balanceSyncingStatus;
@@ -1047,17 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openHomeBanner(HomeBannerItem banner) async {
-    final uri = Uri.tryParse(banner.linkUrl);
-    if (uri == null) {
-      return;
-    }
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!mounted) return;
-    if (!opened) {
-      ToastUtils.showError(
-        AppLocalizations.of(context).unableToOpenLink(banner.title),
-      );
-    }
+    await InAppLinkRouter.open(context, banner.linkUrl);
   }
 
   Future<void> _loadHomeBanners() async {
@@ -1065,7 +1064,24 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    setState(() => _isLoadingHomeBanners = true);
+    final cachedSnapshot = await _homeBannerSnapshotService.loadSnapshot();
+    if (!mounted) {
+      return;
+    }
+
+    final cachedFeed = cachedSnapshot?.feed;
+    if (cachedFeed != null) {
+      setState(() {
+        _homeBanners = cachedFeed.banners.take(4).toList(growable: false);
+        _showFallbackSocialBanner = cachedFeed.showFallbackSocialBanner;
+        _homeBannerIndex = 0;
+        _isLoadingHomeBanners = false;
+      });
+      _configureHomeBannerRotation();
+    } else {
+      setState(() => _isLoadingHomeBanners = true);
+    }
+
     try {
       final feed = await _homeBannerService.fetchHomeBanners();
       if (!mounted) {
@@ -1077,16 +1093,21 @@ class _HomeScreenState extends State<HomeScreen> {
         _homeBannerIndex = 0;
         _isLoadingHomeBanners = false;
       });
+      await _homeBannerSnapshotService.saveSnapshot(feed);
     } catch (_) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _homeBanners = const [];
-        _showFallbackSocialBanner = true;
-        _homeBannerIndex = 0;
-        _isLoadingHomeBanners = false;
-      });
+      if (cachedFeed == null) {
+        setState(() {
+          _homeBanners = const [];
+          _showFallbackSocialBanner = true;
+          _homeBannerIndex = 0;
+          _isLoadingHomeBanners = false;
+        });
+      } else {
+        setState(() => _isLoadingHomeBanners = false);
+      }
     }
     _configureHomeBannerRotation();
   }
@@ -1146,12 +1167,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _showFallbackSocialBanner;
 
   Future<void> _openFallbackSocialBanner() async {
-    final uri = Uri.parse('https://x.com/fomowlhq');
-    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!mounted || opened) {
-      return;
-    }
-    ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink('X'));
+    await InAppLinkRouter.open(context, 'https://x.com/fomowlhq');
   }
 
   Future<void> _showNftDetails(NftAsset nft) async {
@@ -1302,17 +1318,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               description:
                                   'Use this card to track live value, hide balances, and jump into transaction history.',
                               child: BalanceCard(
-                                titleText:
-                                    _selectedAssetTab == HomeAssetTab.tokens
-                                    ? l.availableBalance
-                                    : l.totalNetWorth,
+                                titleText: _balanceTitleText(l),
                                 formattedBalance: _formattedTotalBalance,
                                 portfolioMetrics:
-                                    _selectedAssetTab == HomeAssetTab.tokens
-                                    ? HomePortfolioMetricsCalculator.fromTokens(
-                                        _displayableTokens(_tokens),
-                                      )
-                                    : _portfolioMetrics,
+                                    HomePortfolioMetricsCalculator.fromTokens(
+                                      _displayableTokens(_tokens),
+                                    ),
                                 statusText: _balanceStatusText(l),
                                 isBalanceVisible: _balanceVisible,
                                 isLoadingBalances:
@@ -1394,6 +1405,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 nftPreview: _nftPreview,
                                 hasMoreNfts: _hasMoreNfts,
                                 localization: l,
+                                initialTab: _selectedAssetTab,
                                 onManageTokens: _openTokenManager,
                                 onOpenNfts: () {
                                   if (_hasMoreNfts) {

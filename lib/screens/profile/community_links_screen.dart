@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/toast_utils.dart';
+import '../../utils/in_app_link_router.dart';
 import '../../widgets/bottom_navigation.dart';
 
 class CommunityLinksScreen extends StatelessWidget {
@@ -162,12 +161,7 @@ class CommunityLinksScreen extends StatelessWidget {
   }
 
   Future<void> _open(BuildContext context, String url) async {
-    final uri = Uri.parse(url);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!context.mounted) return;
-    if (!ok) {
-      ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink(url));
-    }
+    await InAppLinkRouter.open(context, url);
   }
 }
 

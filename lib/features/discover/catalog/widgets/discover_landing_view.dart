@@ -22,6 +22,7 @@ class DiscoverLandingView extends StatelessWidget {
     required this.error,
     required this.onRefresh,
     required this.onOpenDapp,
+    required this.onOpenTrendingToken,
     this.onOpenCashIn,
   });
 
@@ -37,6 +38,7 @@ class DiscoverLandingView extends StatelessWidget {
   final String? error;
   final Future<void> Function() onRefresh;
   final ValueChanged<DiscoverDappEntry> onOpenDapp;
+  final ValueChanged<DiscoverTrendingToken> onOpenTrendingToken;
   final VoidCallback? onOpenCashIn;
 
   @override
@@ -138,6 +140,7 @@ class DiscoverLandingView extends StatelessWidget {
               tokens: trendingTokens,
               loading: loadingTrendingTokens,
               error: trendingTokensError,
+              onOpenToken: onOpenTrendingToken,
             ),
             const SizedBox(height: 20),
           ],
@@ -282,11 +285,13 @@ class _TrendingTokenSection extends StatelessWidget {
     required this.tokens,
     required this.loading,
     required this.error,
+    required this.onOpenToken,
   });
 
   final List<DiscoverTrendingToken> tokens;
   final bool loading;
   final String? error;
+  final ValueChanged<DiscoverTrendingToken> onOpenToken;
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +348,10 @@ class _TrendingTokenSection extends StatelessWidget {
             .map(
               (token) => Padding(
                 padding: EdgeInsets.only(bottom: token == tokens.last ? 0 : 14),
-                child: _TrendingTokenRow(token: token),
+                child: _TrendingTokenRow(
+                  token: token,
+                  onTap: () => onOpenToken(token),
+                ),
               ),
             )
             .toList(growable: false),
@@ -353,9 +361,10 @@ class _TrendingTokenSection extends StatelessWidget {
 }
 
 class _TrendingTokenRow extends StatelessWidget {
-  const _TrendingTokenRow({required this.token});
+  const _TrendingTokenRow({required this.token, required this.onTap});
 
   final DiscoverTrendingToken token;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -370,84 +379,100 @@ class _TrendingTokenRow extends StatelessWidget {
           : 4,
     );
 
-    return Row(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: Image.network(
-            token.imageUrl,
-            width: 44,
-            height: 44,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: AppColors.inputBackground,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                token.symbol.substring(0, 1),
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Row(
             children: [
-              Text(
-                token.name,
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Image.network(
+                  token.imageUrl,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      color: AppColors.inputBackground,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      token.symbol.substring(0, 1),
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                token.symbol,
-                style: GoogleFonts.outfit(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      token.name,
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      token.symbol,
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    currencyFormatter.format(token.priceUsd),
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${isPositiveChange ? '+' : ''}${token.changePercent24h.toStringAsFixed(2)}%',
+                    style: GoogleFonts.outfit(
+                      color: isPositiveChange
+                          ? AppColors.success
+                          : isNegativeChange
+                          ? AppColors.error
+                          : AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.open_in_new_rounded,
+                size: 16,
+                color: Colors.white.withValues(alpha: 0.38),
               ),
             ],
           ),
         ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              currencyFormatter.format(token.priceUsd),
-              style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${isPositiveChange ? '+' : ''}${token.changePercent24h.toStringAsFixed(2)}%',
-              style: GoogleFonts.outfit(
-                color: isPositiveChange
-                    ? AppColors.success
-                    : isNegativeChange
-                    ? AppColors.error
-                    : AppColors.textSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 }

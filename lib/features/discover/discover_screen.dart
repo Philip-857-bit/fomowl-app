@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
+import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
 import '../../utils/app_error_utils.dart';
+import '../../utils/in_app_link_router.dart';
 import 'browser/browser_session_controller.dart';
 import 'browser/widgets/discover_blocked_view.dart';
 import 'browser/widgets/discover_browser_view.dart';
@@ -77,6 +79,28 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final pendingDiscoverUrl = context.select<AppShellController, String?>(
+      (controller) => controller.pendingDiscoverUrl,
+    );
+    if (pendingDiscoverUrl != null && pendingDiscoverUrl.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        final nextUrl = context
+            .read<AppShellController>()
+            .consumePendingDiscoverUrl();
+        if (nextUrl == null || nextUrl.trim().isEmpty) {
+          return;
+        }
+        final l = AppLocalizations.of(context);
+        _sessionController.openManualInput(
+          nextUrl,
+          invalidInputReason: l.discoverManualInputInvalid,
+          webSearchTitle: l.discoverWebSearchTitle,
+        );
+      });
+    }
     return AnimatedBuilder(
       animation: _sessionController,
       builder: (context, _) {
@@ -245,6 +269,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             dapp,
             invalidLaunchUrlReason: l.discoverInvalidLaunchUrl,
           ),
+          onOpenTrendingToken: (token) =>
+              InAppLinkRouter.open(context, token.resolvedMarketUrl),
           onOpenCashIn: () => Navigator.of(context).pushNamed(
             '/cash-in',
             arguments: const MiniAppHostArguments(
@@ -301,11 +327,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Future<void> _openExternal(String rawUrl) async {
-    final uri = Uri.tryParse(rawUrl);
-    if (uri == null) {
-      return;
-    }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    await InAppLinkRouter.open(context, rawUrl);
   }
 
   Future<void> _openRequestSupport(dynamic state) async {

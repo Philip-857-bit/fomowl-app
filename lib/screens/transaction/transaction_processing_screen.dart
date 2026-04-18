@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/in_app_link_router.dart';
 import '../../widgets/entrance_motion.dart';
 
 enum TransactionProgressFlow { generic, swap, transfer }
@@ -415,15 +415,8 @@ class _ProcessingScaffold extends StatelessWidget {
   Future<void> _openDetails(BuildContext context) async {
     final detailsUrl = state.detailsUrl;
     if (detailsUrl != null && detailsUrl.isNotEmpty) {
-      final uri = Uri.tryParse(detailsUrl);
-      if (uri != null) {
-        final opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-        if (opened) {
-          return;
-        }
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        return;
-      }
+      await InAppLinkRouter.open(context, detailsUrl);
+      return;
     }
 
     if (!context.mounted) {

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:web3dart/web3dart.dart';
 
 import '../../constants/app_colors.dart';
@@ -15,6 +14,7 @@ import '../../services/etherscan_v2_service.dart';
 import '../../services/http_client_service.dart';
 import '../../services/wallet_history_service.dart';
 import '../../services/wallet_service.dart';
+import '../../utils/in_app_link_router.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -729,14 +729,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _openExplorer(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      return;
-    }
-    final opened = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-    if (!opened) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await InAppLinkRouter.open(context, url);
   }
 
   String _typeLabel(String type, AppLocalizations l) {

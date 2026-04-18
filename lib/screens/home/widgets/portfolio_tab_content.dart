@@ -106,73 +106,65 @@ class _PortfolioTabContentState extends State<PortfolioTabContent> {
 
   Widget _buildChainSection(HomePortfolioSection section) {
     final isExpanded = _expandedChainIds.contains(section.chain.chainId);
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(18),
-              onTap: () {
-                setState(() {
-                  if (isExpanded) {
-                    _expandedChainIds.remove(section.chain.chainId);
-                  } else {
-                    _expandedChainIds.add(section.chain.chainId);
-                  }
-                });
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    _ChainMarker(chainLogoUrl: section.chain.logoUrl),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        section.chain.name.toUpperCase(),
-                        style: GoogleFonts.outfit(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.82),
-                          letterSpacing: 0.7,
-                        ),
-                      ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedChainIds.remove(section.chain.chainId);
+                } else {
+                  _expandedChainIds.add(section.chain.chainId);
+                }
+              });
+            },
+            child: Row(
+              children: [
+                _ChainMarker(chainLogoUrl: section.chain.logoUrl),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    section.chain.name.toUpperCase(),
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.78),
+                      letterSpacing: 0.8,
                     ),
-                    Text(
-                      ValueFormatter.formatCurrencyWithGrouping(
-                        section.totalBalanceUsd,
-                      ),
-                      style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      isExpanded
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                Text(
+                  ValueFormatter.formatCurrencyWithGrouping(
+                    section.totalBalanceUsd,
+                  ),
+                  style: GoogleFonts.outfit(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ],
             ),
           ),
-          if (isExpanded)
-            ...section.tokens.map(
-              (token) => HomeTokenListItem(
-                token: token,
-                chainId: section.chain.chainId,
-                onTap: () => widget.onSelectToken(token),
-              ),
+        ),
+        if (isExpanded)
+          ...section.tokens.map(
+            (token) => HomeTokenListItem(
+              token: token,
+              chainId: section.chain.chainId,
+              onTap: () => widget.onSelectToken(token),
             ),
-          if (isExpanded) const SizedBox(height: 4),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -196,7 +188,7 @@ class _ChainMarker extends StatelessWidget {
             ? Image.network(
                 chainLogoUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
+                errorBuilder: (context, error, stackTrace) =>
                     const Icon(Icons.blur_on, color: Colors.white, size: 14),
               )
             : const Icon(Icons.blur_on, color: Colors.white, size: 14),
