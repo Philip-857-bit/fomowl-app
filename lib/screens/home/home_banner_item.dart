@@ -47,3 +47,13 @@ class HomeBannerItem {
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
+
+class HomeBannerFeed {
+  const HomeBannerFeed({
+    required this.banners,
+    required this.showFallbackSocialBanner,
+  });
+
+  final List<HomeBannerItem> banners;
+  final bool showFallbackSocialBanner;
+}

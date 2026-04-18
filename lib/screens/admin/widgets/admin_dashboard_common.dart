@@ -177,14 +177,12 @@ class AdminHeroCard extends StatelessWidget {
   const AdminHeroCard({
     super.key,
     required this.chainName,
-    required this.backendBaseUrl,
     required this.lastSyncedAt,
     required this.status,
     required this.isRefreshing,
   });
 
   final String chainName;
-  final String backendBaseUrl;
   final DateTime? lastSyncedAt;
   final String? status;
   final bool isRefreshing;
@@ -288,7 +286,7 @@ class AdminHeroCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '$chainName network control surface',
+                              '$chainName operations dashboard',
                               style: GoogleFonts.outfit(
                                 color: AppColors.textSecondary,
                                 fontSize: 13,
@@ -318,7 +316,7 @@ class AdminHeroCard extends StatelessWidget {
                         color: statusColor,
                       ),
                       AdminStatusPill(
-                        label: 'CONTROL PLANE',
+                        label: 'LIVE DASHBOARD',
                         color: Colors.white70,
                       ),
                     ],
@@ -351,45 +349,8 @@ class AdminHeroCard extends StatelessWidget {
                         ),
                         Expanded(
                           child: _HeroMetaBlock(
-                            label: 'Runtime',
+                            label: 'Mode',
                             value: isRefreshing ? 'Refreshing' : 'Ready',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.06),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.cloud_done_outlined,
-                          color: AppColors.textSecondary,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            backendBaseUrl,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.outfit(
-                              color: Colors.white70,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
                           ),
                         ),
                       ],

@@ -14,7 +14,7 @@ class HomeBannerService {
   final http.Client _client;
   final bool _ownsClient;
 
-  Future<List<HomeBannerItem>> fetchHomeBanners() async {
+  Future<HomeBannerFeed> fetchHomeBanners() async {
     final response = await _client.get(AppEnvironment.content('/home-banners'));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
@@ -27,18 +27,29 @@ class HomeBannerService {
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
-      return const <HomeBannerItem>[];
+      return const HomeBannerFeed(
+        banners: <HomeBannerItem>[],
+        showFallbackSocialBanner: true,
+      );
     }
     final items = decoded['banners'];
+    final showFallbackSocialBanner =
+        decoded['showFallbackSocialBanner'] != false;
     if (items is! List) {
-      return const <HomeBannerItem>[];
+      return HomeBannerFeed(
+        banners: const <HomeBannerItem>[],
+        showFallbackSocialBanner: showFallbackSocialBanner,
+      );
     }
 
-    return items
-        .whereType<Map>()
-        .map((item) => HomeBannerItem.fromJson(item.cast<String, dynamic>()))
-        .where((item) => item.id.isNotEmpty)
-        .toList(growable: false);
+    return HomeBannerFeed(
+      banners: items
+          .whereType<Map>()
+          .map((item) => HomeBannerItem.fromJson(item.cast<String, dynamic>()))
+          .where((item) => item.id.isNotEmpty)
+          .toList(growable: false),
+      showFallbackSocialBanner: showFallbackSocialBanner,
+    );
   }
 
   void dispose() {

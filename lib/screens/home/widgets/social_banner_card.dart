@@ -6,8 +6,13 @@ import '../../../l10n/app_localizations.dart';
 
 class SocialBannerCard extends StatelessWidget {
   final VoidCallback onTap;
+  final EdgeInsetsGeometry margin;
 
-  const SocialBannerCard({super.key, required this.onTap});
+  const SocialBannerCard({
+    super.key,
+    required this.onTap,
+    this.margin = const EdgeInsets.symmetric(horizontal: 16),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +23,7 @@ class SocialBannerCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
+          margin: margin,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(

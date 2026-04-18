@@ -228,7 +228,7 @@ class AdminOpsSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Ops and error audit',
           subtitle:
-              'Traffic, limits, push readiness, and recent backend error signals.',
+              'Traffic, rate-limit pressure, push readiness, and recent service alerts.',
         ),
         AdminCard(
           child: Column(

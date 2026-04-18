@@ -261,19 +261,25 @@ class AdminApiService {
     );
   }
 
-  Future<List<Map<String, dynamic>>> fetchHomeBanners() async {
+  Future<AdminHomeBannerFeed> fetchHomeBanners() async {
     final response = await _getMap(
       AppEnvironment.content('/admin/home-banners'),
       fallback: 'Unable to load home promos.',
     );
     final banners = response['banners'];
     if (banners is List) {
-      return banners
-          .whereType<Map>()
-          .map((item) => item.cast<String, dynamic>())
-          .toList();
+      return AdminHomeBannerFeed(
+        banners: banners
+            .whereType<Map>()
+            .map((item) => item.cast<String, dynamic>())
+            .toList(),
+        showFallbackSocialBanner: response['showFallbackSocialBanner'] != false,
+      );
     }
-    return const <Map<String, dynamic>>[];
+    return AdminHomeBannerFeed(
+      banners: const <Map<String, dynamic>>[],
+      showFallbackSocialBanner: response['showFallbackSocialBanner'] != false,
+    );
   }
 
   Future<Map<String, dynamic>> createHomeBanner({
@@ -298,6 +304,16 @@ class AdminApiService {
     return _decodeMapResponse(
       response,
       fallback: 'Unable to update home promo.',
+    );
+  }
+
+  Future<Map<String, dynamic>> updateHomeBannerSettings({
+    required bool showFallbackSocialBanner,
+  }) async {
+    return _postPatchMap(
+      AppEnvironment.content('/admin/home-banners/settings'),
+      body: {'showFallbackSocialBanner': showFallbackSocialBanner},
+      fallback: 'Unable to update home promo settings.',
     );
   }
 
@@ -343,6 +359,19 @@ class AdminApiService {
     return _decodeMapResponse(response, fallback: fallback);
   }
 
+  Future<Map<String, dynamic>> _postPatchMap(
+    Uri uri, {
+    required Map<String, dynamic> body,
+    required String fallback,
+  }) async {
+    final response = await _client.patch(
+      uri,
+      headers: buildHeaders(json: true),
+      body: jsonEncode(body),
+    );
+    return _decodeMapResponse(response, fallback: fallback);
+  }
+
   Map<String, dynamic> _decodeMapResponse(
     http.Response response, {
     required String fallback,
@@ -365,4 +394,14 @@ class AdminApiService {
       _client.close();
     }
   }
+}
+
+class AdminHomeBannerFeed {
+  const AdminHomeBannerFeed({
+    required this.banners,
+    required this.showFallbackSocialBanner,
+  });
+
+  final List<Map<String, dynamic>> banners;
+  final bool showFallbackSocialBanner;
 }

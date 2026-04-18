@@ -82,43 +82,29 @@ class _TokensSectionState extends State<TokensSection> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.05),
+                child: Row(
+                  children: [
+                    _AssetTabChip(
+                      label: widget.localization.tokens,
+                      selected: _selectedTab == HomeAssetTab.tokens,
+                      onTap: () => _setTab(HomeAssetTab.tokens),
                     ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _AssetTabChip(
-                          label: widget.localization.tokens,
-                          selected: _selectedTab == HomeAssetTab.tokens,
-                          onTap: () => _setTab(HomeAssetTab.tokens),
-                        ),
-                      ),
-                      Expanded(
-                        child: _AssetTabChip(
-                          label: widget.localization.portfolio,
-                          selected: _selectedTab == HomeAssetTab.portfolio,
-                          onTap: () => _setTab(HomeAssetTab.portfolio),
-                        ),
-                      ),
-                      Expanded(
-                        child: _AssetTabChip(
-                          label: widget.localization.nfts,
-                          selected: _selectedTab == HomeAssetTab.nfts,
-                          onTap: () => _setTab(HomeAssetTab.nfts),
-                        ),
-                      ),
-                    ],
-                  ),
+                    const SizedBox(width: 20),
+                    _AssetTabChip(
+                      label: widget.localization.portfolio,
+                      selected: _selectedTab == HomeAssetTab.portfolio,
+                      onTap: () => _setTab(HomeAssetTab.portfolio),
+                    ),
+                    const SizedBox(width: 20),
+                    _AssetTabChip(
+                      label: widget.localization.nfts,
+                      selected: _selectedTab == HomeAssetTab.nfts,
+                      onTap: () => _setTab(HomeAssetTab.nfts),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               if (_selectedTab == HomeAssetTab.tokens)
                 _AssetToolbarButton(
                   icon: Icons.tune_rounded,
@@ -349,14 +335,13 @@ class _AssetTabChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.darkRed.withValues(alpha: 0.48) : null,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? AppColors.accentRed.withValues(alpha: 0.22)
-                : Colors.transparent,
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? AppColors.accentRed : Colors.transparent,
+              width: 3,
+            ),
           ),
         ),
         child: Text(
@@ -386,11 +371,11 @@ class _AssetToolbarButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(16),
+          shape: BoxShape.circle,
           border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Icon(

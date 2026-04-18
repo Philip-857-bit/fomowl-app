@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
+import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
@@ -100,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _deferredLoadGeneration = 0;
   bool _isLoadingHomeBanners = false;
   bool _homeShowcaseScheduled = false;
+  bool _showFallbackSocialBanner = true;
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
@@ -1065,12 +1067,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() => _isLoadingHomeBanners = true);
     try {
-      final banners = await _homeBannerService.fetchHomeBanners();
+      final feed = await _homeBannerService.fetchHomeBanners();
       if (!mounted) {
         return;
       }
       setState(() {
-        _homeBanners = banners.take(4).toList(growable: false);
+        _homeBanners = feed.banners.take(4).toList(growable: false);
+        _showFallbackSocialBanner = feed.showFallbackSocialBanner;
         _homeBannerIndex = 0;
         _isLoadingHomeBanners = false;
       });
@@ -1080,6 +1083,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       setState(() {
         _homeBanners = const [];
+        _showFallbackSocialBanner = true;
         _homeBannerIndex = 0;
         _isLoadingHomeBanners = false;
       });
@@ -1123,14 +1127,31 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) {
         return;
       }
-      ShowcaseView.get().startShowCase(<GlobalKey>[
+      final showcaseKeys = <GlobalKey>[
         _walletSwitcherShowcaseKey,
         _balanceShowcaseKey,
         _quickActionsShowcaseKey,
-        _promoCarouselShowcaseKey,
         _assetTabsShowcaseKey,
-      ]);
+      ];
+      if (_shouldShowHomePromoSection) {
+        showcaseKeys.insert(3, _promoCarouselShowcaseKey);
+      }
+      ShowcaseView.get().startShowCase(showcaseKeys);
     });
+  }
+
+  bool get _shouldShowHomePromoSection =>
+      _isLoadingHomeBanners ||
+      _homeBanners.isNotEmpty ||
+      _showFallbackSocialBanner;
+
+  Future<void> _openFallbackSocialBanner() async {
+    final uri = Uri.parse('https://x.com/fomowlhq');
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!mounted || opened) {
+      return;
+    }
+    ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink('X'));
   }
 
   Future<void> _openTokenManager() async {
@@ -1294,6 +1315,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   context,
                                   '/transactions',
                                 ),
+                                primaryActionLabel: 'Deposit Funds',
+                                onPrimaryAction: () => Navigator.pushNamed(
+                                  context,
+                                  '/cash-in',
+                                  arguments: const MiniAppHostArguments(
+                                    miniAppId: 'cash_in',
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -1321,28 +1350,34 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 24),
-                            Showcase(
-                              key: _promoCarouselShowcaseKey,
-                              title: 'Promotions and campaigns',
-                              description:
-                                  'Admins can rotate up to four partner campaigns and product spotlights in this carousel.',
-                              child: HomePromoCarousel(
-                                banners: _homeBanners,
-                                activeIndex: _homeBannerIndex,
-                                pageController: _homeBannerPageController,
-                                isLoading: _isLoadingHomeBanners,
-                                onPageChanged: (index) {
-                                  if (!mounted) {
-                                    return;
-                                  }
-                                  setState(() => _homeBannerIndex = index);
-                                },
-                                onTapBanner: (banner) {
-                                  unawaited(_openHomeBanner(banner));
-                                },
+                            if (_shouldShowHomePromoSection) ...[
+                              Showcase(
+                                key: _promoCarouselShowcaseKey,
+                                title: 'Spotlight',
+                                description:
+                                    'Quick updates, featured campaigns, and Owllet announcements appear here.',
+                                child: HomePromoCarousel(
+                                  banners: _homeBanners,
+                                  showFallbackSocialBanner:
+                                      _showFallbackSocialBanner,
+                                  activeIndex: _homeBannerIndex,
+                                  pageController: _homeBannerPageController,
+                                  isLoading: _isLoadingHomeBanners,
+                                  onPageChanged: (index) {
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    setState(() => _homeBannerIndex = index);
+                                  },
+                                  onTapBanner: (banner) {
+                                    unawaited(_openHomeBanner(banner));
+                                  },
+                                  onTapFallbackSocialBanner:
+                                      _openFallbackSocialBanner,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 28),
+                              const SizedBox(height: 24),
+                            ],
                             Showcase(
                               key: _assetTabsShowcaseKey,
                               title: 'Asset views',

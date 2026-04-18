@@ -17,6 +17,8 @@ class BalanceCard extends StatelessWidget {
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
   final VoidCallback onHistoryTap;
+  final String? primaryActionLabel;
+  final VoidCallback? onPrimaryAction;
 
   const BalanceCard({
     super.key,
@@ -28,6 +30,8 @@ class BalanceCard extends StatelessWidget {
     required this.isLoadingBalances,
     required this.onToggleVisibility,
     required this.onHistoryTap,
+    this.primaryActionLabel,
+    this.onPrimaryAction,
   });
 
   Color _changeColor() {
@@ -74,6 +78,10 @@ class BalanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final changeColor = _changeColor();
+    final showPrimaryAction =
+        onPrimaryAction != null &&
+        primaryActionLabel != null &&
+        primaryActionLabel!.trim().isNotEmpty;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.only(bottom: 20),
@@ -98,29 +106,16 @@ class BalanceCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
-                        ),
-                      ),
-                      child: Text(
-                        titleText.toUpperCase(),
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white.withValues(alpha: 0.82),
-                          letterSpacing: 0.9,
-                        ),
+                    Text(
+                      titleText.toUpperCase(),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withValues(alpha: 0.74),
+                        letterSpacing: 0.9,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -132,7 +127,7 @@ class BalanceCard extends StatelessWidget {
                             isBalanceVisible
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
-                            size: 16,
+                            size: 18,
                             color: Colors.white.withValues(alpha: 0.7),
                           ),
                         ),
@@ -154,12 +149,12 @@ class BalanceCard extends StatelessWidget {
                       onTap: onHistoryTap,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: 16,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.12),
                           ),
@@ -169,8 +164,9 @@ class BalanceCard extends StatelessWidget {
                             Text(
                               l.history,
                               style: GoogleFonts.outfit(
-                                fontSize: 12,
+                                fontSize: 14,
                                 color: Colors.white.withValues(alpha: 0.95),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(width: 4),
@@ -187,25 +183,15 @@ class BalanceCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 if (statusText != null && statusText!.trim().isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      statusText!,
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.74),
-                      ),
+                  Text(
+                    statusText!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.74),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                 ],
                 SizedBox(
                   width: double.infinity,
@@ -224,34 +210,58 @@ class BalanceCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.06),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_changeIcon(), size: 16, color: changeColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      _formatChangeText(),
+                      style: GoogleFonts.outfit(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: changeColor,
+                      ),
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(_changeIcon(), size: 14, color: changeColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        _formatChangeText(),
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: changeColor,
+                  ],
+                ),
+                if (showPrimaryAction) ...[
+                  const SizedBox(height: 22),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onPrimaryAction,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Ink(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: Colors.black,
+                              size: 26,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              primaryActionLabel!,
+                              style: GoogleFonts.outfit(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

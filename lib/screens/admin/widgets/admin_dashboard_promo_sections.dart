@@ -11,6 +11,7 @@ class AdminHomeBannersSection extends StatelessWidget {
     required this.isSubmitting,
     required this.isUploadingImage,
     required this.isEditing,
+    required this.showFallbackSocialBanner,
     required this.titleController,
     required this.descriptionController,
     required this.linkUrlController,
@@ -19,6 +20,7 @@ class AdminHomeBannersSection extends StatelessWidget {
     required this.sortOrderController,
     required this.isActive,
     required this.onActiveChanged,
+    required this.onFallbackSocialBannerChanged,
     required this.onUploadImage,
     required this.onSubmit,
     required this.onReset,
@@ -31,6 +33,7 @@ class AdminHomeBannersSection extends StatelessWidget {
   final bool isSubmitting;
   final bool isUploadingImage;
   final bool isEditing;
+  final bool showFallbackSocialBanner;
   final TextEditingController titleController;
   final TextEditingController descriptionController;
   final TextEditingController linkUrlController;
@@ -39,6 +42,7 @@ class AdminHomeBannersSection extends StatelessWidget {
   final TextEditingController sortOrderController;
   final bool isActive;
   final ValueChanged<bool> onActiveChanged;
+  final ValueChanged<bool> onFallbackSocialBannerChanged;
   final VoidCallback onUploadImage;
   final VoidCallback onSubmit;
   final VoidCallback onReset;
@@ -54,18 +58,55 @@ class AdminHomeBannersSection extends StatelessWidget {
         const AdminSectionHeading(
           title: 'Home promos',
           subtitle:
-              'Manage the wallet home carousel. Owllet shows up to four active banners, ordered by rank, and each card opens the configured link.',
+              'Manage the wallet spotlight. Owllet can rotate up to four active promos on the home screen.',
         ),
         const AdminBanner(
-          title: 'Creative pipeline',
+          title: 'Spotlight behavior',
           message:
-              'Upload a promo image to Supabase Storage or paste an existing public URL. The wallet contract stays URL-first, so manual URLs still work when needed.',
+              'Choose whether Owllet should keep the default social spotlight visible whenever no live promos are active.',
         ),
         const SizedBox(height: 14),
         AdminCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Default social spotlight',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Show the follow-on-X card when there are no live promos.',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white60,
+                            fontSize: 12.5,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Switch.adaptive(
+                    value: showFallbackSocialBanner,
+                    activeThumbColor: AppColors.success,
+                    onChanged: isSubmitting
+                        ? null
+                        : onFallbackSocialBannerChanged,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
               Text(
                 isEditing ? 'Edit home promo' : 'Create home promo',
                 style: GoogleFonts.outfit(
@@ -131,7 +172,7 @@ class AdminHomeBannersSection extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Best results come from wide images with strong contrast and a clear focal point.',
+                                'Use a clean banner image or keep the promo text-only.',
                                 style: GoogleFonts.outfit(
                                   color: Colors.white60,
                                   fontSize: 12.5,
@@ -194,7 +235,7 @@ class AdminHomeBannersSection extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              'No banner image selected yet. Upload one or keep the promo text-only.',
+                              'No promo artwork selected yet. Upload one or keep the card text-only.',
                               style: GoogleFonts.outfit(
                                 color: Colors.white54,
                                 fontSize: 13,

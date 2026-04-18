@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
@@ -78,6 +77,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String? _homeBannerEditingId;
   bool _discoverIsActive = true;
   bool _homeBannerIsActive = true;
+  bool _showFallbackSocialBanner = true;
   bool _homeBannerImageUploadInFlight = false;
 
   Map<String, dynamic>? _lastTestPushResult;
@@ -223,6 +223,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _homeBannerEditingId = null;
       _discoverIsActive = true;
       _homeBannerIsActive = true;
+      _showFallbackSocialBanner = true;
       _homeBannerImageUploadInFlight = false;
       _lastTestPushResult = null;
       _lastBroadcastResult = null;
@@ -289,31 +290,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _loadOverview() async {
     final results = await Future.wait([
-      _apiService.fetchHealth(),
-      _apiService.fetchStats(_activeChainId),
-      _apiService.fetchOps(_activeChainId),
+      _guardAdminLoad(() => _apiService.fetchHealth()),
+      _guardAdminLoad(() => _apiService.fetchStats(_activeChainId)),
+      _guardAdminLoad(() => _apiService.fetchOps(_activeChainId)),
     ]);
     if (!mounted) return;
     setState(() {
-      _health = results[0];
-      _stats = results[1];
-      _ops = results[2];
+      _health = results[0] ?? _health;
+      _stats = results[1] ?? _stats;
+      _ops = results[2] ?? _ops;
     });
   }
 
   Future<void> _loadStats() async {
     final results = await Future.wait([
-      _apiService.fetchStats(_activeChainId),
-      _apiService.fetchOps(_activeChainId),
+      _guardAdminLoad(() => _apiService.fetchStats(_activeChainId)),
+      _guardAdminLoad(() => _apiService.fetchOps(_activeChainId)),
       if (_health == null)
-        _apiService.fetchHealth()
+        _guardAdminLoad(() => _apiService.fetchHealth())
       else
         Future.value(_health!),
     ]);
     if (!mounted) return;
     setState(() {
-      _stats = results[0];
-      _ops = results[1];
+      _stats = results[0] ?? _stats;
+      _ops = results[1] ?? _ops;
       _health = results[2];
     });
   }
@@ -321,22 +322,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadOps({int? page}) async {
     final nextPage = page ?? _errorLogsPage;
     final results = await Future.wait([
-      _apiService.fetchOps(_activeChainId),
-      _apiService.fetchErrorLogs(_activeChainId, page: nextPage, pageSize: 12),
+      _guardAdminLoad(() => _apiService.fetchOps(_activeChainId)),
+      _guardAdminLoad(
+        () => _apiService.fetchErrorLogs(
+          _activeChainId,
+          page: nextPage,
+          pageSize: 12,
+        ),
+      ),
     ]);
-    final logsResponse = results[1];
+    final logsResponse = results[1] ?? const <String, dynamic>{};
     final logs = (logsResponse['logs'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map>()
         .map((item) => item.cast<String, dynamic>())
         .toList();
     if (!mounted) return;
     setState(() {
-      _ops = results[0];
+      _ops = results[0] ?? _ops;
       _errorLogs = logs;
       _errorLogsPage = logsResponse['page'] as int? ?? nextPage;
       _errorLogsTotal = logsResponse['total'] as int? ?? logs.length;
       _errorLogsHasNext = logsResponse['hasNext'] == true;
     });
+  }
+
+  Future<Map<String, dynamic>?> _guardAdminLoad(
+    Future<Map<String, dynamic>> Function() load,
+  ) async {
+    try {
+      return await load();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _loadFeedback({int page = 1}) async {
@@ -392,9 +409,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _loadHomeBanners() async {
-    final banners = await _apiService.fetchHomeBanners();
+    final feed = await _apiService.fetchHomeBanners();
     if (!mounted) return;
-    setState(() => _homeBanners = banners);
+    setState(() {
+      _homeBanners = feed.banners;
+      _showFallbackSocialBanner = feed.showFallbackSocialBanner;
+    });
   }
 
   Future<void> _refreshCurrentSection() async {
@@ -840,6 +860,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _updateFallbackSocialBanner(bool nextValue) async {
+    setState(() {
+      _showFallbackSocialBanner = nextValue;
+      _loadingSections.add(_AdminSection.promos);
+    });
+    try {
+      await _apiService.updateHomeBannerSettings(
+        showFallbackSocialBanner: nextValue,
+      );
+      await _loadHomeBanners();
+      _showSnackBar(
+        nextValue
+            ? 'Default social spotlight enabled.'
+            : 'Default social spotlight hidden.',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _showFallbackSocialBanner = !nextValue);
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to update spotlight settings.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.promos));
+      }
+    }
+  }
+
   void _startEditingDiscoverDapp(Map<String, dynamic> dapp) {
     setState(() {
       _discoverEditingId = dapp['id']?.toString();
@@ -986,7 +1039,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: AdminHeroCard(
                 chainName: activeChain.name,
-                backendBaseUrl: AppEnvironment.backendBaseUrl,
                 lastSyncedAt: _lastSyncedAt,
                 status: _health?['status']?.toString(),
                 isRefreshing: _isLoading(_selectedSection),
@@ -1152,6 +1204,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           isSubmitting: _isLoading(_AdminSection.promos),
           isUploadingImage: _homeBannerImageUploadInFlight,
           isEditing: _homeBannerEditingId != null,
+          showFallbackSocialBanner: _showFallbackSocialBanner,
           titleController: _homeBannerTitleController,
           descriptionController: _homeBannerDescriptionController,
           linkUrlController: _homeBannerLinkUrlController,
@@ -1161,6 +1214,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           isActive: _homeBannerIsActive,
           onActiveChanged: (value) =>
               setState(() => _homeBannerIsActive = value),
+          onFallbackSocialBannerChanged: _updateFallbackSocialBanner,
           onUploadImage: _pickAndUploadHomeBannerImage,
           onSubmit: _submitHomeBanner,
           onReset: () => setState(_resetHomeBannerForm),
