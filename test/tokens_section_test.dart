@@ -49,6 +49,7 @@ void main() {
               onOpenNfts: () {},
               isTokenHidden: (_) => false,
               onSelectToken: (_) {},
+              onSelectNft: (_) {},
               chainId: 1,
             ),
           ),

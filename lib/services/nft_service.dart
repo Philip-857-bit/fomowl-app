@@ -71,12 +71,22 @@ class NftService {
     );
 
     final aggregated = <NftAsset>[];
+    final seenAssetKeys = <String>{};
     var successCount = 0;
     for (final result in results) {
       if (!result.failed) {
         successCount += 1;
       }
-      aggregated.addAll(result.nfts);
+      for (final nft in result.nfts) {
+        final key = [
+          nft.chainName.toLowerCase(),
+          nft.contractAddress.toLowerCase(),
+          nft.tokenId,
+        ].join(':');
+        if (seenAssetKeys.add(key)) {
+          aggregated.add(nft);
+        }
+      }
     }
 
     if (successCount == 0) {
@@ -103,31 +113,69 @@ class NftService {
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final ownedNfts = data['ownedNfts'] as List<dynamic>? ?? const [];
-    return ownedNfts.map<NftAsset>((dynamic raw) {
-      final nft = raw as Map<String, dynamic>;
-      final contract = nft['contract'] as Map<String, dynamic>? ?? const {};
-      final image = nft['image'] as Map<String, dynamic>? ?? const {};
-      final id = nft['id'] as Map<String, dynamic>? ?? const {};
-      final contractAddress = contract['address']?.toString() ?? '';
+    return ownedNfts
+        .whereType<Map<String, dynamic>>()
+        .where((nft) => !_isLikelySpamNft(nft))
+        .map<NftAsset>((nft) {
+          final contract = nft['contract'] as Map<String, dynamic>? ?? const {};
+          final image = nft['image'] as Map<String, dynamic>? ?? const {};
+          final id = nft['id'] as Map<String, dynamic>? ?? const {};
+          final contractAddress = contract['address']?.toString() ?? '';
 
-      return NftAsset(
-        name:
-            nft['name']?.toString() ??
-            contract['name']?.toString() ??
-            'Unknown Token',
-        collection: contract['name']?.toString() ?? 'Unknown Collection',
-        description: nft['description']?.toString().trim() ?? '',
-        count: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
-        chainName: chainName,
-        imageUrl: normalizeImageUrl(
-          image['cachedUrl']?.toString() ?? image['originalUrl']?.toString(),
-        ),
-        contractAddress: contractAddress,
-        tokenId: normalizeTokenId(id['tokenId']?.toString()),
-        isProjectNft:
-            contractAddress.toLowerCase() == _projectNftAddress.toLowerCase(),
-      );
-    }).toList();
+          return NftAsset(
+            name:
+                nft['name']?.toString() ??
+                contract['name']?.toString() ??
+                'Unknown Token',
+            collection: contract['name']?.toString() ?? 'Unknown Collection',
+            description: nft['description']?.toString().trim() ?? '',
+            count: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
+            chainName: chainName,
+            imageUrl: normalizeImageUrl(
+              image['cachedUrl']?.toString() ??
+                  image['originalUrl']?.toString(),
+            ),
+            contractAddress: contractAddress,
+            tokenId: normalizeTokenId(id['tokenId']?.toString()),
+            isProjectNft:
+                contractAddress.toLowerCase() ==
+                _projectNftAddress.toLowerCase(),
+          );
+        })
+        .toList();
+  }
+
+  bool _isLikelySpamNft(Map<String, dynamic> nft) {
+    bool isTrue(dynamic value) => value == true;
+    bool hasValues(dynamic value) => value is List && value.isNotEmpty;
+
+    final spamInfo = nft['spamInfo'];
+    if (spamInfo is Map<String, dynamic>) {
+      if (isTrue(spamInfo['isSpam']) ||
+          hasValues(spamInfo['classifications'])) {
+        return true;
+      }
+    }
+
+    final contract = nft['contract'];
+    if (contract is Map<String, dynamic>) {
+      if (isTrue(contract['isSpam']) ||
+          isTrue(contract['isSpamContract']) ||
+          hasValues(contract['spamClassifications'])) {
+        return true;
+      }
+    }
+
+    final collection = nft['collection'];
+    if (collection is Map<String, dynamic>) {
+      if (isTrue(collection['isSpam']) ||
+          isTrue(collection['isSpamContract']) ||
+          hasValues(collection['spamClassifications'])) {
+        return true;
+      }
+    }
+
+    return isTrue(nft['isSpam']);
   }
 
   String normalizeImageUrl(String? url) {

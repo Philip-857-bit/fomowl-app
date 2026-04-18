@@ -40,6 +40,7 @@ import 'widgets/home_top_bar.dart';
 import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
+import '../wallet/widgets/nft_detail_sheet.dart';
 import '../../services/home_snapshot_service.dart';
 
 /// Home Screen - Main Wallet Dashboard
@@ -1153,6 +1154,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ToastUtils.showError(AppLocalizations.of(context).unableToOpenLink('X'));
   }
 
+  Future<void> _showNftDetails(NftAsset nft) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => NftDetailSheet(nft: nft),
+    );
+  }
+
   Future<void> _openTokenManager() async {
     final hasChanges = await Navigator.pushNamed(context, '/token-management');
     if (hasChanges == true && mounted) {
@@ -1413,6 +1423,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     '/token-detail',
                                     arguments: token,
                                   );
+                                },
+                                onSelectNft: (nft) {
+                                  unawaited(_showNftDetails(nft));
                                 },
                               ),
                             ),

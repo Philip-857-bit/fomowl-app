@@ -24,6 +24,7 @@ class TokensSection extends StatefulWidget {
   final VoidCallback onOpenNfts;
   final bool Function(Token token) isTokenHidden;
   final void Function(Token token) onSelectToken;
+  final void Function(NftAsset nft) onSelectNft;
   final int? chainId;
   final HomeAssetTab initialTab;
   final ValueChanged<HomeAssetTab>? onTabChanged;
@@ -42,6 +43,7 @@ class TokensSection extends StatefulWidget {
     required this.onOpenNfts,
     required this.isTokenHidden,
     required this.onSelectToken,
+    required this.onSelectNft,
     this.chainId,
     this.initialTab = HomeAssetTab.portfolio,
     this.onTabChanged,
@@ -237,6 +239,7 @@ class _TokensSectionState extends State<TokensSection> {
           nfts: widget.nftPreview,
           hasMoreNfts: widget.hasMoreNfts,
           onOpenNfts: widget.onOpenNfts,
+          onSelectNft: widget.onSelectNft,
           localization: widget.localization,
         ),
         const SizedBox(height: 10),
@@ -409,12 +412,14 @@ class _NftPreviewStrip extends StatelessWidget {
   final List<NftAsset> nfts;
   final bool hasMoreNfts;
   final VoidCallback onOpenNfts;
+  final ValueChanged<NftAsset> onSelectNft;
   final AppLocalizations localization;
 
   const _NftPreviewStrip({
     required this.nfts,
     required this.hasMoreNfts,
     required this.onOpenNfts,
+    required this.onSelectNft,
     required this.localization,
   });
 
@@ -461,65 +466,76 @@ class _NftPreviewStrip extends StatelessWidget {
               separatorBuilder: (_, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
                 final nft = nfts[index];
-                return Container(
-                  width: 98,
-                  decoration: BoxDecoration(
-                    color: AppColors.cardDark,
+                return Material(
+                  color: Colors.transparent,
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(12),
-                          ),
-                          child: nft.imageUrl.isNotEmpty
-                              ? Image.network(
-                                  nft.imageUrl,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        width: double.infinity,
+                    onTap: () => onSelectNft(nft),
+                    child: Container(
+                      width: 98,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardDark,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(12),
+                              ),
+                              child: nft.imageUrl.isNotEmpty
+                                  ? Image.network(
+                                      nft.imageUrl,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                                width: double.infinity,
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.05,
+                                                ),
+                                                child: Icon(
+                                                  Icons.broken_image,
+                                                  size: 24,
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.2),
+                                                ),
+                                              ),
+                                    )
+                                  : Container(
+                                      width: double.infinity,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.05,
+                                      ),
+                                      child: Icon(
+                                        Icons.image,
+                                        size: 24,
                                         color: Colors.white.withValues(
-                                          alpha: 0.05,
-                                        ),
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          size: 24,
-                                          color: Colors.white.withValues(
-                                            alpha: 0.2,
-                                          ),
+                                          alpha: 0.2,
                                         ),
                                       ),
-                                )
-                              : Container(
-                                  width: double.infinity,
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  child: Icon(
-                                    Icons.image,
-                                    size: 24,
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                        child: Text(
-                          nft.name,
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+                                    ),
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                            child: Text(
+                              nft.name,
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 );
               },
