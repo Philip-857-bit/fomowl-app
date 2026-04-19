@@ -100,6 +100,8 @@ class _PromoBannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = banner.imageUrl;
+    final ctaLabel = banner.ctaLabel?.trim();
+    final hasCta = ctaLabel != null && ctaLabel.isNotEmpty;
 
     return Material(
       color: Colors.transparent,
@@ -160,13 +162,15 @@ class _PromoBannerCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        banner.description,
+                        hasCta ? ctaLabel : banner.description,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
-                          color: Colors.white.withValues(alpha: 0.72),
+                          color: hasCta
+                              ? AppColors.accentRed
+                              : Colors.white.withValues(alpha: 0.72),
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],

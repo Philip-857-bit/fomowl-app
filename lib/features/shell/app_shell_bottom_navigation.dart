@@ -90,6 +90,13 @@ class _ShellNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = selected
+        ? AppColors.accentRed
+        : Colors.white.withValues(alpha: 0.58);
+    final labelColor = selected
+        ? Colors.white
+        : Colors.white.withValues(alpha: 0.52);
+
     return Expanded(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -98,29 +105,20 @@ class _ShellNavItem extends StatelessWidget {
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.primaryAccent.withValues(alpha: 0.18)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-          ),
+          decoration: const BoxDecoration(color: Colors.transparent),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 selected ? activeIcon : icon,
-                color: selected
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.58),
+                color: iconColor,
                 size: 22,
               ),
               const SizedBox(height: 5),
               Text(
                 label,
                 style: GoogleFonts.outfit(
-                  color: selected
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.52),
+                  color: labelColor,
                   fontSize: 11,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 ),

@@ -39,6 +39,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   bool _canGoForward = false;
   int _progress = 0;
   String? _lastLoadedUrl;
+  String? _pageLoadErrorMessage;
 
   @override
   void initState() {
@@ -82,141 +83,203 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
       children: [
         _buildChrome(),
         Expanded(
-          child: InAppWebView(
-            initialSettings: InAppWebViewSettings(
-              javaScriptEnabled: true,
-              useShouldOverrideUrlLoading: true,
-              supportZoom: false,
-              transparentBackground: true,
-              allowsBackForwardNavigationGestures: true,
-            ),
-            onWebViewCreated: (controller) {
-              _controller = controller;
-              controller.addJavaScriptHandler(
-                handlerName: DappProviderBridge.handlerName,
-                callback: (args) async {
-                  final payload = args.isNotEmpty && args.first is Map
-                      ? (args.first as Map).cast<String, dynamic>()
-                      : <String, dynamic>{};
-                  final uri = widget.sessionController.currentUri;
-                  final origin = uri == null ? '' : normalizeOriginFromUri(uri);
-                  if (uri == null ||
-                      !widget.sessionController.canInjectProviderFor(uri)) {
-                    return <String, dynamic>{
-                      'error': <String, dynamic>{
-                        'code': 4100,
-                        'message': 'Provider is unavailable for this origin.',
-                      },
-                    };
-                  }
-                  return widget.providerBridge.handleRequest(
-                    context: context,
-                    origin: origin,
-                    payload: payload,
-                    evaluateJavaScript: (source) async {
-                      await controller.evaluateJavascript(source: source);
+          child: Stack(
+            children: [
+              InAppWebView(
+                initialSettings: InAppWebViewSettings(
+                  javaScriptEnabled: true,
+                  useShouldOverrideUrlLoading: true,
+                  supportZoom: false,
+                  transparentBackground: true,
+                  allowsBackForwardNavigationGestures: true,
+                ),
+                onWebViewCreated: (controller) {
+                  _controller = controller;
+                  controller.addJavaScriptHandler(
+                    handlerName: DappProviderBridge.handlerName,
+                    callback: (args) async {
+                      final payload = args.isNotEmpty && args.first is Map
+                          ? (args.first as Map).cast<String, dynamic>()
+                          : <String, dynamic>{};
+                      final uri = widget.sessionController.currentUri;
+                      final origin = uri == null ? '' : normalizeOriginFromUri(uri);
+                      if (uri == null ||
+                          !widget.sessionController.canInjectProviderFor(uri)) {
+                        return <String, dynamic>{
+                          'error': <String, dynamic>{
+                            'code': 4100,
+                            'message': 'Provider is unavailable for this origin.',
+                          },
+                        };
+                      }
+                      return widget.providerBridge.handleRequest(
+                        context: context,
+                        origin: origin,
+                        payload: payload,
+                        evaluateJavaScript: (source) async {
+                          await controller.evaluateJavascript(source: source);
+                        },
+                      );
                     },
                   );
+                  controller.addJavaScriptHandler(
+                    handlerName: DappProviderBridge.detectorHandlerName,
+                    callback: (args) async {
+                      final payload = args.isNotEmpty && args.first is Map
+                          ? (args.first as Map).cast<String, dynamic>()
+                          : <String, dynamic>{};
+                      final trigger =
+                          payload['trigger']?.toString().trim().isNotEmpty == true
+                          ? payload['trigger']!.toString().trim()
+                          : l.discoverWalletApiAccessTrigger;
+                      final href = payload['href']?.toString().trim();
+                      final uri = href == null || href.isEmpty
+                          ? widget.sessionController.currentUri
+                          : Uri.tryParse(href);
+                      if (uri == null ||
+                          widget.sessionController.canInjectProviderFor(uri)) {
+                        return null;
+                      }
+                      await controller.stopLoading();
+                      widget.sessionController.blockDetectedDapp(
+                        uri,
+                        trigger: trigger,
+                        reason: l.discoverBlockedReason('{trigger}'),
+                      );
+                      return null;
+                    },
+                  );
+                  unawaited(_initializeWebView(controller, currentUri));
                 },
-              );
-              controller.addJavaScriptHandler(
-                handlerName: DappProviderBridge.detectorHandlerName,
-                callback: (args) async {
-                  final payload = args.isNotEmpty && args.first is Map
-                      ? (args.first as Map).cast<String, dynamic>()
-                      : <String, dynamic>{};
-                  final trigger =
-                      payload['trigger']?.toString().trim().isNotEmpty == true
-                      ? payload['trigger']!.toString().trim()
-                      : l.discoverWalletApiAccessTrigger;
-                  final href = payload['href']?.toString().trim();
-                  final uri = href == null || href.isEmpty
-                      ? widget.sessionController.currentUri
-                      : Uri.tryParse(href);
-                  if (uri == null ||
-                      widget.sessionController.canInjectProviderFor(uri)) {
-                    return null;
+                shouldOverrideUrlLoading: (controller, action) async {
+                  final next = action.request.url?.uriValue;
+                  if (next == null) {
+                    return NavigationActionPolicy.ALLOW;
                   }
-                  await controller.stopLoading();
-                  widget.sessionController.blockDetectedDapp(
-                    uri,
-                    trigger: trigger,
-                    reason: l.discoverBlockedReason('{trigger}'),
-                  );
-                  return null;
+                  if (!widget.sessionController.allowsNavigation(
+                    next,
+                    unsupportedSchemeReason: l.discoverUnsupportedScheme,
+                  )) {
+                    return NavigationActionPolicy.CANCEL;
+                  }
+                  await _applyUserScriptsFor(next);
+                  return NavigationActionPolicy.ALLOW;
                 },
-              );
-              unawaited(_initializeWebView(controller, currentUri));
-            },
-            shouldOverrideUrlLoading: (controller, action) async {
-              final next = action.request.url?.uriValue;
-              if (next == null) {
-                return NavigationActionPolicy.ALLOW;
-              }
-              if (!widget.sessionController.allowsNavigation(
-                next,
-                unsupportedSchemeReason: l.discoverUnsupportedScheme,
-              )) {
-                return NavigationActionPolicy.CANCEL;
-              }
-              await _applyUserScriptsFor(next);
-              return NavigationActionPolicy.ALLOW;
-            },
-            onLoadStart: (controller, url) {
-              final next = url?.uriValue;
-              if (next != null) {
-                _lastLoadedUrl = next.toString();
-                widget.sessionController.updateLoadedPage(next);
-              }
-            },
-            onLoadStop: (controller, url) async {
-              final next = url?.uriValue;
-              if (next != null) {
-                final title = await controller.getTitle();
-                if (!context.mounted) {
-                  return;
-                }
-                final chainId = context
-                    .read<BlockchainService>()
-                    .activeChain
-                    .chainId;
-                widget.sessionController.updateLoadedPage(next, title: title);
-                if (widget.sessionController.canInjectProviderFor(next)) {
-                  final providerScript = await widget.providerBridge
-                      .providerInjectionScript();
-                  await controller.evaluateJavascript(source: providerScript);
-                  await controller.evaluateJavascript(
-                    source: await widget.providerBridge
-                        .buildProviderStateSyncScript(
-                          chainId: chainId,
-                          origin: normalizeOriginFromUri(next),
-                        ),
+                onLoadStart: (controller, url) {
+                  final next = url?.uriValue;
+                  if (mounted && _pageLoadErrorMessage != null) {
+                    setState(() => _pageLoadErrorMessage = null);
+                  }
+                  if (next != null) {
+                    _lastLoadedUrl = next.toString();
+                    widget.sessionController.updateLoadedPage(next);
+                  }
+                },
+                onLoadStop: (controller, url) async {
+                  final next = url?.uriValue;
+                  if (mounted && _pageLoadErrorMessage != null) {
+                    setState(() => _pageLoadErrorMessage = null);
+                  }
+                  if (next != null) {
+                    final title = await controller.getTitle();
+                    if (!context.mounted) {
+                      return;
+                    }
+                    final chainId = context
+                        .read<BlockchainService>()
+                        .activeChain
+                        .chainId;
+                    widget.sessionController.updateLoadedPage(next, title: title);
+                    if (widget.sessionController.canInjectProviderFor(next)) {
+                      final providerScript = await widget.providerBridge
+                          .providerInjectionScript();
+                      await controller.evaluateJavascript(source: providerScript);
+                      await controller.evaluateJavascript(
+                        source: await widget.providerBridge
+                            .buildProviderStateSyncScript(
+                              chainId: chainId,
+                              origin: normalizeOriginFromUri(next),
+                            ),
+                      );
+                    }
+                  }
+                  await _refreshNavigationState();
+                },
+                onReceivedError: (controller, request, error) async {
+                  final requestUri = request.url.uriValue;
+                  final current = widget.sessionController.currentUri;
+                  final samePage =
+                      current != null &&
+                      normalizeOriginFromUri(requestUri) ==
+                          normalizeOriginFromUri(current);
+                  if (!samePage && requestUri.toString() != _lastLoadedUrl) {
+                    return;
+                  }
+                  if (!mounted) {
+                    return;
+                  }
+                  final type = error.type;
+                  final message =
+                      type == WebResourceErrorType.HOST_LOOKUP ||
+                          type == WebResourceErrorType.CANNOT_CONNECT_TO_HOST ||
+                          type == WebResourceErrorType.NETWORK_CONNECTION_LOST ||
+                          type == WebResourceErrorType.NOT_CONNECTED_TO_INTERNET ||
+                          type == WebResourceErrorType.TIMEOUT
+                      ? l.connectionFailed
+                      : 'Unable to load this page right now.';
+                  setState(() {
+                    _pageLoadErrorMessage = message;
+                    _progress = 0;
+                  });
+                },
+                onReceivedHttpError: (controller, request, errorResponse) async {
+                  final requestUri = request.url.uriValue;
+                  final current = widget.sessionController.currentUri;
+                  final samePage =
+                      current != null &&
+                      normalizeOriginFromUri(requestUri) ==
+                          normalizeOriginFromUri(current);
+                  if (!samePage && requestUri.toString() != _lastLoadedUrl) {
+                    return;
+                  }
+                  if (!mounted) {
+                    return;
+                  }
+                  setState(() {
+                    _pageLoadErrorMessage = 'Unable to load this page right now.';
+                    _progress = 0;
+                  });
+                },
+                onTitleChanged: (controller, title) {
+                  final currentUri = widget.sessionController.currentUri;
+                  if (currentUri == null) {
+                    return;
+                  }
+                  widget.sessionController.updateLoadedPage(
+                    currentUri,
+                    title: title,
                   );
-                }
-              }
-              await _refreshNavigationState();
-            },
-            onTitleChanged: (controller, title) {
-              final currentUri = widget.sessionController.currentUri;
-              if (currentUri == null) {
-                return;
-              }
-              widget.sessionController.updateLoadedPage(
-                currentUri,
-                title: title,
-              );
-            },
-            onProgressChanged: (_, progress) {
-              setState(() => _progress = progress);
-            },
-            onUpdateVisitedHistory: (controller, url, isReload) async {
-              final next = url?.uriValue;
-              if (next != null) {
-                _lastLoadedUrl = next.toString();
-                widget.sessionController.updateLoadedPage(next);
-              }
-              await _refreshNavigationState();
-            },
+                },
+                onProgressChanged: (_, progress) {
+                  setState(() => _progress = progress);
+                },
+                onUpdateVisitedHistory: (controller, url, isReload) async {
+                  final next = url?.uriValue;
+                  if (next != null) {
+                    _lastLoadedUrl = next.toString();
+                    widget.sessionController.updateLoadedPage(next);
+                  }
+                  await _refreshNavigationState();
+                },
+              ),
+              if (_pageLoadErrorMessage != null)
+                Positioned.fill(
+                  child: _buildPageErrorState(
+                    message: _pageLoadErrorMessage!,
+                    host: widget.sessionController.currentUri?.host ?? '',
+                  ),
+                ),
+            ],
           ),
         ),
       ],
@@ -444,9 +507,121 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     if (controller == null) {
       return;
     }
+    if (mounted && _pageLoadErrorMessage != null) {
+      setState(() => _pageLoadErrorMessage = null);
+    }
     if (currentUri != null) {
       await _applyUserScriptsFor(currentUri);
     }
     await controller.reload();
+  }
+
+  Widget _buildPageErrorState({
+    required String message,
+    required String host,
+  }) {
+    return Container(
+      color: AppColors.background,
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryAccent.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.public_off_rounded,
+                  color: AppColors.accentRed,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Unable to open site',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                style: GoogleFonts.outfit(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+              if (host.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  host,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withValues(alpha: 0.52),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: widget.onClose,
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'Close',
+                        style: GoogleFonts.outfit(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => unawaited(_reloadCurrentPage()),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentRed,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'Try again',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

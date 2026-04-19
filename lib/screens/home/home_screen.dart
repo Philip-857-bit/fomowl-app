@@ -88,9 +88,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<HomePortfolioSection> _portfolioSections = const [];
   List<HomePortfolioSection> _portfolioRawSections = const [];
   DateTime? _portfolioUpdatedAt;
-  bool _portfolioIsStale = false;
-  bool _portfolioPartialFailure = false;
-  List<int> _portfolioChainsPending = const [];
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
@@ -228,7 +225,54 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Token> _displayableTokens(List<Token> tokens) {
-    return _portfolioRepository.prepareVisibleTokens(tokens, _hiddenTokenKeys);
+    final visible = _portfolioRepository.prepareVisibleTokens(
+      tokens,
+      _hiddenTokenKeys,
+    );
+    final blockchain = _blockchain;
+    if (blockchain == null) {
+      return visible;
+    }
+
+    final byKey = <String, Token>{
+      for (final token in visible)
+        ((token.contractAddress?.trim().isNotEmpty == true
+                    ? token.contractAddress
+                    : token.symbol)
+                ?.toLowerCase() ??
+            token.name.toLowerCase()): token,
+    };
+
+    for (final custom in blockchain.customTokensForActiveChain) {
+      final customToken = tokens.where((token) {
+        final contract = token.contractAddress?.trim().toLowerCase();
+        return contract != null && contract == custom.address.toLowerCase();
+      }).cast<Token?>().firstWhere(
+        (token) => token != null,
+        orElse: () => null,
+      );
+      if (customToken == null) {
+        continue;
+      }
+      final hiddenKey = TokenVisibilityUtils.identifier(customToken);
+      if (_hiddenTokenKeys.contains(hiddenKey)) {
+        continue;
+      }
+      final key =
+          (customToken.contractAddress?.trim().isNotEmpty == true
+                  ? customToken.contractAddress
+                  : customToken.symbol)
+              ?.toLowerCase() ??
+          customToken.name.toLowerCase();
+      byKey.putIfAbsent(key, () => customToken);
+    }
+
+    final nextTokens = byKey.values.toList()
+      ..sort(
+        (left, right) =>
+            right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
+      );
+    return nextTokens;
   }
 
   Future<HomePortfolioData> _buildPortfolioDataFromSections(
@@ -282,9 +326,6 @@ class _HomeScreenState extends State<HomeScreen> {
         data.sections.isNotEmpty ? data : _fallbackPortfolioData(),
       );
       _portfolioUpdatedAt = snapshot.timestamp;
-      _portfolioIsStale = snapshot.isStale;
-      _portfolioPartialFailure = snapshot.partialFailure;
-      _portfolioChainsPending = List<int>.from(snapshot.chainsPending);
       _hydrateActiveTokensFromPortfolio(
         isUsingCachedData: isUsingCachedData || snapshot.isStale,
       );
@@ -436,9 +477,6 @@ class _HomeScreenState extends State<HomeScreen> {
         data.sections.isNotEmpty ? data : _fallbackPortfolioData(),
       );
       _portfolioUpdatedAt = DateTime.now().toUtc();
-      _portfolioIsStale = false;
-      _portfolioPartialFailure = false;
-      _portfolioChainsPending = const [];
     });
   }
 
@@ -545,9 +583,6 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         _applyPortfolioData(_fallbackPortfolioData());
         _portfolioUpdatedAt = null;
-        _portfolioIsStale = false;
-        _portfolioPartialFailure = false;
-        _portfolioChainsPending = const [];
       });
     }
   }
@@ -1039,11 +1074,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _balanceStatusText(AppLocalizations l) {
     if (_isLoadingPortfolio || _isLoadingBalances) {
       return l.balanceSyncingStatus;
-    }
-    if (_portfolioIsStale ||
-        _portfolioPartialFailure ||
-        _portfolioChainsPending.isNotEmpty) {
-      return l.balanceMayBeOutdatedStatus;
     }
     final updatedAt = _portfolioUpdatedAt;
     if (updatedAt == null) {

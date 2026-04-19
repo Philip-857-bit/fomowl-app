@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:decimal/decimal.dart';
 import '../../constants/app_colors.dart';
 import '../../models/chain.dart';
 import '../../l10n/app_localizations.dart';
@@ -220,7 +221,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     if (coinId == null || coinId.isEmpty) {
       if (!mounted) return;
       setState(() {
-        _priceData = [];
+        _priceData = _buildFallbackChartData();
         _isLoadingChart = false;
       });
       return;
@@ -232,7 +233,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     );
     if (mounted) {
       setState(() {
-        _priceData = data;
+        _priceData = data.isNotEmpty ? data : _buildFallbackChartData();
         _isLoadingChart = false;
       });
     }
@@ -269,7 +270,30 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   String _formatPriceLabel(double? price) {
-    return ValueFormatter.formatUsdPrice(ValueFormatter.decimalFromNum(price));
+    final decimal = ValueFormatter.decimalFromNum(price);
+    if (decimal <= Decimal.zero) {
+      return ValueFormatter.formatUsdPrice(decimal);
+    }
+
+    final priceDouble = ValueFormatter.doubleFromDecimal(decimal);
+    if (priceDouble >= 1) {
+      return ValueFormatter.formatUsdPrice(decimal);
+    }
+
+    if (priceDouble >= 0.01) {
+      return '\$${_trimTrailingZeros(priceDouble.toStringAsFixed(4))}';
+    }
+
+    if (priceDouble >= 0.000001) {
+      return '\$${_trimTrailingZeros(priceDouble.toStringAsFixed(8))}';
+    }
+
+    return '\$${_trimTrailingZeros(priceDouble.toStringAsFixed(10))}';
+  }
+
+  String _trimTrailingZeros(String value) {
+    final withoutTrailingZeros = value.replaceFirst(RegExp(r'0+$'), '');
+    return withoutTrailingZeros.replaceFirst(RegExp(r'\.$'), '');
   }
 
   String _formatHoldingsValue(Token token, double? priceUsd) {
@@ -297,6 +321,47 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       return blockchain.activeChain.coinGeckoId!;
     }
     return null;
+  }
+
+  double _resolvedDisplayPriceUsd() {
+    final marketPrice = _marketData?.priceUsd;
+    if (marketPrice != null && marketPrice > 0) {
+      return marketPrice;
+    }
+    final token = _token;
+    if (token == null) {
+      return 0;
+    }
+    return token.unitPriceUsd;
+  }
+
+  List<double> _buildFallbackChartData() {
+    final token = _token;
+    if (token == null) {
+      return const [];
+    }
+
+    final currentPrice = _resolvedDisplayPriceUsd();
+    if (currentPrice <= 0) {
+      return const [];
+    }
+
+    final changePercent = token.changePercent24h;
+    final denominator = 1 + (changePercent / 100);
+    final baselinePrice =
+        denominator > 0 ? currentPrice / denominator : currentPrice;
+    final safeBaseline = baselinePrice.isFinite && baselinePrice > 0
+        ? baselinePrice
+        : currentPrice;
+    final delta = currentPrice - safeBaseline;
+    const pointCount = 24;
+
+    return List<double>.generate(pointCount, (index) {
+      final progress = pointCount == 1 ? 1.0 : index / (pointCount - 1);
+      final wave = (progress < 0.5 ? progress : (1 - progress)) * 0.04;
+      final next = safeBaseline + (delta * progress) + (currentPrice * wave);
+      return next > 0 && next.isFinite ? next : currentPrice;
+    });
   }
 
   void _reloadTokenMarketData({bool force = false}) {
@@ -338,7 +403,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     final circulatingSupplyText = _isLoadingInfo
         ? l.loading
         : _formatSupplyValue(_marketData?.circulatingSupply);
-    final livePriceUsd = _marketData?.priceUsd ?? token.unitPriceUsd;
+    final livePriceUsd = _resolvedDisplayPriceUsd();
     final priceDisplay = _formatPriceLabel(livePriceUsd);
     final holdingsDisplay = _formatHoldingsValue(token, _marketData?.priceUsd);
 
