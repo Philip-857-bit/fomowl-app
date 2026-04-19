@@ -102,13 +102,16 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                           ? (args.first as Map).cast<String, dynamic>()
                           : <String, dynamic>{};
                       final uri = widget.sessionController.currentUri;
-                      final origin = uri == null ? '' : normalizeOriginFromUri(uri);
+                      final origin = uri == null
+                          ? ''
+                          : normalizeOriginFromUri(uri);
                       if (uri == null ||
                           !widget.sessionController.canInjectProviderFor(uri)) {
                         return <String, dynamic>{
                           'error': <String, dynamic>{
                             'code': 4100,
-                            'message': 'Provider is unavailable for this origin.',
+                            'message':
+                                'Provider is unavailable for this origin.',
                           },
                         };
                       }
@@ -129,7 +132,8 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                           ? (args.first as Map).cast<String, dynamic>()
                           : <String, dynamic>{};
                       final trigger =
-                          payload['trigger']?.toString().trim().isNotEmpty == true
+                          payload['trigger']?.toString().trim().isNotEmpty ==
+                              true
                           ? payload['trigger']!.toString().trim()
                           : l.discoverWalletApiAccessTrigger;
                       final href = payload['href']?.toString().trim();
@@ -189,11 +193,16 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                         .read<BlockchainService>()
                         .activeChain
                         .chainId;
-                    widget.sessionController.updateLoadedPage(next, title: title);
+                    widget.sessionController.updateLoadedPage(
+                      next,
+                      title: title,
+                    );
                     if (widget.sessionController.canInjectProviderFor(next)) {
                       final providerScript = await widget.providerBridge
                           .providerInjectionScript();
-                      await controller.evaluateJavascript(source: providerScript);
+                      await controller.evaluateJavascript(
+                        source: providerScript,
+                      );
                       await controller.evaluateJavascript(
                         source: await widget.providerBridge
                             .buildProviderStateSyncScript(
@@ -222,8 +231,10 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   final message =
                       type == WebResourceErrorType.HOST_LOOKUP ||
                           type == WebResourceErrorType.CANNOT_CONNECT_TO_HOST ||
-                          type == WebResourceErrorType.NETWORK_CONNECTION_LOST ||
-                          type == WebResourceErrorType.NOT_CONNECTED_TO_INTERNET ||
+                          type ==
+                              WebResourceErrorType.NETWORK_CONNECTION_LOST ||
+                          type ==
+                              WebResourceErrorType.NOT_CONNECTED_TO_INTERNET ||
                           type == WebResourceErrorType.TIMEOUT
                       ? l.connectionFailed
                       : 'Unable to load this page right now.';
@@ -232,24 +243,27 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                     _progress = 0;
                   });
                 },
-                onReceivedHttpError: (controller, request, errorResponse) async {
-                  final requestUri = request.url.uriValue;
-                  final current = widget.sessionController.currentUri;
-                  final samePage =
-                      current != null &&
-                      normalizeOriginFromUri(requestUri) ==
-                          normalizeOriginFromUri(current);
-                  if (!samePage && requestUri.toString() != _lastLoadedUrl) {
-                    return;
-                  }
-                  if (!mounted) {
-                    return;
-                  }
-                  setState(() {
-                    _pageLoadErrorMessage = 'Unable to load this page right now.';
-                    _progress = 0;
-                  });
-                },
+                onReceivedHttpError:
+                    (controller, request, errorResponse) async {
+                      final requestUri = request.url.uriValue;
+                      final current = widget.sessionController.currentUri;
+                      final samePage =
+                          current != null &&
+                          normalizeOriginFromUri(requestUri) ==
+                              normalizeOriginFromUri(current);
+                      if (!samePage &&
+                          requestUri.toString() != _lastLoadedUrl) {
+                        return;
+                      }
+                      if (!mounted) {
+                        return;
+                      }
+                      setState(() {
+                        _pageLoadErrorMessage =
+                            'Unable to load this page right now.';
+                        _progress = 0;
+                      });
+                    },
                 onTitleChanged: (controller, title) {
                   final currentUri = widget.sessionController.currentUri;
                   if (currentUri == null) {
@@ -516,10 +530,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     await controller.reload();
   }
 
-  Widget _buildPageErrorState({
-    required String message,
-    required String host,
-  }) {
+  Widget _buildPageErrorState({required String message, required String host}) {
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.all(24),

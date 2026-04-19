@@ -109,11 +109,7 @@ class _ShellNavItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                selected ? activeIcon : icon,
-                color: iconColor,
-                size: 22,
-              ),
+              Icon(selected ? activeIcon : icon, color: iconColor, size: 22),
               const SizedBox(height: 5),
               Text(
                 label,

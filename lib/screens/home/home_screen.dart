@@ -237,20 +237,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final byKey = <String, Token>{
       for (final token in visible)
         ((token.contractAddress?.trim().isNotEmpty == true
-                    ? token.contractAddress
-                    : token.symbol)
-                ?.toLowerCase() ??
-            token.name.toLowerCase()): token,
+                        ? token.contractAddress
+                        : token.symbol)
+                    ?.toLowerCase() ??
+                token.name.toLowerCase()):
+            token,
     };
 
     for (final custom in blockchain.customTokensForActiveChain) {
-      final customToken = tokens.where((token) {
-        final contract = token.contractAddress?.trim().toLowerCase();
-        return contract != null && contract == custom.address.toLowerCase();
-      }).cast<Token?>().firstWhere(
-        (token) => token != null,
-        orElse: () => null,
-      );
+      final customToken = tokens
+          .where((token) {
+            final contract = token.contractAddress?.trim().toLowerCase();
+            return contract != null && contract == custom.address.toLowerCase();
+          })
+          .cast<Token?>()
+          .firstWhere((token) => token != null, orElse: () => null);
       if (customToken == null) {
         continue;
       }

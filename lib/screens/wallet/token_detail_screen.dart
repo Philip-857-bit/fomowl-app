@@ -348,8 +348,9 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
 
     final changePercent = token.changePercent24h;
     final denominator = 1 + (changePercent / 100);
-    final baselinePrice =
-        denominator > 0 ? currentPrice / denominator : currentPrice;
+    final baselinePrice = denominator > 0
+        ? currentPrice / denominator
+        : currentPrice;
     final safeBaseline = baselinePrice.isFinite && baselinePrice > 0
         ? baselinePrice
         : currentPrice;
