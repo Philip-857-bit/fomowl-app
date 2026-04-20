@@ -146,22 +146,26 @@ class NftService {
   }
 
   bool _isLikelySpamNft(Map<String, dynamic> nft) {
+    // Never filter the project's own NFTs.
+    final contract = nft['contract'];
+    if (contract is Map<String, dynamic>) {
+      final address = contract['address']?.toString() ?? '';
+      if (address.toLowerCase() == _projectNftAddress.toLowerCase()) {
+        return false;
+      }
+    }
+
     bool isTrue(dynamic value) => value == true;
-    bool hasValues(dynamic value) => value is List && value.isNotEmpty;
 
     final spamInfo = nft['spamInfo'];
     if (spamInfo is Map<String, dynamic>) {
-      if (isTrue(spamInfo['isSpam']) ||
-          hasValues(spamInfo['classifications'])) {
+      if (isTrue(spamInfo['isSpam'])) {
         return true;
       }
     }
 
-    final contract = nft['contract'];
     if (contract is Map<String, dynamic>) {
-      if (isTrue(contract['isSpam']) ||
-          isTrue(contract['isSpamContract']) ||
-          hasValues(contract['spamClassifications'])) {
+      if (isTrue(contract['isSpam']) || isTrue(contract['isSpamContract'])) {
         return true;
       }
     }
@@ -169,8 +173,7 @@ class NftService {
     final collection = nft['collection'];
     if (collection is Map<String, dynamic>) {
       if (isTrue(collection['isSpam']) ||
-          isTrue(collection['isSpamContract']) ||
-          hasValues(collection['spamClassifications'])) {
+          isTrue(collection['isSpamContract'])) {
         return true;
       }
     }
