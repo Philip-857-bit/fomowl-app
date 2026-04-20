@@ -82,6 +82,13 @@ class SwapTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only show price details when the user has input amounts
+    final hasInput =
+        fromController.text.isNotEmpty &&
+        (double.tryParse(fromController.text.replaceAll(',', '')) ?? 0) > 0 &&
+        toAmountText.isNotEmpty &&
+        toAmountText != '0';
+
     return Column(
       children: [
         SwapFromCard(
@@ -107,20 +114,22 @@ class SwapTabContent extends StatelessWidget {
           onSelectToken: onSelectToToken,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 16),
-        SwapPriceDetailsCard(
-          priceText: priceText,
-          platformFeePercent: currentQuote?.platformFeePercent ?? 1.0,
-          platformFeeUsd: platformFeeUsd,
-          feeAmountUsd: feeUsd,
-          feeAmountNative: feeNative,
-          nativeFeeSymbol: blockchain.activeChain.symbol,
-          receiveText: receiveText,
-          priceSeparator: priceSeparator,
-          swapAmountUsd: fromUsdValue,
-          gaslessFeeCovered: gaslessFeeCovered,
-          nativePriceUsd: nativePriceUsd,
-        ),
+        if (hasInput) ...[
+          const SizedBox(height: 16),
+          SwapPriceDetailsCard(
+            priceText: priceText,
+            platformFeePercent: currentQuote?.platformFeePercent ?? 1.0,
+            platformFeeUsd: platformFeeUsd,
+            feeAmountUsd: feeUsd,
+            feeAmountNative: feeNative,
+            nativeFeeSymbol: blockchain.activeChain.symbol,
+            receiveText: receiveText,
+            priceSeparator: priceSeparator,
+            swapAmountUsd: fromUsdValue,
+            gaslessFeeCovered: gaslessFeeCovered,
+            nativePriceUsd: nativePriceUsd,
+          ),
+        ],
         const SizedBox(height: 16),
         SwapPrimaryButton(
           enabled: swapEnabled,
@@ -176,6 +185,24 @@ class LimitTabContent extends StatelessWidget {
   /// The quote token for the limit price chip display.
   final Token? quoteToken;
 
+  /// Percentage deviation from market price (e.g. "+1.2%").
+  final String? priceDeviationLabel;
+
+  /// Callback when user taps a price adjustment chip (e.g. -25, +25).
+  final ValueChanged<int>? onPriceAdjust;
+
+  /// Whether the +/- toggle is in "positive" mode (true = +25/+50/+100).
+  final bool isPositiveAdjust;
+
+  /// Toggles the +/- mode for price adjustment chips.
+  final VoidCallback? onToggleAdjustDirection;
+
+  /// Optional USD input controller for the execution price card.
+  final TextEditingController? limitUsdController;
+
+  /// Fires when the user edits the USD field in the execution card.
+  final ValueChanged<String>? onLimitUsdChanged;
+
   final VoidCallback onSubmitLimit;
   final String expiryLabel;
   final VoidCallback onSelect15m;
@@ -221,6 +248,12 @@ class LimitTabContent extends StatelessWidget {
     required this.nativePriceUsd,
     required this.targetTokenSymbol,
     required this.quoteToken,
+    this.priceDeviationLabel,
+    this.onPriceAdjust,
+    this.isPositiveAdjust = false,
+    this.onToggleAdjustDirection,
+    this.limitUsdController,
+    this.onLimitUsdChanged,
     required this.onSubmitLimit,
     required this.expiryLabel,
     required this.onSelect15m,
@@ -240,9 +273,20 @@ class LimitTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sign = isPositiveAdjust ? '+' : '-';
+
+    // Only show price details once user has filled in limit parameters
+    final hasLimitInput =
+        limitPriceController.text.isNotEmpty &&
+        (double.tryParse(limitPriceController.text.replaceAll(',', '')) ?? 0) >
+            0 &&
+        fromController.text.isNotEmpty &&
+        (double.tryParse(fromController.text.replaceAll(',', '')) ?? 0) > 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // ── From / To Cards ──
         SwapFromCard(
           controller: fromController,
           token: fromToken,
@@ -266,30 +310,65 @@ class LimitTabContent extends StatelessWidget {
           onSelectToken: onSelectToToken,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text(
-              'Execution Price',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                letterSpacing: 1,
-                color: const Color(0xFFC8C6C5),
+        const SizedBox(height: 24),
+
+        // ── Execution Price header row with +/- chips and MARKET toggle ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              Text(
+                'EXECUTION PRICE',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: const Color(0xFFC8C6C5),
+                ),
               ),
-            ),
-            const Spacer(),
-            const Icon(Icons.trending_down, color: Color(0xFFEA2A33), size: 12),
-            const SizedBox(width: 6),
-            Text(
-              'MARKET',
-              style: GoogleFonts.inter(
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-                color: const Color(0xFFEA2A33),
-                letterSpacing: 1,
+              const Spacer(),
+              if (onPriceAdjust != null) ...[
+                LimitPriceAdjustChip(
+                  label: '${sign}25%',
+                  selected: false,
+                  onTap: () => onPriceAdjust!(isPositiveAdjust ? 25 : -25),
+                ),
+                const SizedBox(width: 4),
+                LimitPriceAdjustChip(
+                  label: '${sign}50%',
+                  selected: false,
+                  onTap: () => onPriceAdjust!(isPositiveAdjust ? 50 : -50),
+                ),
+                const SizedBox(width: 4),
+                LimitPriceAdjustChip(
+                  label: '${sign}100%',
+                  selected: false,
+                  onTap: () => onPriceAdjust!(isPositiveAdjust ? 100 : -100),
+                ),
+                const SizedBox(width: 6),
+              ],
+              // Toggle icon: tap to switch between + and -
+              if (onToggleAdjustDirection != null)
+                GestureDetector(
+                  onTap: onToggleAdjustDirection,
+                  child: Icon(
+                    isPositiveAdjust ? Icons.trending_up : Icons.trending_down,
+                    color: const Color(0xFFEA2A33),
+                    size: 12,
+                  ),
+                ),
+              const SizedBox(width: 6),
+              Text(
+                'MARKET',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFEA2A33),
+                  letterSpacing: 1,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 8),
         LimitExecutionCard(
@@ -299,78 +378,80 @@ class LimitTabContent extends StatelessWidget {
           quoteToken: quoteToken,
           targetPriceUsdLabel: executionPriceUsdLabel,
           chainId: blockchain.activeChain.chainId,
+          priceDeviationLabel: priceDeviationLabel,
+          usdController: limitUsdController,
+          onUsdChanged: onLimitUsdChanged,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+
+        // ── Order Expiry ──
         Text(
           'ORDER EXPIRY',
           style: GoogleFonts.inter(
             fontSize: 12,
+            fontWeight: FontWeight.w400,
             letterSpacing: 1.2,
             color: const Color(0xFFC8C6C5),
           ),
         ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            LimitExpiryChip(
-              label: '24H',
-              selected: is24hSelected,
-              onTap: onSelect24h,
-            ),
-            LimitExpiryChip(
-              label: '7D',
-              selected: is7dSelected,
-              onTap: onSelect7d,
-            ),
-            LimitExpiryChip(
-              label: 'Never',
-              selected: isNeverSelected,
-              onTap: onSelectNever,
-            ),
-            GestureDetector(
-              onTap: onPickCustomExpiry,
-              child: Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1F1F1F),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0x1A5D3F3D)),
-                ),
-                child: const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFFC8C6C5),
-                  size: 12,
-                ),
+        const SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              LimitExpiryChip(
+                label: '15M',
+                selected: is15mSelected,
+                onTap: onSelect15m,
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Expiry: $expiryLabel',
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: const Color(0x99C8C6C5),
+              const SizedBox(width: 8),
+              LimitExpiryChip(
+                label: '1H',
+                selected: is1hSelected,
+                onTap: onSelect1h,
+              ),
+              const SizedBox(width: 8),
+              LimitExpiryChip(
+                label: '24H',
+                selected: is24hSelected,
+                onTap: onSelect24h,
+              ),
+              const SizedBox(width: 8),
+              LimitExpiryChip(
+                label: '7D',
+                selected: is7dSelected,
+                onTap: onSelect7d,
+              ),
+              const SizedBox(width: 8),
+              LimitExpiryChip(
+                label: 'Never',
+                selected: isNeverSelected,
+                onTap: onSelectNever,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
-        SwapPriceDetailsCard(
-          priceText: executionPriceText,
-          platformFeePercent: 0.0,
-          platformFeeUsd: 0.0,
-          feeAmountUsd: 0.0,
-          feeAmountNative: 0.0,
-          nativeFeeSymbol: blockchain.activeChain.symbol,
-          receiveText: receiveText,
-          priceSeparator: priceSeparator,
-          swapAmountUsd: fromUsdValue,
-          gaslessFeeCovered: false,
-          nativePriceUsd: nativePriceUsd,
-        ),
-        const SizedBox(height: 16),
+
+        // ── Price details — only show after user fills in limit params ──
+        if (hasLimitInput) ...[
+          SwapPriceDetailsCard(
+            priceText: executionPriceText,
+            platformFeePercent: 0.0,
+            platformFeeUsd: 0.0,
+            feeAmountUsd: 0.0,
+            feeAmountNative: 0.0,
+            nativeFeeSymbol: blockchain.activeChain.symbol,
+            receiveText: receiveText,
+            priceSeparator: priceSeparator,
+            swapAmountUsd: fromUsdValue,
+            gaslessFeeCovered: false,
+            nativePriceUsd: nativePriceUsd,
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // ── Action Button ──
         SwapPrimaryButton(
           enabled: limitEnabled,
           isBusy: limitBusy,

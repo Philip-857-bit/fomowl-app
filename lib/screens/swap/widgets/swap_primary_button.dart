@@ -33,7 +33,7 @@ class SwapPrimaryButton extends StatelessWidget {
           boxShadow: (enabled && !isBusy)
               ? [
                   const BoxShadow(
-                    color: Color(0x4DEA2A33),
+                    color: Color(0x4CEA2A33),
                     blurRadius: 24,
                     offset: Offset(0, 8),
                   ),
@@ -45,7 +45,7 @@ class SwapPrimaryButton extends StatelessWidget {
             isBusy ? l.loading : (label ?? l.swap),
             style: GoogleFonts.inter(
               fontSize: 18,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
               color: (enabled && !isBusy)
                   ? Colors.white
                   : const Color(0x66E2E2E2),

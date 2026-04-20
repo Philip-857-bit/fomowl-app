@@ -34,16 +34,31 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final feePercent = platformFeePercent > 0
-        ? '${platformFeePercent.toStringAsFixed(1)}%'
-        : '1%';
+    final platformFeePct = swapAmountUsd > 0
+        ? ((platformFeeUsd / swapAmountUsd) * 100).toStringAsFixed(2)
+        : '0.00';
+    final platformFeeText = '$platformFeePct% (\$$platformFeeUsd)';
+
+    final networkFeePct = swapAmountUsd > 0
+        ? ((feeAmountUsd / swapAmountUsd) * 100).toStringAsFixed(2)
+        : '0.00';
+    final feeNativeText = feeAmountNative > 0
+        ? '${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol'
+        : '';
+    final feeUsdText = feeAmountUsd > 0
+        ? '\$${feeAmountUsd.toStringAsFixed(2)}'
+        : '';
+    final feeTextCombine = feeNativeText.isNotEmpty
+        ? '$feeNativeText ($feeUsdText) ≈ $networkFeePct%'
+        : '0.00%';
+
     return Column(
       children: [
         _buildDetailRow('Price', priceText, isPrice: true),
         const SizedBox(height: 12),
-        _buildDetailRow('Total Tax', '0.5%'),
+        _buildDetailRow('Total Tax', platformFeeText),
         const SizedBox(height: 12),
-        _buildDetailRow('Fee', feePercent),
+        _buildDetailRow('Fee', feeTextCombine),
         const SizedBox(height: 12),
         _buildDetailRow('To Receive', receiveText),
       ],

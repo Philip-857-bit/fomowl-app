@@ -93,6 +93,7 @@ class _SwapScreenState extends State<SwapScreen> {
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final TextEditingController _limitPriceController = TextEditingController();
+  final TextEditingController _limitUsdController = TextEditingController();
   final SwapService _swapService = SwapService();
   final WalletService _walletService = WalletService();
   final ReferralService _referralService = ReferralService();
@@ -116,6 +117,9 @@ class _SwapScreenState extends State<SwapScreen> {
   _LimitExpiryOption _limitExpiryOption = _LimitExpiryOption.hours24;
   DateTime? _customExpiryDate;
   bool _isSubmittingLimit = false;
+
+  /// Whether the +/- price adjustment chips are in positive mode.
+  bool _isPositiveAdjust = false;
 
   @override
   void didChangeDependencies() {
@@ -484,6 +488,7 @@ class _SwapScreenState extends State<SwapScreen> {
     _fromController.dispose();
     _toController.dispose();
     _limitPriceController.dispose();
+    _limitUsdController.dispose();
     _debounceTimer?.cancel();
     // Clear only swap-owned tracking so Home continues receiving updates.
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -692,8 +697,13 @@ class _SwapScreenState extends State<SwapScreen> {
     return _isGaslessSupported && from != null && _tokenRequiresApproval(from);
   }
 
-  void _resetQuoteState({bool clearInputAmounts = false}) {
-    _quoteRequestId++;
+  void _resetQuoteState({
+    bool clearInputAmounts = false,
+    bool preserveRequestId = false,
+  }) {
+    if (!preserveRequestId) {
+      _quoteRequestId++;
+    }
     _pricing = '';
     _currentQuote = null;
     _feeUsd = 0.0;
@@ -890,6 +900,10 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     if (lower.contains('invalid chain id')) {
       return l.noQuoteAvailable;
+    }
+    if (lower.contains('swap validation failed') ||
+        lower.contains('swap_validation_failed')) {
+      return 'Route unavailable or insufficient liquidity for this pair. Please adjust the amount or try a different pair.';
     }
     if (lower.contains('connection refused') ||
         lower.contains('socketexception') ||
@@ -1394,21 +1408,21 @@ class _SwapScreenState extends State<SwapScreen> {
         final mapped = _mapErrorMessage(_swapService.lastError);
         setState(() {
           _pricing = mapped;
-          _resetQuoteState();
+          _resetQuoteState(preserveRequestId: true);
         });
       }
     } on TimeoutException {
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
           _pricing = l.tryAgain;
-          _resetQuoteState();
+          _resetQuoteState(preserveRequestId: true);
         });
       }
     } catch (e) {
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
           _pricing = _mapErrorMessage(e.toString());
-          _resetQuoteState();
+          _resetQuoteState(preserveRequestId: true);
         });
       }
     } finally {
@@ -2356,6 +2370,16 @@ class _SwapScreenState extends State<SwapScreen> {
                             0.0,
                         targetTokenSymbol: _limitTargetToken?.symbol ?? '',
                         quoteToken: _limitQuoteToken,
+                        priceDeviationLabel: _limitPriceDeviationLabel(),
+                        onPriceAdjust: _adjustLimitPrice,
+                        isPositiveAdjust: _isPositiveAdjust,
+                        onToggleAdjustDirection: () {
+                          setState(() {
+                            _isPositiveAdjust = !_isPositiveAdjust;
+                          });
+                        },
+                        limitUsdController: _limitUsdController,
+                        onLimitUsdChanged: _onLimitUsdChanged,
                         onSubmitLimit: _submitLimitOrder,
                         expiryLabel: _limitExpiryLabel(),
                         onSelect15m: () => setState(
@@ -2445,5 +2469,76 @@ class _SwapScreenState extends State<SwapScreen> {
       return '\$0.00';
     }
     return '\$${usdValue.toStringAsFixed(2)}';
+  }
+
+  /// Calculates the percentage deviation of the user's limit price from the
+  /// current market price of the target token. Returns e.g. "+1.2%" or "-5.0%".
+  String? _limitPriceDeviationLabel() {
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (limitPrice <= Decimal.zero) return null;
+    final limitPriceValue = double.tryParse(limitPrice.toString()) ?? 0.0;
+    if (limitPriceValue <= 0) return null;
+
+    // Compute the market price of the target token in terms of the quote token.
+    final targetUsd = _limitTargetToken?.unitPriceUsd ?? 0.0;
+    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    if (targetUsd <= 0 || quoteUsd <= 0) return null;
+
+    final marketPrice = targetUsd / quoteUsd;
+    if (marketPrice <= 0) return null;
+
+    final deviation = ((limitPriceValue - marketPrice) / marketPrice) * 100;
+    final sign = deviation >= 0 ? '+' : '';
+    return '$sign${deviation.toStringAsFixed(1)}%';
+  }
+
+  /// Adjusts the limit price by a percentage relative to market price.
+  /// [percent] can be negative (e.g. -25 means 25% below market).
+  void _adjustLimitPrice(int percent) {
+    final targetUsd = _limitTargetToken?.unitPriceUsd ?? 0.0;
+    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    if (targetUsd <= 0 || quoteUsd <= 0) return;
+
+    final marketPrice = targetUsd / quoteUsd;
+    final adjusted = marketPrice * (1 + percent / 100.0);
+    if (adjusted <= 0) return;
+
+    final decimals = _limitQuoteToken?.decimals ?? 6;
+    final displayDecimals = decimals > 6 ? 6 : decimals;
+    _limitPriceController.text = adjusted.toStringAsFixed(displayDecimals);
+    // Sync the USD field with the adjusted price
+    _syncLimitUsdField(adjusted);
+    _updateLimitPreview();
+    setState(() {});
+  }
+
+  /// Called when the user edits the USD field in the execution card.
+  /// Converts the entered USD value back to a token price.
+  void _onLimitUsdChanged(String usdText) {
+    final usdValue = double.tryParse(usdText.replaceAll(',', '')) ?? 0.0;
+    if (usdValue <= 0) return;
+
+    // We need the quote token's USD price to convert.
+    // USD / quoteTokenUsdPrice = priceInQuoteTokens
+    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    if (quoteUsd <= 0) return;
+
+    final tokenPrice = usdValue / quoteUsd;
+    final decimals = _limitQuoteToken?.decimals ?? 6;
+    final displayDecimals = decimals > 6 ? 6 : decimals;
+    _limitPriceController.text = tokenPrice.toStringAsFixed(displayDecimals);
+    _updateLimitPreview();
+    setState(() {});
+  }
+
+  /// Syncs the USD input field when the token price changes.
+  void _syncLimitUsdField(double tokenPrice) {
+    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    if (quoteUsd <= 0) {
+      _limitUsdController.text = '';
+      return;
+    }
+    final usdValue = tokenPrice * quoteUsd;
+    _limitUsdController.text = usdValue.toStringAsFixed(2);
   }
 }

@@ -85,7 +85,7 @@ class _SwapTabChip extends StatelessWidget {
             label,
             style: GoogleFonts.inter(
               fontSize: 14,
-              fontWeight: FontWeight.w400,
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
               color: isActive
                   ? const Color(0xFFEA2A33)
                   : const Color(0xFFC8C6C5),
@@ -129,6 +129,7 @@ class NetworkCard extends StatelessWidget {
                       'NETWORK',
                       style: GoogleFonts.inter(
                         fontSize: 10,
+                        fontWeight: FontWeight.w500,
                         color: const Color(0xFFC8C6C5),
                         letterSpacing: 0.5,
                       ),
@@ -138,7 +139,7 @@ class NetworkCard extends StatelessWidget {
                       chain.name,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w600,
                         color: const Color(0xFFE2E2E2),
                       ),
                     ),
@@ -193,19 +194,31 @@ class _ChainLogo extends StatelessWidget {
   }
 }
 
+/// The execution price card for limit orders.
+/// Both the token-price field and the USD field are editable.
+/// When the user edits the USD field, [onUsdChanged] fires and the
+/// parent recalculates the token price from the USD value.
 class LimitExecutionCard extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
   /// The symbol of the token whose price the user is setting.
-  /// In sell mode this is the fromToken; in buy mode this is the toToken.
   final String targetTokenSymbol;
 
   /// The quote token shown as a chip — denominating the limit price.
-  /// In sell mode this is toToken (e.g. USDT); in buy mode this is fromToken.
   final Token? quoteToken;
   final String targetPriceUsdLabel;
   final int? chainId;
+
+  /// Percentage deviation from market price (e.g. "+1.2%").
+  final String? priceDeviationLabel;
+
+  /// Optional controller for the USD input field.
+  /// When provided the USD row becomes editable.
+  final TextEditingController? usdController;
+
+  /// Fires when the user types in the USD field.
+  final ValueChanged<String>? onUsdChanged;
 
   const LimitExecutionCard({
     super.key,
@@ -215,6 +228,9 @@ class LimitExecutionCard extends StatelessWidget {
     required this.quoteToken,
     required this.targetPriceUsdLabel,
     this.chainId,
+    this.priceDeviationLabel,
+    this.usdController,
+    this.onUsdChanged,
   });
 
   @override
@@ -262,18 +278,114 @@ class LimitExecutionCard extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
-                Text(
-                  targetPriceUsdLabel,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFFE2E2E2),
+                // Editable USD row
+                if (usdController != null && onUsdChanged != null)
+                  SizedBox(
+                    height: 20,
+                    child: TextField(
+                      controller: usdController,
+                      onChanged: onUsdChanged,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFFE2E2E2),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '\$0.00',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF71717A),
+                        ),
+                        prefixText: '\$',
+                        prefixStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFFE2E2E2),
+                        ),
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    targetPriceUsdLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFFE2E2E2),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
-          SwapTokenChip(token: quoteToken, onTap: () {}, chainId: chainId),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SwapTokenChip(token: quoteToken, onTap: () {}, chainId: chainId),
+              if (priceDeviationLabel != null &&
+                  priceDeviationLabel!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  priceDeviationLabel!,
+                  textAlign: TextAlign.right,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF73D3F0),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small price adjustment chip shown above the execution card.
+/// Labels switch between +/- based on the toggle state (e.g. -25% vs +25%).
+class LimitPriceAdjustChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const LimitPriceAdjustChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0x1AEA2A33) : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0C000000),
+              blurRadius: 1.3,
+              offset: Offset(0, 0.65),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 8,
+            fontWeight: FontWeight.w700,
+            color: selected ? const Color(0xFFEA2A33) : const Color(0xFF909090),
+          ),
+        ),
       ),
     );
   }
@@ -296,19 +408,20 @@ class LimitExpiryChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 10.5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? const Color(0x1AEA2A33) : const Color(0xFF1F1F1F),
+          color: selected ? const Color(0x19EA2A33) : const Color(0xFF1F1F1F),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? const Color(0x33EA2A33) : const Color(0x1A5D3F3D),
+            color: selected ? const Color(0x33EA2A33) : const Color(0x195D3F3D),
           ),
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 12,
-            fontWeight: FontWeight.w400,
+            fontWeight: FontWeight.w700,
             color: selected ? const Color(0xFFEA2A33) : const Color(0xFFC8C6C5),
           ),
         ),
