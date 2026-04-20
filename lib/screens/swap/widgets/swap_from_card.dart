@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
@@ -36,11 +35,11 @@ class SwapFromCard extends StatelessWidget {
     final l = AppLocalizations.of(context);
     const percentages = [25, 50, 100];
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: const Color(0xFF131313),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.transparent),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,15 +48,16 @@ class SwapFromCard extends StatelessWidget {
             children: [
               Text(
                 l.swapFromLabel,
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.6),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFA1A1AA),
                 ),
               ),
               const Spacer(),
               ...percentages.map(
                 (percent) => Padding(
-                  padding: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsets.only(left: 8),
                   child: _PercentChip(
                     percent: percent,
                     isSelected: selectedPercentage == percent,
@@ -67,17 +67,17 @@ class SwapFromCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: controller,
                   onChanged: onAmountChanged,
-                  style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFFFFFFF),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -85,10 +85,10 @@ class SwapFromCard extends StatelessWidget {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: '0',
-                    hintStyle: GoogleFonts.outfit(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.3),
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0x4DFFFFFF),
                     ),
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
@@ -102,7 +102,7 @@ class SwapFromCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -110,25 +110,28 @@ class SwapFromCard extends StatelessWidget {
                 ValueFormatter.formatCurrencyWithGrouping(
                   ValueFormatter.decimalFromNum(usdValue),
                 ),
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.5),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFF71717A),
                 ),
               ),
               Row(
                 children: [
-                  Text(
-                    '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.5),
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF8B1A1A),
+                      shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 14,
-                    color: Colors.white.withValues(alpha: 0.4),
+                  Text(
+                    '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF71717A),
+                    ),
                   ),
                 ],
               ),
@@ -156,21 +159,17 @@ class _PercentChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.accentRed
-              : Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(14),
+          color: isSelected ? const Color(0xFF640C0B) : const Color(0xFF27272A),
+          borderRadius: BorderRadius.circular(23),
         ),
         child: Text(
           '$percent%',
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: isSelected
-                ? Colors.white
-                : Colors.white.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
       ),

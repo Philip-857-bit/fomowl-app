@@ -5,21 +5,25 @@ import 'package:web3dart/web3dart.dart';
 
 import 'blockchain_service.dart';
 import 'http_client_service.dart';
+import 'rpc_service.dart';
 
 class TransactionMonitor {
   final HttpClientService _httpClientService = HttpClientService();
+  final RpcService _rpcService = RpcService();
 
   Future<bool> waitForConfirmation({
     required String txHash,
     required BlockchainService blockchain,
     Duration pollInterval = const Duration(seconds: 2),
     Duration timeout = const Duration(minutes: 2),
+    Duration receiptTimeout = const Duration(seconds: 8),
     void Function(int attempts)? onPoll,
   }) async {
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
+    final rpcUrl = await _rpcService.resolveWorkingRpcUrl(
+      chainId: blockchain.activeChain.chainId,
+      primaryRpcUrl: blockchain.activeChain.rpcUrl,
     );
+    final client = Web3Client(rpcUrl, _httpClientService.client);
     try {
       final completer = Completer<bool>();
       final stopwatch = Stopwatch()..start();
@@ -43,7 +47,9 @@ class TransactionMonitor {
 
         pollInFlight = true;
         try {
-          final receipt = await client.getTransactionReceipt(txHash);
+          final receipt = await client
+              .getTransactionReceipt(txHash)
+              .timeout(receiptTimeout);
           if (receipt != null) {
             timer?.cancel();
             if (!completer.isCompleted) {

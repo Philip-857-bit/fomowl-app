@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 
 class SwapPrimaryButton extends StatelessWidget {
@@ -27,19 +26,29 @@ class SwapPrimaryButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: (enabled && !isBusy) ? AppColors.primaryGradient : null,
-          color: (enabled && !isBusy) ? null : AppColors.cardDark,
-          borderRadius: BorderRadius.circular(16),
+          color: (enabled && !isBusy)
+              ? const Color(0xFFEA2A33)
+              : const Color(0xFF1F1F1F),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: (enabled && !isBusy)
+              ? [
+                  const BoxShadow(
+                    color: Color(0x4DEA2A33),
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
+                  ),
+                ]
+              : null,
         ),
         child: Center(
           child: Text(
             isBusy ? l.loading : (label ?? l.swap),
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 18,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: (enabled && !isBusy)
                   ? Colors.white
-                  : Colors.white.withValues(alpha: 0.4),
+                  : const Color(0x66E2E2E2),
             ),
           ),
         ),

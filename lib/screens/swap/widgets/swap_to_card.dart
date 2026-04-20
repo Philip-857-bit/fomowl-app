@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
@@ -31,23 +30,24 @@ class SwapToCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: const Color(0xFF131313),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.transparent),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             l.swapToLabel,
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.6),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFFA1A1AA),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -58,14 +58,14 @@ class SwapToCard extends StatelessWidget {
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                              color: AppColors.accentRed,
+                              color: Color(0xFFEA2A33),
                               strokeWidth: 2,
                             ),
                           ),
                           const SizedBox(width: 8),
                           Text(
                             l.calculatingLabel,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               color: Colors.white54,
                             ),
@@ -74,10 +74,10 @@ class SwapToCard extends StatelessWidget {
                       )
                     : Text(
                         amountText.isEmpty ? '0' : amountText,
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                        style: GoogleFonts.inter(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFFFFFFF),
                         ),
                       ),
               ),
@@ -88,7 +88,7 @@ class SwapToCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -96,25 +96,28 @@ class SwapToCard extends StatelessWidget {
                 ValueFormatter.formatCurrencyWithGrouping(
                   ValueFormatter.decimalFromNum(usdValue),
                 ),
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.5),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFF71717A),
                 ),
               ),
               Row(
                 children: [
-                  Text(
-                    '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.5),
+                  Container(
+                    width: 9,
+                    height: 9,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF73D3F0),
+                      shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 14,
-                    color: Colors.white.withValues(alpha: 0.4),
+                  Text(
+                    '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF71717A),
+                    ),
                   ),
                 ],
               ),

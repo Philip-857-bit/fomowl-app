@@ -23,6 +23,7 @@ import '../../widgets/token_selector_modal.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
+import '../home/widgets/network_selector_sheet.dart';
 import 'widgets/swap_limit_widgets.dart';
 import 'widgets/swap_tab_content.dart';
 
@@ -49,8 +50,46 @@ class SwapScreen extends StatefulWidget {
 class _SwapScreenState extends State<SwapScreen> {
   static const String _livePriceScope = 'swap_screen';
   static const Duration _quoteUiTimeout = Duration(seconds: 18);
+  static const Duration _approvalUiTimeout = Duration(seconds: 90);
   static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
   static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
+
+  /// Known stablecoin symbols used to detect buy vs sell mode in limit orders.
+  static const Set<String> _stablecoinSymbols = {
+    'USDT',
+    'USDC',
+    'BUSD',
+    'DAI',
+    'TUSD',
+    'USDP',
+    'FRAX',
+    'GUSD',
+    'LUSD',
+    'PYUSD',
+    'USDD',
+    'SUSD',
+    'CUSD',
+    'USDCE',
+    'USDC.E',
+    'USDT.E',
+  };
+
+  bool _isStablecoin(Token? token) {
+    if (token == null) return false;
+    return _stablecoinSymbols.contains(token.symbol.toUpperCase());
+  }
+
+  /// Buy mode: user is buying a volatile token with a stablecoin.
+  /// The limit target ("When X is worth") should be the volatile token (toToken).
+  bool get _isBuyMode {
+    return _isStablecoin(_fromToken) && !_isStablecoin(_toToken);
+  }
+
+  /// The token whose price the user is targeting in limit orders.
+  Token? get _limitTargetToken => _isBuyMode ? _toToken : _fromToken;
+
+  /// The quote token used to denominate the limit price.
+  Token? get _limitQuoteToken => _isBuyMode ? _fromToken : _toToken;
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final TextEditingController _limitPriceController = TextEditingController();
@@ -115,6 +154,7 @@ class _SwapScreenState extends State<SwapScreen> {
   static final Map<String, double> _tokenPriceCache = {};
   bool _isApproving = false;
   bool _isSwapping = false;
+  bool _isSwapFlowActive = false;
   bool _isGasless = false;
 
   String _formatRateText(double outAmount) {
@@ -1404,7 +1444,18 @@ class _SwapScreenState extends State<SwapScreen> {
       final fromAmount = _parseDecimalAmount(_fromController.text);
       final limitPrice = _parseDecimalAmount(_limitPriceController.text);
       if (fromAmount > Decimal.zero && limitPrice > Decimal.zero) {
-        final toAmount = fromAmount * limitPrice;
+        // Buy mode: user enters price of toToken in fromToken units.
+        //   toAmount = fromAmount / limitPrice
+        // Sell mode: user enters price of fromToken in toToken units.
+        //   toAmount = fromAmount * limitPrice
+        final Decimal toAmount;
+        if (_isBuyMode) {
+          // Compute fromAmount / limitPrice using Rational intermediary
+          final rational = fromAmount.toRational() / limitPrice.toRational();
+          toAmount = rational.toDecimal(scaleOnInfinitePrecision: 18);
+        } else {
+          toAmount = fromAmount * limitPrice;
+        }
         final displayDecimals = to.decimals > 6 ? 6 : to.decimals;
         nextToAmount = _formatDecimalInput(toAmount, displayDecimals);
       }
@@ -1523,7 +1574,15 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.enterValidAmount);
       return;
     }
-    final takerAmountDecimal = makerAmount * limitPrice;
+    // Buy mode: takerAmount = makerAmount / limitPrice
+    // Sell mode: takerAmount = makerAmount * limitPrice
+    final Decimal takerAmountDecimal;
+    if (_isBuyMode) {
+      final rational = makerAmount.toRational() / limitPrice.toRational();
+      takerAmountDecimal = rational.toDecimal(scaleOnInfinitePrecision: 18);
+    } else {
+      takerAmountDecimal = makerAmount * limitPrice;
+    }
     final takerAmountWei = AmountUtils.parseDecimalToBaseUnits(
       takerAmountDecimal.toString(),
       to.decimals,
@@ -1738,6 +1797,10 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   void _executeSwap() async {
+    if (_isSwapFlowActive || _isApproving || _isSwapping) {
+      return;
+    }
+
     final l = AppLocalizations.of(context);
     if (_walletAddress == null) {
       _showError(l.noActiveWalletFound);
@@ -1783,41 +1846,82 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
 
-    final progressController = _openProgressFlow();
-    progressController.setPreparing();
-
-    final executionQuote = await _refreshExecutionQuote(
-      fromToken: fromToken,
-      toToken: toToken,
-      fromAmountWei: fromAmountWei,
-    );
-    if (!mounted) return;
-    if (executionQuote == null) {
-      progressController.setError(
-        _mapErrorMessage(_swapService.lastError ?? l.noQuoteAvailable),
-      );
-      return;
+    TransactionProgressController? progressController;
+    if (mounted) {
+      setState(() => _isSwapFlowActive = true);
     }
 
-    if (_tokenRequiresApproval(fromToken)) {
-      final approvalOk = await _handleTokenApproval(
-        fromToken,
-        fromAmountWei,
+    try {
+      progressController = _openProgressFlow();
+      progressController.setPreparing();
+
+      final executionQuote = await _refreshExecutionQuote(
+        fromToken: fromToken,
+        toToken: toToken,
+        fromAmountWei: fromAmountWei,
+      );
+      if (!mounted) return;
+      if (executionQuote == null) {
+        progressController.setError(
+          _mapErrorMessage(_swapService.lastError ?? l.noQuoteAvailable),
+        );
+        return;
+      }
+
+      if (_tokenRequiresApproval(fromToken)) {
+        final approvalOk = await _handleTokenApproval(
+          fromToken,
+          fromAmountWei,
+          progressController: progressController,
+        );
+        if (!approvalOk) return;
+      }
+
+      await _performSwap(
+        fromToken: fromToken,
+        toToken: toToken,
+        fromAmountWei: fromAmountWei,
         progressController: progressController,
       );
-      if (!approvalOk) return;
+    } catch (error, stackTrace) {
+      debugPrint('Swap flow error: $error\n$stackTrace');
+      if (progressController != null) {
+        progressController.setError(_mapErrorMessage(error.toString()));
+      } else {
+        _showError(_mapErrorMessage(error.toString()));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSwapFlowActive = false);
+      }
     }
-
-    await _performSwap(
-      fromToken: fromToken,
-      toToken: toToken,
-      fromAmountWei: fromAmountWei,
-      progressController: progressController,
-    );
   }
 
   void _showError(String message) {
     ToastUtils.showError(message);
+  }
+
+  void _showNetworkSelector() {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => NetworkSelectorSheet(
+        chains: blockchain.allChains,
+        activeChainId: blockchain.activeChain.chainId,
+        onSelect: (chain) {
+          blockchain.setActiveChain(chain);
+          Navigator.pop(ctx);
+        },
+        onAddCustomNetwork: () async {
+          Navigator.pop(ctx);
+          await Navigator.pushNamed(context, '/add-network');
+        },
+      ),
+    );
   }
 
   Future<bool> _handleTokenApproval(
@@ -1845,7 +1949,8 @@ class _SwapScreenState extends State<SwapScreen> {
 
     setState(() => _isApproving = true);
     try {
-      progressController.setApprovalPending();
+      // Don't show "Approval Processing" yet — wait until we confirm
+      // that an on-chain approval tx is actually needed.
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final gaslessApprovalFunded = await _ensureGaslessApprovalFunding(
         token: fromToken,
@@ -1856,13 +1961,20 @@ class _SwapScreenState extends State<SwapScreen> {
       if (!gaslessApprovalFunded) {
         return false;
       }
-      final result = await _tokenApprovalService.ensureApproval(
-        token: fromToken,
-        amountWei: fromAmountWei,
-        ownerAddress: _walletAddress!,
-        blockchain: blockchain,
-        allowanceTarget: quote.allowanceSpender ?? quote.allowanceTarget,
-      );
+      final result = await _tokenApprovalService
+          .ensureApproval(
+            token: fromToken,
+            amountWei: fromAmountWei,
+            ownerAddress: _walletAddress!,
+            blockchain: blockchain,
+            allowanceTarget: quote.allowanceSpender ?? quote.allowanceTarget,
+            onApprovalNeeded: () {
+              if (mounted) {
+                progressController.setApprovalPending();
+              }
+            },
+          )
+          .timeout(_approvalUiTimeout);
 
       if (!mounted) return false;
 
@@ -1889,6 +2001,15 @@ class _SwapScreenState extends State<SwapScreen> {
       }
 
       return true;
+    } on TimeoutException {
+      progressController.setError(
+        'Approval request timed out. Reopen your wallet and try again.',
+      );
+      return false;
+    } catch (error, stackTrace) {
+      debugPrint('Token approval flow error: $error\n$stackTrace');
+      progressController.setError(_mapErrorMessage(error.toString()));
+      return false;
     } finally {
       if (mounted) {
         setState(() => _isApproving = false);
@@ -2075,7 +2196,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final receiveText = _toController.text.isNotEmpty
         ? '${_currentQuote?.minAmountOutFormatted ?? _toController.text} ${_toToken?.symbol ?? ''} min'
         : '--';
-    final swapBusy = _isApproving || _isSwapping;
+    final swapBusy = _isSwapFlowActive || _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
     final hasQuote = _currentQuote != null && _toController.text.isNotEmpty;
     final chainSupported = _swapService.isChainSupported(
@@ -2120,9 +2241,9 @@ class _SwapScreenState extends State<SwapScreen> {
               child: Text(
                 l.swap,
                 style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFFE2E2E2),
                 ),
               ),
             ),
@@ -2151,7 +2272,10 @@ class _SwapScreenState extends State<SwapScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    NetworkCard(chain: blockchain.activeChain),
+                    NetworkCard(
+                      chain: blockchain.activeChain,
+                      onTap: _showNetworkSelector,
+                    ),
                     const SizedBox(height: 16),
                     if (_activeTab == SwapTab.swap)
                       SwapTabContent(
@@ -2230,6 +2354,8 @@ class _SwapScreenState extends State<SwapScreen> {
                                 .activeChain
                                 .coinGeckoId] ??
                             0.0,
+                        targetTokenSymbol: _limitTargetToken?.symbol ?? '',
+                        quoteToken: _limitQuoteToken,
                         onSubmitLimit: _submitLimitOrder,
                         expiryLabel: _limitExpiryLabel(),
                         onSelect15m: () => setState(
@@ -2295,7 +2421,13 @@ class _SwapScreenState extends State<SwapScreen> {
     if (limitPrice <= Decimal.zero) {
       return '--';
     }
-    return '1 ${_fromToken?.symbol ?? ''} $_priceSeparator ${limitPrice.toString()} ${_toToken?.symbol ?? ''}';
+    // In buy mode the price means:
+    //   "1 [toToken] = [limitPrice] [fromToken]"  (e.g. 1 TWC = 2 USDT)
+    // In sell mode the price means:
+    //   "1 [fromToken] = [limitPrice] [toToken]"  (e.g. 1 TWC = 2 USDT)
+    final target = _limitTargetToken;
+    final quote = _limitQuoteToken;
+    return '1 ${target?.symbol ?? ''} $_priceSeparator ${limitPrice.toString()} ${quote?.symbol ?? ''}';
   }
 
   String _limitExecutionPriceUsdText() {
@@ -2307,7 +2439,8 @@ class _SwapScreenState extends State<SwapScreen> {
     if (limitPriceValue <= 0) {
       return '\$0.00';
     }
-    final usdValue = _usdValueFor(_toToken, limitPriceValue);
+    // The limit price is denominated in the quote token, so use its USD rate.
+    final usdValue = _usdValueFor(_limitQuoteToken, limitPriceValue);
     if (usdValue <= 0) {
       return '\$0.00';
     }

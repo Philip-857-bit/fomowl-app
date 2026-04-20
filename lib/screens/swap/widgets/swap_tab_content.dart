@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../models/token.dart';
 import '../../../services/swap_service.dart';
 import '../../../services/blockchain_service.dart';
@@ -96,9 +95,9 @@ class SwapTabContent extends StatelessWidget {
           onPercentSelected: onPercentSelected,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         SwapDirectionButton(onPressed: onSwapTokens),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         SwapToCard(
           token: toToken,
           amountText: toAmountText,
@@ -108,7 +107,7 @@ class SwapTabContent extends StatelessWidget {
           onSelectToken: onSelectToToken,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         SwapPriceDetailsCard(
           priceText: priceText,
           platformFeePercent: currentQuote?.platformFeePercent ?? 1.0,
@@ -122,7 +121,7 @@ class SwapTabContent extends StatelessWidget {
           gaslessFeeCovered: gaslessFeeCovered,
           nativePriceUsd: nativePriceUsd,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         SwapPrimaryButton(
           enabled: swapEnabled,
           isBusy: swapBusy,
@@ -170,6 +169,13 @@ class LimitTabContent extends StatelessWidget {
   final String executionPriceUsdLabel;
   final String receiveText;
   final double nativePriceUsd;
+
+  /// Symbol of the token whose price the user is setting (target token).
+  final String targetTokenSymbol;
+
+  /// The quote token for the limit price chip display.
+  final Token? quoteToken;
+
   final VoidCallback onSubmitLimit;
   final String expiryLabel;
   final VoidCallback onSelect15m;
@@ -213,6 +219,8 @@ class LimitTabContent extends StatelessWidget {
     required this.executionPriceUsdLabel,
     required this.receiveText,
     required this.nativePriceUsd,
+    required this.targetTokenSymbol,
+    required this.quoteToken,
     required this.onSubmitLimit,
     required this.expiryLabel,
     required this.onSelect15m,
@@ -246,9 +254,9 @@ class LimitTabContent extends StatelessWidget {
           onPercentSelected: onPercentSelected,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         SwapDirectionButton(onPressed: onSwapTokens),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         SwapToCard(
           token: toToken,
           amountText: toAmountText,
@@ -258,79 +266,64 @@ class LimitTabContent extends StatelessWidget {
           onSelectToken: onSelectToToken,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Row(
           children: [
             Text(
               'Execution Price',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                letterSpacing: 1.2,
-                color: Colors.white.withValues(alpha: 0.5),
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                letterSpacing: 1,
+                color: const Color(0xFFC8C6C5),
               ),
             ),
             const Spacer(),
+            const Icon(Icons.trending_down, color: Color(0xFFEA2A33), size: 12),
+            const SizedBox(width: 6),
             Text(
               'MARKET',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primaryAccent,
-                letterSpacing: 1.1,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w400,
+                color: const Color(0xFFEA2A33),
+                letterSpacing: 1,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         LimitExecutionCard(
           controller: limitPriceController,
           onChanged: onLimitPriceChanged,
-          fromTokenSymbol: fromToken?.symbol ?? '',
-          toToken: toToken,
+          targetTokenSymbol: targetTokenSymbol,
+          quoteToken: quoteToken,
           targetPriceUsdLabel: executionPriceUsdLabel,
           chainId: blockchain.activeChain.chainId,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         Text(
-          'Order Expiry',
-          style: GoogleFonts.outfit(
+          'ORDER EXPIRY',
+          style: GoogleFonts.inter(
             fontSize: 12,
             letterSpacing: 1.2,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: const Color(0xFFC8C6C5),
           ),
         ),
         const SizedBox(height: 10),
         Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            LimitExpiryChip(
-              label: '15M',
-              selected: is15mSelected,
-              onTap: onSelect15m,
-            ),
-            LimitExpiryChip(
-              label: '1H',
-              selected: is1hSelected,
-              onTap: onSelect1h,
-            ),
-            LimitExpiryChip(
-              label: '4H',
-              selected: is4hSelected,
-              onTap: onSelect4h,
-            ),
             LimitExpiryChip(
               label: '24H',
               selected: is24hSelected,
               onTap: onSelect24h,
             ),
-            const SizedBox(width: 10),
             LimitExpiryChip(
               label: '7D',
               selected: is7dSelected,
               onTap: onSelect7d,
             ),
-            const SizedBox(width: 10),
             LimitExpiryChip(
               label: 'Never',
               selected: isNeverSelected,
@@ -339,33 +332,31 @@ class LimitTabContent extends StatelessWidget {
             GestureDetector(
               onTap: onPickCustomExpiry,
               child: Container(
-                width: 42,
-                height: 42,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: AppColors.cardDark,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                  ),
+                  color: const Color(0xFF1F1F1F),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0x1A5D3F3D)),
                 ),
                 child: const Icon(
-                  Icons.calendar_month,
-                  color: Colors.white70,
-                  size: 18,
+                  Icons.calendar_today,
+                  color: Color(0xFFC8C6C5),
+                  size: 12,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
           'Expiry: $expiryLabel',
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.45),
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: const Color(0x99C8C6C5),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         SwapPriceDetailsCard(
           priceText: executionPriceText,
           platformFeePercent: 0.0,
@@ -379,7 +370,7 @@ class LimitTabContent extends StatelessWidget {
           gaslessFeeCovered: false,
           nativePriceUsd: nativePriceUsd,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         SwapPrimaryButton(
           enabled: limitEnabled,
           isBusy: limitBusy,
@@ -390,9 +381,9 @@ class LimitTabContent extends StatelessWidget {
         Text(
           limitStatusMessage,
           textAlign: TextAlign.center,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.45),
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            color: const Color(0x99C8C6C5),
           ),
         ),
       ],

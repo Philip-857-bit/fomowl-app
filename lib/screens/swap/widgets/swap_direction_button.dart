@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../constants/app_colors.dart';
+import 'swap_figma_icons.dart';
 
 class SwapDirectionButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -13,20 +13,16 @@ class SwapDirectionButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onPressed,
         child: Container(
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: AppColors.accentRed,
+            color: const Color(0xFF000000),
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accentRed.withValues(alpha: 0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            border: Border.all(color: const Color(0xFF131313), width: 4),
           ),
-          child: const Icon(Icons.swap_vert, color: Colors.white, size: 22),
+          child: const Center(
+            child: FigmaSwapDirectionIcon(color: Color(0xFFEA2A33), width: 16),
+          ),
         ),
       ),
     );

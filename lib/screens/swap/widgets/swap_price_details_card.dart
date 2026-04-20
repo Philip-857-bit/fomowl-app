@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
-import '../../../l10n/app_localizations.dart';
-import '../../../utils/value_formatter.dart';
-
 class SwapPriceDetailsCard extends StatelessWidget {
   final String priceText;
   final double platformFeePercent;
@@ -36,59 +32,20 @@ class SwapPriceDetailsCard extends StatelessWidget {
     this.gaslessFeeCovered = false,
   });
 
-  String _formatFeeDisplay() {
-    if (platformFeeUsd > 0) {
-      return ValueFormatter.formatUsdValueOrLessThanCent(
-        ValueFormatter.decimalFromNum(platformFeeUsd),
-      );
-    }
-    if (swapAmountUsd <= 0 || platformFeePercent <= 0) return '--';
-    final feeUsd = swapAmountUsd * (platformFeePercent / 100);
-    return ValueFormatter.formatUsdValueOrLessThanCent(
-      ValueFormatter.decimalFromNum(feeUsd),
-    );
-  }
-
-  String _formatNativeFeeAmount() {
-    final formatted = feeAmountNative
-        .toStringAsFixed(8)
-        .replaceFirst(RegExp(r'0+$'), '');
-    return formatted.endsWith('.')
-        ? formatted.substring(0, formatted.length - 1)
-        : formatted;
-  }
-
-  String _formatNetworkFee() {
-    // Try backend-provided USD first
-    double usd = feeAmountUsd;
-    // If backend didn't provide USD, compute from native amount × native price
-    if (usd <= 0 && feeAmountNative > 0 && nativePriceUsd > 0) {
-      usd = feeAmountNative * nativePriceUsd;
-    }
-    if (feeAmountNative > 0) {
-      if (usd > 0) {
-        return '${ValueFormatter.formatUsdValueOrLessThanCent(ValueFormatter.decimalFromNum(usd))} (${_formatNativeFeeAmount()} $nativeFeeSymbol)';
-      }
-      return '${_formatNativeFeeAmount()} $nativeFeeSymbol';
-    }
-    return '--';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
+    final feePercent = platformFeePercent > 0
+        ? '${platformFeePercent.toStringAsFixed(1)}%'
+        : '1%';
     return Column(
       children: [
-        _buildDetailRow(l.priceLabel, priceText, isPrice: true),
+        _buildDetailRow('Price', priceText, isPrice: true),
         const SizedBox(height: 12),
-        _buildDetailRow(l.platformFeeLabel, _formatFeeDisplay()),
+        _buildDetailRow('Total Tax', '0.5%'),
         const SizedBox(height: 12),
-        _buildDetailRow(
-          l.networkFeeLabel,
-          gaslessFeeCovered ? l.coveredByOwllet : _formatNetworkFee(),
-        ),
+        _buildDetailRow('Fee', feePercent),
         const SizedBox(height: 12),
-        _buildDetailRow(l.toReceiveLabel, receiveText),
+        _buildDetailRow('To Receive', receiveText),
       ],
     );
   }
@@ -101,9 +58,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
           flex: 3,
           child: Text(
             label,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFFA1A1AA),
             ),
           ),
         ),
@@ -119,10 +77,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFFFFFF),
                     ),
                   ),
           ),
@@ -139,18 +97,18 @@ class SwapPriceDetailsCard extends StatelessWidget {
           children: [
             TextSpan(
               text: '${parts[0]}$priceSeparator ',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFFFFFFF),
               ),
             ),
             TextSpan(
               text: parts[1].trim(),
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF8B1A1A),
               ),
             ),
           ],
@@ -165,10 +123,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.end,
-      style: GoogleFonts.outfit(
+      style: GoogleFonts.inter(
         fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: Colors.white,
+        fontWeight: FontWeight.w600,
+        color: const Color(0xFFFFFFFF),
       ),
     );
   }

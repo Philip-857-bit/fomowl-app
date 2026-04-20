@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/token.dart';
 import '../../../widgets/token_icon.dart';
+import 'swap_figma_icons.dart';
 
 class SwapTokenChip extends StatelessWidget {
   final Token? token;
@@ -21,10 +23,11 @@ class SwapTokenChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFF0E0E0E),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x265D3F3D)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -41,21 +44,17 @@ class SwapTokenChip extends StatelessWidget {
                 chainId: chainId,
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             Text(
               symbol,
-              style: const TextStyle(
+              style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFE2E2E2),
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.keyboard_arrow_down,
-              size: 16,
-              color: Colors.white.withValues(alpha: 0.7),
-            ),
+            const SizedBox(width: 8),
+            const FigmaDropdownIcon(width: 6, color: Color(0xFFC8C6C5)),
           ],
         ),
       ),

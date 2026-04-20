@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
 
 import '../models/token.dart';
@@ -57,10 +58,18 @@ class TokenApprovalService {
   }) : _walletService = walletService ?? WalletService();
 
   Future<String> _resolveRpcUrl(BlockchainService blockchain) {
-    return _rpcService.resolveWorkingRpcUrl(
-      chainId: blockchain.activeChain.chainId,
-      primaryRpcUrl: blockchain.activeChain.rpcUrl,
-    );
+    return _rpcService
+        .resolveWorkingRpcUrl(
+          chainId: blockchain.activeChain.chainId,
+          primaryRpcUrl: blockchain.activeChain.rpcUrl,
+        )
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            // Fallback to primary URL if resolution times out.
+            return blockchain.activeChain.rpcUrl;
+          },
+        );
   }
 
   Future<BigInt?> estimateApprovalFeeWei({
@@ -89,12 +98,12 @@ class TokenApprovalService {
         spenderAddr,
         approvalAmount,
       ]);
-      final gasPrice = await client.getGasPrice();
-      final estimatedGas = await client.estimateGas(
-        sender: ownerAddr,
-        to: tokenAddr,
-        data: approvalData,
+      final gasPrice = await client.getGasPrice().timeout(
+        const Duration(seconds: 10),
       );
+      final estimatedGas = await client
+          .estimateGas(sender: ownerAddr, to: tokenAddr, data: approvalData)
+          .timeout(const Duration(seconds: 10));
       final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
       return gasPrice.getInWei * bufferedGas;
     } catch (_) {
@@ -104,12 +113,21 @@ class TokenApprovalService {
     }
   }
 
+  /// Ensures the required ERC-20 allowance is in place, sending an approval
+  /// transaction if necessary.
+  ///
+  /// [onApprovalNeeded] is called just before an approval transaction is
+  /// broadcast. This lets the caller transition the UI to "approval pending"
+  /// only when a tx is actually required (not when the allowance is already
+  /// sufficient). This avoids the UX issue where users see "Approval Processing"
+  /// even though they already have sufficient allowance.
   Future<TokenApprovalResult> ensureApproval({
     required Token token,
     required String amountWei,
     required String ownerAddress,
     required BlockchainService blockchain,
     required String allowanceTarget,
+    VoidCallback? onApprovalNeeded,
   }) async {
     final tokenAddress = token.contractAddress;
     if (tokenAddress == null || tokenAddress.isEmpty) {
@@ -143,11 +161,15 @@ class TokenApprovalService {
       final allowanceFunc = contract.function('allowance');
       final approveFunc = contract.function('approve');
 
-      final allowanceRes = await client.call(
-        contract: contract,
-        function: allowanceFunc,
-        params: [ownerAddr, spenderAddr],
-      );
+      // Check current allowance with a tight timeout to prevent hangs on
+      // slow/unreliable RPC nodes.
+      final allowanceRes = await client
+          .call(
+            contract: contract,
+            function: allowanceFunc,
+            params: [ownerAddr, spenderAddr],
+          )
+          .timeout(const Duration(seconds: 10));
 
       final currentAllowance = allowanceRes.first as BigInt;
 
@@ -155,7 +177,9 @@ class TokenApprovalService {
         return const TokenApprovalResult(approvalSatisfied: true);
       }
 
-      // 3. Needs additional approval
+      // 3. Needs additional approval — notify caller so UI can transition.
+      onApprovalNeeded?.call();
+
       final credentials = await _walletService.getCredentials();
 
       final tx = Transaction.callContract(
@@ -164,12 +188,17 @@ class TokenApprovalService {
         parameters: [spenderAddr, BigInt.two.pow(256) - BigInt.one],
       );
 
-      final txHash = await client.sendTransaction(
-        credentials,
-        tx,
-        chainId: blockchain.activeChain.chainId,
-        fetchChainIdFromNetworkId: false,
-      );
+      // Timeout for the actual approval transaction broadcast — prevents
+      // indefinite hang when the RPC node accepts the request but is slow
+      // to respond.
+      final txHash = await client
+          .sendTransaction(
+            credentials,
+            tx,
+            chainId: blockchain.activeChain.chainId,
+            fetchChainIdFromNetworkId: false,
+          )
+          .timeout(const Duration(seconds: 30));
 
       return TokenApprovalResult(
         approvalSatisfied: true,
