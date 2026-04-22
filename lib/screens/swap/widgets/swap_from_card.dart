@@ -35,9 +35,9 @@ class SwapFromCard extends StatelessWidget {
     final l = AppLocalizations.of(context);
     const percentages = [25, 50, 100];
     return Container(
-      padding: const EdgeInsets.all(17),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF131313),
+        color: const Color(0xFF121212),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.transparent),
       ),
@@ -52,6 +52,7 @@ class SwapFromCard extends StatelessWidget {
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFFA1A1AA),
+                  height: 1.67,
                 ),
               ),
               const Spacer(),
@@ -67,7 +68,7 @@ class SwapFromCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -78,6 +79,7 @@ class SwapFromCard extends StatelessWidget {
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFFFFFFFF),
+                    height: 2.13,
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -86,9 +88,10 @@ class SwapFromCard extends StatelessWidget {
                     border: InputBorder.none,
                     hintText: '0',
                     hintStyle: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                       color: const Color(0x4DFFFFFF),
+                      height: 2.13,
                     ),
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
@@ -161,8 +164,15 @@ class _PercentChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF640C0B) : const Color(0xFF27272A),
+          color: isSelected ? const Color(0xFF640B0B) : const Color(0xFF27272A),
           borderRadius: BorderRadius.circular(23),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0C000000),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+          ],
         ),
         child: Text(
           '$percent%',
@@ -170,6 +180,7 @@ class _PercentChip extends StatelessWidget {
             fontSize: 12,
             fontWeight: FontWeight.w700,
             color: Colors.white,
+            height: 1.33,
           ),
         ),
       ),

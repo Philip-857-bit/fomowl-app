@@ -11,6 +11,7 @@ import 'swap_price_details_card.dart';
 import 'swap_primary_button.dart';
 import 'swap_gasless_toggle.dart';
 import 'swap_limit_widgets.dart';
+import 'swap_figma_icons.dart';
 
 class SwapTabContent extends StatelessWidget {
   final BlockchainService blockchain;
@@ -274,14 +275,13 @@ class LimitTabContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sign = isPositiveAdjust ? '+' : '-';
-
-    // Only show price details once user has filled in limit parameters
-    final hasLimitInput =
-        limitPriceController.text.isNotEmpty &&
-        (double.tryParse(limitPriceController.text.replaceAll(',', '')) ?? 0) >
-            0 &&
-        fromController.text.isNotEmpty &&
-        (double.tryParse(fromController.text.replaceAll(',', '')) ?? 0) > 0;
+    final isCustomExpirySelected =
+        !is15mSelected &&
+        !is1hSelected &&
+        !is4hSelected &&
+        !is24hSelected &&
+        !is7dSelected &&
+        !isNeverSelected;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,25 +347,27 @@ class LimitTabContent extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
               ],
-              // Toggle icon: tap to switch between + and -
-              if (onToggleAdjustDirection != null)
-                GestureDetector(
-                  onTap: onToggleAdjustDirection,
-                  child: Icon(
-                    isPositiveAdjust ? Icons.trending_up : Icons.trending_down,
-                    color: const Color(0xFFEA2A33),
-                    size: 12,
+              Row(
+                children: [
+                  Text(
+                    'MARKET',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFEA2A33),
+                      letterSpacing: 1,
+                      height: 1.5,
+                    ),
                   ),
-                ),
-              const SizedBox(width: 6),
-              Text(
-                'MARKET',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFEA2A33),
-                  letterSpacing: 1,
-                ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: onToggleAdjustDirection,
+                    child: const FigmaDropdownIcon(
+                      width: 8,
+                      color: Color(0xFFEA2A33),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -428,28 +430,50 @@ class LimitTabContent extends StatelessWidget {
                 selected: isNeverSelected,
                 onTap: onSelectNever,
               ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onPickCustomExpiry,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isCustomExpirySelected
+                        ? const Color(0x19EA2A33)
+                        : const Color(0xFF1F1F1F),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: isCustomExpirySelected
+                          ? const Color(0x33EA2A33)
+                          : const Color(0x195D3F3D),
+                    ),
+                  ),
+                  child: const FigmaDropdownIcon(
+                    width: 10,
+                    color: Color(0xFFC8C6C5),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 16),
 
-        // ── Price details — only show after user fills in limit params ──
-        if (hasLimitInput) ...[
-          SwapPriceDetailsCard(
-            priceText: executionPriceText,
-            platformFeePercent: 0.0,
-            platformFeeUsd: 0.0,
-            feeAmountUsd: 0.0,
-            feeAmountNative: 0.0,
-            nativeFeeSymbol: blockchain.activeChain.symbol,
-            receiveText: receiveText,
-            priceSeparator: priceSeparator,
-            swapAmountUsd: fromUsdValue,
-            gaslessFeeCovered: false,
-            nativePriceUsd: nativePriceUsd,
-          ),
-          const SizedBox(height: 16),
-        ],
+        SwapPriceDetailsCard(
+          priceText: executionPriceText,
+          platformFeePercent: 0.0,
+          platformFeeUsd: 0.0,
+          feeAmountUsd: 0.0,
+          feeAmountNative: 0.0,
+          nativeFeeSymbol: blockchain.activeChain.symbol,
+          receiveText: receiveText,
+          priceSeparator: priceSeparator,
+          swapAmountUsd: fromUsdValue,
+          gaslessFeeCovered: false,
+          nativePriceUsd: nativePriceUsd,
+        ),
+        const SizedBox(height: 16),
 
         // ── Action Button ──
         SwapPrimaryButton(
@@ -459,12 +483,19 @@ class LimitTabContent extends StatelessWidget {
           label: limitButtonLabel,
         ),
         const SizedBox(height: 12),
-        Text(
-          limitStatusMessage,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: const Color(0x99C8C6C5),
+        Opacity(
+          opacity: 0.6,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              limitStatusMessage,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: const Color(0xFFC8C6C5),
+                height: 1.5,
+              ),
+            ),
           ),
         ),
       ],

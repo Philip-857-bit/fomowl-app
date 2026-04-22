@@ -49,6 +49,7 @@ class SwapPrimaryButton extends StatelessWidget {
               color: (enabled && !isBusy)
                   ? Colors.white
                   : const Color(0x66E2E2E2),
+              height: 1.56,
             ),
           ),
         ),

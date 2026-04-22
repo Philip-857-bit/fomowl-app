@@ -9,12 +9,14 @@ class SwapTokenChip extends StatelessWidget {
   final Token? token;
   final VoidCallback onTap;
   final int? chainId;
+  final Color backgroundColor;
 
   const SwapTokenChip({
     super.key,
     required this.token,
     required this.onTap,
     this.chainId,
+    this.backgroundColor = const Color(0xFF0E0E0E),
   });
 
   @override
@@ -25,7 +27,7 @@ class SwapTokenChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF0E0E0E),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: const Color(0x265D3F3D)),
         ),
@@ -49,8 +51,9 @@ class SwapTokenChip extends StatelessWidget {
               symbol,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
                 color: const Color(0xFFE2E2E2),
+                height: 1.43,
               ),
             ),
             const SizedBox(width: 8),

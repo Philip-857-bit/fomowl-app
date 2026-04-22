@@ -30,9 +30,9 @@ class SwapToCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Container(
-      padding: const EdgeInsets.all(17),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF131313),
+        color: const Color(0xFF121212),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.transparent),
       ),
@@ -45,9 +45,10 @@ class SwapToCard extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: const Color(0xFFA1A1AA),
+              height: 1.67,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -78,6 +79,7 @@ class SwapToCard extends StatelessWidget {
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFFFFFFF),
+                          height: 1.33,
                         ),
                       ),
               ),

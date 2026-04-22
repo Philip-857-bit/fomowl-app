@@ -52,16 +52,19 @@ class SwapPriceDetailsCard extends StatelessWidget {
         ? '$feeNativeText ($feeUsdText) ≈ $networkFeePct%'
         : '0.00%';
 
-    return Column(
-      children: [
-        _buildDetailRow('Price', priceText, isPrice: true),
-        const SizedBox(height: 12),
-        _buildDetailRow('Total Tax', platformFeeText),
-        const SizedBox(height: 12),
-        _buildDetailRow('Fee', feeTextCombine),
-        const SizedBox(height: 12),
-        _buildDetailRow('To Receive', receiveText),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        children: [
+          _buildDetailRow('Price', priceText, isPrice: true),
+          const SizedBox(height: 12),
+          _buildDetailRow('Total Tax', platformFeeText),
+          const SizedBox(height: 12),
+          _buildDetailRow('Fee', feeTextCombine),
+          const SizedBox(height: 12),
+          _buildDetailRow('To Receive', receiveText),
+        ],
+      ),
     );
   }
 
@@ -77,6 +80,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: const Color(0xFFA1A1AA),
+              height: 1.43,
             ),
           ),
         ),
@@ -96,6 +100,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFFFFFFFF),
+                      height: 1.43,
                     ),
                   ),
           ),
@@ -116,6 +121,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFFFFFFFF),
+                height: 1.43,
               ),
             ),
             TextSpan(
@@ -124,6 +130,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF8B1A1A),
+                height: 1.43,
               ),
             ),
           ],
@@ -142,6 +149,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: const Color(0xFFFFFFFF),
+        height: 1.43,
       ),
     );
   }

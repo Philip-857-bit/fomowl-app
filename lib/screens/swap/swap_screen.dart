@@ -2250,14 +2250,18 @@ class _SwapScreenState extends State<SwapScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text(
-                l.swap,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFFE2E2E2),
+            SizedBox(
+              height: 63,
+              child: Center(
+                child: Text(
+                  l.swap,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFFE2E2E2),
+                    height: 1.4,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
             ),
@@ -2267,7 +2271,7 @@ class _SwapScreenState extends State<SwapScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
                     SwapTabSelector(
                       activeTab: _activeTab,
                       onChanged: (tab) {
@@ -2285,7 +2289,7 @@ class _SwapScreenState extends State<SwapScreen> {
                         }
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 19),
                     NetworkCard(
                       chain: blockchain.activeChain,
                       onTap: _showNetworkSelector,

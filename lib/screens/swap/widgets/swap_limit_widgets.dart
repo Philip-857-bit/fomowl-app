@@ -36,7 +36,6 @@ class SwapTabSelector extends StatelessWidget {
               onTap: () => onChanged(SwapTab.swap),
             ),
           ),
-          const SizedBox(width: 6),
           Expanded(
             child: _SwapTabChip(
               label: 'Limit',
@@ -85,10 +84,13 @@ class _SwapTabChip extends StatelessWidget {
             label,
             style: GoogleFonts.inter(
               fontSize: 14,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+              fontWeight: isActive
+                  ? (label == 'Limit' ? FontWeight.w700 : FontWeight.w600)
+                  : FontWeight.w600,
               color: isActive
                   ? const Color(0xFFEA2A33)
                   : const Color(0xFFC8C6C5),
+              height: 1.43,
             ),
           ),
         ),
@@ -111,7 +113,7 @@ class NetworkCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Ink(
-          padding: const EdgeInsets.all(17),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: const Color(0x991F1F1F),
             borderRadius: BorderRadius.circular(12),
@@ -131,6 +133,7 @@ class NetworkCard extends StatelessWidget {
                         fontSize: 10,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFFC8C6C5),
+                        height: 1.5,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -141,6 +144,7 @@ class NetworkCard extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFFE2E2E2),
+                        height: 1.43,
                       ),
                     ),
                   ],
@@ -236,6 +240,7 @@ class LimitExecutionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 115),
       padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
       decoration: BoxDecoration(
         color: const Color(0xFF0E0E0E),
@@ -254,6 +259,7 @@ class LimitExecutionCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     color: const Color(0xFFC8C6C5),
+                    height: 1.5,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -263,16 +269,19 @@ class LimitExecutionCard extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     color: const Color(0xFFE2E2E2),
+                    height: 1.87,
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  maxLines: 1,
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: '0.0',
                     hintStyle: GoogleFonts.inter(
                       fontSize: 15,
                       color: const Color(0xFFE2E2E2),
+                      height: 1.87,
                     ),
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
@@ -288,21 +297,25 @@ class LimitExecutionCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: const Color(0xFFE2E2E2),
+                        height: 1.33,
                       ),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
+                      maxLines: 1,
                       decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: '\$0.00',
                         hintStyle: GoogleFonts.inter(
                           fontSize: 12,
                           color: const Color(0xFF71717A),
+                          height: 1.33,
                         ),
                         prefixText: '\$',
                         prefixStyle: GoogleFonts.inter(
                           fontSize: 12,
                           color: const Color(0xFFE2E2E2),
+                          height: 1.33,
                         ),
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -315,6 +328,7 @@ class LimitExecutionCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: const Color(0xFFE2E2E2),
+                      height: 2.33,
                     ),
                   ),
               ],
@@ -324,7 +338,12 @@ class LimitExecutionCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              SwapTokenChip(token: quoteToken, onTap: () {}, chainId: chainId),
+              SwapTokenChip(
+                token: quoteToken,
+                onTap: () {},
+                chainId: chainId,
+                backgroundColor: const Color(0xFF0A0A0A),
+              ),
               if (priceDeviationLabel != null &&
                   priceDeviationLabel!.isNotEmpty) ...[
                 const SizedBox(height: 6),
@@ -335,6 +354,7 @@ class LimitExecutionCard extends StatelessWidget {
                     fontSize: 10,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFF73D3F0),
+                    height: 1.5,
                   ),
                 ),
               ],
@@ -365,10 +385,10 @@ class LimitPriceAdjustChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+        padding: const EdgeInsets.symmetric(horizontal: 7.82, vertical: 2.61),
         decoration: BoxDecoration(
           color: selected ? const Color(0x1AEA2A33) : Colors.transparent,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(14.98),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0C000000),
@@ -381,9 +401,10 @@ class LimitPriceAdjustChip extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
-            fontSize: 8,
+            fontSize: 7.82,
             fontWeight: FontWeight.w700,
             color: selected ? const Color(0xFFEA2A33) : const Color(0xFF909090),
+            height: 1.33,
           ),
         ),
       ),
@@ -408,7 +429,12 @@ class LimitExpiryChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.only(
+          top: 9.5,
+          left: 16,
+          right: 16,
+          bottom: 10.5,
+        ),
         decoration: BoxDecoration(
           color: selected ? const Color(0x19EA2A33) : const Color(0xFF1F1F1F),
           borderRadius: BorderRadius.circular(999),
@@ -423,6 +449,7 @@ class LimitExpiryChip extends StatelessWidget {
             fontSize: 12,
             fontWeight: FontWeight.w700,
             color: selected ? const Color(0xFFEA2A33) : const Color(0xFFC8C6C5),
+            height: 1.33,
           ),
         ),
       ),
