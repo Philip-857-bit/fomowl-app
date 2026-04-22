@@ -110,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<HomeBannerItem> _homeBanners = const [];
   int _homeBannerIndex = 0;
   Timer? _homeBannerRotationTimer;
+  Timer? _connectivityTimer;
   final PageController _homeBannerPageController = PageController();
   final GlobalKey _walletSwitcherShowcaseKey = GlobalKey();
   final GlobalKey _balanceShowcaseKey = GlobalKey();
@@ -143,6 +144,11 @@ class _HomeScreenState extends State<HomeScreen> {
       unawaited(_loadWalletData(forcePortfolioSync: true));
       unawaited(_loadHomeBanners());
     });
+    _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _hasInternet == false) {
+        unawaited(_checkConnectivity());
+      }
+    });
   }
 
   @override
@@ -165,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _deferredLoadGeneration++;
     _homeBannerRotationTimer?.cancel();
+    _connectivityTimer?.cancel();
     _homeBannerPageController.dispose();
     _homeBannerService.dispose();
     _blockchain?.clearLivePriceTracking(scope: _livePriceScope);

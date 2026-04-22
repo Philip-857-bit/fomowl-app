@@ -19,13 +19,13 @@ import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
-import '../../widgets/token_selector_modal.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'widgets/swap_limit_widgets.dart';
 import 'widgets/swap_tab_content.dart';
+import 'widgets/swap_token_selector_dialog.dart';
 
 enum _LimitExpiryOption {
   minutes15,
@@ -451,7 +451,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     final selectedToken = await showDialog<Token>(
       context: context,
-      builder: (ctx) => TokenSelectorDialog(
+      builder: (ctx) => SwapTokenSelectorDialog(
         tokens: tokens,
         chainId: blockchain.activeChain.chainId,
       ),

@@ -175,7 +175,9 @@ jobs:
             --flutter-version="$FLUTTER_VERSION" \
             --artifact apk \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
-            -- "${DART_DEFINES[@]}"
+            -- \
+            --split-per-abi \
+            "${DART_DEFINES[@]}"
           status=$?
           set -o pipefail
           exit $status
@@ -203,14 +205,50 @@ jobs:
           )"
           echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Android release artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: shorebird-android-release-${{ steps.manifest.outputs.release_version }}
-          path: |
-            build/app/outputs/**/*.aab
-            build/app/outputs/**/*.apk
-          if-no-files-found: error
+      - name: Upload Android split APK to Dropbox
+        env:
+          DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+          DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
+          DROPBOX_APP_KEY: ${{ secrets.DROPBOX_APP_KEY }}
+          DROPBOX_APP_SECRET: ${{ secrets.DROPBOX_APP_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${DROPBOX_REFRESH_TOKEN:-}" ] && [ -n "${DROPBOX_APP_KEY:-}" ] && [ -n "${DROPBOX_APP_SECRET:-}" ]; then
+            echo "Fetching new access token using refresh token..."
+            RESPONSE=$(curl -s -X POST https://api.dropboxapi.com/oauth2/token \
+              -d grant_type=refresh_token \
+              -d refresh_token="$DROPBOX_REFRESH_TOKEN" \
+              -u "$DROPBOX_APP_KEY:$DROPBOX_APP_SECRET")
+
+            NEW_TOKEN=$(echo "$RESPONSE" | grep -o '"access_token": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"' || true)
+            if [ -n "$NEW_TOKEN" ]; then
+              DROPBOX_ACCESS_TOKEN="$NEW_TOKEN"
+            else
+              echo "Failed to retrieve access token from Dropbox response:" >&2
+              echo "$RESPONSE" >&2
+              exit 1
+            fi
+          fi
+
+          if [ -z "${DROPBOX_ACCESS_TOKEN:-}" ]; then
+            echo "No DROPBOX_ACCESS_TOKEN available. Skipping Dropbox upload."
+            exit 0
+          fi
+
+          apk_path="build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+          if [ ! -f "$apk_path" ]; then
+            echo "Expected split APK not found at $apk_path" >&2
+            exit 1
+          fi
+
+          curl -s -X POST https://content.dropboxapi.com/2/files/upload \
+            --header "Authorization: Bearer $DROPBOX_ACCESS_TOKEN" \
+            --header "Dropbox-API-Arg: {\"path\": \"/owllet1.apk\",\"mode\": \"overwrite\",\"autorename\": false,\"mute\": false,\"strict_conflict\": false}" \
+            --header "Content-Type: application/octet-stream" \
+            --data-binary "@$apk_path"
+          echo
+          echo "Dropbox upload completed for owllet1.apk"
 
       - name: Upload release manifest
         uses: actions/upload-artifact@v4

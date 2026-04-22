@@ -635,7 +635,7 @@ class _ProcessingStageView extends StatelessWidget {
   }
 }
 
-class _ProcessingStatusContent extends StatelessWidget {
+class _ProcessingStatusContent extends StatefulWidget {
   const _ProcessingStatusContent({
     super.key,
     required this.state,
@@ -654,75 +654,285 @@ class _ProcessingStatusContent extends StatelessWidget {
   final Color orbColor;
 
   @override
+  State<_ProcessingStatusContent> createState() =>
+      _ProcessingStatusContentState();
+}
+
+class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
+    with TickerProviderStateMixin {
+  late final AnimationController _spinController;
+  late final AnimationController _pulseController;
+  late final AnimationController _successController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Continuous spinner for the orbiting ring
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+
+    // Subtle breathing / pulsing glow
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+
+    // One-shot scale-up for the success tick
+    _successController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+
+    if (widget.state.stage == TransactionProgressStage.success) {
+      _successController.forward();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProcessingStatusContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.state.stage == TransactionProgressStage.success &&
+        oldWidget.state.stage != TransactionProgressStage.success) {
+      _successController.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _spinController.dispose();
+    _pulseController.dispose();
+    _successController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isProcessing = widget.state.hasProcessingState;
+    final isSuccess = widget.state.stage == TransactionProgressStage.success;
+    final isError = widget.state.stage == TransactionProgressStage.error;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween<double>(begin: 0.94, end: 1),
-            duration: const Duration(milliseconds: 420),
-            curve: Curves.easeOutBack,
-            builder: (context, scale, child) {
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    orbColor.withValues(alpha: 0.35),
-                    orbColor.withValues(alpha: 0.08),
-                    Colors.transparent,
-                  ],
-                  stops: const [0.3, 0.7, 1.0],
-                ),
-              ),
-              child: Center(
-                child: Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: orbColor.withValues(alpha: 0.2),
+          // --- Central visual ---
+          SizedBox(
+            width: 160,
+            height: 160,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulsing glow backdrop (only while processing)
+                if (isProcessing)
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, _) {
+                      final t = _pulseController.value;
+                      final glowRadius = 60.0 + t * 16;
+                      final glowOpacity = 0.12 + t * 0.10;
+                      return Container(
+                        width: glowRadius * 2,
+                        height: glowRadius * 2,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.accentRed.withValues(
+                                alpha: glowOpacity,
+                              ),
+                              blurRadius: 50,
+                              spreadRadius: 8,
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                  child: Icon(icon, color: iconColor, size: 40),
-                ),
-              ),
+
+                // Orbiting thin progress ring (only while processing)
+                if (isProcessing)
+                  AnimatedBuilder(
+                    animation: _spinController,
+                    builder: (context, child) {
+                      return Transform.rotate(
+                        angle: _spinController.value * 2 * 3.14159265,
+                        child: child,
+                      );
+                    },
+                    child: SizedBox(
+                      width: 130,
+                      height: 130,
+                      child: CustomPaint(
+                        painter: _ArcRingPainter(
+                          color: AppColors.accentRed,
+                          strokeWidth: 2.5,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Logo container (processing) or success/error icon
+                if (isProcessing)
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.cardDark,
+                      border: Border.all(
+                        color: AppColors.accentRed.withValues(alpha: 0.25),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Center(
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 54,
+                          height: 54,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Success checkmark with pop animation
+                if (isSuccess)
+                  ScaleTransition(
+                    scale: CurvedAnimation(
+                      parent: _successController,
+                      curve: Curves.elasticOut,
+                    ),
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.success.withValues(alpha: 0.30),
+                            AppColors.success.withValues(alpha: 0.06),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.3, 0.7, 1.0],
+                        ),
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.success.withValues(alpha: 0.2),
+                          ),
+                          child: const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Error icon
+                if (isError)
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.94, end: 1),
+                    duration: const Duration(milliseconds: 420),
+                    curve: Curves.easeOutBack,
+                    builder: (context, scale, child) {
+                      return Transform.scale(scale: scale, child: child);
+                    },
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.error.withValues(alpha: 0.35),
+                            AppColors.error.withValues(alpha: 0.08),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.3, 0.7, 1.0],
+                        ),
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 70,
+                          height: 70,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.error.withValues(alpha: 0.2),
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
+
           const SizedBox(height: 40),
-          Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
-              subtitle,
+
+          // Title — only show for terminal states
+          if (isSuccess || isError)
+            Text(
+              widget.title,
               style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.5),
-                height: 1.5,
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
-              textAlign: TextAlign.center,
             ),
-          ),
-          if (state.reference != null && state.reference!.isNotEmpty) ...[
+
+          // Processing: single subtle line
+          if (isProcessing)
+            Text(
+              'Processing your transaction…',
+              style: GoogleFonts.outfit(
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+                color: Colors.white.withValues(alpha: 0.50),
+              ),
+            ),
+
+          const SizedBox(height: 14),
+
+          // Subtitle — only for terminal states
+          if (isSuccess || isError)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Text(
+                widget.subtitle,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white.withValues(alpha: 0.5),
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
+          // Reference hash
+          if (widget.state.reference != null &&
+              widget.state.reference!.isNotEmpty) ...[
             const SizedBox(height: 18),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(
-                state.reference!,
+                widget.state.reference!,
                 style: GoogleFonts.outfit(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
@@ -732,29 +942,47 @@ class _ProcessingStatusContent extends StatelessWidget {
               ),
             ),
           ],
-          if (state.hasProcessingState) ...[
-            const SizedBox(height: 18),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0.85, end: 1),
-              duration: const Duration(milliseconds: 320),
-              curve: Curves.easeOutCubic,
-              builder: (context, scale, child) {
-                return Transform.scale(scale: scale, child: child);
-              },
-              child: const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.4,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.accentRed,
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
+}
+
+/// Paints a partial arc ring (about 100°) for the loading spinner.
+class _ArcRingPainter extends CustomPainter {
+  _ArcRingPainter({required this.color, required this.strokeWidth});
+
+  final Color color;
+  final double strokeWidth;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    // Draw a background faint ring
+    canvas.drawArc(
+      rect.deflate(strokeWidth / 2),
+      0,
+      2 * 3.14159265,
+      false,
+      paint..color = color.withValues(alpha: 0.08),
+    );
+
+    // Draw the active arc (~100 degrees = ~1.75 radians)
+    canvas.drawArc(
+      rect.deflate(strokeWidth / 2),
+      -1.5708, // start at top (-90°)
+      1.7453, // sweep ~100°
+      false,
+      paint..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArcRingPainter oldDelegate) => false;
 }
