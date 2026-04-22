@@ -38,6 +38,7 @@ class SwapTabContent extends StatelessWidget {
   final String priceSeparator;
   final double nativePriceUsd;
   final bool gaslessFeeCovered;
+  final String? quoteStatusMessage;
   final bool swapEnabled;
   final bool swapBusy;
   final VoidCallback onSwapPressed;
@@ -72,6 +73,7 @@ class SwapTabContent extends StatelessWidget {
     required this.priceSeparator,
     required this.nativePriceUsd,
     required this.gaslessFeeCovered,
+    required this.quoteStatusMessage,
     required this.swapEnabled,
     required this.swapBusy,
     required this.onSwapPressed,
@@ -92,34 +94,43 @@ class SwapTabContent extends StatelessWidget {
 
     return Column(
       children: [
-        SwapFromCard(
-          controller: fromController,
-          token: fromToken,
-          usdValue: fromUsdValue,
-          balance: fromToken?.balance ?? 0,
-          selectedPercentage: selectedPercentage,
-          onAmountChanged: onAmountChanged,
-          onSelectToken: onSelectFromToken,
-          onPercentSelected: onPercentSelected,
-          chainId: blockchain.activeChain.chainId,
-        ),
-        const SizedBox(height: 2),
-        SwapDirectionButton(onPressed: onSwapTokens),
-        const SizedBox(height: 2),
-        SwapToCard(
-          token: toToken,
-          amountText: toAmountText,
-          usdValue: toUsdValue,
-          balance: toBalance,
-          isCalculating: isCalculating,
-          onSelectToken: onSelectToToken,
-          chainId: blockchain.activeChain.chainId,
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Column(
+              children: [
+                SwapFromCard(
+                  controller: fromController,
+                  token: fromToken,
+                  usdValue: fromUsdValue,
+                  balance: fromToken?.balance ?? 0,
+                  selectedPercentage: selectedPercentage,
+                  onAmountChanged: onAmountChanged,
+                  onSelectToken: onSelectFromToken,
+                  onPercentSelected: onPercentSelected,
+                  chainId: blockchain.activeChain.chainId,
+                ),
+                const SizedBox(height: 12),
+                SwapToCard(
+                  token: toToken,
+                  amountText: toAmountText,
+                  usdValue: toUsdValue,
+                  balance: toBalance,
+                  isCalculating: isCalculating,
+                  onSelectToken: onSelectToToken,
+                  chainId: blockchain.activeChain.chainId,
+                  statusMessage: isCalculating ? null : quoteStatusMessage,
+                ),
+              ],
+            ),
+            SwapDirectionButton(onPressed: onSwapTokens),
+          ],
         ),
         if (hasInput) ...[
           const SizedBox(height: 16),
           SwapPriceDetailsCard(
             priceText: priceText,
-            platformFeePercent: currentQuote?.platformFeePercent ?? 1.0,
+            platformFeePercent: currentQuote?.platformFeePercent ?? 0.0,
             platformFeeUsd: platformFeeUsd,
             feeAmountUsd: feeUsd,
             feeAmountNative: feeNative,
@@ -179,6 +190,10 @@ class LimitTabContent extends StatelessWidget {
   final String executionPriceUsdLabel;
   final String receiveText;
   final double nativePriceUsd;
+  final double platformFeePercent;
+  final double platformFeeUsd;
+  final double feeUsd;
+  final double feeNative;
 
   /// Symbol of the token whose price the user is setting (target token).
   final String targetTokenSymbol;
@@ -247,6 +262,10 @@ class LimitTabContent extends StatelessWidget {
     required this.executionPriceUsdLabel,
     required this.receiveText,
     required this.nativePriceUsd,
+    required this.platformFeePercent,
+    required this.platformFeeUsd,
+    required this.feeUsd,
+    required this.feeNative,
     required this.targetTokenSymbol,
     required this.quoteToken,
     this.priceDeviationLabel,
@@ -287,28 +306,37 @@ class LimitTabContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // ── From / To Cards ──
-        SwapFromCard(
-          controller: fromController,
-          token: fromToken,
-          usdValue: fromUsdValue,
-          balance: fromToken?.balance ?? 0,
-          selectedPercentage: selectedPercentage,
-          onAmountChanged: onAmountChanged,
-          onSelectToken: onSelectFromToken,
-          onPercentSelected: onPercentSelected,
-          chainId: blockchain.activeChain.chainId,
-        ),
-        const SizedBox(height: 2),
-        SwapDirectionButton(onPressed: onSwapTokens),
-        const SizedBox(height: 2),
-        SwapToCard(
-          token: toToken,
-          amountText: toAmountText,
-          usdValue: toUsdValue,
-          balance: toBalance,
-          isCalculating: false,
-          onSelectToken: onSelectToToken,
-          chainId: blockchain.activeChain.chainId,
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Column(
+              children: [
+                SwapFromCard(
+                  controller: fromController,
+                  token: fromToken,
+                  usdValue: fromUsdValue,
+                  balance: fromToken?.balance ?? 0,
+                  selectedPercentage: selectedPercentage,
+                  onAmountChanged: onAmountChanged,
+                  onSelectToken: onSelectFromToken,
+                  onPercentSelected: onPercentSelected,
+                  chainId: blockchain.activeChain.chainId,
+                ),
+                const SizedBox(height: 12),
+                SwapToCard(
+                  token: toToken,
+                  amountText: toAmountText,
+                  usdValue: toUsdValue,
+                  balance: toBalance,
+                  isCalculating: false,
+                  onSelectToken: onSelectToToken,
+                  chainId: blockchain.activeChain.chainId,
+                  statusMessage: null,
+                ),
+              ],
+            ),
+            SwapDirectionButton(onPressed: onSwapTokens),
+          ],
         ),
         const SizedBox(height: 24),
 
@@ -462,10 +490,10 @@ class LimitTabContent extends StatelessWidget {
 
         SwapPriceDetailsCard(
           priceText: executionPriceText,
-          platformFeePercent: 0.0,
-          platformFeeUsd: 0.0,
-          feeAmountUsd: 0.0,
-          feeAmountNative: 0.0,
+          platformFeePercent: platformFeePercent,
+          platformFeeUsd: platformFeeUsd,
+          feeAmountUsd: feeUsd,
+          feeAmountNative: feeNative,
           nativeFeeSymbol: blockchain.activeChain.symbol,
           receiveText: receiveText,
           priceSeparator: priceSeparator,

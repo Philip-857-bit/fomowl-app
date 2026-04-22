@@ -34,23 +34,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final platformFeePct = swapAmountUsd > 0
-        ? ((platformFeeUsd / swapAmountUsd) * 100).toStringAsFixed(2)
-        : '0.00';
-    final platformFeeText = '$platformFeePct% (\$$platformFeeUsd)';
-
-    final networkFeePct = swapAmountUsd > 0
-        ? ((feeAmountUsd / swapAmountUsd) * 100).toStringAsFixed(2)
-        : '0.00';
-    final feeNativeText = feeAmountNative > 0
-        ? '${feeAmountNative.toStringAsFixed(6)} $nativeFeeSymbol'
-        : '';
-    final feeUsdText = feeAmountUsd > 0
-        ? '\$${feeAmountUsd.toStringAsFixed(2)}'
-        : '';
-    final feeTextCombine = feeNativeText.isNotEmpty
-        ? '$feeNativeText ($feeUsdText) ≈ $networkFeePct%'
-        : '0.00%';
+    final resolvedPlatformFeePercent = _resolvedPlatformFeePercent();
+    final platformFeeText = resolvedPlatformFeePercent > 0
+        ? _formatPercent(resolvedPlatformFeePercent)
+        : 'No platform fee';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -60,12 +47,57 @@ class SwapPriceDetailsCard extends StatelessWidget {
           const SizedBox(height: 12),
           _buildDetailRow('Total Tax', platformFeeText),
           const SizedBox(height: 12),
-          _buildDetailRow('Fee', feeTextCombine),
+          _buildDetailRow('Fee', _buildFeeText()),
           const SizedBox(height: 12),
           _buildDetailRow('To Receive', receiveText),
         ],
       ),
     );
+  }
+
+  double _resolvedPlatformFeePercent() {
+    if (platformFeePercent > 0) {
+      return platformFeePercent;
+    }
+    if (swapAmountUsd > 0 && platformFeeUsd > 0) {
+      return (platformFeeUsd / swapAmountUsd) * 100;
+    }
+    return 0.0;
+  }
+
+  String _formatPercent(double value) {
+    if (value <= 0) return '0%';
+    if (value < 0.1) return '<0.1%';
+    return '${value.toStringAsFixed(1)}%';
+  }
+
+  String _formatApproxUsd(double value) {
+    if (value <= 0) return '';
+    if (value < 0.1) return '<\$0.1';
+    return '~\$${value.toStringAsFixed(1)}';
+  }
+
+  String _formatApproxNative(double value) {
+    if (value <= 0) return '';
+    if (value < 0.1) return '<0.1 $nativeFeeSymbol';
+    return '~${value.toStringAsFixed(1)} $nativeFeeSymbol';
+  }
+
+  String _buildFeeText() {
+    if (gaslessFeeCovered) {
+      return 'Covered';
+    }
+
+    final feeNativeText = _formatApproxNative(feeAmountNative);
+    final feeUsdText = _formatApproxUsd(feeAmountUsd);
+
+    if (feeNativeText.isEmpty && feeUsdText.isEmpty) {
+      return 'No network fee';
+    }
+    if (feeNativeText.isNotEmpty && feeUsdText.isNotEmpty) {
+      return '$feeNativeText ($feeUsdText)';
+    }
+    return feeNativeText.isNotEmpty ? feeNativeText : feeUsdText;
   }
 
   Widget _buildDetailRow(String label, String value, {bool isPrice = false}) {

@@ -14,6 +14,7 @@ class SwapToCard extends StatelessWidget {
   final bool isCalculating;
   final VoidCallback onSelectToken;
   final int? chainId;
+  final String? statusMessage;
 
   const SwapToCard({
     super.key,
@@ -24,6 +25,7 @@ class SwapToCard extends StatelessWidget {
     required this.isCalculating,
     required this.onSelectToken,
     this.chainId,
+    this.statusMessage,
   });
 
   @override
@@ -125,6 +127,20 @@ class SwapToCard extends StatelessWidget {
               ),
             ],
           ),
+          if (statusMessage != null && statusMessage!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              statusMessage!,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFEA2A33),
+                height: 1.4,
+              ),
+            ),
+          ],
         ],
       ),
     );

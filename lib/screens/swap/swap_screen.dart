@@ -5,6 +5,7 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
+import '../../services/cow_limit_order_signing.dart';
 import '../../services/swap_service.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
@@ -144,6 +145,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool _isCalculating = false;
   String _pricing = '';
+  String? _quoteStatusMessage;
 
   /// Trading slippage tolerance for 0x swap execution (not the platform fee).
   final int _slippageBps = 50;
@@ -227,6 +229,9 @@ class _SwapScreenState extends State<SwapScreen> {
     if ((_walletAddress ?? '').isEmpty) {
       return 'Connect Wallet';
     }
+    if (!_isLimitSupported) {
+      return 'Network Unsupported';
+    }
     if (_fromToken == null || _toToken == null) {
       return 'Select Tokens';
     }
@@ -249,6 +254,9 @@ class _SwapScreenState extends State<SwapScreen> {
   String _limitStatusMessage() {
     if ((_walletAddress ?? '').isEmpty) {
       return 'Connect your wallet to create limit orders.';
+    }
+    if (!_isLimitSupported) {
+      return _limitUnsupportedMessage();
     }
     if (_fromToken == null || _toToken == null) {
       return 'Select both sell and receive tokens to continue.';
@@ -291,6 +299,18 @@ class _SwapScreenState extends State<SwapScreen> {
       59144,
       1101,
     ].contains(chainId);
+  }
+
+  bool get _isLimitSupported {
+    final chainId = Provider.of<BlockchainService>(
+      context,
+      listen: false,
+    ).activeChain.chainId;
+    return _swapService.isLimitChainSupported(chainId);
+  }
+
+  String _limitUnsupportedMessage() {
+    return 'Limit orders are only available on Ethereum, BNB, Gnosis, Polygon, Base, Arbitrum, Avalanche, and Linea.';
   }
 
   @override
@@ -700,11 +720,15 @@ class _SwapScreenState extends State<SwapScreen> {
   void _resetQuoteState({
     bool clearInputAmounts = false,
     bool preserveRequestId = false,
+    bool clearQuoteStatusMessage = true,
   }) {
     if (!preserveRequestId) {
       _quoteRequestId++;
     }
     _pricing = '';
+    if (clearQuoteStatusMessage) {
+      _quoteStatusMessage = null;
+    }
     _currentQuote = null;
     _feeUsd = 0.0;
     _feeNative = 0.0;
@@ -897,6 +921,17 @@ class _SwapScreenState extends State<SwapScreen> {
         lower.contains('insufficient balance')) {
       final tokenSymbol = _fromToken?.symbol ?? 'token';
       return 'You do not have enough $tokenSymbol for this swap amount.';
+    }
+    if (lower.contains('sell_amount_too_small') ||
+        lower.contains('buy_amount_too_small') ||
+        lower.contains('provided sell amount is too small') ||
+        lower.contains('provided buy amount is too small') ||
+        lower.contains('minsellamount') ||
+        lower.contains('minbuyamount') ||
+        lower.contains('minimum sell amount') ||
+        lower.contains('minimum buy amount') ||
+        lower.contains('too small to cover fees required to execute swap')) {
+      return 'Swap output amount is too small to cover fees required to execute swap';
     }
     if (lower.contains('invalid chain id')) {
       return l.noQuoteAvailable;
@@ -1320,23 +1355,26 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     final requestId = ++_quoteRequestId;
-    setState(() => _isCalculating = true);
+    setState(() {
+      _isCalculating = true;
+      _quoteStatusMessage = null;
+    });
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     if (!_swapService.isChainSupported(
       blockchain.activeChain.chainId,
       isGasless: _isGasless,
     )) {
       setState(() {
-        _pricing = l.networkError;
-        _resetQuoteState();
+        _quoteStatusMessage = l.networkError;
+        _resetQuoteState(clearQuoteStatusMessage: false);
         _isCalculating = false;
       });
       return;
     }
     if (_isGaslessSourceUnsupported()) {
       setState(() {
-        _pricing = l.networkError;
-        _resetQuoteState();
+        _quoteStatusMessage = l.networkError;
+        _resetQuoteState(clearQuoteStatusMessage: false);
         _isCalculating = false;
       });
       return;
@@ -1350,8 +1388,8 @@ class _SwapScreenState extends State<SwapScreen> {
       if (amountWei == null || amountWei == '0') {
         if (mounted && requestId == _quoteRequestId) {
           setState(() {
-            _pricing = l.enterValidAmount;
-            _resetQuoteState();
+            _quoteStatusMessage = l.enterValidAmount;
+            _resetQuoteState(clearQuoteStatusMessage: false);
           });
         }
         return;
@@ -1398,6 +1436,7 @@ class _SwapScreenState extends State<SwapScreen> {
         if (!mounted || requestId != _quoteRequestId) return;
         setState(() {
           _pricing = _formatRateText(unitRate);
+          _quoteStatusMessage = null;
           _toController.text = quote.amountOutFormatted;
           _currentQuote = quote;
           _feeNative = feeNative;
@@ -1407,22 +1446,31 @@ class _SwapScreenState extends State<SwapScreen> {
       } else {
         final mapped = _mapErrorMessage(_swapService.lastError);
         setState(() {
-          _pricing = mapped;
-          _resetQuoteState(preserveRequestId: true);
+          _quoteStatusMessage = mapped;
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
         });
       }
     } on TimeoutException {
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
-          _pricing = l.tryAgain;
-          _resetQuoteState(preserveRequestId: true);
+          _quoteStatusMessage = l.tryAgain;
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
         });
       }
     } catch (e) {
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
-          _pricing = _mapErrorMessage(e.toString());
-          _resetQuoteState(preserveRequestId: true);
+          _quoteStatusMessage = _mapErrorMessage(e.toString());
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
         });
       }
     } finally {
@@ -1475,17 +1523,26 @@ class _SwapScreenState extends State<SwapScreen> {
       }
     }
 
-    if (_toController.text == nextToAmount) {
+    final shouldClearFeePreview =
+        _platformFeeUsd != 0.0 || _feeUsd != 0.0 || _feeNative != 0.0;
+
+    if (_toController.text == nextToAmount && !shouldClearFeePreview) {
       return;
     }
 
     if (!mounted) {
       _toController.text = nextToAmount;
+      _platformFeeUsd = 0.0;
+      _feeUsd = 0.0;
+      _feeNative = 0.0;
       return;
     }
 
     setState(() {
       _toController.text = nextToAmount;
+      _platformFeeUsd = 0.0;
+      _feeUsd = 0.0;
+      _feeNative = 0.0;
     });
   }
 
@@ -1505,8 +1562,7 @@ class _SwapScreenState extends State<SwapScreen> {
       case _LimitExpiryOption.days7:
         return now.add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
       case _LimitExpiryOption.never:
-        return now.add(const Duration(days: 365)).millisecondsSinceEpoch ~/
-            1000;
+        return resolveCowNeverValidTo(now: now);
       case _LimitExpiryOption.custom:
         final custom = _customExpiryDate ?? now.add(const Duration(days: 1));
         final normalized = DateTime(
@@ -1558,8 +1614,14 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Future<void> _submitLimitOrder() async {
     final l = AppLocalizations.of(context);
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final chainId = blockchain.activeChain.chainId;
     if (_walletAddress == null || _walletAddress!.isEmpty) {
       _showError(l.noActiveWalletFound);
+      return;
+    }
+    if (!_swapService.isLimitChainSupported(chainId)) {
+      _showError(_limitUnsupportedMessage());
       return;
     }
     final from = _fromToken;
@@ -1577,6 +1639,10 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError('Limit orders require ERC-20 tokens.');
       return;
     }
+    if (!_tokenRequiresApproval(from) || !_tokenRequiresApproval(to)) {
+      _showError('Limit orders currently support ERC-20 token pairs only.');
+      return;
+    }
     final makerAmount = _parseDecimalAmount(_fromController.text);
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
     if (makerAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
@@ -1588,20 +1654,20 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.enterValidAmount);
       return;
     }
-    // Buy mode: takerAmount = makerAmount / limitPrice
-    // Sell mode: takerAmount = makerAmount * limitPrice
-    final Decimal takerAmountDecimal;
+    // Buy mode: the user is selling a stablecoin to buy the target token.
+    // Sell mode: the user is selling the target token for the quote token.
+    final Decimal buyAmountDecimal;
     if (_isBuyMode) {
       final rational = makerAmount.toRational() / limitPrice.toRational();
-      takerAmountDecimal = rational.toDecimal(scaleOnInfinitePrecision: 18);
+      buyAmountDecimal = rational.toDecimal(scaleOnInfinitePrecision: 18);
     } else {
-      takerAmountDecimal = makerAmount * limitPrice;
+      buyAmountDecimal = makerAmount * limitPrice;
     }
-    final takerAmountWei = AmountUtils.parseDecimalToBaseUnits(
-      takerAmountDecimal.toString(),
+    final buyAmountWei = AmountUtils.parseDecimalToBaseUnits(
+      buyAmountDecimal.toString(),
       to.decimals,
     ).toString();
-    if (takerAmountWei == '0') {
+    if (buyAmountWei == '0') {
       _showError(l.enterValidAmount);
       return;
     }
@@ -1609,25 +1675,16 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_isSubmittingLimit) return;
     setState(() => _isSubmittingLimit = true);
     try {
-      final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final chainId = blockchain.activeChain.chainId;
-      final verifyingContract = _exchangeProxyForChain(chainId);
-      final order = _buildLimitOrderPayload(
-        chainId: chainId,
-        maker: _walletAddress!,
-        makerToken: from.contractAddress!,
-        takerToken: to.contractAddress!,
-        makerAmount: makerAmountWei,
-        takerAmount: takerAmountWei,
-        expiry: _resolveLimitExpirySeconds(),
-        verifyingContract: verifyingContract,
+      final order = buildCowLimitOrderPayload(
+        sellToken: from.contractAddress!,
+        buyToken: to.contractAddress!,
+        receiver: _walletAddress!,
+        sellAmount: makerAmountWei,
+        buyAmount: buyAmountWei,
+        validTo: _resolveLimitExpirySeconds(),
       );
 
-      final typedData = _buildLimitOrderTypedData(
-        chainId: chainId,
-        verifyingContract: verifyingContract,
-        order: order['order'] as Map<String, dynamic>,
-      );
+      final typedData = buildCowOrderTypedData(chainId: chainId, order: order);
       final signature = await _walletService.signTypedData(
         jsonEncode(typedData),
       );
@@ -1635,8 +1692,9 @@ class _SwapScreenState extends State<SwapScreen> {
       final result = await _swapService.createLimitOrder(
         chainId: chainId,
         walletAddress: _walletAddress!,
-        order: order['orderbook'] as Map<String, dynamic>,
+        order: order,
         signature: signature,
+        signingScheme: 'eip712',
         targetPrice: limitPrice.toString(),
       );
 
@@ -1651,97 +1709,6 @@ class _SwapScreenState extends State<SwapScreen> {
       if (mounted) {
         setState(() => _isSubmittingLimit = false);
       }
-    }
-  }
-
-  Map<String, dynamic> _buildLimitOrderPayload({
-    required int chainId,
-    required String maker,
-    required String makerToken,
-    required String takerToken,
-    required String makerAmount,
-    required String takerAmount,
-    required int expiry,
-    required String verifyingContract,
-  }) {
-    final salt = DateTime.now().microsecondsSinceEpoch.toString();
-    const zeroAddress = '0x0000000000000000000000000000000000000000';
-    const zeroBytes32 =
-        '0x0000000000000000000000000000000000000000000000000000000000000000';
-    final order = {
-      'makerToken': makerToken,
-      'takerToken': takerToken,
-      'makerAmount': makerAmount,
-      'takerAmount': takerAmount,
-      'takerTokenFeeAmount': '0',
-      'maker': maker,
-      'taker': zeroAddress,
-      'sender': zeroAddress,
-      'feeRecipient': zeroAddress,
-      'pool': zeroBytes32,
-      'expiry': expiry,
-      'salt': salt,
-    };
-    final orderbookOrder = {
-      ...order,
-      'chainId': chainId,
-      'verifyingContract': verifyingContract,
-    };
-    return {'order': order, 'orderbook': orderbookOrder};
-  }
-
-  Map<String, dynamic> _buildLimitOrderTypedData({
-    required int chainId,
-    required String verifyingContract,
-    required Map<String, dynamic> order,
-  }) {
-    return {
-      'types': {
-        'EIP712Domain': [
-          {'name': 'name', 'type': 'string'},
-          {'name': 'version', 'type': 'string'},
-          {'name': 'chainId', 'type': 'uint256'},
-          {'name': 'verifyingContract', 'type': 'address'},
-        ],
-        'LimitOrder': [
-          {'name': 'makerToken', 'type': 'address'},
-          {'name': 'takerToken', 'type': 'address'},
-          {'name': 'makerAmount', 'type': 'uint128'},
-          {'name': 'takerAmount', 'type': 'uint128'},
-          {'name': 'takerTokenFeeAmount', 'type': 'uint128'},
-          {'name': 'maker', 'type': 'address'},
-          {'name': 'taker', 'type': 'address'},
-          {'name': 'sender', 'type': 'address'},
-          {'name': 'feeRecipient', 'type': 'address'},
-          {'name': 'pool', 'type': 'bytes32'},
-          {'name': 'expiry', 'type': 'uint64'},
-          {'name': 'salt', 'type': 'uint256'},
-        ],
-      },
-      'primaryType': 'LimitOrder',
-      'domain': {
-        'name': 'ZeroEx',
-        'version': '1.0.0',
-        'chainId': chainId,
-        'verifyingContract': verifyingContract,
-      },
-      'message': order,
-    };
-  }
-
-  String _exchangeProxyForChain(int chainId) {
-    switch (chainId) {
-      case 1:
-      case 10:
-      case 56:
-      case 137:
-      case 42161:
-      case 8453:
-      case 43114:
-      case 59144:
-        return '0xdef1c0ded9bec7f1a1670819833240f027b25eff';
-      default:
-        return '0xdef1c0ded9bec7f1a1670819833240f027b25eff';
     }
   }
 
@@ -2325,6 +2292,7 @@ class _SwapScreenState extends State<SwapScreen> {
                                 .coinGeckoId] ??
                             0.0,
                         gaslessFeeCovered: _isGasless,
+                        quoteStatusMessage: _quoteStatusMessage,
                         swapEnabled: swapEnabled,
                         swapBusy: swapBusy,
                         onSwapPressed: _executeSwap,
@@ -2372,6 +2340,10 @@ class _SwapScreenState extends State<SwapScreen> {
                                 .activeChain
                                 .coinGeckoId] ??
                             0.0,
+                        platformFeePercent: 0.0,
+                        platformFeeUsd: _platformFeeUsd,
+                        feeUsd: _feeUsd,
+                        feeNative: _feeNative,
                         targetTokenSymbol: _limitTargetToken?.symbol ?? '',
                         quoteToken: _limitQuoteToken,
                         priceDeviationLabel: _limitPriceDeviationLabel(),
@@ -2434,13 +2406,14 @@ class _SwapScreenState extends State<SwapScreen> {
     final fromAmount = _parseDecimalAmount(_fromController.text);
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
     return (_walletAddress ?? '').isNotEmpty &&
+        _isLimitSupported &&
         fromAmount > Decimal.zero &&
         limitPrice > Decimal.zero &&
         !_tokensAreIdentical(_fromToken, _toToken) &&
         _fromToken != null &&
         _toToken != null &&
-        (_fromToken?.contractAddress ?? '').isNotEmpty &&
-        (_toToken?.contractAddress ?? '').isNotEmpty &&
+        _tokenRequiresApproval(_fromToken!) &&
+        _tokenRequiresApproval(_toToken!) &&
         !_isSubmittingLimit;
   }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:fomowl_wallet/services/cow_limit_order_signing.dart';
 import 'package:fomowl_wallet/services/swap_service.dart';
 import 'package:fomowl_wallet/services/http_client_service.dart';
 
@@ -173,6 +174,90 @@ void main() {
         expect(quote, isNotNull);
         expect(quote!.hasBalanceIssue, isTrue);
         expect(quote.amountOutWei, '5000');
+      },
+    );
+  });
+
+  group('SwapService limit orders', () {
+    test('supports only CoW limit-order chains', () {
+      final service = SwapService();
+
+      for (final chainId in cowSupportedLimitChainIds) {
+        expect(service.isLimitChainSupported(chainId), isTrue);
+      }
+
+      expect(service.isLimitChainSupported(10), isFalse);
+      expect(service.isLimitChainSupported(250), isFalse);
+      expect(service.isLimitChainSupported(324), isFalse);
+    });
+
+    test('createLimitOrder prefers canonical orderUid', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'id': 'local-order-1',
+            'status': 'open',
+            'orderUid': '0xuid123',
+            'orderHash': '0xlegacy',
+          }),
+          200,
+        );
+      });
+      final service = SwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final result = await service.createLimitOrder(
+        chainId: 1,
+        walletAddress: '0x111111125421ca6dc452d289314280a0f8842a65',
+        order: {
+          'sellToken': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+          'buyToken': '0x6b175474e89094c44da98b954eedeac495271d0f',
+        },
+        signature: '0xsig',
+      );
+
+      expect(result, isNotNull);
+      expect(result!.orderUid, '0xuid123');
+      expect(result.orderHash, '0xuid123');
+    });
+
+    test(
+      'listLimitOrders falls back to orderHash alias during rollout',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'orders': [
+                {
+                  'id': 'local-order-2',
+                  'walletAddress': '0x111111125421ca6dc452d289314280a0f8842a65',
+                  'chainId': 1,
+                  'sellToken': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+                  'buyToken': '0x6b175474e89094c44da98b954eedeac495271d0f',
+                  'sellAmount': '1000000',
+                  'buyAmount': '998000000000000000',
+                  'targetPrice': '998',
+                  'expiry': 1700000000,
+                  'status': 'open',
+                  'orderHash': '0xlegacy-only',
+                },
+              ],
+            }),
+            200,
+          );
+        });
+        final service = SwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
+
+        final orders = await service.getLimitOrders(
+          walletAddress: '0x111111125421ca6dc452d289314280a0f8842a65',
+        );
+
+        expect(orders, hasLength(1));
+        expect(orders.first.orderUid, '0xlegacy-only');
+        expect(orders.first.orderHash, '0xlegacy-only');
       },
     );
   });

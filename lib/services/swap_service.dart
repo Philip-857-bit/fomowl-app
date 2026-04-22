@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_environment.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
+import 'cow_limit_order_signing.dart';
 import 'http_client_service.dart';
 
 /// Swap Quote Model
@@ -60,13 +61,15 @@ class SwapQuote {
 class LimitOrderResult {
   final String id;
   final String status;
-  final String? orderHash;
+  final String? orderUid;
 
   const LimitOrderResult({
     required this.id,
     required this.status,
-    this.orderHash,
+    this.orderUid,
   });
+
+  String? get orderHash => orderUid;
 }
 
 class LimitOrderSummary {
@@ -80,7 +83,7 @@ class LimitOrderSummary {
   final String targetPrice;
   final int expiry;
   final String status;
-  final String? orderHash;
+  final String? orderUid;
   final String? txHash;
 
   const LimitOrderSummary({
@@ -94,9 +97,11 @@ class LimitOrderSummary {
     required this.targetPrice,
     required this.expiry,
     required this.status,
-    this.orderHash,
+    this.orderUid,
     this.txHash,
   });
+
+  String? get orderHash => orderUid;
 
   factory LimitOrderSummary.fromJson(Map<String, dynamic> json) {
     return LimitOrderSummary(
@@ -110,7 +115,7 @@ class LimitOrderSummary {
       targetPrice: json['targetPrice']?.toString() ?? '',
       expiry: int.tryParse(json['expiry']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? '',
-      orderHash: json['orderHash']?.toString(),
+      orderUid: json['orderUid']?.toString() ?? json['orderHash']?.toString(),
       txHash: json['txHash']?.toString(),
     );
   }
@@ -163,6 +168,7 @@ class SwapService {
     43114, // Avalanche
     59144, // Linea
   };
+  static const Set<int> supportedLimitChainIds = cowSupportedLimitChainIds;
   String? _lastError;
 
   String? get lastError => _lastError;
@@ -172,6 +178,7 @@ class SwapService {
     required String walletAddress,
     required Map<String, dynamic> order,
     required String signature,
+    String signingScheme = 'eip712',
     String? targetPrice,
   }) async {
     _lastError = null;
@@ -185,6 +192,7 @@ class SwapService {
         'walletAddress': walletAddress,
         'order': order,
         'signature': signature,
+        'signingScheme': signingScheme,
         ...optionalFields,
       };
 
@@ -209,7 +217,8 @@ class SwapService {
         return LimitOrderResult(
           id: data['id']?.toString() ?? '',
           status: data['status']?.toString() ?? '',
-          orderHash: data['orderHash']?.toString(),
+          orderUid:
+              data['orderUid']?.toString() ?? data['orderHash']?.toString(),
         );
       }
 
@@ -278,11 +287,17 @@ class SwapService {
   Future<bool> cancelLimitOrder({
     required String orderId,
     required String walletAddress,
+    required String signature,
+    String signingScheme = 'eip712',
   }) async {
     _lastError = null;
     try {
       final url = AppEnvironment.swap('/limit/orders/$orderId/cancel');
-      final payload = {'walletAddress': walletAddress};
+      final payload = {
+        'walletAddress': walletAddress,
+        'signature': signature,
+        'signingScheme': signingScheme,
+      };
       final response = await _httpClientService
           .sendWithRetry(
             () => _httpClientService.client.post(
@@ -353,6 +368,10 @@ class SwapService {
   bool isChainSupported(int chainId, {required bool isGasless}) {
     if (isGasless) return supportedGaslessChainIds.contains(chainId);
     return supportedQuoteChainIds.contains(chainId);
+  }
+
+  bool isLimitChainSupported(int chainId) {
+    return supportedLimitChainIds.contains(chainId);
   }
 
   /// Get aggregated quote from 0x via backend
