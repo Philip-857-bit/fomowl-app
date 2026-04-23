@@ -237,6 +237,7 @@ void main() {
                   'buyToken': '0x6b175474e89094c44da98b954eedeac495271d0f',
                   'sellAmount': '1000000',
                   'buyAmount': '998000000000000000',
+                  'kind': 'buy',
                   'targetPrice': '998',
                   'expiry': 1700000000,
                   'status': 'open',
@@ -256,6 +257,7 @@ void main() {
         );
 
         expect(orders, hasLength(1));
+        expect(orders.first.kind, 'buy');
         expect(orders.first.orderUid, '0xlegacy-only');
         expect(orders.first.orderHash, '0xlegacy-only');
       },

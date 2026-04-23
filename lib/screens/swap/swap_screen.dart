@@ -53,6 +53,8 @@ class SwapScreen extends StatefulWidget {
 class _SwapScreenState extends State<SwapScreen> {
   static const String _livePriceScope = 'swap_screen';
   static const String _limitShowcaseSeenKey = 'swap_limit_showcase_seen_v1';
+  static const String _limitTutorialControlHiddenKey =
+      'swap_limit_tutorial_control_hidden_v1';
   static const Duration _quoteUiTimeout = Duration(seconds: 18);
   static const Duration _approvalUiTimeout = Duration(seconds: 90);
   static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
@@ -83,17 +85,42 @@ class _SwapScreenState extends State<SwapScreen> {
     return _stablecoinSymbols.contains(token.symbol.toUpperCase());
   }
 
-  /// Buy mode: user is buying a volatile token with a stablecoin.
-  /// The limit target ("When X is worth") should be the volatile token (toToken).
-  bool get _isBuyMode {
-    return _isStablecoin(_fromToken) && !_isStablecoin(_toToken);
-  }
+  bool get _isBuyMode => _isLimitBuyMode;
 
   /// The token whose price the user is targeting in limit orders.
   Token? get _limitTargetToken => _isBuyMode ? _toToken : _fromToken;
 
   /// The quote token used to denominate the limit price.
   Token? get _limitQuoteToken => _isBuyMode ? _fromToken : _toToken;
+
+  bool _suggestLimitBuyMode() {
+    return _isStablecoin(_fromToken) && !_isStablecoin(_toToken);
+  }
+
+  void _applySuggestedLimitSide() {
+    if (_hasManualLimitSideSelection) {
+      return;
+    }
+    _isLimitBuyMode = _suggestLimitBuyMode();
+  }
+
+  void _setLimitOrderSide(bool isBuyMode) {
+    if (_isLimitBuyMode == isBuyMode && _hasManualLimitSideSelection) {
+      return;
+    }
+    setState(() {
+      _isLimitBuyMode = isBuyMode;
+      _hasManualLimitSideSelection = true;
+      _limitPriceController.clear();
+      _limitUsdController.clear();
+      _toController.clear();
+      _platformFeeUsd = 0.0;
+      _feeUsd = 0.0;
+      _feeNative = 0.0;
+    });
+  }
+
+  String get _currentLimitKind => _isBuyMode ? 'buy' : 'sell';
   final TextEditingController _fromController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final TextEditingController _limitPriceController = TextEditingController();
@@ -121,6 +148,12 @@ class _SwapScreenState extends State<SwapScreen> {
   _LimitExpiryOption _limitExpiryOption = _LimitExpiryOption.hours24;
   DateTime? _customExpiryDate;
   bool _isSubmittingLimit = false;
+  bool _isLimitBuyMode = false;
+  bool _hasManualLimitSideSelection = false;
+  bool _isLoadingLimitOrders = false;
+  bool _limitTutorialControlHidden = false;
+  List<LimitOrderSummary> _limitOrders = const [];
+  final Set<String> _cancellingLimitOrderIds = <String>{};
 
   /// Whether the +/- price adjustment chips are in positive mode.
   bool _isPositiveAdjust = false;
@@ -144,12 +177,16 @@ class _SwapScreenState extends State<SwapScreen> {
         _isGasless = false;
       }
       _loadWalletBalance();
+      if (_activeTab == SwapTab.limit) {
+        unawaited(_refreshLimitOrders(showLoading: false));
+      }
     } else if (_fromToken == null || _toToken == null) {
       final tokens = _visibleTokens(blockchain.tokens);
       _syncSelectedTokens(tokens);
     }
     if (_activeTab == SwapTab.limit) {
       _ensureLimitEligiblePair();
+      unawaited(_refreshLimitOrders(showLoading: false));
     }
   }
 
@@ -225,6 +262,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     _fromToken = resolvedFrom;
     _toToken = resolvedTo;
+    _applySuggestedLimitSide();
     _selectedPercentage = -1;
     _fromController.clear();
     _toController.clear();
@@ -233,8 +271,9 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitButtonLabel() {
+    final sideLabel = _isBuyMode ? 'Buy' : 'Sell';
     if (_isSubmittingLimit) {
-      return 'Submitting...';
+      return 'Submitting $sideLabel...';
     }
     if ((_walletAddress ?? '').isEmpty) {
       return 'Connect Wallet';
@@ -253,12 +292,12 @@ class _SwapScreenState extends State<SwapScreen> {
       return 'Use ERC-20 Tokens';
     }
     if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
-      return 'Enter Sell Amount';
+      return _isBuyMode ? 'Enter Max Spend' : 'Enter Sell Amount';
     }
     if (_parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
       return 'Set Target Price';
     }
-    return 'Place Limit Order';
+    return 'Place $sideLabel Order';
   }
 
   String _limitStatusMessage() {
@@ -279,13 +318,15 @@ class _SwapScreenState extends State<SwapScreen> {
       return 'Limit orders currently support ERC-20 token pairs only.';
     }
     if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
-      return 'Enter how much you want to sell.';
+      return _isBuyMode
+          ? 'Enter the maximum amount you want to spend.'
+          : 'Enter how much you want to sell.';
     }
     if (_parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
       return 'Set the execution price that should trigger this order.';
     }
     if (_isSubmittingLimit) {
-      return 'Submitting your signed limit order to the backend...';
+      return 'Submitting your signed ${_currentLimitKind.toUpperCase()} limit order...';
     }
     return 'You pay no gas to place or cancel a limit order. Your first sell-token approval may still need a network fee.';
   }
@@ -335,8 +376,18 @@ class _SwapScreenState extends State<SwapScreen> {
       swapService: _swapService,
     );
     _transactionMonitor = TransactionMonitor();
+    unawaited(_loadLimitTutorialPreferences());
     _loadWalletBalance();
     _activateSwapLiveTracking();
+  }
+
+  Future<void> _loadLimitTutorialPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _limitTutorialControlHidden =
+          prefs.getBool(_limitTutorialControlHiddenKey) ?? false;
+    });
   }
 
   Future<void> _loadWalletBalance() async {
@@ -350,6 +401,14 @@ class _SwapScreenState extends State<SwapScreen> {
     _syncSelectedTokens(_visibleTokens(blockchain.tokens));
     if (mounted) {
       setState(() => _walletAddress = address);
+    }
+
+    if (address == null || address.isEmpty) {
+      if (mounted) {
+        setState(() => _limitOrders = const []);
+      }
+    } else {
+      unawaited(_refreshLimitOrders(showLoading: false));
     }
 
     if (address != null && address.isNotEmpty) {
@@ -443,6 +502,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
     _fromToken = from;
     _toToken = to;
+    _applySuggestedLimitSide();
   }
 
   List<Token> _visibleTokens(List<Token> tokens) {
@@ -499,6 +559,7 @@ class _SwapScreenState extends State<SwapScreen> {
         } else {
           _toToken = selectedToken;
         }
+        _applySuggestedLimitSide();
         _resetQuoteState();
       });
       // Refresh prices so USD values are immediately available for new token
@@ -1537,6 +1598,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final temp = _fromToken;
       _fromToken = _toToken;
       _toToken = temp;
+      _applySuggestedLimitSide();
       _resetQuoteState(clearInputAmounts: true);
       if (_isGasless && _isGaslessSourceUnsupported()) {
         _isGasless = false;
@@ -1598,18 +1660,129 @@ class _SwapScreenState extends State<SwapScreen> {
     });
   }
 
-  Future<void> _startLimitShowcaseIfNeeded() async {
-    if (_limitShowcaseScheduled || !mounted || _activeTab != SwapTab.limit) {
+  List<LimitOrderSummary> get _activeChainLimitOrders {
+    final chainId = Provider.of<BlockchainService>(
+      context,
+      listen: false,
+    ).activeChain.chainId;
+    final orders = _limitOrders.where((order) {
+      return order.chainId == chainId && order.status.toLowerCase() == 'open';
+    }).toList();
+    orders.sort((left, right) => left.expiry.compareTo(right.expiry));
+    return orders;
+  }
+
+  Future<void> _refreshLimitOrders({
+    bool showLoading = true,
+    bool surfaceErrors = false,
+  }) async {
+    final walletAddress = _walletAddress;
+    if (walletAddress == null || walletAddress.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _limitOrders = const [];
+          _isLoadingLimitOrders = false;
+        });
+      }
       return;
     }
-    _limitShowcaseScheduled = true;
+
+    if (showLoading && mounted) {
+      setState(() => _isLoadingLimitOrders = true);
+    }
+
+    final orders = await _swapService.getLimitOrders(
+      walletAddress: walletAddress,
+    );
+    if (!mounted) return;
+
+    if (_swapService.lastError != null && _swapService.lastError!.isNotEmpty) {
+      setState(() => _isLoadingLimitOrders = false);
+      if (surfaceErrors) {
+        _showError(_mapErrorMessage(_swapService.lastError));
+      }
+      return;
+    }
+
+    setState(() {
+      _limitOrders = orders;
+      _isLoadingLimitOrders = false;
+    });
+  }
+
+  Future<void> _cancelLimitOrder(LimitOrderSummary order) async {
+    final walletAddress = _walletAddress;
+    final orderUid = order.orderUid;
+    if (walletAddress == null || walletAddress.isEmpty) {
+      _showError('Connect your wallet to manage limit orders.');
+      return;
+    }
+    if (orderUid == null || orderUid.isEmpty) {
+      _showError('This limit order cannot be cancelled right now.');
+      return;
+    }
+    if (_cancellingLimitOrderIds.contains(order.id)) {
+      return;
+    }
+
+    setState(() => _cancellingLimitOrderIds.add(order.id));
+    try {
+      final typedData = buildCowOrderCancellationTypedData(
+        chainId: order.chainId,
+        orderUids: [orderUid],
+      );
+      final signature = await _walletService.signTypedDataForAddress(
+        walletAddress,
+        jsonEncode(typedData),
+      );
+      final cancelled = await _swapService.cancelLimitOrder(
+        orderId: order.id,
+        walletAddress: walletAddress,
+        signature: signature,
+      );
+      if (!mounted) return;
+
+      if (!cancelled) {
+        _showError(_mapErrorMessage(_swapService.lastError));
+        return;
+      }
+
+      ToastUtils.showSuccess('Limit order cancelled');
+      await _refreshLimitOrders(showLoading: false);
+    } catch (e) {
+      _showError(_mapErrorMessage(e.toString()));
+    } finally {
+      if (mounted) {
+        setState(() => _cancellingLimitOrderIds.remove(order.id));
+      }
+    }
+  }
+
+  Future<void> _hideLimitTutorialControl() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_limitTutorialControlHiddenKey, true);
+    if (!mounted) return;
+    setState(() => _limitTutorialControlHidden = true);
+  }
+
+  Future<void> _startLimitShowcaseIfNeeded({bool force = false}) async {
+    if ((!force && _limitShowcaseScheduled) ||
+        !mounted ||
+        _activeTab != SwapTab.limit) {
+      return;
+    }
+    if (!force) {
+      _limitShowcaseScheduled = true;
+    }
 
     final prefs = await SharedPreferences.getInstance();
-    final hasSeenShowcase = prefs.getBool(_limitShowcaseSeenKey) ?? false;
-    if (hasSeenShowcase || !mounted || _activeTab != SwapTab.limit) {
-      return;
+    if (!force) {
+      final hasSeenShowcase = prefs.getBool(_limitShowcaseSeenKey) ?? false;
+      if (hasSeenShowcase || !mounted || _activeTab != SwapTab.limit) {
+        return;
+      }
+      await prefs.setBool(_limitShowcaseSeenKey, true);
     }
-    await prefs.setBool(_limitShowcaseSeenKey, true);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _activeTab != SwapTab.limit) {
@@ -1817,6 +1990,7 @@ class _SwapScreenState extends State<SwapScreen> {
         sellAmount: makerAmountWei,
         buyAmount: buyAmountWei,
         validTo: _resolveLimitExpirySeconds(),
+        kind: _currentLimitKind,
       );
 
       progressController?.setSwapSubmitting();
@@ -1848,6 +2022,7 @@ class _SwapScreenState extends State<SwapScreen> {
       } else {
         ToastUtils.showSuccess('Limit order submitted');
       }
+      unawaited(_refreshLimitOrders(showLoading: false));
     } on TimeoutException {
       const message =
           'Approval or order signing timed out. Reopen your wallet and try again.';
@@ -2370,6 +2545,42 @@ class _SwapScreenState extends State<SwapScreen> {
                   BottomNavBar.handleNavigation(context, index, 1),
             )
           : null,
+      floatingActionButton:
+          _activeTab == SwapTab.limit && !_limitTutorialControlHidden
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: widget.showBottomNavigation ? 72 : 8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FloatingActionButton.small(
+                    heroTag: 'limitTutorialReplay',
+                    tooltip: 'Replay limit tutorial',
+                    backgroundColor: const Color(0xFFEA2A33),
+                    foregroundColor: Colors.white,
+                    onPressed: () {
+                      unawaited(_startLimitShowcaseIfNeeded(force: true));
+                    },
+                    child: const Icon(Icons.play_circle_fill_rounded),
+                  ),
+                  const SizedBox(height: 10),
+                  FloatingActionButton.small(
+                    heroTag: 'limitTutorialHide',
+                    tooltip: 'Hide tutorial button',
+                    backgroundColor: const Color(0xFF1F1F1F),
+                    foregroundColor: const Color(0xFFC8C6C5),
+                    onPressed: () {
+                      unawaited(_hideLimitTutorialControl());
+                    },
+                    child: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: Column(
           children: [
@@ -2414,6 +2625,11 @@ class _SwapScreenState extends State<SwapScreen> {
                             _getQuote();
                           } else {
                             _updateLimitPreview();
+                            unawaited(
+                              _refreshLimitOrders(
+                                showLoading: _limitOrders.isEmpty,
+                              ),
+                            );
                             unawaited(_startLimitShowcaseIfNeeded());
                           }
                         },
@@ -2486,6 +2702,9 @@ class _SwapScreenState extends State<SwapScreen> {
                         toUsdValue: toUsdValue,
                         toBalance: _toToken?.balance ?? 0,
                         onSelectToToken: () => _showTokenSelector(false),
+                        isBuyMode: _isBuyMode,
+                        onSelectBuyMode: () => _setLimitOrderSide(true),
+                        onSelectSellMode: () => _setLimitOrderSide(false),
                         limitBusy: _isSubmittingLimit,
                         limitEnabled: _limitEnabled(),
                         limitButtonLabel: limitButtonLabel,
@@ -2520,6 +2739,15 @@ class _SwapScreenState extends State<SwapScreen> {
                         limitUsdController: _limitUsdController,
                         onLimitUsdChanged: _onLimitUsdChanged,
                         onSubmitLimit: _submitLimitOrder,
+                        activeOrders: _activeChainLimitOrders,
+                        isLoadingActiveOrders: _isLoadingLimitOrders,
+                        onRefreshActiveOrders: () {
+                          unawaited(_refreshLimitOrders(surfaceErrors: true));
+                        },
+                        onCancelActiveOrder: (order) {
+                          unawaited(_cancelLimitOrder(order));
+                        },
+                        cancellingOrderIds: _cancellingLimitOrderIds,
                         amountShowcaseKey: _limitAmountsShowcaseKey,
                         executionPriceShowcaseKey:
                             _limitExecutionPriceShowcaseKey,

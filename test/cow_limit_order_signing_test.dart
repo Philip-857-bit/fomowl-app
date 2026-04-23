@@ -26,6 +26,22 @@ void main() {
     expect(typedData['message']['appData'], cowZeroAppDataHash);
   });
 
+  test('CoW order payload supports explicit buy orders', () {
+    final order = buildCowLimitOrderPayload(
+      sellToken: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+      buyToken: '0x6b175474e89094c44da98b954eedeac495271d0f',
+      receiver: '0x111111125421ca6dc452d289314280a0f8842a65',
+      sellAmount: '1000000',
+      buyAmount: '998000000000000000',
+      validTo: 1700000000,
+      kind: 'buy',
+    );
+
+    expect(order['kind'], 'buy');
+    expect(order['feeAmount'], '0');
+    expect(order['partiallyFillable'], isFalse);
+  });
+
   test('CoW cancellation typed data uses orderUids bytes array', () {
     final typedData = buildCowOrderCancellationTypedData(
       chainId: 42161,

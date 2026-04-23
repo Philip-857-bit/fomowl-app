@@ -176,10 +176,9 @@ jobs:
           set +o pipefail
           printf 'y\n' | shorebird release android \
             --flutter-version="$FLUTTER_VERSION" \
-            --artifact apk \
+            --artifact=apk \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
             -- \
-            --split-per-abi \
             "${DART_DEFINES[@]}"
           status=$?
           set -o pipefail
@@ -208,7 +207,7 @@ jobs:
           )"
           echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Android split APK to Dropbox
+      - name: Upload Android APK to Dropbox
         env:
           DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
@@ -239,9 +238,19 @@ jobs:
             exit 0
           fi
 
-          apk_path="build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+          apk_path=""
+          for candidate in \
+            "build/app/outputs/flutter-apk/app-release.apk" \
+            "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk"
+          do
+            if [ -f "$candidate" ]; then
+              apk_path="$candidate"
+              break
+            fi
+          done
+
           if [ ! -f "$apk_path" ]; then
-            echo "Expected split APK not found at $apk_path" >&2
+            echo "Expected Shorebird APK not found under build/app/outputs/flutter-apk" >&2
             exit 1
           fi
 

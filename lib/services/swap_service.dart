@@ -80,6 +80,7 @@ class LimitOrderSummary {
   final String buyToken;
   final String sellAmount;
   final String buyAmount;
+  final String kind;
   final String targetPrice;
   final int expiry;
   final String status;
@@ -94,6 +95,7 @@ class LimitOrderSummary {
     required this.buyToken,
     required this.sellAmount,
     required this.buyAmount,
+    required this.kind,
     required this.targetPrice,
     required this.expiry,
     required this.status,
@@ -112,6 +114,7 @@ class LimitOrderSummary {
       buyToken: json['buyToken']?.toString() ?? '',
       sellAmount: json['sellAmount']?.toString() ?? '',
       buyAmount: json['buyAmount']?.toString() ?? '',
+      kind: (json['kind']?.toString() ?? 'sell').toLowerCase(),
       targetPrice: json['targetPrice']?.toString() ?? '',
       expiry: int.tryParse(json['expiry']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? '',

@@ -77,6 +77,7 @@ Map<String, dynamic> buildCowLimitOrderPayload({
   required String sellAmount,
   required String buyAmount,
   required int validTo,
+  String kind = 'sell',
 }) {
   return {
     'sellToken': sellToken,
@@ -87,7 +88,7 @@ Map<String, dynamic> buildCowLimitOrderPayload({
     'validTo': validTo,
     'appData': cowZeroAppDataHash,
     'feeAmount': '0',
-    'kind': 'sell',
+    'kind': kind,
     'partiallyFillable': false,
     'sellTokenBalance': 'erc20',
     'buyTokenBalance': 'erc20',

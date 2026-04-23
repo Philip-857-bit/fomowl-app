@@ -5,6 +5,7 @@ import 'package:showcaseview/showcaseview.dart';
 import '../../../models/token.dart';
 import '../../../services/swap_service.dart';
 import '../../../services/blockchain_service.dart';
+import '../../../utils/amount_utils.dart';
 import 'swap_from_card.dart';
 import 'swap_to_card.dart';
 import 'swap_direction_button.dart';
@@ -165,6 +166,401 @@ class SwapTabContent extends StatelessWidget {
   }
 }
 
+class _LimitSideChip extends StatelessWidget {
+  const _LimitSideChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0x19EA2A33) : const Color(0xFF111111),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0x66EA2A33)
+                : const Color(0x265D3F3D),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isSelected
+                  ? const Color(0xFFEA2A33)
+                  : const Color(0xFFC8C6C5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LimitActiveOrdersSection extends StatelessWidget {
+  const _LimitActiveOrdersSection({
+    required this.blockchain,
+    required this.orders,
+    required this.isLoading,
+    required this.onRefresh,
+    required this.onCancel,
+    required this.cancellingOrderIds,
+  });
+
+  final BlockchainService blockchain;
+  final List<LimitOrderSummary> orders;
+  final bool isLoading;
+  final VoidCallback onRefresh;
+  final ValueChanged<LimitOrderSummary> onCancel;
+  final Set<String> cancellingOrderIds;
+
+  Token? _resolveToken(String address) {
+    final normalized = address.toLowerCase();
+    for (final token in blockchain.tokens) {
+      final contractAddress = token.contractAddress?.toLowerCase();
+      if (contractAddress == normalized) {
+        return token;
+      }
+    }
+    return null;
+  }
+
+  String _shortAddress(String address) {
+    if (address.length <= 10) {
+      return address;
+    }
+    return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
+  }
+
+  String _symbolFor(Token? token, String address) {
+    return token?.symbol ?? _shortAddress(address);
+  }
+
+  String _formatAmount(String rawAmount, Token? token) {
+    final value = BigInt.tryParse(rawAmount) ?? BigInt.zero;
+    return AmountUtils.formatBaseUnits(
+      value,
+      token?.decimals ?? 18,
+      maxFractionDigits: 6,
+    );
+  }
+
+  String _formatExpiry(int expirySeconds) {
+    if (expirySeconds <= 0) {
+      return '--';
+    }
+    final date = DateTime.fromMillisecondsSinceEpoch(expirySeconds * 1000);
+    String twoDigits(int value) => value.toString().padLeft(2, '0');
+    return '${date.year}-${twoDigits(date.month)}-${twoDigits(date.day)} ${twoDigits(date.hour)}:${twoDigits(date.minute)}';
+  }
+
+  String _formatPrice(
+    LimitOrderSummary order,
+    Token? sellToken,
+    Token? buyToken,
+  ) {
+    final price = order.targetPrice.trim();
+    if (price.isEmpty || price == '0') {
+      return '--';
+    }
+    final isBuy = order.kind.toLowerCase() == 'buy';
+    final targetSymbol = isBuy
+        ? _symbolFor(buyToken, order.buyToken)
+        : _symbolFor(sellToken, order.sellToken);
+    final quoteSymbol = isBuy
+        ? _symbolFor(sellToken, order.sellToken)
+        : _symbolFor(buyToken, order.buyToken);
+    return '1 $targetSymbol -> $price $quoteSymbol';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0E0E0E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x265D3F3D)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Text(
+                'ACTIVE ORDERS',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                  color: const Color(0xFFC8C6C5),
+                ),
+              ),
+              const Spacer(),
+              if (orders.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0x19EA2A33),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${orders.length}',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFEA2A33),
+                    ),
+                  ),
+                ),
+              IconButton(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                color: const Color(0xFFC8C6C5),
+                splashRadius: 18,
+                tooltip: 'Refresh active orders',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Open Owllet limit orders on ${blockchain.activeChain.name}.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: const Color(0xFF909090),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (isLoading && orders.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.2,
+                    color: Color(0xFFEA2A33),
+                  ),
+                ),
+              ),
+            )
+          else if (orders.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0x1F5D3F3D)),
+              ),
+              child: Text(
+                'No active limit orders on this network yet.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: const Color(0xFFC8C6C5),
+                  height: 1.5,
+                ),
+              ),
+            )
+          else
+            ...orders.map((order) {
+              final isBuy = order.kind.toLowerCase() == 'buy';
+              final sellToken = _resolveToken(order.sellToken);
+              final buyToken = _resolveToken(order.buyToken);
+              final sellSymbol = _symbolFor(sellToken, order.sellToken);
+              final buySymbol = _symbolFor(buyToken, order.buyToken);
+              final primaryLabel = isBuy ? 'Receive' : 'Sell';
+              final primaryValue = isBuy
+                  ? '${_formatAmount(order.buyAmount, buyToken)} $buySymbol'
+                  : '${_formatAmount(order.sellAmount, sellToken)} $sellSymbol';
+              final secondaryLabel = isBuy ? 'Max spend' : 'Min receive';
+              final secondaryValue = isBuy
+                  ? '${_formatAmount(order.sellAmount, sellToken)} $sellSymbol'
+                  : '${_formatAmount(order.buyAmount, buyToken)} $buySymbol';
+              final isCancelling = cancellingOrderIds.contains(order.id);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111111),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0x1F5D3F3D)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isBuy
+                                  ? const Color(0x1932D74B)
+                                  : const Color(0x19EA2A33),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              isBuy ? 'BUY' : 'SELL',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: isBuy
+                                    ? const Color(0xFF32D74B)
+                                    : const Color(0xFFEA2A33),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isBuy ? 'Buy $buySymbol' : 'Sell $sellSymbol',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFE2E2E2),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            height: 34,
+                            child: OutlinedButton(
+                              onPressed: isCancelling
+                                  ? null
+                                  : () => onCancel(order),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0x33EA2A33),
+                                ),
+                                backgroundColor: const Color(0x0FEA2A33),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                ),
+                              ),
+                              child: isCancelling
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFFEA2A33),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Cancel',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFEA2A33),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _formatPrice(order, sellToken, buyToken),
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFE2E2E2),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _LimitOrderMetric(
+                              label: primaryLabel,
+                              value: primaryValue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _LimitOrderMetric(
+                              label: secondaryLabel,
+                              value: secondaryValue,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Expires ${_formatExpiry(order.expiry)}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: const Color(0xFF909090),
+                          height: 1.45,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _LimitOrderMetric extends StatelessWidget {
+  const _LimitOrderMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: const Color(0xFF909090),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFFE2E2E2),
+            height: 1.4,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class LimitTabContent extends StatelessWidget {
   final BlockchainService blockchain;
   final TextEditingController fromController;
@@ -180,6 +576,9 @@ class LimitTabContent extends StatelessWidget {
   final double toUsdValue;
   final double toBalance;
   final VoidCallback onSelectToToken;
+  final bool isBuyMode;
+  final VoidCallback onSelectBuyMode;
+  final VoidCallback onSelectSellMode;
   final bool limitBusy;
   final bool limitEnabled;
   final String limitButtonLabel;
@@ -221,6 +620,11 @@ class LimitTabContent extends StatelessWidget {
   final ValueChanged<String>? onLimitUsdChanged;
 
   final VoidCallback onSubmitLimit;
+  final List<LimitOrderSummary> activeOrders;
+  final bool isLoadingActiveOrders;
+  final VoidCallback onRefreshActiveOrders;
+  final ValueChanged<LimitOrderSummary> onCancelActiveOrder;
+  final Set<String> cancellingOrderIds;
   final GlobalKey? amountShowcaseKey;
   final GlobalKey? executionPriceShowcaseKey;
   final GlobalKey? expiryShowcaseKey;
@@ -257,6 +661,9 @@ class LimitTabContent extends StatelessWidget {
     required this.toUsdValue,
     required this.toBalance,
     required this.onSelectToToken,
+    required this.isBuyMode,
+    required this.onSelectBuyMode,
+    required this.onSelectSellMode,
     required this.limitBusy,
     required this.limitEnabled,
     required this.limitButtonLabel,
@@ -281,6 +688,11 @@ class LimitTabContent extends StatelessWidget {
     this.limitUsdController,
     this.onLimitUsdChanged,
     required this.onSubmitLimit,
+    required this.activeOrders,
+    required this.isLoadingActiveOrders,
+    required this.onRefreshActiveOrders,
+    required this.onCancelActiveOrder,
+    required this.cancellingOrderIds,
     this.amountShowcaseKey,
     this.executionPriceShowcaseKey,
     this.expiryShowcaseKey,
@@ -312,16 +724,62 @@ class LimitTabContent extends StatelessWidget {
         !is24hSelected &&
         !is7dSelected &&
         !isNeverSelected;
+    final orderSideDescription = isBuyMode
+        ? 'Buy ${toToken?.symbol ?? 'the receive token'} and cap how much ${fromToken?.symbol ?? 'the spend token'} you spend.'
+        : 'Sell ${fromToken?.symbol ?? 'the input token'} and set the minimum ${toToken?.symbol ?? 'the receive token'} you want back.';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          'ORDER SIDE',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            letterSpacing: 1.2,
+            color: const Color(0xFFC8C6C5),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _LimitSideChip(
+                label: 'Sell',
+                isSelected: !isBuyMode,
+                onTap: onSelectSellMode,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _LimitSideChip(
+                label: 'Buy',
+                isSelected: isBuyMode,
+                onTap: onSelectBuyMode,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            orderSideDescription,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: const Color(0xFF909090),
+              height: 1.5,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
         // ── From / To Cards ──
         _withShowcase(
           showcaseKey: amountShowcaseKey,
           title: 'Limit order size',
-          description:
-              'Enter the amount to sell. The output preview is calculated from your limit price, not from a live market quote.',
+          description: isBuyMode
+              ? 'Enter the most you want to spend. Owllet previews the amount you would buy at your target price.'
+              : 'Enter the amount to sell. The output preview is calculated from your limit price, not from a live market quote.',
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -566,6 +1024,15 @@ class LimitTabContent extends StatelessWidget {
               ),
             ),
           ),
+        ),
+        const SizedBox(height: 24),
+        _LimitActiveOrdersSection(
+          blockchain: blockchain,
+          orders: activeOrders,
+          isLoading: isLoadingActiveOrders,
+          onRefresh: onRefreshActiveOrders,
+          onCancel: onCancelActiveOrder,
+          cancellingOrderIds: cancellingOrderIds,
         ),
       ],
     );
