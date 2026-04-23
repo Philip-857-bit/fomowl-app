@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:showcaseview/showcaseview.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/bottom_navigation.dart';
@@ -50,6 +52,7 @@ class SwapScreen extends StatefulWidget {
 
 class _SwapScreenState extends State<SwapScreen> {
   static const String _livePriceScope = 'swap_screen';
+  static const String _limitShowcaseSeenKey = 'swap_limit_showcase_seen_v1';
   static const Duration _quoteUiTimeout = Duration(seconds: 18);
   static const Duration _approvalUiTimeout = Duration(seconds: 90);
   static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
@@ -121,6 +124,13 @@ class _SwapScreenState extends State<SwapScreen> {
 
   /// Whether the +/- price adjustment chips are in positive mode.
   bool _isPositiveAdjust = false;
+  bool _limitShowcaseScheduled = false;
+  final GlobalKey _limitTabShowcaseKey = GlobalKey();
+  final GlobalKey _limitAmountsShowcaseKey = GlobalKey();
+  final GlobalKey _limitExecutionPriceShowcaseKey = GlobalKey();
+  final GlobalKey _limitExpiryShowcaseKey = GlobalKey();
+  final GlobalKey _limitSummaryShowcaseKey = GlobalKey();
+  final GlobalKey _limitSubmitShowcaseKey = GlobalKey();
 
   @override
   void didChangeDependencies() {
@@ -277,7 +287,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_isSubmittingLimit) {
       return 'Submitting your signed limit order to the backend...';
     }
-    return 'Limit orders execute when the target price is hit. Fees are only deducted on successful execution.';
+    return 'Limit orders are signed off-chain. You pay no gas to place or cancel; token approval may still need gas before a fill.';
   }
 
   bool get _isGaslessSupported {
@@ -1546,6 +1556,34 @@ class _SwapScreenState extends State<SwapScreen> {
     });
   }
 
+  Future<void> _startLimitShowcaseIfNeeded() async {
+    if (_limitShowcaseScheduled || !mounted || _activeTab != SwapTab.limit) {
+      return;
+    }
+    _limitShowcaseScheduled = true;
+
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenShowcase = prefs.getBool(_limitShowcaseSeenKey) ?? false;
+    if (hasSeenShowcase || !mounted || _activeTab != SwapTab.limit) {
+      return;
+    }
+    await prefs.setBool(_limitShowcaseSeenKey, true);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _activeTab != SwapTab.limit) {
+        return;
+      }
+      ShowcaseView.get().startShowCase([
+        _limitTabShowcaseKey,
+        _limitAmountsShowcaseKey,
+        _limitExecutionPriceShowcaseKey,
+        _limitExpiryShowcaseKey,
+        _limitSummaryShowcaseKey,
+        _limitSubmitShowcaseKey,
+      ]);
+    });
+  }
+
   int _resolveLimitExpirySeconds() {
     final now = DateTime.now();
     switch (_limitExpiryOption) {
@@ -1685,7 +1723,8 @@ class _SwapScreenState extends State<SwapScreen> {
       );
 
       final typedData = buildCowOrderTypedData(chainId: chainId, order: order);
-      final signature = await _walletService.signTypedData(
+      final signature = await _walletService.signTypedDataForAddress(
+        _walletAddress!,
         jsonEncode(typedData),
       );
 
@@ -2239,22 +2278,29 @@ class _SwapScreenState extends State<SwapScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 24),
-                    SwapTabSelector(
-                      activeTab: _activeTab,
-                      onChanged: (tab) {
-                        if (_activeTab == tab) return;
-                        setState(() {
-                          _activeTab = tab;
-                          if (tab == SwapTab.limit) {
-                            _ensureLimitEligiblePair();
+                    Showcase(
+                      key: _limitTabShowcaseKey,
+                      title: 'Limit orders',
+                      description:
+                          'Use Swap for instant market execution. Use Limit to post an off-chain CoW order that waits for your target price.',
+                      child: SwapTabSelector(
+                        activeTab: _activeTab,
+                        onChanged: (tab) {
+                          if (_activeTab == tab) return;
+                          setState(() {
+                            _activeTab = tab;
+                            if (tab == SwapTab.limit) {
+                              _ensureLimitEligiblePair();
+                            }
+                          });
+                          if (tab == SwapTab.swap) {
+                            _getQuote();
+                          } else {
+                            _updateLimitPreview();
+                            unawaited(_startLimitShowcaseIfNeeded());
                           }
-                        });
-                        if (tab == SwapTab.swap) {
-                          _getQuote();
-                        } else {
-                          _updateLimitPreview();
-                        }
-                      },
+                        },
+                      ),
                     ),
                     const SizedBox(height: 19),
                     NetworkCard(
@@ -2357,6 +2403,12 @@ class _SwapScreenState extends State<SwapScreen> {
                         limitUsdController: _limitUsdController,
                         onLimitUsdChanged: _onLimitUsdChanged,
                         onSubmitLimit: _submitLimitOrder,
+                        amountShowcaseKey: _limitAmountsShowcaseKey,
+                        executionPriceShowcaseKey:
+                            _limitExecutionPriceShowcaseKey,
+                        expiryShowcaseKey: _limitExpiryShowcaseKey,
+                        summaryShowcaseKey: _limitSummaryShowcaseKey,
+                        submitShowcaseKey: _limitSubmitShowcaseKey,
                         expiryLabel: _limitExpiryLabel(),
                         onSelect15m: () => setState(
                           () =>

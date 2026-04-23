@@ -164,7 +164,10 @@ jobs:
       - name: Create Shorebird patch-signing public key
         run: |
           set -euo pipefail
-          echo "$SHOREBIRD_PATCH_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/shorebird_public.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 \
+            --kind public \
+            --output "$RUNNER_TEMP/shorebird_public.pem"
 
       - name: Create Shorebird Android release
         run: |

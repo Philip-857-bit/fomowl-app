@@ -195,8 +195,14 @@ jobs:
       - name: Create Shorebird patch-signing keys
         run: |
           set -euo pipefail
-          echo "$SHOREBIRD_PATCH_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/shorebird_public.pem"
-          echo "$SHOREBIRD_PATCH_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/shorebird_private.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 \
+            --kind public \
+            --output "$RUNNER_TEMP/shorebird_public.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 \
+            --kind private \
+            --output "$RUNNER_TEMP/shorebird_private.pem"
 
       - name: Create Shorebird Android patch
         run: |
@@ -425,8 +431,14 @@ jobs:
       - name: Create Shorebird patch-signing keys
         run: |
           set -euo pipefail
-          echo "$SHOREBIRD_PATCH_PUBLIC_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/shorebird_public.pem"
-          echo "$SHOREBIRD_PATCH_PRIVATE_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/shorebird_private.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 \
+            --kind public \
+            --output "$RUNNER_TEMP/shorebird_public.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 \
+            --kind private \
+            --output "$RUNNER_TEMP/shorebird_private.pem"
 
       - name: Create Shorebird iOS patch
         run: |

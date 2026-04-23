@@ -37,7 +37,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
     final resolvedPlatformFeePercent = _resolvedPlatformFeePercent();
     final platformFeeText = resolvedPlatformFeePercent > 0
         ? _formatPercent(resolvedPlatformFeePercent)
-        : 'No platform fee';
+        : '0';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -84,15 +84,11 @@ class SwapPriceDetailsCard extends StatelessWidget {
   }
 
   String _buildFeeText() {
-    if (gaslessFeeCovered) {
-      return 'Covered';
-    }
-
     final feeNativeText = _formatApproxNative(feeAmountNative);
     final feeUsdText = _formatApproxUsd(feeAmountUsd);
 
     if (feeNativeText.isEmpty && feeUsdText.isEmpty) {
-      return 'No network fee';
+      return '0';
     }
     if (feeNativeText.isNotEmpty && feeUsdText.isNotEmpty) {
       return '$feeNativeText ($feeUsdText)';

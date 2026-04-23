@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:showcaseview/showcaseview.dart';
 
 import '../../../models/token.dart';
 import '../../../services/swap_service.dart';
@@ -220,6 +221,11 @@ class LimitTabContent extends StatelessWidget {
   final ValueChanged<String>? onLimitUsdChanged;
 
   final VoidCallback onSubmitLimit;
+  final GlobalKey? amountShowcaseKey;
+  final GlobalKey? executionPriceShowcaseKey;
+  final GlobalKey? expiryShowcaseKey;
+  final GlobalKey? summaryShowcaseKey;
+  final GlobalKey? submitShowcaseKey;
   final String expiryLabel;
   final VoidCallback onSelect15m;
   final VoidCallback onSelect1h;
@@ -275,6 +281,11 @@ class LimitTabContent extends StatelessWidget {
     this.limitUsdController,
     this.onLimitUsdChanged,
     required this.onSubmitLimit,
+    this.amountShowcaseKey,
+    this.executionPriceShowcaseKey,
+    this.expiryShowcaseKey,
+    this.summaryShowcaseKey,
+    this.submitShowcaseKey,
     required this.expiryLabel,
     required this.onSelect15m,
     required this.onSelect1h,
@@ -306,37 +317,43 @@ class LimitTabContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // ── From / To Cards ──
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Column(
-              children: [
-                SwapFromCard(
-                  controller: fromController,
-                  token: fromToken,
-                  usdValue: fromUsdValue,
-                  balance: fromToken?.balance ?? 0,
-                  selectedPercentage: selectedPercentage,
-                  onAmountChanged: onAmountChanged,
-                  onSelectToken: onSelectFromToken,
-                  onPercentSelected: onPercentSelected,
-                  chainId: blockchain.activeChain.chainId,
-                ),
-                const SizedBox(height: 12),
-                SwapToCard(
-                  token: toToken,
-                  amountText: toAmountText,
-                  usdValue: toUsdValue,
-                  balance: toBalance,
-                  isCalculating: false,
-                  onSelectToken: onSelectToToken,
-                  chainId: blockchain.activeChain.chainId,
-                  statusMessage: null,
-                ),
-              ],
-            ),
-            SwapDirectionButton(onPressed: onSwapTokens),
-          ],
+        _withShowcase(
+          showcaseKey: amountShowcaseKey,
+          title: 'Limit order size',
+          description:
+              'Enter the amount to sell. The output preview is calculated from your limit price, not from a live market quote.',
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Column(
+                children: [
+                  SwapFromCard(
+                    controller: fromController,
+                    token: fromToken,
+                    usdValue: fromUsdValue,
+                    balance: fromToken?.balance ?? 0,
+                    selectedPercentage: selectedPercentage,
+                    onAmountChanged: onAmountChanged,
+                    onSelectToken: onSelectFromToken,
+                    onPercentSelected: onPercentSelected,
+                    chainId: blockchain.activeChain.chainId,
+                  ),
+                  const SizedBox(height: 12),
+                  SwapToCard(
+                    token: toToken,
+                    amountText: toAmountText,
+                    usdValue: toUsdValue,
+                    balance: toBalance,
+                    isCalculating: false,
+                    onSelectToken: onSelectToToken,
+                    chainId: blockchain.activeChain.chainId,
+                    statusMessage: null,
+                  ),
+                ],
+              ),
+              SwapDirectionButton(onPressed: onSwapTokens),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -401,16 +418,22 @@ class LimitTabContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        LimitExecutionCard(
-          controller: limitPriceController,
-          onChanged: onLimitPriceChanged,
-          targetTokenSymbol: targetTokenSymbol,
-          quoteToken: quoteToken,
-          targetPriceUsdLabel: executionPriceUsdLabel,
-          chainId: blockchain.activeChain.chainId,
-          priceDeviationLabel: priceDeviationLabel,
-          usdController: limitUsdController,
-          onUsdChanged: onLimitUsdChanged,
+        _withShowcase(
+          showcaseKey: executionPriceShowcaseKey,
+          title: 'Execution price',
+          description:
+              'Set the price where your order can fill. CoW solvers execute only if they can satisfy this price or better.',
+          child: LimitExecutionCard(
+            controller: limitPriceController,
+            onChanged: onLimitPriceChanged,
+            targetTokenSymbol: targetTokenSymbol,
+            quoteToken: quoteToken,
+            targetPriceUsdLabel: executionPriceUsdLabel,
+            chainId: blockchain.activeChain.chainId,
+            priceDeviationLabel: priceDeviationLabel,
+            usdController: limitUsdController,
+            onUsdChanged: onLimitUsdChanged,
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -425,90 +448,108 @@ class LimitTabContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              LimitExpiryChip(
-                label: '15M',
-                selected: is15mSelected,
-                onTap: onSelect15m,
-              ),
-              const SizedBox(width: 8),
-              LimitExpiryChip(
-                label: '1H',
-                selected: is1hSelected,
-                onTap: onSelect1h,
-              ),
-              const SizedBox(width: 8),
-              LimitExpiryChip(
-                label: '24H',
-                selected: is24hSelected,
-                onTap: onSelect24h,
-              ),
-              const SizedBox(width: 8),
-              LimitExpiryChip(
-                label: '7D',
-                selected: is7dSelected,
-                onTap: onSelect7d,
-              ),
-              const SizedBox(width: 8),
-              LimitExpiryChip(
-                label: 'Never',
-                selected: isNeverSelected,
-                onTap: onSelectNever,
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onPickCustomExpiry,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isCustomExpirySelected
-                        ? const Color(0x19EA2A33)
-                        : const Color(0xFF1F1F1F),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
+        _withShowcase(
+          showcaseKey: expiryShowcaseKey,
+          title: 'Order expiry',
+          description:
+              'Choose how long the order stays open. "Never" is sent as one year because CoW orders have a max validity window.',
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                LimitExpiryChip(
+                  label: '15M',
+                  selected: is15mSelected,
+                  onTap: onSelect15m,
+                ),
+                const SizedBox(width: 8),
+                LimitExpiryChip(
+                  label: '1H',
+                  selected: is1hSelected,
+                  onTap: onSelect1h,
+                ),
+                const SizedBox(width: 8),
+                LimitExpiryChip(
+                  label: '24H',
+                  selected: is24hSelected,
+                  onTap: onSelect24h,
+                ),
+                const SizedBox(width: 8),
+                LimitExpiryChip(
+                  label: '7D',
+                  selected: is7dSelected,
+                  onTap: onSelect7d,
+                ),
+                const SizedBox(width: 8),
+                LimitExpiryChip(
+                  label: 'Never',
+                  selected: isNeverSelected,
+                  onTap: onSelectNever,
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onPickCustomExpiry,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
                       color: isCustomExpirySelected
-                          ? const Color(0x33EA2A33)
-                          : const Color(0x195D3F3D),
+                          ? const Color(0x19EA2A33)
+                          : const Color(0xFF1F1F1F),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: isCustomExpirySelected
+                            ? const Color(0x33EA2A33)
+                            : const Color(0x195D3F3D),
+                      ),
+                    ),
+                    child: const FigmaDropdownIcon(
+                      width: 10,
+                      color: Color(0xFFC8C6C5),
                     ),
                   ),
-                  child: const FigmaDropdownIcon(
-                    width: 10,
-                    color: Color(0xFFC8C6C5),
-                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
 
-        SwapPriceDetailsCard(
-          priceText: executionPriceText,
-          platformFeePercent: platformFeePercent,
-          platformFeeUsd: platformFeeUsd,
-          feeAmountUsd: feeUsd,
-          feeAmountNative: feeNative,
-          nativeFeeSymbol: blockchain.activeChain.symbol,
-          receiveText: receiveText,
-          priceSeparator: priceSeparator,
-          swapAmountUsd: fromUsdValue,
-          gaslessFeeCovered: false,
-          nativePriceUsd: nativePriceUsd,
+        _withShowcase(
+          showcaseKey: summaryShowcaseKey,
+          title: 'Order summary',
+          description:
+              'Limit order creation and cancellation are off-chain signatures. You pay no gas to place or cancel; token approval may still need gas before a fill.',
+          child: SwapPriceDetailsCard(
+            priceText: executionPriceText,
+            platformFeePercent: platformFeePercent,
+            platformFeeUsd: platformFeeUsd,
+            feeAmountUsd: feeUsd,
+            feeAmountNative: feeNative,
+            nativeFeeSymbol: blockchain.activeChain.symbol,
+            receiveText: receiveText,
+            priceSeparator: priceSeparator,
+            swapAmountUsd: fromUsdValue,
+            gaslessFeeCovered: false,
+            nativePriceUsd: nativePriceUsd,
+          ),
         ),
         const SizedBox(height: 16),
 
         // ── Action Button ──
-        SwapPrimaryButton(
-          enabled: limitEnabled,
-          isBusy: limitBusy,
-          onPressed: onSubmitLimit,
-          label: limitButtonLabel,
+        _withShowcase(
+          showcaseKey: submitShowcaseKey,
+          title: 'Submit limit order',
+          description:
+              'You sign the order with the selected wallet. It stays open until the target price is met or the order expires.',
+          child: SwapPrimaryButton(
+            enabled: limitEnabled,
+            isBusy: limitBusy,
+            onPressed: onSubmitLimit,
+            label: limitButtonLabel,
+          ),
         ),
         const SizedBox(height: 12),
         Opacity(
@@ -527,6 +568,23 @@ class LimitTabContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _withShowcase({
+    required GlobalKey? showcaseKey,
+    required String title,
+    required String description,
+    required Widget child,
+  }) {
+    if (showcaseKey == null) {
+      return child;
+    }
+    return Showcase(
+      key: showcaseKey,
+      title: title,
+      description: description,
+      child: child,
     );
   }
 }

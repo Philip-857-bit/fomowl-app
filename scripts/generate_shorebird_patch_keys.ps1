@@ -24,10 +24,10 @@ $publicBase64 = Join-Path $outputDir "shorebird_public_key_base64.txt"
 $privateBase64 = Join-Path $outputDir "shorebird_private_key_base64.txt"
 
 Write-Host "Encoding public key to base64..."
-certutil -encode $publicKey $publicBase64 | Out-Null
+[Convert]::ToBase64String([IO.File]::ReadAllBytes($publicKey)) | Set-Content -Path $publicBase64 -NoNewline
 
 Write-Host "Encoding private key to base64..."
-certutil -encode $privateKey $privateBase64 | Out-Null
+[Convert]::ToBase64String([IO.File]::ReadAllBytes($privateKey)) | Set-Content -Path $privateBase64 -NoNewline
 
 Write-Host ""
 Write-Host "Done. Files written to $outputDir"
