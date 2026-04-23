@@ -26,6 +26,9 @@ const Map<int, String> cowSettlementContracts = {
   59144: '0x9008D19f58AAbD9eD0D60971565AA8510560ab41',
 };
 
+const String cowVaultRelayerAddress =
+    '0xC92E8bdf79f0507f65a392b0ab4667716BFE0110';
+
 const List<Map<String, String>> _eip712DomainFields = [
   {'name': 'name', 'type': 'string'},
   {'name': 'version', 'type': 'string'},
@@ -54,6 +57,12 @@ const List<Map<String, String>> cowOrderCancellationsFields = [
 
 String? cowSettlementContractForChain(int chainId) {
   return cowSettlementContracts[chainId];
+}
+
+String? cowVaultRelayerForChain(int chainId) {
+  return cowSupportedLimitChainIds.contains(chainId)
+      ? cowVaultRelayerAddress
+      : null;
 }
 
 int resolveCowNeverValidTo({DateTime? now}) {

@@ -49,4 +49,9 @@ void main() {
       now.add(const Duration(days: 365)).millisecondsSinceEpoch ~/ 1000,
     );
   });
+
+  test('Vault relayer is available only on supported limit networks', () {
+    expect(cowVaultRelayerForChain(1), cowVaultRelayerAddress);
+    expect(cowVaultRelayerForChain(10), isNull);
+  });
 }

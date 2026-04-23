@@ -180,7 +180,25 @@ class TokenApprovalService {
       // 3. Needs additional approval — notify caller so UI can transition.
       onApprovalNeeded?.call();
 
-      final credentials = await _walletService.getCredentials();
+      final privateKeyHex = await _walletService.getPrivateKey(ownerAddress);
+      if (privateKeyHex == null) {
+        return const TokenApprovalResult(
+          approvalSatisfied: false,
+          error: 'No wallet found for token approval',
+        );
+      }
+      final credentials = EthPrivateKey.fromHex(
+        privateKeyHex.startsWith('0x')
+            ? privateKeyHex.substring(2)
+            : privateKeyHex,
+      );
+      if (credentials.address.hex.toLowerCase() !=
+          ownerAddr.hex.toLowerCase()) {
+        return const TokenApprovalResult(
+          approvalSatisfied: false,
+          error: 'Token approval wallet does not match the selected wallet',
+        );
+      }
 
       final tx = Transaction.callContract(
         contract: contract,

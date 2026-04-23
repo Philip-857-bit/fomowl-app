@@ -287,7 +287,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_isSubmittingLimit) {
       return 'Submitting your signed limit order to the backend...';
     }
-    return 'Limit orders are signed off-chain. You pay no gas to place or cancel; token approval may still need gas before a fill.';
+    return 'You pay no gas to place or cancel a limit order. Your first sell-token approval may still need a network fee.';
   }
 
   bool get _isGaslessSupported {
@@ -826,6 +826,27 @@ class _SwapScreenState extends State<SwapScreen> {
     return 'Gasless swap still needs a one-time $tokenSymbol approval paid in $nativeSymbol.$feeSuffix';
   }
 
+  String _limitApprovalFundingMessage({
+    required Token token,
+    required BlockchainService blockchain,
+    BigInt? estimatedApprovalFeeWei,
+  }) {
+    final nativeSymbol = blockchain.activeChain.symbol;
+    final tokenSymbol = token.symbol;
+    final approxFee =
+        estimatedApprovalFeeWei != null && estimatedApprovalFeeWei > BigInt.zero
+        ? AmountUtils.formatBaseUnits(
+            estimatedApprovalFeeWei,
+            18,
+            maxFractionDigits: 6,
+          )
+        : null;
+    final feeSuffix = approxFee != null && approxFee != '0'
+        ? ' Add about $approxFee $nativeSymbol to continue.'
+        : ' Add a small amount of $nativeSymbol to continue.';
+    return '$tokenSymbol needs a one-time approval before limit orders can use it.$feeSuffix';
+  }
+
   Future<bool> _ensureGaslessApprovalFunding({
     required Token token,
     required SwapQuote quote,
@@ -876,10 +897,10 @@ class _SwapScreenState extends State<SwapScreen> {
     });
   }
 
-  TransactionProgressController _openProgressFlow() {
-    final controller = TransactionProgressController(
-      flow: TransactionProgressFlow.swap,
-    );
+  TransactionProgressController _openProgressFlow({
+    TransactionProgressFlow flow = TransactionProgressFlow.swap,
+  }) {
+    final controller = TransactionProgressController(flow: flow);
     unawaited(
       Navigator.of(context)
           .pushNamed(
@@ -923,6 +944,27 @@ class _SwapScreenState extends State<SwapScreen> {
         );
       }
       return 'Gasless swap still needs a one-time token approval paid in $nativeSymbol.';
+    }
+    if (_activeTab == SwapTab.limit &&
+        (lower.contains('insufficient funds') ||
+            lower.contains('insufficient native gas') ||
+            lower.contains('funds for gas') ||
+            lower.contains('gas required exceeds allowance'))) {
+      final fromToken = _fromToken;
+      if (fromToken != null) {
+        return _limitApprovalFundingMessage(
+          token: fromToken,
+          blockchain: blockchain,
+        );
+      }
+      return 'A one-time token approval needs network gas paid in $nativeSymbol.';
+    }
+    if (lower.contains('insufficientallowance') ||
+        lower.contains('order owner must give allowance') ||
+        lower.contains('token approval is required') ||
+        lower.contains('missing allowance target')) {
+      final tokenSymbol = _fromToken?.symbol ?? 'sell token';
+      return 'Approve $tokenSymbol first, then submit the limit order again.';
     }
     if (lower.contains('insufficient funds')) {
       return 'You do not have enough $nativeSymbol to cover the amount and gas fees.';
@@ -1709,10 +1751,65 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.enterValidAmount);
       return;
     }
+    final allowanceTarget = cowVaultRelayerForChain(chainId);
+    if (allowanceTarget == null || allowanceTarget.isEmpty) {
+      _showError(_limitUnsupportedMessage());
+      return;
+    }
 
     if (_isSubmittingLimit) return;
     setState(() => _isSubmittingLimit = true);
+    TransactionProgressController? progressController;
     try {
+      final approvalResult = await _tokenApprovalService
+          .ensureApproval(
+            token: from,
+            amountWei: makerAmountWei,
+            ownerAddress: _walletAddress!,
+            blockchain: blockchain,
+            allowanceTarget: allowanceTarget,
+            onApprovalNeeded: () {
+              if (!mounted) return;
+              progressController ??= _openProgressFlow(
+                flow: TransactionProgressFlow.generic,
+              );
+              progressController!.setApprovalPending();
+            },
+          )
+          .timeout(_approvalUiTimeout);
+
+      if (!mounted) return;
+
+      if (approvalResult.hasError) {
+        final message = _mapErrorMessage(approvalResult.error);
+        progressController?.setError(message);
+        if (progressController == null) {
+          _showError(message);
+        }
+        return;
+      }
+
+      if (approvalResult.approvalSubmitted &&
+          approvalResult.transactionHash != null) {
+        final txHash = approvalResult.transactionHash!;
+        progressController ??= _openProgressFlow(
+          flow: TransactionProgressFlow.generic,
+        );
+        progressController!.setApprovalPending(
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+        final confirmed = await _waitForTxConfirmation(txHash);
+        if (!confirmed) {
+          progressController!.setError(
+            l.approvalPendingConfirmation,
+            reference: _shortHash(txHash),
+            detailsUrl: _transactionDetailsUrl(txHash),
+          );
+          return;
+        }
+      }
+
       final order = buildCowLimitOrderPayload(
         sellToken: from.contractAddress!,
         buyToken: to.contractAddress!,
@@ -1722,6 +1819,7 @@ class _SwapScreenState extends State<SwapScreen> {
         validTo: _resolveLimitExpirySeconds(),
       );
 
+      progressController?.setSwapSubmitting();
       final typedData = buildCowOrderTypedData(chainId: chainId, order: order);
       final signature = await _walletService.signTypedDataForAddress(
         _walletAddress!,
@@ -1738,12 +1836,31 @@ class _SwapScreenState extends State<SwapScreen> {
       );
 
       if (result == null) {
-        _showError(_swapService.lastError ?? l.tryAgain);
+        final message = _mapErrorMessage(_swapService.lastError ?? l.tryAgain);
+        progressController?.setError(message);
+        if (progressController == null) {
+          _showError(message);
+        }
         return;
       }
-      ToastUtils.showSuccess('Limit order submitted');
+      if (progressController != null) {
+        progressController!.setSuccess();
+      } else {
+        ToastUtils.showSuccess('Limit order submitted');
+      }
+    } on TimeoutException {
+      const message =
+          'Approval or order signing timed out. Reopen your wallet and try again.';
+      progressController?.setError(message);
+      if (progressController == null) {
+        _showError(message);
+      }
     } catch (e) {
-      _showError(_mapErrorMessage(e.toString()));
+      final message = _mapErrorMessage(e.toString());
+      progressController?.setError(message);
+      if (progressController == null) {
+        _showError(message);
+      }
     } finally {
       if (mounted) {
         setState(() => _isSubmittingLimit = false);
@@ -2282,7 +2399,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       key: _limitTabShowcaseKey,
                       title: 'Limit orders',
                       description:
-                          'Use Swap for instant market execution. Use Limit to post an off-chain CoW order that waits for your target price.',
+                          'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
                       child: SwapTabSelector(
                         activeTab: _activeTab,
                         onChanged: (tab) {

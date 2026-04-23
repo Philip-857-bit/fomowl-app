@@ -422,7 +422,7 @@ class LimitTabContent extends StatelessWidget {
           showcaseKey: executionPriceShowcaseKey,
           title: 'Execution price',
           description:
-              'Set the price where your order can fill. CoW solvers execute only if they can satisfy this price or better.',
+              'Set the target price. Your order can fill only at this price or better.',
           child: LimitExecutionCard(
             controller: limitPriceController,
             onChanged: onLimitPriceChanged,
@@ -452,7 +452,7 @@ class LimitTabContent extends StatelessWidget {
           showcaseKey: expiryShowcaseKey,
           title: 'Order expiry',
           description:
-              'Choose how long the order stays open. "Never" is sent as one year because CoW orders have a max validity window.',
+              'Choose how long the order stays open. "Never" keeps it active for up to one year.',
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -521,7 +521,7 @@ class LimitTabContent extends StatelessWidget {
           showcaseKey: summaryShowcaseKey,
           title: 'Order summary',
           description:
-              'Limit order creation and cancellation are off-chain signatures. You pay no gas to place or cancel; token approval may still need gas before a fill.',
+              'Creating or cancelling a limit order costs 0 gas. Your first sell-token approval may still need a network fee.',
           child: SwapPriceDetailsCard(
             priceText: executionPriceText,
             platformFeePercent: platformFeePercent,
