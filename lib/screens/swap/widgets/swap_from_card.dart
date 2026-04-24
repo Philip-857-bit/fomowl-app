@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
+import '../../../widgets/amount_input_mode_toggle.dart';
 import 'swap_token_chip.dart';
 
 class SwapFromCard extends StatelessWidget {
@@ -16,6 +17,9 @@ class SwapFromCard extends StatelessWidget {
   final VoidCallback onSelectToken;
   final void Function(int) onPercentSelected;
   final int? chainId;
+  final AmountInputMode inputMode;
+  final VoidCallback? onToggleInputMode;
+  final String? equivalentText;
 
   const SwapFromCard({
     super.key,
@@ -28,12 +32,19 @@ class SwapFromCard extends StatelessWidget {
     required this.onSelectToken,
     required this.onPercentSelected,
     this.chainId,
+    this.inputMode = AmountInputMode.token,
+    this.onToggleInputMode,
+    this.equivalentText,
   });
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     const percentages = [25, 50, 100];
+    final fiatDisplay = equivalentText ??
+        ValueFormatter.formatCurrencyWithGrouping(
+          ValueFormatter.decimalFromNum(usdValue),
+        );
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -56,6 +67,14 @@ class SwapFromCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (onToggleInputMode != null) ...[
+                AmountInputModeToggle(
+                  mode: inputMode,
+                  tokenSymbol: token?.symbol ?? '',
+                  onToggle: onToggleInputMode!,
+                ),
+                const SizedBox(width: 8),
+              ],
               ...percentages.map(
                 (percent) => Padding(
                   padding: const EdgeInsets.only(left: 8),
@@ -93,6 +112,15 @@ class SwapFromCard extends StatelessWidget {
                       color: const Color(0x4DFFFFFF),
                       height: 2.13,
                     ),
+                    prefixText: inputMode == AmountInputMode.fiat
+                        ? ValueFormatter.currencyPrefix
+                        : null,
+                    prefixStyle: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFFFFFFFF),
+                      height: 2.13,
+                    ),
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -110,9 +138,7 @@ class SwapFromCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                ValueFormatter.formatCurrencyWithGrouping(
-                  ValueFormatter.decimalFromNum(usdValue),
-                ),
+                fiatDisplay,
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: const Color(0xFF71717A),

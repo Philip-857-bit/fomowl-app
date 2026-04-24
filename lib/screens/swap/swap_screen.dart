@@ -24,6 +24,7 @@ import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../../widgets/amount_input_mode_toggle.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
@@ -125,9 +126,16 @@ class _SwapScreenState extends State<SwapScreen> {
 
   String get _currentLimitKind => _isBuyMode ? 'buy' : 'sell';
   final TextEditingController _fromController = TextEditingController();
+  // What the user is typing in the `from` field. May be token or fiat.
+  // `_fromController` is always kept in token units — it's the source of
+  // truth for quotes and limit-order submission.
+  final TextEditingController _fromDisplayController = TextEditingController();
   final TextEditingController _toController = TextEditingController();
   final TextEditingController _limitPriceController = TextEditingController();
   final TextEditingController _limitUsdController = TextEditingController();
+  AmountInputMode _fromInputMode = AmountInputMode.token;
+  AmountInputMode _limitPriceInputMode = AmountInputMode.token;
+  bool _syncingFromDisplay = false;
   final SwapService _swapService = SwapService();
   final WalletService _walletService = WalletService();
   final ReferralService _referralService = ReferralService();
@@ -242,6 +250,18 @@ class _SwapScreenState extends State<SwapScreen> {
     return 0.0;
   }
 
+  String? _fromEquivalentText() {
+    final tokenValue =
+        double.tryParse(_fromController.text.replaceAll(',', '')) ?? 0.0;
+    if (tokenValue <= 0) return null;
+    final tokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
+    if (tokenPriceUsd <= 0) return null;
+    if (_fromInputMode == AmountInputMode.token) {
+      return '≈ ${ValueFormatter.formatCurrencyWithGrouping(ValueFormatter.decimalFromNum(tokenValue * tokenPriceUsd))}';
+    }
+    return '≈ ${ValueFormatter.formatTokenRateAmount(tokenValue)} ${_fromToken?.symbol ?? ''}';
+  }
+
   String _selectedFiatToTokenRateText(Token? token) {
     final symbol = token?.symbol ?? '';
     final tokenPriceUsd = _resolvedTokenUnitPriceUsd(token);
@@ -304,6 +324,7 @@ class _SwapScreenState extends State<SwapScreen> {
     _applySuggestedLimitSide();
     _selectedPercentage = -1;
     _fromController.clear();
+    _syncFromDisplayFromTokenAmount();
     _toController.clear();
     _limitPriceController.clear();
     _limitUsdController.clear();
@@ -417,9 +438,108 @@ class _SwapScreenState extends State<SwapScreen> {
       swapService: _swapService,
     );
     _transactionMonitor = TransactionMonitor();
+    _fromDisplayController.addListener(_handleFromDisplayChanged);
     unawaited(_loadLimitTutorialPreferences());
     _loadWalletBalance();
     _activateSwapLiveTracking();
+  }
+
+  void _handleFromDisplayChanged() {
+    if (_syncingFromDisplay) return;
+    final raw = _fromDisplayController.text.replaceAll(',', '');
+    if (_fromInputMode == AmountInputMode.token) {
+      // In token mode the display controller is the canonical input.
+      _fromController.text = raw;
+      _onFromAmountChanged(raw);
+      return;
+    }
+    // Fiat mode: user types fiat; derive the token amount.
+    final entered = double.tryParse(raw) ?? 0.0;
+    final tokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
+    if (entered <= 0 || tokenPriceUsd <= 0) {
+      _fromController.text = '';
+      _onFromAmountChanged('');
+      return;
+    }
+    final usdValue = ValueFormatter.doubleFromDecimal(
+      ValueFormatter.convertToUsdDecimal(
+        ValueFormatter.decimalFromNum(entered),
+      ),
+    );
+    final tokenAmount = usdValue / tokenPriceUsd;
+    final decimals = _fromToken?.decimals ?? 18;
+    final displayDecimals = decimals > 8 ? 8 : decimals;
+    var tokenText = tokenAmount.toStringAsFixed(displayDecimals);
+    while (tokenText.contains('.') && tokenText.endsWith('0')) {
+      tokenText = tokenText.substring(0, tokenText.length - 1);
+    }
+    if (tokenText.endsWith('.')) {
+      tokenText = tokenText.substring(0, tokenText.length - 1);
+    }
+    _fromController.text = tokenText;
+    _onFromAmountChanged(tokenText);
+  }
+
+  void _syncFromDisplayFromTokenAmount() {
+    _syncingFromDisplay = true;
+    final tokenText = _fromController.text;
+    if (_fromInputMode == AmountInputMode.token) {
+      if (_fromDisplayController.text != tokenText) {
+        _fromDisplayController.text = tokenText;
+      }
+    } else {
+      final tokenValue = double.tryParse(tokenText.replaceAll(',', '')) ?? 0.0;
+      final tokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
+      if (tokenValue > 0 && tokenPriceUsd > 0) {
+        final fiatValue = ValueFormatter.doubleFromDecimal(
+          ValueFormatter.convertFromUsdDecimal(
+            ValueFormatter.decimalFromNum(tokenValue * tokenPriceUsd),
+          ),
+        );
+        _fromDisplayController.text = fiatValue.toStringAsFixed(2);
+      } else {
+        _fromDisplayController.text = '';
+      }
+    }
+    _syncingFromDisplay = false;
+  }
+
+  void _toggleFromInputMode() {
+    final tokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
+    if (tokenPriceUsd <= 0 && _fromInputMode == AmountInputMode.token) {
+      ToastUtils.showError(
+        'Price unavailable for ${_fromToken?.symbol ?? 'this token'}',
+      );
+      return;
+    }
+    setState(() {
+      _fromInputMode = _fromInputMode == AmountInputMode.token
+          ? AmountInputMode.fiat
+          : AmountInputMode.token;
+    });
+    _syncFromDisplayFromTokenAmount();
+  }
+
+  void _toggleLimitPriceInputMode() {
+    final quotePriceUsd = _resolvedTokenUnitPriceUsd(_limitQuoteToken);
+    if (quotePriceUsd <= 0 && _limitPriceInputMode == AmountInputMode.token) {
+      ToastUtils.showError(
+        'Price unavailable for ${_limitQuoteToken?.symbol ?? 'the quote token'}',
+      );
+      return;
+    }
+    setState(() {
+      _limitPriceInputMode = _limitPriceInputMode == AmountInputMode.token
+          ? AmountInputMode.fiat
+          : AmountInputMode.token;
+    });
+    // Refresh the fiat field from the canonical token price, so switching
+    // into fiat mode shows the current equivalent rather than stale text.
+    final limitPriceValue =
+        double.tryParse(_limitPriceController.text.replaceAll(',', '')) ?? 0.0;
+    if (limitPriceValue > 0) {
+      _syncLimitUsdField(limitPriceValue);
+    }
   }
 
   Future<void> _loadLimitTutorialPreferences() async {
@@ -594,6 +714,12 @@ class _SwapScreenState extends State<SwapScreen> {
           _fromToken = selectedToken;
           _selectedPercentage = -1;
           _fromController.clear();
+          // If the new token has no USD price, drop back to token mode.
+          if (_fromInputMode == AmountInputMode.fiat &&
+              _resolvedTokenUnitPriceUsd(selectedToken) <= 0) {
+            _fromInputMode = AmountInputMode.token;
+          }
+          _syncFromDisplayFromTokenAmount();
           _selectedLimitPriceAdjustment = 0;
           _limitPriceController.clear();
           _limitUsdController.clear();
@@ -623,6 +749,8 @@ class _SwapScreenState extends State<SwapScreen> {
 
   @override
   void dispose() {
+    _fromDisplayController.removeListener(_handleFromDisplayChanged);
+    _fromDisplayController.dispose();
     _fromController.dispose();
     _toController.dispose();
     _limitPriceController.dispose();
@@ -662,6 +790,7 @@ class _SwapScreenState extends State<SwapScreen> {
           ? _formatDecimalInput(amount, displayDecimals)
           : '0';
     });
+    _syncFromDisplayFromTokenAmount();
     if (amount > Decimal.zero) {
       if (_activeTab == SwapTab.limit) {
         _updateLimitPreview();
@@ -854,6 +983,7 @@ class _SwapScreenState extends State<SwapScreen> {
     _toController.clear();
     if (clearInputAmounts) {
       _fromController.clear();
+      _syncFromDisplayFromTokenAmount();
       _selectedPercentage = -1;
       _selectedLimitPriceAdjustment = 0;
     }
@@ -2712,11 +2842,17 @@ class _SwapScreenState extends State<SwapScreen> {
                     if (_activeTab == SwapTab.swap)
                       SwapTabContent(
                         blockchain: blockchain,
-                        fromController: _fromController,
+                        fromController: _fromDisplayController,
                         fromToken: _fromToken,
                         fromUsdValue: fromUsdValue,
                         selectedPercentage: _selectedPercentage,
-                        onAmountChanged: _onFromAmountChanged,
+                        onAmountChanged: (_) {},
+                        fromInputMode: _fromInputMode,
+                        onToggleFromInputMode:
+                            _resolvedTokenUnitPriceUsd(_fromToken) > 0
+                                ? _toggleFromInputMode
+                                : null,
+                        fromEquivalentText: _fromEquivalentText(),
                         onSelectFromToken: () => _showTokenSelector(true),
                         onPercentSelected: _setPercentage,
                         onSwapTokens: _swapTokens,
@@ -2757,11 +2893,22 @@ class _SwapScreenState extends State<SwapScreen> {
                     else
                       LimitTabContent(
                         blockchain: blockchain,
-                        fromController: _fromController,
+                        fromController: _fromDisplayController,
                         fromToken: _fromToken,
                         fromUsdValue: fromUsdValue,
                         selectedPercentage: _selectedPercentage,
-                        onAmountChanged: _onFromAmountChanged,
+                        onAmountChanged: (_) {},
+                        fromInputMode: _fromInputMode,
+                        onToggleFromInputMode:
+                            _resolvedTokenUnitPriceUsd(_fromToken) > 0
+                                ? _toggleFromInputMode
+                                : null,
+                        fromEquivalentText: _fromEquivalentText(),
+                        limitPriceInputMode: _limitPriceInputMode,
+                        onToggleLimitPriceInputMode:
+                            _resolvedTokenUnitPriceUsd(_limitQuoteToken) > 0
+                                ? _toggleLimitPriceInputMode
+                                : null,
                         onSelectFromToken: () => _showTokenSelector(true),
                         onPercentSelected: _setPercentage,
                         onSwapTokens: _swapTokens,

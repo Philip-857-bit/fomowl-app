@@ -6,6 +6,7 @@ import '../../../models/token.dart';
 import '../../../services/swap_service.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../utils/amount_utils.dart';
+import '../../../widgets/amount_input_mode_toggle.dart';
 import 'swap_from_card.dart';
 import 'swap_to_card.dart';
 import 'swap_direction_button.dart';
@@ -48,6 +49,9 @@ class SwapTabContent extends StatelessWidget {
   final bool showGaslessToggle;
   final bool isGasless;
   final ValueChanged<bool> onGaslessChanged;
+  final AmountInputMode fromInputMode;
+  final VoidCallback? onToggleFromInputMode;
+  final String? fromEquivalentText;
 
   const SwapTabContent({
     super.key,
@@ -83,6 +87,9 @@ class SwapTabContent extends StatelessWidget {
     required this.showGaslessToggle,
     required this.isGasless,
     required this.onGaslessChanged,
+    this.fromInputMode = AmountInputMode.token,
+    this.onToggleFromInputMode,
+    this.fromEquivalentText,
   });
 
   @override
@@ -111,6 +118,9 @@ class SwapTabContent extends StatelessWidget {
                   onSelectToken: onSelectFromToken,
                   onPercentSelected: onPercentSelected,
                   chainId: blockchain.activeChain.chainId,
+                  inputMode: fromInputMode,
+                  onToggleInputMode: onToggleFromInputMode,
+                  equivalentText: fromEquivalentText,
                 ),
                 const SizedBox(height: 12),
                 SwapToCard(
@@ -647,6 +657,11 @@ class LimitTabContent extends StatelessWidget {
   final bool is24hSelected;
   final bool is7dSelected;
   final bool isNeverSelected;
+  final AmountInputMode fromInputMode;
+  final VoidCallback? onToggleFromInputMode;
+  final String? fromEquivalentText;
+  final AmountInputMode limitPriceInputMode;
+  final VoidCallback? onToggleLimitPriceInputMode;
 
   const LimitTabContent({
     super.key,
@@ -716,6 +731,11 @@ class LimitTabContent extends StatelessWidget {
     required this.is24hSelected,
     required this.is7dSelected,
     required this.isNeverSelected,
+    this.fromInputMode = AmountInputMode.token,
+    this.onToggleFromInputMode,
+    this.fromEquivalentText,
+    this.limitPriceInputMode = AmountInputMode.token,
+    this.onToggleLimitPriceInputMode,
   });
 
   @override
@@ -799,6 +819,9 @@ class LimitTabContent extends StatelessWidget {
                     onSelectToken: onSelectFromToken,
                     onPercentSelected: onPercentSelected,
                     chainId: blockchain.activeChain.chainId,
+                    inputMode: fromInputMode,
+                    onToggleInputMode: onToggleFromInputMode,
+                    equivalentText: fromEquivalentText,
                   ),
                   const SizedBox(height: 12),
                   SwapToCard(
@@ -899,6 +922,8 @@ class LimitTabContent extends StatelessWidget {
             priceDeviationLabel: priceDeviationLabel,
             usdController: limitUsdController,
             onUsdChanged: onLimitUsdChanged,
+            priceInputMode: limitPriceInputMode,
+            onToggleInputMode: onToggleLimitPriceInputMode,
           ),
         ),
         const SizedBox(height: 24),

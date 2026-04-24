@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
+import '../../../../widgets/amount_input_mode_toggle.dart';
 
 class AmountInputField extends StatelessWidget {
   final TextEditingController controller;
@@ -10,6 +11,10 @@ class AmountInputField extends StatelessWidget {
   final VoidCallback onMaxTap;
   final String fiatValueText;
   final String rateText;
+  final AmountInputMode inputMode;
+  final VoidCallback? onToggleInputMode;
+  final String inputSuffixLabel;
+  final String equivalentText;
 
   const AmountInputField({
     super.key,
@@ -19,10 +24,15 @@ class AmountInputField extends StatelessWidget {
     required this.onMaxTap,
     this.fiatValueText = '',
     this.rateText = '',
+    this.inputMode = AmountInputMode.token,
+    this.onToggleInputMode,
+    this.inputSuffixLabel = '',
+    this.equivalentText = '',
   });
 
   @override
   Widget build(BuildContext context) {
+    final suffix = inputSuffixLabel.isNotEmpty ? inputSuffixLabel : tokenSymbol;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -38,13 +48,26 @@ class AmountInputField extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.5),
               ),
             ),
-            Text(
-              'Available: ${availableBalance.toStringAsFixed(2)} $tokenSymbol',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onToggleInputMode != null) ...[
+                  AmountInputModeToggle(
+                    mode: inputMode,
+                    tokenSymbol: tokenSymbol,
+                    onToggle: onToggleInputMode!,
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Text(
+                  'Available: ${availableBalance.toStringAsFixed(2)} $tokenSymbol',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -79,7 +102,7 @@ class AmountInputField extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    tokenSymbol,
+                    suffix,
                     style: GoogleFonts.outfit(
                       fontSize: 16,
                       color: Colors.white.withValues(alpha: 0.45),
@@ -104,23 +127,22 @@ class AmountInputField extends StatelessWidget {
             ),
           ),
         ),
-        if (fiatValueText.isNotEmpty || rateText.isNotEmpty) ...[
+        if (equivalentText.isNotEmpty ||
+            fiatValueText.isNotEmpty ||
+            rateText.isNotEmpty) ...[
           const SizedBox(height: 8),
           Row(
             children: [
-              if (fiatValueText.isNotEmpty)
-                Expanded(
-                  child: Text(
-                    fiatValueText,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.5),
-                    ),
+              Expanded(
+                child: Text(
+                  equivalentText.isNotEmpty ? equivalentText : fiatValueText,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
-                )
-              else
-                const Spacer(),
+                ),
+              ),
               if (rateText.isNotEmpty)
                 Flexible(
                   child: Text(

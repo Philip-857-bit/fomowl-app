@@ -10,6 +10,7 @@ import '../../services/currency_controller.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../../widgets/amount_input_mode_toggle.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/address_input_field.dart';
@@ -27,10 +28,15 @@ class SendTokenScreen extends StatefulWidget {
 
 class _SendTokenScreenState extends State<SendTokenScreen> {
   final TextEditingController _addressController = TextEditingController();
+  // Canonical amount in token units — source of truth for submission.
   final TextEditingController _amountController = TextEditingController();
+  // What the user is physically typing; may be in fiat or token units.
+  final TextEditingController _displayController = TextEditingController();
   final WalletService _walletService = WalletService();
 
   Token? _selectedToken;
+  AmountInputMode _inputMode = AmountInputMode.token;
+  bool _syncingDisplay = false;
 
   double _availableBalance = 0.0;
   BigInt _availableBalanceBaseUnits = BigInt.zero;
@@ -38,22 +44,96 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   @override
   void initState() {
     super.initState();
-    _amountController.addListener(_handleAmountChanged);
+    _displayController.addListener(_handleDisplayChanged);
     _loadDefaultToken();
   }
 
   @override
   void dispose() {
     _addressController.dispose();
-    _amountController.removeListener(_handleAmountChanged);
+    _displayController.removeListener(_handleDisplayChanged);
+    _displayController.dispose();
     _amountController.dispose();
     super.dispose();
   }
 
-  void _handleAmountChanged() {
-    if (mounted) {
-      setState(() {});
+  void _handleDisplayChanged() {
+    if (_syncingDisplay) return;
+    final raw = _displayController.text.replaceAll(',', '');
+    final entered = double.tryParse(raw) ?? 0.0;
+    final tokenUsdPrice = _currentTokenUsdPrice();
+    String tokenAmountText;
+    if (_inputMode == AmountInputMode.token) {
+      tokenAmountText = raw;
+    } else if (entered > 0 && tokenUsdPrice > 0) {
+      final usdValue = ValueFormatter.doubleFromDecimal(
+        ValueFormatter.convertToUsdDecimal(
+          ValueFormatter.decimalFromNum(entered),
+        ),
+      );
+      final tokenAmount = usdValue / tokenUsdPrice;
+      final decimals = _selectedToken?.decimals ?? 18;
+      final displayDecimals = decimals > 8 ? 8 : decimals;
+      tokenAmountText = tokenAmount.toStringAsFixed(displayDecimals);
+      tokenAmountText = _trimTrailingZeros(tokenAmountText);
+    } else {
+      tokenAmountText = '';
     }
+    _amountController.text = tokenAmountText;
+    if (mounted) setState(() {});
+  }
+
+  String _trimTrailingZeros(String value) {
+    var output = value;
+    while (output.contains('.') && output.endsWith('0')) {
+      output = output.substring(0, output.length - 1);
+    }
+    if (output.endsWith('.')) {
+      output = output.substring(0, output.length - 1);
+    }
+    return output;
+  }
+
+  double _currentTokenUsdPrice() {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    return _selectedTokenUsdPrice(blockchain);
+  }
+
+  void _setDisplayFromTokenAmount(String tokenAmount) {
+    _syncingDisplay = true;
+    if (_inputMode == AmountInputMode.token) {
+      _displayController.text = tokenAmount;
+    } else {
+      final tokenValue = double.tryParse(tokenAmount) ?? 0.0;
+      final tokenUsdPrice = _currentTokenUsdPrice();
+      if (tokenValue > 0 && tokenUsdPrice > 0) {
+        final fiatValue = ValueFormatter.doubleFromDecimal(
+          ValueFormatter.convertFromUsdDecimal(
+            ValueFormatter.decimalFromNum(tokenValue * tokenUsdPrice),
+          ),
+        );
+        _displayController.text = fiatValue.toStringAsFixed(2);
+      } else {
+        _displayController.text = '';
+      }
+    }
+    _syncingDisplay = false;
+  }
+
+  void _toggleInputMode() {
+    final tokenUsdPrice = _currentTokenUsdPrice();
+    if (tokenUsdPrice <= 0 && _inputMode == AmountInputMode.token) {
+      ToastUtils.showError(
+        'Price unavailable for ${_selectedToken?.symbol ?? 'this token'}',
+      );
+      return;
+    }
+    setState(() {
+      _inputMode = _inputMode == AmountInputMode.token
+          ? AmountInputMode.fiat
+          : AmountInputMode.token;
+    });
+    _setDisplayFromTokenAmount(_amountController.text);
   }
 
   Future<void> _loadDefaultToken() async {
@@ -133,19 +213,26 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           token.balance.toString(),
           token.decimals,
         );
+        // Fall back to token mode if the new token has no USD price.
+        if (_inputMode == AmountInputMode.fiat &&
+            _currentTokenUsdPrice() <= 0) {
+          _inputMode = AmountInputMode.token;
+        }
       });
+      _setDisplayFromTokenAmount(_amountController.text);
     }
   }
 
   void _setMax() {
     final decimals = _selectedToken?.decimals ?? 18;
-    setState(() {
-      _amountController.text = AmountUtils.formatBaseUnits(
-        _availableBalanceBaseUnits,
-        decimals,
-        maxFractionDigits: decimals,
-      );
-    });
+    final tokenText = AmountUtils.formatBaseUnits(
+      _availableBalanceBaseUnits,
+      decimals,
+      maxFractionDigits: decimals,
+    );
+    _amountController.text = tokenText;
+    _setDisplayFromTokenAmount(tokenText);
+    if (mounted) setState(() {});
   }
 
   void _openQrScanner() {
@@ -244,20 +331,35 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     );
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
-    final enteredAmount = double.tryParse(
+    final tokenAmount = double.tryParse(
       _amountController.text.replaceAll(',', ''),
     );
     final tokenUsdPrice = _selectedTokenUsdPrice(blockchain);
-    final fiatAmountText =
-        enteredAmount != null && enteredAmount > 0 && tokenUsdPrice > 0
-        ? ValueFormatter.formatCurrencyWithGrouping(
-            ValueFormatter.decimalFromNum(enteredAmount * tokenUsdPrice),
-          )
+    final tokenSymbol = _selectedToken?.symbol ?? '';
+
+    // Equivalent shown beneath the input:
+    //   token mode → equivalent fiat value
+    //   fiat mode  → equivalent token amount
+    String equivalentText = '';
+    if (tokenAmount != null && tokenAmount > 0 && tokenUsdPrice > 0) {
+      if (_inputMode == AmountInputMode.token) {
+        equivalentText = '≈ ${ValueFormatter.formatCurrencyWithGrouping(
+          ValueFormatter.decimalFromNum(tokenAmount * tokenUsdPrice),
+        )}';
+      } else {
+        equivalentText =
+            '≈ ${ValueFormatter.formatTokenRateAmount(tokenAmount)} $tokenSymbol';
+      }
+    }
+
+    final tokenRateText = tokenUsdPrice > 0 && tokenSymbol.isNotEmpty
+        ? '1 ${ValueFormatter.currencyCode} -> ${ValueFormatter.formatTokenRateAmount(ValueFormatter.doubleFromDecimal(ValueFormatter.convertToUsdDecimal(Decimal.one)) / tokenUsdPrice)} $tokenSymbol'
         : '';
-    final tokenRateText =
-        tokenUsdPrice > 0 && (_selectedToken?.symbol ?? '').isNotEmpty
-        ? '1 ${ValueFormatter.currencyCode} -> ${ValueFormatter.formatTokenRateAmount(ValueFormatter.doubleFromDecimal(ValueFormatter.convertToUsdDecimal(Decimal.one)) / tokenUsdPrice)} ${_selectedToken!.symbol}'
-        : '';
+
+    final inputSuffix = _inputMode == AmountInputMode.token
+        ? tokenSymbol
+        : ValueFormatter.currencyCode;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -291,11 +393,16 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                     const SizedBox(height: 26),
 
                     AmountInputField(
-                      controller: _amountController,
+                      controller: _displayController,
                       availableBalance: _availableBalance,
-                      tokenSymbol: _selectedToken?.symbol ?? '',
+                      tokenSymbol: tokenSymbol,
                       onMaxTap: _setMax,
-                      fiatValueText: fiatAmountText,
+                      inputMode: _inputMode,
+                      onToggleInputMode: tokenUsdPrice > 0
+                          ? _toggleInputMode
+                          : null,
+                      inputSuffixLabel: inputSuffix,
+                      equivalentText: equivalentText,
                       rateText: tokenRateText,
                     ),
                   ],

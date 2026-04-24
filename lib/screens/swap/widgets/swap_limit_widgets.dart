@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../models/chain.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
+import '../../../widgets/amount_input_mode_toggle.dart';
 import 'swap_figma_icons.dart';
 import 'swap_token_chip.dart';
 
@@ -200,9 +201,10 @@ class _ChainLogo extends StatelessWidget {
 }
 
 /// The execution price card for limit orders.
-/// Both the token-price field and the USD field are editable.
-/// When the user edits the USD field, [onUsdChanged] fires and the
-/// parent recalculates the token price from the USD value.
+/// Either the token-price field OR the fiat field is the editable primary,
+/// depending on [priceInputMode]; the other row becomes a read-only
+/// equivalent. The primary controller — which the parent reads to submit —
+/// always holds the token price regardless of which field is visible.
 class LimitExecutionCard extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -218,12 +220,19 @@ class LimitExecutionCard extends StatelessWidget {
   /// Percentage deviation from market price (e.g. "+1.2%").
   final String? priceDeviationLabel;
 
-  /// Optional controller for the USD input field.
-  /// When provided the USD row becomes editable.
+  /// Optional controller for the fiat input field.
+  /// When provided AND [priceInputMode] is fiat, this field becomes the
+  /// editable primary.
   final TextEditingController? usdController;
 
-  /// Fires when the user types in the USD field.
+  /// Fires when the user types in the fiat field.
   final ValueChanged<String>? onUsdChanged;
+
+  /// Which input is currently editable / primary.
+  final AmountInputMode priceInputMode;
+
+  /// Fires when the user taps the token/fiat toggle.
+  final VoidCallback? onToggleInputMode;
 
   const LimitExecutionCard({
     super.key,
@@ -236,11 +245,16 @@ class LimitExecutionCard extends StatelessWidget {
     this.priceDeviationLabel,
     this.usdController,
     this.onUsdChanged,
+    this.priceInputMode = AmountInputMode.token,
+    this.onToggleInputMode,
   });
 
   @override
   Widget build(BuildContext context) {
     final fiatPrefix = ValueFormatter.currencyPrefix;
+    final isFiatPrimary = priceInputMode == AmountInputMode.fiat &&
+        usdController != null &&
+        onUsdChanged != null;
     return Container(
       constraints: const BoxConstraints(minHeight: 115),
       padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
@@ -256,75 +270,96 @@ class LimitExecutionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'When $targetTokenSymbol is worth',
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: const Color(0xFFC8C6C5),
-                    height: 1.5,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'When $targetTokenSymbol is worth',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: const Color(0xFFC8C6C5),
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                    if (onToggleInputMode != null && usdController != null)
+                      AmountInputModeToggle(
+                        mode: priceInputMode,
+                        tokenSymbol: quoteToken?.symbol ?? '',
+                        onToggle: onToggleInputMode!,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 4),
-                TextField(
-                  controller: controller,
-                  onChanged: onChanged,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    color: const Color(0xFFE2E2E2),
-                    height: 1.87,
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '0.0',
-                    hintStyle: GoogleFonts.inter(
+                if (isFiatPrimary) ...[
+                  TextField(
+                    controller: usdController,
+                    onChanged: onUsdChanged,
+                    style: GoogleFonts.inter(
                       fontSize: 15,
                       color: const Color(0xFFE2E2E2),
                       height: 1.87,
                     ),
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    maxLines: 1,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '0.00',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: const Color(0xFFE2E2E2),
+                        height: 1.87,
+                      ),
+                      prefixText: fiatPrefix,
+                      prefixStyle: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: const Color(0xFFE2E2E2),
+                        height: 1.87,
+                      ),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
-                ),
-                // Editable USD row
-                if (usdController != null && onUsdChanged != null)
                   SizedBox(
                     height: 20,
-                    child: TextField(
-                      controller: usdController,
-                      onChanged: onUsdChanged,
+                    child: Text(
+                      controller.text.isEmpty
+                          ? '0 ${quoteToken?.symbol ?? ''}'
+                          : '${controller.text} ${quoteToken?.symbol ?? ''}',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: const Color(0xFFE2E2E2),
-                        height: 1.33,
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      maxLines: 1,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        hintText: '0.00',
-                        hintStyle: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: const Color(0xFF71717A),
-                          height: 1.33,
-                        ),
-                        prefixText: fiatPrefix,
-                        prefixStyle: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: const Color(0xFFE2E2E2),
-                          height: 1.33,
-                        ),
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
+                        color: const Color(0xFF71717A),
+                        height: 1.67,
                       ),
                     ),
-                  )
-                else
+                  ),
+                ] else ...[
+                  TextField(
+                    controller: controller,
+                    onChanged: onChanged,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: const Color(0xFFE2E2E2),
+                      height: 1.87,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    maxLines: 1,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: '0.0',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: const Color(0xFFE2E2E2),
+                        height: 1.87,
+                      ),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                   Text(
                     targetPriceUsdLabel,
                     style: GoogleFonts.inter(
@@ -333,6 +368,7 @@ class LimitExecutionCard extends StatelessWidget {
                       height: 2.33,
                     ),
                   ),
+                ],
               ],
             ),
           ),
