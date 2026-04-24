@@ -2850,8 +2850,8 @@ class _SwapScreenState extends State<SwapScreen> {
                         fromInputMode: _fromInputMode,
                         onToggleFromInputMode:
                             _resolvedTokenUnitPriceUsd(_fromToken) > 0
-                                ? _toggleFromInputMode
-                                : null,
+                            ? _toggleFromInputMode
+                            : null,
                         fromEquivalentText: _fromEquivalentText(),
                         onSelectFromToken: () => _showTokenSelector(true),
                         onPercentSelected: _setPercentage,
@@ -2901,14 +2901,14 @@ class _SwapScreenState extends State<SwapScreen> {
                         fromInputMode: _fromInputMode,
                         onToggleFromInputMode:
                             _resolvedTokenUnitPriceUsd(_fromToken) > 0
-                                ? _toggleFromInputMode
-                                : null,
+                            ? _toggleFromInputMode
+                            : null,
                         fromEquivalentText: _fromEquivalentText(),
                         limitPriceInputMode: _limitPriceInputMode,
                         onToggleLimitPriceInputMode:
                             _resolvedTokenUnitPriceUsd(_limitQuoteToken) > 0
-                                ? _toggleLimitPriceInputMode
-                                : null,
+                            ? _toggleLimitPriceInputMode
+                            : null,
                         onSelectFromToken: () => _showTokenSelector(true),
                         onPercentSelected: _setPercentage,
                         onSwapTokens: _swapTokens,

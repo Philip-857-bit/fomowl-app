@@ -343,9 +343,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     String equivalentText = '';
     if (tokenAmount != null && tokenAmount > 0 && tokenUsdPrice > 0) {
       if (_inputMode == AmountInputMode.token) {
-        equivalentText = '≈ ${ValueFormatter.formatCurrencyWithGrouping(
-          ValueFormatter.decimalFromNum(tokenAmount * tokenUsdPrice),
-        )}';
+        equivalentText =
+            '≈ ${ValueFormatter.formatCurrencyWithGrouping(ValueFormatter.decimalFromNum(tokenAmount * tokenUsdPrice))}';
       } else {
         equivalentText =
             '≈ ${ValueFormatter.formatTokenRateAmount(tokenAmount)} $tokenSymbol';
