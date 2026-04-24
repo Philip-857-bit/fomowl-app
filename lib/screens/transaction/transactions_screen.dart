@@ -660,7 +660,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   List<WalletHistoryEntry> get _filteredHistory {
     return _allHistory.where((entry) {
       final matchesType =
-          _selectedType == 'all' || entry.eventType == _selectedType;
+          _selectedType == 'all' ||
+          entry.eventType == _selectedType ||
+          (_selectedType == 'swap' && entry.eventType == 'limit');
       final matchesChain =
           _selectedChainId == null || entry.chainId == _selectedChainId;
       return matchesType && matchesChain;
@@ -761,6 +763,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         return l.historyTransferSent;
       case 'swap':
         return l.swapCompletedTitle;
+      case 'limit':
+        final title = entry.title.trim();
+        return title.isNotEmpty ? title : l.swapCompletedTitle;
       default:
         final title = entry.title.trim();
         return title.isNotEmpty ? title : l.transactionDetails;
@@ -791,6 +796,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         return l.historyActivityOnNetwork(networkName);
       case 'swap':
         return l.historySwapOnNetwork(networkName);
+      case 'limit':
+        final message = entry.message.trim();
+        return message.isNotEmpty
+            ? message
+            : l.historyActivityOnNetwork(networkName);
       default:
         final message = entry.message.trim();
         return message.isNotEmpty
@@ -829,6 +839,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   IconData _entryIcon(WalletHistoryEntry entry) {
     switch (entry.eventType) {
       case 'swap':
+      case 'limit':
         return Icons.compare_arrows;
       case 'send':
         return Icons.arrow_upward;
@@ -840,6 +851,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Color _entryColor(WalletHistoryEntry entry) {
     switch (entry.eventType) {
       case 'swap':
+      case 'limit':
         return Colors.white;
       case 'send':
         return AppColors.accentRed;
@@ -854,7 +866,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     if (amount == null || tokenSymbol == null || tokenSymbol.isEmpty) {
       return '';
     }
-    final prefix = entry.eventType == 'swap'
+    final prefix = entry.eventType == 'swap' || entry.eventType == 'limit'
         ? ''
         : (entry.isIncoming ? '+' : '-');
     return '$prefix ${_trimAmount(amount)} $tokenSymbol';
@@ -1186,7 +1198,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: entry.eventType == 'swap'
+                              color:
+                                  entry.eventType == 'swap' ||
+                                      entry.eventType == 'limit'
                                   ? Colors.white
                                   : _entryColor(entry),
                             ),

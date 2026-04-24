@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/chain.dart';
 import '../../../models/token.dart';
+import '../../../utils/value_formatter.dart';
 import 'swap_figma_icons.dart';
 import 'swap_token_chip.dart';
 
@@ -239,6 +240,7 @@ class LimitExecutionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fiatPrefix = ValueFormatter.currencyPrefix;
     return Container(
       constraints: const BoxConstraints(minHeight: 115),
       padding: const EdgeInsets.fromLTRB(20, 20, 16, 20),
@@ -305,13 +307,13 @@ class LimitExecutionCard extends StatelessWidget {
                       maxLines: 1,
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: '\$0.00',
+                        hintText: '0.00',
                         hintStyle: GoogleFonts.inter(
                           fontSize: 12,
                           color: const Color(0xFF71717A),
                           height: 1.33,
                         ),
-                        prefixText: '\$',
+                        prefixText: fiatPrefix,
                         prefixStyle: GoogleFonts.inter(
                           fontSize: 12,
                           color: const Color(0xFFE2E2E2),

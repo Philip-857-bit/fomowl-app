@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +9,7 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/currency_controller.dart';
 import '../../services/wallet_history_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_notification_service.dart';
@@ -79,6 +81,31 @@ class _TransferConfirmationScreenState
       } catch (_) {}
     }
     return null;
+  }
+
+  double _tokenUsdPrice(BlockchainService blockchain, Token? token) {
+    if (token == null) {
+      return 0.0;
+    }
+    if (token.unitPriceUsd > 0) {
+      return token.unitPriceUsd;
+    }
+    final selectedAddress = (token.contractAddress ?? '').toLowerCase();
+    for (final candidate in blockchain.tokens) {
+      final candidateAddress = (candidate.contractAddress ?? '').toLowerCase();
+      if (selectedAddress.isNotEmpty &&
+          selectedAddress == candidateAddress &&
+          candidate.unitPriceUsd > 0) {
+        return candidate.unitPriceUsd;
+      }
+      if (selectedAddress.isEmpty &&
+          candidateAddress.isEmpty &&
+          candidate.symbol.toUpperCase() == token.symbol.toUpperCase() &&
+          candidate.unitPriceUsd > 0) {
+        return candidate.unitPriceUsd;
+      }
+    }
+    return 0.0;
   }
 
   Future<void> _loadFromAddress() async {
@@ -365,6 +392,9 @@ class _TransferConfirmationScreenState
 
   @override
   Widget build(BuildContext context) {
+    context.select<CurrencyController, String>(
+      (controller) => controller.currencyCode,
+    );
     final token = _args?['token'] as Token?;
     final toAddress = _args?['toAddress'] as String? ?? '';
     final amountText = _args?['amount'] as String? ?? '0';
@@ -382,6 +412,21 @@ class _TransferConfirmationScreenState
       amountInBaseUnits,
       token?.decimals ?? 18,
     );
+    final tokenUsdPrice = _tokenUsdPrice(blockchain, token);
+    final amountValueText = tokenUsdPrice > 0
+        ? ValueFormatter.formatCurrencyWithGrouping(
+            ValueFormatter.decimalFromNum(
+              (double.tryParse(parsedAmount) ?? 0.0) * tokenUsdPrice,
+            ),
+          )
+        : '';
+    final tokenRateText = tokenUsdPrice > 0 && symbol.isNotEmpty
+        ? '1 ${ValueFormatter.currencyCode} -> ${ValueFormatter.formatTokenRateAmount(ValueFormatter.doubleFromDecimal(ValueFormatter.convertToUsdDecimal(Decimal.one)) / tokenUsdPrice)} $symbol'
+        : '';
+    final amountSubtitle = [
+      if (amountValueText.isNotEmpty) amountValueText,
+      if (tokenRateText.isNotEmpty) tokenRateText,
+    ].join(' • ');
     final maxTotalDisplay = isNative
         ? '${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? 18)} $symbol'
         : '$amountText $symbol';
@@ -459,6 +504,7 @@ class _TransferConfirmationScreenState
                             AmountSummary(
                               amountText: parsedAmount,
                               symbol: symbol,
+                              subtitle: amountSubtitle,
                             ),
                             const SizedBox(height: 28),
                             Align(

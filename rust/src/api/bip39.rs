@@ -2,7 +2,11 @@ use bip39::{Mnemonic, Language};
 use rand::Rng;
 
 pub fn generate_mnemonic() -> String {
-    // Generate a new 12-word mnemonic phrase (128 bits of entropy)
+    // Generate a new 12-word mnemonic phrase (128 bits of entropy).
+    // rand::rng() in rand 0.10 returns a ThreadRng that is TryCryptoRng — a
+    // reseeding CSPRNG seeded from the OS (SysRng/getrandom). That is the
+    // correct source for mnemonic entropy; do not swap it for a user-space
+    // generator.
     let mut entropy = [0u8; 16];
     rand::rng().fill_bytes(&mut entropy);
     let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy)

@@ -11,6 +11,7 @@ import '../../services/cow_limit_order_signing.dart';
 import '../../services/swap_service.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/currency_controller.dart';
 import '../../services/token_approval_service.dart';
 import '../../services/swap_execution_service.dart';
 import '../../services/token_visibility_service.dart';
@@ -22,6 +23,7 @@ import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
+import '../../utils/value_formatter.dart';
 import 'dart:convert';
 import 'dart:async';
 import '../transaction/transaction_processing_screen.dart';
@@ -113,6 +115,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _hasManualLimitSideSelection = true;
       _limitPriceController.clear();
       _limitUsdController.clear();
+      _selectedLimitPriceAdjustment = 0;
       _toController.clear();
       _platformFeeUsd = 0.0;
       _feeUsd = 0.0;
@@ -154,6 +157,8 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _limitTutorialControlHidden = false;
   List<LimitOrderSummary> _limitOrders = const [];
   final Set<String> _cancellingLimitOrderIds = <String>{};
+  int _selectedLimitPriceAdjustment = 0;
+  String? _lastFiatCurrencyCode;
 
   /// Whether the +/- price adjustment chips are in positive mode.
   bool _isPositiveAdjust = false;
@@ -219,6 +224,40 @@ class _SwapScreenState extends State<SwapScreen> {
     return '1 $from $_priceSeparator ${outAmount.toStringAsFixed(6)} $to';
   }
 
+  double _resolvedTokenUnitPriceUsd(Token? token) {
+    if (token == null) {
+      return 0.0;
+    }
+    final directPrice = token.unitPriceUsd;
+    if (directPrice > 0) {
+      return directPrice;
+    }
+    final coinGeckoId = token.coinGeckoId;
+    if (coinGeckoId != null && coinGeckoId.isNotEmpty) {
+      final cached = _tokenPriceCache[coinGeckoId];
+      if (cached != null && cached > 0) {
+        return cached;
+      }
+    }
+    return 0.0;
+  }
+
+  String _selectedFiatToTokenRateText(Token? token) {
+    final symbol = token?.symbol ?? '';
+    final tokenPriceUsd = _resolvedTokenUnitPriceUsd(token);
+    if (symbol.isEmpty || tokenPriceUsd <= 0) {
+      return '--';
+    }
+    final fiatUnitInUsd = ValueFormatter.doubleFromDecimal(
+      ValueFormatter.convertToUsdDecimal(Decimal.one),
+    );
+    if (fiatUnitInUsd <= 0) {
+      return '--';
+    }
+    final tokenAmount = fiatUnitInUsd / tokenPriceUsd;
+    return '1 ${ValueFormatter.currencyCode} $_priceSeparator ${ValueFormatter.formatTokenRateAmount(tokenAmount)} $symbol';
+  }
+
   List<Token> _limitOrderEligibleTokens(List<Token> tokens) {
     return tokens
         .where((token) => _tokenRequiresApproval(token))
@@ -267,6 +306,8 @@ class _SwapScreenState extends State<SwapScreen> {
     _fromController.clear();
     _toController.clear();
     _limitPriceController.clear();
+    _limitUsdController.clear();
+    _selectedLimitPriceAdjustment = 0;
     return true;
   }
 
@@ -553,11 +594,17 @@ class _SwapScreenState extends State<SwapScreen> {
           _fromToken = selectedToken;
           _selectedPercentage = -1;
           _fromController.clear();
+          _selectedLimitPriceAdjustment = 0;
+          _limitPriceController.clear();
+          _limitUsdController.clear();
           if (_isGasless && !_tokenRequiresApproval(selectedToken)) {
             _isGasless = false;
           }
         } else {
           _toToken = selectedToken;
+          _selectedLimitPriceAdjustment = 0;
+          _limitPriceController.clear();
+          _limitUsdController.clear();
         }
         _applySuggestedLimitSide();
         _resetQuoteState();
@@ -808,6 +855,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (clearInputAmounts) {
       _fromController.clear();
       _selectedPercentage = -1;
+      _selectedLimitPriceAdjustment = 0;
     }
   }
 
@@ -2498,16 +2546,36 @@ class _SwapScreenState extends State<SwapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final selectedCurrencyCode = context.select<CurrencyController, String>(
+      (controller) => controller.currencyCode,
+    );
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     final fromAmount = _parseAmount(_fromController);
     final toAmount = _parseAmount(_toController);
     final fromUsdValue = _usdValueFor(_fromToken, fromAmount);
     final toUsdValue = _usdValueFor(_toToken, toAmount);
-    final priceText = _pricing.isNotEmpty ? _pricing : '--';
+    final priceText = _pricing.isNotEmpty
+        ? _pricing
+        : (_selectedFiatToTokenRateText(_toToken));
     final receiveText = _toController.text.isNotEmpty
         ? '${_currentQuote?.minAmountOutFormatted ?? _toController.text} ${_toToken?.symbol ?? ''} min'
         : '--';
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (_lastFiatCurrencyCode != selectedCurrencyCode) {
+      _lastFiatCurrencyCode = selectedCurrencyCode;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        if (limitPrice > Decimal.zero) {
+          final limitPriceValue = double.tryParse(limitPrice.toString()) ?? 0.0;
+          if (limitPriceValue > 0) {
+            _syncLimitUsdField(limitPriceValue);
+          }
+        }
+      });
+    }
     final swapBusy = _isSwapFlowActive || _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
     final hasQuote = _currentQuote != null && _toController.text.isNotEmpty;
@@ -2710,7 +2778,12 @@ class _SwapScreenState extends State<SwapScreen> {
                         limitButtonLabel: limitButtonLabel,
                         limitStatusMessage: limitStatusMessage,
                         limitPriceController: _limitPriceController,
-                        onLimitPriceChanged: (_) => _updateLimitPreview(),
+                        onLimitPriceChanged: (_) {
+                          setState(() {
+                            _selectedLimitPriceAdjustment = 0;
+                          });
+                          _updateLimitPreview();
+                        },
                         priceSeparator: _priceSeparator,
                         executionPriceText: _limitExecutionPriceText(),
                         executionPriceUsdLabel: _limitExecutionPriceUsdText(),
@@ -2730,14 +2803,21 @@ class _SwapScreenState extends State<SwapScreen> {
                         quoteToken: _limitQuoteToken,
                         priceDeviationLabel: _limitPriceDeviationLabel(),
                         onPriceAdjust: _adjustLimitPrice,
+                        selectedPriceAdjustment: _selectedLimitPriceAdjustment,
                         isPositiveAdjust: _isPositiveAdjust,
                         onToggleAdjustDirection: () {
                           setState(() {
                             _isPositiveAdjust = !_isPositiveAdjust;
+                            _selectedLimitPriceAdjustment = 0;
                           });
                         },
                         limitUsdController: _limitUsdController,
-                        onLimitUsdChanged: _onLimitUsdChanged,
+                        onLimitUsdChanged: (value) {
+                          setState(() {
+                            _selectedLimitPriceAdjustment = 0;
+                          });
+                          _onLimitUsdChanged(value);
+                        },
                         onSubmitLimit: _submitLimitOrder,
                         activeOrders: _activeChainLimitOrders,
                         isLoadingActiveOrders: _isLoadingLimitOrders,
@@ -2817,12 +2897,8 @@ class _SwapScreenState extends State<SwapScreen> {
   String _limitExecutionPriceText() {
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
     if (limitPrice <= Decimal.zero) {
-      return '--';
+      return _selectedFiatToTokenRateText(_limitTargetToken);
     }
-    // In buy mode the price means:
-    //   "1 [toToken] = [limitPrice] [fromToken]"  (e.g. 1 TWC = 2 USDT)
-    // In sell mode the price means:
-    //   "1 [fromToken] = [limitPrice] [toToken]"  (e.g. 1 TWC = 2 USDT)
     final target = _limitTargetToken;
     final quote = _limitQuoteToken;
     return '1 ${target?.symbol ?? ''} $_priceSeparator ${limitPrice.toString()} ${quote?.symbol ?? ''}';
@@ -2831,18 +2907,20 @@ class _SwapScreenState extends State<SwapScreen> {
   String _limitExecutionPriceUsdText() {
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
     if (limitPrice <= Decimal.zero) {
-      return '\$0.00';
+      return ValueFormatter.formatCurrencyWithGrouping(Decimal.zero);
     }
     final limitPriceValue = double.tryParse(limitPrice.toString()) ?? 0.0;
     if (limitPriceValue <= 0) {
-      return '\$0.00';
+      return ValueFormatter.formatCurrencyWithGrouping(Decimal.zero);
     }
     // The limit price is denominated in the quote token, so use its USD rate.
     final usdValue = _usdValueFor(_limitQuoteToken, limitPriceValue);
     if (usdValue <= 0) {
-      return '\$0.00';
+      return ValueFormatter.formatCurrencyWithGrouping(Decimal.zero);
     }
-    return '\$${usdValue.toStringAsFixed(2)}';
+    return ValueFormatter.formatCurrencyWithGrouping(
+      ValueFormatter.decimalFromNum(usdValue),
+    );
   }
 
   /// Calculates the percentage deviation of the user's limit price from the
@@ -2854,8 +2932,8 @@ class _SwapScreenState extends State<SwapScreen> {
     if (limitPriceValue <= 0) return null;
 
     // Compute the market price of the target token in terms of the quote token.
-    final targetUsd = _limitTargetToken?.unitPriceUsd ?? 0.0;
-    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    final targetUsd = _resolvedTokenUnitPriceUsd(_limitTargetToken);
+    final quoteUsd = _resolvedTokenUnitPriceUsd(_limitQuoteToken);
     if (targetUsd <= 0 || quoteUsd <= 0) return null;
 
     final marketPrice = targetUsd / quoteUsd;
@@ -2869,8 +2947,8 @@ class _SwapScreenState extends State<SwapScreen> {
   /// Adjusts the limit price by a percentage relative to market price.
   /// [percent] can be negative (e.g. -25 means 25% below market).
   void _adjustLimitPrice(int percent) {
-    final targetUsd = _limitTargetToken?.unitPriceUsd ?? 0.0;
-    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    final targetUsd = _resolvedTokenUnitPriceUsd(_limitTargetToken);
+    final quoteUsd = _resolvedTokenUnitPriceUsd(_limitQuoteToken);
     if (targetUsd <= 0 || quoteUsd <= 0) return;
 
     final marketPrice = targetUsd / quoteUsd;
@@ -2883,20 +2961,26 @@ class _SwapScreenState extends State<SwapScreen> {
     // Sync the USD field with the adjusted price
     _syncLimitUsdField(adjusted);
     _updateLimitPreview();
-    setState(() {});
+    setState(() {
+      _selectedLimitPriceAdjustment = percent;
+    });
   }
 
   /// Called when the user edits the USD field in the execution card.
   /// Converts the entered USD value back to a token price.
   void _onLimitUsdChanged(String usdText) {
-    final usdValue = double.tryParse(usdText.replaceAll(',', '')) ?? 0.0;
-    if (usdValue <= 0) return;
+    final displayValue =
+        Decimal.tryParse(usdText.replaceAll(',', '')) ?? Decimal.zero;
+    if (displayValue <= Decimal.zero) return;
 
     // We need the quote token's USD price to convert.
-    // USD / quoteTokenUsdPrice = priceInQuoteTokens
-    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    // selected-fiat / rate = USD; USD / quoteTokenUsdPrice = priceInQuoteTokens
+    final quoteUsd = _resolvedTokenUnitPriceUsd(_limitQuoteToken);
     if (quoteUsd <= 0) return;
 
+    final usdValue = ValueFormatter.doubleFromDecimal(
+      ValueFormatter.convertToUsdDecimal(displayValue),
+    );
     final tokenPrice = usdValue / quoteUsd;
     final decimals = _limitQuoteToken?.decimals ?? 6;
     final displayDecimals = decimals > 6 ? 6 : decimals;
@@ -2907,12 +2991,15 @@ class _SwapScreenState extends State<SwapScreen> {
 
   /// Syncs the USD input field when the token price changes.
   void _syncLimitUsdField(double tokenPrice) {
-    final quoteUsd = _limitQuoteToken?.unitPriceUsd ?? 0.0;
+    final quoteUsd = _resolvedTokenUnitPriceUsd(_limitQuoteToken);
     if (quoteUsd <= 0) {
       _limitUsdController.text = '';
       return;
     }
     final usdValue = tokenPrice * quoteUsd;
-    _limitUsdController.text = usdValue.toStringAsFixed(2);
+    _limitUsdController.text = ValueFormatter.formatPlainFiatFromUsd(
+      ValueFormatter.decimalFromNum(usdValue),
+      trimTrailingZeros: false,
+    );
   }
 }

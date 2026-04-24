@@ -39,6 +39,8 @@ class ValueFormatter {
 
   static String get currencyCode => _currencyCode;
 
+  static String get currencyPrefix => _currencySymbol;
+
   static String get _currencySymbol =>
       _currencySymbols[_currencyCode] ?? _currencySymbols['USD']!;
 
@@ -49,6 +51,19 @@ class ValueFormatter {
     }
     final effectiveRate = rate ?? Decimal.one;
     return value * effectiveRate;
+  }
+
+  static Decimal convertFromUsdDecimal(Decimal value) {
+    return _convertFromUsd(value);
+  }
+
+  static Decimal convertToUsdDecimal(Decimal value) {
+    final rate = _usdConversionRates[_currencyCode];
+    if (_currencyCode != 'USD' && (rate == null || rate <= Decimal.zero)) {
+      return value;
+    }
+    final effectiveRate = rate ?? Decimal.one;
+    return divide(value, effectiveRate);
   }
 
   static Decimal decimalFromNum(num? value) {
@@ -144,6 +159,24 @@ class ValueFormatter {
         : '$_currencySymbol$whole.${parts[1]}';
   }
 
+  static String formatTokenRateAmount(double value) {
+    if (value <= 0) return '0';
+    if (value >= 1000000) return formatCompactNumber(decimalFromNum(value));
+    if (value >= 1000) return _trimTrailingZeros(value.toStringAsFixed(2));
+    if (value >= 1) return _trimTrailingZeros(value.toStringAsFixed(4));
+    return _trimTrailingZeros(value.toStringAsFixed(6));
+  }
+
+  static String formatPlainFiatFromUsd(
+    Decimal value, {
+    int fractionDigits = 2,
+    bool trimTrailingZeros = false,
+  }) {
+    final converted = convertFromUsdDecimal(value);
+    final text = _fixed(converted, fractionDigits);
+    return trimTrailingZeros ? _trimTrailingZeros(text) : text;
+  }
+
   static String _fixed(Decimal value, int fractionDigits) {
     var text = value.toString();
     final negative = text.startsWith('-');
@@ -178,5 +211,16 @@ class ValueFormatter {
       }
     }
     return buffer.toString();
+  }
+
+  static String _trimTrailingZeros(String input) {
+    var output = input;
+    while (output.contains('.') && output.endsWith('0')) {
+      output = output.substring(0, output.length - 1);
+    }
+    if (output.endsWith('.')) {
+      output = output.substring(0, output.length - 1);
+    }
+    return output;
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../utils/value_formatter.dart';
+
 class SwapPriceDetailsCard extends StatelessWidget {
   final String priceText;
   final double platformFeePercent;
@@ -71,10 +73,15 @@ class SwapPriceDetailsCard extends StatelessWidget {
     return '${value.toStringAsFixed(1)}%';
   }
 
-  String _formatApproxUsd(double value) {
+  String _formatApproxFiat(double value) {
     if (value <= 0) return '';
-    if (value < 0.1) return '<\$0.1';
-    return '~\$${value.toStringAsFixed(1)}';
+    final converted = ValueFormatter.convertFromUsdDecimal(
+      ValueFormatter.decimalFromNum(value),
+    );
+    final convertedValue = ValueFormatter.doubleFromDecimal(converted);
+    final prefix = ValueFormatter.currencyPrefix;
+    if (convertedValue < 0.1) return '<${prefix}0.1';
+    return '~$prefix${convertedValue.toStringAsFixed(1)}';
   }
 
   String _formatApproxNative(double value) {
@@ -85,7 +92,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   String _buildFeeText() {
     final feeNativeText = _formatApproxNative(feeAmountNative);
-    final feeUsdText = _formatApproxUsd(feeAmountUsd);
+    final feeUsdText = _formatApproxFiat(feeAmountUsd);
 
     if (feeNativeText.isEmpty && feeUsdText.isEmpty) {
       return '0';

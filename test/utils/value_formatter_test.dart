@@ -4,6 +4,16 @@ import 'package:decimal/decimal.dart';
 
 void main() {
   group('ValueFormatter', () {
+    setUp(() {
+      ValueFormatter.setCurrencyCode('USD');
+      ValueFormatter.updateUsdConversionRates({
+        'USD': 1.0,
+        'EUR': 0.92,
+        'GBP': 0.79,
+        'NGN': 1600.0,
+      });
+    });
+
     test('formats compact token amounts correctly (Trillions)', () {
       final value = Decimal.parse('1500000000000'); // 1.5 Trillion
       final result = ValueFormatter.formatCompactTokenAmount(
@@ -66,6 +76,28 @@ void main() {
       expect(
         ValueFormatter.formatUsdValue(Decimal.parse('500.25')),
         '\$500.25',
+      );
+    });
+
+    test('converts USD values into the selected fiat currency', () {
+      ValueFormatter.setCurrencyCode('NGN');
+
+      expect(
+        ValueFormatter.formatCurrencyWithGrouping(Decimal.one),
+        'NGN 1,600.00',
+      );
+      expect(
+        ValueFormatter.formatPlainFiatFromUsd(Decimal.parse('1.25')),
+        '2000.00',
+      );
+    });
+
+    test('converts selected fiat input back into USD', () {
+      ValueFormatter.setCurrencyCode('NGN');
+
+      expect(
+        ValueFormatter.convertToUsdDecimal(Decimal.parse('1600')),
+        Decimal.one,
       );
     });
   });

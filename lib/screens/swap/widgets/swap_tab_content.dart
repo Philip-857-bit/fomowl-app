@@ -607,6 +607,9 @@ class LimitTabContent extends StatelessWidget {
   /// Callback when user taps a price adjustment chip (e.g. -25, +25).
   final ValueChanged<int>? onPriceAdjust;
 
+  /// Currently selected execution-price adjustment chip (e.g. -25, 50).
+  final int selectedPriceAdjustment;
+
   /// Whether the +/- toggle is in "positive" mode (true = +25/+50/+100).
   final bool isPositiveAdjust;
 
@@ -683,6 +686,7 @@ class LimitTabContent extends StatelessWidget {
     required this.quoteToken,
     this.priceDeviationLabel,
     this.onPriceAdjust,
+    this.selectedPriceAdjustment = 0,
     this.isPositiveAdjust = false,
     this.onToggleAdjustDirection,
     this.limitUsdController,
@@ -833,19 +837,23 @@ class LimitTabContent extends StatelessWidget {
               if (onPriceAdjust != null) ...[
                 LimitPriceAdjustChip(
                   label: '${sign}25%',
-                  selected: false,
+                  selected:
+                      selectedPriceAdjustment == (isPositiveAdjust ? 25 : -25),
                   onTap: () => onPriceAdjust!(isPositiveAdjust ? 25 : -25),
                 ),
                 const SizedBox(width: 4),
                 LimitPriceAdjustChip(
                   label: '${sign}50%',
-                  selected: false,
+                  selected:
+                      selectedPriceAdjustment == (isPositiveAdjust ? 50 : -50),
                   onTap: () => onPriceAdjust!(isPositiveAdjust ? 50 : -50),
                 ),
                 const SizedBox(width: 4),
                 LimitPriceAdjustChip(
                   label: '${sign}100%',
-                  selected: false,
+                  selected:
+                      selectedPriceAdjustment ==
+                      (isPositiveAdjust ? 100 : -100),
                   onTap: () => onPriceAdjust!(isPositiveAdjust ? 100 : -100),
                 ),
                 const SizedBox(width: 6),

@@ -8,6 +8,8 @@ class AmountInputField extends StatelessWidget {
   final double availableBalance;
   final String tokenSymbol;
   final VoidCallback onMaxTap;
+  final String fiatValueText;
+  final String rateText;
 
   const AmountInputField({
     super.key,
@@ -15,6 +17,8 @@ class AmountInputField extends StatelessWidget {
     required this.availableBalance,
     required this.tokenSymbol,
     required this.onMaxTap,
+    this.fiatValueText = '',
+    this.rateText = '',
   });
 
   @override
@@ -100,6 +104,38 @@ class AmountInputField extends StatelessWidget {
             ),
           ),
         ),
+        if (fiatValueText.isNotEmpty || rateText.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (fiatValueText.isNotEmpty)
+                Expanded(
+                  child: Text(
+                    fiatValueText,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+              if (rateText.isNotEmpty)
+                Flexible(
+                  child: Text(
+                    rateText,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ],
     );
   }

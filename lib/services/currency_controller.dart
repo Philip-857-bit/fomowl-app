@@ -16,7 +16,7 @@ class CurrencyController extends ChangeNotifier {
   final HttpClientService _httpClient;
 
   static const _supportedCurrencies = {'USD', 'EUR', 'GBP', 'NGN'};
-  static const _exchangeRatesBaseUrl = 'https://open.er-api.com/v6/latest/USD';
+  static const _exchangeRatesBaseUrl = 'https://api.frankfurter.dev/v1/latest';
 
   String _currencyCode = 'USD';
   bool _initialized = false;
@@ -50,7 +50,10 @@ class CurrencyController extends ChangeNotifier {
 
   Future<void> _refreshRates() async {
     try {
-      final uri = Uri.parse(_exchangeRatesBaseUrl);
+      final targets = _supportedCurrencies
+          .where((code) => code != 'USD')
+          .join(',');
+      final uri = Uri.parse('$_exchangeRatesBaseUrl?base=USD&symbols=$targets');
       final response = await _httpClient.client
           .get(uri)
           .timeout(const Duration(seconds: 8));

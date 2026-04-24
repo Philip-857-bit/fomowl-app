@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:decimal/decimal.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/currency_controller.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
+import '../../utils/value_formatter.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/address_input_field.dart';
@@ -35,14 +38,22 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   @override
   void initState() {
     super.initState();
+    _amountController.addListener(_handleAmountChanged);
     _loadDefaultToken();
   }
 
   @override
   void dispose() {
     _addressController.dispose();
+    _amountController.removeListener(_handleAmountChanged);
     _amountController.dispose();
     super.dispose();
+  }
+
+  void _handleAmountChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadDefaultToken() async {
@@ -200,10 +211,53 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     ToastUtils.showError(message);
   }
 
+  double _selectedTokenUsdPrice(BlockchainService blockchain) {
+    final token = _selectedToken;
+    if (token == null) {
+      return 0.0;
+    }
+    if (token.unitPriceUsd > 0) {
+      return token.unitPriceUsd;
+    }
+    final selectedAddress = (token.contractAddress ?? '').toLowerCase();
+    for (final candidate in blockchain.tokens) {
+      final candidateAddress = (candidate.contractAddress ?? '').toLowerCase();
+      if (selectedAddress.isNotEmpty &&
+          selectedAddress == candidateAddress &&
+          candidate.unitPriceUsd > 0) {
+        return candidate.unitPriceUsd;
+      }
+      if (selectedAddress.isEmpty &&
+          candidateAddress.isEmpty &&
+          candidate.symbol.toUpperCase() == token.symbol.toUpperCase() &&
+          candidate.unitPriceUsd > 0) {
+        return candidate.unitPriceUsd;
+      }
+    }
+    return 0.0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    context.select<CurrencyController, String>(
+      (controller) => controller.currencyCode,
+    );
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
+    final enteredAmount = double.tryParse(
+      _amountController.text.replaceAll(',', ''),
+    );
+    final tokenUsdPrice = _selectedTokenUsdPrice(blockchain);
+    final fiatAmountText =
+        enteredAmount != null && enteredAmount > 0 && tokenUsdPrice > 0
+        ? ValueFormatter.formatCurrencyWithGrouping(
+            ValueFormatter.decimalFromNum(enteredAmount * tokenUsdPrice),
+          )
+        : '';
+    final tokenRateText =
+        tokenUsdPrice > 0 && (_selectedToken?.symbol ?? '').isNotEmpty
+        ? '1 ${ValueFormatter.currencyCode} -> ${ValueFormatter.formatTokenRateAmount(ValueFormatter.doubleFromDecimal(ValueFormatter.convertToUsdDecimal(Decimal.one)) / tokenUsdPrice)} ${_selectedToken!.symbol}'
+        : '';
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -241,6 +295,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                       availableBalance: _availableBalance,
                       tokenSymbol: _selectedToken?.symbol ?? '',
                       onMaxTap: _setMax,
+                      fiatValueText: fiatAmountText,
+                      rateText: tokenRateText,
                     ),
                   ],
                 ),

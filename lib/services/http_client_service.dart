@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
@@ -7,6 +8,12 @@ import 'package:flutter/foundation.dart';
 class HttpClientService {
   static final HttpClientService _instance = HttpClientService._internal();
   factory HttpClientService() => _instance;
+
+  // Cap per-attempt backoff so a long-running retry chain can't wait tens of
+  // seconds between attempts on slow networks, and add a small random jitter
+  // to avoid synchronized thundering-herd retries across clients.
+  static const Duration _maxRetryDelay = Duration(seconds: 30);
+  static final Random _jitterRng = Random();
 
   late final http.Client _client;
   http.Client get client => _client;
@@ -33,7 +40,7 @@ class HttpClientService {
         if (attempts < maxRetries &&
             (retryIf?.call(response) ??
                 _isRetryableStatus(response.statusCode))) {
-          await Future.delayed(delay * attempts);
+          await Future.delayed(_backoff(delay, attempts));
           continue;
         }
         return response;
@@ -41,9 +48,17 @@ class HttpClientService {
         if (attempts >= maxRetries || !_isRetryableException(e)) {
           rethrow;
         }
-        await Future.delayed(delay * attempts);
+        await Future.delayed(_backoff(delay, attempts));
       }
     }
+  }
+
+  static Duration _backoff(Duration base, int attempt) {
+    final scaledMs = base.inMilliseconds * attempt;
+    final cappedMs = scaledMs.clamp(0, _maxRetryDelay.inMilliseconds);
+    // Up to +25% jitter on top of the capped delay.
+    final jitterMs = (cappedMs * 0.25 * _jitterRng.nextDouble()).round();
+    return Duration(milliseconds: cappedMs + jitterMs);
   }
 
   bool _isRetryableStatus(int statusCode) {

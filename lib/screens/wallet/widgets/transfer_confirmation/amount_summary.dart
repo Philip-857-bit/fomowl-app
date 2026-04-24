@@ -7,12 +7,14 @@ class AmountSummary extends StatelessWidget {
   final String amountText;
   final String symbol;
   final String title;
+  final String subtitle;
 
   const AmountSummary({
     super.key,
     required this.amountText,
     required this.symbol,
     this.title = 'AMOUNT TO SEND',
+    this.subtitle = '',
   });
 
   @override
@@ -52,6 +54,17 @@ class AmountSummary extends StatelessWidget {
             ],
           ),
         ),
+        if (subtitle.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
+          ),
+        ],
       ],
     );
   }
