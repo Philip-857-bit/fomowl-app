@@ -41,7 +41,8 @@ class SwapFromCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     const percentages = [25, 50, 100];
-    final fiatDisplay = equivalentText ??
+    final fiatDisplay =
+        equivalentText ??
         ValueFormatter.formatCurrencyWithGrouping(
           ValueFormatter.decimalFromNum(usdValue),
         );
