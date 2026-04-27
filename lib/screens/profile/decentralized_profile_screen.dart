@@ -9,6 +9,7 @@ import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
+import '../../models/wallet_account.dart';
 import '../../services/app_patch_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
@@ -55,6 +56,8 @@ class _DecentralizedProfileScreenState
   String _currency = 'USD';
   bool _loading = true;
   Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
+  WalletOrigin _walletOrigin = WalletOrigin.derived;
+  Set<ChainFamily> _supportedFamilies = {ChainFamily.evm};
 
   @override
   void initState() {
@@ -91,14 +94,24 @@ class _DecentralizedProfileScreenState
     final walletAddress = await _walletService.getCurrentWalletAddress();
     final currency = await _storageService.getCurrency();
     final savedFamilies = await _storageService.getEnabledChainFamilies();
+    final activeAccount = await _walletService.getActiveWalletAccount();
 
     if (!mounted) return;
+
+    // Determine which network families this wallet actually supports.
+    // Private-key imports are EVM-only. Seed-phrase wallets have all 3 families.
+    final origin = activeAccount?.origin ?? WalletOrigin.derived;
+    final supported = origin == WalletOrigin.imported
+        ? {ChainFamily.evm}
+        : activeAccount?.addressesByFamily.keys.toSet() ?? {ChainFamily.evm};
 
     setState(() {
       _walletName = walletName ?? 'Main Wallet';
       _walletAddress = walletAddress ?? '--';
       _currency = currency;
       _enabledFamilies = savedFamilies ?? {ChainFamily.evm};
+      _walletOrigin = origin;
+      _supportedFamilies = supported;
       _loading = false;
     });
   }
@@ -524,62 +537,76 @@ class _DecentralizedProfileScreenState
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    SettingsSectionHeader(title: 'Manage Networks'),
-                    SettingsGroupCard(
-                      children: [
-                        SettingsItemTile(
-                          icon: Icons.hexagon_outlined,
-                          title: 'EVM Networks',
-                          subtitle: 'Ethereum, BNB, Base & more',
-                          onTap: () => _toggleFamily(ChainFamily.evm),
-                          trailing: Switch(
-                            value: _enabledFamilies.contains(ChainFamily.evm),
-                            onChanged: (_) => _toggleFamily(ChainFamily.evm),
-                            activeThumbColor: const Color(0xFF627EEA),
-                            activeTrackColor: const Color(
-                              0xFF627EEA,
-                            ).withValues(alpha: 0.3),
-                            inactiveThumbColor: Colors.white38,
-                            inactiveTrackColor: Colors.white12,
-                          ),
-                        ),
-                        SettingsItemTile(
-                          icon: Icons.blur_circular_rounded,
-                          title: 'Solana',
-                          subtitle: 'SOL and SPL tokens',
-                          onTap: () => _toggleFamily(ChainFamily.solana),
-                          trailing: Switch(
-                            value: _enabledFamilies.contains(
-                              ChainFamily.solana,
+                    // Manage Networks: only shown for seed-phrase wallets.
+                    // Private-key imports are EVM-only — no toggle needed.
+                    if (_walletOrigin == WalletOrigin.derived) ...[
+                      const SizedBox(height: 14),
+                      SettingsSectionHeader(title: 'Manage Networks'),
+                      SettingsGroupCard(
+                        children: [
+                          if (_supportedFamilies.contains(ChainFamily.evm))
+                            SettingsItemTile(
+                              icon: Icons.hexagon_outlined,
+                              title: 'EVM Networks',
+                              subtitle: 'Ethereum, BNB, Base & more',
+                              onTap: () => _toggleFamily(ChainFamily.evm),
+                              trailing: Switch(
+                                value: _enabledFamilies.contains(
+                                  ChainFamily.evm,
+                                ),
+                                onChanged: (_) =>
+                                    _toggleFamily(ChainFamily.evm),
+                                activeThumbColor: const Color(0xFF627EEA),
+                                activeTrackColor: const Color(
+                                  0xFF627EEA,
+                                ).withValues(alpha: 0.3),
+                                inactiveThumbColor: Colors.white38,
+                                inactiveTrackColor: Colors.white12,
+                              ),
                             ),
-                            onChanged: (_) => _toggleFamily(ChainFamily.solana),
-                            activeThumbColor: const Color(0xFF9945FF),
-                            activeTrackColor: const Color(
-                              0xFF9945FF,
-                            ).withValues(alpha: 0.3),
-                            inactiveThumbColor: Colors.white38,
-                            inactiveTrackColor: Colors.white12,
-                          ),
-                        ),
-                        SettingsItemTile(
-                          icon: Icons.change_history_rounded,
-                          title: 'Tron',
-                          subtitle: 'TRX and TRC-20 tokens',
-                          onTap: () => _toggleFamily(ChainFamily.tron),
-                          trailing: Switch(
-                            value: _enabledFamilies.contains(ChainFamily.tron),
-                            onChanged: (_) => _toggleFamily(ChainFamily.tron),
-                            activeThumbColor: const Color(0xFFEF0027),
-                            activeTrackColor: const Color(
-                              0xFFEF0027,
-                            ).withValues(alpha: 0.3),
-                            inactiveThumbColor: Colors.white38,
-                            inactiveTrackColor: Colors.white12,
-                          ),
-                        ),
-                      ],
-                    ),
+                          if (_supportedFamilies.contains(ChainFamily.solana))
+                            SettingsItemTile(
+                              icon: Icons.blur_circular_rounded,
+                              title: 'Solana',
+                              subtitle: 'SOL and SPL tokens',
+                              onTap: () => _toggleFamily(ChainFamily.solana),
+                              trailing: Switch(
+                                value: _enabledFamilies.contains(
+                                  ChainFamily.solana,
+                                ),
+                                onChanged: (_) =>
+                                    _toggleFamily(ChainFamily.solana),
+                                activeThumbColor: const Color(0xFF9945FF),
+                                activeTrackColor: const Color(
+                                  0xFF9945FF,
+                                ).withValues(alpha: 0.3),
+                                inactiveThumbColor: Colors.white38,
+                                inactiveTrackColor: Colors.white12,
+                              ),
+                            ),
+                          if (_supportedFamilies.contains(ChainFamily.tron))
+                            SettingsItemTile(
+                              icon: Icons.change_history_rounded,
+                              title: 'Tron',
+                              subtitle: 'TRX and TRC-20 tokens',
+                              onTap: () => _toggleFamily(ChainFamily.tron),
+                              trailing: Switch(
+                                value: _enabledFamilies.contains(
+                                  ChainFamily.tron,
+                                ),
+                                onChanged: (_) =>
+                                    _toggleFamily(ChainFamily.tron),
+                                activeThumbColor: const Color(0xFFEF0027),
+                                activeTrackColor: const Color(
+                                  0xFFEF0027,
+                                ).withValues(alpha: 0.3),
+                                inactiveThumbColor: Colors.white38,
+                                inactiveTrackColor: Colors.white12,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 14),
                     SettingsSectionHeader(title: l.security),
                     SettingsGroupCard(

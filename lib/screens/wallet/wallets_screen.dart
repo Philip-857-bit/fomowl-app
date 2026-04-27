@@ -27,6 +27,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
   bool _loading = true;
   String? _activeAddress;
   List<WalletAccount> _walletAccounts = const [];
+  bool _hasMnemonic = false;
 
   @override
   void initState() {
@@ -39,10 +40,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
     try {
       final accounts = await _walletService.getWalletAccounts();
       final active = await _walletService.getCurrentWalletAddress();
+      final mnemonic = await _storage.getMnemonic();
       if (!mounted) return;
       setState(() {
         _walletAccounts = accounts;
         _activeAddress = active;
+        _hasMnemonic = mnemonic != null && mnemonic.isNotEmpty;
         _loading = false;
       });
     } catch (e) {
@@ -61,11 +64,21 @@ class _WalletsScreenState extends State<WalletsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => CreateWalletActionSheet(
+        canCreateNew: _hasMnemonic,
         onConfirm: (mode) {
           Navigator.pop(ctx);
           switch (mode) {
             case WalletCreateMode.create:
-              _createWallet();
+              if (_hasMnemonic) {
+                _createWallet();
+              } else {
+                // No mnemonic — take the user through the full create-wallet
+                // onboarding flow to generate a brand-new seed phrase.
+                Navigator.pushNamed(
+                  context,
+                  '/create-wallet',
+                ).then((_) => _loadWallets());
+              }
               break;
             case WalletCreateMode.importSeedPhrase:
               Navigator.pushNamed(
