@@ -1,16 +1,51 @@
-enum ChainFamily { evm, solana }
+import 'token_standard.dart';
+
+enum ChainFamily { evm, solana, tron }
 
 extension ChainFamilyCodec on ChainFamily {
   String get wireValue => switch (this) {
     ChainFamily.evm => 'evm',
     ChainFamily.solana => 'solana',
+    ChainFamily.tron => 'tron',
   };
 
   static ChainFamily fromWireValue(String? value) {
     return switch (value?.trim().toLowerCase()) {
       'solana' => ChainFamily.solana,
+      'tron' => ChainFamily.tron,
       _ => ChainFamily.evm,
     };
+  }
+}
+
+class NetworkKey {
+  const NetworkKey._();
+
+  static String evm(int chainId) => 'evm:$chainId';
+
+  static String solana(String cluster) => 'solana:${_solanaNetworkId(cluster)}';
+
+  static String tron(String networkId) => 'tron:${networkId.trim()}';
+
+  static ChainFamily familyOf(String? networkKey) {
+    final trimmed = networkKey?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return ChainFamily.evm;
+    }
+    return ChainFamilyCodec.fromWireValue(trimmed.split(':').first);
+  }
+
+  static int? evmChainIdOf(String? networkKey) {
+    final parts = networkKey?.trim().split(':') ?? const [];
+    if (parts.length != 2 || parts[0].toLowerCase() != 'evm') {
+      return null;
+    }
+    return int.tryParse(parts[1]);
+  }
+
+  static String _solanaNetworkId(String cluster) {
+    final normalized = cluster.trim().toLowerCase();
+    return normalized == 'mainnet-beta' ? 'mainnet' : normalized;
   }
 }
 
@@ -38,10 +73,13 @@ class EvmChain {
     this.family = ChainFamily.evm,
   });
 
+  String get networkKey => NetworkKey.evm(chainId);
+
   Map<String, dynamic> toJson() => {
     'name': name,
     'symbol': symbol,
     'chainId': chainId,
+    'networkKey': networkKey,
     'rpcUrl': rpcUrl,
     'coinGeckoId': coinGeckoId,
     'explorerUrl': explorerUrl,
@@ -53,7 +91,10 @@ class EvmChain {
   factory EvmChain.fromJson(Map<String, dynamic> json) => EvmChain(
     name: json['name'] as String,
     symbol: json['symbol'] as String,
-    chainId: json['chainId'] as int,
+    chainId:
+        (json['chainId'] as num?)?.toInt() ??
+        NetworkKey.evmChainIdOf(json['networkKey'] as String?) ??
+        1,
     rpcUrl: json['rpcUrl'] as String,
     coinGeckoId: json['coinGeckoId'] as String?,
     explorerUrl: json['explorerUrl'] as String?,
@@ -86,10 +127,13 @@ class SolanaChain {
   });
 
   bool get isMainnet => cluster == 'mainnet-beta';
+  String get networkId => cluster == 'mainnet-beta' ? 'mainnet' : cluster;
+  String get networkKey => NetworkKey.solana(cluster);
 
   Map<String, dynamic> toJson() => {
     'name': name,
     'symbol': symbol,
+    'networkKey': networkKey,
     'cluster': cluster,
     'rpcUrl': rpcUrl,
     'coinGeckoId': coinGeckoId,
@@ -101,7 +145,59 @@ class SolanaChain {
   factory SolanaChain.fromJson(Map<String, dynamic> json) => SolanaChain(
     name: json['name'] as String,
     symbol: json['symbol'] as String,
-    cluster: json['cluster'] as String,
+    cluster:
+        json['cluster'] as String? ??
+        _solanaClusterFromNetworkKey(json['networkKey'] as String?),
+    rpcUrl: json['rpcUrl'] as String,
+    coinGeckoId: json['coinGeckoId'] as String?,
+    explorerUrl: json['explorerUrl'] as String?,
+    logoUrl: json['logoUrl'] as String?,
+    family: ChainFamilyCodec.fromWireValue(json['family'] as String?),
+  );
+}
+
+class TronChain {
+  final String name;
+  final String symbol;
+  final String networkId;
+  final String rpcUrl;
+  final String? coinGeckoId;
+  final String? explorerUrl;
+  final String? logoUrl;
+  final ChainFamily family;
+
+  const TronChain({
+    required this.name,
+    required this.symbol,
+    required this.networkId,
+    required this.rpcUrl,
+    this.coinGeckoId,
+    this.explorerUrl,
+    this.logoUrl,
+    this.family = ChainFamily.tron,
+  });
+
+  bool get isMainnet => networkId == 'mainnet';
+  String get networkKey => NetworkKey.tron(networkId);
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'symbol': symbol,
+    'networkKey': networkKey,
+    'networkId': networkId,
+    'rpcUrl': rpcUrl,
+    'coinGeckoId': coinGeckoId,
+    'explorerUrl': explorerUrl,
+    'logoUrl': logoUrl,
+    'family': family.wireValue,
+  };
+
+  factory TronChain.fromJson(Map<String, dynamic> json) => TronChain(
+    name: json['name'] as String,
+    symbol: json['symbol'] as String,
+    networkId:
+        json['networkId'] as String? ??
+        _networkIdFromNetworkKey(json['networkKey'] as String?, 'mainnet'),
     rpcUrl: json['rpcUrl'] as String,
     coinGeckoId: json['coinGeckoId'] as String?,
     explorerUrl: json['explorerUrl'] as String?,
@@ -117,6 +213,8 @@ class CustomTokenDefinition {
   final int decimals;
   final String? coinGeckoId;
   final String? imageUrl;
+  final String? networkKey;
+  final TokenStandard tokenStandard;
 
   const CustomTokenDefinition({
     required this.symbol,
@@ -125,6 +223,8 @@ class CustomTokenDefinition {
     required this.decimals,
     this.coinGeckoId,
     this.imageUrl,
+    this.networkKey,
+    this.tokenStandard = TokenStandard.erc20,
   });
 
   factory CustomTokenDefinition.fromJson(Map<String, dynamic> json) {
@@ -135,6 +235,10 @@ class CustomTokenDefinition {
       decimals: json['decimals'] as int,
       coinGeckoId: json['coinGeckoId'] as String?,
       imageUrl: json['imageUrl'] as String?,
+      networkKey: json['networkKey'] as String?,
+      tokenStandard: TokenStandardCodec.fromWireValue(
+        json['tokenStandard'] as String?,
+      ),
     );
   }
 
@@ -145,5 +249,20 @@ class CustomTokenDefinition {
     'decimals': decimals,
     'coinGeckoId': coinGeckoId,
     'imageUrl': imageUrl,
+    'networkKey': networkKey,
+    'tokenStandard': tokenStandard.wireValue,
   };
+}
+
+String _solanaClusterFromNetworkKey(String? networkKey) {
+  final networkId = _networkIdFromNetworkKey(networkKey, 'mainnet');
+  return networkId == 'mainnet' ? 'mainnet-beta' : networkId;
+}
+
+String _networkIdFromNetworkKey(String? networkKey, String fallback) {
+  final parts = networkKey?.trim().split(':') ?? const [];
+  if (parts.length != 2 || parts[1].trim().isEmpty) {
+    return fallback;
+  }
+  return parts[1].trim().toLowerCase();
 }

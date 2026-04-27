@@ -22,6 +22,7 @@ class WalletHistoryEntry {
     this.tokenName,
     this.tokenSymbol,
     this.amount,
+    this.networkKey,
   });
 
   final String id;
@@ -38,6 +39,7 @@ class WalletHistoryEntry {
   final bool isIncoming;
   final DateTime createdAt;
   final String source;
+  final String? networkKey;
 
   factory WalletHistoryEntry.fromJson(Map<String, dynamic> json) {
     final createdAtRaw = json['createdAt']?.toString() ?? '';
@@ -56,6 +58,7 @@ class WalletHistoryEntry {
       isIncoming: json['isIncoming'] == true,
       createdAt: DateTime.tryParse(createdAtRaw) ?? DateTime.now(),
       source: json['source']?.toString() ?? 'local_history',
+      networkKey: json['networkKey']?.toString(),
     );
   }
 
@@ -139,6 +142,7 @@ class WalletHistoryService {
     required String tokenSymbol,
     required String amountText,
     required String toAddress,
+    String? networkKey,
   }) {
     return _recordHistory({
       'walletAddress': walletAddress,
@@ -150,6 +154,7 @@ class WalletHistoryService {
       'isIncoming': false,
       'chainId': chainId,
       'networkName': networkName,
+      'networkKey': networkKey,
       'title': 'Transfer sent',
       'message':
           'Sent $amountText $tokenSymbol to ${_shortAddress(toAddress)} on $networkName.',
@@ -166,6 +171,7 @@ class WalletHistoryService {
     required String fromAmount,
     required String toAmount,
     required String toTokenSymbol,
+    String? networkKey,
   }) {
     return _recordHistory({
       'walletAddress': walletAddress,
@@ -177,6 +183,7 @@ class WalletHistoryService {
       'isIncoming': false,
       'chainId': chainId,
       'networkName': networkName,
+      'networkKey': networkKey,
       'title': 'Swap confirmed',
       'message':
           'Swapped $fromAmount $fromTokenSymbol for $toAmount $toTokenSymbol on $networkName.',

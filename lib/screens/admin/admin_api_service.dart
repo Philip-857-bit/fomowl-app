@@ -261,6 +261,29 @@ class AdminApiService {
     );
   }
 
+  Future<Map<String, dynamic>> fetchAppRelease() async {
+    return _getMap(
+      AppEnvironment.content('/app-release'),
+      fallback: 'Unable to load app release info.',
+    );
+  }
+
+  Future<Map<String, dynamic>> updateAppRelease({
+    required String version,
+    required String minVersion,
+    required String releaseNotes,
+  }) async {
+    return _postPatchMap(
+      AppEnvironment.content('/admin/app-release'),
+      body: {
+        'version': version.trim(),
+        'minVersion': minVersion.trim(),
+        'releaseNotes': releaseNotes.trim(),
+      },
+      fallback: 'Unable to update app release.',
+    );
+  }
+
   Future<AdminHomeBannerFeed> fetchHomeBanners() async {
     final response = await _getMap(
       AppEnvironment.content('/admin/home-banners'),

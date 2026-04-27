@@ -4,13 +4,40 @@ use sha3::{Digest, Keccak256};
 use std::str::FromStr;
 
 fn sign_digest(private_key_hex: &str, digest: [u8; 32]) -> Result<String, String> {
+    sign_digest_inner(private_key_hex, digest, true)
+}
+
+pub(crate) fn sign_digest_with_recovery_id(
+    private_key_hex: String,
+    digest: [u8; 32],
+    ethereum_recovery_id: bool,
+) -> Result<String, String> {
+    sign_digest_inner(&private_key_hex, digest, ethereum_recovery_id)
+}
+
+fn sign_digest_inner(
+    private_key_hex: &str,
+    digest: [u8; 32],
+    ethereum_recovery_id: bool,
+) -> Result<String, String> {
     let secp = Secp256k1::new();
-    let secret_key = SecretKey::from_str(private_key_hex)
-        .map_err(|e| format!("Invalid private key: {}", e))?;
+    let normalized_private_key = private_key_hex
+        .trim()
+        .strip_prefix("0x")
+        .unwrap_or(private_key_hex.trim());
+    let secret_key = SecretKey::from_str(normalized_private_key)
+        .map_err(|e| format!("Invalid private key: {e}"))?;
     let msg = Message::from_digest(digest);
-    let (recovery_id, sig) = secp.sign_ecdsa_recoverable(msg, &secret_key).serialize_compact();
+    let (recovery_id, sig) = secp
+        .sign_ecdsa_recoverable(msg, &secret_key)
+        .serialize_compact();
     let mut signature = sig.to_vec();
-    signature.push(i32::from(recovery_id) as u8 + 27);
+    let recovery_id = i32::from(recovery_id) as u8;
+    signature.push(if ethereum_recovery_id {
+        recovery_id + 27
+    } else {
+        recovery_id
+    });
     Ok(format!("0x{}", hex::encode(signature)))
 }
 
@@ -45,8 +72,7 @@ mod tests {
 
     #[test]
     fn signs_typed_data_and_recovers_expected_address() {
-        let private_key =
-            "4c0883a69102937d6231471b5dbb6204fe5129617082794a7a4da5f6d7d28e17";
+        let private_key = "4c0883a69102937d6231471b5dbb6204fe5129617082794a7a4da5f6d7d28e17";
         let typed_data_json = r#"{
           "types": {
             "EIP712Domain": [

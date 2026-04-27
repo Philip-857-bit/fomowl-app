@@ -1,4 +1,4 @@
-use bip39::{Mnemonic, Language};
+use bip39::{Language, Mnemonic};
 use rand::Rng;
 
 pub fn generate_mnemonic() -> String {
@@ -21,7 +21,7 @@ pub fn validate_mnemonic(phrase: String) -> bool {
 pub fn mnemonic_to_seed(phrase: String) -> Result<Vec<u8>, String> {
     let mnemonic = Mnemonic::parse_in(Language::English, &phrase)
         .map_err(|e| format!("Invalid mnemonic: {}", e))?;
-    
+
     // Convert to seed (empty passphrase per Dart implementation)
     let seed = mnemonic.to_seed("");
     Ok(seed.to_vec())

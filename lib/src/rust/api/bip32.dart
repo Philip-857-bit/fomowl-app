@@ -6,10 +6,96 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `derive_secp256k1_private_key`, `evm_address_from_public_key`, `hardened`, `parse_32_byte_hex`, `public_key_from_private_key`, `slip10_ed25519_derive_child`, `slip10_ed25519_master_key`, `slip10_key_from_hmac`, `to_eip55_address`, `tron_address_from_public_key`, `validate_seed`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Ed25519Slip10Key`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `drop`, `zeroize`
+
 Future<String> deriveWalletFromSeed({
   required List<int> seed,
   required int derivationIndex,
 }) => RustLib.instance.api.crateApiBip32DeriveWalletFromSeed(
   seed: seed,
   derivationIndex: derivationIndex,
+);
+
+Future<String> deriveEvmPrivateKeyFromSeed({
+  required List<int> seed,
+  required int derivationIndex,
+}) => RustLib.instance.api.crateApiBip32DeriveEvmPrivateKeyFromSeed(
+  seed: seed,
+  derivationIndex: derivationIndex,
+);
+
+Future<String> deriveEvmAddressFromSeed({
+  required List<int> seed,
+  required int derivationIndex,
+}) => RustLib.instance.api.crateApiBip32DeriveEvmAddressFromSeed(
+  seed: seed,
+  derivationIndex: derivationIndex,
+);
+
+Future<String> deriveEvmAddressFromPrivateKey({
+  required String privateKeyHex,
+}) => RustLib.instance.api.crateApiBip32DeriveEvmAddressFromPrivateKey(
+  privateKeyHex: privateKeyHex,
+);
+
+Future<String> deriveTronPrivateKeyFromSeed({
+  required List<int> seed,
+  required int derivationIndex,
+}) => RustLib.instance.api.crateApiBip32DeriveTronPrivateKeyFromSeed(
+  seed: seed,
+  derivationIndex: derivationIndex,
+);
+
+Future<String> deriveTronAddressFromSeed({
+  required List<int> seed,
+  required int derivationIndex,
+}) => RustLib.instance.api.crateApiBip32DeriveTronAddressFromSeed(
+  seed: seed,
+  derivationIndex: derivationIndex,
+);
+
+Future<String> deriveTronAddressFromPrivateKey({
+  required String privateKeyHex,
+}) => RustLib.instance.api.crateApiBip32DeriveTronAddressFromPrivateKey(
+  privateKeyHex: privateKeyHex,
+);
+
+Future<String> deriveSolanaPrivateKeyFromSeed({
+  required List<int> seed,
+  required int derivationIndex,
+}) => RustLib.instance.api.crateApiBip32DeriveSolanaPrivateKeyFromSeed(
+  seed: seed,
+  derivationIndex: derivationIndex,
+);
+
+Future<String> deriveSolanaAddressFromSeed({
+  required List<int> seed,
+  required int derivationIndex,
+}) => RustLib.instance.api.crateApiBip32DeriveSolanaAddressFromSeed(
+  seed: seed,
+  derivationIndex: derivationIndex,
+);
+
+Future<String> deriveSolanaAddressFromPrivateKey({
+  required String privateKeyHex,
+}) => RustLib.instance.api.crateApiBip32DeriveSolanaAddressFromPrivateKey(
+  privateKeyHex: privateKeyHex,
+);
+
+Future<String> signSolanaMessage({
+  required String privateKeyHex,
+  required List<int> message,
+}) => RustLib.instance.api.crateApiBip32SignSolanaMessage(
+  privateKeyHex: privateKeyHex,
+  message: message,
+);
+
+Future<String> signTronRawHash({
+  required String privateKeyHex,
+  required String rawHashHex,
+}) => RustLib.instance.api.crateApiBip32SignTronRawHash(
+  privateKeyHex: privateKeyHex,
+  rawHashHex: rawHashHex,
 );

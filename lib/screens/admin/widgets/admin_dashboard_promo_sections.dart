@@ -548,3 +548,162 @@ class _AdminHomeBannerCard extends StatelessWidget {
     );
   }
 }
+
+class AdminAppReleaseSection extends StatelessWidget {
+  const AdminAppReleaseSection({
+    super.key,
+    required this.isLoading,
+    required this.isSubmitting,
+    required this.versionController,
+    required this.minVersionController,
+    required this.releaseNotesController,
+    required this.onSubmit,
+    required this.currentVersion,
+    required this.currentMinVersion,
+  });
+
+  final bool isLoading;
+  final bool isSubmitting;
+  final TextEditingController versionController;
+  final TextEditingController minVersionController;
+  final TextEditingController releaseNotesController;
+  final VoidCallback onSubmit;
+  final String currentVersion;
+  final String currentMinVersion;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AdminSectionHeading(
+          title: 'App release',
+          subtitle:
+              'Manage the version, minimum required version, and release notes shown to users inside the wallet.',
+        ),
+        const AdminBanner(
+          title: 'Release notes format',
+          message:
+              'Enter one bullet point per line. Each line becomes a separate entry in the "What\'s New" sheet.',
+        ),
+        const SizedBox(height: 14),
+        AdminCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Current published version',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isLoading ? '...' : currentVersion,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AdminStatusPill(
+                    label: 'min: $currentMinVersion',
+                    color: AppColors.warning,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Update release',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: versionController,
+                      decoration: adminInputDecoration(
+                        label: 'Version',
+                        hint: '1.3.10',
+                        icon: Icons.tag_rounded,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: minVersionController,
+                      decoration: adminInputDecoration(
+                        label: 'Min version',
+                        hint: '1.0.0',
+                        icon: Icons.arrow_upward_rounded,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: releaseNotesController,
+                maxLines: 6,
+                decoration: adminInputDecoration(
+                  label: 'Release notes (one bullet per line)',
+                  hint:
+                      'Solana and Tron wallets are now fully supported\nSend, receive and view transaction history cross-chain',
+                  icon: Icons.notes_rounded,
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isSubmitting ? null : onSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentRed,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Publish release',
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

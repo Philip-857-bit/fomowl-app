@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../src/rust/api/argon2.dart' as rust_argon2;
 import 'package:flutter/foundation.dart';
 
+import '../models/chain.dart';
 import '../models/wallet_account.dart';
 import '../utils/language_utils.dart';
 import 'secure_store.dart';
@@ -44,6 +45,7 @@ class StorageService {
   static const String _keyBackendSessionPrefix = 'backend_session_';
   static const String _keyNotificationDevicePrefix = 'notification_device_';
   static const String _keyPushPreferencePrefix = 'push_pref_';
+  static const String _keyEnabledChainFamilies = 'enabled_chain_families';
 
   static const int maxFailedAttempts = 5;
   // 60-second lockout after maxFailedAttempts consecutive wrong passcode
@@ -67,6 +69,7 @@ class StorageService {
     WalletOrigin origin = WalletOrigin.derived,
     int? derivationIndex,
     DateTime? createdAt,
+    Map<ChainFamily, String>? addressesByFamily,
   }) async {
     await _secureStore.write(key: _keyAddress, value: address);
     await _secureStore.write(key: _keyPrivateKey, value: privateKey);
@@ -89,6 +92,7 @@ class StorageService {
       origin: origin,
       derivationIndex: derivationIndex,
       createdAt: createdAt ?? DateTime.now(),
+      addressesByFamily: addressesByFamily,
     );
     await _upsertWalletAccount(account);
 
@@ -258,6 +262,7 @@ class StorageService {
       origin: account.origin,
       derivationIndex: account.derivationIndex,
       createdAt: account.createdAt,
+      addressesByFamily: account.addressesByFamily,
     );
     await _saveWalletAccounts(accounts);
     final activeAddress = await getWalletAddress();
@@ -571,6 +576,27 @@ class StorageService {
   Future<void> setFirstLaunchCompleted() async {
     final prefs = await _prefs;
     await prefs.setBool(_keyFirstLaunch, false);
+  }
+
+  Future<void> setEnabledChainFamilies(Set<ChainFamily> families) async {
+    final prefs = await _prefs;
+    final encoded = jsonEncode(families.map((f) => f.wireValue).toList());
+    await prefs.setString(_keyEnabledChainFamilies, encoded);
+  }
+
+  /// Returns the persisted enabled families, or null if never set (new install).
+  Future<Set<ChainFamily>?> getEnabledChainFamilies() async {
+    final prefs = await _prefs;
+    final raw = prefs.getString(_keyEnabledChainFamilies);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => ChainFamilyCodec.fromWireValue(e as String?))
+          .toSet();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> clearAll() async {

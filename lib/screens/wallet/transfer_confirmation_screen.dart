@@ -13,6 +13,7 @@ import '../../services/currency_controller.dart';
 import '../../services/wallet_history_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_notification_service.dart';
+import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
@@ -280,12 +281,15 @@ class _TransferConfirmationScreenState
 
     try {
       final chain = blockchain.activeChain;
+      final activeFamily = blockchain.activeFamily;
       progressController.setSwapSubmitting();
 
       final isNative =
           token?.contractAddress == null ||
           (token?.contractAddress?.isEmpty ?? true);
-      if (_fromAddress != null) {
+
+      // EVM balance/gas checks only apply to EVM families.
+      if (activeFamily == ChainFamily.evm && _fromAddress != null) {
         final availableBalance = await blockchain.getNativeBalanceBaseUnits(
           _fromAddress!,
         );
@@ -303,20 +307,37 @@ class _TransferConfirmationScreenState
         }
       }
 
-      final txHash = isNative
-          ? await _walletService.sendNativeTransaction(
-              toAddress: toAddress,
-              amountInBaseUnits: amountInBaseUnits,
-              rpcUrl: chain.rpcUrl,
-              chainId: chain.chainId,
-            )
-          : await _walletService.sendTokenTransaction(
-              tokenAddress: token!.contractAddress!,
-              toAddress: toAddress,
-              amountInBaseUnits: amountInBaseUnits,
-              rpcUrl: chain.rpcUrl,
-              chainId: chain.chainId,
-            );
+      String txHash;
+      if (activeFamily == ChainFamily.solana) {
+        txHash = await _walletService.sendSolanaTransaction(
+          fromAddress: _fromAddress!,
+          toAddress: toAddress,
+          amountLamports: amountInBaseUnits.toInt(),
+          tokenMint: isNative ? null : token?.contractAddress,
+        );
+      } else if (activeFamily == ChainFamily.tron) {
+        txHash = await _walletService.sendTronTransaction(
+          fromAddress: _fromAddress!,
+          toAddress: toAddress,
+          amount: amountInBaseUnits.toInt(),
+          tokenContract: isNative ? null : token?.contractAddress,
+        );
+      } else {
+        txHash = isNative
+            ? await _walletService.sendNativeTransaction(
+                toAddress: toAddress,
+                amountInBaseUnits: amountInBaseUnits,
+                rpcUrl: chain.rpcUrl,
+                chainId: chain.chainId,
+              )
+            : await _walletService.sendTokenTransaction(
+                tokenAddress: token!.contractAddress!,
+                toAddress: toAddress,
+                amountInBaseUnits: amountInBaseUnits,
+                rpcUrl: chain.rpcUrl,
+                chainId: chain.chainId,
+              );
+      }
 
       final detailsUrl = _transactionDetailsUrl(txHash, blockchain);
       progressController.setSwapPending(
@@ -365,6 +386,7 @@ class _TransferConfirmationScreenState
               tokenSymbol: token.symbol,
               amountText: amountText,
               toAddress: toAddress,
+              networkKey: token.networkKey,
             ),
           );
         }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
+import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
@@ -249,10 +250,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       return;
     }
 
-    final isValidEvmAddress = RegExp(
-      r'^0x[0-9a-fA-F]{40}$',
-    ).hasMatch(destination);
-    if (!isValidEvmAddress) {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final family = blockchain.activeFamily;
+    final isValidAddress = _isValidAddressForFamily(destination, family);
+    if (!isValidAddress) {
       _showError(l.invalidEthereumAddress);
       return;
     }
@@ -292,6 +293,19 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         'isInterTransfer': false,
       },
     );
+  }
+
+  bool _isValidAddressForFamily(String address, ChainFamily family) {
+    switch (family) {
+      case ChainFamily.evm:
+        return RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address);
+      case ChainFamily.solana:
+        // Base58 public key: 32–44 chars, no 0/O/I/l
+        return RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(address);
+      case ChainFamily.tron:
+        // Tron base58check addresses start with T and are 34 chars
+        return RegExp(r'^T[1-9A-HJ-NP-Za-km-z]{33}$').hasMatch(address);
+    }
   }
 
   void _showError(String message) {
@@ -343,9 +357,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     String equivalentText = '';
     if (tokenAmount != null && tokenAmount > 0 && tokenUsdPrice > 0) {
       if (_inputMode == AmountInputMode.token) {
-        equivalentText = '≈ ${ValueFormatter.formatCurrencyWithGrouping(
-          ValueFormatter.decimalFromNum(tokenAmount * tokenUsdPrice),
-        )}';
+        equivalentText =
+            '≈ ${ValueFormatter.formatCurrencyWithGrouping(ValueFormatter.decimalFromNum(tokenAmount * tokenUsdPrice))}';
       } else {
         equivalentText =
             '≈ ${ValueFormatter.formatTokenRateAmount(tokenAmount)} $tokenSymbol';

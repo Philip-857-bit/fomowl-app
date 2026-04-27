@@ -9,6 +9,7 @@ import 'package:showcaseview/showcaseview.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
+import '../../models/chain.dart';
 import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
@@ -43,6 +44,8 @@ import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
 import '../wallet/widgets/nft_detail_sheet.dart';
 import '../../services/home_snapshot_service.dart';
+import '../../services/app_release_checker.dart';
+import 'widgets/whats_new_sheet.dart';
 
 /// Home Screen - Main Wallet Dashboard
 /// Shows wallet balance, quick actions, and token list
@@ -93,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool? _hasInternet;
   String _connectivityStatus = '';
   int? _lastChainId;
+  String? _lastNetworkKey;
   Set<String> _hiddenTokenKeys = {};
   List<NftAsset> _nftPreview = [];
   bool _hasMoreNfts = false;
@@ -102,6 +106,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingHomeBanners = false;
   bool _homeShowcaseScheduled = false;
   bool _showFallbackSocialBanner = true;
+  bool _whatsNewChecked = false;
+  final AppReleaseChecker _releaseChecker = AppReleaseChecker();
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
@@ -163,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _blockchain?.removeListener(_handleBlockchainChange);
       _blockchain = newService;
       _lastChainId = newService.activeChain.chainId;
+      _lastNetworkKey = newService.activeNetworkKey;
       _blockchain?.addListener(_handleBlockchainChange);
     }
   }
@@ -627,26 +634,33 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
 
-      debugPrint('[OWLLET] Initializing BlockchainService...');
-      await blockchain.init().timeout(
+      // Load address + cached snapshot concurrently with blockchain.init()
+      // so the UI unblocks as soon as local storage is ready, without
+      // waiting for the full init chain.
+      final initFuture = blockchain.init().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           debugPrint('[OWLLET] CRITICAL: Blockchain init timed out after 10s');
         },
       );
 
-      _lastChainId = blockchain.activeChain.chainId;
-      debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
+      final addressFuture = _walletService.getCurrentWalletAddress();
+      final nameFuture = _storage.getWalletName();
 
-      await _loadHiddenTokens(_lastChainId!);
-      final address = await _walletService.getCurrentWalletAddress();
-      final name = await _storage.getWalletName();
+      // Wait only for the address/name — these are fast local reads.
+      final address = await addressFuture;
+      final name = await nameFuture;
+
       if (address != null && address.isNotEmpty) {
-        // Load snapshot before unblocking UI with _isLoading = false
+        // Load snapshot immediately — don't wait for blockchain.init().
+        // We use the last known chainId if available, otherwise fall through.
+        final preChainId = _lastChainId ?? blockchain.activeChain.chainId;
         final snapshot = await _snapshotService.loadSnapshot(
-          _lastChainId!,
+          preChainId,
           address,
         );
+        final portfolioSnapshotFuture = _applyPortfolioSnapshot(address);
+
         if (snapshot != null && mounted) {
           setState(() {
             _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
@@ -661,22 +675,34 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }
 
-        await _applyPortfolioSnapshot(address);
+        await portfolioSnapshotFuture;
 
+        // Unblock the UI now — cached data is shown.
         if (mounted) {
           final l = AppLocalizations.of(context);
           setState(() {
             _walletName ??= name ?? l.mainWallet;
             _isLoading = false;
           });
-          debugPrint('[OWLLET] Loading state cleared. UI unblocked.');
+          debugPrint('[OWLLET] Loading state cleared. UI unblocked (cached).');
         }
+
+        // Now wait for blockchain.init() to finish before the live refresh.
+        await initFuture;
+        if (!mounted) return;
+
+        _lastChainId = blockchain.activeChain.chainId;
+        debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
+        await _loadHiddenTokens(_lastChainId!);
 
         debugPrint('[OWLLET] Triggering background data sync...');
         unawaited(_fetchRealBalances(address));
         unawaited(_fetchPortfolioData(address, sync: forcePortfolioSync));
         _scheduleDeferredHomeTasks(address);
+        unawaited(_checkWhatsNew());
       } else {
+        // No wallet — still need blockchain init to know the chain.
+        await initFuture;
         if (mounted) {
           final l = AppLocalizations.of(context);
           setState(() {
@@ -698,6 +724,23 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         });
       }
+    }
+  }
+
+  Future<void> _checkWhatsNew() async {
+    if (_whatsNewChecked || !mounted) return;
+    _whatsNewChecked = true;
+
+    // Small delay so the home screen finishes painting first.
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+
+    try {
+      final result = await _releaseChecker.checkForWhatsNew();
+      if (result == null || !mounted) return;
+      await WhatsNewSheet.show(context, result);
+    } catch (_) {
+      // Never block the user over a non-critical feature.
     }
   }
 
@@ -921,7 +964,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final chainId = blockchain?.activeChain.chainId;
     if (blockchain == null || chainId == null) return;
 
-    if (chainId == _lastChainId) {
+    final currentNetworkKey = blockchain.activeNetworkKey;
+    final networkKeyChanged = currentNetworkKey != _lastNetworkKey;
+    final chainIdChanged = chainId != _lastChainId;
+
+    // Same network — just refresh token list if the signature changed.
+    if (!networkKeyChanged && !chainIdChanged) {
       final nextTokens = blockchain.tokens;
       final nextSignature = _buildTokenSignature(nextTokens);
       if (nextSignature == _lastTokenSignature) {
@@ -938,20 +986,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     _lastChainId = chainId;
+    _lastNetworkKey = currentNetworkKey;
     _loadHiddenTokens(chainId);
     _walletService.getCurrentWalletAddress().then((address) async {
       if (!mounted || address == null) return;
 
-      // Attempt to load snapshot for the new chain to show something instantly
-      final snapshot = await _snapshotService.loadSnapshot(chainId, address);
-      if (snapshot != null && mounted) {
-        setState(() {
-          _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
-        });
-        _blockchain?.setLivePriceTrackingForTokens(
-          _tokens,
-          scope: _livePriceScope,
-        );
+      // For EVM chains, try to load a cached snapshot instantly.
+      // For non-EVM, clear the list so stale EVM tokens don't show.
+      if (blockchain.activeFamily == ChainFamily.evm) {
+        final snapshot = await _snapshotService.loadSnapshot(chainId, address);
+        if (snapshot != null && mounted) {
+          setState(() {
+            _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
+          });
+          _blockchain?.setLivePriceTrackingForTokens(
+            _tokens,
+            scope: _livePriceScope,
+          );
+        } else if (mounted) {
+          setState(() {
+            _replaceDisplayedTokens(const [], isUsingCachedData: false);
+          });
+        }
       } else if (mounted) {
         setState(() {
           _replaceDisplayedTokens(const [], isUsingCachedData: false);
@@ -1243,16 +1299,18 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => NetworkSelectorSheet(
-        chains: blockchain.allChains,
-        activeChainId: blockchain.activeChain.chainId,
-        onSelect: (chain) {
-          blockchain.setActiveChain(chain);
+        entries: blockchain.networkEntries,
+        activeNetworkKey: blockchain.activeNetworkKey,
+        onSelect: (entry) {
+          blockchain.setActiveNetworkKey(entry.networkKey);
           Navigator.pop(ctx);
         },
-        onAddCustomNetwork: () async {
-          Navigator.pop(ctx);
-          await Navigator.pushNamed(context, '/add-network');
-        },
+        onAddCustomNetwork: blockchain.enabledFamilies.contains(ChainFamily.evm)
+            ? () async {
+                Navigator.pop(ctx);
+                await Navigator.pushNamed(context, '/add-network');
+              }
+            : null,
       ),
     );
   }
@@ -1285,8 +1343,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         await Navigator.pushNamed(context, '/wallets');
                         await _loadWalletData();
                       },
-                      chainSymbol: blockchain.activeChain.symbol,
-                      chainLogoUrl: blockchain.activeChain.logoUrl,
+                      chainSymbol: switch (blockchain.activeFamily) {
+                        ChainFamily.solana => 'SOL',
+                        ChainFamily.tron => 'TRX',
+                        ChainFamily.evm => blockchain.activeChain.symbol,
+                      },
+                      chainLogoUrl: switch (blockchain.activeFamily) {
+                        ChainFamily.solana || ChainFamily.tron => null,
+                        ChainFamily.evm => blockchain.activeChain.logoUrl,
+                      },
                       onChainTap: _showNetworkSelector,
                       showNotificationDot: _hasUnreadNotifications,
                       onNotificationsTap: () async {
@@ -1388,15 +1453,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 onSend: () =>
                                     Navigator.pushNamed(context, '/send-token'),
-                                onSwap: () {
-                                  if (widget.showBottomNavigation) {
-                                    Navigator.pushNamed(context, '/swap');
-                                    return;
-                                  }
-                                  context.read<AppShellController>().selectTab(
-                                    AppShellTab.swap,
-                                  );
-                                },
+                                onSwap:
+                                    blockchain.activeFamily == ChainFamily.evm
+                                    ? () {
+                                        if (widget.showBottomNavigation) {
+                                          Navigator.pushNamed(context, '/swap');
+                                          return;
+                                        }
+                                        context
+                                            .read<AppShellController>()
+                                            .selectTab(AppShellTab.swap);
+                                      }
+                                    : null,
                               ),
                             ),
                             const SizedBox(height: 18),

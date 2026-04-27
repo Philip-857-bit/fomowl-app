@@ -30,11 +30,24 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
+  int _wordCount = 0;
 
   @override
   void initState() {
     super.initState();
     unawaited(_screenCaptureGuard.enableProtection());
+    _secretPhraseController.addListener(_onPhraseChanged);
+  }
+
+  void _onPhraseChanged() {
+    final words = _secretPhraseController.text
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .length;
+    if (words != _wordCount) {
+      setState(() => _wordCount = words);
+    }
   }
 
   @override
@@ -42,6 +55,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
     _walletNameController.text = '';
     _secretPhraseController.text = '';
     _walletNameController.dispose();
+    _secretPhraseController.removeListener(_onPhraseChanged);
     _secretPhraseController.dispose();
     unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
@@ -260,7 +274,12 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
+
+                // Word count indicator
+                _WordCountIndicator(wordCount: _wordCount),
+
+                const SizedBox(height: 10),
 
                 // Helper text
                 Center(
@@ -335,6 +354,50 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _WordCountIndicator extends StatelessWidget {
+  const _WordCountIndicator({required this.wordCount});
+
+  final int wordCount;
+
+  @override
+  Widget build(BuildContext context) {
+    if (wordCount == 0) return const SizedBox.shrink();
+
+    final bool isValid = wordCount == 12 || wordCount == 24;
+    final int target = wordCount <= 12 ? 12 : 24;
+    final Color color = isValid
+        ? const Color(0xFF4CAF50)
+        : wordCount > 24
+        ? const Color(0xFFEB3F3F)
+        : Colors.white.withValues(alpha: 0.5);
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.35)),
+          ),
+          child: Text(
+            '$wordCount / $target words',
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ),
+        if (isValid) ...[
+          const SizedBox(width: 8),
+          Icon(Icons.check_circle_outline, size: 14, color: color),
+        ],
+      ],
     );
   }
 }

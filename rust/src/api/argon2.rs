@@ -25,13 +25,9 @@ pub fn derive_passcode_hash_argon2(
         .checked_shl(memory_power_of_2)
         .ok_or_else(|| "Invalid Argon2 memory parameter".to_string())?;
     let params = Params::new(memory_kib, iterations, 1, Some(32))
-    .map_err(|e| format!("Invalid Argon2 parameters: {}", e))?;
-    
-    let argon2 = Argon2::new(
-        argon2::Algorithm::Argon2id,
-        argon2::Version::V0x13,
-        params,
-    );
+        .map_err(|e| format!("Invalid Argon2 parameters: {}", e))?;
+
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
 
     // Hash the passcode
     let password_hash = argon2

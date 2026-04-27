@@ -18,7 +18,7 @@ import '../src/rust/api/secp256k1_api.dart' as rust_secp;
 ///   final mnemonic = await NativeCrypto.generateMnemonic();
 ///   final isValid  = await NativeCrypto.validateMnemonic(mnemonic);
 ///   final seed     = await NativeCrypto.mnemonicToSeed(mnemonic);
-///   final privKey  = await NativeCrypto.deriveWalletFromSeed(seed, 0);
+///   final privKey  = await NativeCrypto.deriveEvmPrivateKeyFromSeed(seed, 0);
 class NativeCrypto {
   NativeCrypto._();
 
@@ -55,42 +55,135 @@ class NativeCrypto {
     }
   }
 
-  // ---------- BIP-32 (HD Key Derivation) ------------------------------------
+  // ---------- HD Key Derivation -------------------------------------------
+
+  /// Compatibility alias for deriving an Ethereum private key.
+  ///
+  /// Prefer [deriveEvmPrivateKeyFromSeed] in new code because Solana/TRON use
+  /// different curves and derivation paths.
+  static Future<String> deriveWalletFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) {
+    return deriveEvmPrivateKeyFromSeed(seed, derivationIndex);
+  }
 
   /// Derive an Ethereum private key from a 64-byte seed at the given index.
   /// Returns a 64-character hex string (no 0x prefix).
   ///
   /// Path: m/44'/60'/0'/0/{derivationIndex}
-  static Future<String> deriveWalletFromSeed(
+  static Future<String> deriveEvmPrivateKeyFromSeed(
     Uint8List seed,
     int derivationIndex,
   ) async {
     try {
-      return await rust_bip32.deriveWalletFromSeed(
+      return await rust_bip32.deriveEvmPrivateKeyFromSeed(
         seed: seed.toList(),
         derivationIndex: derivationIndex,
       );
     } catch (e) {
-      debugPrint('[NativeCrypto] deriveWalletFromSeed Rust error: $e');
+      debugPrint('[NativeCrypto] deriveEvmPrivateKeyFromSeed Rust error: $e');
       rethrow;
     }
   }
 
-  // ---------- Argon2id (Passcode Hashing) -----------------------------------
+  /// Derive an EIP-55 Ethereum address from the wallet seed.
+  static Future<String> deriveEvmAddressFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) async {
+    try {
+      return await rust_bip32.deriveEvmAddressFromSeed(
+        seed: seed.toList(),
+        derivationIndex: derivationIndex,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] deriveEvmAddressFromSeed Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Derive a Solana Ed25519 private key seed at m/44'/501'/{index}'/0'.
+  static Future<String> deriveSolanaPrivateKeyFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) async {
+    try {
+      return await rust_bip32.deriveSolanaPrivateKeyFromSeed(
+        seed: seed.toList(),
+        derivationIndex: derivationIndex,
+      );
+    } catch (e) {
+      debugPrint(
+        '[NativeCrypto] deriveSolanaPrivateKeyFromSeed Rust error: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Derive a Solana base58 public address from the wallet seed.
+  static Future<String> deriveSolanaAddressFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) async {
+    try {
+      return await rust_bip32.deriveSolanaAddressFromSeed(
+        seed: seed.toList(),
+        derivationIndex: derivationIndex,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] deriveSolanaAddressFromSeed Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Derive a TRON secp256k1 private key at m/44'/195'/0'/0/{index}.
+  static Future<String> deriveTronPrivateKeyFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) async {
+    try {
+      return await rust_bip32.deriveTronPrivateKeyFromSeed(
+        seed: seed.toList(),
+        derivationIndex: derivationIndex,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] deriveTronPrivateKeyFromSeed Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Derive a TRON base58check address from the wallet seed.
+  static Future<String> deriveTronAddressFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) async {
+    try {
+      return await rust_bip32.deriveTronAddressFromSeed(
+        seed: seed.toList(),
+        derivationIndex: derivationIndex,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] deriveTronAddressFromSeed Rust error: $e');
+      rethrow;
+    }
+  }
+
+  // ---------- Argon2id (Passcode Hashing) ---------------------------------
 
   /// Derive a passcode hash using Argon2id. Returns base64-encoded hash.
   static Future<String> derivePasscodeHash({
     required String passcode,
     required String saltBase64,
     int iterations = 3,
-    int memoryKiB = 65536,
+    int memoryPowerOf2 = 16,
   }) async {
     try {
       return await rust_argon2.derivePasscodeHashArgon2(
         passcode: passcode,
         saltBase64: saltBase64,
         iterations: iterations,
-        memoryPowerOf2: memoryKiB,
+        memoryPowerOf2: memoryPowerOf2,
       );
     } catch (e) {
       debugPrint('[NativeCrypto] derivePasscodeHash Rust error: $e');
@@ -98,7 +191,7 @@ class NativeCrypto {
     }
   }
 
-  // ---------- secp256k1 (Transaction / Message Signing) ---------------------
+  // ---------- Signing ------------------------------------------------------
 
   /// Sign an Ethereum personal message (EIP-191).
   /// Returns a 0x-prefixed hex signature string.
@@ -117,8 +210,41 @@ class NativeCrypto {
     }
   }
 
-  /// Sign EIP-712 typed data.
-  /// NOTE: This is currently stubbed in Rust — falls back to Dart's EthSigUtil.
+  /// Sign a Solana transaction/message payload with a 32-byte Ed25519 private
+  /// key seed. Returns a base58-encoded 64-byte signature.
+  static Future<String> signSolanaMessage({
+    required String privateKeyHex,
+    required Uint8List message,
+  }) async {
+    try {
+      return await rust_bip32.signSolanaMessage(
+        privateKeyHex: privateKeyHex,
+        message: message.toList(),
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] signSolanaMessage Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign a 32-byte TRON raw transaction hash. Returns a 0x-prefixed 65-byte
+  /// hex signature with a 0/1 recovery ID.
+  static Future<String> signTronRawHash({
+    required String privateKeyHex,
+    required String rawHashHex,
+  }) async {
+    try {
+      return await rust_bip32.signTronRawHash(
+        privateKeyHex: privateKeyHex,
+        rawHashHex: rawHashHex,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] signTronRawHash Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign EIP-712 typed data. Returns a 0x-prefixed hex signature string.
   static Future<String> signTypedData({
     required String privateKeyHex,
     required String jsonData,
@@ -129,9 +255,7 @@ class NativeCrypto {
         jsonData: jsonData,
       );
     } catch (e) {
-      // EIP-712 is intentionally unimplemented in Rust — callers should
-      // catch this and use Dart's EthSigUtil as fallback.
-      debugPrint('[NativeCrypto] signTypedData Rust stubbed — use Dart: $e');
+      debugPrint('[NativeCrypto] signTypedData Rust error: $e');
       rethrow;
     }
   }

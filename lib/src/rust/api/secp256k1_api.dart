@@ -6,6 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `sign_digest_inner`, `sign_digest_with_recovery_id`, `sign_digest`
+
 Future<String> signPersonalMessage({
   required String privateKeyHex,
   required String message,

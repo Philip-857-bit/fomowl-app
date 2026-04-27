@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 
+import 'token_standard.dart';
 import '../utils/value_formatter.dart';
 
 /// Token Model
@@ -20,6 +21,8 @@ class Token {
   final String? imageUrl;
   final String? coinGeckoId;
   final bool isCertified;
+  final String? networkKey;
+  final TokenStandard tokenStandard;
 
   const Token({
     required this.symbol,
@@ -33,7 +36,48 @@ class Token {
     this.imageUrl,
     this.coinGeckoId,
     this.isCertified = false,
+    this.networkKey,
+    this.tokenStandard = TokenStandard.erc20,
   });
+
+  TokenStandard get effectiveTokenStandard {
+    if (contractAddress == null && tokenStandard == TokenStandard.erc20) {
+      return TokenStandard.native;
+    }
+    return tokenStandard;
+  }
+
+  Token copyWith({
+    String? symbol,
+    String? name,
+    String? contractAddress,
+    double? balance,
+    double? valueUsd,
+    double? priceUsd,
+    double? changePercent24h,
+    int? decimals,
+    String? imageUrl,
+    String? coinGeckoId,
+    bool? isCertified,
+    String? networkKey,
+    TokenStandard? tokenStandard,
+  }) {
+    return Token(
+      symbol: symbol ?? this.symbol,
+      name: name ?? this.name,
+      contractAddress: contractAddress ?? this.contractAddress,
+      balance: balance ?? this.balance,
+      valueUsd: valueUsd ?? this.valueUsd,
+      priceUsd: priceUsd ?? this.priceUsd,
+      changePercent24h: changePercent24h ?? this.changePercent24h,
+      decimals: decimals ?? this.decimals,
+      imageUrl: imageUrl ?? this.imageUrl,
+      coinGeckoId: coinGeckoId ?? this.coinGeckoId,
+      isCertified: isCertified ?? this.isCertified,
+      networkKey: networkKey ?? this.networkKey,
+      tokenStandard: tokenStandard ?? this.tokenStandard,
+    );
+  }
 
   Decimal get balanceDecimal => ValueFormatter.decimalFromNum(balance);
   Decimal get valueUsdDecimal => ValueFormatter.decimalFromNum(valueUsd);

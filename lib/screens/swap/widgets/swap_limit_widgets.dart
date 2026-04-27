@@ -252,7 +252,8 @@ class LimitExecutionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fiatPrefix = ValueFormatter.currencyPrefix;
-    final isFiatPrimary = priceInputMode == AmountInputMode.fiat &&
+    final isFiatPrimary =
+        priceInputMode == AmountInputMode.fiat &&
         usdController != null &&
         onUsdChanged != null;
     return Container(

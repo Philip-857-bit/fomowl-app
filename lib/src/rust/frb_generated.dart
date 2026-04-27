@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1285434652;
+  int get rustContentHash => 2022949558;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -81,11 +81,53 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiBip32DeriveEvmAddressFromPrivateKey({
+    required String privateKeyHex,
+  });
+
+  Future<String> crateApiBip32DeriveEvmAddressFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  });
+
+  Future<String> crateApiBip32DeriveEvmPrivateKeyFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  });
+
   Future<String> crateApiArgon2DerivePasscodeHashArgon2({
     required String passcode,
     required String saltBase64,
     required int iterations,
     required int memoryPowerOf2,
+  });
+
+  Future<String> crateApiBip32DeriveSolanaAddressFromPrivateKey({
+    required String privateKeyHex,
+  });
+
+  Future<String> crateApiBip32DeriveSolanaAddressFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  });
+
+  Future<String> crateApiBip32DeriveSolanaPrivateKeyFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  });
+
+  Future<String> crateApiBip32DeriveTronAddressFromPrivateKey({
+    required String privateKeyHex,
+  });
+
+  Future<String> crateApiBip32DeriveTronAddressFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  });
+
+  Future<String> crateApiBip32DeriveTronPrivateKeyFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
   });
 
   Future<String> crateApiBip32DeriveWalletFromSeed({
@@ -106,6 +148,16 @@ abstract class RustLibApi extends BaseApi {
     required String message,
   });
 
+  Future<String> crateApiBip32SignSolanaMessage({
+    required String privateKeyHex,
+    required List<int> message,
+  });
+
+  Future<String> crateApiBip32SignTronRawHash({
+    required String privateKeyHex,
+    required String rawHashHex,
+  });
+
   Future<String> crateApiSecp256K1ApiSignTypedData({
     required String privateKeyHex,
     required String jsonData,
@@ -121,6 +173,109 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  @override
+  Future<String> crateApiBip32DeriveEvmAddressFromPrivateKey({
+    required String privateKeyHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveEvmAddressFromPrivateKeyConstMeta,
+        argValues: [privateKeyHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveEvmAddressFromPrivateKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_evm_address_from_private_key",
+        argNames: ["privateKeyHex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveEvmAddressFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(seed, serializer);
+          sse_encode_u_32(derivationIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveEvmAddressFromSeedConstMeta,
+        argValues: [seed, derivationIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveEvmAddressFromSeedConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_evm_address_from_seed",
+        argNames: ["seed", "derivationIndex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveEvmPrivateKeyFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(seed, serializer);
+          sse_encode_u_32(derivationIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveEvmPrivateKeyFromSeedConstMeta,
+        argValues: [seed, derivationIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveEvmPrivateKeyFromSeedConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_evm_private_key_from_seed",
+        argNames: ["seed", "derivationIndex"],
+      );
 
   @override
   Future<String> crateApiArgon2DerivePasscodeHashArgon2({
@@ -140,7 +295,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 4,
             port: port_,
           );
         },
@@ -162,6 +317,212 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiBip32DeriveSolanaAddressFromPrivateKey({
+    required String privateKeyHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveSolanaAddressFromPrivateKeyConstMeta,
+        argValues: [privateKeyHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveSolanaAddressFromPrivateKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_solana_address_from_private_key",
+        argNames: ["privateKeyHex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveSolanaAddressFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(seed, serializer);
+          sse_encode_u_32(derivationIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveSolanaAddressFromSeedConstMeta,
+        argValues: [seed, derivationIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveSolanaAddressFromSeedConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_solana_address_from_seed",
+        argNames: ["seed", "derivationIndex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveSolanaPrivateKeyFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(seed, serializer);
+          sse_encode_u_32(derivationIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveSolanaPrivateKeyFromSeedConstMeta,
+        argValues: [seed, derivationIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveSolanaPrivateKeyFromSeedConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_solana_private_key_from_seed",
+        argNames: ["seed", "derivationIndex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveTronAddressFromPrivateKey({
+    required String privateKeyHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveTronAddressFromPrivateKeyConstMeta,
+        argValues: [privateKeyHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveTronAddressFromPrivateKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_tron_address_from_private_key",
+        argNames: ["privateKeyHex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveTronAddressFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(seed, serializer);
+          sse_encode_u_32(derivationIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveTronAddressFromSeedConstMeta,
+        argValues: [seed, derivationIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveTronAddressFromSeedConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_tron_address_from_seed",
+        argNames: ["seed", "derivationIndex"],
+      );
+
+  @override
+  Future<String> crateApiBip32DeriveTronPrivateKeyFromSeed({
+    required List<int> seed,
+    required int derivationIndex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(seed, serializer);
+          sse_encode_u_32(derivationIndex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32DeriveTronPrivateKeyFromSeedConstMeta,
+        argValues: [seed, derivationIndex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32DeriveTronPrivateKeyFromSeedConstMeta =>
+      const TaskConstMeta(
+        debugName: "derive_tron_private_key_from_seed",
+        argNames: ["seed", "derivationIndex"],
+      );
+
+  @override
   Future<String> crateApiBip32DeriveWalletFromSeed({
     required List<int> seed,
     required int derivationIndex,
@@ -175,7 +536,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 11,
             port: port_,
           );
         },
@@ -205,7 +566,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 12,
             port: port_,
           );
         },
@@ -230,7 +591,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -255,7 +616,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 14,
             port: port_,
           );
         },
@@ -283,7 +644,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 15,
             port: port_,
           );
         },
@@ -315,7 +676,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 16,
             port: port_,
           );
         },
@@ -337,6 +698,76 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiBip32SignSolanaMessage({
+    required String privateKeyHex,
+    required List<int> message,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_list_prim_u_8_loose(message, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32SignSolanaMessageConstMeta,
+        argValues: [privateKeyHex, message],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32SignSolanaMessageConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_solana_message",
+        argNames: ["privateKeyHex", "message"],
+      );
+
+  @override
+  Future<String> crateApiBip32SignTronRawHash({
+    required String privateKeyHex,
+    required String rawHashHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_String(rawHashHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32SignTronRawHashConstMeta,
+        argValues: [privateKeyHex, rawHashHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32SignTronRawHashConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_tron_raw_hash",
+        argNames: ["privateKeyHex", "rawHashHex"],
+      );
+
+  @override
   Future<String> crateApiSecp256K1ApiSignTypedData({
     required String privateKeyHex,
     required String jsonData,
@@ -350,7 +781,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 19,
             port: port_,
           );
         },
@@ -381,7 +812,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 20,
             port: port_,
           );
         },

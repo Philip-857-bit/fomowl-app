@@ -1025,6 +1025,7 @@ class _SwapScreenState extends State<SwapScreen> {
     required String networkName,
     required int chainId,
     String? txHash,
+    String? networkKey,
   }) {
     if (_walletAddress == null) {
       return;
@@ -1040,6 +1041,7 @@ class _SwapScreenState extends State<SwapScreen> {
         fromAmount: fromAmount,
         toAmount: toAmount,
         toTokenSymbol: toTokenSymbol,
+        networkKey: networkKey,
       ),
     );
   }
@@ -1460,6 +1462,7 @@ class _SwapScreenState extends State<SwapScreen> {
               toTokenSymbol: toSymbol,
               networkName: networkName,
               chainId: chainId,
+              networkKey: blockchain.activeNetworkKey,
             );
           }
           progressController.setSuccess(
@@ -1512,6 +1515,7 @@ class _SwapScreenState extends State<SwapScreen> {
             toTokenSymbol: toSymbol,
             networkName: networkName,
             chainId: chainId,
+            networkKey: blockchain.activeNetworkKey,
           );
         }
         progressController.setSuccess(reference: _shortHash(tradeHash));
@@ -2399,7 +2403,7 @@ class _SwapScreenState extends State<SwapScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => NetworkSelectorSheet(
+      builder: (ctx) => NetworkSelectorSheet.fromEvmChains(
         chains: blockchain.allChains,
         activeChainId: blockchain.activeChain.chainId,
         onSelect: (chain) {
@@ -2655,6 +2659,7 @@ class _SwapScreenState extends State<SwapScreen> {
           toTokenSymbol: toToken.symbol,
           networkName: blockchain.activeChain.name,
           chainId: blockchain.activeChain.chainId,
+          networkKey: blockchain.activeNetworkKey,
         );
         progressController.setSuccess(
           reference: _shortHash(txHash),
@@ -2850,8 +2855,8 @@ class _SwapScreenState extends State<SwapScreen> {
                         fromInputMode: _fromInputMode,
                         onToggleFromInputMode:
                             _resolvedTokenUnitPriceUsd(_fromToken) > 0
-                                ? _toggleFromInputMode
-                                : null,
+                            ? _toggleFromInputMode
+                            : null,
                         fromEquivalentText: _fromEquivalentText(),
                         onSelectFromToken: () => _showTokenSelector(true),
                         onPercentSelected: _setPercentage,
@@ -2901,14 +2906,14 @@ class _SwapScreenState extends State<SwapScreen> {
                         fromInputMode: _fromInputMode,
                         onToggleFromInputMode:
                             _resolvedTokenUnitPriceUsd(_fromToken) > 0
-                                ? _toggleFromInputMode
-                                : null,
+                            ? _toggleFromInputMode
+                            : null,
                         fromEquivalentText: _fromEquivalentText(),
                         limitPriceInputMode: _limitPriceInputMode,
                         onToggleLimitPriceInputMode:
                             _resolvedTokenUnitPriceUsd(_limitQuoteToken) > 0
-                                ? _toggleLimitPriceInputMode
-                                : null,
+                            ? _toggleLimitPriceInputMode
+                            : null,
                         onSelectFromToken: () => _showTokenSelector(true),
                         onPercentSelected: _setPercentage,
                         onSwapTokens: _swapTokens,

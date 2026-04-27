@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/token.dart';
+import '../models/token_standard.dart';
 
 /// Model representing a captured state of the user's portfolio on the Home screen.
 class HomePortfolioSnapshot {
@@ -67,6 +68,8 @@ Map<String, dynamic> _tokenToJson(Token token) => {
   'imageUrl': token.imageUrl,
   'coinGeckoId': token.coinGeckoId,
   'isCertified': token.isCertified,
+  'networkKey': token.networkKey,
+  'tokenStandard': token.effectiveTokenStandard.wireValue,
 };
 
 Token _tokenFromJson(Map<String, dynamic> json) => Token(
@@ -81,6 +84,10 @@ Token _tokenFromJson(Map<String, dynamic> json) => Token(
   imageUrl: json['imageUrl'] as String?,
   coinGeckoId: json['coinGeckoId'] as String?,
   isCertified: json['isCertified'] == true,
+  networkKey: json['networkKey'] as String?,
+  tokenStandard: TokenStandardCodec.fromWireValue(
+    json['tokenStandard'] as String?,
+  ),
 );
 
 /// Service to persist and retrieve the Home portfolio snapshot for instant-after-unlock UX.

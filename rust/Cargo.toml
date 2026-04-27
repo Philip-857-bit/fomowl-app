@@ -11,6 +11,8 @@ argon2 = "0.5.3"
 base64 = "0.22.1"
 bip32 = "0.5.3"
 bip39 = "2.2.2"
+bs58 = "0.5.1"
+ed25519-dalek = "2.2.0"
 ethers-core = { version = "2.0.14", default-features = false }
 ethereum-types = "0.16.0"
 flutter_rust_bridge = "=2.11.1"

@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:fomowl_wallet/models/chain.dart';
+import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 
@@ -62,6 +64,35 @@ void main() {
 
       await storage.clearBackendSession(walletAddress);
       expect(await storage.getBackendSession(walletAddress), isNull);
+    });
+
+    test('persists wallet account family addresses', () async {
+      await storage.saveWallet(
+        address: '0x1234567890123456789012345678901234567890',
+        privateKey: 'private-key',
+        walletName: 'Wallet 1',
+        origin: WalletOrigin.derived,
+        derivationIndex: 0,
+        addressesByFamily: const {
+          ChainFamily.solana: 'solanaAddress',
+          ChainFamily.tron: 'tronAddress',
+        },
+      );
+
+      final accounts = await storage.getWalletAccounts();
+      expect(accounts, hasLength(1));
+      expect(
+        accounts.single.getWalletAddressForFamily(ChainFamily.evm),
+        '0x1234567890123456789012345678901234567890',
+      );
+      expect(
+        accounts.single.getWalletAddressForFamily(ChainFamily.solana),
+        'solanaAddress',
+      );
+      expect(
+        accounts.single.getWalletAddressForFamily(ChainFamily.tron),
+        'tronAddress',
+      );
     });
 
     test('rust and dart argon2 derivation stay compatible', () async {

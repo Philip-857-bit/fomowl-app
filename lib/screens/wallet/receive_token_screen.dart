@@ -6,6 +6,7 @@ import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
 import '../../models/token.dart';
+import '../../models/chain.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/toast_utils.dart';
 import 'widgets/send/send_header.dart';
@@ -25,14 +26,23 @@ class ReceiveTokenScreen extends StatefulWidget {
 class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   Token? _selectedToken;
 
+  ChainFamily? _lastFamily;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final blockchain = Provider.of<BlockchainService>(context);
     if (_selectedToken == null) {
-      final tokens = Provider.of<BlockchainService>(context).tokens;
+      final tokens = blockchain.tokens;
       if (tokens.isNotEmpty) {
         _selectedToken = tokens.first;
       }
+    }
+    // Reload address whenever the active family changes (EVM → Solana → Tron).
+    final currentFamily = blockchain.activeFamily;
+    if (_lastFamily != currentFamily) {
+      _lastFamily = currentFamily;
+      _loadAddress();
     }
   }
 
@@ -42,11 +52,14 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAddress();
   }
 
   Future<void> _loadAddress() async {
-    final address = await _walletService.getCurrentWalletAddress();
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final family = blockchain.activeFamily;
+    final address = family == ChainFamily.evm
+        ? await _walletService.getCurrentWalletAddress()
+        : await _walletService.getWalletAddressForFamily(family);
     if (mounted) {
       setState(() {
         _walletAddress = address ?? '';

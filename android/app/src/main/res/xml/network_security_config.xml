@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow all HTTPS connections -->
+    <!-- Trust system CAs only; user-installed certs are not trusted in release. -->
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
-            <!-- Trust system certificates -->
             <certificates src="system" />
-            <!-- Trust user-added certificates (for debugging) -->
-            <certificates src="user" />
         </trust-anchors>
     </base-config>
     

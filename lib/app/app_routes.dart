@@ -8,6 +8,7 @@ import '../screens/auth/unlock_screen.dart';
 import '../screens/earn/earn_coming_soon_screen.dart';
 import '../screens/notifications/notifications_screen.dart';
 import '../screens/onboarding/biometric_setup_screen.dart';
+import '../screens/onboarding/blockchain_selection_screen.dart';
 import '../screens/onboarding/congratulations_screen.dart';
 import '../screens/onboarding/confirm_passcode_screen.dart';
 import '../screens/onboarding/confirm_phrase_screen.dart';
@@ -70,6 +71,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/face-id-verification': (_) => const FaceIdVerificationScreen(),
     '/fingerprint-verification': (_) => const FingerprintVerificationScreen(),
     '/congratulations': (_) => const CongratulationsScreen(),
+    '/blockchain-selection': (_) => const BlockchainSelectionScreen(),
     '/shell': (_) => const AppShellScreen(),
     '/home': (_) => const ShellRouteRedirect(tab: AppShellTab.wallet),
     '/earn': (_) => const EarnComingSoonScreen(),

@@ -20,6 +20,7 @@ enum _AdminSection {
   feedback('Feedback', Icons.forum_outlined),
   dapps('DApps', Icons.explore_outlined),
   promos('Promos', Icons.view_carousel_outlined),
+  release('Release', Icons.new_releases_outlined),
   actions('Actions', Icons.bolt_outlined),
   push('Push', Icons.notifications_active_outlined),
   maintainers('Maintainers', Icons.groups_2_outlined),
@@ -73,6 +74,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _registryHasNext = false;
   List<Map<String, dynamic>> _discoverDapps = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _homeBanners = const <Map<String, dynamic>>[];
+  String _appReleaseVersion = '';
+  String _appReleaseMinVersion = '';
   String? _discoverEditingId;
   String? _homeBannerEditingId;
   bool _discoverIsActive = true;
@@ -112,6 +115,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final TextEditingController _discoverFeaturedRankController =
       TextEditingController();
   final TextEditingController _discoverTrendingRankController =
+      TextEditingController();
+  final TextEditingController _appReleaseVersionController =
+      TextEditingController();
+  final TextEditingController _appReleaseMinVersionController =
+      TextEditingController();
+  final TextEditingController _appReleaseNotesController =
       TextEditingController();
   final TextEditingController _homeBannerTitleController =
       TextEditingController();
@@ -182,6 +191,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _discoverChainIdsController.dispose();
     _discoverFeaturedRankController.dispose();
     _discoverTrendingRankController.dispose();
+    _appReleaseVersionController.dispose();
+    _appReleaseMinVersionController.dispose();
+    _appReleaseNotesController.dispose();
     _homeBannerTitleController.dispose();
     _homeBannerDescriptionController.dispose();
     _homeBannerLinkUrlController.dispose();
@@ -219,6 +231,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _registryHasNext = false;
       _discoverDapps = const <Map<String, dynamic>>[];
       _homeBanners = const <Map<String, dynamic>>[];
+      _appReleaseVersion = '';
+      _appReleaseMinVersion = '';
       _discoverEditingId = null;
       _homeBannerEditingId = null;
       _discoverIsActive = true;
@@ -264,6 +278,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           break;
         case _AdminSection.promos:
           await _loadHomeBanners();
+          break;
+        case _AdminSection.release:
+          await _loadAppRelease();
           break;
         case _AdminSection.actions:
         case _AdminSection.push:
@@ -415,6 +432,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _homeBanners = feed.banners;
       _showFallbackSocialBanner = feed.showFallbackSocialBanner;
     });
+  }
+
+  Future<void> _loadAppRelease() async {
+    final response = await _apiService.fetchAppRelease();
+    if (!mounted) return;
+    setState(() {
+      _appReleaseVersion = response['version']?.toString() ?? '';
+      _appReleaseMinVersion = response['minVersion']?.toString() ?? '';
+      _appReleaseVersionController.text = _appReleaseVersion;
+      _appReleaseMinVersionController.text = _appReleaseMinVersion;
+      _appReleaseNotesController.text =
+          (response['releaseNotes'] as List<dynamic>? ?? const <dynamic>[])
+              .join('\n');
+    });
+  }
+
+  Future<void> _submitAppRelease() async {
+    final version = _appReleaseVersionController.text.trim();
+    final minVersion = _appReleaseMinVersionController.text.trim();
+    if (version.isEmpty || minVersion.isEmpty) {
+      _showSnackBar('Version and minimum version are required.');
+      return;
+    }
+    setState(() => _loadingSections.add(_AdminSection.release));
+    try {
+      await _apiService.updateAppRelease(
+        version: version,
+        minVersion: minVersion,
+        releaseNotes: _appReleaseNotesController.text.trim(),
+      );
+      await _loadAppRelease();
+      _showSnackBar('App release published.');
+    } catch (error) {
+      _showSnackBar(
+        AppErrorUtils.userMessage(
+          error,
+          fallback: 'Unable to publish release.',
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _loadingSections.remove(_AdminSection.release));
+      }
+    }
   }
 
   Future<void> _refreshCurrentSection() async {
@@ -1122,6 +1183,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return _discoverDapps.isNotEmpty || _discoverEditingId != null;
       case _AdminSection.promos:
         return _homeBanners.isNotEmpty || _homeBannerEditingId != null;
+      case _AdminSection.release:
+        return _appReleaseVersion.isNotEmpty;
       case _AdminSection.actions:
       case _AdminSection.push:
         return true;
@@ -1221,6 +1284,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           banners: _homeBanners,
           onEdit: _startEditingHomeBanner,
           onToggleActive: _toggleHomeBannerActive,
+        );
+      case _AdminSection.release:
+        return AdminAppReleaseSection(
+          isLoading: _isLoading(_AdminSection.release),
+          isSubmitting: _isLoading(_AdminSection.release),
+          versionController: _appReleaseVersionController,
+          minVersionController: _appReleaseMinVersionController,
+          releaseNotesController: _appReleaseNotesController,
+          onSubmit: _submitAppRelease,
+          currentVersion: _appReleaseVersion.isEmpty ? '—' : _appReleaseVersion,
+          currentMinVersion: _appReleaseMinVersion.isEmpty
+              ? '—'
+              : _appReleaseMinVersion,
         );
       case _AdminSection.actions:
         return AdminActionsSection(

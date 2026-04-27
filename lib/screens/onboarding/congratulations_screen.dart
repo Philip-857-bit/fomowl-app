@@ -36,7 +36,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
     }
 
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/shell', (route) => false);
+    Navigator.pushReplacementNamed(context, '/blockchain-selection');
   }
 
   @override

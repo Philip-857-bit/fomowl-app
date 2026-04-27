@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/chain.dart';
 import '../../services/app_patch_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
@@ -53,6 +54,7 @@ class _DecentralizedProfileScreenState
   String _walletAddress = '--';
   String _currency = 'USD';
   bool _loading = true;
+  Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
 
   @override
   void initState() {
@@ -88,6 +90,7 @@ class _DecentralizedProfileScreenState
     final walletName = await _storageService.getWalletName();
     final walletAddress = await _walletService.getCurrentWalletAddress();
     final currency = await _storageService.getCurrency();
+    final savedFamilies = await _storageService.getEnabledChainFamilies();
 
     if (!mounted) return;
 
@@ -95,8 +98,22 @@ class _DecentralizedProfileScreenState
       _walletName = walletName ?? 'Main Wallet';
       _walletAddress = walletAddress ?? '--';
       _currency = currency;
+      _enabledFamilies = savedFamilies ?? {ChainFamily.evm};
       _loading = false;
     });
+  }
+
+  Future<void> _toggleFamily(ChainFamily family) async {
+    final blockchain = context.read<BlockchainService>();
+    final updated = Set<ChainFamily>.of(_enabledFamilies);
+    if (updated.contains(family)) {
+      if (updated.length == 1) return; // must keep at least one
+      updated.remove(family);
+    } else {
+      updated.add(family);
+    }
+    setState(() => _enabledFamilies = updated);
+    await blockchain.setEnabledFamilies(updated);
   }
 
   String _currencyDisplayName(String code, AppLocalizations l) {
@@ -181,20 +198,21 @@ class _DecentralizedProfileScreenState
       isScrollControlled: true,
       builder: (ctx) => SafeArea(
         child: NetworkSelectorSheet(
-          chains: blockchain.allChains,
-          activeChainId: blockchain.activeChain.chainId,
-          onSelect: (chain) {
-            blockchain.setActiveChain(chain);
+          entries: blockchain.networkEntries,
+          activeNetworkKey: blockchain.activeNetworkKey,
+          onSelect: (entry) {
+            blockchain.setActiveNetworkKey(entry.networkKey);
             Navigator.pop(ctx);
             if (mounted) setState(() {});
           },
-          onAddCustomNetwork: () async {
-            Navigator.pop(ctx);
-            await Navigator.pushNamed(context, '/add-network');
-            if (mounted) {
-              setState(() {});
-            }
-          },
+          onAddCustomNetwork:
+              blockchain.enabledFamilies.contains(ChainFamily.evm)
+              ? () async {
+                  Navigator.pop(ctx);
+                  await Navigator.pushNamed(context, '/add-network');
+                  if (mounted) setState(() {});
+                }
+              : null,
         ),
       ),
     );
@@ -503,6 +521,62 @@ class _DecentralizedProfileScreenState
                               await _load();
                             }
                           },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SettingsSectionHeader(title: 'Manage Networks'),
+                    SettingsGroupCard(
+                      children: [
+                        SettingsItemTile(
+                          icon: Icons.hexagon_outlined,
+                          title: 'EVM Networks',
+                          subtitle: 'Ethereum, BNB, Base & more',
+                          onTap: () => _toggleFamily(ChainFamily.evm),
+                          trailing: Switch(
+                            value: _enabledFamilies.contains(ChainFamily.evm),
+                            onChanged: (_) => _toggleFamily(ChainFamily.evm),
+                            activeThumbColor: const Color(0xFF627EEA),
+                            activeTrackColor: const Color(
+                              0xFF627EEA,
+                            ).withValues(alpha: 0.3),
+                            inactiveThumbColor: Colors.white38,
+                            inactiveTrackColor: Colors.white12,
+                          ),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.blur_circular_rounded,
+                          title: 'Solana',
+                          subtitle: 'SOL and SPL tokens',
+                          onTap: () => _toggleFamily(ChainFamily.solana),
+                          trailing: Switch(
+                            value: _enabledFamilies.contains(
+                              ChainFamily.solana,
+                            ),
+                            onChanged: (_) => _toggleFamily(ChainFamily.solana),
+                            activeThumbColor: const Color(0xFF9945FF),
+                            activeTrackColor: const Color(
+                              0xFF9945FF,
+                            ).withValues(alpha: 0.3),
+                            inactiveThumbColor: Colors.white38,
+                            inactiveTrackColor: Colors.white12,
+                          ),
+                        ),
+                        SettingsItemTile(
+                          icon: Icons.change_history_rounded,
+                          title: 'Tron',
+                          subtitle: 'TRX and TRC-20 tokens',
+                          onTap: () => _toggleFamily(ChainFamily.tron),
+                          trailing: Switch(
+                            value: _enabledFamilies.contains(ChainFamily.tron),
+                            onChanged: (_) => _toggleFamily(ChainFamily.tron),
+                            activeThumbColor: const Color(0xFFEF0027),
+                            activeTrackColor: const Color(
+                              0xFFEF0027,
+                            ).withValues(alpha: 0.3),
+                            inactiveThumbColor: Colors.white38,
+                            inactiveTrackColor: Colors.white12,
+                          ),
                         ),
                       ],
                     ),
