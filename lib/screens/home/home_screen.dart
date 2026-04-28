@@ -43,6 +43,8 @@ import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
 import '../wallet/widgets/nft_detail_sheet.dart';
+import '../../services/blockchain/solana_catalog.dart';
+import '../../services/blockchain/tron_catalog.dart';
 import '../../services/home_snapshot_service.dart';
 import '../../services/app_release_checker.dart';
 import 'widgets/whats_new_sheet.dart';
@@ -1349,7 +1351,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ChainFamily.evm => blockchain.activeChain.symbol,
                       },
                       chainLogoUrl: switch (blockchain.activeFamily) {
-                        ChainFamily.solana || ChainFamily.tron => null,
+                        ChainFamily.solana => SolanaCatalog.mainnet.logoUrl,
+                        ChainFamily.tron => TronCatalog.mainnet.logoUrl,
                         ChainFamily.evm => blockchain.activeChain.logoUrl,
                       },
                       onChainTap: _showNetworkSelector,

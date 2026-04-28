@@ -25,56 +25,66 @@ class ReceiveTokenScreen extends StatefulWidget {
 
 class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   Token? _selectedToken;
-
   ChainFamily? _lastFamily;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final blockchain = Provider.of<BlockchainService>(context);
-    if (_selectedToken == null) {
-      final tokens = blockchain.tokens;
-      if (tokens.isNotEmpty) {
-        _selectedToken = tokens.first;
-      }
-    }
-    // Reload address whenever the active family changes (EVM → Solana → Tron).
-    final currentFamily = blockchain.activeFamily;
-    if (_lastFamily != currentFamily) {
-      _lastFamily = currentFamily;
-      _loadAddress();
-    }
-  }
-
   String _walletAddress = '';
   final WalletService _walletService = WalletService();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initForFamily());
   }
 
-  Future<void> _loadAddress() async {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = Provider.of<BlockchainService>(context);
+    final currentFamily = blockchain.activeFamily;
+    // Re-initialise token + address whenever the active family changes.
+    if (_lastFamily != currentFamily) {
+      _lastFamily = currentFamily;
+      _initForFamily();
+    }
+  }
+
+  /// Resets the selected token to the native token of the active family and
+  /// reloads the correct wallet address for that family.
+  Future<void> _initForFamily() async {
+    if (!mounted) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final family = blockchain.activeFamily;
-    final address = family == ChainFamily.evm
-        ? await _walletService.getCurrentWalletAddress()
-        : await _walletService.getWalletAddressForFamily(family);
+    final activeNetworkKey = blockchain.activeNetworkKey;
+
+    // Pick the native token for the active family from the loaded token list.
+    final familyTokens = blockchain.tokens
+        .where((t) => t.networkKey == activeNetworkKey)
+        .toList();
+    final nativeToken = familyTokens.firstWhere(
+      (t) => t.contractAddress == null || t.contractAddress!.isEmpty,
+      orElse: () => familyTokens.isNotEmpty
+          ? familyTokens.first
+          : blockchain.tokens.first,
+    );
+
+    final address = await _walletService.getWalletAddressForFamily(family);
     if (mounted) {
       setState(() {
+        _selectedToken = nativeToken;
         _walletAddress = address ?? '';
       });
     }
   }
 
   void _showTokenSelector() async {
-    final tokens = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    ).tokens;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    // Only show tokens that belong to the currently active network.
+    final activeNetworkKey = blockchain.activeNetworkKey;
+    final familyTokens = blockchain.tokens
+        .where((t) => t.networkKey == activeNetworkKey)
+        .toList();
     final result = await showDialog<Token>(
       context: context,
-      builder: (context) => TokenSelectorDialog(tokens: tokens),
+      builder: (context) => TokenSelectorDialog(tokens: familyTokens),
     );
     if (result != null && mounted) {
       setState(() {
@@ -112,6 +122,21 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: ReceiveWarningBanner(message: l.receiveExternalWarning),
               ),
+              if (_walletAddress.isEmpty &&
+                  blockchain.activeFamily != ChainFamily.evm) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ReceiveWarningBanner(
+                    message:
+                        'This wallet was imported via private key and does not have a ${blockchain.activeFamily == ChainFamily.solana ? 'Solana' : 'Tron'} address. '
+                        'Create a new wallet from a seed phrase to receive on this network.',
+                    icon: Icons.account_balance_wallet_outlined,
+                    iconColor: AppColors.warning,
+                    borderColor: AppColors.warning,
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
 
               QrCodeCard(data: _walletAddress),

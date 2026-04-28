@@ -342,6 +342,12 @@ class BlockchainService extends ChangeNotifier {
   String _walletTokenStateKey(int chainId, String walletAddress) =>
       '$chainId:${walletAddress.toLowerCase()}';
 
+  /// For non-EVM families the chainId is meaningless; use the networkKey instead.
+  String _walletTokenStateKeyForNetwork(
+    String networkKey,
+    String walletAddress,
+  ) => '$networkKey:${walletAddress.toLowerCase()}';
+
   void _setWalletTokenState(
     String cacheKey,
     WalletTokenState state, {
@@ -1089,7 +1095,11 @@ class BlockchainService extends ChangeNotifier {
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
     final requestedChainId = chainId ?? _activeChain.chainId;
-    final cacheKey = _walletTokenStateKey(requestedChainId, walletAddress);
+    // Non-EVM chains must use a network-key-based cache key to avoid colliding
+    // with an EVM chain that happens to share the same numeric chainId slot.
+    final cacheKey = (activeFamily != ChainFamily.evm && chainId == null)
+        ? _walletTokenStateKeyForNetwork(effectiveNetworkKey, walletAddress)
+        : _walletTokenStateKey(requestedChainId, walletAddress);
     final now = DateTime.now();
     final existingState = _walletTokenStates[cacheKey];
 
@@ -2289,10 +2299,14 @@ class BlockchainService extends ChangeNotifier {
     try {
       final walletAddress = await _storageService.getWalletAddress();
       if (walletAddress == null || walletAddress.isEmpty) return;
+      // Use the override key when on Solana/Tron, otherwise use the EVM chain key.
+      final selectedNetworkKey = _activeNetworkKeyOverride.isNotEmpty
+          ? _activeNetworkKeyOverride
+          : _activeChain.networkKey;
       final payload = {
         'walletAddress': walletAddress,
         'selectedChainId': _activeChain.chainId,
-        'selectedNetworkKey': _activeChain.networkKey,
+        'selectedNetworkKey': selectedNetworkKey,
         'customNetworks': _customChains.map((c) => c.toJson()).toList(),
       };
       await _walletBackendAuthService

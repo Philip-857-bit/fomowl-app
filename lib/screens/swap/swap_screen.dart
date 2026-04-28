@@ -10,6 +10,7 @@ import '../../models/token.dart';
 import '../../services/cow_limit_order_signing.dart';
 import '../../services/swap_service.dart';
 import '../../services/wallet_service.dart';
+import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
 import '../../services/token_approval_service.dart';
@@ -153,7 +154,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Token? _fromToken;
   Token? _toToken;
-  int? _lastChainId;
+  String? _lastNetworkKey;
   int _quoteRequestId = 0;
   SwapTab _activeTab = SwapTab.swap;
   _LimitExpiryOption _limitExpiryOption = _LimitExpiryOption.hours24;
@@ -182,9 +183,9 @@ class _SwapScreenState extends State<SwapScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
-    final chainId = blockchain.activeChain.chainId;
-    if (_lastChainId != chainId) {
-      _lastChainId = chainId;
+    final networkKey = blockchain.activeNetworkKey;
+    if (_lastNetworkKey != networkKey) {
+      _lastNetworkKey = networkKey;
       _resetQuoteState(clearInputAmounts: true);
       if (_isGasless && !_isGaslessSupported) {
         _isGasless = false;
@@ -394,10 +395,9 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   bool get _isGaslessSupported {
-    final chainId = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    ).activeChain.chainId;
+    final bc = Provider.of<BlockchainService>(context, listen: false);
+    if (bc.activeFamily != ChainFamily.evm) return false;
+    final chainId = bc.activeChain.chainId;
     // 0x Tx Relay (Gasless) supports 11+ chains: Ethereum, BSC, Polygon, Avalanche, Arbitrum, Optimism, Fantom, Base, Celo, Linea, and Polygon zkEVM.
     return [
       1,
@@ -415,11 +415,9 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   bool get _isLimitSupported {
-    final chainId = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    ).activeChain.chainId;
-    return _swapService.isLimitChainSupported(chainId);
+    final bc = Provider.of<BlockchainService>(context, listen: false);
+    if (bc.activeFamily != ChainFamily.evm) return false;
+    return _swapService.isLimitChainSupported(bc.activeChain.chainId);
   }
 
   String _limitUnsupportedMessage() {
@@ -2395,6 +2393,132 @@ class _SwapScreenState extends State<SwapScreen> {
     ToastUtils.showError(message);
   }
 
+  Widget _buildNonEvmNetworkCard(BlockchainService blockchain) {
+    final networkName = switch (blockchain.activeFamily) {
+      ChainFamily.solana => 'Solana',
+      ChainFamily.tron => 'Tron',
+      ChainFamily.evm => blockchain.activeChain.name,
+    };
+    final networkColor = switch (blockchain.activeFamily) {
+      ChainFamily.solana => AppColors.primaryAccent,
+      ChainFamily.tron => AppColors.primaryAccent,
+      ChainFamily.evm => AppColors.accentRed,
+    };
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _showNetworkSelector,
+        borderRadius: BorderRadius.circular(12),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0x991F1F1F),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0x265D3F3D)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: networkColor.withAlpha(40),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.language, color: networkColor, size: 16),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'NETWORK',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFFC8C6C5),
+                        height: 1.5,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      networkName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFE2E2E2),
+                        height: 1.43,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                'Switch to EVM',
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 10,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNonEvmUnavailable(BlockchainService blockchain) {
+    final networkName = switch (blockchain.activeFamily) {
+      ChainFamily.solana => 'Solana',
+      ChainFamily.tron => 'Tron',
+      ChainFamily.evm => blockchain.activeChain.name,
+    };
+    return Container(
+      margin: const EdgeInsets.only(top: 40),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.swap_horiz_rounded,
+            color: AppColors.textSecondary,
+            size: 48,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Swap not available on $networkName',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFFE2E2E2),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Token swaps are only supported on EVM-compatible networks.\nSwitch to Ethereum, BNB, Base, Polygon, or another EVM chain to swap.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showNetworkSelector() {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     showModalBottomSheet(
@@ -2839,12 +2963,17 @@ class _SwapScreenState extends State<SwapScreen> {
                       ),
                     ),
                     const SizedBox(height: 19),
-                    NetworkCard(
-                      chain: blockchain.activeChain,
-                      onTap: _showNetworkSelector,
-                    ),
+                    if (blockchain.activeFamily == ChainFamily.evm)
+                      NetworkCard(
+                        chain: blockchain.activeChain,
+                        onTap: _showNetworkSelector,
+                      )
+                    else
+                      _buildNonEvmNetworkCard(blockchain),
                     const SizedBox(height: 16),
-                    if (_activeTab == SwapTab.swap)
+                    if (blockchain.activeFamily != ChainFamily.evm)
+                      _buildNonEvmUnavailable(blockchain)
+                    else if (_activeTab == SwapTab.swap)
                       SwapTabContent(
                         blockchain: blockchain,
                         fromController: _fromDisplayController,
@@ -2895,7 +3024,7 @@ class _SwapScreenState extends State<SwapScreen> {
                           _getQuote();
                         },
                       )
-                    else
+                    else if (blockchain.activeFamily == ChainFamily.evm)
                       LimitTabContent(
                         blockchain: blockchain,
                         fromController: _fromDisplayController,

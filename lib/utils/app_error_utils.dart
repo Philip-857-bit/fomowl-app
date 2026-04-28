@@ -57,6 +57,37 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
+      'seed phrase not available',
+      'non-evm transactions require',
+      'imported via private key and cannot sign',
+    ])) {
+      return 'This wallet was imported via private key and cannot sign Solana or Tron transactions. Create a new wallet from a seed phrase to use this network.';
+    }
+
+    if (_containsAny(lowered, const [
+      'destination token account',
+      'does not exist',
+      'associated token account',
+    ])) {
+      return 'The recipient does not have a token account for this asset. They must first receive or create an account for this token before you can send it.';
+    }
+
+    if (_containsAny(lowered, const [
+      'tron broadcast rejected',
+      'failed to broadcast tron',
+      'failed to prepare tron',
+    ])) {
+      return 'Tron transaction failed. Please check your balance and try again.';
+    }
+
+    if (_containsAny(lowered, const [
+      'failed to broadcast solana',
+      'failed to prepare solana',
+    ])) {
+      return 'Solana transaction failed. Please check your balance and try again.';
+    }
+
+    if (_containsAny(lowered, const [
       'unexpected end of input',
       'unexpected character',
       'invalid portfolio response payload',

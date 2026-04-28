@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../models/wallet_account.dart';
+import 'wallet_origin_badge.dart';
 
 class WalletList extends StatelessWidget {
   final List<WalletAccount> wallets;
@@ -61,15 +62,40 @@ class WalletList extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                account.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            if (walletOriginBadge(account) != null) ...[
+                              const SizedBox(width: 6),
+                              walletOriginBadge(account)!,
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
                         Text(
-                          account.name,
+                          walletTypeLabel(account),
                           style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: account.origin == WalletOrigin.imported
+                                ? const Color(
+                                    0xFFF59E0B,
+                                  ).withValues(alpha: 0.85)
+                                : Colors.white38,
                           ),
                         ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
                         Text(
                           shortenAddress(account.address),
                           style: GoogleFonts.outfit(

@@ -169,6 +169,40 @@ class NativeCrypto {
     }
   }
 
+  /// Derive a Solana base58 public address from a 32-byte Ed25519 private key
+  /// (provided as 64 hex characters, no 0x prefix).
+  static Future<String> deriveSolanaAddressFromPrivateKey(
+    String privateKeyHex,
+  ) async {
+    try {
+      return await rust_bip32.deriveSolanaAddressFromPrivateKey(
+        privateKeyHex: privateKeyHex,
+      );
+    } catch (e) {
+      debugPrint(
+        '[NativeCrypto] deriveSolanaAddressFromPrivateKey Rust error: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Derive a TRON base58check address from a 32-byte secp256k1 private key
+  /// (provided as 64 hex characters, no 0x prefix).
+  static Future<String> deriveTronAddressFromPrivateKey(
+    String privateKeyHex,
+  ) async {
+    try {
+      return await rust_bip32.deriveTronAddressFromPrivateKey(
+        privateKeyHex: privateKeyHex,
+      );
+    } catch (e) {
+      debugPrint(
+        '[NativeCrypto] deriveTronAddressFromPrivateKey Rust error: $e',
+      );
+      rethrow;
+    }
+  }
+
   // ---------- Argon2id (Passcode Hashing) ---------------------------------
 
   /// Derive a passcode hash using Argon2id. Returns base64-encoded hash.

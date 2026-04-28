@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../models/chain.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
@@ -25,6 +26,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final TextEditingController _privateKeyController = TextEditingController();
   final WalletService _walletService = WalletService();
   bool _isLoading = false;
+  ChainFamily _selectedChain = ChainFamily.evm;
 
   @override
   void dispose() {
@@ -80,11 +82,24 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     });
 
     try {
-      // Import wallet from private key
-      await _walletService.importWalletFromPrivateKey(
-        privateKey,
-        walletName: walletName,
-      );
+      // Import wallet using the selected chain family
+      switch (_selectedChain) {
+        case ChainFamily.solana:
+          await _walletService.importWalletFromSolanaKey(
+            privateKey,
+            walletName: walletName,
+          );
+        case ChainFamily.tron:
+          await _walletService.importWalletFromTronKey(
+            privateKey,
+            walletName: walletName,
+          );
+        case ChainFamily.evm:
+          await _walletService.importWalletFromPrivateKey(
+            privateKey,
+            walletName: walletName,
+          );
+      }
 
       // Refresh blockchain service to clear any cached data from previous wallet
       if (mounted) {
@@ -121,6 +136,66 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     }
   }
 
+  String _chainHint() {
+    switch (_selectedChain) {
+      case ChainFamily.solana:
+        return 'Enter your 32-byte Ed25519 Solana private key as 64 hex characters.';
+      case ChainFamily.tron:
+        return 'Enter your 32-byte secp256k1 Tron private key as 64 hex characters.';
+      case ChainFamily.evm:
+        return 'Enter your 32-byte EVM private key as 64 hex characters (with or without 0x prefix).';
+    }
+  }
+
+  Widget _chainChip(String label, ChainFamily family, String iconPath) {
+    final selected = _selectedChain == family;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedChain = family),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.primaryAccent.withValues(alpha: 0.18)
+                : const Color(0xFF2C2B2B),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected
+                  ? AppColors.primaryAccent
+                  : Colors.white.withValues(alpha: 0.1),
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                iconPath,
+                width: 24,
+                height: 24,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.link,
+                  color: selected ? AppColors.primaryAccent : Colors.white54,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: selected ? AppColors.primaryAccent : Colors.white70,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showError(String message) {
     ToastUtils.showError(message);
   }
@@ -150,6 +225,38 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                 ),
 
                 const SizedBox(height: 20),
+
+                // Chain selector
+                Text(
+                  'Blockchain',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Row(
+                  children: [
+                    _chainChip('EVM', ChainFamily.evm, 'assets/images/evm.png'),
+                    const SizedBox(width: 10),
+                    _chainChip(
+                      'Solana',
+                      ChainFamily.solana,
+                      'assets/images/solana.png',
+                    ),
+                    const SizedBox(width: 10),
+                    _chainChip(
+                      'Tron',
+                      ChainFamily.tron,
+                      'assets/images/tron.png',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
 
                 // Wallet name label
                 Text(
@@ -255,7 +362,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                 // Helper text
                 Center(
                   child: Text(
-                    l.privateKeyHelperText,
+                    _chainHint(),
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,

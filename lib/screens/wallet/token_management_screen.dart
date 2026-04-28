@@ -55,10 +55,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   // Tokens being toggled (optimistic state tracking)
   final Set<String> _processingTokens = {};
 
-  // In-memory search cache: "chainId:query" → results
+  // In-memory search cache: "networkKey:query" → results
   final Map<String, List<Token>> _searchCache = {};
   BlockchainService? _blockchain;
-  int? _observedChainId;
+  String? _observedNetworkKey;
 
   @override
   void initState() {
@@ -87,9 +87,19 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
     _blockchain?.removeListener(_handleBlockchainChanged);
     _blockchain = blockchain;
-    _observedChainId = blockchain.activeChain.chainId;
+    _observedNetworkKey = blockchain.activeNetworkKey;
     _blockchain?.addListener(_handleBlockchainChanged);
   }
+
+  /// Returns a stable integer key for [TokenVisibilityService] that is unique
+  /// per network family. EVM uses the real chainId; non-EVM uses negative
+  /// BIP-44 coin-type sentinels that cannot collide with any real chain ID.
+  int _effectiveChainId(BlockchainService blockchain) =>
+      switch (blockchain.activeFamily) {
+        ChainFamily.evm => blockchain.activeChain.chainId,
+        ChainFamily.solana => -501,
+        ChainFamily.tron => -195,
+      };
 
   void _handleBlockchainChanged() {
     final blockchain = _blockchain;
@@ -97,9 +107,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       return;
     }
 
-    final nextChainId = blockchain.activeChain.chainId;
-    if (_observedChainId != nextChainId) {
-      _observedChainId = nextChainId;
+    final nextNetworkKey = blockchain.activeNetworkKey;
+    if (_observedNetworkKey != nextNetworkKey) {
+      _observedNetworkKey = nextNetworkKey;
       unawaited(_loadData(showSpinner: false));
       return;
     }
@@ -132,19 +142,30 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final blockchain = context.read<BlockchainService>();
     _attachBlockchainListener();
     if (!mounted) return;
-    final chainId = blockchain.activeChain.chainId;
+    final effectiveChainId = _effectiveChainId(blockchain);
+    final isEvm = blockchain.activeFamily == ChainFamily.evm;
     if (showSpinner) {
       setState(() => _isLoading = true);
     }
 
-    final hidden = await _visibilityService.loadHiddenTokens(chainId);
-    final address = await _walletService.getCurrentWalletAddress();
+    final hidden = await _visibilityService.loadHiddenTokens(effectiveChainId);
+    final address = isEvm
+        ? await _walletService.getCurrentWalletAddress()
+        : await _walletService.getWalletAddressForFamily(
+            blockchain.activeFamily,
+          );
     List<Token> fetched = blockchain.tokens;
-    if (address != null && address.isNotEmpty) {
-      final state = blockchain.getWalletTokenState(address, chainId: chainId);
+    if (isEvm && address != null && address.isNotEmpty) {
+      final state = blockchain.getWalletTokenState(
+        address,
+        chainId: blockchain.activeChain.chainId,
+      );
       final cached = state.tokens.isNotEmpty
           ? state.tokens
-          : blockchain.getCachedWalletTokens(address, chainId: chainId);
+          : blockchain.getCachedWalletTokens(
+              address,
+              chainId: blockchain.activeChain.chainId,
+            );
       if (cached.isNotEmpty) {
         fetched = List<Token>.from(cached);
       }
@@ -165,7 +186,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         _refreshWalletTokensInBackground(
           blockchain,
           walletAddress: address,
-          chainId: chainId,
+          effectiveChainId: effectiveChainId,
           hidden: hidden,
         ),
       );
@@ -175,14 +196,13 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Future<void> _refreshWalletTokensInBackground(
     BlockchainService blockchain, {
     required String walletAddress,
-    required int chainId,
+    required int effectiveChainId,
     required Set<String> hidden,
   }) async {
     try {
-      final fetched = await blockchain.refreshWalletTokens(
-        walletAddress,
-        chainId: chainId,
-      );
+      // Passing no chainId lets BlockchainService use activeNetworkKey for
+      // non-EVM families, which correctly targets the Solana/Tron endpoint.
+      final fetched = await blockchain.refreshWalletTokens(walletAddress);
       if (!mounted) {
         return;
       }
@@ -197,6 +217,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   Future<void> _loadSuggestedTokens() async {
     final blockchain = context.read<BlockchainService>();
+    // Token search is EVM-only; the backend catalog has no SPL/TRC-20 directory.
+    if (blockchain.activeFamily != ChainFamily.evm) return;
     try {
       final results = await blockchain.searchTokensFromBackend('', limit: 60);
       if (!mounted) return;
@@ -253,7 +275,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   Future<void> _handleToggle(Token token, bool enable) async {
     final l = AppLocalizations.of(context);
     final blockchain = context.read<BlockchainService>();
-    final chainId = blockchain.activeChain.chainId;
+    final isEvm = blockchain.activeFamily == ChainFamily.evm;
+    final chainId = _effectiveChainId(blockchain);
     final key = _tokenKey(token);
     final contract = token.contractAddress;
     if (_processingTokens.contains(key)) return;
@@ -273,32 +296,38 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         // Enabling: unhide the token, and add as custom if not already in wallet
         await _visibilityService.setTokenHidden(chainId, token, false);
 
-        final existsInWallet = _walletTokens.any(
-          (t) =>
-              (t.contractAddress ?? '').toLowerCase() ==
-              (contract ?? '').toLowerCase(),
-        );
-        final existsAsCustom = blockchain.customTokensForActiveChain.any(
-          (c) => c.address.toLowerCase() == (contract ?? '').toLowerCase(),
-        );
-
-        if (!existsInWallet &&
-            !existsAsCustom &&
-            contract != null &&
-            contract.isNotEmpty) {
-          // Add as custom token
-          final detected = await blockchain.detectTokenByContract(contract);
-          final tokenToAdd = CustomTokenDefinition(
-            symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
-            name: detected?.name ?? token.name,
-            address: detected?.address ?? contract,
-            decimals: (detected?.decimals ?? token.decimals) > 0
-                ? (detected?.decimals ?? token.decimals)
-                : 18,
-            coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
-            imageUrl: token.imageUrl ?? detected?.imageUrl,
+        // Custom token registration is EVM-only. On Solana/Tron the backend
+        // already surfaces all known tokens via the wallet-tokens endpoint.
+        if (isEvm) {
+          final existsInWallet = _walletTokens.any(
+            (t) =>
+                (t.contractAddress ?? '').toLowerCase() ==
+                (contract ?? '').toLowerCase(),
           );
-          await blockchain.addCustomToken(chainId: chainId, token: tokenToAdd);
+          final existsAsCustom = blockchain.customTokensForActiveChain.any(
+            (c) => c.address.toLowerCase() == (contract ?? '').toLowerCase(),
+          );
+
+          if (!existsInWallet &&
+              !existsAsCustom &&
+              contract != null &&
+              contract.isNotEmpty) {
+            final detected = await blockchain.detectTokenByContract(contract);
+            final tokenToAdd = CustomTokenDefinition(
+              symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
+              name: detected?.name ?? token.name,
+              address: detected?.address ?? contract,
+              decimals: (detected?.decimals ?? token.decimals) > 0
+                  ? (detected?.decimals ?? token.decimals)
+                  : 18,
+              coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
+              imageUrl: token.imageUrl ?? detected?.imageUrl,
+            );
+            await blockchain.addCustomToken(
+              chainId: blockchain.activeChain.chainId,
+              token: tokenToAdd,
+            );
+          }
         }
       } else {
         // Disabling: hide the token
@@ -387,8 +416,15 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
 
     final blockchain = context.read<BlockchainService>();
-    final cacheKey =
-        '${blockchain.activeChain.chainId}:${trimmed.toLowerCase()}';
+    // Remote token search is EVM-only.
+    if (blockchain.activeFamily != ChainFamily.evm) {
+      setState(() {
+        _isSearchingRemote = false;
+        _remoteResults = [];
+      });
+      return;
+    }
+    final cacheKey = '${blockchain.activeNetworkKey}:${trimmed.toLowerCase()}';
 
     // Show cached results immediately
     final cached = _searchCache[cacheKey];
@@ -472,6 +508,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final l = AppLocalizations.of(context);
     if (_hasCheckedClipboard || !mounted) return;
     _hasCheckedClipboard = true;
+    // Contract auto-detection only applies to EVM (0x… addresses).
+    final blockchain = context.read<BlockchainService>();
+    if (blockchain.activeFamily != ChainFamily.evm) return;
 
     try {
       final data = await Clipboard.getData('text/plain');
@@ -480,7 +519,6 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       if (!TokenManagementQueryHelper.isContractAddress(clipboardText)) return;
       if (_tokenExistsForAddress(clipboardText)) return;
 
-      final blockchain = context.read<BlockchainService>();
       final detected = await blockchain.detectTokenByContract(clipboardText);
       if (detected == null || !mounted) return;
 
@@ -787,7 +825,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                                 isProcessing: isProcessing,
                                 onToggleChanged: (value) =>
                                     _handleToggle(token, value),
-                                chainId: blockchain.activeChain.chainId,
+                                chainId:
+                                    blockchain.activeFamily == ChainFamily.evm
+                                    ? blockchain.activeChain.chainId
+                                    : null,
                               );
                             },
                           ),

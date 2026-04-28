@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' as pkg_crypto;
 import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:hex/hex.dart';
@@ -166,6 +166,92 @@ class WalletService {
       return {'address': address, 'privateKey': privateKey};
     } catch (e) {
       throw Exception('Failed to import wallet: ${e.toString()}');
+    }
+  }
+
+  /// Import wallet from a 32-byte Ed25519 Solana private key (64 hex chars).
+  Future<Map<String, String>> importWalletFromSolanaKey(
+    String privateKey, {
+    String? walletName,
+  }) async {
+    try {
+      privateKey = privateKey.trim();
+      if (privateKey.startsWith('0x')) {
+        privateKey = privateKey.substring(2);
+      }
+      if (privateKey.length != 64) {
+        throw Exception(
+          'Invalid Solana private key length (expected 32 bytes / 64 hex chars)',
+        );
+      }
+      if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
+        throw Exception(
+          'Invalid Solana private key format: must be hexadecimal',
+        );
+      }
+
+      final address = await NativeCrypto.deriveSolanaAddressFromPrivateKey(
+        privateKey,
+      );
+
+      await _storage.saveWallet(
+        address: address,
+        privateKey: privateKey,
+        walletName: walletName ?? 'Solana Wallet',
+        origin: WalletOrigin.imported,
+        addressesByFamily: {ChainFamily.solana: address},
+      );
+      await _storage.saveFamilyPrivateKey(
+        family: ChainFamily.solana,
+        address: address,
+        privateKey: privateKey,
+      );
+
+      return {'address': address, 'privateKey': privateKey};
+    } catch (e) {
+      throw Exception('Failed to import Solana wallet: ${e.toString()}');
+    }
+  }
+
+  /// Import wallet from a 32-byte secp256k1 Tron private key (64 hex chars).
+  Future<Map<String, String>> importWalletFromTronKey(
+    String privateKey, {
+    String? walletName,
+  }) async {
+    try {
+      privateKey = privateKey.trim();
+      if (privateKey.startsWith('0x')) {
+        privateKey = privateKey.substring(2);
+      }
+      if (privateKey.length != 64) {
+        throw Exception(
+          'Invalid Tron private key length (expected 32 bytes / 64 hex chars)',
+        );
+      }
+      if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
+        throw Exception('Invalid Tron private key format: must be hexadecimal');
+      }
+
+      final address = await NativeCrypto.deriveTronAddressFromPrivateKey(
+        privateKey,
+      );
+
+      await _storage.saveWallet(
+        address: address,
+        privateKey: privateKey,
+        walletName: walletName ?? 'Tron Wallet',
+        origin: WalletOrigin.imported,
+        addressesByFamily: {ChainFamily.tron: address},
+      );
+      await _storage.saveFamilyPrivateKey(
+        family: ChainFamily.tron,
+        address: address,
+        privateKey: privateKey,
+      );
+
+      return {'address': address, 'privateKey': privateKey};
+    } catch (e) {
+      throw Exception('Failed to import Tron wallet: ${e.toString()}');
     }
   }
 
@@ -498,41 +584,42 @@ class WalletService {
     return AmountUtils.parseDecimalToBaseUnits(amount, decimals);
   }
 
-  // ── Solana send ────────────────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Solana send ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
-  /// Send SOL or an SPL token via the backend prepare-transfer → sign → broadcast pipeline.
+  /// Send SOL or an SPL token via the backend prepare-transfer ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ sign ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ broadcast pipeline.
   ///
   /// [amountLamports] is the amount in the token's smallest unit (lamports for
   /// SOL, or raw token units for SPL).  Pass [tokenMint] for SPL transfers.
   Future<String> sendSolanaTransaction({
     required String fromAddress,
     required String toAddress,
-    required int amountLamports,
+    required BigInt amountLamports,
     String? tokenMint,
   }) async {
-    final seed = await _getSeedBytes();
-    final account = await getActiveWalletAccount();
-    final derivationIndex = account?.derivationIndex ?? 0;
-    final privateKeyHex = await NativeCrypto.deriveSolanaPrivateKeyFromSeed(
-      seed,
-      derivationIndex,
-    );
+    if (amountLamports <= BigInt.zero) {
+      throw Exception('amountLamports must be greater than zero');
+    }
+    // Solana amounts are u64 on-chain; guard against overflow before JSON serialisation.
+    final maxU64 = BigInt.parse('18446744073709551615');
+    if (amountLamports > maxU64) {
+      throw Exception('amountLamports exceeds maximum u64 value');
+    }
+    final privateKeyHex = await _getSolanaPrivateKey(fromAddress);
 
-    // 1. Ask the backend to prepare the transaction and return a recent blockhash.
+    // 1. Ask the backend to build the serialized unsigned message.
     final prepareUri = AppEnvironment.blockchain(
       '/networks/solana:mainnet/prepare-transfer',
     );
-    final prepareBody = jsonEncode({
-      'fromAddress': fromAddress,
-      'toAddress': toAddress,
-      'amountLamports': amountLamports,
-      if (tokenMint != null) 'tokenMint': tokenMint,
-    });
     final prepareResp = await _httpClientService.client
         .post(
           prepareUri,
           headers: const {'Content-Type': 'application/json'},
-          body: prepareBody,
+          body: jsonEncode({
+            'fromAddress': fromAddress,
+            'toAddress': toAddress,
+            'amountLamports': amountLamports.toString(),
+            'tokenMint': tokenMint,
+          }),
         )
         .timeout(const Duration(seconds: 15));
 
@@ -540,34 +627,31 @@ class WalletService {
       throw Exception('Failed to prepare Solana transfer: ${prepareResp.body}');
     }
     final prepareData = jsonDecode(prepareResp.body) as Map<String, dynamic>;
-    final recentBlockhash = prepareData['recentBlockhash'] as String?;
-    if (recentBlockhash == null || recentBlockhash.isEmpty) {
-      throw Exception('Backend did not return a recentBlockhash');
-    }
 
-    // 2. Build and sign the legacy Solana transaction message in Dart, then
-    //    sign the raw message bytes with the ed25519 key via Rust FFI.
-    final messageBytes = _buildSolanaTransferMessage(
-      fromAddress: fromAddress,
-      toAddress: toAddress,
-      amountLamports: amountLamports,
-      recentBlockhash: recentBlockhash,
-    );
-    // signSolanaMessage returns a base58-encoded 64-byte ed25519 signature.
+    // The backend returns the fully serialized unsigned message as base64.
+    // Sign those exact bytes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â do NOT rebuild the message locally.
+    final unsignedMessageB64 = prepareData['unsignedMessage'] as String?;
+    if (unsignedMessageB64 == null || unsignedMessageB64.isEmpty) {
+      throw Exception('Backend did not return unsignedMessage');
+    }
+    final messageBytes = base64Decode(unsignedMessageB64);
+
+    // 2. Sign the message bytes with the Ed25519 key via Rust FFI.
+    //    signSolanaMessage returns a base58-encoded 64-byte signature.
     final signatureBase58 = await NativeCrypto.signSolanaMessage(
       privateKeyHex: privateKeyHex,
       message: messageBytes,
     );
-    final signatureBytes = _base58Decode(signatureBase58);
+    final sigBytes = _decodeBase58Signature(signatureBase58);
 
-    // 3. Serialise: [compact_array(1), signature_bytes, message_bytes] → base64.
-    final txBytes = Uint8List(1 + signatureBytes.length + messageBytes.length);
+    // 3. Serialise: [1, <64-byte sig>, <message bytes>] ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base64.
+    final txBytes = Uint8List(1 + sigBytes.length + messageBytes.length);
     txBytes[0] = 1; // one signature
-    txBytes.setRange(1, 1 + signatureBytes.length, signatureBytes);
-    txBytes.setRange(1 + signatureBytes.length, txBytes.length, messageBytes);
+    txBytes.setRange(1, 1 + sigBytes.length, sigBytes);
+    txBytes.setRange(1 + sigBytes.length, txBytes.length, messageBytes);
     final signedBase64 = base64Encode(txBytes);
 
-    // 4. Broadcast the signed transaction.
+    // 4. Broadcast.
     final broadcastUri = AppEnvironment.blockchain(
       '/networks/solana:mainnet/broadcast',
     );
@@ -575,7 +659,7 @@ class WalletService {
         .post(
           broadcastUri,
           headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({'signedTransactionBase64': signedBase64}),
+          body: jsonEncode({'signedTransaction': signedBase64}),
         )
         .timeout(const Duration(seconds: 15));
 
@@ -593,122 +677,176 @@ class WalletService {
     return txHash;
   }
 
-  /// Build a Solana legacy transaction message for a SOL transfer.
-  /// Spec: https://docs.solana.com/developing/programming-model/transactions
-  static Uint8List _buildSolanaTransferMessage({
-    required String fromAddress,
-    required String toAddress,
-    required int amountLamports,
-    required String recentBlockhash,
-  }) {
-    // System program public key (all zeros except last byte = 0)
-    const systemProgramId = '11111111111111111111111111111111';
+  /// Decode a base58-encoded Ed25519 signature (64 bytes) to raw bytes.
+  /// Uses an O(n) lookup-table approach instead of BigInt arithmetic.
+  static Uint8List _decodeBase58Signature(String input) {
+    // Lookup table: ASCII code ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base58 digit value, -1 for invalid chars.
+    const int invalidDigit = -1;
+    const List<int> base58Table = [
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 0-7
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 8-15
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 16-23
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 24-31
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 32-39
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 40-47
+      invalidDigit, 0, 1, 2, 3, 4, 5, 6, // 48-55  '1'-'7'
+      7,
+      8,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 56-63  '8','9'
+      invalidDigit, 9, 10, 11, 12, 13, 14, 15, // 64-71  'A'-'G'
+      16, 17, 18, 19, 20, 21, invalidDigit, 22, // 72-79  'H'-'N' (no 'I')
+      23, 24, 25, 26, 27, 28, 29, 30, // 80-87  'P'-'W' (no 'O')
+      31,
+      32,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 88-95  'X','Y','Z'
+      invalidDigit, 33, 34, 35, 36, 37, 38, 39, // 96-103 'a'-'g'
+      40, 41, 42, 43, invalidDigit, 44, 45, 46, // 104-111 'h'-'o' (no 'l')
+      47, 48, 49, 50, 51, 52, 53, 54, // 112-119 'p'-'w'
+      55,
+      56,
+      57,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit,
+      invalidDigit, // 120-127 'x','y','z'
+    ];
 
-    final from = _base58Decode(fromAddress);
-    final to = _base58Decode(toAddress);
-    final system = _base58Decode(systemProgramId);
-    final blockhash = _base58Decode(recentBlockhash);
-
-    // Header: numRequiredSignatures=1, numReadonlySignedAccounts=0,
-    //         numReadonlyUnsignedAccounts=1
-    const header = [1, 0, 1];
-
-    // Account keys: [from(signer+writable), to(writable), systemProgram(readonly)]
-    final accountKeys = [from, to, system];
-
-    // Instruction data for SystemProgram.transfer:
-    //   instruction index (u32 LE) = 2
-    //   lamports (u64 LE)
-    final instructionData = Uint8List(12);
-    final byteData = ByteData.view(instructionData.buffer);
-    byteData.setUint32(0, 2, Endian.little);
-    byteData.setUint64(4, amountLamports, Endian.little);
-
-    // Build message
-    final buf = BytesBuilder();
-    buf.add(header);
-
-    // Compact-array of account keys (3 keys)
-    buf.addByte(accountKeys.length);
-    for (final key in accountKeys) {
-      buf.add(key);
+    // Count leading '1' chars (each maps to a leading 0x00 byte).
+    int leadingZeros = 0;
+    for (final ch in input.codeUnits) {
+      if (ch == 49) {
+        // '1'
+        leadingZeros++;
+      } else {
+        break;
+      }
     }
 
-    // Recent blockhash (32 bytes)
-    buf.add(blockhash);
+    // Decode into a byte array using base-58 long division.
+    // Output size upper bound: ceil(inputLen * log(58) / log(256)) ÃƒÂ¢Ã¢â‚¬Â°Ã‹â€  inputLen * 0.733
+    final output = List<int>.filled(input.length, 0);
+    int outputLen = 0;
 
-    // Compact-array of instructions (1 instruction)
-    buf.addByte(1);
-    // program_id_index = 2 (systemProgram is account index 2)
-    buf.addByte(2);
-    // accounts involved: compact-array [0 (from), 1 (to)]
-    buf.addByte(2);
-    buf.addByte(0);
-    buf.addByte(1);
-    // data length + data
-    buf.addByte(instructionData.length);
-    buf.add(instructionData);
+    for (final ch in input.codeUnits) {
+      if (ch >= base58Table.length) {
+        throw FormatException('Invalid base58 character: $ch');
+      }
+      int carry = base58Table[ch];
+      if (carry == invalidDigit) {
+        throw FormatException('Invalid base58 character: $ch');
+      }
+      for (int i = 0; i < outputLen; i++) {
+        carry += output[i] * 58;
+        output[i] = carry & 0xff;
+        carry >>= 8;
+      }
+      while (carry > 0) {
+        output[outputLen++] = carry & 0xff;
+        carry >>= 8;
+      }
+    }
 
-    return buf.toBytes();
+    // output is little-endian; reverse to big-endian and prepend leading zeros.
+    final result = Uint8List(leadingZeros + outputLen);
+    for (int i = 0; i < outputLen; i++) {
+      result[leadingZeros + i] = output[outputLen - 1 - i];
+    }
+
+    if (result.length != 64) {
+      throw FormatException(
+        'Expected 64-byte Ed25519 signature, got ${result.length} bytes',
+      );
+    }
+    return result;
   }
 
-  /// Minimal base58 decoder (Bitcoin/Solana alphabet).
-  static Uint8List _base58Decode(String input) {
-    const alphabet =
-        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    var result = BigInt.zero;
-    var base = BigInt.from(58);
-    for (final ch in input.runes) {
-      final digit = alphabet.indexOf(String.fromCharCode(ch));
-      if (digit < 0) throw FormatException('Invalid base58 character: $ch');
-      result = result * base + BigInt.from(digit);
-    }
-    final bytes = <int>[];
-    while (result > BigInt.zero) {
-      bytes.insert(0, (result % BigInt.from(256)).toInt());
-      result ~/= BigInt.from(256);
-    }
-    // Leading '1' chars → leading 0x00 bytes
-    for (var i = 0; i < input.length && input[i] == '1'; i++) {
-      bytes.insert(0, 0);
-    }
-    return Uint8List.fromList(bytes);
-  }
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tron send ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
-  // ── Tron send ──────────────────────────────────────────────────────────────
-
-  /// Send TRX or a TRC-20 token via the backend prepare-transfer → sign → broadcast pipeline.
+  /// Send TRX or a TRC-20 token via the backend prepare-transfer ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ sign ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ broadcast pipeline.
   ///
   /// [amount] is in SUN for TRX, or the token's smallest unit for TRC-20.
   Future<String> sendTronTransaction({
     required String fromAddress,
     required String toAddress,
-    required int amount,
+    required BigInt amount,
     String? tokenContract,
   }) async {
-    final seed = await _getSeedBytes();
-    final account = await getActiveWalletAccount();
-    final derivationIndex = account?.derivationIndex ?? 0;
-    final privateKeyHex = await NativeCrypto.deriveTronPrivateKeyFromSeed(
-      seed,
-      derivationIndex,
-    );
+    if (amount <= BigInt.zero) {
+      throw Exception('amount must be greater than zero');
+    }
+    final maxU64 = BigInt.parse('18446744073709551615');
+    if (amount > maxU64) {
+      throw Exception('amount exceeds maximum u64 value');
+    }
+    final privateKeyHex = await _getTronPrivateKey(fromAddress);
 
     // 1. Prepare the unsigned transaction via the backend.
     final prepareUri = AppEnvironment.blockchain(
       '/networks/tron:mainnet/prepare-transfer',
     );
-    final prepareBody = jsonEncode({
-      'fromAddress': fromAddress,
-      'toAddress': toAddress,
-      'amount': amount,
-      if (tokenContract != null) 'tokenContract': tokenContract,
-    });
     final prepareResp = await _httpClientService.client
         .post(
           prepareUri,
           headers: const {'Content-Type': 'application/json'},
-          body: prepareBody,
+          body: jsonEncode({
+            'fromAddress': fromAddress,
+            'toAddress': toAddress,
+            'amount': amount.toString(),
+            'tokenContract': tokenContract,
+          }),
         )
         .timeout(const Duration(seconds: 15));
 
@@ -721,16 +859,21 @@ class WalletService {
       throw Exception('Backend did not return unsignedTransaction');
     }
 
-    // 2. Sign the raw transaction hash using secp256k1 (Rust FFI).
+    // 2. Tron signs SHA-256(raw_data_hex bytes), not the raw bytes directly.
+    //    raw_data_hex is the hex-encoded serialized transaction body.
     final rawDataHex = (unsignedTx['raw_data_hex'] ?? unsignedTx['rawDataHex'])
         ?.toString();
     if (rawDataHex == null || rawDataHex.isEmpty) {
       throw Exception('unsignedTransaction missing raw_data_hex');
     }
-    // Tron signs the SHA-256 hash of raw_data_hex bytes.
+    final rawBytes = HEX.decode(rawDataHex);
+    // SHA-256 hash the raw bytes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â this 32-byte digest is what gets signed.
+    final digestBytes = _sha256(Uint8List.fromList(rawBytes));
+    final digestHex = HEX.encode(digestBytes);
+
     final signature = await NativeCrypto.signTronRawHash(
       privateKeyHex: privateKeyHex,
-      rawHashHex: rawDataHex,
+      rawHashHex: digestHex,
     );
     final signatureHex = signature.startsWith('0x')
         ? signature.substring(2)
@@ -747,7 +890,7 @@ class WalletService {
         .post(
           broadcastUri,
           headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({'signedTransaction': signedTx}),
+          body: jsonEncode({'signedTransactionJson': signedTx}),
         )
         .timeout(const Duration(seconds: 15));
 
@@ -765,6 +908,11 @@ class WalletService {
     return txHash;
   }
 
+  /// SHA-256 hash of [input] bytes.
+  static Uint8List _sha256(Uint8List input) {
+    return Uint8List.fromList(pkg_crypto.sha256.convert(input).bytes);
+  }
+
   Future<Uint8List> _getSeedBytes() async {
     final mnemonic = await getMnemonic();
     if (mnemonic == null || mnemonic.isEmpty) {
@@ -773,6 +921,34 @@ class WalletService {
       );
     }
     return NativeCrypto.mnemonicToSeed(mnemonic);
+  }
+
+  /// Returns the Ed25519 private key hex for the given Solana [address].
+  /// Checks for a directly-imported key first; falls back to mnemonic derivation.
+  Future<String> _getSolanaPrivateKey(String address) async {
+    final imported = await _storage.getFamilyPrivateKey(
+      ChainFamily.solana,
+      address,
+    );
+    if (imported != null && imported.isNotEmpty) return imported;
+    final seed = await _getSeedBytes();
+    final account = await getActiveWalletAccount();
+    final derivationIndex = account?.derivationIndex ?? 0;
+    return NativeCrypto.deriveSolanaPrivateKeyFromSeed(seed, derivationIndex);
+  }
+
+  /// Returns the secp256k1 private key hex for the given Tron [address].
+  /// Checks for a directly-imported key first; falls back to mnemonic derivation.
+  Future<String> _getTronPrivateKey(String address) async {
+    final imported = await _storage.getFamilyPrivateKey(
+      ChainFamily.tron,
+      address,
+    );
+    if (imported != null && imported.isNotEmpty) return imported;
+    final seed = await _getSeedBytes();
+    final account = await getActiveWalletAccount();
+    final derivationIndex = account?.derivationIndex ?? 0;
+    return NativeCrypto.deriveTronPrivateKeyFromSeed(seed, derivationIndex);
   }
 
   Uint8List? _decodeHexBytes(String? value) {

@@ -35,21 +35,21 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
       label: 'EVM Networks',
       subtitle: 'Ethereum, BNB, Base, Polygon & more',
       icon: Icons.hexagon_outlined,
-      color: Color(0xFF627EEA),
+      color: AppColors.accentRed,
     ),
     _ChainOption(
       family: ChainFamily.solana,
       label: 'Solana',
       subtitle: 'SOL and SPL tokens',
       icon: Icons.blur_circular_rounded,
-      color: Color(0xFF9945FF),
+      color: AppColors.primaryAccent,
     ),
     _ChainOption(
       family: ChainFamily.tron,
       label: 'Tron',
       subtitle: 'TRX and TRC-20 tokens',
       icon: Icons.change_history_rounded,
-      color: Color(0xFFEF0027),
+      color: AppColors.primaryAccent,
     ),
   ];
 

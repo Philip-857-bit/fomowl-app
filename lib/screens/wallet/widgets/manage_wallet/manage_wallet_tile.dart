@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
 import '../../../../models/wallet_account.dart';
+import '../wallet_origin_badge.dart';
 
 class ManageWalletTile extends StatelessWidget {
   final WalletAccount account;
@@ -47,15 +48,24 @@ class ManageWalletTile extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.15),
-                Colors.white.withValues(alpha: 0.05),
-              ],
+              colors: account.origin == WalletOrigin.imported
+                  ? [
+                      const Color(0xFFF59E0B).withValues(alpha: 0.22),
+                      const Color(0xFFF59E0B).withValues(alpha: 0.07),
+                    ]
+                  : [
+                      Colors.white.withValues(alpha: 0.15),
+                      Colors.white.withValues(alpha: 0.05),
+                    ],
             ),
           ),
-          child: const Icon(
-            Icons.account_balance_wallet_rounded,
-            color: Color(0xFFAFC2E8),
+          child: Icon(
+            account.origin == WalletOrigin.imported
+                ? Icons.key_rounded
+                : Icons.account_balance_wallet_rounded,
+            color: account.origin == WalletOrigin.imported
+                ? const Color(0xFFF59E0B)
+                : const Color(0xFFAFC2E8),
           ),
         ),
         title: Row(
@@ -72,20 +82,43 @@ class ManageWalletTile extends StatelessWidget {
                 ),
               ),
             ),
-            if (isActive)
+            if (walletOriginBadge(account) != null) ...[
+              const SizedBox(width: 6),
+              walletOriginBadge(account)!,
+            ],
+            if (isActive) ...[
+              const SizedBox(width: 6),
               const Icon(
                 Icons.check_circle,
                 size: 18,
                 color: AppColors.accentRed,
               ),
+            ],
           ],
         ),
-        subtitle: Text(
-          balanceLabel,
-          style: GoogleFonts.outfit(
-            color: const Color(0xFF9AA7C0),
-            fontSize: 14,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              walletTypeLabel(account),
+              style: GoogleFonts.outfit(
+                color: account.origin == WalletOrigin.imported
+                    ? const Color(0xFFF59E0B).withValues(alpha: 0.85)
+                    : Colors.white38,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              balanceLabel,
+              style: GoogleFonts.outfit(
+                color: const Color(0xFF9AA7C0),
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
         trailing: IconButton(
           onPressed: onEdit,

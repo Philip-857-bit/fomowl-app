@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/wallet_account.dart';
+import '../../services/blockchain_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
@@ -120,6 +122,15 @@ class _WalletsScreenState extends State<WalletsScreen> {
     setState(() => _loading = true);
     try {
       await _walletService.setActiveWallet(account.address);
+      // Notify BlockchainService so the home screen reloads tokens for the
+      // newly active wallet instead of showing the previous wallet's data.
+      if (mounted) {
+        final blockchain = Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        );
+        blockchain.refresh();
+      }
       await _loadWallets();
       ToastUtils.showSuccess(l.walletSetAsActive(account.name));
     } catch (e) {

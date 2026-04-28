@@ -556,10 +556,9 @@ class _DecentralizedProfileScreenState
                                 ),
                                 onChanged: (_) =>
                                     _toggleFamily(ChainFamily.evm),
-                                activeThumbColor: const Color(0xFF627EEA),
-                                activeTrackColor: const Color(
-                                  0xFF627EEA,
-                                ).withValues(alpha: 0.3),
+                                activeThumbColor: AppColors.accentRed,
+                                activeTrackColor: AppColors.accentRed
+                                    .withValues(alpha: 0.3),
                                 inactiveThumbColor: Colors.white38,
                                 inactiveTrackColor: Colors.white12,
                               ),
@@ -576,10 +575,9 @@ class _DecentralizedProfileScreenState
                                 ),
                                 onChanged: (_) =>
                                     _toggleFamily(ChainFamily.solana),
-                                activeThumbColor: const Color(0xFF9945FF),
-                                activeTrackColor: const Color(
-                                  0xFF9945FF,
-                                ).withValues(alpha: 0.3),
+                                activeThumbColor: AppColors.primaryAccent,
+                                activeTrackColor: AppColors.primaryAccent
+                                    .withValues(alpha: 0.3),
                                 inactiveThumbColor: Colors.white38,
                                 inactiveTrackColor: Colors.white12,
                               ),
@@ -596,10 +594,9 @@ class _DecentralizedProfileScreenState
                                 ),
                                 onChanged: (_) =>
                                     _toggleFamily(ChainFamily.tron),
-                                activeThumbColor: const Color(0xFFEF0027),
-                                activeTrackColor: const Color(
-                                  0xFFEF0027,
-                                ).withValues(alpha: 0.3),
+                                activeThumbColor: AppColors.primaryAccent,
+                                activeTrackColor: AppColors.primaryAccent
+                                    .withValues(alpha: 0.3),
                                 inactiveThumbColor: Colors.white38,
                                 inactiveTrackColor: Colors.white12,
                               ),

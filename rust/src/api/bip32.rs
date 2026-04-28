@@ -125,12 +125,29 @@ fn derive_secp256k1_private_key(seed: Vec<u8>, path_str: &str) -> Result<String,
         .map_err(|e| format!("Failed to create master key from seed: {e:?}"))?;
 
     for child_num in path.into_iter() {
-        extended_prv = extended_prv
+        let child = extended_prv
             .derive_child(child_num)
             .map_err(|e| format!("Failed to derive child key: {e:?}"))?;
+        // Volatile-wipe the parent key bytes before overwriting the binding.
+        // write_volatile prevents the compiler from eliding the wipe.
+        unsafe {
+            let p = &extended_prv as *const XPrv as *mut u8;
+            for i in 0..std::mem::size_of::<XPrv>() {
+                std::ptr::write_volatile(p.add(i), 0u8);
+            }
+        }
+        extended_prv = child;
     }
 
-    Ok(hex::encode(extended_prv.private_key().to_bytes()))
+    let key_hex = hex::encode(extended_prv.private_key().to_bytes());
+    // Volatile-wipe the final key before it is dropped.
+    unsafe {
+        let p = &extended_prv as *const XPrv as *mut u8;
+        for i in 0..std::mem::size_of::<XPrv>() {
+            std::ptr::write_volatile(p.add(i), 0u8);
+        }
+    }
+    Ok(key_hex)
 }
 
 fn validate_seed(seed: &[u8]) -> Result<(), String> {

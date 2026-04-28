@@ -138,8 +138,8 @@ class NetworkSelectorSheet extends StatelessWidget {
 
   Color _accentFor(ChainFamily family) => switch (family) {
     ChainFamily.evm => AppColors.accentRed,
-    ChainFamily.solana => const Color(0xFF9945FF),
-    ChainFamily.tron => const Color(0xFFEF0027),
+    ChainFamily.solana => AppColors.primaryAccent,
+    ChainFamily.tron => AppColors.primaryAccent,
   };
 
   String _subtitle(NetworkEntry entry) => switch (entry) {

@@ -274,6 +274,10 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                               TextField(
                                 controller: _controllers[index],
                                 focusNode: _focusNodes[index],
+                                autocorrect: false,
+                                enableSuggestions: false,
+                                keyboardType: TextInputType.visiblePassword,
+                                textCapitalization: TextCapitalization.none,
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,

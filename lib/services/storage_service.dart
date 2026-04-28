@@ -388,6 +388,21 @@ class StorageService {
   String _walletPrivateKeyKey(String address) =>
       'wallet_private_key_${address.toLowerCase()}';
 
+  String _familyPrivateKeyKey(ChainFamily family, String address) =>
+      'family_pk_${family.name}_${address.toLowerCase()}';
+
+  Future<void> saveFamilyPrivateKey({
+    required ChainFamily family,
+    required String address,
+    required String privateKey,
+  }) => _secureStore.write(
+    key: _familyPrivateKeyKey(family, address),
+    value: privateKey,
+  );
+
+  Future<String?> getFamilyPrivateKey(ChainFamily family, String address) =>
+      _secureStore.read(key: _familyPrivateKeyKey(family, address));
+
   String _backendSessionKey(String address) =>
       '$_keyBackendSessionPrefix${address.toLowerCase()}';
 

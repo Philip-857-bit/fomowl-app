@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../models/chain.dart';
 import '../../../../models/token.dart';
 import '../../../../services/blockchain_service.dart';
 import '../../../../widgets/token_icon.dart';
@@ -18,6 +19,14 @@ class TokenSelectorCard extends StatelessWidget {
     required this.onTap,
     required this.blockchain,
   });
+
+  String _activeNetworkName() {
+    return switch (blockchain.activeFamily) {
+      ChainFamily.solana => 'Solana',
+      ChainFamily.tron => 'TRON',
+      ChainFamily.evm => blockchain.activeChain.name,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +74,7 @@ class TokenSelectorCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${l.networkLabel}: ${blockchain.activeChain.name}',
+                  '${l.networkLabel}: ${_activeNetworkName()}',
                   style: GoogleFonts.outfit(
                     fontSize: 13,
                     color: Colors.white.withValues(alpha: 0.72),

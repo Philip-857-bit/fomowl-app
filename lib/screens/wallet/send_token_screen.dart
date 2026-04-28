@@ -41,6 +41,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   double _availableBalance = 0.0;
   BigInt _availableBalanceBaseUnits = BigInt.zero;
+  bool _nonEvmAddressMissing = false;
 
   @override
   void initState() {
@@ -138,68 +139,115 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   }
 
   Future<void> _loadDefaultToken() async {
-    final address = await _walletService.getCurrentWalletAddress();
-    if (address != null) {
-      if (!mounted) return;
-      try {
-        final blockchain = Provider.of<BlockchainService>(
-          context,
-          listen: false,
-        );
-        final balance = await blockchain.getEthBalance(address);
-        final balanceBaseUnits = await blockchain.getNativeBalanceBaseUnits(
-          address,
-        );
-        if (mounted) {
-          setState(() {
-            _selectedToken = Token(
-              symbol: blockchain.activeChain.symbol,
-              name: blockchain.activeChain.name,
-              balance: balance,
-              valueUsd: 0,
-              changePercent24h: 0,
-              contractAddress: '',
-              decimals: 18,
-              coinGeckoId: blockchain.activeChain.coinGeckoId,
-            );
-            _availableBalance = balance;
-            _availableBalanceBaseUnits = balanceBaseUnits;
-          });
-        }
-      } catch (e) {
-        if (!mounted) return;
-        final blockchain = Provider.of<BlockchainService>(
-          context,
-          listen: false,
-        );
-        setState(() {
-          _selectedToken = Token(
-            symbol: blockchain.activeChain.symbol,
-            name: blockchain.activeChain.name,
-            balance: 0,
-            valueUsd: 0,
-            changePercent24h: 0,
-            contractAddress: '',
-            decimals: 18,
-            coinGeckoId: blockchain.activeChain.coinGeckoId,
-          );
-          _availableBalanceBaseUnits = BigInt.zero;
-        });
-      }
-    } else {
-      if (!mounted) return;
-      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (!mounted) return;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final family = blockchain.activeFamily;
+
+    // Native token decimals differ per family.
+    final int nativeDecimals = switch (family) {
+      ChainFamily.solana => 9,
+      ChainFamily.tron => 6,
+      ChainFamily.evm => 18,
+    };
+
+    final String nativeSymbol;
+    final String nativeName;
+    final String? nativeCoinGeckoId;
+    switch (family) {
+      case ChainFamily.solana:
+        nativeSymbol = 'SOL';
+        nativeName = 'Solana';
+        nativeCoinGeckoId = 'solana';
+      case ChainFamily.tron:
+        nativeSymbol = 'TRX';
+        nativeName = 'TRON';
+        nativeCoinGeckoId = 'tron';
+      case ChainFamily.evm:
+        nativeSymbol = blockchain.activeChain.symbol;
+        nativeName = blockchain.activeChain.name;
+        nativeCoinGeckoId = blockchain.activeChain.coinGeckoId;
+    }
+
+    final address = await _walletService.getWalletAddressForFamily(family);
+    if (!mounted) return;
+
+    if (address == null || address.isEmpty) {
       setState(() {
         _selectedToken = Token(
-          symbol: blockchain.activeChain.symbol,
-          name: blockchain.activeChain.name,
+          symbol: nativeSymbol,
+          name: nativeName,
           balance: 0,
           valueUsd: 0,
           changePercent24h: 0,
           contractAddress: '',
-          decimals: 18,
-          coinGeckoId: blockchain.activeChain.coinGeckoId,
+          decimals: nativeDecimals,
+          coinGeckoId: nativeCoinGeckoId,
         );
+        _availableBalanceBaseUnits = BigInt.zero;
+        _nonEvmAddressMissing = family != ChainFamily.evm;
+      });
+      return;
+    }
+    if (_nonEvmAddressMissing) {
+      setState(() => _nonEvmAddressMissing = false);
+    }
+
+    try {
+      double balance = 0;
+      BigInt balanceBaseUnits = BigInt.zero;
+
+      // Only EVM has a local RPC path; Solana/Tron balances come from the
+      // backend token list that BlockchainService already fetched.
+      if (family == ChainFamily.evm) {
+        balance = await blockchain.getEthBalance(address);
+        balanceBaseUnits = await blockchain.getNativeBalanceBaseUnits(address);
+      } else {
+        // For non-EVM, pull from the already-loaded token list.
+        final cached = blockchain.tokens;
+        final native = cached
+            .where(
+              (t) => t.contractAddress == null || t.contractAddress!.isEmpty,
+            )
+            .firstOrNull;
+        if (native != null) {
+          balance = native.balance;
+          balanceBaseUnits = AmountUtils.parseDecimalToBaseUnits(
+            native.balance.toString(),
+            nativeDecimals,
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _selectedToken = Token(
+            symbol: nativeSymbol,
+            name: nativeName,
+            balance: balance,
+            valueUsd: 0,
+            changePercent24h: 0,
+            contractAddress: '',
+            decimals: nativeDecimals,
+            coinGeckoId: nativeCoinGeckoId,
+          );
+          _availableBalance = balance;
+          _availableBalanceBaseUnits = balanceBaseUnits;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _selectedToken = Token(
+          symbol: nativeSymbol,
+          name: nativeName,
+          balance: 0,
+          valueUsd: 0,
+          changePercent24h: 0,
+          contractAddress: '',
+          decimals: nativeDecimals,
+          coinGeckoId: nativeCoinGeckoId,
+        );
+        _availableBalanceBaseUnits = BigInt.zero;
       });
     }
   }
@@ -241,6 +289,13 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   }
 
   void _onSend() {
+    if (_nonEvmAddressMissing) {
+      _showError(
+        'This wallet was imported via private key and does not have a Solana or Tron address. '
+        'Create a new wallet from a seed phrase to send on this network.',
+      );
+      return;
+    }
     final l = AppLocalizations.of(context);
     final destination = _addressController.text.trim();
     final amountText = _amountController.text.trim();
@@ -278,6 +333,12 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       return;
     }
 
+    final String activeNetworkDisplayName = switch (family) {
+      ChainFamily.solana => 'Solana',
+      ChainFamily.tron => 'TRON',
+      ChainFamily.evm => blockchain.activeChain.name,
+    };
+
     Navigator.pushNamed(
       context,
       '/transfer-confirmation',
@@ -286,10 +347,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         'toAddress': destination,
         'amount': amountText,
         'amountBaseUnits': amountInBaseUnits,
-        'network': Provider.of<BlockchainService>(
-          context,
-          listen: false,
-        ).activeChain.name,
+        'network': activeNetworkDisplayName,
         'isInterTransfer': false,
       },
     );
@@ -391,6 +449,42 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                   children: [
                     const SizedBox(height: 18),
 
+                    if (_nonEvmAddressMissing)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withAlpha(20),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: AppColors.warning.withAlpha(128),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              color: AppColors.warning,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'This wallet was imported via private key and does not have a Solana/Tron address. Create a new wallet from a seed phrase to use this network.',
+                                style: TextStyle(
+                                  color: AppColors.warning,
+                                  fontSize: 12,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     TokenSelectorCard(
                       token: _selectedToken,
                       onTap: _openTokenSelector,

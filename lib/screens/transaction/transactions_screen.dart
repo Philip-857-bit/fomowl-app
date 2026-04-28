@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:web3dart/web3dart.dart';
 
+import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
@@ -559,169 +560,27 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     String walletAddress,
   ) async {
     try {
-      const rpcUrl = 'https://api.mainnet-beta.solana.com';
-      final sigResp = await http
-          .post(
-            Uri.parse(rpcUrl),
-            headers: const {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'jsonrpc': '2.0',
-              'id': 1,
-              'method': 'getSignaturesForAddress',
-              'params': [
-                walletAddress,
-                {'limit': 50},
-              ],
-            }),
-          )
+      final uri = AppEnvironment.blockchain(
+        '/networks/solana:mainnet/history/$walletAddress',
+        {'limit': '50'},
+      );
+      final resp = await http
+          .get(uri, headers: const {'Accept': 'application/json'})
           .timeout(const Duration(seconds: 15));
-
-      if (sigResp.statusCode < 200 || sigResp.statusCode >= 300) {
-        return const [];
-      }
-      final sigData = jsonDecode(sigResp.body) as Map<String, dynamic>;
-      final sigList = (sigData['result'] as List<dynamic>?) ?? const [];
-
+      if (resp.statusCode < 200 || resp.statusCode >= 300) return const [];
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final txs = (data['transactions'] as List<dynamic>?) ?? const [];
       final history = <WalletHistoryEntry>[];
-      for (final sigItem in sigList) {
-        if (sigItem is! Map<String, dynamic>) continue;
-        final sig = sigItem['signature']?.toString() ?? '';
+      for (final item in txs) {
+        if (item is! Map<String, dynamic>) continue;
+        final sig = item['txHash']?.toString() ?? '';
         if (sig.isEmpty) continue;
-
-        final blockTime = sigItem['blockTime'];
+        final blockTime = item['blockTime'];
         final ts = blockTime is int && blockTime > 0
             ? DateTime.fromMillisecondsSinceEpoch(blockTime * 1000)
             : DateTime.now();
-        final err = sigItem['err'];
-        final memo = sigItem['memo']?.toString() ?? '';
-
-        // Try to resolve from transaction details
-        final txResp = await http
-            .post(
-              Uri.parse(rpcUrl),
-              headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'jsonrpc': '2.0',
-                'id': 1,
-                'method': 'getTransaction',
-                'params': [
-                  sig,
-                  {
-                    'encoding': 'jsonParsed',
-                    'maxSupportedTransactionVersion': 0,
-                  },
-                ],
-              }),
-            )
-            .timeout(const Duration(seconds: 10));
-
-        double amount = 0;
-        String counterparty = '';
-        bool isIncoming = false;
-        String tokenSymbol = 'SOL';
-        String tokenName = 'Solana';
-
-        if (txResp.statusCode >= 200 && txResp.statusCode < 300) {
-          final txData = jsonDecode(txResp.body) as Map<String, dynamic>;
-          final result = txData['result'] as Map<String, dynamic>?;
-          if (result != null) {
-            final meta = result['meta'] as Map<String, dynamic>?;
-            final tx = result['transaction'] as Map<String, dynamic>?;
-            final accountKeys =
-                (tx?['message']?['accountKeys'] as List<dynamic>?) ?? const [];
-            final walletIdx = accountKeys.indexWhere((k) {
-              if (k is Map) return k['pubkey']?.toString() == walletAddress;
-              return k?.toString() == walletAddress;
-            });
-
-            final preBalances =
-                (meta?['preBalances'] as List<dynamic>?) ?? const [];
-            final postBalances =
-                (meta?['postBalances'] as List<dynamic>?) ?? const [];
-            if (walletIdx >= 0 &&
-                walletIdx < preBalances.length &&
-                walletIdx < postBalances.length) {
-              final pre = (preBalances[walletIdx] as num?)?.toInt() ?? 0;
-              final post = (postBalances[walletIdx] as num?)?.toInt() ?? 0;
-              final diffLamports = post - pre;
-              // exclude fee from self-assessment (fee is in meta.fee)
-              final fee = (meta?['fee'] as num?)?.toInt() ?? 0;
-              final netLamports = walletIdx == 0
-                  ? diffLamports + fee
-                  : diffLamports;
-              amount = netLamports.abs() / 1e9;
-              isIncoming = netLamports > 0;
-              // find counterparty: largest balance change that isn't walletIdx
-              int bestIdx = -1;
-              int bestDiff = 0;
-              for (int i = 0; i < preBalances.length; i++) {
-                if (i == walletIdx) continue;
-                final d =
-                    ((postBalances[i] as num?)?.toInt() ?? 0) -
-                    ((preBalances[i] as num?)?.toInt() ?? 0);
-                if (d.abs() > bestDiff.abs()) {
-                  bestDiff = d;
-                  bestIdx = i;
-                }
-              }
-              if (bestIdx >= 0 && bestIdx < accountKeys.length) {
-                final key = accountKeys[bestIdx];
-                counterparty =
-                    (key is Map
-                        ? key['pubkey']?.toString()
-                        : key?.toString()) ??
-                    '';
-              }
-            }
-
-            // Check SPL token transfers
-            final postTokenBalances =
-                (meta?['postTokenBalances'] as List<dynamic>?) ?? const [];
-            final preTokenBalances =
-                (meta?['preTokenBalances'] as List<dynamic>?) ?? const [];
-            if (postTokenBalances.isNotEmpty) {
-              for (int i = 0; i < postTokenBalances.length; i++) {
-                final ptb = postTokenBalances[i] as Map<String, dynamic>?;
-                if (ptb == null) continue;
-                final owner = ptb['owner']?.toString() ?? '';
-                if (owner != walletAddress) continue;
-                final accIdx = (ptb['accountIndex'] as num?)?.toInt() ?? -1;
-                final mint = ptb['mint']?.toString() ?? '';
-                final uiPost =
-                    (ptb['uiTokenAmount']?['uiAmount'] as num?)?.toDouble() ??
-                    0.0;
-                double uiPre = 0.0;
-                if (accIdx >= 0) {
-                  final preEntry = preTokenBalances.firstWhere(
-                    (e) => (e as Map?)?['accountIndex'] == accIdx,
-                    orElse: () => null,
-                  );
-                  uiPre =
-                      ((preEntry as Map?)?['uiTokenAmount']?['uiAmount']
-                              as num?)
-                          ?.toDouble() ??
-                      0.0;
-                }
-                final diff = uiPost - uiPre;
-                if (diff.abs() > 0) {
-                  amount = diff.abs();
-                  isIncoming = diff > 0;
-                  tokenSymbol = ptb['uiTokenAmount']?['uiAmountString'] != null
-                      ? _splMintToSymbol(mint)
-                      : _splMintToSymbol(mint);
-                  tokenName = tokenSymbol;
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        final direction = isIncoming ? 'from' : 'to';
-        final action = isIncoming ? 'Received' : 'Sent';
-        final displayCounterparty = counterparty.isNotEmpty
-            ? _shortAddress(counterparty)
-            : 'unknown';
+        final failed = item['status']?.toString() == 'failed';
+        final memo = item['memo']?.toString() ?? '';
         history.add(
           WalletHistoryEntry(
             id: 'solana:$sig',
@@ -729,13 +588,72 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             networkName: 'Solana',
             networkKey: 'solana:mainnet',
             txHash: sig,
+            eventType: failed ? 'failed' : 'send',
+            title: failed ? 'Failed transaction' : 'Transaction',
+            message: failed
+                ? 'Transaction failed on Solana.'
+                : 'Transaction on Solana.${memo.isNotEmpty ? ' Memo: $memo' : ''}',
+            tokenName: 'Solana',
+            tokenSymbol: 'SOL',
+            amount: 0,
+            isIncoming: false,
+            createdAt: ts,
+            source: 'explorer',
+          ),
+        );
+      }
+      return history;
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<List<WalletHistoryEntry>> _loadTronHistory(
+    String walletAddress,
+  ) async {
+    try {
+      final uri = AppEnvironment.blockchain(
+        '/networks/tron:mainnet/history/$walletAddress',
+        {'limit': '50'},
+      );
+      final resp = await http
+          .get(uri, headers: const {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 15));
+      if (resp.statusCode < 200 || resp.statusCode >= 300) return const [];
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
+      final txs = (data['transactions'] as List<dynamic>?) ?? const [];
+      final history = <WalletHistoryEntry>[];
+      for (final item in txs) {
+        if (item is! Map<String, dynamic>) continue;
+        final txId = item['txHash']?.toString() ?? '';
+        if (txId.isEmpty) continue;
+        final blockTime = item['blockTime'];
+        final ts = blockTime is int && blockTime > 0
+            ? DateTime.fromMillisecondsSinceEpoch(blockTime * 1000)
+            : DateTime.now();
+        final from = item['from']?.toString() ?? '';
+        final to = item['to']?.toString() ?? '';
+        final symbol = item['symbol']?.toString() ?? 'TRX';
+        final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+        final tokenStandard = item['tokenStandard']?.toString() ?? 'native';
+        final isIncoming = to.toLowerCase() == walletAddress.toLowerCase();
+        final counterparty = isIncoming ? from : to;
+        final direction = isIncoming ? 'from' : 'to';
+        final action = isIncoming ? 'Received' : 'Sent';
+        final tokenName = tokenStandard == 'trc20' ? symbol : 'Tron';
+        history.add(
+          WalletHistoryEntry(
+            id: 'tron:${tokenStandard == 'trc20' ? 'trc20:' : ''}$txId',
+            walletAddress: walletAddress,
+            networkName: 'Tron',
+            networkKey: 'tron:mainnet',
+            txHash: txId,
             eventType: isIncoming ? 'receive' : 'send',
             title: isIncoming ? 'Transfer received' : 'Transfer sent',
-            message: err != null
-                ? 'Failed transaction'
-                : '$action ${_trimAmount(amount)} $tokenSymbol $direction $displayCounterparty on Solana.${memo.isNotEmpty ? ' Memo: $memo' : ''}',
+            message:
+                '$action ${_trimAmount(amount)} $symbol $direction ${_shortAddress(counterparty)} on Tron.',
             tokenName: tokenName,
-            tokenSymbol: tokenSymbol,
+            tokenSymbol: symbol,
             amount: amount,
             isIncoming: isIncoming,
             createdAt: ts,
@@ -743,165 +661,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ),
         );
       }
-
       history.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return history;
     } catch (_) {
       return const [];
     }
-  }
-
-  String _splMintToSymbol(String mint) {
-    const knownMints = {
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
-      'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
-      'So11111111111111111111111111111111111111112': 'SOL',
-      'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': 'mSOL',
-      'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'BONK',
-    };
-    return knownMints[mint] ?? mint.substring(0, min(6, mint.length));
-  }
-
-  Future<List<WalletHistoryEntry>> _loadTronHistory(
-    String walletAddress,
-  ) async {
-    try {
-      const apiBase = 'https://api.trongrid.io';
-      final history = <WalletHistoryEntry>[];
-
-      // TRX native transactions
-      final trxResp = await http
-          .get(
-            Uri.parse(
-              '$apiBase/v1/accounts/$walletAddress/transactions?limit=50&order_by=block_timestamp,desc',
-            ),
-            headers: const {'Accept': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (trxResp.statusCode >= 200 && trxResp.statusCode < 300) {
-        final trxData = jsonDecode(trxResp.body) as Map<String, dynamic>;
-        final trxList = (trxData['data'] as List<dynamic>?) ?? const [];
-        for (final tx in trxList) {
-          if (tx is! Map<String, dynamic>) continue;
-          final entry = _mapTronNativeTx(tx, walletAddress);
-          if (entry != null) history.add(entry);
-        }
-      }
-
-      // TRC-20 token transfers
-      final trc20Resp = await http
-          .get(
-            Uri.parse(
-              '$apiBase/v1/accounts/$walletAddress/transactions/trc20?limit=50&order_by=block_timestamp,desc',
-            ),
-            headers: const {'Accept': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (trc20Resp.statusCode >= 200 && trc20Resp.statusCode < 300) {
-        final trc20Data = jsonDecode(trc20Resp.body) as Map<String, dynamic>;
-        final trc20List = (trc20Data['data'] as List<dynamic>?) ?? const [];
-        for (final tx in trc20List) {
-          if (tx is! Map<String, dynamic>) continue;
-          final entry = _mapTrc20Tx(tx, walletAddress);
-          if (entry != null) history.add(entry);
-        }
-      }
-
-      history.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return history;
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  WalletHistoryEntry? _mapTronNativeTx(
-    Map<String, dynamic> tx,
-    String walletAddress,
-  ) {
-    final txId = tx['txID']?.toString() ?? '';
-    if (txId.isEmpty) return null;
-    final rawData = tx['raw_data'] as Map<String, dynamic>?;
-    final contracts = (rawData?['contract'] as List<dynamic>?) ?? const [];
-    if (contracts.isEmpty) return null;
-    final contract = contracts.first as Map<String, dynamic>?;
-    if (contract == null) return null;
-    final type = contract['type']?.toString() ?? '';
-    if (type != 'TransferContract') return null;
-    final value = contract['parameter']?['value'] as Map<String, dynamic>?;
-    if (value == null) return null;
-    final from = value['owner_address']?.toString() ?? '';
-    final to = value['to_address']?.toString() ?? '';
-    final amountSun = (value['amount'] as num?)?.toInt() ?? 0;
-    final amount = amountSun / 1e6;
-    final isIncoming = to == walletAddress;
-    final counterparty = isIncoming ? from : to;
-    final tsMs = (tx['block_timestamp'] as num?)?.toInt() ?? 0;
-    final ts = tsMs > 0
-        ? DateTime.fromMillisecondsSinceEpoch(tsMs)
-        : DateTime.now();
-    final direction = isIncoming ? 'from' : 'to';
-    final action = isIncoming ? 'Received' : 'Sent';
-    return WalletHistoryEntry(
-      id: 'tron:$txId',
-      walletAddress: walletAddress,
-      networkName: 'Tron',
-      networkKey: 'tron:mainnet',
-      txHash: txId,
-      eventType: isIncoming ? 'receive' : 'send',
-      title: isIncoming ? 'Transfer received' : 'Transfer sent',
-      message:
-          '$action ${_trimAmount(amount)} TRX $direction ${_shortAddress(counterparty)} on Tron.',
-      tokenName: 'Tron',
-      tokenSymbol: 'TRX',
-      amount: amount,
-      isIncoming: isIncoming,
-      createdAt: ts,
-      source: 'explorer',
-    );
-  }
-
-  WalletHistoryEntry? _mapTrc20Tx(
-    Map<String, dynamic> tx,
-    String walletAddress,
-  ) {
-    final txId = tx['transaction_id']?.toString() ?? '';
-    if (txId.isEmpty) return null;
-    final from = tx['from']?.toString() ?? '';
-    final to = tx['to']?.toString() ?? '';
-    final tokenInfo = tx['token_info'] as Map<String, dynamic>?;
-    final symbol = tokenInfo?['symbol']?.toString() ?? 'TRC20';
-    final name = tokenInfo?['name']?.toString() ?? symbol;
-    final decimals = (tokenInfo?['decimals'] as num?)?.toInt() ?? 6;
-    final rawValue = tx['value']?.toString() ?? '0';
-    final rawBig = BigInt.tryParse(rawValue) ?? BigInt.zero;
-    final amount = rawBig.toDouble() / pow(10, decimals);
-    final isIncoming = to == walletAddress;
-    final counterparty = isIncoming ? from : to;
-    final tsMs = (tx['block_timestamp'] as num?)?.toInt() ?? 0;
-    final ts = tsMs > 0
-        ? DateTime.fromMillisecondsSinceEpoch(tsMs)
-        : DateTime.now();
-    final direction = isIncoming ? 'from' : 'to';
-    final action = isIncoming ? 'Received' : 'Sent';
-    return WalletHistoryEntry(
-      id: 'tron:trc20:$txId',
-      walletAddress: walletAddress,
-      networkName: 'Tron',
-      networkKey: 'tron:mainnet',
-      txHash: txId,
-      eventType: isIncoming ? 'receive' : 'send',
-      title: isIncoming ? 'Transfer received' : 'Transfer sent',
-      message:
-          '$action ${_trimAmount(amount)} $symbol $direction ${_shortAddress(counterparty)} on Tron.',
-      tokenName: name,
-      tokenSymbol: symbol,
-      amount: amount,
-      isIncoming: isIncoming,
-      createdAt: ts,
-      source: 'explorer',
-    );
   }
 
   WalletHistoryEntry? _mapExplorerHistoryEntry(

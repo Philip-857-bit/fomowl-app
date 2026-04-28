@@ -76,7 +76,7 @@ class WalletAccount {
       }
     });
     final evmAddress = address.trim();
-    if (evmAddress.isNotEmpty) {
+    if (evmAddress.isNotEmpty && evmAddress.startsWith('0x')) {
       normalized.putIfAbsent(ChainFamily.evm, () => evmAddress);
     }
     return normalized;

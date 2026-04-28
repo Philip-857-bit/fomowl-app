@@ -1,11 +1,9 @@
 import '../../models/chain.dart';
 
-/// Solana metadata scaffold for future wallet integration.
+/// Solana chain metadata for multi-family wallet support.
 ///
-/// This intentionally does not wire Solana into the active wallet flows yet.
-/// The rest of the app still assumes EVM signing, RPC, token discovery, and
-/// transaction semantics. These definitions give the next implementation pass
-/// a single canonical source for Solana network metadata.
+/// Mainnet is the active production network. Devnet and testnet are retained
+/// for development fixtures and internal validation.
 class SolanaCatalog {
   static const SolanaChain mainnet = SolanaChain(
     name: 'Solana',

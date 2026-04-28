@@ -110,7 +110,9 @@ class _TransferConfirmationScreenState
   }
 
   Future<void> _loadFromAddress() async {
-    final address = await _walletService.getCurrentWalletAddress();
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final family = blockchain.activeFamily;
+    final address = await _walletService.getWalletAddressForFamily(family);
     if (mounted) {
       setState(() => _fromAddress = address);
     }
@@ -120,6 +122,23 @@ class _TransferConfirmationScreenState
   Future<void> _fetchGasEstimate() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final activeFamily = blockchain.activeFamily;
+
+      // Solana and Tron don't use EVM gas — skip estimation entirely.
+      if (activeFamily != ChainFamily.evm) {
+        if (mounted) {
+          setState(() {
+            _gasPriceGwei = 0;
+            _gasFeeEth = 0;
+            _gasFeeUsd = 0;
+            _gasFeeWei = BigInt.zero;
+            _isLoadingGas = false;
+            _gasEstimationFailed = false;
+          });
+        }
+        return;
+      }
+
       final effectiveCoinId = blockchain.activeChain.coinGeckoId;
       final token = _args?['token'] as Token?;
       final toAddress = _args?['toAddress'] as String? ?? '';
@@ -212,17 +231,33 @@ class _TransferConfirmationScreenState
   }
 
   String? _transactionDetailsUrl(String hash, BlockchainService blockchain) {
-    if (!RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(hash)) {
-      return null;
+    final family = blockchain.activeFamily;
+
+    switch (family) {
+      case ChainFamily.solana:
+        // Solana signatures are 87-88 base58 chars.
+        if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {
+          return null;
+        }
+        final solanaExplorer = blockchain.activeNetworkKey == 'solana:mainnet'
+            ? 'https://explorer.solana.com'
+            : 'https://explorer.solana.com/?cluster=devnet';
+        return '$solanaExplorer/tx/$hash';
+
+      case ChainFamily.tron:
+        // Tron txids are 64 hex chars without 0x prefix.
+        if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
+        return 'https://tronscan.org/#/transaction/$hash';
+
+      case ChainFamily.evm:
+        if (!RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
+        final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
+        if (explorerUrl == null || explorerUrl.isEmpty) return null;
+        final normalized = explorerUrl.endsWith('/')
+            ? explorerUrl.substring(0, explorerUrl.length - 1)
+            : explorerUrl;
+        return '$normalized/tx/$hash';
     }
-    final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
-    if (explorerUrl == null || explorerUrl.isEmpty) {
-      return null;
-    }
-    final normalized = explorerUrl.endsWith('/')
-        ? explorerUrl.substring(0, explorerUrl.length - 1)
-        : explorerUrl;
-    return '$normalized/tx/$hash';
   }
 
   TransactionProgressController _openProgressFlow() {
@@ -246,18 +281,26 @@ class _TransferConfirmationScreenState
 
   Future<void> _refreshWalletStateAfterTransfer({
     required BlockchainService blockchain,
-    required int chainId,
+    required ChainFamily family,
+    required int? chainId,
   }) async {
     final walletAddress = _fromAddress;
-    if (walletAddress == null || walletAddress.isEmpty) {
-      return;
-    }
+    if (walletAddress == null || walletAddress.isEmpty) return;
 
-    await blockchain.refreshWalletTokens(walletAddress, chainId: chainId);
+    // For non-EVM families chainId is irrelevant — pass null so
+    // fetchWalletTokens uses activeNetworkKey to hit the correct cache bucket.
+    final effectiveChainId = family == ChainFamily.evm ? chainId : null;
+    await blockchain.refreshWalletTokens(
+      walletAddress,
+      chainId: effectiveChainId,
+    );
     unawaited(
       Future<void>.delayed(const Duration(seconds: 3), () async {
         try {
-          await blockchain.refreshWalletTokens(walletAddress, chainId: chainId);
+          await blockchain.refreshWalletTokens(
+            walletAddress,
+            chainId: effectiveChainId,
+          );
         } catch (_) {}
       }),
     );
@@ -307,19 +350,32 @@ class _TransferConfirmationScreenState
         }
       }
 
+      if (activeFamily == ChainFamily.solana ||
+          activeFamily == ChainFamily.tron) {
+        final mnemonic = await _walletService.getMnemonic();
+        if (mnemonic == null || mnemonic.trim().isEmpty) {
+          progressController.setError(
+            'This wallet was imported via private key and cannot sign '
+            'Solana or Tron transactions. Create a new wallet from a seed '
+            'phrase to use this network.',
+          );
+          return;
+        }
+      }
+
       String txHash;
       if (activeFamily == ChainFamily.solana) {
         txHash = await _walletService.sendSolanaTransaction(
           fromAddress: _fromAddress!,
           toAddress: toAddress,
-          amountLamports: amountInBaseUnits.toInt(),
+          amountLamports: amountInBaseUnits,
           tokenMint: isNative ? null : token?.contractAddress,
         );
       } else if (activeFamily == ChainFamily.tron) {
         txHash = await _walletService.sendTronTransaction(
           fromAddress: _fromAddress!,
           toAddress: toAddress,
-          amount: amountInBaseUnits.toInt(),
+          amount: amountInBaseUnits,
           tokenContract: isNative ? null : token?.contractAddress,
         );
       } else {
@@ -361,27 +417,36 @@ class _TransferConfirmationScreenState
         unawaited(
           _refreshWalletStateAfterTransfer(
             blockchain: blockchain,
+            family: activeFamily,
             chainId: chain.chainId,
           ),
         );
         if (_fromAddress != null && token != null) {
+          // For non-EVM families use 0 as a sentinel chainId and rely on
+          // networkKey for chain identification in history/notification services.
+          final effectiveChainId = activeFamily == ChainFamily.evm
+              ? chain.chainId
+              : 0;
+          final effectiveNetworkName = activeFamily == ChainFamily.evm
+              ? chain.name
+              : blockchain.activeNetworkKey;
           unawaited(
             _walletNotificationService.notifySendConfirmed(
               walletAddress: _fromAddress!,
-              chainId: chain.chainId,
+              chainId: effectiveChainId,
               txHash: txHash,
               amountText: amountText,
               tokenSymbol: token.symbol,
               toAddress: toAddress,
-              networkName: chain.name,
+              networkName: effectiveNetworkName,
             ),
           );
           unawaited(
             _walletHistoryService.recordSendConfirmed(
               walletAddress: _fromAddress!,
               txHash: txHash,
-              chainId: chain.chainId,
-              networkName: chain.name,
+              chainId: effectiveChainId,
+              networkName: effectiveNetworkName,
               tokenName: token.name,
               tokenSymbol: token.symbol,
               amountText: amountText,
