@@ -170,11 +170,19 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         fetched = List<Token>.from(cached);
       }
     }
+    // For non-EVM, keep the spinner running until the background refresh
+    // delivers real data — either the list is empty, or the cached tokens
+    // belong to a different network (stale EVM tokens visible after switch).
+    final hasWrongNetworkTokens =
+        fetched.isNotEmpty &&
+        fetched.any((t) => t.networkKey != blockchain.activeNetworkKey);
+    final keepSpinner =
+        !isEvm && (fetched.isEmpty || hasWrongNetworkTokens) && address != null;
     if (mounted) {
       setState(() {
         _walletTokens = fetched;
         _hiddenKeys = hidden;
-        _isLoading = false;
+        _isLoading = keepSpinner;
       });
     }
 
@@ -209,9 +217,11 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       setState(() {
         _walletTokens = fetched;
         _hiddenKeys = hidden;
+        _isLoading = false;
       });
     } catch (e) {
       debugPrint('Error refreshing tokens in manager: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

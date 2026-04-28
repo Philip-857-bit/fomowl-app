@@ -119,22 +119,26 @@ class _WalletsScreenState extends State<WalletsScreen> {
   Future<void> _switchWallet(WalletAccount account) async {
     final l = AppLocalizations.of(context);
     if (_activeAddress?.toLowerCase() == account.address.toLowerCase()) return;
-    setState(() => _loading = true);
     try {
+      // Fast storage write — update active address immediately so the tile
+      // highlights without waiting for any network call.
       await _walletService.setActiveWallet(account.address);
-      // Notify BlockchainService so the home screen reloads tokens for the
-      // newly active wallet instead of showing the previous wallet's data.
       if (mounted) {
-        final blockchain = Provider.of<BlockchainService>(
-          context,
-          listen: false,
-        );
-        blockchain.refresh();
+        setState(() => _activeAddress = account.address);
       }
+
+      // Notify BlockchainService in the background — do NOT await so the UI
+      // remains responsive while tokens reload for the new wallet.
+      if (mounted) {
+        Provider.of<BlockchainService>(context, listen: false).refresh();
+      }
+
+      // Reload the wallet list metadata (no network involved, just storage).
       await _loadWallets();
-      ToastUtils.showSuccess(l.walletSetAsActive(account.name));
+      if (mounted) {
+        ToastUtils.showSuccess(l.walletSetAsActive(account.name));
+      }
     } catch (e) {
-      if (mounted) setState(() => _loading = false);
       ToastUtils.showError(
         AppErrorUtils.userMessage(
           e,

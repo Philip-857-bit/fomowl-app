@@ -7,6 +7,7 @@ import '../../models/token.dart';
 import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/blockchain/blockchain_catalog.dart';
 import '../../services/currency_controller.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
@@ -43,11 +44,27 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   BigInt _availableBalanceBaseUnits = BigInt.zero;
   bool _nonEvmAddressMissing = false;
 
+  ChainFamily? _lastFamily;
+
   @override
   void initState() {
     super.initState();
     _displayController.addListener(_handleDisplayChanged);
-    _loadDefaultToken();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDefaultToken());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = Provider.of<BlockchainService>(context);
+    final currentFamily = blockchain.activeFamily;
+    final tokenIsStale =
+        _selectedToken != null &&
+        _selectedToken!.networkKey != blockchain.activeNetworkKey;
+    if (_lastFamily != currentFamily || tokenIsStale) {
+      _lastFamily = currentFamily;
+      _loadDefaultToken();
+    }
   }
 
   @override
@@ -182,6 +199,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           contractAddress: '',
           decimals: nativeDecimals,
           coinGeckoId: nativeCoinGeckoId,
+          imageUrl: BlockchainCatalog.iconUrlForSymbol(nativeSymbol),
+          networkKey: blockchain.activeNetworkKey,
         );
         _availableBalanceBaseUnits = BigInt.zero;
         _nonEvmAddressMissing = family != ChainFamily.evm;
@@ -229,6 +248,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
             contractAddress: '',
             decimals: nativeDecimals,
             coinGeckoId: nativeCoinGeckoId,
+            imageUrl: BlockchainCatalog.iconUrlForSymbol(nativeSymbol),
+            networkKey: blockchain.activeNetworkKey,
           );
           _availableBalance = balance;
           _availableBalanceBaseUnits = balanceBaseUnits;
@@ -246,6 +267,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           contractAddress: '',
           decimals: nativeDecimals,
           coinGeckoId: nativeCoinGeckoId,
+          imageUrl: BlockchainCatalog.iconUrlForSymbol(nativeSymbol),
+          networkKey: blockchain.activeNetworkKey,
         );
         _availableBalanceBaseUnits = BigInt.zero;
       });

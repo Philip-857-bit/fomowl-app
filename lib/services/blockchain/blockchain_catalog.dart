@@ -138,6 +138,10 @@ class BlockchainCatalog {
         return 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png';
       case 'USDT':
         return 'https://cryptologos.cc/logos/tether-usdt-logo.png';
+      case 'SOL':
+        return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png';
+      case 'TRX':
+        return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png';
       default:
         return null;
     }

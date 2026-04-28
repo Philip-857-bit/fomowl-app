@@ -180,6 +180,11 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildNativeLogoFallback() {
+    // For non-EVM tokens chainId is null; try the symbol-based CDN URL first.
+    final symbolUrl = BlockchainCatalog.iconUrlForSymbol(tokenSymbol);
+    if (symbolUrl != null && symbolUrl.isNotEmpty) {
+      return _buildNetworkImage(symbolUrl, fallback: _buildPlaceholder());
+    }
     final nativeLogoUrl = chainId == null
         ? null
         : BlockchainCatalog.defaultChainLogoUrl(chainId!);
@@ -256,6 +261,8 @@ class TokenIcon extends StatelessWidget {
       'FTM': const Color(0xFF1969FF),
       'FOWL': const Color(0xFFFF6B35),
       'FOMOWL': const Color(0xFFFF6B35),
+      'SOL': const Color(0xFF9945FF),
+      'TRX': const Color(0xFFFF0013),
     };
 
     return colors[symbol.toUpperCase()] ?? const Color(0xFF6B7280);

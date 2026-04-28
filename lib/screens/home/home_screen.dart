@@ -135,7 +135,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) {
         return;
       }
-      if (change.chainId == _lastChainId) {
+      final blockchain = _blockchain;
+      if (blockchain != null &&
+          change.chainId == _effectiveVisibilityChainId(blockchain)) {
         setState(() => _hiddenTokenKeys = change.hiddenTokens);
       }
       unawaited(_reloadPortfolioFromCachedTokens());
@@ -695,7 +697,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         _lastChainId = blockchain.activeChain.chainId;
         debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
-        await _loadHiddenTokens(_lastChainId!);
+        await _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
 
         debugPrint('[OWLLET] Triggering background data sync...');
         unawaited(_fetchRealBalances(address));
@@ -989,7 +991,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     _lastChainId = chainId;
     _lastNetworkKey = currentNetworkKey;
-    _loadHiddenTokens(chainId);
+    _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
     _walletService.getCurrentWalletAddress().then((address) async {
       if (!mounted || address == null) return;
 
@@ -1021,6 +1023,20 @@ class _HomeScreenState extends State<HomeScreen> {
       unawaited(_fetchPortfolioData(address, sync: true));
       _scheduleDeferredHomeTasks(address);
     });
+  }
+
+  /// Returns the chain-ID key used by [TokenVisibilityService] for the
+  /// currently active network. Mirrors the sentinel logic in token management:
+  /// EVM uses the real chainId; Solana = -501; Tron = -195.
+  int _effectiveVisibilityChainId(BlockchainService blockchain) {
+    switch (blockchain.activeFamily) {
+      case ChainFamily.solana:
+        return -501;
+      case ChainFamily.tron:
+        return -195;
+      case ChainFamily.evm:
+        return blockchain.activeChain.chainId;
+    }
   }
 
   Future<void> _loadHiddenTokens(int chainId) async {

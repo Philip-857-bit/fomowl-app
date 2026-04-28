@@ -101,9 +101,8 @@ class _DecentralizedProfileScreenState
     // Determine which network families this wallet actually supports.
     // Private-key imports are EVM-only. Seed-phrase wallets have all 3 families.
     final origin = activeAccount?.origin ?? WalletOrigin.derived;
-    final supported = origin == WalletOrigin.imported
-        ? {ChainFamily.evm}
-        : activeAccount?.addressesByFamily.keys.toSet() ?? {ChainFamily.evm};
+    final supported =
+        activeAccount?.addressesByFamily.keys.toSet() ?? {ChainFamily.evm};
 
     setState(() {
       _walletName = walletName ?? 'Main Wallet';
@@ -490,7 +489,10 @@ class _DecentralizedProfileScreenState
                     SettingsWalletHeaderCard(
                       walletName: _walletName,
                       walletAddress: _walletAddress,
-                      onTap: () => Navigator.pushNamed(context, '/wallets'),
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        '/wallets',
+                      ).then((_) => _load()),
                     ),
                     const SizedBox(height: 16),
                     SettingsSectionHeader(title: l.general),
@@ -499,7 +501,10 @@ class _DecentralizedProfileScreenState
                         SettingsItemTile(
                           icon: Icons.wallet_outlined,
                           title: l.manageWallets,
-                          onTap: () => Navigator.pushNamed(context, '/wallets'),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/wallets',
+                          ).then((_) => _load()),
                         ),
                         SettingsItemTile(
                           icon: Icons.hub_outlined,

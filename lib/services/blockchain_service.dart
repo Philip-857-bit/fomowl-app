@@ -1625,14 +1625,28 @@ class BlockchainService extends ChangeNotifier {
             .timeout(_backendDiscoveryTimeout);
         if (response.statusCode != 200) continue;
 
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = data['tokens'] as List<dynamic>? ?? const [];
+        final decoded = jsonDecode(response.body);
+        // Accept both {"tokens":[...]} style maps and bare [...] arrays.
+        List<dynamic> list = const [];
+        if (decoded is List) {
+          list = decoded;
+        } else if (decoded is Map<String, dynamic>) {
+          // Try several common wrapper keys in order of likelihood.
+          for (final key in const ['tokens', 'results', 'data', 'items']) {
+            final candidate = decoded[key];
+            if (candidate is List) {
+              list = candidate;
+              break;
+            }
+          }
+        }
         for (final entry in list) {
           if (entry is! Map<String, dynamic>) continue;
           final symbol = (entry['symbol'] as String?)?.trim() ?? '';
           final name = (entry['name'] as String?)?.trim() ?? '';
           final contractAddress = (entry['contractAddress'] as String?)?.trim();
-          if (symbol.isEmpty || name.isEmpty || contractAddress == null) {
+          // Allow native tokens (no contract address) through the filter.
+          if (symbol.isEmpty || name.isEmpty) {
             continue;
           }
 
