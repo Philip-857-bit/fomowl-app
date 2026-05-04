@@ -36,24 +36,48 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final feeText = _buildFeeText();
     final resolvedPlatformFeePercent = _resolvedPlatformFeePercent();
     final platformFeeText = resolvedPlatformFeePercent > 0
         ? _formatPercent(resolvedPlatformFeePercent)
         : '0';
+    final estTotalText = receiveText;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(
-        children: [
-          _buildDetailRow('Price', priceText, isPrice: true),
-          const SizedBox(height: 12),
-          _buildDetailRow('Total Tax', platformFeeText),
-          const SizedBox(height: 12),
-          _buildDetailRow('Fee', _buildFeeText()),
-          const SizedBox(height: 12),
-          _buildDetailRow('To Receive', receiveText),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'TRANSACTION DETAILS',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 1.0,
+            color: const Color(0xFF8894A0),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 17),
+          decoration: BoxDecoration(
+            color: const Color(0xFF151C24),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFF2A333D)),
+          ),
+          child: Column(
+            children: [
+              _buildDetailRow('Rate', priceText, isPrice: true),
+              const SizedBox(height: 14),
+              _buildDetailRowWithInfo('Total tax', feeText),
+              const SizedBox(height: 14),
+              _buildDetailRowWithInfo('Platform Fee', platformFeeText),
+              const SizedBox(height: 14),
+              Container(height: 1, color: const Color(0xFF2B3139)),
+              const SizedBox(height: 14),
+              _buildDetailRow('Est. Total', estTotalText, isBold: true),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -103,7 +127,12 @@ class SwapPriceDetailsCard extends StatelessWidget {
     return feeNativeText.isNotEmpty ? feeNativeText : feeUsdText;
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isPrice = false}) {
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    bool isPrice = false,
+    bool isBold = false,
+  }) {
     final priceRow = isPrice && value.contains(priceSeparator);
     return Row(
       children: [
@@ -112,10 +141,9 @@ class SwapPriceDetailsCard extends StatelessWidget {
           child: Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFFA1A1AA),
-              height: 1.43,
+              fontSize: 12,
+              fontWeight: isBold ? FontWeight.w400 : FontWeight.w400,
+              color: const Color(0xFF848E9C),
             ),
           ),
         ),
@@ -132,12 +160,40 @@ class SwapPriceDetailsCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.end,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFFFFFFF),
-                      height: 1.43,
+                      fontSize: 12,
+                      fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+                      color: const Color(0xFFEAECEF),
                     ),
                   ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailRowWithInfo(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: const Color(0xFF848E9C),
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.info_outline_rounded,
+          size: 12,
+          color: Color(0xFF848E9C),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFFEAECEF),
           ),
         ),
       ],

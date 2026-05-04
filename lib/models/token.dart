@@ -23,6 +23,12 @@ class Token {
   final bool isCertified;
   final String? networkKey;
   final TokenStandard tokenStandard;
+  // PATCH: Backend price resolver source for provider/DEX badges.
+  final String priceSource;
+  // PATCH: DEX liquidity when the backend can estimate it.
+  final double? liquidityUsd;
+  // PATCH: True when the price was found only through DEX fallback.
+  final bool isDexOnly;
 
   const Token({
     required this.symbol,
@@ -38,6 +44,12 @@ class Token {
     this.isCertified = false,
     this.networkKey,
     this.tokenStandard = TokenStandard.erc20,
+    // PATCH: Default preserves existing callers that do not provide source metadata.
+    this.priceSource = 'Unknown',
+    // PATCH: Default preserves existing callers that do not provide liquidity metadata.
+    this.liquidityUsd,
+    // PATCH: Default preserves existing provider-priced tokens.
+    this.isDexOnly = false,
   });
 
   TokenStandard get effectiveTokenStandard {
@@ -61,6 +73,12 @@ class Token {
     bool? isCertified,
     String? networkKey,
     TokenStandard? tokenStandard,
+    // PATCH: Copy source metadata through local token mutations.
+    String? priceSource,
+    // PATCH: Copy DEX liquidity metadata through local token mutations.
+    double? liquidityUsd,
+    // PATCH: Copy DEX-only flag through local token mutations.
+    bool? isDexOnly,
   }) {
     return Token(
       symbol: symbol ?? this.symbol,
@@ -76,6 +94,12 @@ class Token {
       isCertified: isCertified ?? this.isCertified,
       networkKey: networkKey ?? this.networkKey,
       tokenStandard: tokenStandard ?? this.tokenStandard,
+      // PATCH: Preserve price source unless explicitly replaced.
+      priceSource: priceSource ?? this.priceSource,
+      // PATCH: Preserve liquidity unless explicitly replaced.
+      liquidityUsd: liquidityUsd ?? this.liquidityUsd,
+      // PATCH: Preserve DEX-only status unless explicitly replaced.
+      isDexOnly: isDexOnly ?? this.isDexOnly,
     );
   }
 
@@ -101,6 +125,16 @@ class Token {
     return ValueFormatter.doubleFromDecimal(totalValueUsdDecimal);
   }
 
+  // PATCH: Used to render unavailable prices instead of a fake $0.00.
+  bool get hasKnownPrice => unitPriceUsdDecimal > Decimal.zero;
+
+  // PATCH: Used by wallet/home rows to show a compact DEX badge.
+  bool get isDexPriced {
+    return isDexOnly ||
+        priceSource == 'PancakeSwapV2' ||
+        priceSource == 'UniswapV3';
+  }
+
   Decimal get totalValueUsdDecimal {
     final inferredValue = balanceDecimal * priceUsdDecimal;
     if (valueUsdDecimal > Decimal.zero) return valueUsdDecimal;
@@ -121,11 +155,19 @@ class Token {
 
   /// Format USD value
   String get formattedValue {
+    // PATCH: A positive balance with no price should not render as $0.00.
+    if (balanceDecimal > Decimal.zero &&
+        valueUsdDecimal <= Decimal.zero &&
+        !hasKnownPrice) {
+      return 'Price unavailable';
+    }
     return ValueFormatter.formatUsdValue(totalValueUsdDecimal);
   }
 
   /// Format per-token price for UI
   String get formattedPrice {
+    // PATCH: Per-token unknown prices render explicitly unavailable.
+    if (!hasKnownPrice) return 'Price unavailable';
     return ValueFormatter.formatUsdPrice(unitPriceUsdDecimal);
   }
 

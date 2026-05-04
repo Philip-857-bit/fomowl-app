@@ -5,6 +5,7 @@ import 'release_notes_service.dart';
 
 class AppReleaseChecker {
   static const String _keyLastSeenVersion = 'last_seen_app_version_v1';
+  static const String _keyLastSeenServerUpdate = 'last_seen_server_update_v1';
 
   final ReleaseNotesService _releaseNotesService;
 
@@ -21,25 +22,43 @@ class AppReleaseChecker {
 
     final prefs = await SharedPreferences.getInstance();
     final lastSeenVersion = prefs.getString(_keyLastSeenVersion) ?? '';
+    final lastSeenServerUpdate =
+        prefs.getString(_keyLastSeenServerUpdate) ?? '';
 
     // If the installed version is newer than what we last showed, show notes.
     final isNewInstallOrUpdate =
         lastSeenVersion.isEmpty ||
         _compareVersions(installedVersion, lastSeenVersion) > 0;
 
-    // Fetch server release info in parallel — don't block on it.
+    // Fetch server release info
     final releaseInfo = await _releaseNotesService.fetchReleaseInfo();
 
     final serverVersion = releaseInfo?.version ?? '';
+    final minVersion = releaseInfo?.minVersion ?? '';
+
     final isUpdateAvailable =
         serverVersion.isNotEmpty &&
         _compareVersions(serverVersion, installedVersion) > 0;
 
-    if (!isNewInstallOrUpdate && !isUpdateAvailable) return null;
+    final isUpdateRequired =
+        minVersion.isNotEmpty &&
+        _compareVersions(minVersion, installedVersion) > 0;
+
+    final hasAlreadySeenThisUpdate =
+        isUpdateAvailable &&
+        _compareVersions(serverVersion, lastSeenServerUpdate) <= 0;
+
+    final shouldShowUpdate =
+        isUpdateRequired || (isUpdateAvailable && !hasAlreadySeenThisUpdate);
+
+    if (!isNewInstallOrUpdate && !shouldShowUpdate) return null;
 
     // Mark this version as seen so the sheet never shows twice.
     if (isNewInstallOrUpdate) {
       await prefs.setString(_keyLastSeenVersion, installedVersion);
+    }
+    if (shouldShowUpdate && !isUpdateRequired) {
+      await prefs.setString(_keyLastSeenServerUpdate, serverVersion);
     }
 
     return WhatsNewResult(
@@ -49,7 +68,7 @@ class AppReleaseChecker {
           : installedVersion,
       releaseNotes: releaseInfo?.releaseNotes ?? const [],
       isUpdateAvailable: isUpdateAvailable,
-      minVersion: releaseInfo?.minVersion ?? '',
+      minVersion: minVersion,
     );
   }
 

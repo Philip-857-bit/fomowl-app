@@ -227,8 +227,6 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   Future<void> _loadSuggestedTokens() async {
     final blockchain = context.read<BlockchainService>();
-    // Token search is EVM-only; the backend catalog has no SPL/TRC-20 directory.
-    if (blockchain.activeFamily != ChainFamily.evm) return;
     try {
       final results = await blockchain.searchTokensFromBackend('', limit: 60);
       if (!mounted) return;
@@ -306,24 +304,27 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         // Enabling: unhide the token, and add as custom if not already in wallet
         await _visibilityService.setTokenHidden(chainId, token, false);
 
-        // Custom token registration is EVM-only. On Solana/Tron the backend
-        // already surfaces all known tokens via the wallet-tokens endpoint.
-        if (isEvm) {
-          final existsInWallet = _walletTokens.any(
-            (t) =>
-                (t.contractAddress ?? '').toLowerCase() ==
-                (contract ?? '').toLowerCase(),
-          );
-          final existsAsCustom = blockchain.customTokensForActiveChain.any(
-            (c) => c.address.toLowerCase() == (contract ?? '').toLowerCase(),
-          );
+        // Register the token as a custom token so it persists and shows in the
+        // wallet even if the backend returns $0 balance. For EVM we attempt to
+        // detect the on-chain metadata; for Solana / Tron we trust the search
+        // result directly and use the sentinel chain-ID keys (-501 / -195).
+        final existsInWallet = _walletTokens.any(
+          (t) =>
+              (t.contractAddress ?? '').toLowerCase() ==
+              (contract ?? '').toLowerCase(),
+        );
+        final existsAsCustom = blockchain.customTokensForActiveChain.any(
+          (c) => c.address.toLowerCase() == (contract ?? '').toLowerCase(),
+        );
 
-          if (!existsInWallet &&
-              !existsAsCustom &&
-              contract != null &&
-              contract.isNotEmpty) {
+        if (!existsInWallet &&
+            !existsAsCustom &&
+            contract != null &&
+            contract.isNotEmpty) {
+          CustomTokenDefinition tokenToAdd;
+          if (isEvm) {
             final detected = await blockchain.detectTokenByContract(contract);
-            final tokenToAdd = CustomTokenDefinition(
+            tokenToAdd = CustomTokenDefinition(
               symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
               name: detected?.name ?? token.name,
               address: detected?.address ?? contract,
@@ -333,11 +334,20 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
               coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
               imageUrl: token.imageUrl ?? detected?.imageUrl,
             );
-            await blockchain.addCustomToken(
-              chainId: blockchain.activeChain.chainId,
-              token: tokenToAdd,
+          } else {
+            // Solana / Tron — trust the search-result metadata.
+            tokenToAdd = CustomTokenDefinition(
+              symbol: token.symbol.toUpperCase(),
+              name: token.name,
+              address: contract,
+              decimals: token.decimals > 0 ? token.decimals : 9,
+              coinGeckoId: token.coinGeckoId,
+              imageUrl: token.imageUrl,
+              networkKey: token.networkKey,
+              tokenStandard: token.tokenStandard,
             );
           }
+          await blockchain.addCustomToken(chainId: chainId, token: tokenToAdd);
         }
       } else {
         // Disabling: hide the token
@@ -426,14 +436,6 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
 
     final blockchain = context.read<BlockchainService>();
-    // Remote token search is EVM-only.
-    if (blockchain.activeFamily != ChainFamily.evm) {
-      setState(() {
-        _isSearchingRemote = false;
-        _remoteResults = [];
-      });
-      return;
-    }
     final cacheKey = '${blockchain.activeNetworkKey}:${trimmed.toLowerCase()}';
 
     // Show cached results immediately
@@ -642,23 +644,58 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   // ── Build unified token list ───────────────
 
+  /// Returns [_walletTokens] merged with any custom-token definitions that are
+  /// not yet present in [_walletTokens] (e.g. a token with $0 balance that
+  /// the backend chose not to return). User-added tokens must always be shown.
+  List<Token> _walletTokensWithCustom(BlockchainService blockchain) {
+    final custom = blockchain.customTokensForActiveChain;
+    if (custom.isEmpty) return _walletTokens;
+    final existingAddresses = {
+      for (final t in _walletTokens) (t.contractAddress ?? '').toLowerCase(),
+    };
+    final missing = <Token>[];
+    for (final def in custom) {
+      if (existingAddresses.contains(def.address.toLowerCase())) continue;
+      missing.add(
+        Token(
+          symbol: def.symbol,
+          name: def.name,
+          contractAddress: def.address,
+          balance: 0,
+          valueUsd: 0,
+          priceUsd: 0,
+          changePercent24h: 0,
+          decimals: def.decimals,
+          imageUrl: def.imageUrl,
+          coinGeckoId: def.coinGeckoId,
+          isCertified: false,
+          networkKey:
+              def.networkKey ?? NetworkKey.evm(blockchain.activeChain.chainId),
+          tokenStandard: def.tokenStandard,
+        ),
+      );
+    }
+    if (missing.isEmpty) return _walletTokens;
+    return [..._walletTokens, ...missing];
+  }
+
   List<Token> _buildDisplayList() {
+    final blockchain = context.read<BlockchainService>();
+    final walletTokens = _walletTokensWithCustom(blockchain);
+
     final query = _query.trim().toLowerCase();
     final isContract = TokenManagementQueryHelper.isContractAddress(_query);
-    if (isContract) return _walletTokens;
+    if (isContract) return walletTokens;
 
     // Determine source list
     List<Token> sourceTokens;
     if (query.isNotEmpty && query.length >= 2 && _remoteResults.isNotEmpty) {
       // Merge: wallet tokens + remote results, deduplicated
-      sourceTokens = _deduplicateTokens([..._walletTokens, ..._remoteResults]);
+      sourceTokens = _deduplicateTokens([...walletTokens, ..._remoteResults]);
     } else if (query.isEmpty && _suggestedTokens.isNotEmpty) {
-      sourceTokens = _deduplicateTokens([
-        ..._walletTokens,
-        ..._suggestedTokens,
-      ]);
+      sourceTokens = _deduplicateTokens([...walletTokens, ..._suggestedTokens]);
     } else {
-      sourceTokens = _walletTokens;
+      sourceTokens = walletTokens;
     }
 
     // Filter by query

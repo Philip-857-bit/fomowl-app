@@ -642,7 +642,7 @@ class WalletService {
       privateKeyHex: privateKeyHex,
       message: messageBytes,
     );
-    final sigBytes = _decodeBase58Signature(signatureBase58);
+    final sigBytes = decodeBase58Signature(signatureBase58);
 
     // 3. Serialise: [1, <64-byte sig>, <message bytes>] ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base64.
     final txBytes = Uint8List(1 + sigBytes.length + messageBytes.length);
@@ -677,9 +677,120 @@ class WalletService {
     return txHash;
   }
 
+  // ── Solana DApp signing helpers ───────────────────────────────────────────
+
+  /// Sign [messageBytes] with the Ed25519 key for the Solana [address].
+  /// Returns the base58-encoded 64-byte signature.
+  Future<String> signSolanaMessageRaw(
+    String address,
+    Uint8List messageBytes,
+  ) async {
+    final privateKeyHex = await _getSolanaPrivateKey(address);
+    return NativeCrypto.signSolanaMessage(
+      privateKeyHex: privateKeyHex,
+      message: messageBytes,
+    );
+  }
+
+  /// Sign [messageBytes] and return the fully-serialised signed Solana
+  /// transaction as a base64 string: [1, <64-byte sig>, <message bytes>].
+  Future<String> signSolanaTransactionRaw(
+    String address,
+    Uint8List messageBytes,
+  ) async {
+    final privateKeyHex = await _getSolanaPrivateKey(address);
+    final signatureBase58 = await NativeCrypto.signSolanaMessage(
+      privateKeyHex: privateKeyHex,
+      message: messageBytes,
+    );
+    final sigBytes = decodeBase58Signature(signatureBase58);
+    final txBytes = Uint8List(1 + sigBytes.length + messageBytes.length);
+    txBytes[0] = 1;
+    txBytes.setRange(1, 1 + sigBytes.length, sigBytes);
+    txBytes.setRange(1 + sigBytes.length, txBytes.length, messageBytes);
+    return base64Encode(txBytes);
+  }
+
+  /// Sign and broadcast a pre-built Solana transaction message.
+  /// [messageBytes] must be the raw serialised unsigned transaction message.
+  /// Returns the transaction hash on success.
+  Future<String> signAndBroadcastSolanaTransactionRaw(
+    String address,
+    Uint8List messageBytes,
+  ) async {
+    final signedBase64 = await signSolanaTransactionRaw(address, messageBytes);
+    final broadcastUri = AppEnvironment.blockchain(
+      '/networks/solana:mainnet/broadcast',
+    );
+    final broadcastResp = await _httpClientService.client
+        .post(
+          broadcastUri,
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({'signedTransaction': signedBase64}),
+        )
+        .timeout(const Duration(seconds: 30));
+    if (broadcastResp.statusCode < 200 || broadcastResp.statusCode >= 300) {
+      throw Exception(
+        'Failed to broadcast Solana transaction: ${broadcastResp.body}',
+      );
+    }
+    final broadcastData =
+        jsonDecode(broadcastResp.body) as Map<String, dynamic>;
+    final txHash = broadcastData['transactionHash']?.toString();
+    if (txHash == null || txHash.isEmpty) {
+      throw Exception('Broadcast succeeded but no transaction hash returned');
+    }
+    return txHash;
+  }
+
+  // ── Tron DApp signing helpers ─────────────────────────────────────────────
+
+  /// Sign a Tron transaction JSON object with the key for [address].
+  /// [unsignedTx] must contain a `raw_data_hex` field.
+  /// Returns the transaction map with a `signature` list appended.
+  Future<Map<String, dynamic>> signTronTransactionRaw(
+    String address,
+    Map<String, dynamic> unsignedTx,
+  ) async {
+    final privateKeyHex = await _getTronPrivateKey(address);
+    final rawDataHex = (unsignedTx['raw_data_hex'] ?? unsignedTx['rawDataHex'])
+        ?.toString();
+    if (rawDataHex == null || rawDataHex.isEmpty) {
+      throw Exception('signTronTransactionRaw: missing raw_data_hex');
+    }
+    final rawBytes = HEX.decode(rawDataHex);
+    final digestBytes = _sha256(Uint8List.fromList(rawBytes));
+    final digestHex = HEX.encode(digestBytes);
+    final signature = await NativeCrypto.signTronRawHash(
+      privateKeyHex: privateKeyHex,
+      rawHashHex: digestHex,
+    );
+    final signatureHex = signature.startsWith('0x')
+        ? signature.substring(2)
+        : signature;
+    return {
+      ...unsignedTx,
+      'signature': [signatureHex],
+    };
+  }
+
+  /// Sign a raw Tron message hash [messageHex] with the key for [address].
+  /// Returns a 0x-prefixed hex signature.
+  Future<String> signTronMessageRaw(String address, String messageHex) async {
+    final privateKeyHex = await _getTronPrivateKey(address);
+    final normalized = messageHex.startsWith('0x')
+        ? messageHex.substring(2)
+        : messageHex;
+    final signature = await NativeCrypto.signTronRawHash(
+      privateKeyHex: privateKeyHex,
+      rawHashHex: normalized,
+    );
+    return signature.startsWith('0x') ? signature : '0x$signature';
+  }
+
   /// Decode a base58-encoded Ed25519 signature (64 bytes) to raw bytes.
   /// Uses an O(n) lookup-table approach instead of BigInt arithmetic.
-  static Uint8List _decodeBase58Signature(String input) {
+  static Uint8List decodeBase58Signature(String input) {
     // Lookup table: ASCII code ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base58 digit value, -1 for invalid chars.
     const int invalidDigit = -1;
     const List<int> base58Table = [

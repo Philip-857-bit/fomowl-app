@@ -1,227 +1,188 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:local_auth/local_auth.dart';
-import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
-import '../../services/biometric_service.dart';
-import '../../l10n/app_localizations.dart';
-import '../../utils/toast_utils.dart';
 
-/// Face ID Verification Screen - Initial prompt
-class FaceIdVerificationScreen extends StatefulWidget {
+/// Face ID Verification Screen – intro (Figma 41:399)
+class FaceIdVerificationScreen extends StatelessWidget {
   const FaceIdVerificationScreen({super.key});
 
   @override
-  State<FaceIdVerificationScreen> createState() =>
-      _FaceIdVerificationScreenState();
-}
-
-class _FaceIdVerificationScreenState extends State<FaceIdVerificationScreen> {
-  Map<String, bool>? _biometricSettings;
-  final BiometricService _biometricService = BiometricService();
-  bool _isVerifying = false;
-  bool _isFaceAvailable = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _biometricSettings ??=
-        ModalRoute.of(context)?.settings.arguments as Map<String, bool>?;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _detectBiometricType();
-    // Automatically trigger system biometric prompt when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startVerification();
-    });
-  }
-
-  Future<void> _detectBiometricType() async {
-    try {
-      final availableBiometrics = await _biometricService
-          .getAvailableBiometrics();
-      if (mounted) {
-        setState(() {
-          _isFaceAvailable = availableBiometrics.contains(BiometricType.face);
-        });
-      }
-    } catch (e) {
-      debugPrint('Error checking biometric availability: $e');
-    }
-  }
-
-  Future<void> _startVerification() async {
-    final l = AppLocalizations.of(context);
-    setState(() {
-      _isVerifying = true;
-    });
-
-    try {
-      final fingerprintEnabled =
-          _biometricSettings?['fingerprintEnabled'] ?? false;
-
-      // Use system biometric prompt directly
-      final authenticated = await _biometricService.authenticate(
-        localizedReason: l.identityVerifyReason,
-      );
-
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-        });
-
-        if (authenticated) {
-          // Success - check if fingerprint verification is also needed
-          if (fingerprintEnabled) {
-            Navigator.pushReplacementNamed(
-              context,
-              '/fingerprint-verification',
-            );
-          } else {
-            Navigator.pushReplacementNamed(context, '/congratulations');
-          }
-        } else {
-          // Failed - show error
-          ToastUtils.showError(l.biometricVerificationFailed);
-        }
-      }
-    } catch (e) {
-      debugPrint('Biometric authentication error: $e');
-      if (mounted) {
-        setState(() {
-          _isVerifying = false;
-        });
-
-        ToastUtils.showError(l.biometricVerificationFailedWithPasscode);
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     return MobileScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: SafeArea(
-        bottom: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back button
-            Align(
-              alignment: Alignment.topLeft,
-              child: IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                  size: 24,
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-
-            const Spacer(flex: 2),
-
-            // Title — adapts to available biometric type
-            Text(
-              _isFaceAvailable
-                  ? l.faceVerificationTitle
-                  : l.biometricVerificationTitle,
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 60),
-
-            // Biometric icon — shows face or fingerprint based on device
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.accentRed, width: 3),
-              ),
-              child: Icon(
-                _isFaceAvailable ? Icons.face : Icons.fingerprint,
-                size: 120,
-                color: AppColors.accentRed,
-              ),
-            ),
-
-            const SizedBox(height: 60),
-
-            // Instruction text
-            Text(
-              _isVerifying ? l.biometricPromptInstruction : l.tapBelowToVerify,
-              style: GoogleFonts.outfit(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const Spacer(flex: 3),
-
-            // Start verification button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: SizedBox(
-                width: double.infinity,
-                height: 53,
-                child: ElevatedButton(
-                  onPressed: _isVerifying ? null : _startVerification,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFC03F2E), Color(0xFF640C0B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFEA2A33),
+                  size: 20,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 240,
+                    height: 240,
+                    child: Stack(
                       alignment: Alignment.center,
-                      child: _isVerifying
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                      children: [
+                        Container(
+                          width: 240,
+                          height: 240,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(
+                                0xFFEA2A33,
+                              ).withValues(alpha: 0.1),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 211,
+                          height: 211,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(
+                                0xFFEA2A33,
+                              ).withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          width: 192,
+                          height: 192,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0E0E0E),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(
+                                0xFF5D3F3D,
+                              ).withValues(alpha: 0.15),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFEA2A33,
+                                ).withValues(alpha: 0.4),
+                                blurRadius: 7.5,
                               ),
-                            )
-                          : Text(
-                              l.startVerification,
-                              style: GoogleFonts.outfit(
-                                fontSize: 21,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                            ],
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/face_recognition_red.png',
+                              width: 83,
+                              height: 83,
+                              fit: BoxFit.contain,
+                              errorBuilder: (e, s, t) => const Icon(
+                                Icons.face,
+                                color: Color(0xFFEA2A33),
+                                size: 80,
                               ),
                             ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 48),
+                  Text(
+                    'Face ID',
+                    style: GoogleFonts.inter(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      'Accelerate secure access and authorize transaction instantly with Face ID.',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFFD2D0D0),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
               ),
             ),
-
-            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(32, 0, 32, 16),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/face-id-check'),
+                    child: Container(
+                      width: double.infinity,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEA2A33),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFFEA2A33,
+                            ).withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Verify',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Icon(
+                            Icons.security,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  GestureDetector(
+                    onTap: () =>
+                        Navigator.pushNamed(context, '/congratulations'),
+                    child: Text(
+                      'SKIP FOR NOW',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFFB7B5B4),
+                        letterSpacing: 0.35,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
           ],
         ),
       ),

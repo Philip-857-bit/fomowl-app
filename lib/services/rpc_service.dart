@@ -8,7 +8,8 @@ class RpcService extends BaseService {
   int _nextRequestId = 1;
   RpcCallException? _lastError;
   final HttpClientService _httpClientService = HttpClientService();
-  final Map<String, String> _resolvedRpcUrlCache = {};
+  static const Duration _resolvedRpcUrlCacheTtl = Duration(minutes: 5);
+  final Map<String, _ResolvedRpcUrlCacheEntry> _resolvedRpcUrlCache = {};
 
   RpcCallException? get lastError => _lastError;
 
@@ -221,9 +222,14 @@ class RpcService extends BaseService {
     required String primaryRpcUrl,
   }) async {
     final cacheKey = '$chainId|$primaryRpcUrl';
+    final now = DateTime.now();
     final cached = _resolvedRpcUrlCache[cacheKey];
-    if (cached != null && cached.isNotEmpty) {
-      return cached;
+    if (cached != null) {
+      if (cached.rpcUrl.isNotEmpty &&
+          now.difference(cached.resolvedAt) < _resolvedRpcUrlCacheTtl) {
+        return cached.rpcUrl;
+      }
+      _resolvedRpcUrlCache.remove(cacheKey);
     }
 
     final candidates = <String>{
@@ -233,13 +239,26 @@ class RpcService extends BaseService {
     for (final rpcUrl in candidates) {
       final resolvedChainId = await getChainIdForRpcUrl(rpcUrl);
       if (resolvedChainId == chainId) {
-        _resolvedRpcUrlCache[cacheKey] = rpcUrl;
+        _resolvedRpcUrlCache[cacheKey] = _ResolvedRpcUrlCacheEntry(
+          rpcUrl: rpcUrl,
+          resolvedAt: DateTime.now(),
+        );
         return rpcUrl;
       }
     }
 
     return primaryRpcUrl;
   }
+}
+
+class _ResolvedRpcUrlCacheEntry {
+  const _ResolvedRpcUrlCacheEntry({
+    required this.rpcUrl,
+    required this.resolvedAt,
+  });
+
+  final String rpcUrl;
+  final DateTime resolvedAt;
 }
 
 class RpcCallException implements Exception {

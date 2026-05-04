@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/app_colors.dart';
 import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 
-/// Congratulations Screen
-/// Success screen after completing wallet setup
+/// Congratulations Screen – Figma 41:761
 class CongratulationsScreen extends StatefulWidget {
   const CongratulationsScreen({super.key});
 
@@ -28,13 +26,9 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
   Future<void> _enterWallet() async {
     if (_isNavigating) return;
     setState(() => _isNavigating = true);
-
     try {
       await _screenCaptureGuard.disableProtection();
-    } catch (_) {
-      // Best effort only.
-    }
-
+    } catch (_) {}
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/blockchain-selection');
   }
@@ -42,121 +36,112 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
   @override
   Widget build(BuildContext context) {
     return MobileScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF0E0E0E),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            const Spacer(flex: 2),
-
-            // Dancing owls illustration
-            Image.asset(
-              'assets/images/dancing_owls.png',
-              width: 300,
-              height: 300,
-              errorBuilder: (context, error, stackTrace) {
-                // Placeholder if image not found
-                return SizedBox(
-                  width: 300,
-                  height: 300,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.celebration, size: 80, color: Colors.grey),
-                      SizedBox(width: 20),
-                      Icon(
-                        Icons.celebration,
-                        size: 80,
-                        color: Color(0xFFEB3F3F),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Center(
+                child: Container(
+                  width: 384,
+                  height: 384,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5451).withValues(alpha: 0.1),
+                        blurRadius: 60,
+                        spreadRadius: 40,
                       ),
-                      SizedBox(width: 20),
-                      Icon(Icons.celebration, size: 80, color: Colors.brown),
                     ],
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 60),
-
-            // Title
-            Text(
-              'Congratulation',
-              style: GoogleFonts.outfit(
-                fontSize: 40,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const SizedBox(height: 16),
-
-            // Subtitle
-            Text(
-              'You are now an official Owlian',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.8),
-              ),
-              textAlign: TextAlign.center,
-            ),
-
-            const Spacer(flex: 3),
-
-            // Enter wallet button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: SizedBox(
-                width: double.infinity,
-                height: 53,
-                child: ElevatedButton(
-                  onPressed: _isNavigating ? null : _enterWallet,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFC03F2E), Color(0xFF640C0B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: _isNavigating
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              'Enter wallet',
-                              style: GoogleFonts.outfit(
-                                fontSize: 21,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 40),
-
-            const SizedBox(height: 12),
+            Column(
+              children: [
+                const SizedBox(height: 24),
+                Image.asset(
+                  'assets/images/dancing_owls.png',
+                  width: 343,
+                  height: 248,
+                  fit: BoxFit.cover,
+                  errorBuilder: (e, s, t) => const Icon(
+                    Icons.celebration,
+                    color: Color(0xFFEA2A33),
+                    size: 120,
+                  ),
+                ),
+                const SizedBox(height: 50),
+                Text(
+                  'Congratulation',
+                  style: GoogleFonts.inter(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFFE2E2E2),
+                    letterSpacing: -1.8,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'You are now an official Owlian',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: const Color(0xFFC8C6C5).withValues(alpha: 0.8),
+                    letterSpacing: 0.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                  child: GestureDetector(
+                    onTap: _isNavigating ? null : _enterWallet,
+                    child: Container(
+                      width: double.infinity,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEA2A33),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFFEA2A33,
+                            ).withValues(alpha: 0.2),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: _isNavigating
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                'Enter wallet',
+                                style: GoogleFonts.inter(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFFE2E2E2),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

@@ -68,6 +68,18 @@ class HomePortfolioApiService {
               imageUrl: mapped['imageUrl'] as String?,
               coinGeckoId: mapped['coinGeckoId'] as String?,
               isCertified: mapped['isCertified'] == true,
+              // PATCH: Preserve backend price source metadata for DEX badges.
+              priceSource:
+                  mapped['priceSource'] as String? ??
+                  mapped['price_source'] as String? ??
+                  'Unknown',
+              // PATCH: Preserve backend DEX liquidity metadata.
+              liquidityUsd:
+                  (mapped['liquidityUsd'] as num?)?.toDouble() ??
+                  (mapped['liquidity_usd'] as num?)?.toDouble(),
+              // PATCH: Preserve backend DEX-only marker.
+              isDexOnly:
+                  mapped['isDexOnly'] == true || mapped['is_dex_only'] == true,
             );
           })
           .toList();

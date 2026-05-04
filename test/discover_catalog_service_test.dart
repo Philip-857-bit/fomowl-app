@@ -122,5 +122,21 @@ void main() {
       expect(snapshot.dapps.map((dapp) => dapp.id), ['cached']);
       expect(callCount, 0);
     });
+
+    test('bundled fallback snapshot is cached as stale', () async {
+      final service = DiscoverCatalogService(
+        client: MockClient((request) async {
+          return http.Response('{}', 500);
+        }),
+      );
+
+      final snapshot = await service.getSnapshot();
+      expect(snapshot.dapps, isNotEmpty);
+      expect(snapshot.isFresh, isFalse);
+
+      final cached = await service.loadCachedSnapshot();
+      expect(cached?.dapps, isNotEmpty);
+      expect(cached?.isFresh, isFalse);
+    });
   });
 }
