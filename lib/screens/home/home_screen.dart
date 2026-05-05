@@ -685,7 +685,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           final l = AppLocalizations.of(context);
           setState(() {
-            _walletName ??= name ?? l.mainWallet;
+            _walletName = name ?? _walletName ?? l.mainWallet;
             _isLoading = false;
           });
           debugPrint('[OWLLET] Loading state cleared. UI unblocked (cached).');
