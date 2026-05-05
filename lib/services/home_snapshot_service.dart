@@ -118,12 +118,10 @@ class HomeSnapshotService {
       if (raw == null || raw.isEmpty) return null;
 
       final decoded = jsonDecode(raw);
-      final snapshot = HomePortfolioSnapshot.fromJson(decoded);
-      if (snapshot.isStale) {
-        await prefs.remove(key);
-        return null;
-      }
-      return snapshot;
+      // Always return the snapshot regardless of staleness. Callers check
+      // snapshot.isStale (a computed getter) to decide whether to show a
+      // refresh indicator while fresh data loads in the background.
+      return HomePortfolioSnapshot.fromJson(decoded);
     } catch (e) {
       debugPrint('Error loading home snapshot: $e');
       return null;

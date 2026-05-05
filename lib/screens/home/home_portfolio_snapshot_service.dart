@@ -130,8 +130,11 @@ class HomePortfolioSnapshotService {
 
       final snapshot = HomeAggregatedPortfolioSnapshot.fromJson(decoded);
       if (snapshot.isExpired) {
-        await prefs.remove(_key(walletAddress));
-        return null;
+        // Return the stale snapshot rather than null so the UI can show
+        // last-known data immediately while fresh data loads in the background.
+        // isStale is set explicitly because this model's field can be
+        // overridden (unlike HomePortfolioSnapshot where it is computed).
+        return snapshot.copyWith(isStale: true);
       }
       return snapshot;
     } catch (error) {
