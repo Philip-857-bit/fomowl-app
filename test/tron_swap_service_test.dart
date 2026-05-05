@@ -34,10 +34,7 @@ void main() {
             'networkFeeUsd': 0.5,
             'platformFeeUsd': 0.2,
             'platformFeeBps': 100,
-            'transaction': {
-              'raw_data_hex': 'aabbcc',
-              'visible': true,
-            },
+            'transaction': {'raw_data_hex': 'aabbcc', 'visible': true},
           }),
           200,
         );
@@ -137,31 +134,33 @@ void main() {
       expect(service.lastError, contains('missing the unsigned transaction'));
     });
 
-    test('returns null when raw_data_hex and rawDataHex are both absent',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({
-            'outAmount': '1000000',
-            'transaction': {'visible': true},
-          }),
-          200,
+    test(
+      'returns null when raw_data_hex and rawDataHex are both absent',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'outAmount': '1000000',
+              'transaction': {'visible': true},
+            }),
+            200,
+          );
+        });
+        final service = TronSwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
         );
-      });
-      final service = TronSwapService(
-        httpClientService: HttpClientServiceMock(mockClient),
-      );
 
-      final quote = await service.getQuote(
-        fromToken: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb',
-        toToken: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-        amountSun: '1000000',
-        walletAddress: 'TXyz',
-      );
+        final quote = await service.getQuote(
+          fromToken: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb',
+          toToken: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+          amountSun: '1000000',
+          walletAddress: 'TXyz',
+        );
 
-      expect(quote, isNull);
-      expect(service.lastError, contains('raw_data_hex'));
-    });
+        expect(quote, isNull);
+        expect(service.lastError, contains('raw_data_hex'));
+      },
+    );
 
     test('returns null on non-2xx status and sets lastError', () async {
       final mockClient = MockClient((request) async {
@@ -186,34 +185,33 @@ void main() {
       expect(service.lastError, isNotEmpty);
     });
 
-    test('returns null on unexpected response format and sets lastError',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response('[1, 2, 3]', 200);
-      });
-      final service = TronSwapService(
-        httpClientService: HttpClientServiceMock(mockClient),
-      );
+    test(
+      'returns null on unexpected response format and sets lastError',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response('[1, 2, 3]', 200);
+        });
+        final service = TronSwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
 
-      final quote = await service.getQuote(
-        fromToken: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb',
-        toToken: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
-        amountSun: '1000000',
-        walletAddress: 'TXyz',
-      );
+        final quote = await service.getQuote(
+          fromToken: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb',
+          toToken: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+          amountSun: '1000000',
+          walletAddress: 'TXyz',
+        );
 
-      expect(quote, isNull);
-      expect(service.lastError, contains('Unexpected response format'));
-    });
+        expect(quote, isNull);
+        expect(service.lastError, contains('Unexpected response format'));
+      },
+    );
   });
 
   group('TronSwapService.broadcastSignedTx', () {
     test('returns txid from "txid" field', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'txid': 'abc123txid'}),
-          200,
-        );
+        return http.Response(jsonEncode({'txid': 'abc123txid'}), 200);
       });
       final service = TronSwapService(
         httpClientService: HttpClientServiceMock(mockClient),
@@ -229,10 +227,7 @@ void main() {
 
     test('falls back to txHash field', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'txHash': 'hash456'}),
-          200,
-        );
+        return http.Response(jsonEncode({'txHash': 'hash456'}), 200);
       });
       final service = TronSwapService(
         httpClientService: HttpClientServiceMock(mockClient),
@@ -248,10 +243,7 @@ void main() {
 
     test('falls back to transactionHash field', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'transactionHash': 'txhash789'}),
-          200,
-        );
+        return http.Response(jsonEncode({'transactionHash': 'txhash789'}), 200);
       });
       final service = TronSwapService(
         httpClientService: HttpClientServiceMock(mockClient),
@@ -267,10 +259,7 @@ void main() {
 
     test('falls back to id field', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'id': 'idvalue000'}),
-          200,
-        );
+        return http.Response(jsonEncode({'id': 'idvalue000'}), 200);
       });
       final service = TronSwapService(
         httpClientService: HttpClientServiceMock(mockClient),

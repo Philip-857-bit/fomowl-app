@@ -116,28 +116,30 @@ void main() {
       expect(quote.requestId, 'req-003');
     });
 
-    test('returns null and sets error when swapTransaction is absent',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'outAmount': '1000000000', 'toDecimals': 9}),
-          200,
+    test(
+      'returns null and sets error when swapTransaction is absent',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'outAmount': '1000000000', 'toDecimals': 9}),
+            200,
+          );
+        });
+        final service = SolanaSwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
         );
-      });
-      final service = SolanaSwapService(
-        httpClientService: HttpClientServiceMock(mockClient),
-      );
 
-      final quote = await service.getQuote(
-        fromMint: 'So11111111111111111111111111111111111111112',
-        toMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-        amountLamports: '1000000000',
-        walletAddress: 'SoLWaLLetAddresS',
-      );
+        final quote = await service.getQuote(
+          fromMint: 'So11111111111111111111111111111111111111112',
+          toMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          amountLamports: '1000000000',
+          walletAddress: 'SoLWaLLetAddresS',
+        );
 
-      expect(quote, isNull);
-      expect(service.lastError, contains('missing the unsigned transaction'));
-    });
+        expect(quote, isNull);
+        expect(service.lastError, contains('missing the unsigned transaction'));
+      },
+    );
 
     test('returns null on non-2xx status and sets lastError', () async {
       final mockClient = MockClient((request) async {
@@ -185,10 +187,7 @@ void main() {
   group('SolanaSwapService.executeSwap', () {
     test('returns txid from "txid" field', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'txid': 'solana-tx-sig-001'}),
-          200,
-        );
+        return http.Response(jsonEncode({'txid': 'solana-tx-sig-001'}), 200);
       });
       final service = SolanaSwapService(
         httpClientService: HttpClientServiceMock(mockClient),
@@ -204,10 +203,7 @@ void main() {
 
     test('falls back to "signature" field', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'signature': 'sig-value-002'}),
-          200,
-        );
+        return http.Response(jsonEncode({'signature': 'sig-value-002'}), 200);
       });
       final service = SolanaSwapService(
         httpClientService: HttpClientServiceMock(mockClient),
@@ -259,30 +255,32 @@ void main() {
       expect(txHash, 'txhash-via-txHash-field');
     });
 
-    test('returns null and sets error when 2xx response has no tx signature',
-        () async {
-      final mockClient = MockClient((request) async {
-        return http.Response(jsonEncode({'status': 'submitted'}), 200);
-      });
-      final service = SolanaSwapService(
-        httpClientService: HttpClientServiceMock(mockClient),
-      );
+    test(
+      'returns null and sets error when 2xx response has no tx signature',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(jsonEncode({'status': 'submitted'}), 200);
+        });
+        final service = SolanaSwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
 
-      final txHash = await service.executeSwap(
-        signedTransactionBase64: 'signedbase64tx==',
-        requestId: 'req-001',
-      );
+        final txHash = await service.executeSwap(
+          signedTransactionBase64: 'signedbase64tx==',
+          requestId: 'req-001',
+        );
 
-      expect(txHash, isNull);
-      expect(service.lastError, contains('no transaction signature returned'));
-    });
+        expect(txHash, isNull);
+        expect(
+          service.lastError,
+          contains('no transaction signature returned'),
+        );
+      },
+    );
 
     test('returns null on non-2xx status and sets lastError', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          jsonEncode({'message': 'Simulation failed'}),
-          400,
-        );
+        return http.Response(jsonEncode({'message': 'Simulation failed'}), 400);
       });
       final service = SolanaSwapService(
         httpClientService: HttpClientServiceMock(mockClient),
