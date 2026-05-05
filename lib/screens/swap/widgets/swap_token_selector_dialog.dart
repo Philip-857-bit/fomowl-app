@@ -82,6 +82,10 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
     return _isContractQuery && !_hasVisibleContractMatch;
   }
 
+  int? get _tokenIconChainId {
+    return widget.chainId > 0 ? widget.chainId : null;
+  }
+
   void _handleSearchChanged() {
     final nextQuery = _searchController.text.trim();
     _searchDebounce?.cancel();
@@ -290,7 +294,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
             if (_showContractCard) ...[
               const SizedBox(height: 14),
               _SwapContractDetectionCard(
-                chainId: widget.chainId,
+                chainId: _tokenIconChainId,
                 detectedToken: _detectedToken,
                 isResolving: _isResolvingContract,
                 isAdding: _isAddingToken,
@@ -323,7 +327,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
                         final token = _filteredTokens[index];
                         return _SwapTokenOption(
                           token: token,
-                          chainId: widget.chainId,
+                          chainId: _tokenIconChainId,
                           onTap: () => Navigator.pop(context, token),
                         );
                       },
@@ -346,7 +350,7 @@ class _SwapContractDetectionCard extends StatelessWidget {
     required this.onAdd,
   });
 
-  final int chainId;
+  final int? chainId;
   final CustomTokenDefinition? detectedToken;
   final bool isResolving;
   final bool isAdding;
@@ -473,7 +477,7 @@ class _SwapTokenOption extends StatelessWidget {
   });
 
   final Token token;
-  final int chainId;
+  final int? chainId;
   final VoidCallback onTap;
 
   @override

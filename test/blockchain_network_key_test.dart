@@ -42,17 +42,36 @@ void main() {
     },
   );
 
-  test('keeps non-EVM network activation explicitly unsupported for now', () {
+  test(
+    'activates non-EVM networks and exposes family native token fallback',
+    () {
+      final service = BlockchainService();
+
+      service.setActiveNetworkKey('solana:mainnet');
+      expect(service.activeNetworkKey, 'solana:mainnet');
+      expect(service.activeFamily, ChainFamily.solana);
+      expect(service.activeNetworkSymbol, 'SOL');
+      expect(service.activeTokenStorageChainId, -501);
+      expect(service.tokens.single.symbol, 'SOL');
+
+      service.setActiveNetworkKey('tron:mainnet');
+      expect(service.activeNetworkKey, 'tron:mainnet');
+      expect(service.activeFamily, ChainFamily.tron);
+      expect(service.activeNetworkSymbol, 'TRX');
+      expect(service.activeTokenStorageChainId, -195);
+      expect(service.tokens.single.symbol, 'TRX');
+    },
+  );
+
+  test('clears non-EVM override when activating an EVM chain directly', () {
     final service = BlockchainService();
 
-    expect(
-      () => service.setActiveNetworkKey('solana:mainnet'),
-      throwsA(isA<UnsupportedError>()),
-    );
-    expect(
-      () => service.setActiveNetworkKey('tron:mainnet'),
-      throwsA(isA<UnsupportedError>()),
-    );
+    service.setActiveNetworkKey('solana:mainnet');
+    service.setActiveChainByChainId(56);
+
+    expect(service.activeFamily, ChainFamily.evm);
+    expect(service.activeNetworkKey, 'evm:56');
+    expect(service.tokens.single.symbol, 'BNB');
   });
 
   test('prefers canonical network wallet token endpoint before legacy alias', () {

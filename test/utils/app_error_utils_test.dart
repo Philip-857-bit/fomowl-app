@@ -93,7 +93,7 @@ void main() {
     });
     test('returns fallback when backend message exposes a remote URL', () {
       const body =
-          '{"message": "Request to https://fomowl-backend.onrender.com/api failed"}';
+          '{"message": "Request to https://core.owlletapp.com/api failed"}';
       expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
     });
   });
@@ -104,7 +104,7 @@ void main() {
     test('returns fallback when raw error exposes backend URL', () {
       expect(
         AppErrorUtils.userMessage(
-          'https://fomowl-backend.onrender.com/api/swap/quote failed',
+          'https://core.owlletapp.com/api/swap/quote failed',
           fallback: fallback,
         ),
         fallback,

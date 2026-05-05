@@ -224,6 +224,50 @@ class BlockchainService extends ChangeNotifier {
   ChainFamily get activeFamily => NetworkKey.familyOf(activeNetworkKey);
   Set<ChainFamily> get enabledFamilies => Set.unmodifiable(_enabledFamilies);
 
+  SolanaChain get _activeSolanaChain {
+    return SolanaCatalog.builtInChains.firstWhere(
+      (chain) => chain.networkKey == activeNetworkKey,
+      orElse: () => SolanaCatalog.mainnet,
+    );
+  }
+
+  TronChain get _activeTronChain {
+    return TronCatalog.builtInChains.firstWhere(
+      (chain) => chain.networkKey == activeNetworkKey,
+      orElse: () => TronCatalog.mainnet,
+    );
+  }
+
+  String get activeNetworkName => switch (activeFamily) {
+    ChainFamily.solana => _activeSolanaChain.name,
+    ChainFamily.tron => _activeTronChain.name,
+    ChainFamily.evm => _activeChain.name,
+  };
+
+  String get activeNetworkSymbol => switch (activeFamily) {
+    ChainFamily.solana => _activeSolanaChain.symbol,
+    ChainFamily.tron => _activeTronChain.symbol,
+    ChainFamily.evm => _activeChain.symbol,
+  };
+
+  String? get activeNetworkCoinGeckoId => switch (activeFamily) {
+    ChainFamily.solana => _activeSolanaChain.coinGeckoId,
+    ChainFamily.tron => _activeTronChain.coinGeckoId,
+    ChainFamily.evm => _activeChain.coinGeckoId,
+  };
+
+  String? get activeNetworkExplorerUrl => switch (activeFamily) {
+    ChainFamily.solana => _activeSolanaChain.explorerUrl,
+    ChainFamily.tron => _activeTronChain.explorerUrl,
+    ChainFamily.evm => _activeChain.explorerUrl,
+  };
+
+  String? get activeNetworkLogoUrl => switch (activeFamily) {
+    ChainFamily.solana => _activeSolanaChain.logoUrl,
+    ChainFamily.tron => _activeTronChain.logoUrl,
+    ChainFamily.evm => _activeChain.logoUrl,
+  };
+
   /// Lower-cased address of the wallet currently selected in storage.
   /// Empty until [setActiveWalletContext] runs (e.g. on init or wallet switch).
   String get activeWalletAddress => _activeWalletAddress;
@@ -341,13 +385,25 @@ class BlockchainService extends ChangeNotifier {
   /// Mirrors the sentinel logic in TokenManagementScreen and TokenVisibilityService:
   /// EVM uses the real chainId; Solana = -501; Tron = -195.
   int get _customTokenChainKey {
-    switch (activeFamily) {
+    return _customTokenChainKeyForNetwork(
+      activeNetworkKey,
+      _activeChain.chainId,
+    );
+  }
+
+  int get activeTokenStorageChainId => _customTokenChainKey;
+
+  int _customTokenChainKeyForNetwork(
+    String networkKey,
+    int evmFallbackChainId,
+  ) {
+    switch (NetworkKey.familyOf(networkKey)) {
       case ChainFamily.solana:
         return -501;
       case ChainFamily.tron:
         return -195;
       case ChainFamily.evm:
-        return _activeChain.chainId;
+        return NetworkKey.evmChainIdOf(networkKey) ?? evmFallbackChainId;
     }
   }
 
@@ -364,21 +420,29 @@ class BlockchainService extends ChangeNotifier {
 
   List<Token> get tokens {
     if (_walletTokens.isNotEmpty) return _walletTokens;
-    return [
-      Token(
-        symbol: activeChain.symbol,
-        name: activeChain.name,
-        balance: 0.0,
-        valueUsd: 0.0,
-        changePercent24h: 0.0,
-        imageUrl:
-            activeChain.logoUrl ??
-            BlockchainCatalog.iconUrlForSymbol(activeChain.symbol),
-        coinGeckoId: activeChain.coinGeckoId,
-        networkKey: activeChain.networkKey,
-        tokenStandard: TokenStandard.native,
-      ),
-    ];
+    return [activeNativeToken];
+  }
+
+  Token get activeNativeToken {
+    return Token(
+      symbol: activeNetworkSymbol,
+      name: activeNetworkName,
+      balance: 0.0,
+      valueUsd: 0.0,
+      changePercent24h: 0.0,
+      decimals: switch (activeFamily) {
+        ChainFamily.solana => 9,
+        ChainFamily.tron => 6,
+        ChainFamily.evm => 18,
+      },
+      imageUrl:
+          activeNetworkLogoUrl ??
+          BlockchainCatalog.iconUrlForSymbol(activeNetworkSymbol),
+      coinGeckoId: activeNetworkCoinGeckoId,
+      isCertified: true,
+      networkKey: activeNetworkKey,
+      tokenStandard: TokenStandard.native,
+    );
   }
 
   WalletTokenState getWalletTokenState(String walletAddress, {int? chainId}) {
@@ -604,6 +668,7 @@ class BlockchainService extends ChangeNotifier {
   Future<void> saveActiveNetworkForTest() => _saveActiveChain();
 
   void setActiveChain(EvmChain chain) {
+    _activeNetworkKeyOverride = '';
     _activeChain = chain;
     refresh();
     _saveActiveChain();
@@ -611,6 +676,7 @@ class BlockchainService extends ChangeNotifier {
   }
 
   void setActiveChainByChainId(int chainId) {
+    _activeNetworkKeyOverride = '';
     _activeChain = allChains.firstWhere(
       (c) => c.chainId == chainId,
       orElse: () => builtInChains[0],
@@ -1394,6 +1460,10 @@ class BlockchainService extends ChangeNotifier {
     final isNonEvm =
         effectiveFamily == ChainFamily.solana ||
         effectiveFamily == ChainFamily.tron;
+    final customTokenChainKey = _customTokenChainKeyForNetwork(
+      effectiveNetworkKey,
+      requestedChainId,
+    );
 
     final previousState = _walletTokenStates[cacheKey];
     final previousTokens = List<Token>.from(
@@ -1431,7 +1501,7 @@ class BlockchainService extends ChangeNotifier {
       );
 
       // Merge custom tokens that weren't discovered by the backend.
-      final customTokens = _customTokens[requestedChainId] ?? const [];
+      final customTokens = _customTokens[customTokenChainKey] ?? const [];
       final merged = await _tokenPortfolioModule.mergeMissingCustomTokens(
         walletAddress: walletAddress,
         existing: enriched,
@@ -1547,7 +1617,7 @@ class BlockchainService extends ChangeNotifier {
       }
 
       final builtInTokens = _getWellKnownTokens(requestedChainId);
-      final customTokens = _customTokens[requestedChainId] ?? const [];
+      final customTokens = _customTokens[customTokenChainKey] ?? const [];
       for (var t in builtInTokens) {
         if (t['coinGeckoId'] != null && t['coinGeckoId']!.isNotEmpty) {
           priceIds.add(t['coinGeckoId']!);

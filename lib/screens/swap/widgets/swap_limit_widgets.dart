@@ -13,11 +13,13 @@ enum SwapTab { swap, limit }
 class SwapTabSelector extends StatelessWidget {
   final SwapTab activeTab;
   final ValueChanged<SwapTab> onChanged;
+  final bool showLimitTab;
 
   const SwapTabSelector({
     super.key,
     required this.activeTab,
     required this.onChanged,
+    this.showLimitTab = true,
   });
 
   @override
@@ -38,11 +40,12 @@ class SwapTabSelector extends StatelessWidget {
               isActive: activeTab == SwapTab.swap,
               onTap: () => onChanged(SwapTab.swap),
             ),
-            _SwapTabChip(
-              label: 'LIMIT',
-              isActive: activeTab == SwapTab.limit,
-              onTap: () => onChanged(SwapTab.limit),
-            ),
+            if (showLimitTab)
+              _SwapTabChip(
+                label: 'LIMIT',
+                isActive: activeTab == SwapTab.limit,
+                onTap: () => onChanged(SwapTab.limit),
+              ),
           ],
         ),
       ),

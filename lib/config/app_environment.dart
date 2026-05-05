@@ -4,8 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 class AppEnvironment {
   AppEnvironment._();
 
-  static const String _productionBackendBaseUrl =
-      'https://fomowl-backend.onrender.com';
+  static const String _productionBackendBaseUrl = 'https://core.owlletapp.com';
 
   static final String backendBaseUrl = _resolveBackendBaseUrl();
   static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(

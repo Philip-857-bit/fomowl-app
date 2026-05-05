@@ -200,6 +200,9 @@ class _SwapScreenState extends State<SwapScreen> {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
     final networkKey = blockchain.activeNetworkKey;
+    if (_activeTab == SwapTab.limit && !_supportsLimitTab(blockchain)) {
+      _activeTab = SwapTab.swap;
+    }
     if (_lastNetworkKey != networkKey) {
       _lastNetworkKey = networkKey;
       _resetQuoteState(clearInputAmounts: true);
@@ -445,6 +448,15 @@ class _SwapScreenState extends State<SwapScreen> {
     return _swapService.isLimitChainSupported(bc.activeChain.chainId);
   }
 
+  bool _supportsLimitTab(BlockchainService blockchain) {
+    return blockchain.activeFamily == ChainFamily.evm ||
+        blockchain.activeFamily == ChainFamily.solana;
+  }
+
+  int _tokenStorageChainId(BlockchainService blockchain) {
+    return blockchain.activeTokenStorageChainId;
+  }
+
   String _limitUnsupportedMessage() {
     return 'Limit orders are available on Solana and on Ethereum, BNB, Gnosis, Polygon, Base, Arbitrum, Avalanche, and Linea.';
   }
@@ -590,7 +602,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (!mounted) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     await _tokenVisibilityService.loadHiddenTokens(
-      blockchain.activeChain.chainId,
+      _tokenStorageChainId(blockchain),
     );
     // Always sync with whatever token set we currently have so selectors never look empty.
     _syncSelectedTokens(_visibleTokens(blockchain.tokens));
@@ -645,7 +657,7 @@ class _SwapScreenState extends State<SwapScreen> {
       }
     }
     // Also include the active chain's native token CoinGecko ID for fee estimation.
-    final nativeCoinGeckoId = blockchain.activeChain.coinGeckoId;
+    final nativeCoinGeckoId = blockchain.activeNetworkCoinGeckoId;
     if (nativeCoinGeckoId != null && nativeCoinGeckoId.isNotEmpty) {
       priceIds.add(nativeCoinGeckoId);
     }
@@ -704,7 +716,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final chainId = Provider.of<BlockchainService>(
       context,
       listen: false,
-    ).activeChain.chainId;
+    ).activeTokenStorageChainId;
     return _visibleTokensForChain(tokens, chainId);
   }
 
@@ -725,12 +737,17 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<void> _showTokenSelector(bool isFrom) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final allTokens = _visibleTokens(blockchain.tokens);
-    final tokens = _activeTab == SwapTab.limit
+    final tokens =
+        _activeTab == SwapTab.limit &&
+            blockchain.activeFamily == ChainFamily.evm
         ? _limitOrderEligibleTokens(allTokens)
         : allTokens;
     if (tokens.isEmpty) {
       _showError(
-        'No ERC-20 tokens available for limit orders on this network.',
+        _activeTab == SwapTab.limit &&
+                blockchain.activeFamily == ChainFamily.evm
+            ? 'No ERC-20 tokens available for limit orders on this network.'
+            : 'No tokens available on this network.',
       );
       return;
     }
@@ -738,7 +755,7 @@ class _SwapScreenState extends State<SwapScreen> {
       context: context,
       builder: (ctx) => SwapTokenSelectorDialog(
         tokens: tokens,
-        chainId: blockchain.activeChain.chainId,
+        chainId: _tokenStorageChainId(blockchain),
       ),
     );
 
@@ -962,7 +979,7 @@ class _SwapScreenState extends State<SwapScreen> {
   /// Returns the native token's USD price from the cache or token model.
   double get _nativeTokenPriceUsd {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final nativeId = blockchain.activeChain.coinGeckoId;
+    final nativeId = blockchain.activeNetworkCoinGeckoId;
     if (nativeId != null && nativeId.isNotEmpty) {
       final cached = _tokenPriceCache[nativeId];
       if (cached != null && cached > 0) return cached;
@@ -1042,7 +1059,7 @@ class _SwapScreenState extends State<SwapScreen> {
     // Reject short gasless trade-order IDs (typically <40 chars).
     if (hash.length < 40) return null;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
+    final explorerUrl = blockchain.activeNetworkExplorerUrl?.trim();
     if (explorerUrl == null || explorerUrl.isEmpty) {
       return null;
     }
@@ -1087,7 +1104,7 @@ class _SwapScreenState extends State<SwapScreen> {
     required BlockchainService blockchain,
     BigInt? estimatedApprovalFeeWei,
   }) {
-    final nativeSymbol = blockchain.activeChain.symbol;
+    final nativeSymbol = blockchain.activeNetworkSymbol;
     final tokenSymbol = token.symbol;
     final approxFee =
         estimatedApprovalFeeWei != null && estimatedApprovalFeeWei > BigInt.zero
@@ -1108,7 +1125,7 @@ class _SwapScreenState extends State<SwapScreen> {
     required BlockchainService blockchain,
     BigInt? estimatedApprovalFeeWei,
   }) {
-    final nativeSymbol = blockchain.activeChain.symbol;
+    final nativeSymbol = blockchain.activeNetworkSymbol;
     final tokenSymbol = token.symbol;
     final approxFee =
         estimatedApprovalFeeWei != null && estimatedApprovalFeeWei > BigInt.zero
@@ -1200,7 +1217,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     final lower = raw.toLowerCase();
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final nativeSymbol = blockchain.activeChain.symbol;
+    final nativeSymbol = blockchain.activeNetworkSymbol;
     if (lower.contains('unable to fetch a swap price right now') ||
         lower.contains('upstream request failed') ||
         lower.contains('unable to fetch a swap quote right now') ||
@@ -1594,8 +1611,15 @@ class _SwapScreenState extends State<SwapScreen> {
     if (address == null) return;
     final activeBlockchain =
         blockchain ?? Provider.of<BlockchainService>(context, listen: false);
-    final chainId = activeBlockchain.activeChain.chainId;
-    await activeBlockchain.refreshWalletTokens(address, chainId: chainId);
+    final chainId = _tokenStorageChainId(activeBlockchain);
+    if (activeBlockchain.activeFamily == ChainFamily.evm) {
+      await activeBlockchain.refreshWalletTokens(
+        address,
+        chainId: activeBlockchain.activeChain.chainId,
+      );
+    } else {
+      await activeBlockchain.refreshWalletTokens(address);
+    }
     await _refreshTokenPrices();
     if (!mounted) return;
     setState(() {
@@ -1606,7 +1630,14 @@ class _SwapScreenState extends State<SwapScreen> {
     unawaited(
       Future<void>.delayed(_followUpWalletRefreshDelay, () async {
         try {
-          await activeBlockchain.refreshWalletTokens(address, chainId: chainId);
+          if (activeBlockchain.activeFamily == ChainFamily.evm) {
+            await activeBlockchain.refreshWalletTokens(
+              address,
+              chainId: activeBlockchain.activeChain.chainId,
+            );
+          } else {
+            await activeBlockchain.refreshWalletTokens(address);
+          }
           await _refreshTokenPrices();
           if (!mounted) return;
           setState(() {
@@ -2104,6 +2135,9 @@ class _SwapScreenState extends State<SwapScreen> {
   /// Solana Jupiter Trigger orders are converted to [LimitOrderSummary] shape.
   List<LimitOrderSummary> get _activeChainLimitOrders {
     final bc = Provider.of<BlockchainService>(context, listen: false);
+    if (!_supportsLimitTab(bc)) {
+      return const [];
+    }
     if (bc.activeFamily == ChainFamily.solana) {
       return _solanaLimitOrders
           .map(
@@ -2150,6 +2184,17 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (!_supportsLimitTab(blockchain)) {
+      if (mounted) {
+        setState(() {
+          _limitOrders = const [];
+          _solanaLimitOrders = const [];
+          _isLoadingLimitOrders = false;
+          _isLoadingSolanaLimitOrders = false;
+        });
+      }
+      return;
+    }
 
     if (blockchain.activeFamily == ChainFamily.solana) {
       // Fetch Jupiter Trigger orders for Solana
@@ -2360,6 +2405,10 @@ class _SwapScreenState extends State<SwapScreen> {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     if (_walletAddress == null || _walletAddress!.isEmpty) {
       _showError(l.noActiveWalletFound);
+      return;
+    }
+    if (!_supportsLimitTab(blockchain)) {
+      _showError(_limitUnsupportedMessage());
       return;
     }
 
@@ -2742,11 +2791,11 @@ class _SwapScreenState extends State<SwapScreen> {
     required Token toToken,
     required String fromAmountWei,
   }) async {
-    if (_isGasless) {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (blockchain.activeFamily != ChainFamily.evm || _isGasless) {
       return _currentQuote;
     }
 
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final quote = await _swapService
         .get0xQuote(
           chainId: blockchain.activeChain.chainId,
@@ -2832,10 +2881,11 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    if (!_swapService.isChainSupported(
-      blockchain.activeChain.chainId,
-      isGasless: _isGasless,
-    )) {
+    if (blockchain.activeFamily == ChainFamily.evm &&
+        !_swapService.isChainSupported(
+          blockchain.activeChain.chainId,
+          isGasless: _isGasless,
+        )) {
       _showError(_isGasless ? l.networkError : l.networkError);
       return;
     }
@@ -2909,8 +2959,8 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Widget _buildNonEvmNetworkCard(BlockchainService blockchain) {
     final networkName = switch (blockchain.activeFamily) {
-      ChainFamily.solana => 'Solana',
-      ChainFamily.tron => 'Tron',
+      ChainFamily.solana => blockchain.activeNetworkName,
+      ChainFamily.tron => blockchain.activeNetworkName,
       ChainFamily.evm => blockchain.activeChain.name,
     };
     final networkColor = switch (blockchain.activeFamily) {
@@ -3515,8 +3565,13 @@ class _SwapScreenState extends State<SwapScreen> {
                           'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
                       child: SwapTabSelector(
                         activeTab: _activeTab,
+                        showLimitTab: _supportsLimitTab(blockchain),
                         onChanged: (tab) {
                           if (_activeTab == tab) return;
+                          if (tab == SwapTab.limit &&
+                              !_supportsLimitTab(blockchain)) {
+                            return;
+                          }
                           setState(() {
                             _activeTab = tab;
                             if (tab == SwapTab.limit) {
@@ -3578,8 +3633,7 @@ class _SwapScreenState extends State<SwapScreen> {
                         priceSeparator: _priceSeparator,
                         nativePriceUsd:
                             _tokenPriceCache[blockchain
-                                .activeChain
-                                .coinGeckoId] ??
+                                .activeNetworkCoinGeckoId] ??
                             0.0,
                         gaslessFeeCovered: _isGasless,
                         quoteStatusMessage: _quoteStatusMessage,
@@ -3653,8 +3707,7 @@ class _SwapScreenState extends State<SwapScreen> {
                             : '--',
                         nativePriceUsd:
                             _tokenPriceCache[blockchain
-                                .activeChain
-                                .coinGeckoId] ??
+                                .activeNetworkCoinGeckoId] ??
                             0.0,
                         platformFeePercent: 0.0,
                         platformFeeUsd: _platformFeeUsd,

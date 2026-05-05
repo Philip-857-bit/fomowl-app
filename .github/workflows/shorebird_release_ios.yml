@@ -18,7 +18,7 @@ jobs:
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
       SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
-      BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://fomowl-backend.onrender.com' }}
+      BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://core.owlletapp.com' }}
       COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
       CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
       PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}

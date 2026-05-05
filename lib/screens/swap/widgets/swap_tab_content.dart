@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:showcaseview/showcaseview.dart';
 
+import '../../../models/chain.dart';
 import '../../../models/token.dart';
 import '../../../services/swap_service.dart';
 import '../../../services/blockchain_service.dart';
@@ -98,6 +99,9 @@ class SwapTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokenIconChainId = blockchain.activeFamily == ChainFamily.evm
+        ? blockchain.activeChain.chainId
+        : null;
     // Only show price details when the user has input amounts
     final hasInput =
         fromController.text.isNotEmpty &&
@@ -121,7 +125,7 @@ class SwapTabContent extends StatelessWidget {
                   onAmountChanged: onAmountChanged,
                   onSelectToken: onSelectFromToken,
                   onPercentSelected: onPercentSelected,
-                  chainId: blockchain.activeChain.chainId,
+                  chainId: tokenIconChainId,
                   inputMode: fromInputMode,
                   onToggleInputMode: onToggleFromInputMode,
                   equivalentText: fromEquivalentText,
@@ -134,7 +138,7 @@ class SwapTabContent extends StatelessWidget {
                   balance: toBalance,
                   isCalculating: isCalculating,
                   onSelectToken: onSelectToToken,
-                  chainId: blockchain.activeChain.chainId,
+                  chainId: tokenIconChainId,
                   statusMessage: isCalculating ? null : quoteStatusMessage,
                 ),
               ],
@@ -155,7 +159,7 @@ class SwapTabContent extends StatelessWidget {
             platformFeeUsd: platformFeeUsd,
             feeAmountUsd: feeUsd,
             feeAmountNative: feeNative,
-            nativeFeeSymbol: blockchain.activeChain.symbol,
+            nativeFeeSymbol: blockchain.activeNetworkSymbol,
             receiveText: receiveText,
             priceSeparator: priceSeparator,
             swapAmountUsd: fromUsdValue,
@@ -705,6 +709,9 @@ class LimitTabContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokenIconChainId = blockchain.activeFamily == ChainFamily.evm
+        ? blockchain.activeChain.chainId
+        : null;
     final isCustomExpirySelected =
         !is15mSelected &&
         !is1hSelected &&
@@ -816,7 +823,7 @@ class LimitTabContent extends StatelessWidget {
               balance: toBalance,
               isCalculating: false,
               onSelectToken: onSelectToToken,
-              chainId: blockchain.activeChain.chainId,
+              chainId: tokenIconChainId,
               statusMessage: null,
             ),
           )
@@ -830,7 +837,7 @@ class LimitTabContent extends StatelessWidget {
             onAmountChanged: onAmountChanged,
             onSelectToken: onSelectFromToken,
             onPercentSelected: onPercentSelected,
-            chainId: blockchain.activeChain.chainId,
+            chainId: tokenIconChainId,
             inputMode: fromInputMode,
             onToggleInputMode: onToggleFromInputMode,
             equivalentText: fromEquivalentText,
@@ -864,7 +871,7 @@ class LimitTabContent extends StatelessWidget {
             onAmountChanged: onAmountChanged,
             onSelectToken: onSelectFromToken,
             onPercentSelected: onPercentSelected,
-            chainId: blockchain.activeChain.chainId,
+            chainId: tokenIconChainId,
             inputMode: fromInputMode,
             onToggleInputMode: onToggleFromInputMode,
             equivalentText: fromEquivalentText,
@@ -886,7 +893,7 @@ class LimitTabContent extends StatelessWidget {
             balance: toBalance,
             isCalculating: false,
             onSelectToken: onSelectToToken,
-            chainId: blockchain.activeChain.chainId,
+            chainId: tokenIconChainId,
             statusMessage: null,
           ),
 
@@ -911,7 +918,7 @@ class LimitTabContent extends StatelessWidget {
             targetTokenSymbol: targetTokenSymbol,
             quoteToken: quoteToken,
             targetPriceUsdLabel: executionPriceUsdLabel,
-            chainId: blockchain.activeChain.chainId,
+            chainId: tokenIconChainId,
             priceDeviationLabel: priceDeviationLabel,
             usdController: limitUsdController,
             onUsdChanged: onLimitUsdChanged,
@@ -1091,7 +1098,7 @@ class LimitTabContent extends StatelessWidget {
             platformFeeUsd: platformFeeUsd,
             feeAmountUsd: feeUsd,
             feeAmountNative: feeNative,
-            nativeFeeSymbol: blockchain.activeChain.symbol,
+            nativeFeeSymbol: blockchain.activeNetworkSymbol,
             receiveText: receiveText,
             priceSeparator: priceSeparator,
             swapAmountUsd: fromUsdValue,

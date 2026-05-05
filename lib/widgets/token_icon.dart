@@ -100,13 +100,13 @@ class TokenIcon extends StatelessWidget {
 
   Widget _buildTrustWalletIcon() {
     // Try network (Trust Wallet) with chain-aware path
-    if (tokenAddress != null && tokenAddress!.isNotEmpty) {
+    if (chainId != null && tokenAddress != null && tokenAddress!.isNotEmpty) {
       final blockchainName = _trustWalletBlockchainName(chainId);
       final candidates = _trustWalletAddressCandidates(tokenAddress!);
       return _buildTrustWalletCandidate(blockchainName, candidates, 0);
     }
 
-    // No address available, show placeholder
+    // No EVM address/chain pairing available; fall back to symbol/native logos.
     return _buildNativeLogoFallback();
   }
 
