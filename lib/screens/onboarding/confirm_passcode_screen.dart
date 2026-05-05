@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/storage_service.dart';
 import '../../utils/toast_utils.dart';
@@ -19,7 +18,8 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   String _passcode = '';
   String? _originalPasscode;
   String? _mode;
-  final int _passcodeLength = 6;
+  static const int _minLength = 6;
+  static const int _maxLength = 12;
   final StorageService _storage = StorageService();
   bool _isVerifying = false;
 
@@ -36,16 +36,15 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   }
 
   void _onNumberPressed(String number) {
-    if (_passcode.length < _passcodeLength) {
-      setState(() {
-        _passcode += number;
-      });
-
-      // Auto-verify when passcode is complete
-      if (_passcode.length == _passcodeLength && !_isVerifying) {
-        _verifyPasscode();
-      }
+    if (_passcode.length < _maxLength) {
+      setState(() => _passcode += number);
     }
+  }
+
+  bool get _canConfirm {
+    final original = _originalPasscode;
+    if (original != null) return _passcode.length == original.length;
+    return _passcode.length >= _minLength;
   }
 
   void _onDeletePressed() {
@@ -102,90 +101,91 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return MobileScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Back button
-            Align(
-              alignment: Alignment.topLeft,
-              child: IconButton(
-                icon: const Icon(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(
                   Icons.arrow_back,
-                  color: Colors.white,
-                  size: 24,
+                  color: Color(0xFFEA2A33),
+                  size: 20,
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
               ),
             ),
-
-            const SizedBox(height: 40),
-
-            // Title
-            Text(
-              l.confirmPasscodeTitle,
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                l.confirmPasscodeTitle,
+                style: GoogleFonts.inter(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
-
-            const SizedBox(height: 40),
-
-            // PIN dots
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_passcodeLength, (index) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    color: index < _passcode.length
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : Colors.transparent,
+            const SizedBox(height: 8),
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  l.confirmPasscodeDescription,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFD2D0D0),
                   ),
-                  child: Center(
-                    child: index < _passcode.length
-                        ? const Text(
-                            '●',
-                            style: TextStyle(fontSize: 22, color: Colors.white),
-                          )
-                        : null,
-                  ),
-                );
-              }),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Instruction text
-            Text(
-              l.confirmPasscodeDescription,
-              style: GoogleFonts.outfit(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withValues(alpha: 0.7),
+                  textAlign: TextAlign.center,
+                ),
               ),
-              textAlign: TextAlign.center,
             ),
-
+            const SizedBox(height: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'Confirm Pin',
+                style: GoogleFonts.inter(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFA3A3A3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Container(
+                height: 47,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1D1B1B),
+                  border: Border.all(color: const Color(0xFF222121)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '●' * _passcode.length,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: 6,
+                  ),
+                ),
+              ),
+            ),
             const Spacer(),
-
-            // Number pad
-            _buildNumberPad(),
-
-            const SizedBox(height: 40),
-
-            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: _buildNumberPad(),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -193,89 +193,88 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   }
 
   Widget _buildNumberPad() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
-      child: Column(
-        children: [
-          // Row 1: 1, 2, 3
-          _buildNumberRow(['1', '2', '3']),
-          const SizedBox(height: 20),
-          // Row 2: 4, 5, 6
-          _buildNumberRow(['4', '5', '6']),
-          const SizedBox(height: 20),
-          // Row 3: 7, 8, 9
-          _buildNumberRow(['7', '8', '9']),
-          const SizedBox(height: 20),
-          // Row 4: X, 0, >
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNumberButton(
-                child: const Icon(Icons.close, color: Colors.white, size: 28),
-                onPressed: _onDeletePressed,
-              ),
-              _buildNumberButton(
-                child: Text(
-                  '0',
-                  style: GoogleFonts.outfit(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-                onPressed: () => _onNumberPressed('0'),
-              ),
-              _buildNumberButton(
-                child: const Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                onPressed: _passcode.length == _passcodeLength && !_isVerifying
-                    ? _verifyPasscode
-                    : null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNumberRow(List<String> numbers) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: numbers.map((number) {
-        return _buildNumberButton(
-          child: Text(
-            number,
-            style: GoogleFonts.outfit(
-              fontSize: 32,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+    return Column(
+      children: [
+        _buildRow(['1', '2', '3']),
+        _buildRow(['4', '5', '6']),
+        _buildRow(['7', '8', '9']),
+        Row(
+          children: [
+            Expanded(
+              child: _canConfirm
+                  ? _buildKey(
+                      child: _isVerifying
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFEA2A33),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.arrow_forward,
+                              color: Color(0xFFEA2A33),
+                              size: 22,
+                            ),
+                      onTap: _isVerifying ? () {} : _verifyPasscode,
+                    )
+                  : const SizedBox(),
             ),
-          ),
-          onPressed: () => _onNumberPressed(number),
-        );
-      }).toList(),
+            Expanded(
+              child: _buildKey(label: '0', onTap: () => _onNumberPressed('0')),
+            ),
+            Expanded(
+              child: _buildKey(
+                child: const Icon(
+                  Icons.backspace_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                onTap: _onDeletePressed,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _buildNumberButton({
-    required Widget child,
-    required VoidCallback? onPressed,
+  Widget _buildRow(List<String> digits) {
+    return Row(
+      children: digits
+          .map(
+            (d) => Expanded(
+              child: _buildKey(label: d, onTap: () => _onNumberPressed(d)),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildKey({
+    String? label,
+    Widget? child,
+    required VoidCallback onTap,
   }) {
-    return SizedBox(
-      width: 80,
-      height: 80,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 60,
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+        child: Center(
+          child:
+              child ??
+              Text(
+                label!,
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
         ),
-        child: child,
       ),
     );
   }

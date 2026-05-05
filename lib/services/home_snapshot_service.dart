@@ -70,6 +70,12 @@ Map<String, dynamic> _tokenToJson(Token token) => {
   'isCertified': token.isCertified,
   'networkKey': token.networkKey,
   'tokenStandard': token.effectiveTokenStandard.wireValue,
+  // PATCH: Persist price source metadata for DEX badges after reload.
+  'priceSource': token.priceSource,
+  // PATCH: Persist DEX liquidity metadata after reload.
+  'liquidityUsd': token.liquidityUsd,
+  // PATCH: Persist DEX-only marker after reload.
+  'isDexOnly': token.isDexOnly,
 };
 
 Token _tokenFromJson(Map<String, dynamic> json) => Token(
@@ -85,6 +91,12 @@ Token _tokenFromJson(Map<String, dynamic> json) => Token(
   coinGeckoId: json['coinGeckoId'] as String?,
   isCertified: json['isCertified'] == true,
   networkKey: json['networkKey'] as String?,
+  // PATCH: Restore price source metadata for DEX badges after reload.
+  priceSource: json['priceSource'] as String? ?? 'Unknown',
+  // PATCH: Restore DEX liquidity metadata after reload.
+  liquidityUsd: (json['liquidityUsd'] as num?)?.toDouble(),
+  // PATCH: Restore DEX-only marker after reload.
+  isDexOnly: json['isDexOnly'] == true,
   tokenStandard: TokenStandardCodec.fromWireValue(
     json['tokenStandard'] as String?,
   ),

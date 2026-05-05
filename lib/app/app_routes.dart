@@ -14,10 +14,14 @@ import '../screens/onboarding/confirm_passcode_screen.dart';
 import '../screens/onboarding/confirm_phrase_screen.dart';
 import '../screens/onboarding/create_passcode_screen.dart';
 import '../screens/onboarding/create_wallet_screen.dart';
+import '../screens/onboarding/biometric_success_screen.dart';
+import '../screens/onboarding/face_capture_screen.dart';
 import '../screens/onboarding/face_id_verification_screen.dart';
+import '../screens/onboarding/fingerprint_check_screen.dart';
 import '../screens/onboarding/fingerprint_verification_screen.dart';
 import '../screens/onboarding/import_private_key_screen.dart';
 import '../screens/onboarding/import_secret_phrase_screen.dart';
+import '../screens/onboarding/wallet_imported_screen.dart';
 import '../screens/onboarding/import_wallet_screen.dart';
 import '../screens/onboarding/language_selection_screen.dart';
 import '../screens/onboarding/verify_phrase_screen.dart';
@@ -61,6 +65,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/import-wallet': (_) => const ImportWalletScreen(),
     '/language-selection': (_) => const LanguageSelectionScreen(),
     '/import-secret-phrase': (_) => const ImportSecretPhraseScreen(),
+    '/wallet-imported': (_) => const WalletImportedScreen(),
     '/import-private-key': (_) => const ImportPrivateKeyScreen(),
     '/create-wallet': (_) => const CreateWalletScreen(),
     '/confirm-phrase': (_) => const ConfirmPhraseScreen(),
@@ -69,7 +74,10 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/confirm-passcode': (_) => const ConfirmPasscodeScreen(),
     '/biometric-setup': (_) => const BiometricSetupScreen(),
     '/face-id-verification': (_) => const FaceIdVerificationScreen(),
+    '/face-id-check': (_) => const FaceCaptureScreen(),
     '/fingerprint-verification': (_) => const FingerprintVerificationScreen(),
+    '/fingerprint-check': (_) => const FingerprintCheckScreen(),
+    '/biometric-success': (_) => const BiometricSuccessScreen(),
     '/congratulations': (_) => const CongratulationsScreen(),
     '/blockchain-selection': (_) => const BlockchainSelectionScreen(),
     '/shell': (_) => const AppShellScreen(),

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solid background matching Flutter kSplashBackground (#131313) -->
+    <item android:drawable="@color/splash_background"/>
+    <!-- Centred owl logo — same asset the Flutter splash fades in -->
     <item>
-        <bitmap android:gravity="fill" android:src="@drawable/background"/>
+        <bitmap
+            android:src="@drawable/splash_logo"
+            android:gravity="center"
+            android:tileMode="disabled"/>
     </item>
 </layer-list>

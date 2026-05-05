@@ -22,30 +22,29 @@ class SwapTabSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0E0E0E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x265D3F3D)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _SwapTabChip(
-              label: 'Swap',
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF151C24),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0x0DFFFFFF)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _SwapTabChip(
+              label: 'SWAP',
               isActive: activeTab == SwapTab.swap,
               onTap: () => onChanged(SwapTab.swap),
             ),
-          ),
-          Expanded(
-            child: _SwapTabChip(
-              label: 'Limit',
+            _SwapTabChip(
+              label: 'LIMIT',
               isActive: activeTab == SwapTab.limit,
               onTap: () => onChanged(SwapTab.limit),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -66,34 +65,29 @@ class _SwapTabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF2A2A2A) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isActive ? const Color(0xFFEA2A33) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
           boxShadow: isActive
               ? const [
                   BoxShadow(
-                    color: Color(0x0D000000),
-                    blurRadius: 2,
-                    offset: Offset(0, 1),
+                    color: Color(0x1A000000),
+                    blurRadius: 15,
+                    offset: Offset(0, 10),
                   ),
                 ]
               : null,
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: isActive
-                  ? (label == 'Limit' ? FontWeight.w700 : FontWeight.w600)
-                  : FontWeight.w600,
-              color: isActive
-                  ? const Color(0xFFEA2A33)
-                  : const Color(0xFFC8C6C5),
-              height: 1.43,
-            ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isActive ? Colors.white : const Color(0xFFA1A1A1),
+            letterSpacing: 0.6,
           ),
         ),
       ),
@@ -109,54 +103,52 @@ class NetworkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0x991F1F1F),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x265D3F3D)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Network',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF8894A0),
+            letterSpacing: 0.3,
           ),
-          child: Row(
-            children: [
-              _ChainLogo(url: chain.logoUrl),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'NETWORK',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFC8C6C5),
-                        height: 1.5,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
+        ),
+        const SizedBox(height: 8),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Ink(
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: const Color(0xFF151C24),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF2A333D)),
+              ),
+              child: Row(
+                children: [
+                  _ChainLogo(url: chain.logoUrl),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
                       chain.name,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFE2E2E2),
-                        height: 1.43,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const FigmaDropdownIcon(width: 12, color: Color(0xFF8894A0)),
+                ],
               ),
-              const FigmaDropdownIcon(width: 12, color: Color(0xFFC8C6C5)),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -467,28 +459,23 @@ class LimitExpiryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.only(
-          top: 9.5,
-          left: 16,
-          right: 16,
-          bottom: 10.5,
-        ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? const Color(0x19EA2A33) : const Color(0xFF1F1F1F),
-          borderRadius: BorderRadius.circular(999),
+          color: selected ? const Color(0x19EA2A33) : const Color(0xFF151C24),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: selected ? const Color(0x33EA2A33) : const Color(0x195D3F3D),
+            color: selected ? const Color(0xFFEA2A33) : const Color(0xFF2A333D),
           ),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFFEA2A33) : const Color(0xFFC8C6C5),
-            height: 1.33,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: selected ? const Color(0xFFEA2A33) : const Color(0xFF848E9C),
           ),
         ),
       ),

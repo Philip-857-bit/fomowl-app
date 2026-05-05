@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/app_colors.dart';
 import '../../services/storage_service.dart';
 import '../../services/biometric_service.dart';
 import '../../widgets/mobile_scaffold.dart';
@@ -23,7 +22,9 @@ class _UnlockScreenState extends State<UnlockScreen> {
   final BiometricService _biometric = BiometricService();
 
   String _passcode = '';
-  final int _passcodeLength = 6;
+  static const int _minLength = 6;
+  static const int _maxLength = 12;
+  int? _storedPasscodeLength;
   bool _isError = false;
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
@@ -57,6 +58,10 @@ class _UnlockScreenState extends State<UnlockScreen> {
   }
 
   Future<void> _checkLockoutAndBiometric() async {
+    // Load stored passcode length so → appears at the right digit count
+    final storedLength = await _storage.getPasscodeLength();
+    if (mounted) setState(() => _storedPasscodeLength = storedLength);
+
     // Check lockout status first
     final lockoutTime = await _storage.getLockoutUntil();
     final failedAttempts = await _storage.getFailedAttempts();
@@ -135,18 +140,20 @@ class _UnlockScreenState extends State<UnlockScreen> {
     }
   }
 
+  bool get _readyToSubmit {
+    final target = _storedPasscodeLength;
+    return target != null
+        ? _passcode.length == target
+        : _passcode.length >= _minLength;
+  }
+
   void _onNumberPressed(String number) {
     if (_isLockedOut) return;
-
-    if (_passcode.length < _passcodeLength) {
+    if (_passcode.length < _maxLength) {
       setState(() {
         _passcode += number;
         _isError = false;
       });
-
-      if (_passcode.length == _passcodeLength) {
-        _verifyPasscode();
-      }
     }
   }
 
@@ -211,228 +218,227 @@ class _UnlockScreenState extends State<UnlockScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return MobileScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 60),
-
-            // Logo
-            Image.asset('assets/images/logo.png', width: 80, height: 80),
-
-            const SizedBox(height: 20),
-
-            // Title
-            Text(
-              'Owllet',
-              style: GoogleFonts.outfit(
-                fontSize: 32,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            Center(
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 72,
+                height: 72,
               ),
             ),
-
-            const SizedBox(height: 40),
-
-            // Instruction or lockout message
-            // Show remaining attempts if failed but not locked
-            if (_failedAttempts > 0 && !_isLockedOut)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  l.attemptsRemaining(
-                    StorageService.maxFailedAttempts - _failedAttempts,
-                  ),
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.warning,
-                  ),
+            const SizedBox(height: 16),
+            Center(
+              child: Text(
+                'Owllet',
+                style: GoogleFonts.inter(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
+            ),
+            const SizedBox(height: 24),
             if (_isLockedOut)
-              Column(
-                children: [
-                  const Icon(
-                    Icons.lock_clock,
-                    color: AppColors.error,
-                    size: 32,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l.lockedOutTitle,
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.error,
+              Center(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.lock_clock,
+                      color: Color(0xFFEA2A33),
+                      size: 32,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l.unlockTryAgainIn(_lockoutSecondsRemaining),
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.6),
+                    const SizedBox(height: 10),
+                    Text(
+                      l.lockedOutTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFEA2A33),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      l.unlockTryAgainIn(_lockoutSecondsRemaining),
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
               )
             else
-              Text(
-                l.unlockEnterPasscode,
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: 0.8),
+              Center(
+                child: Text(
+                  l.unlockEnterPasscode,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFD2D0D0),
+                  ),
                 ),
               ),
-
-            const SizedBox(height: 30),
-
-            // Passcode dots
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _passcodeLength,
-                (index) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: index < _passcode.length
-                        ? (_isError ? AppColors.error : AppColors.primaryAccent)
-                        : Colors.white.withValues(alpha: 0.3),
-                    border: Border.all(
-                      color: _isError
-                          ? AppColors.error
-                          : (index < _passcode.length
-                                ? AppColors.primaryAccent
-                                : Colors.white.withValues(alpha: 0.5)),
-                      width: 2,
+            if (_failedAttempts > 0 && !_isLockedOut)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    l.attemptsRemaining(
+                      StorageService.maxFailedAttempts - _failedAttempts,
+                    ),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFFEA2A33),
                     ),
                   ),
                 ),
               ),
-            ),
-
-            const Spacer(),
-
-            // Number pad
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                'Enter Pin',
+                style: GoogleFonts.inter(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFFA3A3A3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Container(
+                height: 47,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1D1B1B),
+                  border: Border.all(
+                    color: _isError
+                        ? const Color(0xFFEA2A33)
+                        : const Color(0xFF222121),
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '●' * _passcode.length,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: _isError ? const Color(0xFFEA2A33) : Colors.white,
+                    letterSpacing: 6,
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Opacity(
                 opacity: _isLockedOut ? 0.3 : 1.0,
                 child: AbsorbPointer(
                   absorbing: _isLockedOut,
-                  child: Column(
-                    children: [
-                      // Row 1: 1, 2, 3
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildNumberButton('1'),
-                          _buildNumberButton('2'),
-                          _buildNumberButton('3'),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Row 2: 4, 5, 6
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildNumberButton('4'),
-                          _buildNumberButton('5'),
-                          _buildNumberButton('6'),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Row 3: 7, 8, 9
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _buildNumberButton('7'),
-                          _buildNumberButton('8'),
-                          _buildNumberButton('9'),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Row 4: Biometric, 0, Backspace
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // Biometric button
-                          _biometricAvailable && _biometricEnabled
-                              ? _buildIconButton(
-                                  Icons.fingerprint,
-                                  _authenticateWithBiometric,
-                                )
-                              : const SizedBox(width: 70, height: 70),
-
-                          // 0
-                          _buildNumberButton('0'),
-
-                          // Backspace
-                          _buildIconButton(
-                            Icons.backspace_outlined,
-                            _onBackspacePressed,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  child: _buildNumberPad(),
                 ),
               ),
             ),
-
-            const SizedBox(height: 60),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNumberButton(String number) {
-    return InkWell(
-      onTap: () => _onNumberPressed(number),
-      borderRadius: BorderRadius.circular(35),
-      child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.1),
-        ),
-        child: Center(
-          child: Text(
-            number,
-            style: GoogleFonts.outfit(
-              fontSize: 28,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+  Widget _buildNumberPad() {
+    return Column(
+      children: [
+        _buildRow(['1', '2', '3']),
+        _buildRow(['4', '5', '6']),
+        _buildRow(['7', '8', '9']),
+        Row(
+          children: [
+            Expanded(
+              child: _readyToSubmit
+                  ? _buildKey(
+                      child: const Icon(
+                        Icons.arrow_forward,
+                        color: Color(0xFFEA2A33),
+                        size: 22,
+                      ),
+                      onTap: _verifyPasscode,
+                    )
+                  : (_biometricAvailable && _biometricEnabled
+                        ? _buildKey(
+                            child: const Icon(
+                              Icons.fingerprint,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                            onTap: _authenticateWithBiometric,
+                          )
+                        : const SizedBox()),
             ),
-          ),
+            Expanded(
+              child: _buildKey(label: '0', onTap: () => _onNumberPressed('0')),
+            ),
+            Expanded(
+              child: _buildKey(
+                child: const Icon(
+                  Icons.backspace_outlined,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                onTap: _onBackspacePressed,
+              ),
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildIconButton(IconData icon, VoidCallback onPressed) {
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(35),
+  Widget _buildRow(List<String> digits) {
+    return Row(
+      children: digits
+          .map(
+            (d) => Expanded(
+              child: _buildKey(label: d, onTap: () => _onNumberPressed(d)),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _buildKey({
+    String? label,
+    Widget? child,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        width: 70,
-        height: 70,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: 0.1),
+        height: 60,
+        margin: const EdgeInsets.all(4),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+        child: Center(
+          child:
+              child ??
+              Text(
+                label!,
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
         ),
-        child: Center(child: Icon(icon, color: Colors.white, size: 28)),
       ),
     );
   }

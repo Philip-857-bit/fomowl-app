@@ -448,6 +448,12 @@ class StorageService {
 
   Future<void> deletePasscode() => _secureStore.delete(key: _keyPasscode);
 
+  Future<int?> getPasscodeLength() async {
+    final stored = await _secureStore.read(key: _keyPasscode);
+    if (stored == null || stored.isEmpty) return null;
+    return _decodePasscodeRecord(stored)?.length;
+  }
+
   Future<int> getFailedAttempts() async {
     final prefs = await _prefs;
     return prefs.getInt(_keyFailedAttempts) ?? 0;
@@ -631,6 +637,7 @@ class StorageService {
       'algorithm': 'argon2id',
       'iterations': _passcodeHashIterations,
       'memoryPowerOf2': _passcodeMemoryPowerOf2,
+      'length': passcode.length,
       'salt': salt,
       'hash': await _derivePasscodeHashAsync(
         passcode: passcode,
@@ -657,11 +664,13 @@ class StorageService {
           hash is! String) {
         return null;
       }
+      final length = decoded['length'];
       return _PasscodeRecord(
         iterations: iterations,
         memoryPowerOf2: memoryPowerOf2,
         salt: salt,
         hash: hash,
+        length: length is int ? length : null,
       );
     } catch (_) {
       return null;
@@ -764,10 +773,12 @@ class _PasscodeRecord {
     required this.memoryPowerOf2,
     required this.salt,
     required this.hash,
+    this.length,
   });
 
   final int iterations;
   final int memoryPowerOf2;
   final String salt;
   final String hash;
+  final int? length;
 }

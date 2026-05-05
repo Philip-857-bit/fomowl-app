@@ -58,12 +58,41 @@ class _DecentralizedProfileScreenState
   Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
   WalletOrigin _walletOrigin = WalletOrigin.derived;
   Set<ChainFamily> _supportedFamilies = {ChainFamily.evm};
+  BlockchainService? _blockchain;
 
   @override
   void initState() {
     super.initState();
     _walletService = widget.walletService ?? WalletService();
     _storageService = widget.storageService ?? StorageService();
+    _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (!identical(_blockchain, blockchain)) {
+      _blockchain?.removeListener(_handleBlockchainChange);
+      _blockchain = blockchain;
+      _blockchain?.addListener(_handleBlockchainChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _blockchain?.removeListener(_handleBlockchainChange);
+    super.dispose();
+  }
+
+  void _handleBlockchainChange() {
+    if (!mounted) return;
+    final nextActive = _blockchain?.activeWalletAddress ?? '';
+    final currentActive = _walletAddress.toLowerCase();
+    if (nextActive.isEmpty || nextActive == currentActive) {
+      return;
+    }
+    // Active wallet changed from another tab — refresh the settings header.
     _load();
   }
 
@@ -113,6 +142,12 @@ class _DecentralizedProfileScreenState
       _supportedFamilies = supported;
       _loading = false;
     });
+    // Keep the global wallet context fresh so the network selector and other
+    // tabs filter correctly when the user lands on this tab first.
+    _blockchain?.setActiveWalletContext(
+      address: walletAddress ?? '',
+      supportedFamilies: supported,
+    );
   }
 
   Future<void> _toggleFamily(ChainFamily family) async {

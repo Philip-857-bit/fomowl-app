@@ -74,14 +74,45 @@ class HomeTokenListItem extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  token.formattedChange,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: token.isPositiveChange
-                        ? AppColors.success
-                        : AppColors.error,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      token.formattedChange,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: token.isPositiveChange
+                            ? AppColors.success
+                            : AppColors.error,
+                      ),
+                    ),
+                    // PATCH: DEX-only resolved tokens show a compact source badge.
+                    if (token.isDexPriced) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          // PATCH: Use the app's existing primary accent token.
+                          color: AppColors.primaryAccent.withValues(
+                            alpha: 0.16,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'DEX',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            // PATCH: Use the app's existing primary accent token.
+                            color: AppColors.primaryAccent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,11 @@ import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
 import '../../services/cow_limit_order_signing.dart';
 import '../../services/swap_service.dart';
+import '../../services/solana_swap_service.dart';
+import '../../services/tron_swap_service.dart';
+import '../../services/solana_limit_service.dart';
+import '../../services/solana_swap_execution_service.dart';
+import '../../services/tron_swap_execution_service.dart';
 import '../../services/wallet_service.dart';
 import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
@@ -28,6 +34,7 @@ import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'dart:typed_data';
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'widgets/swap_limit_widgets.dart';
@@ -148,6 +155,15 @@ class _SwapScreenState extends State<SwapScreen> {
   late final TokenApprovalService _tokenApprovalService;
   late final SwapExecutionService _swapExecutionService;
   late final TransactionMonitor _transactionMonitor;
+  late final SolanaSwapService _solanaSwapService;
+  late final TronSwapService _tronSwapService;
+  late final SolanaLimitService _solanaLimitService;
+  late final SolanaSwapExecutionService _solanaSwapExecutionService;
+  late final TronSwapExecutionService _tronSwapExecutionService;
+  // Solana limit orders (kept separate from EVM LimitOrderSummary list)
+  List<SolanaLimitOrder> _solanaLimitOrders = const [];
+  bool _isLoadingSolanaLimitOrders = false;
+  final Set<String> _cancellingSolanaOrderAccounts = <String>{};
   static const String _priceSeparator = '->';
 
   Timer? _debounceTimer;
@@ -209,7 +225,7 @@ class _SwapScreenState extends State<SwapScreen> {
   String? _quoteStatusMessage;
 
   /// Trading slippage tolerance for 0x swap execution (not the platform fee).
-  final int _slippageBps = 50;
+  int _slippageBps = 50;
   double _feeUsd = 0.0;
   double _feeNative = 0.0;
   double _platformFeeUsd = 0.0;
@@ -287,6 +303,8 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool _ensureLimitEligiblePair() {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    // Solana SPL tokens don't use ERC-20 approval — any token pair is valid.
+    if (blockchain.activeFamily == ChainFamily.solana) return false;
     final eligible = _limitOrderEligibleTokens(
       _visibleTokens(blockchain.tokens),
     );
@@ -334,6 +352,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitButtonLabel() {
+    final bc = Provider.of<BlockchainService>(context, listen: false);
     final sideLabel = _isBuyMode ? 'Buy' : 'Sell';
     if (_isSubmittingLimit) {
       return 'Submitting $sideLabel...';
@@ -350,8 +369,10 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_tokensAreIdentical(_fromToken, _toToken)) {
       return 'Choose Different Tokens';
     }
-    if (!_tokenRequiresApproval(_fromToken!) ||
-        !_tokenRequiresApproval(_toToken!)) {
+    if (bc.activeFamily != ChainFamily.solana &&
+        (_fromToken != null && _toToken != null) &&
+        (!_tokenRequiresApproval(_fromToken!) ||
+            !_tokenRequiresApproval(_toToken!))) {
       return 'Use ERC-20 Tokens';
     }
     if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
@@ -364,6 +385,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitStatusMessage() {
+    final bc = Provider.of<BlockchainService>(context, listen: false);
     if ((_walletAddress ?? '').isEmpty) {
       return 'Connect your wallet to create limit orders.';
     }
@@ -376,8 +398,10 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_tokensAreIdentical(_fromToken, _toToken)) {
       return 'Choose two different tokens for the limit pair.';
     }
-    if (!_tokenRequiresApproval(_fromToken!) ||
-        !_tokenRequiresApproval(_toToken!)) {
+    if (bc.activeFamily != ChainFamily.solana &&
+        (_fromToken != null && _toToken != null) &&
+        (!_tokenRequiresApproval(_fromToken!) ||
+            !_tokenRequiresApproval(_toToken!))) {
       return 'Limit orders currently support ERC-20 token pairs only.';
     }
     if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
@@ -416,12 +440,13 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool get _isLimitSupported {
     final bc = Provider.of<BlockchainService>(context, listen: false);
+    if (bc.activeFamily == ChainFamily.solana) return true;
     if (bc.activeFamily != ChainFamily.evm) return false;
     return _swapService.isLimitChainSupported(bc.activeChain.chainId);
   }
 
   String _limitUnsupportedMessage() {
-    return 'Limit orders are only available on Ethereum, BNB, Gnosis, Polygon, Base, Arbitrum, Avalanche, and Linea.';
+    return 'Limit orders are available on Solana and on Ethereum, BNB, Gnosis, Polygon, Base, Arbitrum, Avalanche, and Linea.';
   }
 
   @override
@@ -436,6 +461,17 @@ class _SwapScreenState extends State<SwapScreen> {
       swapService: _swapService,
     );
     _transactionMonitor = TransactionMonitor();
+    _solanaSwapService = SolanaSwapService();
+    _tronSwapService = TronSwapService();
+    _solanaLimitService = SolanaLimitService();
+    _solanaSwapExecutionService = SolanaSwapExecutionService(
+      walletService: _walletService,
+      swapService: _solanaSwapService,
+    );
+    _tronSwapExecutionService = TronSwapExecutionService(
+      walletService: _walletService,
+      swapService: _tronSwapService,
+    );
     _fromDisplayController.addListener(_handleFromDisplayChanged);
     unawaited(_loadLimitTutorialPreferences());
     _loadWalletBalance();
@@ -975,6 +1011,8 @@ class _SwapScreenState extends State<SwapScreen> {
       _quoteStatusMessage = null;
     }
     _currentQuote = null;
+    _currentSolanaQuote = null;
+    _currentTronQuote = null;
     _feeUsd = 0.0;
     _feeNative = 0.0;
     _platformFeeUsd = 0.0;
@@ -1000,9 +1038,9 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String? _transactionDetailsUrl(String hash) {
-    if (!_looksLikeTxHash(hash)) {
-      return null;
-    }
+    // Accept EVM (0x + 64 hex), Solana (base58 ~87 chars), Tron (64 hex).
+    // Reject short gasless trade-order IDs (typically <40 chars).
+    if (hash.length < 40) return null;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
     if (explorerUrl == null || explorerUrl.isEmpty) {
@@ -1653,6 +1691,18 @@ class _SwapScreenState extends State<SwapScreen> {
       _quoteStatusMessage = null;
     });
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+
+    // Route to chain-specific quote handler
+    if (blockchain.activeFamily == ChainFamily.solana) {
+      await _getSolanaQuote(requestId: requestId);
+      return;
+    }
+    if (blockchain.activeFamily == ChainFamily.tron) {
+      await _getTronQuote(requestId: requestId);
+      return;
+    }
+
+    // EVM path
     if (!_swapService.isChainSupported(
       blockchain.activeChain.chainId,
       isGasless: _isGasless,
@@ -1773,6 +1823,216 @@ class _SwapScreenState extends State<SwapScreen> {
     }
   }
 
+  // ── Cached Solana/Tron quote objects (used during execution) ─────────────
+  SolanaSwapQuote? _currentSolanaQuote;
+  TronSwapQuote? _currentTronQuote;
+
+  Future<void> _getSolanaQuote({required int requestId}) async {
+    try {
+      final fromMint = _fromToken!.contractAddress?.isNotEmpty == true
+          ? _fromToken!.contractAddress!
+          : 'So11111111111111111111111111111111111111112';
+      final toMint = _toToken!.contractAddress?.isNotEmpty == true
+          ? _toToken!.contractAddress!
+          : 'So11111111111111111111111111111111111111112';
+      final amountLamports = _toWeiAmount(
+        _fromController.text,
+        _fromToken!.decimals,
+      );
+      if (amountLamports == null || amountLamports == '0') {
+        if (mounted && requestId == _quoteRequestId) {
+          setState(() {
+            _quoteStatusMessage = 'Enter a valid amount.';
+            _resetQuoteState(clearQuoteStatusMessage: false);
+            _isCalculating = false;
+          });
+        }
+        return;
+      }
+
+      final quote = await _solanaSwapService
+          .getQuote(
+            fromMint: fromMint,
+            toMint: toMint,
+            amountLamports: amountLamports,
+            walletAddress: _walletAddress ?? '',
+            slippageBps: _slippageBps,
+          )
+          .timeout(_quoteUiTimeout);
+
+      if (!mounted || requestId != _quoteRequestId) return;
+
+      if (quote != null) {
+        final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
+        final inAmount = _parseAmount(_fromController);
+        final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
+        setState(() {
+          _currentSolanaQuote = quote;
+          _pricing = _formatRateText(unitRate);
+          _quoteStatusMessage = null;
+          _toController.text = quote.amountOutFormatted;
+          _currentQuote = SwapQuote(
+            amountOutWei: quote.amountOutRaw,
+            minAmountOutWei: quote.amountOutRaw,
+            amountOutFormatted: quote.amountOutFormatted,
+            minAmountOutFormatted: quote.amountOutFormatted,
+            networkFeeNative: 0.0,
+            networkFeeUsd: quote.networkFeeUsd,
+            platformFeeUsd: quote.platformFeeUsd,
+            allowanceTarget: '',
+            allowanceSpender: '',
+            needsAllowance: false,
+            hasBalanceIssue: false,
+            balanceNeeded: null,
+            balanceActual: null,
+          );
+          _feeNative = 0.0;
+          _feeUsd = quote.networkFeeUsd;
+          _platformFeeUsd = quote.platformFeeUsd;
+          _isCalculating = false;
+        });
+      } else {
+        final mapped = _mapErrorMessage(_solanaSwapService.lastError);
+        setState(() {
+          _currentSolanaQuote = null;
+          _quoteStatusMessage = mapped;
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
+          _isCalculating = false;
+        });
+      }
+    } on TimeoutException {
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() {
+          _currentSolanaQuote = null;
+          _quoteStatusMessage = 'Quote timed out. Please try again.';
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
+          _isCalculating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() {
+          _currentSolanaQuote = null;
+          _quoteStatusMessage = _mapErrorMessage(e.toString());
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
+          _isCalculating = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _getTronQuote({required int requestId}) async {
+    try {
+      final fromToken = _fromToken!.contractAddress?.isNotEmpty == true
+          ? _fromToken!.contractAddress!
+          : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
+      final toToken = _toToken!.contractAddress?.isNotEmpty == true
+          ? _toToken!.contractAddress!
+          : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
+      final amountSun = _toWeiAmount(
+        _fromController.text,
+        _fromToken!.decimals,
+      );
+      if (amountSun == null || amountSun == '0') {
+        if (mounted && requestId == _quoteRequestId) {
+          setState(() {
+            _quoteStatusMessage = 'Enter a valid amount.';
+            _resetQuoteState(clearQuoteStatusMessage: false);
+            _isCalculating = false;
+          });
+        }
+        return;
+      }
+
+      final quote = await _tronSwapService
+          .getQuote(
+            fromToken: fromToken,
+            toToken: toToken,
+            amountSun: amountSun,
+            walletAddress: _walletAddress ?? '',
+            slippageBps: _slippageBps,
+          )
+          .timeout(_quoteUiTimeout);
+
+      if (!mounted || requestId != _quoteRequestId) return;
+
+      if (quote != null) {
+        final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
+        final inAmount = _parseAmount(_fromController);
+        final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
+        setState(() {
+          _currentTronQuote = quote;
+          _pricing = _formatRateText(unitRate);
+          _quoteStatusMessage = null;
+          _toController.text = quote.amountOutFormatted;
+          _currentQuote = SwapQuote(
+            amountOutWei: quote.amountOutRaw,
+            minAmountOutWei: quote.amountOutRaw,
+            amountOutFormatted: quote.amountOutFormatted,
+            minAmountOutFormatted: quote.amountOutFormatted,
+            networkFeeNative: 0.0,
+            networkFeeUsd: quote.networkFeeUsd,
+            platformFeeUsd: quote.platformFeeUsd,
+            allowanceTarget: '',
+            allowanceSpender: '',
+            needsAllowance: false,
+            hasBalanceIssue: false,
+            balanceNeeded: null,
+            balanceActual: null,
+          );
+          _feeNative = 0.0;
+          _feeUsd = quote.networkFeeUsd;
+          _platformFeeUsd = quote.platformFeeUsd;
+          _isCalculating = false;
+        });
+      } else {
+        final mapped = _mapErrorMessage(_tronSwapService.lastError);
+        setState(() {
+          _currentTronQuote = null;
+          _quoteStatusMessage = mapped;
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
+          _isCalculating = false;
+        });
+      }
+    } on TimeoutException {
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() {
+          _currentTronQuote = null;
+          _quoteStatusMessage = 'Quote timed out. Please try again.';
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
+          _isCalculating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() {
+          _currentTronQuote = null;
+          _quoteStatusMessage = _mapErrorMessage(e.toString());
+          _resetQuoteState(
+            preserveRequestId: true,
+            clearQuoteStatusMessage: false,
+          );
+          _isCalculating = false;
+        });
+      }
+    }
+  }
+
   void _swapTokens() {
     setState(() {
       final temp = _fromToken;
@@ -1840,11 +2100,31 @@ class _SwapScreenState extends State<SwapScreen> {
     });
   }
 
+  /// Returns limit orders for the active chain, adapted for the shared UI widget.
+  /// Solana Jupiter Trigger orders are converted to [LimitOrderSummary] shape.
   List<LimitOrderSummary> get _activeChainLimitOrders {
-    final chainId = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    ).activeChain.chainId;
+    final bc = Provider.of<BlockchainService>(context, listen: false);
+    if (bc.activeFamily == ChainFamily.solana) {
+      return _solanaLimitOrders
+          .map(
+            (o) => LimitOrderSummary(
+              id: o.orderAccount,
+              walletAddress: _walletAddress ?? '',
+              chainId: -501,
+              sellToken: o.inputMint,
+              buyToken: o.outputMint,
+              sellAmount: o.inputAmount,
+              buyAmount: o.expectedOutputAmount,
+              kind: 'sell',
+              targetPrice: '',
+              expiry: o.expiredAt ?? 0,
+              status: o.status,
+              orderUid: o.orderAccount,
+            ),
+          )
+          .toList();
+    }
+    final chainId = bc.activeChain.chainId;
     final orders = _limitOrders.where((order) {
       return order.chainId == chainId && order.status.toLowerCase() == 'open';
     }).toList();
@@ -1861,12 +2141,42 @@ class _SwapScreenState extends State<SwapScreen> {
       if (mounted) {
         setState(() {
           _limitOrders = const [];
+          _solanaLimitOrders = const [];
           _isLoadingLimitOrders = false;
+          _isLoadingSolanaLimitOrders = false;
         });
       }
       return;
     }
 
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+
+    if (blockchain.activeFamily == ChainFamily.solana) {
+      // Fetch Jupiter Trigger orders for Solana
+      if (showLoading && mounted) {
+        setState(() => _isLoadingSolanaLimitOrders = true);
+      }
+      final orders = await _solanaLimitService.getOrders(
+        walletAddress: walletAddress,
+        status: 'open',
+      );
+      if (!mounted) return;
+      if (_solanaLimitService.lastError != null &&
+          _solanaLimitService.lastError!.isNotEmpty) {
+        setState(() => _isLoadingSolanaLimitOrders = false);
+        if (surfaceErrors) {
+          _showError(_mapErrorMessage(_solanaLimitService.lastError));
+        }
+        return;
+      }
+      setState(() {
+        _solanaLimitOrders = orders;
+        _isLoadingSolanaLimitOrders = false;
+      });
+      return;
+    }
+
+    // EVM path
     if (showLoading && mounted) {
       setState(() => _isLoadingLimitOrders = true);
     }
@@ -2048,11 +2358,18 @@ class _SwapScreenState extends State<SwapScreen> {
   Future<void> _submitLimitOrder() async {
     final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final chainId = blockchain.activeChain.chainId;
     if (_walletAddress == null || _walletAddress!.isEmpty) {
       _showError(l.noActiveWalletFound);
       return;
     }
+
+    // Route to Solana limit order handler
+    if (blockchain.activeFamily == ChainFamily.solana) {
+      await _submitSolanaLimitOrder();
+      return;
+    }
+
+    final chainId = blockchain.activeChain.chainId;
     if (!_swapService.isLimitChainSupported(chainId)) {
       _showError(_limitUnsupportedMessage());
       return;
@@ -2221,6 +2538,203 @@ class _SwapScreenState extends State<SwapScreen> {
         setState(() => _isSubmittingLimit = false);
       }
     }
+  }
+
+  /// Submit a Jupiter Trigger limit order on Solana.
+  Future<void> _submitSolanaLimitOrder() async {
+    final l = AppLocalizations.of(context);
+    final from = _fromToken;
+    final to = _toToken;
+    if (from == null || to == null) {
+      _showError(l.selectTokenTitle);
+      return;
+    }
+    if (_tokensAreIdentical(from, to)) {
+      _showError(l.tryAgain);
+      return;
+    }
+    final makerAmount = _parseDecimalAmount(_fromController.text);
+    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    if (makerAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
+      _showError(l.enterValidAmount);
+      return;
+    }
+
+    final inputMint = from.contractAddress?.isNotEmpty == true
+        ? from.contractAddress!
+        : 'So11111111111111111111111111111111111111112';
+    final outputMint = to.contractAddress?.isNotEmpty == true
+        ? to.contractAddress!
+        : 'So11111111111111111111111111111111111111112';
+
+    final inputAmountLamports = _toWeiAmount(
+      _fromController.text,
+      from.decimals,
+    );
+    if (inputAmountLamports == null || inputAmountLamports == '0') {
+      _showError(l.enterValidAmount);
+      return;
+    }
+
+    final Decimal outputAmountDecimal;
+    if (_isBuyMode) {
+      final rational = makerAmount.toRational() / limitPrice.toRational();
+      outputAmountDecimal = rational.toDecimal(scaleOnInfinitePrecision: 18);
+    } else {
+      outputAmountDecimal = makerAmount * limitPrice;
+    }
+    final outputAmountLamports = AmountUtils.parseDecimalToBaseUnits(
+      outputAmountDecimal.toString(),
+      to.decimals,
+    ).toString();
+    if (outputAmountLamports == '0') {
+      _showError(l.enterValidAmount);
+      return;
+    }
+
+    final expiredAt = _limitExpiryOption == _LimitExpiryOption.never
+        ? null
+        : _resolveLimitExpirySeconds();
+
+    if (_isSubmittingLimit) return;
+    setState(() => _isSubmittingLimit = true);
+    TransactionProgressController? progressController;
+    try {
+      progressController = _openProgressFlow(
+        flow: TransactionProgressFlow.generic,
+      );
+      progressController.setSwapSubmitting();
+
+      final txResult = await _solanaLimitService.createOrder(
+        inputMint: inputMint,
+        outputMint: outputMint,
+        inputAmountLamports: inputAmountLamports,
+        expectedOutputAmountLamports: outputAmountLamports,
+        walletAddress: _walletAddress!,
+        expiredAt: expiredAt,
+      );
+
+      if (!mounted) return;
+      if (txResult == null) {
+        final message = _mapErrorMessage(
+          _solanaLimitService.lastError ?? l.tryAgain,
+        );
+        progressController.setError(message);
+        return;
+      }
+
+      // Sign and submit the returned transaction
+      final txBytes = base64Decode(txResult.transaction);
+      final msgOffset =
+          SolanaSwapExecutionService.compactU16ByteLenPublic(txBytes, 0) + 64;
+      final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
+      final signatureBase58 = await _walletService.signSolanaMessageRaw(
+        _walletAddress!,
+        messageBytes,
+      );
+      if (!mounted) return;
+
+      final signedTxBase64 = _assembleSolanaSignedTx(txBytes, signatureBase58);
+      final txHash = await _solanaSwapService.executeSwap(
+        signedTransactionBase64: signedTxBase64,
+        requestId: txResult.requestId,
+      );
+      if (!mounted) return;
+
+      if (txHash != null && txHash.isNotEmpty) {
+        progressController.setSuccess(reference: _shortHash(txHash));
+        unawaited(_refreshLimitOrders(showLoading: false));
+      } else {
+        final message = _mapErrorMessage(
+          _solanaSwapService.lastError ?? l.tryAgain,
+        );
+        progressController.setError(message);
+      }
+    } on TimeoutException {
+      const message = 'Order signing timed out. Please try again.';
+      progressController?.setError(message);
+    } catch (e) {
+      final message = _mapErrorMessage(e.toString());
+      progressController?.setError(message);
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmittingLimit = false);
+      }
+    }
+  }
+
+  /// Cancel a Solana Jupiter Trigger limit order.
+  Future<void> _cancelSolanaLimitOrder(SolanaLimitOrder order) async {
+    if (_cancellingSolanaOrderAccounts.contains(order.orderAccount)) return;
+    setState(() => _cancellingSolanaOrderAccounts.add(order.orderAccount));
+    try {
+      final txResult = await _solanaLimitService.cancelOrder(
+        orderAccount: order.orderAccount,
+      );
+      if (!mounted) return;
+      if (txResult == null) {
+        _showError(
+          _mapErrorMessage(_solanaLimitService.lastError ?? 'Cancel failed.'),
+        );
+        return;
+      }
+
+      final txBytes = base64Decode(txResult.transaction);
+      final msgOffset =
+          SolanaSwapExecutionService.compactU16ByteLenPublic(txBytes, 0) + 64;
+      final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
+      final signatureBase58 = await _walletService.signSolanaMessageRaw(
+        _walletAddress!,
+        messageBytes,
+      );
+      if (!mounted) return;
+
+      final signedTxBase64 = _assembleSolanaSignedTx(txBytes, signatureBase58);
+      final txHash = await _solanaSwapService.executeSwap(
+        signedTransactionBase64: signedTxBase64,
+        requestId: txResult.requestId,
+      );
+      if (!mounted) return;
+
+      if (txHash != null && txHash.isNotEmpty) {
+        ToastUtils.showSuccess('Limit order cancelled');
+        unawaited(_refreshLimitOrders(showLoading: false));
+      } else {
+        _showError(
+          _mapErrorMessage(_solanaSwapService.lastError ?? 'Cancel failed.'),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError(_mapErrorMessage(e.toString()));
+      }
+    } finally {
+      if (mounted) {
+        setState(
+          () => _cancellingSolanaOrderAccounts.remove(order.orderAccount),
+        );
+      }
+    }
+  }
+
+  /// Assemble a signed Solana transaction from unsigned bytes + base58 signature.
+  String _assembleSolanaSignedTx(Uint8List txBytes, String signatureBase58) {
+    // Decode base58 signature → 64 bytes
+    final sigBytes = SolanaSwapExecutionService.decodeBase58Public(
+      signatureBase58,
+    );
+    // compact-u16 header byte count
+    final sigCountLen = SolanaSwapExecutionService.compactU16ByteLenPublic(
+      txBytes,
+      0,
+    );
+    final msgOffset = sigCountLen + 64;
+    final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
+    final signedTx = Uint8List(sigCountLen + 64 + messageBytes.length);
+    signedTx.setRange(0, sigCountLen, txBytes, 0);
+    signedTx.setRange(sigCountLen, sigCountLen + 64, sigBytes);
+    signedTx.setRange(sigCountLen + 64, signedTx.length, messageBytes);
+    return base64Encode(signedTx);
   }
 
   Future<SwapQuote?> _refreshExecutionQuote({
@@ -2472,53 +2986,6 @@ class _SwapScreenState extends State<SwapScreen> {
     );
   }
 
-  Widget _buildNonEvmUnavailable(BlockchainService blockchain) {
-    final networkName = switch (blockchain.activeFamily) {
-      ChainFamily.solana => 'Solana',
-      ChainFamily.tron => 'Tron',
-      ChainFamily.evm => blockchain.activeChain.name,
-    };
-    return Container(
-      margin: const EdgeInsets.only(top: 40),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.swap_horiz_rounded,
-            color: AppColors.textSecondary,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Swap not available on $networkName',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFFE2E2E2),
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Token swaps are only supported on EVM-compatible networks.\nSwitch to Ethereum, BNB, Base, Polygon, or another EVM chain to swap.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showNetworkSelector() {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     showModalBottomSheet(
@@ -2671,6 +3138,86 @@ class _SwapScreenState extends State<SwapScreen> {
     try {
       progressController.setSwapSubmitting(gasless: _isGasless);
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+
+      // ── Solana swap ───────────────────────────────────────────────────────
+      if (blockchain.activeFamily == ChainFamily.solana) {
+        final solanaQuote = _currentSolanaQuote;
+        if (solanaQuote == null) {
+          progressController.setError(l.noQuoteAvailable);
+          return;
+        }
+        final execResult = await _solanaSwapExecutionService.execute(
+          quote: solanaQuote,
+          walletAddress: _walletAddress!,
+        );
+        if (!mounted) return;
+        if (!execResult.success || execResult.transactionHash == null) {
+          progressController.setError(
+            _mapErrorMessage(execResult.error ?? l.tryAgain),
+          );
+          return;
+        }
+        final txHash = execResult.transactionHash!;
+        _clearSubmittedSwapState();
+        _recordSwapHistory(
+          txHash: txHash,
+          fromAmount: fromAmountText,
+          fromTokenName: fromToken.name,
+          fromTokenSymbol: fromToken.symbol,
+          toAmount: toAmountText,
+          toTokenSymbol: toToken.symbol,
+          networkName: 'Solana',
+          chainId: -501,
+          networkKey: blockchain.activeNetworkKey,
+        );
+        progressController.setSuccess(
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+        unawaited(_refreshWalletState(blockchain: blockchain));
+        return;
+      }
+
+      // ── Tron swap ─────────────────────────────────────────────────────────
+      if (blockchain.activeFamily == ChainFamily.tron) {
+        final tronQuote = _currentTronQuote;
+        if (tronQuote == null) {
+          progressController.setError(l.noQuoteAvailable);
+          return;
+        }
+        final execResult = await _tronSwapExecutionService.execute(
+          quote: tronQuote,
+          walletAddress: _walletAddress!,
+        );
+        if (!mounted) return;
+        if (!execResult.success || execResult.transactionHash == null) {
+          progressController.setError(
+            _mapErrorMessage(execResult.error ?? l.tryAgain),
+          );
+          return;
+        }
+        final txHash = execResult.transactionHash!;
+        _clearSubmittedSwapState();
+        _recordSwapHistory(
+          txHash: txHash,
+          fromAmount: fromAmountText,
+          fromTokenName: fromToken.name,
+          fromTokenSymbol: fromToken.symbol,
+          toAmount: toAmountText,
+          toTokenSymbol: toToken.symbol,
+          networkName: 'Tron',
+          chainId: -195,
+          networkKey: blockchain.activeNetworkKey,
+        );
+        progressController.setSuccess(
+          reference: _shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+        unawaited(_refreshWalletState(blockchain: blockchain));
+        return;
+      }
+
+      // ── EVM swap ──────────────────────────────────────────────────────────
       final result = await _swapExecutionService.execute(
         quote: quote,
         fromToken: fromToken,
@@ -2680,7 +3227,7 @@ class _SwapScreenState extends State<SwapScreen> {
         slippageBps: _slippageBps,
         blockchain: blockchain,
         recipientAddress: _walletAddress!,
-        isGasless: _isGasless, // Pass the beta toggle selection
+        isGasless: _isGasless,
       );
 
       if (!result.success) {
@@ -2837,11 +3384,18 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     final swapBusy = _isSwapFlowActive || _isApproving || _isSwapping;
     final hasInputAmount = fromAmount > 0;
-    final hasQuote = _currentQuote != null && _toController.text.isNotEmpty;
-    final chainSupported = _swapService.isChainSupported(
-      blockchain.activeChain.chainId,
-      isGasless: _isGasless,
-    );
+    final hasQuote =
+        (_currentQuote != null ||
+            _currentSolanaQuote != null ||
+            _currentTronQuote != null) &&
+        _toController.text.isNotEmpty;
+    final chainSupported =
+        blockchain.activeFamily == ChainFamily.solana ||
+        blockchain.activeFamily == ChainFamily.tron ||
+        _swapService.isChainSupported(
+          blockchain.activeChain.chainId,
+          isGasless: _isGasless,
+        );
     final localHasBalance =
         _fromToken != null &&
         _parseDecimalAmount(_fromController.text) <=
@@ -2912,18 +3466,39 @@ class _SwapScreenState extends State<SwapScreen> {
         child: Column(
           children: [
             SizedBox(
-              height: 63,
+              height: _activeTab == SwapTab.limit ? 80 : 63,
               child: Center(
-                child: Text(
-                  l.swap,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFFE2E2E2),
-                    height: 1.4,
-                    letterSpacing: -0.5,
-                  ),
-                ),
+                child: _activeTab == SwapTab.limit
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Limit Order',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Place a limit order to buy or sell tokens',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF8894A0),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Text(
+                        'SWAP',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: 1.4,
+                        ),
+                      ),
               ),
             ),
 
@@ -2971,9 +3546,7 @@ class _SwapScreenState extends State<SwapScreen> {
                     else
                       _buildNonEvmNetworkCard(blockchain),
                     const SizedBox(height: 16),
-                    if (blockchain.activeFamily != ChainFamily.evm)
-                      _buildNonEvmUnavailable(blockchain)
-                    else if (_activeTab == SwapTab.swap)
+                    if (_activeTab == SwapTab.swap)
                       SwapTabContent(
                         blockchain: blockchain,
                         fromController: _fromDisplayController,
@@ -3023,8 +3596,15 @@ class _SwapScreenState extends State<SwapScreen> {
                           });
                           _getQuote();
                         },
+                        slippageBps: _slippageBps,
+                        onSlippageChanged: (bps) {
+                          setState(() => _slippageBps = bps);
+                          _resetQuoteState();
+                          _getQuote();
+                        },
                       )
-                    else if (blockchain.activeFamily == ChainFamily.evm)
+                    else if (blockchain.activeFamily == ChainFamily.evm ||
+                        blockchain.activeFamily == ChainFamily.solana)
                       LimitTabContent(
                         blockchain: blockchain,
                         fromController: _fromDisplayController,
@@ -3101,14 +3681,29 @@ class _SwapScreenState extends State<SwapScreen> {
                         },
                         onSubmitLimit: _submitLimitOrder,
                         activeOrders: _activeChainLimitOrders,
-                        isLoadingActiveOrders: _isLoadingLimitOrders,
+                        isLoadingActiveOrders:
+                            blockchain.activeFamily == ChainFamily.solana
+                            ? _isLoadingSolanaLimitOrders
+                            : _isLoadingLimitOrders,
                         onRefreshActiveOrders: () {
                           unawaited(_refreshLimitOrders(surfaceErrors: true));
                         },
                         onCancelActiveOrder: (order) {
-                          unawaited(_cancelLimitOrder(order));
+                          if (blockchain.activeFamily == ChainFamily.solana) {
+                            final solanaOrder = _solanaLimitOrders
+                                .where((o) => o.orderAccount == order.id)
+                                .firstOrNull;
+                            if (solanaOrder != null) {
+                              unawaited(_cancelSolanaLimitOrder(solanaOrder));
+                            }
+                          } else {
+                            unawaited(_cancelLimitOrder(order));
+                          }
                         },
-                        cancellingOrderIds: _cancellingLimitOrderIds,
+                        cancellingOrderIds:
+                            blockchain.activeFamily == ChainFamily.solana
+                            ? _cancellingSolanaOrderAccounts
+                            : _cancellingLimitOrderIds,
                         amountShowcaseKey: _limitAmountsShowcaseKey,
                         executionPriceShowcaseKey:
                             _limitExecutionPriceShowcaseKey,
@@ -3163,6 +3758,15 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _limitEnabled() {
     final fromAmount = _parseDecimalAmount(_fromController.text);
     final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final isSolana = blockchain.activeFamily == ChainFamily.solana;
+    // On Solana, SPL tokens don't use ERC-20 approval — skip that check.
+    final approvalsOk =
+        isSolana ||
+        (_fromToken != null &&
+            _toToken != null &&
+            _tokenRequiresApproval(_fromToken!) &&
+            _tokenRequiresApproval(_toToken!));
     return (_walletAddress ?? '').isNotEmpty &&
         _isLimitSupported &&
         fromAmount > Decimal.zero &&
@@ -3170,8 +3774,7 @@ class _SwapScreenState extends State<SwapScreen> {
         !_tokensAreIdentical(_fromToken, _toToken) &&
         _fromToken != null &&
         _toToken != null &&
-        _tokenRequiresApproval(_fromToken!) &&
-        _tokenRequiresApproval(_toToken!) &&
+        approvalsOk &&
         !_isSubmittingLimit;
   }
 

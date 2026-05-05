@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../screens/splash/splash_screen.dart';
 import '../services/storage_service.dart';
 import '../services/wallet_service.dart';
 
+/// Orchestrates app startup:
+/// 1. Holds the native splash while determining the first route.
+/// 2. Removes the native splash and starts the [SplashScreenBody] animation.
+/// 3. Navigates to the correct route once the animation completes.
+///
+/// The UI is entirely delegated to [SplashScreenBody] in
+/// `lib/screens/splash/splash_screen.dart`.
 class AppBootstrapper extends StatefulWidget {
   const AppBootstrapper({super.key});
 
@@ -27,17 +34,17 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1100),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: const Interval(0.1, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.0, 0.85, curve: Curves.easeOut),
       ),
     );
 
@@ -45,7 +52,7 @@ class _AppBootstrapperState extends State<AppBootstrapper>
   }
 
   Future<void> _initializeApp() async {
-    // Determine the next route while the splash screen is visible
+    // Determine the next route while the native splash is still visible.
     final hasWallet = await _walletService.hasWallet();
     var nextRoute = '/welcome';
     if (hasWallet) {
@@ -54,20 +61,25 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
     if (!mounted) return;
 
-    // Give it a tiny bit of time to make sure the app bootstrapper is drawn.
-    // If we remove the native splash off synchronously, it might flash white/black.
+    // Wait for the first frame so [SplashScreenBody] is definitely painted
+    // with the matching [kSplashBackground] before we dismiss the native
+    // splash.  Without this the OS window briefly shows the wrong colour.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return;
+      // Remove native splash — the custom splash beneath is already drawn
+      // with the same background so the transition is invisible.
       FlutterNativeSplash.remove();
-      // Start the animation simultaneously
-      _animationController.forward();
+      // Reset before forwarding so the animation reliably plays on every
+      // cold launch (guards against edge-cases in debug hot-restart).
+      _animationController
+        ..reset()
+        ..forward();
     });
 
-    // Wait for the animation to wrap up nicely
-    await Future.delayed(const Duration(milliseconds: 2000));
+    // Hold on splash long enough for the full animation + a brief pause.
+    await Future.delayed(const Duration(milliseconds: 1900));
 
     if (!mounted) return;
-    // Navigate to the next screen
     Navigator.of(context).pushReplacementNamed(nextRoute);
   }
 
@@ -79,64 +91,9 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF131313), // Match the Figma background
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/splash.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 32.0),
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'by ',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFEA2A33), // or Red
-                      ),
-                    ),
-                    Text(
-                      'FOMOwl Inc',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ),
+    return SplashScreenBody(
+      fadeAnimation: _fadeAnimation,
+      scaleAnimation: _scaleAnimation,
     );
   }
 }

@@ -65,6 +65,16 @@ class TokenPortfolioModule {
         imageUrl: t.imageUrl,
         coinGeckoId: t.coinGeckoId,
         isCertified: t.isCertified,
+        // PATCH: Preserve backend price source metadata during enrichment.
+        priceSource: t.priceSource,
+        // PATCH: Preserve backend DEX liquidity metadata during enrichment.
+        liquidityUsd: t.liquidityUsd,
+        // PATCH: Preserve backend DEX-only marker during enrichment.
+        isDexOnly: t.isDexOnly,
+        // PATCH: Preserve network key during enrichment.
+        networkKey: t.networkKey,
+        // PATCH: Preserve token standard during enrichment.
+        tokenStandard: t.tokenStandard,
       );
     }).toList();
   }
@@ -124,6 +134,8 @@ class TokenPortfolioModule {
           imageUrl: custom.imageUrl,
           coinGeckoId: custom.coinGeckoId,
           isCertified: false,
+          // PATCH: Custom token prices from simple price lookup have no source metadata.
+          priceSource: 'Unknown',
         ),
       );
     }
@@ -192,6 +204,8 @@ class TokenPortfolioModule {
           imageUrl: tDef['imageUrl'] ?? resolveIconUrl(tDef['symbol']!),
           coinGeckoId: coinGeckoId,
           isCertified: tDef['isCertified'] == 'true',
+          // PATCH: Supplemental token prices from simple price lookup have no source metadata.
+          priceSource: 'Unknown',
         ),
       );
 

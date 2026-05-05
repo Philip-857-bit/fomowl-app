@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/chain.dart';
 import '../../models/wallet_account.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/storage_service.dart';
@@ -30,11 +33,39 @@ class _WalletsScreenState extends State<WalletsScreen> {
   String? _activeAddress;
   List<WalletAccount> _walletAccounts = const [];
   bool _hasMnemonic = false;
+  BlockchainService? _blockchain;
 
   @override
   void initState() {
     super.initState();
     _loadWallets();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (!identical(_blockchain, blockchain)) {
+      _blockchain?.removeListener(_handleBlockchainChange);
+      _blockchain = blockchain;
+      _blockchain?.addListener(_handleBlockchainChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _blockchain?.removeListener(_handleBlockchainChange);
+    super.dispose();
+  }
+
+  void _handleBlockchainChange() {
+    if (!mounted) return;
+    final nextActive = _blockchain?.activeWalletAddress ?? '';
+    final currentActive = (_activeAddress ?? '').toLowerCase();
+    if (nextActive.isEmpty || nextActive == currentActive) {
+      return;
+    }
+    unawaited(_loadWallets());
   }
 
   Future<void> _loadWallets() async {
@@ -50,6 +81,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
         _hasMnemonic = mnemonic != null && mnemonic.isNotEmpty;
         _loading = false;
       });
+      _syncActiveWalletContext(accounts, active);
     } catch (e) {
       debugPrint('Failed to load wallets: $e');
       if (!mounted) return;
@@ -116,6 +148,39 @@ class _WalletsScreenState extends State<WalletsScreen> {
     }
   }
 
+  /// Pushes the active wallet's address and the chain families it actually
+  /// supports into [BlockchainService]. This is what makes the home,
+  /// settings, and network selector update when the wallet changes from any
+  /// tab in the [IndexedStack]-based shell.
+  void _syncActiveWalletContext(
+    List<WalletAccount> accounts,
+    String? activeAddress,
+  ) {
+    final blockchain = _blockchain;
+    if (blockchain == null) return;
+    final normalizedActive = (activeAddress ?? '').trim().toLowerCase();
+    if (normalizedActive.isEmpty) {
+      blockchain.setActiveWalletContext(
+        address: '',
+        supportedFamilies: const {ChainFamily.evm},
+      );
+      return;
+    }
+    WalletAccount? active;
+    for (final account in accounts) {
+      if (account.address.toLowerCase() == normalizedActive) {
+        active = account;
+        break;
+      }
+    }
+    final supported =
+        active?.addressesByFamily.keys.toSet() ?? const {ChainFamily.evm};
+    blockchain.setActiveWalletContext(
+      address: activeAddress ?? '',
+      supportedFamilies: supported,
+    );
+  }
+
   Future<void> _switchWallet(WalletAccount account) async {
     final l = AppLocalizations.of(context);
     if (_activeAddress?.toLowerCase() == account.address.toLowerCase()) return;
@@ -130,7 +195,17 @@ class _WalletsScreenState extends State<WalletsScreen> {
       // Notify BlockchainService in the background — do NOT await so the UI
       // remains responsive while tokens reload for the new wallet.
       if (mounted) {
-        Provider.of<BlockchainService>(context, listen: false).refresh();
+        final blockchain = Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        );
+        // Push the new wallet context BEFORE refresh so listeners that fire
+        // on refresh see the up-to-date address and supported families.
+        blockchain.setActiveWalletContext(
+          address: account.address,
+          supportedFamilies: account.addressesByFamily.keys.toSet(),
+        );
+        blockchain.refresh();
       }
 
       // Reload the wallet list metadata (no network involved, just storage).

@@ -99,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _connectivityStatus = '';
   int? _lastChainId;
   String? _lastNetworkKey;
+  String? _lastWalletAddress;
   Set<String> _hiddenTokenKeys = {};
   List<NftAsset> _nftPreview = [];
   bool _hasMoreNfts = false;
@@ -221,6 +222,10 @@ class _HomeScreenState extends State<HomeScreen> {
             token.name.toLowerCase(),
             token.balance.toStringAsPrecision(12),
             token.priceUsd.toStringAsPrecision(12),
+            // PATCH: Price-source changes should refresh DEX badges.
+            token.priceSource,
+            // PATCH: DEX-only changes should refresh DEX badges.
+            token.isDexOnly.toString(),
             imageUrl,
           ].join(':');
         })
@@ -263,16 +268,35 @@ class _HomeScreenState extends State<HomeScreen> {
     };
 
     for (final custom in blockchain.customTokensForActiveChain) {
-      final customToken = tokens
+      // Try to find an existing Token object (may have a live balance).
+      Token? customToken = tokens
           .where((token) {
             final contract = token.contractAddress?.trim().toLowerCase();
             return contract != null && contract == custom.address.toLowerCase();
           })
           .cast<Token?>()
           .firstWhere((token) => token != null, orElse: () => null);
-      if (customToken == null) {
-        continue;
-      }
+
+      // If the token isn't in the live list yet (e.g. $0 balance omitted by
+      // the backend, or the wallet was just loaded), synthesise a zero-balance
+      // entry so the user-added token always shows in the Tokens tab.
+      customToken ??= Token(
+        symbol: custom.symbol,
+        name: custom.name,
+        contractAddress: custom.address,
+        balance: 0,
+        valueUsd: 0,
+        priceUsd: 0,
+        changePercent24h: 0,
+        decimals: custom.decimals,
+        imageUrl: custom.imageUrl,
+        coinGeckoId: custom.coinGeckoId,
+        isCertified: false,
+        networkKey:
+            custom.networkKey ?? NetworkKey.evm(blockchain.activeChain.chainId),
+        tokenStandard: custom.tokenStandard,
+      );
+
       final hiddenKey = TokenVisibilityUtils.identifier(customToken);
       if (_hiddenTokenKeys.contains(hiddenKey)) {
         continue;
@@ -283,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   : customToken.symbol)
               ?.toLowerCase() ??
           customToken.name.toLowerCase();
-      byKey.putIfAbsent(key, () => customToken);
+      byKey.putIfAbsent(key, () => customToken!);
     }
 
     final nextTokens = byKey.values.toList()
@@ -650,10 +674,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final addressFuture = _walletService.getCurrentWalletAddress();
       final nameFuture = _storage.getWalletName();
+      final activeAccountFuture = _walletService.getActiveWalletAccount();
 
       // Wait only for the address/name — these are fast local reads.
       final address = await addressFuture;
       final name = await nameFuture;
+      final activeAccount = await activeAccountFuture;
+
+      // Remember the active wallet so cross-tab switches can be detected,
+      // and push the wallet context so the network selector hides families
+      // the wallet does not actually support (e.g. EVM-only imports).
+      _lastWalletAddress = address?.toLowerCase();
+      blockchain.setActiveWalletContext(
+        address: address ?? '',
+        supportedFamilies:
+            activeAccount?.addressesByFamily.keys.toSet() ??
+            const {ChainFamily.evm},
+      );
 
       if (address != null && address.isNotEmpty) {
         // Load snapshot immediately — don't wait for blockchain.init().
@@ -971,6 +1008,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentNetworkKey = blockchain.activeNetworkKey;
     final networkKeyChanged = currentNetworkKey != _lastNetworkKey;
     final chainIdChanged = chainId != _lastChainId;
+
+    // Detect a wallet switch performed from another tab in the IndexedStack
+    // shell (e.g. from settings → wallets). When the active wallet address
+    // changes, the home screen needs to reload the wallet name, snapshot,
+    // and balances — not just the token list.
+    final currentWallet = blockchain.activeWalletAddress;
+    final walletChanged =
+        currentWallet.isNotEmpty && currentWallet != (_lastWalletAddress ?? '');
+    if (walletChanged) {
+      _lastWalletAddress = currentWallet;
+      unawaited(_loadWalletData(forcePortfolioSync: true));
+      return;
+    }
 
     // Same network — just refresh token list if the signature changed.
     if (!networkKeyChanged && !chainIdChanged) {

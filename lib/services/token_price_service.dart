@@ -192,8 +192,13 @@ class TokenPriceService extends BaseService {
     final data = jsonDecode(responseBody) as Map<String, dynamic>;
     final prices = <String, double>{};
     data.forEach((key, value) {
-      if (value is Map && value['usd'] != null) {
-        prices[key] = (value['usd'] as num).toDouble();
+      if (value is Map &&
+          (value['usd'] != null || value['price_usd'] != null)) {
+        // PATCH: Backend may omit legacy `usd` when the price is truly unavailable.
+        final rawPrice = value['usd'] ?? value['price_usd'];
+        // PATCH: Null price means unavailable, not zero.
+        if (rawPrice is! num) return;
+        prices[key] = rawPrice.toDouble();
         if (value['usd_24h_change'] != null) {
           prices['${key}_change'] = (value['usd_24h_change'] as num).toDouble();
         }

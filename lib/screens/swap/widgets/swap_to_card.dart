@@ -32,25 +32,25 @@ class SwapToCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF121212),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.transparent),
+        color: const Color(0xFF151C24),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0x0DFFFFFF)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l.swapToLabel,
+            'SWAP TO',
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w500,
-              color: const Color(0xFFA1A1AA),
-              height: 1.67,
+              color: const Color(0xFFA1A1A1),
+              letterSpacing: 1.0,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
@@ -78,10 +78,9 @@ class SwapToCard extends StatelessWidget {
                     : Text(
                         amountText.isEmpty ? '0' : amountText,
                         style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFFFFFFF),
-                          height: 1.33,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFE2E2E2),
                         ),
                       ),
               ),
@@ -92,7 +91,7 @@ class SwapToCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -102,25 +101,22 @@ class SwapToCard extends StatelessWidget {
                 ),
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: const Color(0xFF71717A),
+                  color: const Color(0xFF848E9C),
                 ),
               ),
               Row(
                 children: [
-                  Container(
-                    width: 9,
-                    height: 9,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF73D3F0),
-                      shape: BoxShape.circle,
-                    ),
+                  const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 11,
+                    color: Color(0xFF848E9C),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFF71717A),
+                      color: const Color(0xFF848E9C),
                     ),
                   ),
                 ],

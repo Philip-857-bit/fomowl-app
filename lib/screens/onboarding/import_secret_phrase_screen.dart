@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
@@ -120,14 +119,14 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
           _isLoading = false;
         });
 
-        // Show success message
-        ToastUtils.showSuccess(l.walletImportedSuccessfully);
-
         final storage = StorageService();
-        if (await storage.hasPasscode()) {
-          if (mounted) Navigator.pop(context, true);
-        } else {
-          if (mounted) Navigator.pushNamed(context, '/create-passcode');
+        final hasPasscode = await storage.hasPasscode();
+        if (mounted) {
+          Navigator.pushNamed(
+            context,
+            '/wallet-imported',
+            arguments: {'hasPasscode': hasPasscode},
+          );
         }
       }
     } catch (e) {
@@ -153,205 +152,263 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return MobileScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Back button
-                IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Wallet name label
-                Text(
-                  l.walletNameLabel,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Wallet name input
-                TextField(
-                  controller: _walletNameController,
-                  style: GoogleFonts.outfit(fontSize: 16, color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color(0xFF2C2B2B),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 18,
-                    ),
-                    hintText: l.enterWalletNameHint,
-                    hintStyle: GoogleFonts.outfit(
-                      fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.3),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Secret phrase label
-                Text(
-                  l.secretPhrase,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Secret phrase input
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2C2B2B),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Stack(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 30, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextField(
-                        controller: _secretPhraseController,
-                        maxLines: 6,
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: Colors.white,
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: const Icon(
+                          Icons.arrow_back,
+                          color: Color(0xFFEA2A33),
+                          size: 18,
                         ),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.all(20),
-                          hintText: l.enterSecretPhraseHint,
-                          hintStyle: GoogleFonts.outfit(
+                      ),
+                      const SizedBox(height: 32),
+
+                      // WALLET NAME
+                      Text(
+                        'WALLET NAME',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFB7B5B4),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0E0E0E),
+                          border: Border.all(color: const Color(0xFF6B7280)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _walletNameController,
+                          style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 17,
+                              vertical: 19,
+                            ),
+                            hintText: 'e.g. Primary Savings',
+                            hintStyle: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: const Color(0xFFB7B5B4),
+                            ),
                           ),
                         ),
                       ),
-                      // Paste button
-                      Positioned(
-                        right: 12,
-                        bottom: 12,
-                        child: TextButton(
-                          onPressed: _pasteFromClipboard,
-                          child: Text(
-                            l.paste,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFFEB3F3F),
+                      const SizedBox(height: 32),
+
+                      // SECRET PHRASE
+                      Text(
+                        'SECRET PHRASE',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFFB7B5B4),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0E0E0E),
+                              border: Border.all(
+                                color: const Color(0x265D3F3D),
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: TextField(
+                              controller: _secretPhraseController,
+                              maxLines: null,
+                              minLines: 6,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Colors.white,
+                              ),
+                              decoration: InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.fromLTRB(
+                                  17,
+                                  17,
+                                  17,
+                                  52,
+                                ),
+                                hintText:
+                                    'Enter your 24 or 12 word recovery phrase...',
+                                hintStyle: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: const Color(0xB8B7B5B4),
+                                ),
+                              ),
                             ),
                           ),
+                          Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: GestureDetector(
+                              onTap: _pasteFromClipboard,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x0DFFB3AD),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'PASTE',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFEA2A33),
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (_wordCount > 0) ...[
+                        _WordCountIndicator(wordCount: _wordCount),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(
+                            Icons.info_outline,
+                            size: 12,
+                            color: Color(0xFFC8C6C5),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your secret phrase is a 24 or 12 word separated by single spaces',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: const Color(0xFFC8C6C5),
+                                height: 1.788,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Security card
+                      Container(
+                        padding: const EdgeInsets.all(25),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1B1B),
+                          border: Border.all(color: const Color(0x265D3F3D)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Importing an existing wallet?',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFE2E2E2),
+                                height: 1.43,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Ensure you are in a private environment. Never share your secret phrase with anyone, including our support team.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: const Color(0xFFB7B5B4),
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                // Word count indicator
-                _WordCountIndicator(wordCount: _wordCount),
-
-                const SizedBox(height: 10),
-
-                // Helper text
-                Center(
-                  child: Text(
-                    l.secretPhraseHelperText,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.6),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Import wallet button
-                SizedBox(
-                  width: double.infinity,
-                  height: 53,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _importWallet,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    child: Ink(
-                      decoration: BoxDecoration(
-                        gradient: _isLoading
-                            ? null
-                            : const LinearGradient(
-                                colors: [Color(0xFFC03F2E), Color(0xFF640C0B)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                        color: _isLoading ? Colors.grey : null,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Container(
-                        alignment: Alignment.center,
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                l.importWallet,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                const SizedBox(height: 12),
-              ],
+              ),
             ),
-          ),
+
+            // Sticky footer
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00131313), Color(0xFF131313)],
+                  stops: [0, 0.5],
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33EA2A33),
+                      blurRadius: 12,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEA2A33),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: _isLoading ? null : _importWallet,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          l.importWallet,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -372,30 +429,30 @@ class _WordCountIndicator extends StatelessWidget {
     final Color color = isValid
         ? const Color(0xFF4CAF50)
         : wordCount > 24
-        ? const Color(0xFFEB3F3F)
+        ? const Color(0xFFEA2A33)
         : Colors.white.withValues(alpha: 0.5);
 
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             border: Border.all(color: color.withValues(alpha: 0.35)),
           ),
           child: Text(
             '$wordCount / $target words',
-            style: GoogleFonts.outfit(
-              fontSize: 12,
+            style: GoogleFonts.inter(
+              fontSize: 11,
               fontWeight: FontWeight.w600,
               color: color,
             ),
           ),
         ),
         if (isValid) ...[
-          const SizedBox(width: 8),
-          Icon(Icons.check_circle_outline, size: 14, color: color),
+          const SizedBox(width: 6),
+          Icon(Icons.check_circle_outline, size: 13, color: color),
         ],
       ],
     );

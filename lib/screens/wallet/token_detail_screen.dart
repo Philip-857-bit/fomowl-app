@@ -193,6 +193,12 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
           ? resolved.coinGeckoId
           : current.coinGeckoId,
       isCertified: current.isCertified,
+      // PATCH: Preserve backend price source metadata when metadata is refreshed.
+      priceSource: current.priceSource,
+      // PATCH: Preserve backend DEX liquidity metadata when metadata is refreshed.
+      liquidityUsd: current.liquidityUsd,
+      // PATCH: Preserve backend DEX-only marker when metadata is refreshed.
+      isDexOnly: current.isDexOnly,
     );
   }
 

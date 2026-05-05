@@ -37,6 +37,7 @@ DateTime _parseTimestamp(Object? rawValue) {
 
 class HomeBannerSnapshotService {
   static const String _storageKey = 'home_banner_feed_snapshot_v1';
+  static const Duration _snapshotTtl = Duration(minutes: 30);
 
   Future<void> saveSnapshot(HomeBannerFeed feed) async {
     try {
@@ -62,7 +63,13 @@ class HomeBannerSnapshotService {
       if (decoded is! Map<String, dynamic>) {
         return null;
       }
-      return HomeBannerSnapshot.fromJson(decoded);
+      final snapshot = HomeBannerSnapshot.fromJson(decoded);
+      final age = DateTime.now().toUtc().difference(snapshot.timestamp.toUtc());
+      if (age > _snapshotTtl) {
+        await prefs.remove(_storageKey);
+        return null;
+      }
+      return snapshot;
     } catch (error) {
       debugPrint('Error loading home banner snapshot: $error');
       return null;

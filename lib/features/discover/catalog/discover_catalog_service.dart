@@ -101,7 +101,7 @@ class DiscoverCatalogService {
 
   DiscoverCatalogSnapshot _bundledSnapshot() {
     return DiscoverCatalogSnapshot(
-      fetchedAt: DateTime.now().toUtc(),
+      fetchedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       dapps: const <DiscoverDappEntry>[
         DiscoverDappEntry(
           id: 'discover-uniswap',

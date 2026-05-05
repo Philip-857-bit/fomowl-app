@@ -91,7 +91,14 @@ class DappProviderBridge {
     'wallet_addEthereumChain',
     'personal_sign',
     'eth_signTypedData_v4',
-    'eth_sendTransaction'
+    'eth_sendTransaction',
+    'solana_connect',
+    'solana_signMessage',
+    'solana_signTransaction',
+    'solana_signAndSendTransaction',
+    'tron_requestAccounts',
+    'tron_sign',
+    'tron_signTransaction'
   ]);
 
   function normalizeParams(params) {
@@ -300,6 +307,125 @@ class DappProviderBridge {
     document.addEventListener('DOMContentLoaded', window.__owlletAnnounceProvider);
   }
   window.dispatchEvent(new Event('ethereum#initialized'));
+
+  // ── Solana Provider (Phantom-compatible) ─────────────────────────────────
+  class OwlletSolanaProvider {
+    constructor() {
+      this.isPhantom = true;
+      this.isOwllet = true;
+      this.publicKey = null;
+      this._connected = false;
+      this._events = {};
+    }
+    get connected() { return this._connected; }
+    _emit(name, ...args) {
+      (this._events[name] || []).forEach(fn => { try { fn(...args); } catch(_) {} });
+    }
+    on(name, fn) { (this._events[name] = this._events[name] || []).push(fn); return this; }
+    off(name, fn) { this._events[name] = (this._events[name] || []).filter(l => l !== fn); return this; }
+    removeListener(name, fn) { return this.off(name, fn); }
+    async connect(options) {
+      const r = await callFlutterHandler('solana_connect', { method: 'solana_connect', params: [{ options: options || {} }] });
+      if (r && r.result && r.result.publicKey) {
+        const pk = r.result.publicKey;
+        this.publicKey = { toBase58() { return pk; }, toString() { return pk; } };
+        this._connected = true;
+        this._emit('connect', this.publicKey);
+      }
+      return { publicKey: this.publicKey };
+    }
+    async disconnect() {
+      await callFlutterHandler('solana_disconnect', { method: 'solana_disconnect', params: [] });
+      this.publicKey = null;
+      this._connected = false;
+      this._emit('disconnect');
+    }
+    _toBase64(bytes) {
+      let b64 = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        b64 += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+      }
+      return btoa(b64);
+    }
+    async signMessage(message, encoding) {
+      const bytes = (message instanceof Uint8Array) ? message : new Uint8Array(message);
+      const r = await callFlutterHandler('solana_signMessage', { method: 'solana_signMessage', params: [{ message: this._toBase64(bytes), encoding: encoding || 'utf8' }] });
+      if (r && r.result) {
+        const sigBytes = Uint8Array.from(atob(r.result.signature).split('').map(c => c.charCodeAt(0)));
+        return { signature: sigBytes, publicKey: this.publicKey };
+      }
+      const err = new Error(r && r.error ? r.error.message : 'signMessage failed');
+      if (r && r.error) err.code = r.error.code;
+      throw err;
+    }
+    _serializeTx(tx) {
+      try { return tx.serialize({ requireAllSignatures: false, verifySignatures: false }); }
+      catch(_) { try { return tx.message.serialize(); } catch(e) { throw new Error('Cannot serialize transaction: ' + e.message); } }
+    }
+    async signTransaction(tx) {
+      const r = await callFlutterHandler('solana_signTransaction', { method: 'solana_signTransaction', params: [{ transaction: this._toBase64(this._serializeTx(tx)) }] });
+      if (r && r.result && r.result.signedTransaction) {
+        try {
+          const signed = Uint8Array.from(atob(r.result.signedTransaction).split('').map(c => c.charCodeAt(0)));
+          const sig = signed.slice(1, 65);
+          if (tx.signatures && tx.signatures.length > 0 && tx.signatures[0]) {
+            tx.signatures[0].signature = (typeof Buffer !== 'undefined') ? Buffer.from(sig) : sig;
+          }
+        } catch(_) {}
+        return tx;
+      }
+      const err = new Error(r && r.error ? r.error.message : 'signTransaction failed');
+      if (r && r.error) err.code = r.error.code;
+      throw err;
+    }
+    async signAllTransactions(txs) { return Promise.all(txs.map(tx => this.signTransaction(tx))); }
+    async signAndSendTransaction(tx, options) {
+      const r = await callFlutterHandler('solana_signAndSendTransaction', { method: 'solana_signAndSendTransaction', params: [{ transaction: this._toBase64(this._serializeTx(tx)), options: options || {} }] });
+      if (r && r.result) return { signature: r.result.txHash };
+      const err = new Error(r && r.error ? r.error.message : 'signAndSendTransaction failed');
+      if (r && r.error) err.code = r.error.code;
+      throw err;
+    }
+  }
+  const _owlletSolana = new OwlletSolanaProvider();
+  window.solana = _owlletSolana;
+  window.phantom = window.phantom || {};
+  window.phantom.solana = _owlletSolana;
+  try { window.dispatchEvent(new CustomEvent('solana#initialized')); } catch(_) {}
+
+  // ── Tron Provider (TronLink-compatible) ───────────────────────────────────
+  const _owlletTronLink = {
+    ready: false,
+    request: async function(req) {
+      const method = (req && req.method) ? req.method : 'tron_requestAccounts';
+      const params = (req && req.params) ? req.params : {};
+      const r = await callFlutterHandler(method, { method: method, params: [params] });
+      if (r && r.error) { const e = new Error(r.error.message); e.code = r.error.code; throw e; }
+      return r ? r.result : null;
+    }
+  };
+  const _owlletTronWeb = {
+    ready: false,
+    defaultAddress: { base58: '', hex: '' },
+    sign: async function(msg) {
+      const r = await callFlutterHandler('tron_sign', { method: 'tron_sign', params: [{ message: msg }] });
+      if (r && r.error) { const e = new Error(r.error.message); e.code = r.error.code; throw e; }
+      return r && r.result ? r.result.signature : null;
+    },
+    trx: {
+      sign: async function(tx) {
+        const r = await callFlutterHandler('tron_signTransaction', { method: 'tron_signTransaction', params: [{ transaction: tx }] });
+        if (r && r.error) { const e = new Error(r.error.message); e.code = r.error.code; throw e; }
+        return r && r.result ? r.result.signedTransaction : null;
+      }
+    }
+  };
+  _owlletTronLink.tronWeb = _owlletTronWeb;
+  window.tronLink = _owlletTronLink;
+  window.tronWeb = _owlletTronWeb;
+
+  window.__owlletProviderInstalled = true;
 })();
 ''';
   }
@@ -322,14 +448,30 @@ class DappProviderBridge {
     required String origin,
   }) async {
     final accounts = await _ethAccounts(origin);
+    final solanaAddress =
+        await _walletService.getWalletAddressForFamily(ChainFamily.solana) ??
+        '';
+    final tronAddress =
+        await _walletService.getWalletAddressForFamily(ChainFamily.tron) ?? '';
     return '''
 (() => {
-  if (!window.ethereum || !window.ethereum.isOwllet) return;
-  if (typeof window.ethereum._setChainId === 'function') {
-    window.ethereum._setChainId('${_hexQuantity(chainId)}');
+  if (window.ethereum && window.ethereum.isOwllet) {
+    if (typeof window.ethereum._setChainId === 'function') {
+      window.ethereum._setChainId('${_hexQuantity(chainId)}');
+    }
+    if (typeof window.ethereum._setAccounts === 'function') {
+      window.ethereum._setAccounts(${jsonEncode(accounts)});
+    }
   }
-  if (typeof window.ethereum._setAccounts === 'function') {
-    window.ethereum._setAccounts(${jsonEncode(accounts)});
+  if (window.solana && window.solana.isOwllet && ${jsonEncode(solanaAddress)}) {
+    const pk = ${jsonEncode(solanaAddress)};
+    window.solana.publicKey = { toBase58() { return pk; }, toString() { return pk; } };
+    window.solana._connected = true;
+  }
+  if (window.tronWeb && ${jsonEncode(tronAddress)}) {
+    window.tronWeb.defaultAddress.base58 = ${jsonEncode(tronAddress)};
+    window.tronWeb.ready = true;
+    if (window.tronLink) window.tronLink.ready = true;
   }
 })();
 ''';
@@ -447,6 +589,34 @@ class DappProviderBridge {
           return _result(await _signTypedData(context, params));
         case 'eth_sendTransaction':
           return _result(await _sendTransaction(context, params));
+
+        // ── Solana ──────────────────────────────────────────────────────────
+        case 'solana_connect':
+          return _result(
+            await _solanaConnect(context, origin, evaluateJavaScript),
+          );
+        case 'solana_disconnect':
+          await _solanaDisconnect(origin);
+          return _result(null);
+        case 'solana_signMessage':
+          return _result(await _solanaSignMessage(context, origin, params));
+        case 'solana_signTransaction':
+          return _result(await _solanaSignTransaction(context, origin, params));
+        case 'solana_signAndSendTransaction':
+          return _result(
+            await _solanaSignAndSendTransaction(context, origin, params),
+          );
+
+        // ── Tron ────────────────────────────────────────────────────────────
+        case 'tron_requestAccounts':
+          return _result(
+            await _tronRequestAccounts(context, origin, evaluateJavaScript),
+          );
+        case 'tron_sign':
+          return _result(await _tronSign(context, origin, params));
+        case 'tron_signTransaction':
+          return _result(await _tronSignTransaction(context, origin, params));
+
         default:
           return _result(await _forwardRpcRequest(context, method, params));
       }
@@ -1063,6 +1233,309 @@ class DappProviderBridge {
       );
     }
     return txHash.startsWith('0x') ? txHash : '0x$txHash';
+  }
+
+  // ── Solana handler methods ────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> _solanaConnect(
+    BuildContext context,
+    String origin,
+    Future<void> Function(String) evaluateJavaScript,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.solana,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Solana wallet available.');
+    }
+    final hasApproval = await permissionService.hasConnectionApproval(
+      origin,
+      address,
+    );
+    if (!hasApproval) {
+      if (!context.mounted) {
+        throw _ProviderBridgeException(
+          -32603,
+          'The request could not be completed.',
+        );
+      }
+      final approved = await _confirmAction(
+        context,
+        title: 'Connect Solana wallet',
+        message:
+            '$origin wants access to your Solana wallet (${_shortAddress(address)}).',
+        confirmLabel: 'Connect',
+      );
+      if (!approved) {
+        throw _ProviderBridgeException(4001, 'Connection rejected.');
+      }
+      await permissionService.grantConnectionApproval(origin, address);
+    }
+    await evaluateJavaScript(
+      "if (window.solana) { window.solana.publicKey = { toBase58: () => '$address', toString: () => '$address' }; window.solana._connected = true; }",
+    );
+    return {'publicKey': address};
+  }
+
+  Future<void> _solanaDisconnect(String origin) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.solana,
+    );
+    if (address != null && address.isNotEmpty) {
+      await permissionService.revokeConnectionApproval(origin, address);
+    }
+  }
+
+  Future<Map<String, dynamic>> _solanaSignMessage(
+    BuildContext context,
+    String origin,
+    List<dynamic> params,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.solana,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Solana wallet available.');
+    }
+    final paramMap = params.isNotEmpty && params.first is Map
+        ? params.first as Map
+        : null;
+    final messageB64 = paramMap?['message']?.toString();
+    if (messageB64 == null || messageB64.isEmpty) {
+      throw _ProviderBridgeException(
+        -32602,
+        'solana_signMessage: missing message.',
+      );
+    }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final approved = await _confirmAction(
+      context,
+      title: 'Sign Solana message',
+      message: '$origin wants to sign a message with your Solana wallet.',
+      confirmLabel: 'Sign',
+    );
+    if (!approved) throw _ProviderBridgeException(4001, 'Signature rejected.');
+    final messageBytes = base64Decode(messageB64);
+    final signatureB58 = await _walletService.signSolanaMessageRaw(
+      address,
+      messageBytes,
+    );
+    final sigBytes = WalletService.decodeBase58Signature(signatureB58);
+    return {'signature': base64Encode(sigBytes)};
+  }
+
+  Future<Map<String, dynamic>> _solanaSignTransaction(
+    BuildContext context,
+    String origin,
+    List<dynamic> params,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.solana,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Solana wallet available.');
+    }
+    final paramMap = params.isNotEmpty && params.first is Map
+        ? params.first as Map
+        : null;
+    final txB64 = paramMap?['transaction']?.toString();
+    if (txB64 == null || txB64.isEmpty) {
+      throw _ProviderBridgeException(
+        -32602,
+        'solana_signTransaction: missing transaction.',
+      );
+    }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final approved = await _confirmAction(
+      context,
+      title: 'Sign Solana transaction',
+      message: '$origin wants to sign a Solana transaction.',
+      confirmLabel: 'Sign',
+    );
+    if (!approved) {
+      throw _ProviderBridgeException(4001, 'Transaction rejected.');
+    }
+    final signedB64 = await _walletService.signSolanaTransactionRaw(
+      address,
+      base64Decode(txB64),
+    );
+    return {'signedTransaction': signedB64};
+  }
+
+  Future<Map<String, dynamic>> _solanaSignAndSendTransaction(
+    BuildContext context,
+    String origin,
+    List<dynamic> params,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.solana,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Solana wallet available.');
+    }
+    final paramMap = params.isNotEmpty && params.first is Map
+        ? params.first as Map
+        : null;
+    final txB64 = paramMap?['transaction']?.toString();
+    if (txB64 == null || txB64.isEmpty) {
+      throw _ProviderBridgeException(
+        -32602,
+        'solana_signAndSendTransaction: missing transaction.',
+      );
+    }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final approved = await _confirmAction(
+      context,
+      title: 'Send Solana transaction',
+      message: '$origin wants to sign and send a Solana transaction.',
+      confirmLabel: 'Send',
+    );
+    if (!approved) {
+      throw _ProviderBridgeException(4001, 'Transaction rejected.');
+    }
+    final txHash = await _walletService.signAndBroadcastSolanaTransactionRaw(
+      address,
+      base64Decode(txB64),
+    );
+    return {'txHash': txHash};
+  }
+
+  // ── Tron handler methods ──────────────────────────────────────────────────
+
+  Future<List<String>> _tronRequestAccounts(
+    BuildContext context,
+    String origin,
+    Future<void> Function(String) evaluateJavaScript,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.tron,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Tron wallet available.');
+    }
+    final hasApproval = await permissionService.hasConnectionApproval(
+      origin,
+      address,
+    );
+    if (!hasApproval) {
+      if (!context.mounted) {
+        throw _ProviderBridgeException(
+          -32603,
+          'The request could not be completed.',
+        );
+      }
+      final approved = await _confirmAction(
+        context,
+        title: 'Connect Tron wallet',
+        message:
+            '$origin wants access to your Tron wallet (${_shortAddress(address)}).',
+        confirmLabel: 'Connect',
+      );
+      if (!approved) {
+        throw _ProviderBridgeException(4001, 'Connection rejected.');
+      }
+      await permissionService.grantConnectionApproval(origin, address);
+    }
+    await evaluateJavaScript(
+      "if (window.tronWeb) { window.tronWeb.defaultAddress.base58 = '$address'; window.tronWeb.ready = true; } if (window.tronLink) { window.tronLink.ready = true; }",
+    );
+    return [address];
+  }
+
+  Future<Map<String, dynamic>> _tronSign(
+    BuildContext context,
+    String origin,
+    List<dynamic> params,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.tron,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Tron wallet available.');
+    }
+    final paramMap = params.isNotEmpty && params.first is Map
+        ? params.first as Map
+        : null;
+    final messageHex = paramMap?['message']?.toString();
+    if (messageHex == null || messageHex.isEmpty) {
+      throw _ProviderBridgeException(-32602, 'tron_sign: missing message.');
+    }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final approved = await _confirmAction(
+      context,
+      title: 'Sign Tron message',
+      message: '$origin wants to sign a message with your Tron wallet.',
+      confirmLabel: 'Sign',
+    );
+    if (!approved) throw _ProviderBridgeException(4001, 'Signature rejected.');
+    final signature = await _walletService.signTronMessageRaw(
+      address,
+      messageHex,
+    );
+    return {'signature': signature};
+  }
+
+  Future<Map<String, dynamic>> _tronSignTransaction(
+    BuildContext context,
+    String origin,
+    List<dynamic> params,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(
+      ChainFamily.tron,
+    );
+    if (address == null || address.isEmpty) {
+      throw _ProviderBridgeException(4100, 'No Tron wallet available.');
+    }
+    final paramMap = params.isNotEmpty && params.first is Map
+        ? params.first as Map
+        : null;
+    final txParam = paramMap?['transaction'];
+    if (txParam is! Map) {
+      throw _ProviderBridgeException(
+        -32602,
+        'tron_signTransaction: missing or invalid transaction.',
+      );
+    }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final approved = await _confirmAction(
+      context,
+      title: 'Sign Tron transaction',
+      message: '$origin wants to sign a Tron transaction.',
+      confirmLabel: 'Sign',
+    );
+    if (!approved) {
+      throw _ProviderBridgeException(4001, 'Transaction rejected.');
+    }
+    final signedTx = await _walletService.signTronTransactionRaw(
+      address,
+      Map<String, dynamic>.from(txParam),
+    );
+    return {'signedTransaction': signedTx};
   }
 
   void _ensureChainAllowedForDapp(int chainId) {

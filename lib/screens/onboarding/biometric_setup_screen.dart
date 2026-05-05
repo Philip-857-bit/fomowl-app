@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../constants/app_colors.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/biometric_service.dart';
 import '../../services/storage_service.dart';
@@ -16,8 +15,10 @@ class BiometricSetupScreen extends StatefulWidget {
 
 class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
   bool _fingerprintEnabled = false;
+  bool _faceIdEnabled = false;
+  bool _fingerprintAvailable = false;
+  bool _faceIdAvailable = false;
   final StorageService _storage = StorageService();
-  bool _biometricsAvailable = true; // Start as true, will update after check
 
   @override
   void initState() {
@@ -26,258 +27,224 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
   }
 
   Future<void> _checkBiometricAvailability() async {
-    final biometricService = BiometricService();
-    final canCheck = await biometricService.canCheckBiometrics();
-    final isSupported = await biometricService.isDeviceSupported();
-    final hasFingerprint = await biometricService.hasFingerprint();
-
+    final svc = BiometricService();
+    final canCheck = await svc.canCheckBiometrics();
+    final isSupported = await svc.isDeviceSupported();
+    if (!canCheck || !isSupported) return;
+    final hasFp = await svc.hasFingerprint();
+    final hasFace = await svc.hasFaceId();
     if (mounted) {
       setState(() {
-        _biometricsAvailable = canCheck && isSupported && hasFingerprint;
+        _fingerprintAvailable = hasFp;
+        _faceIdAvailable = hasFace;
       });
     }
   }
 
   Future<void> _continue() async {
-    // If biometrics not available, skip to congratulations
-    if (!_biometricsAvailable) {
-      if (mounted) {
-        Navigator.pushNamed(context, '/congratulations');
-      }
-      return;
-    }
-
-    // Save biometric preferences
     if (_fingerprintEnabled) {
       await _storage.setFingerprintEnabled(true);
-
-      // Go directly to fingerprint verification
-      if (mounted) {
-        Navigator.pushNamed(context, '/fingerprint-verification');
-      }
+      if (mounted) Navigator.pushNamed(context, '/fingerprint-verification');
+    } else if (_faceIdEnabled) {
+      await _storage.setFaceIdEnabled(true);
+      if (mounted) Navigator.pushNamed(context, '/face-id-verification');
     } else {
-      // Skip biometrics, go to congratulations
-      if (mounted) {
-        Navigator.pushNamed(context, '/congratulations');
-      }
+      if (mounted) Navigator.pushNamed(context, '/congratulations');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return MobileScaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.black,
       body: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              const Spacer(flex: 2),
-
-              // Owl padlock illustration
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.black.withValues(alpha: 0.3),
-                ),
-                child: Center(
-                  child: Image.asset(
-                    'assets/images/owl_lock.png',
-                    width: 150,
-                    height: 150,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Placeholder if image not found
-                      return const Icon(
-                        Icons.lock,
-                        size: 100,
-                        color: Colors.white54,
-                      );
-                    },
-                  ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Icon(
+                  Icons.arrow_back,
+                  color: Color(0xFFEA2A33),
+                  size: 20,
                 ),
               ),
-
-              const SizedBox(height: 40),
-
-              // Title
-              Text(
-                'Shield Your Wallet',
-                style: GoogleFonts.outfit(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 16),
-
-              // Description
-              Text(
-                'Adding biometric security will ensure you are\nthe only one that can access your wallet',
-                style: GoogleFonts.outfit(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 40),
-
-              // Biometrics not available message
-              if (!_biometricsAvailable)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.orange.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: Colors.orange,
-                          size: 24,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Image.asset(
+                        'assets/images/shield_owl.png',
+                        height: 260,
+                        fit: BoxFit.contain,
+                        errorBuilder: (e, s, t) => Image.asset(
+                          'assets/images/owl_lock.png',
+                          height: 260,
+                          fit: BoxFit.contain,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Shield Your Wallet',
+                        style: GoogleFonts.inter(
+                          fontSize: 36,
+                          fontWeight: FontWeight.normal,
+                          color: const Color(0xFFE2E2E2),
+                          letterSpacing: -1.08,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Adding biometric security will ensure you are the only one that can access your wallet',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFFB7B5B4),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      _buildCard(
+                        iconAsset: 'assets/images/face_id_icon.png',
+                        fallbackIcon: Icons.face,
+                        title: 'Face ID',
+                        subtitle: 'Use face ID Authentication',
+                        value: _faceIdEnabled,
+                        available: _faceIdAvailable,
+                        onChanged: (v) => setState(() => _faceIdEnabled = v),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildCard(
+                        iconAsset: 'assets/images/fingerprint_icon.png',
+                        fallbackIcon: Icons.fingerprint,
+                        title: 'Fingerprint ID',
+                        subtitle: 'Use fingerprint Authentication',
+                        value: _fingerprintEnabled,
+                        available: _fingerprintAvailable,
+                        onChanged: (v) =>
+                            setState(() => _fingerprintEnabled = v),
+                      ),
+                      const SizedBox(height: 32),
+                      GestureDetector(
+                        onTap: _continue,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEA2A33),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFEA2A33,
+                                ).withValues(alpha: 0.3),
+                                blurRadius: 15,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
                           child: Text(
-                            'Biometric authentication is not available on this device',
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              color: Colors.orange,
+                            'NEXT',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              color: Colors.white,
+                              letterSpacing: 1.8,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              if (!_biometricsAvailable) const SizedBox(height: 20),
-
-              // Fingerprint option
-              _buildBiometricOption(
-                icon: Icons.fingerprint,
-                title: 'Fingerprint ID',
-                subtitle: 'Use fingerprint Authentication',
-                value: _fingerprintEnabled,
-                enabled: _biometricsAvailable,
-                onChanged: (value) {
-                  if (_biometricsAvailable) {
-                    setState(() {
-                      _fingerprintEnabled = value;
-                    });
-                  }
-                },
-              ),
-
-              const SizedBox(height: 40),
-
-              // Next button
-              SizedBox(
-                width: double.infinity,
-                height: 53,
-                child: ElevatedButton(
-                  onPressed: _continue,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFC03F2E), Color(0xFF640C0B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Next',
-                        style: GoogleFonts.outfit(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                      const SizedBox(height: 24),
+                    ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildBiometricOption({
-    required IconData icon,
+  Widget _buildCard({
+    required String iconAsset,
+    required IconData fallbackIcon,
     required String title,
     required String subtitle,
     required bool value,
-    required bool enabled,
+    required bool available,
     required ValueChanged<bool> onChanged,
   }) {
     return Opacity(
-      opacity: enabled ? 1.0 : 0.5,
+      opacity: available ? 1.0 : 0.45,
       child: Container(
+        height: 67,
+        padding: const EdgeInsets.symmetric(horizontal: 25),
         decoration: BoxDecoration(
-          color: const Color(0xFF2C2B2B).withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(15),
+          color: const Color(0xFF1B1B1B),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: const Color(0xFF5D3F3D).withValues(alpha: 0.12),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x66000000),
+              blurRadius: 16,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
-        child: SwitchListTile(
-          value: value,
-          onChanged: enabled ? onChanged : null,
-          secondary: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEB3F3F).withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(8),
+        child: Row(
+          children: [
+            Image.asset(
+              iconAsset,
+              width: 35,
+              height: 35,
+              fit: BoxFit.contain,
+              errorBuilder: (e, s, t) =>
+                  Icon(fallbackIcon, color: const Color(0xFFEA2A33), size: 28),
             ),
-            child: Icon(icon, color: const Color(0xFFEB3F3F), size: 24),
-          ),
-          title: Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      color: const Color(0xFFE2E2E2),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.54),
+                      letterSpacing: -0.08,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: GoogleFonts.outfit(
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.6),
+            Switch(
+              value: value,
+              onChanged: available ? onChanged : null,
+              activeTrackColor: const Color(0xFFEA2A33),
+              activeThumbColor: Colors.white,
+              inactiveTrackColor: const Color(0xFF575555),
+              inactiveThumbColor: Colors.white,
+              trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
             ),
-          ),
-          activeTrackColor: const Color(0xFFEB3F3F),
-          activeThumbColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
+          ],
         ),
       ),
     );

@@ -160,6 +160,17 @@ class BlockchainService extends ChangeNotifier {
   EvmChain _activeChain = builtInChains[0];
   String _activeNetworkKeyOverride = ''; // non-empty only for Solana/Tron
   Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
+  // Tracks the active wallet's supported chain families. Imported private-key
+  // wallets only support a single family (e.g. EVM-only), so the network
+  // selector should hide families the wallet cannot use. Defaults to all
+  // families until explicitly set so behavior is unchanged at startup.
+  Set<ChainFamily> _activeWalletSupportedFamilies = {
+    ChainFamily.evm,
+    ChainFamily.solana,
+    ChainFamily.tron,
+  };
+  // Lower-cased active wallet address so listeners can detect wallet switches.
+  String _activeWalletAddress = '';
   final Map<int, List<CustomTokenDefinition>> _customTokens = {};
   List<Token> _walletTokens = [];
   final Map<String, _WalletTokensCacheEntry> _walletTokensCache = {};
@@ -213,14 +224,63 @@ class BlockchainService extends ChangeNotifier {
   ChainFamily get activeFamily => NetworkKey.familyOf(activeNetworkKey);
   Set<ChainFamily> get enabledFamilies => Set.unmodifiable(_enabledFamilies);
 
+  /// Lower-cased address of the wallet currently selected in storage.
+  /// Empty until [setActiveWalletContext] runs (e.g. on init or wallet switch).
+  String get activeWalletAddress => _activeWalletAddress;
+
+  /// Families the active wallet has actual addresses for. Listeners can use
+  /// this to hide selectors that the current wallet cannot service.
+  Set<ChainFamily> get activeWalletSupportedFamilies =>
+      Set.unmodifiable(_activeWalletSupportedFamilies);
+
+  /// Updates the active-wallet snapshot and notifies listeners. Callers
+  /// should invoke this after switching wallets so dependent UI (network
+  /// selector, settings, home screen) reacts immediately.
+  void setActiveWalletContext({
+    required String address,
+    required Set<ChainFamily> supportedFamilies,
+  }) {
+    final normalizedAddress = address.trim().toLowerCase();
+    final normalizedFamilies = supportedFamilies.isEmpty
+        ? <ChainFamily>{ChainFamily.evm}
+        : Set<ChainFamily>.of(supportedFamilies);
+    final addressChanged = normalizedAddress != _activeWalletAddress;
+    final familiesChanged = !_setEquals(
+      normalizedFamilies,
+      _activeWalletSupportedFamilies,
+    );
+    if (!addressChanged && !familiesChanged) {
+      return;
+    }
+    _activeWalletAddress = normalizedAddress;
+    _activeWalletSupportedFamilies = normalizedFamilies;
+    notifyListeners();
+  }
+
+  bool _setEquals<T>(Set<T> a, Set<T> b) {
+    if (a.length != b.length) return false;
+    for (final item in a) {
+      if (!b.contains(item)) return false;
+    }
+    return true;
+  }
+
+  /// Effective family filter for the network selector: only entries that are
+  /// both globally enabled AND supported by the active wallet are shown.
+  Set<ChainFamily> get _selectorFamilies => {
+    for (final family in _enabledFamilies)
+      if (_activeWalletSupportedFamilies.contains(family)) family,
+  };
+
   /// Ordered network entries for the selector, filtered by enabled families.
   /// Order: ETH(1), BNB(56), Base(8453), Solana, Tron, Polygon(137),
   ///        Arbitrum(42161), Optimism(10), then any other enabled EVM chains.
   List<NetworkEntry> get networkEntries {
     const priorityChainIds = [1, 56, 8453, 137, 42161, 10];
     final entries = <NetworkEntry>[];
+    final selectorFamilies = _selectorFamilies;
 
-    if (_enabledFamilies.contains(ChainFamily.evm)) {
+    if (selectorFamilies.contains(ChainFamily.evm)) {
       // Priority EVM chains first, in defined order.
       for (final id in priorityChainIds) {
         final chain = allChains.firstWhere(
@@ -233,15 +293,15 @@ class BlockchainService extends ChangeNotifier {
       // We insert them after Base by post-processing below.
     }
 
-    if (_enabledFamilies.contains(ChainFamily.solana)) {
+    if (selectorFamilies.contains(ChainFamily.solana)) {
       entries.add(SolanaNetworkEntry(SolanaCatalog.mainnet));
     }
 
-    if (_enabledFamilies.contains(ChainFamily.tron)) {
+    if (selectorFamilies.contains(ChainFamily.tron)) {
       entries.add(TronNetworkEntry(TronCatalog.mainnet));
     }
 
-    if (_enabledFamilies.contains(ChainFamily.evm)) {
+    if (selectorFamilies.contains(ChainFamily.evm)) {
       // Remaining enabled EVM chains not in priority list.
       for (final chain in allChains) {
         if (!priorityChainIds.contains(chain.chainId)) {
@@ -277,8 +337,22 @@ class BlockchainService extends ChangeNotifier {
     return entries;
   }
 
+  /// Returns the chain-ID key used to bucket custom token definitions.
+  /// Mirrors the sentinel logic in TokenManagementScreen and TokenVisibilityService:
+  /// EVM uses the real chainId; Solana = -501; Tron = -195.
+  int get _customTokenChainKey {
+    switch (activeFamily) {
+      case ChainFamily.solana:
+        return -501;
+      case ChainFamily.tron:
+        return -195;
+      case ChainFamily.evm:
+        return _activeChain.chainId;
+    }
+  }
+
   List<CustomTokenDefinition> get customTokensForActiveChain =>
-      List.unmodifiable(_customTokens[_activeChain.chainId] ?? []);
+      List.unmodifiable(_customTokens[_customTokenChainKey] ?? []);
 
   String get lastDiscoverySource => _lastDiscoverySource;
   bool get lastDiscoveryPartialFailure => _lastDiscoveryPartialFailure;
@@ -325,16 +399,20 @@ class BlockchainService extends ChangeNotifier {
   List<Token> getCachedWalletTokens(String walletAddress, {int? chainId}) {
     final effectiveChainId = chainId ?? _activeChain.chainId;
     final cacheKey = _walletTokenStateKey(effectiveChainId, walletAddress);
+    final now = DateTime.now();
     final state = _walletTokenStates[cacheKey];
-    if (state != null && state.tokens.isNotEmpty) {
+    final stateLastUpdatedAt = state?.lastUpdatedAt;
+    if (state != null &&
+        state.tokens.isNotEmpty &&
+        stateLastUpdatedAt != null &&
+        now.difference(stateLastUpdatedAt) < _walletTokensCacheTtl) {
       return List<Token>.from(state.tokens);
     }
     final cached = _walletTokensCache[cacheKey];
-    if (cached != null && cached.tokens.isNotEmpty) {
+    if (cached != null &&
+        cached.tokens.isNotEmpty &&
+        now.difference(cached.fetchedAt) < _walletTokensCacheTtl) {
       return List<Token>.from(cached.tokens);
-    }
-    if (_activeChain.chainId == effectiveChainId && _walletTokens.isNotEmpty) {
-      return List<Token>.from(_walletTokens);
     }
     return const [];
   }
@@ -1104,18 +1182,19 @@ class BlockchainService extends ChangeNotifier {
     final existingState = _walletTokenStates[cacheKey];
 
     final cached = _walletTokensCache[cacheKey];
-    if (!forceRefresh &&
+    final cachedIsFresh =
         cached != null &&
-        now.difference(cached.fetchedAt) < _walletTokensCacheTtl) {
+        now.difference(cached.fetchedAt) < _walletTokensCacheTtl;
+    if (!forceRefresh && cached != null && cachedIsFresh) {
       _setWalletTokenState(
         cacheKey,
         WalletTokenState(
           tokens: List<Token>.from(cached.tokens),
-          source: 'cache',
+          source: cached.source,
           isLoading: false,
-          isStale: false,
+          isStale: cached.isStale,
           lastUpdatedAt: cached.fetchedAt,
-          message: null,
+          message: cached.message,
         ),
         chainId: requestedChainId,
         notify: true,
@@ -1144,11 +1223,13 @@ class BlockchainService extends ChangeNotifier {
         tokens: List<Token>.from(
           existingState?.tokens ?? cached?.tokens ?? const [],
         ),
-        source: existingState?.source ?? (cached != null ? 'cache' : 'none'),
+        source: existingState?.source ?? cached?.source ?? 'none',
         isLoading: true,
-        isStale: existingState?.isStale ?? (cached != null),
+        isStale:
+            existingState?.isStale ??
+            (cached != null && (!cachedIsFresh || cached.isStale)),
         lastUpdatedAt: existingState?.lastUpdatedAt ?? cached?.fetchedAt,
-        message: existingState?.message,
+        message: existingState?.message ?? cached?.message,
       ),
       chainId: requestedChainId,
       notify: true,
@@ -1207,6 +1288,8 @@ class BlockchainService extends ChangeNotifier {
     _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
       tokens: List<Token>.from(updatedTokens),
       fetchedAt: now,
+      source: 'optimistic',
+      isStale: true,
     );
 
     final existingState = _walletTokenStates[cacheKey];
@@ -1386,6 +1469,9 @@ class BlockchainService extends ChangeNotifier {
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
         tokens: List<Token>.from(nextTokens),
         fetchedAt: fetchedAt,
+        source: discovered.source,
+        isStale: nextStale,
+        message: nextMessage,
       );
       _setWalletTokenState(
         cacheKey,
@@ -1416,6 +1502,11 @@ class BlockchainService extends ChangeNotifier {
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
         tokens: List<Token>.from(fallbackTokens),
         fetchedAt: fetchedAt,
+        source: 'fallback',
+        isStale: fallbackTokens.isNotEmpty,
+        message: fallbackTokens.isNotEmpty
+            ? 'Using cached tokens - backend temporarily unavailable.'
+            : null,
       );
       _setWalletTokenState(
         cacheKey,
@@ -1426,7 +1517,7 @@ class BlockchainService extends ChangeNotifier {
           isStale: fallbackTokens.isNotEmpty,
           lastUpdatedAt: fetchedAt,
           message: fallbackTokens.isNotEmpty
-              ? 'Using cached tokens — backend temporarily unavailable.'
+              ? 'Using cached tokens - backend temporarily unavailable.'
               : null,
         ),
         chainId: requestedChainId,
@@ -1582,6 +1673,9 @@ class BlockchainService extends ChangeNotifier {
     _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
       tokens: List<Token>.from(finalTokens),
       fetchedAt: fetchedAt,
+      source: 'fallback',
+      isStale: isStale,
+      message: fallbackMessage,
     );
     _setWalletTokenState(
       cacheKey,
@@ -1615,8 +1709,20 @@ class BlockchainService extends ChangeNotifier {
       final normalizedBase = base.endsWith('/')
           ? base.substring(0, base.length - 1)
           : base;
+
+      // Use the network-key-based endpoint for non-EVM families so Solana
+      // (SPL tokens) and Tron (TRC-20 tokens) can also be searched remotely.
+      final String tokenSearchPath;
+      if (activeFamily != ChainFamily.evm) {
+        final encoded = Uri.encodeComponent(activeNetworkKey);
+        tokenSearchPath = '$normalizedBase/networks/$encoded/token-search';
+      } else {
+        tokenSearchPath =
+            '$normalizedBase/${_activeChain.chainId}/token-search';
+      }
+
       final url = Uri.parse(
-        '$normalizedBase/${_activeChain.chainId}/token-search',
+        tokenSearchPath,
       ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
 
       try {
@@ -1665,9 +1771,23 @@ class BlockchainService extends ChangeNotifier {
                   ?.trim(),
               isCertified:
                   entry['isCertified'] == true || entry['isNative'] == true,
+              // PATCH: Preserve backend price source for DEX badges.
+              priceSource:
+                  _asTrimmedString(entry['priceSource']) ??
+                  _asTrimmedString(entry['price_source']) ??
+                  'Unknown',
+              // PATCH: Preserve backend DEX liquidity estimate when supplied.
+              liquidityUsd: _nullableDouble(
+                entry['liquidityUsd'] ?? entry['liquidity_usd'],
+              ),
+              // PATCH: Preserve backend DEX-only marker when supplied.
+              isDexOnly:
+                  entry['isDexOnly'] == true || entry['is_dex_only'] == true,
               networkKey:
                   _asTrimmedString(entry['networkKey']) ??
-                  NetworkKey.evm(_activeChain.chainId),
+                  (activeFamily == ChainFamily.evm
+                      ? NetworkKey.evm(_activeChain.chainId)
+                      : activeNetworkKey),
               tokenStandard: TokenStandardCodec.fromWireValue(
                 _asTrimmedString(entry['tokenStandard']),
               ),
@@ -1909,6 +2029,17 @@ class BlockchainService extends ChangeNotifier {
           imageUrl: _asTrimmedString(e['imageUrl']),
           coinGeckoId: _asTrimmedString(e['coinGeckoId']),
           isCertified: e['isCertified'] == true,
+          // PATCH: Preserve backend price source for DEX badges.
+          priceSource:
+              _asTrimmedString(e['priceSource']) ??
+              _asTrimmedString(e['price_source']) ??
+              'Unknown',
+          // PATCH: Preserve backend DEX liquidity estimate when supplied.
+          liquidityUsd: _nullableDouble(
+            e['liquidityUsd'] ?? e['liquidity_usd'],
+          ),
+          // PATCH: Preserve backend DEX-only marker when supplied.
+          isDexOnly: e['isDexOnly'] == true || e['is_dex_only'] == true,
           networkKey: _asTrimmedString(e['networkKey']) ?? payloadNetworkKey,
           tokenStandard: tokenStandard,
         );
@@ -2110,6 +2241,9 @@ class BlockchainService extends ChangeNotifier {
       updatedCacheEntries[entry.key] = _WalletTokensCacheEntry(
         tokens: nextTokens,
         fetchedAt: now,
+        source: entry.value.source,
+        isStale: entry.value.isStale,
+        message: entry.value.message,
       );
     }
 
@@ -2459,10 +2593,16 @@ class BlockchainService extends ChangeNotifier {
 class _WalletTokensCacheEntry {
   final List<Token> tokens;
   final DateTime fetchedAt;
+  final String source;
+  final bool isStale;
+  final String? message;
 
   const _WalletTokensCacheEntry({
     required this.tokens,
     required this.fetchedAt,
+    this.source = 'cache',
+    this.isStale = false,
+    this.message,
   });
 }
 
