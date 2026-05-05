@@ -130,9 +130,11 @@ class HomeSnapshotService {
       if (raw == null || raw.isEmpty) return null;
 
       final decoded = jsonDecode(raw);
-      // Always return the snapshot regardless of staleness. Callers check
-      // snapshot.isStale (a computed getter) to decide whether to show a
-      // refresh indicator while fresh data loads in the background.
+      // Always return the snapshot regardless of staleness so the UI can
+      // render last-known balances instantly after unlock. Callers consult
+      // [HomePortfolioSnapshot.isStale] (a computed getter based on the
+      // snapshot's [timestamp]) to decide whether to flag the data as
+      // cached while fresh data loads in the background.
       return HomePortfolioSnapshot.fromJson(decoded);
     } catch (e) {
       debugPrint('Error loading home snapshot: $e');

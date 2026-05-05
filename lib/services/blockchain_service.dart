@@ -1925,6 +1925,18 @@ class BlockchainService extends ChangeNotifier {
             _backendDiscoveryBackoffUntil.remove(base);
             breaker.reset(_circuitBreakerInitialBackoff);
             final result = _parseBackendDiscoveredTokens(response.body);
+            // If the new /networks/{networkKey}/... endpoint is not yet
+            // recognised by the backend it may reply 200 with an empty token
+            // list. Fall through to the legacy /{chainId}/... endpoint on EVM
+            // so users don't suddenly see only the native token.
+            final isEmptyOnEvm =
+                result != null &&
+                result.tokens.isEmpty &&
+                !isLastUrl &&
+                NetworkKey.familyOf(resolvedNetworkKey) == ChainFamily.evm;
+            if (isEmptyOnEvm) {
+              continue;
+            }
             _metrics.recordDiscoveryCall(
               success: true,
               usedFallback: result?.source != 'alchemy',

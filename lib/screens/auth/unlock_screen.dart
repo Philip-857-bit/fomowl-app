@@ -118,8 +118,13 @@ class _UnlockScreenState extends State<UnlockScreen> {
   }
 
   Future<void> _authenticateWithBiometric() async {
+    if (_isLockedOut) return;
     final l = AppLocalizations.of(context);
     try {
+      // Ensure any stale in-flight auth session is dismissed before starting
+      // a new one — otherwise Android's BiometricPrompt can silently reject
+      // the second invocation with `auth_in_progress`.
+      await _biometric.stopAuthentication();
       final authenticated = await _biometric.authenticate(
         localizedReason: l.unlockWalletReason,
       );
@@ -423,6 +428,11 @@ class _UnlockScreenState extends State<UnlockScreen> {
   }) {
     return GestureDetector(
       onTap: onTap,
+      // Without this the empty space inside the container doesn't register
+      // taps (the container has no fill), so only direct hits on the small
+      // icon/glyph trigger the callback. This was particularly noticeable on
+      // the fingerprint key where the hit target is just ~26px.
+      behavior: HitTestBehavior.opaque,
       child: Container(
         height: 60,
         margin: const EdgeInsets.all(4),

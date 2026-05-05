@@ -406,7 +406,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final snapshot = _mergePortfolioSnapshotWithLiveChain(
-        await _portfolioApiService.fetchPortfolio(walletAddress, sync: sync),
+        await _portfolioApiService
+            .fetchPortfolio(walletAddress, sync: sync)
+            .timeout(const Duration(seconds: 45)),
       );
       if (!mounted) {
         return;
@@ -704,7 +706,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (snapshot != null && mounted) {
           setState(() {
-            _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
+            _replaceDisplayedTokens(
+              snapshot.tokens,
+              isUsingCachedData: snapshot.isStale,
+            );
             _walletName = snapshot.walletName;
           });
           blockchain.setLivePriceTrackingForTokens(
@@ -935,7 +940,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final realTokens = await blockchain.fetchWalletTokens(address);
+      final realTokens = await blockchain
+          .fetchWalletTokens(address)
+          .timeout(const Duration(seconds: 45));
 
       if (mounted) {
         setState(() {
@@ -1051,7 +1058,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final snapshot = await _snapshotService.loadSnapshot(chainId, address);
         if (snapshot != null && mounted) {
           setState(() {
-            _replaceDisplayedTokens(snapshot.tokens, isUsingCachedData: true);
+            _replaceDisplayedTokens(
+              snapshot.tokens,
+              isUsingCachedData: snapshot.isStale,
+            );
           });
           _blockchain?.setLivePriceTrackingForTokens(
             _tokens,

@@ -141,7 +141,7 @@ flutter:
 
 # Flutter Native Splash Configuration
 flutter_native_splash:
-  color: "#131313"
+  color: "#000000"
   android: true
   ios: true
   web: false
@@ -149,7 +149,7 @@ flutter_native_splash:
   
   # Android 12+ specific
   android_12:
-    color: "#131313"
+    color: "#000000"
 
 
 # Flutter Launcher Icons Configuration
