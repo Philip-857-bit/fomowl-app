@@ -248,9 +248,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Token> _displayableTokens(List<Token> tokens) {
+    final userAdded = <String>{
+      for (final c in (_blockchain?.customTokensForActiveChain ?? const []))
+        c.address.trim().toLowerCase(),
+    };
     final visible = _portfolioRepository.prepareVisibleTokens(
       tokens,
       _hiddenTokenKeys,
+      userAddedAddresses: userAdded,
     );
     final blockchain = _blockchain;
     if (blockchain == null) {

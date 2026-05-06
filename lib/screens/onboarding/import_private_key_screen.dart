@@ -59,22 +59,22 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
       return;
     }
 
-    // Validate private key format
-    String cleanKey = privateKey;
-    if (cleanKey.startsWith('0x')) {
-      cleanKey = cleanKey.substring(2);
-    }
-
-    if (cleanKey.length != 64) {
-      _showError(l.invalidPrivateKeyLength);
-      return;
-    }
-
-    // Validate hex characters
-    final hexRegex = RegExp(r'^[0-9a-fA-F]+$');
-    if (!hexRegex.hasMatch(cleanKey)) {
-      _showError(l.invalidPrivateKeyCharacters);
-      return;
+    // EVM: strict 64-hex-char check (0x prefix optional).
+    // Solana / Tron: accept any non-empty string; the wallet service validates.
+    if (_selectedChain == ChainFamily.evm) {
+      String cleanKey = privateKey;
+      if (cleanKey.startsWith('0x')) {
+        cleanKey = cleanKey.substring(2);
+      }
+      if (cleanKey.length != 64) {
+        _showError(l.invalidPrivateKeyLength);
+        return;
+      }
+      final hexRegex = RegExp(r'^[0-9a-fA-F]+$');
+      if (!hexRegex.hasMatch(cleanKey)) {
+        _showError(l.invalidPrivateKeyCharacters);
+        return;
+      }
     }
 
     setState(() {
@@ -133,17 +133,6 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
           ),
         );
       }
-    }
-  }
-
-  String _chainHint() {
-    switch (_selectedChain) {
-      case ChainFamily.solana:
-        return 'Enter your 32-byte Ed25519 Solana private key as 64 hex characters.';
-      case ChainFamily.tron:
-        return 'Enter your 32-byte secp256k1 Tron private key as 64 hex characters.';
-      case ChainFamily.evm:
-        return 'Enter your 32-byte EVM private key as 64 hex characters (with or without 0x prefix).';
     }
   }
 
@@ -354,21 +343,6 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                         ),
                       ),
                     ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Helper text
-                Center(
-                  child: Text(
-                    _chainHint(),
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.6),
-                    ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
 

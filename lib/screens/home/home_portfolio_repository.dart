@@ -12,8 +12,13 @@ class HomePortfolioRepository {
 
   List<Token> prepareVisibleTokens(
     List<Token> tokens,
-    Set<String> hiddenTokenKeys,
-  ) => _prepareVisibleTokens(tokens, hiddenTokenKeys);
+    Set<String> hiddenTokenKeys, {
+    Set<String> userAddedAddresses = const {},
+  }) => _prepareVisibleTokens(
+    tokens,
+    hiddenTokenKeys,
+    userAddedAddresses: userAddedAddresses,
+  );
 
   Future<HomePortfolioData> filterSections({
     required List<HomePortfolioSection> sections,
@@ -97,17 +102,26 @@ class HomePortfolioRepository {
 
   List<Token> _prepareVisibleTokens(
     List<Token> tokens,
-    Set<String> hiddenTokenKeys,
-  ) {
+    Set<String> hiddenTokenKeys, {
+    Set<String> userAddedAddresses = const {},
+  }) {
     final deduped = <String, Token>{};
     for (final token in tokens) {
       if (hiddenTokenKeys.contains(TokenVisibilityUtils.identifier(token))) {
         continue;
       }
-      if (token.balance <= 0 && token.totalValueUsd <= 0) {
+      final isNativeToken =
+          token.contractAddress == null ||
+          token.contractAddress!.trim().isEmpty;
+      final addr = token.contractAddress?.trim().toLowerCase() ?? '';
+      final isUserAdded = addr.isNotEmpty && userAddedAddresses.contains(addr);
+      if (!isNativeToken &&
+          !isUserAdded &&
+          token.balance <= 0 &&
+          token.totalValueUsd <= 0) {
         continue;
       }
-      if (!token.isCertified) {
+      if (!isNativeToken && !isUserAdded && !token.isCertified) {
         final totalValueUsd = token.totalValueUsdDecimal;
         final unitPriceUsd = token.unitPriceUsdDecimal;
         if (unitPriceUsd <= Decimal.zero ||

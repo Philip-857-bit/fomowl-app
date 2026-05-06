@@ -65,7 +65,8 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
   }
 
   bool get _isContractQuery {
-    return TokenManagementQueryHelper.isContractAddress(_query);
+    final family = context.read<BlockchainService>().activeFamily;
+    return TokenManagementQueryHelper.isContractAddress(_query, family: family);
   }
 
   bool get _hasVisibleContractMatch {

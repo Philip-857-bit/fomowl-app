@@ -61,7 +61,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     }
     _blockchain?.removeListener(_handleBlockchainChanged);
     _blockchain = blockchain;
-    _observedChainId = blockchain.activeChain.chainId;
+    _observedChainId = blockchain.activeTokenStorageChainId;
     _blockchain?.addListener(_handleBlockchainChanged);
   }
 
@@ -70,7 +70,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     if (!mounted || blockchain == null) {
       return;
     }
-    final nextChainId = blockchain.activeChain.chainId;
+    final nextChainId = blockchain.activeTokenStorageChainId;
     if (_observedChainId != nextChainId) {
       _observedChainId = nextChainId;
       unawaited(_loadTokens());
@@ -99,7 +99,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   Future<void> _loadTokens() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     _attachBlockchainListener();
-    final chainId = blockchain.activeChain.chainId;
+    final chainId = blockchain.activeTokenStorageChainId;
     setState(() => _isLoading = true);
     try {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(

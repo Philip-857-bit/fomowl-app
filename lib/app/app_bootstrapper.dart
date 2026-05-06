@@ -26,7 +26,6 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -39,13 +38,6 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
     _scaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.85, curve: Curves.easeOut),
-      ),
     );
 
     _initializeApp();
@@ -91,9 +83,6 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
   @override
   Widget build(BuildContext context) {
-    return SplashScreenBody(
-      fadeAnimation: _fadeAnimation,
-      scaleAnimation: _scaleAnimation,
-    );
+    return SplashScreenBody(scaleAnimation: _scaleAnimation);
   }
 }

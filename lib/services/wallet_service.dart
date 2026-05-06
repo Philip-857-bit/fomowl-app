@@ -169,34 +169,82 @@ class WalletService {
     }
   }
 
-  /// Import wallet from a 32-byte Ed25519 Solana private key (64 hex chars).
+  /// Import wallet from a Solana private key.
+  /// Accepts multiple formats:
+  ///   • 64 hex chars  — 32-byte raw private key
+  ///   • 128 hex chars — 64-byte keypair (first 32 bytes used)
+  ///   • JSON array    — `[b0,b1,...,b63]` or `[b0,...,b31]`
+  ///   • Base58 string — 32-byte (44 chars) or 64-byte keypair (≈88 chars)
   Future<Map<String, String>> importWalletFromSolanaKey(
     String privateKey, {
     String? walletName,
   }) async {
     try {
       privateKey = privateKey.trim();
-      if (privateKey.startsWith('0x')) {
-        privateKey = privateKey.substring(2);
+
+      // Normalise to 64-char hex (32-byte private key).
+      String hexKey;
+
+      final jsonMatch = RegExp(r'^\[[\d,\s]+\]$').hasMatch(privateKey);
+      if (jsonMatch) {
+        // JSON byte array: [b0, b1, ..., b31] or [b0, ..., b63].
+        final bytes = (jsonDecode(privateKey) as List)
+            .map<int>((v) => (v as int) & 0xFF)
+            .toList();
+        if (bytes.length == 64) {
+          hexKey = bytes
+              .sublist(0, 32)
+              .map((b) => b.toRadixString(16).padLeft(2, '0'))
+              .join();
+        } else if (bytes.length == 32) {
+          hexKey = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        } else {
+          throw Exception(
+            'Invalid Solana key: JSON array must have 32 or 64 bytes (got ${bytes.length})',
+          );
+        }
+      } else if (privateKey.startsWith('0x')) {
+        hexKey = privateKey.substring(2);
+        if (hexKey.length == 128) hexKey = hexKey.substring(0, 64);
+      } else if (RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
+        // Pure hex string.
+        if (privateKey.length == 64) {
+          hexKey = privateKey;
+        } else if (privateKey.length == 128) {
+          hexKey = privateKey.substring(0, 64);
+        } else {
+          throw Exception(
+            'Invalid Solana hex key length (expected 64 or 128 chars, got ${privateKey.length})',
+          );
+        }
+      } else {
+        // Treat as base58 (Phantom/Solflare export).
+        final bytes = _decodeBase58ToBytes(privateKey);
+        if (bytes.length == 64) {
+          hexKey = bytes
+              .sublist(0, 32)
+              .map((b) => b.toRadixString(16).padLeft(2, '0'))
+              .join();
+        } else if (bytes.length == 32) {
+          hexKey = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+        } else {
+          throw Exception(
+            'Invalid Solana base58 key: expected 32 or 64 bytes (decoded ${bytes.length})',
+          );
+        }
       }
-      if (privateKey.length != 64) {
-        throw Exception(
-          'Invalid Solana private key length (expected 32 bytes / 64 hex chars)',
-        );
-      }
-      if (!RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
-        throw Exception(
-          'Invalid Solana private key format: must be hexadecimal',
-        );
+
+      if (hexKey.length != 64 || !RegExp(r'^[0-9a-fA-F]+$').hasMatch(hexKey)) {
+        throw Exception('Could not normalise Solana private key to 32 bytes');
       }
 
       final address = await NativeCrypto.deriveSolanaAddressFromPrivateKey(
-        privateKey,
+        hexKey,
       );
 
       await _storage.saveWallet(
         address: address,
-        privateKey: privateKey,
+        privateKey: hexKey,
         walletName: walletName ?? 'Solana Wallet',
         origin: WalletOrigin.imported,
         addressesByFamily: {ChainFamily.solana: address},
@@ -204,10 +252,10 @@ class WalletService {
       await _storage.saveFamilyPrivateKey(
         family: ChainFamily.solana,
         address: address,
-        privateKey: privateKey,
+        privateKey: hexKey,
       );
 
-      return {'address': address, 'privateKey': privateKey};
+      return {'address': address, 'privateKey': hexKey};
     } catch (e) {
       throw Exception('Failed to import Solana wallet: ${e.toString()}');
     }
@@ -787,6 +835,10 @@ class WalletService {
     );
     return signature.startsWith('0x') ? signature : '0x$signature';
   }
+
+  /// Decode any base58-encoded byte sequence to raw bytes.
+  static Uint8List _decodeBase58ToBytes(String input) =>
+      decodeBase58Signature(input);
 
   /// Decode a base58-encoded Ed25519 signature (64 bytes) to raw bytes.
   /// Uses an O(n) lookup-table approach instead of BigInt arithmetic.

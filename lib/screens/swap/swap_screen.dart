@@ -713,11 +713,44 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   List<Token> _visibleTokens(List<Token> tokens) {
-    final chainId = Provider.of<BlockchainService>(
-      context,
-      listen: false,
-    ).activeTokenStorageChainId;
-    return _visibleTokensForChain(tokens, chainId);
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final chainId = blockchain.activeTokenStorageChainId;
+    final base = _visibleTokensForChain(tokens, chainId);
+
+    // Merge custom tokens added by the user that may not yet appear in the live
+    // wallet-tokens list (e.g. zero-balance tokens the backend omits).
+    final existing = {
+      for (final t in base)
+        (t.contractAddress?.trim().toLowerCase() ?? '').isNotEmpty
+            ? t.contractAddress!.trim().toLowerCase()
+            : t.symbol.toLowerCase(),
+    };
+
+    final extra = <Token>[];
+    for (final custom in blockchain.customTokensForActiveChain) {
+      final addr = custom.address.trim().toLowerCase();
+      if (addr.isNotEmpty && existing.contains(addr)) continue;
+      extra.add(
+        Token(
+          symbol: custom.symbol,
+          name: custom.name,
+          contractAddress: custom.address,
+          balance: 0,
+          valueUsd: 0,
+          priceUsd: 0,
+          changePercent24h: 0,
+          decimals: custom.decimals,
+          imageUrl: custom.imageUrl,
+          coinGeckoId: custom.coinGeckoId,
+          isCertified: false,
+          networkKey: custom.networkKey,
+          tokenStandard: custom.tokenStandard,
+        ),
+      );
+    }
+
+    if (extra.isEmpty) return base;
+    return [...base, ...extra];
   }
 
   List<Token> _visibleTokensForChain(List<Token> tokens, int chainId) {
@@ -2968,10 +3001,15 @@ class _SwapScreenState extends State<SwapScreen> {
       ChainFamily.tron => AppColors.primaryAccent,
       ChainFamily.evm => AppColors.accentRed,
     };
+    final logoUrl = blockchain.activeNetworkLogoUrl;
+    // Show 'Change' only when the wallet supports more than one chain family
+    // (i.e. a mnemonic wallet). Pure Solana / Tron PK wallets have a single
+    // family and have nothing to switch to.
+    final canSwitch = blockchain.enabledFamilies.length > 1;
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: _showNetworkSelector,
+        onTap: canSwitch ? _showNetworkSelector : null,
         borderRadius: BorderRadius.circular(12),
         child: Ink(
           padding: const EdgeInsets.all(16),
@@ -2989,7 +3027,17 @@ class _SwapScreenState extends State<SwapScreen> {
                   color: networkColor.withAlpha(40),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.language, color: networkColor, size: 16),
+                clipBehavior: Clip.antiAlias,
+                child: logoUrl != null && logoUrl.isNotEmpty
+                    ? Image.network(
+                        logoUrl,
+                        width: 32,
+                        height: 32,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, err, stack) =>
+                            Icon(Icons.language, color: networkColor, size: 16),
+                      )
+                    : Icon(Icons.language, color: networkColor, size: 16),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3019,16 +3067,21 @@ class _SwapScreenState extends State<SwapScreen> {
                   ],
                 ),
               ),
-              Text(
-                'Switch to EVM',
-                style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 10,
-                color: AppColors.textSecondary,
-              ),
+              if (canSwitch) ...[
+                Text(
+                  'Change',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 10,
+                  color: AppColors.textSecondary,
+                ),
+              ],
             ],
           ),
         ),
@@ -3044,17 +3097,19 @@ class _SwapScreenState extends State<SwapScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => NetworkSelectorSheet.fromEvmChains(
-        chains: blockchain.allChains,
-        activeChainId: blockchain.activeChain.chainId,
-        onSelect: (chain) {
-          blockchain.setActiveChain(chain);
+      builder: (ctx) => NetworkSelectorSheet(
+        entries: blockchain.networkEntries,
+        activeNetworkKey: blockchain.activeNetworkKey,
+        onSelect: (entry) {
+          blockchain.setActiveNetworkKey(entry.networkKey);
           Navigator.pop(ctx);
         },
-        onAddCustomNetwork: () async {
-          Navigator.pop(ctx);
-          await Navigator.pushNamed(context, '/add-network');
-        },
+        onAddCustomNetwork: blockchain.enabledFamilies.contains(ChainFamily.evm)
+            ? () async {
+                Navigator.pop(ctx);
+                await Navigator.pushNamed(context, '/add-network');
+              }
+            : null,
       ),
     );
   }

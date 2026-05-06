@@ -473,8 +473,13 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
   Future<void> _importTokenFromContract() async {
     final l = AppLocalizations.of(context);
-    if (!TokenManagementQueryHelper.isContractAddress(_query)) return;
     final blockchain = context.read<BlockchainService>();
+    if (!TokenManagementQueryHelper.isContractAddress(
+      _query,
+      family: blockchain.activeFamily,
+    )) {
+      return;
+    }
     if (_tokenExistsForAddress(_query)) {
       ToastUtils.showInfo(l.tokenAlreadyAvailable);
       return;
@@ -488,7 +493,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         return;
       }
       final added = await blockchain.addCustomToken(
-        chainId: blockchain.activeChain.chainId,
+        chainId: _effectiveChainId(blockchain),
         token: token,
       );
       if (!added) {
@@ -520,15 +525,18 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final l = AppLocalizations.of(context);
     if (_hasCheckedClipboard || !mounted) return;
     _hasCheckedClipboard = true;
-    // Contract auto-detection only applies to EVM (0x… addresses).
     final blockchain = context.read<BlockchainService>();
-    if (blockchain.activeFamily != ChainFamily.evm) return;
 
     try {
       final data = await Clipboard.getData('text/plain');
       if (!mounted) return;
       final clipboardText = data?.text?.trim() ?? '';
-      if (!TokenManagementQueryHelper.isContractAddress(clipboardText)) return;
+      if (!TokenManagementQueryHelper.isContractAddress(
+        clipboardText,
+        family: blockchain.activeFamily,
+      )) {
+        return;
+      }
       if (_tokenExistsForAddress(clipboardText)) return;
 
       final detected = await blockchain.detectTokenByContract(clipboardText);
@@ -623,7 +631,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
       if (shouldAdd != true || !mounted) return;
       final added = await blockchain.addCustomToken(
-        chainId: blockchain.activeChain.chainId,
+        chainId: _effectiveChainId(blockchain),
         token: detected,
       );
       if (!added) {
@@ -669,8 +677,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
           imageUrl: def.imageUrl,
           coinGeckoId: def.coinGeckoId,
           isCertified: false,
-          networkKey:
-              def.networkKey ?? NetworkKey.evm(blockchain.activeChain.chainId),
+          networkKey: def.networkKey ?? blockchain.activeNetworkKey,
           tokenStandard: def.tokenStandard,
         ),
       );
@@ -684,7 +691,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final walletTokens = _walletTokensWithCustom(blockchain);
 
     final query = _query.trim().toLowerCase();
-    final isContract = TokenManagementQueryHelper.isContractAddress(_query);
+    final isContract = TokenManagementQueryHelper.isContractAddress(
+      _query,
+      family: blockchain.activeFamily,
+    );
     if (isContract) return walletTokens;
 
     // Determine source list
@@ -727,6 +737,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final blockchain = context.watch<BlockchainService>();
     final canImportByContract = TokenManagementQueryHelper.isContractAddress(
       _query,
+      family: blockchain.activeFamily,
     );
     final displayTokens = _buildDisplayList();
     final query = _query.trim().toLowerCase();

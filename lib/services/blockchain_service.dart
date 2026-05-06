@@ -1028,8 +1028,13 @@ class BlockchainService extends ChangeNotifier {
     String contractAddress,
   ) async {
     final normalized = contractAddress.trim();
-    final addressRegex = RegExp(r'^0x[a-fA-F0-9]{40}$');
-    if (!addressRegex.hasMatch(normalized)) return null;
+    // EVM addresses must be 0x-prefixed hex. For Solana (base58 mint) and
+    // Tron (T-prefixed base58) we skip this guard and let searchTokensFromBackend
+    // route to the correct chain endpoint via activeNetworkKey.
+    if (activeFamily == ChainFamily.evm) {
+      final addressRegex = RegExp(r'^0x[a-fA-F0-9]{40}$');
+      if (!addressRegex.hasMatch(normalized)) return null;
+    }
 
     final backendSearchResults = await searchTokensFromBackend(
       normalized,
@@ -1059,6 +1064,9 @@ class BlockchainService extends ChangeNotifier {
     if (backendDetails != null) {
       return backendDetails;
     }
+
+    // On-chain ABI calls only work for EVM.
+    if (activeFamily != ChainFamily.evm) return null;
 
     final symbol = await _ethCallString(normalized, '0x95d89b41');
     final name = await _ethCallString(normalized, '0x06fdde03');
@@ -1876,7 +1884,7 @@ class BlockchainService extends ChangeNotifier {
 
   List<Token> _localTokenSearchFallback(String query, int limit) {
     final normalized = query.toLowerCase();
-    final customTokens = (_customTokens[_activeChain.chainId] ?? const [])
+    final customTokens = (_customTokens[_customTokenChainKey] ?? const [])
         .map(
           (token) => Token(
             symbol: token.symbol,
