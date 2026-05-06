@@ -904,16 +904,23 @@ class WalletService {
       invalidDigit,
       invalidDigit, // 56-63  '8','9'
       invalidDigit, 9, 10, 11, 12, 13, 14, 15, // 64-71  'A'-'G'
-      16, 17, 18, 19, 20, 21, invalidDigit, 22, // 72-79  'H'-'N' (no 'I')
-      23, 24, 25, 26, 27, 28, 29, 30, // 80-87  'P'-'W' (no 'O')
+      16,
+      invalidDigit,
+      17,
+      18,
+      19,
+      20,
+      21,
+      invalidDigit, // 72-79  'H'-'O' (no 'I','O')
+      22, 23, 24, 25, 26, 27, 28, 29, // 80-87  'P'-'W'
+      30,
       31,
       32,
       invalidDigit,
       invalidDigit,
       invalidDigit,
       invalidDigit,
-      invalidDigit,
-      invalidDigit, // 88-95  'X','Y','Z'
+      invalidDigit, // 88-96  'X','Y','Z','['...
       invalidDigit, 33, 34, 35, 36, 37, 38, 39, // 96-103 'a'-'g'
       40, 41, 42, 43, invalidDigit, 44, 45, 46, // 104-111 'h'-'o' (no 'l')
       47, 48, 49, 50, 51, 52, 53, 54, // 112-119 'p'-'w'
