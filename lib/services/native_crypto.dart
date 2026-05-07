@@ -106,7 +106,7 @@ class NativeCrypto {
   }
 
   /// Derive a Solana Ed25519 private key seed at m/44'/501'/{index}'/0'.
-  static Future<String> deriveSolanaPrivateKeyFromSeed(
+  static Future<Uint8List> deriveSolanaPrivateKeyFromSeed(
     Uint8List seed,
     int derivationIndex,
   ) async {
@@ -171,14 +171,13 @@ class NativeCrypto {
     }
   }
 
-  /// Derive a Solana base58 public address from a 32-byte Ed25519 private key
-  /// (provided as 64 hex characters, no 0x prefix).
+  /// Derive a Solana base58 public address from a 32-byte Ed25519 private key.
   static Future<String> deriveSolanaAddressFromPrivateKey(
-    String privateKeyHex,
+    Uint8List privateKeyBytes,
   ) async {
     try {
       return await rust_bip32.deriveSolanaAddressFromPrivateKey(
-        privateKeyHex: privateKeyHex,
+        privateKeyBytes: privateKeyBytes.toList(),
       );
     } catch (e) {
       debugPrint(
@@ -198,7 +197,7 @@ class NativeCrypto {
   ) async {
     try {
       return await rust_bip32.normalizeSolanaPrivateKey(
-        privateKeyBytes: privateKeyBytes,
+        privateKeyBytes: privateKeyBytes.toList(),
       );
     } catch (e) {
       debugPrint('[NativeCrypto] normalizeSolanaPrivateKey Rust error: $e');
@@ -267,12 +266,12 @@ class NativeCrypto {
   /// Sign a Solana transaction/message payload with a 32-byte Ed25519 private
   /// key seed. Returns a base58-encoded 64-byte signature.
   static Future<String> signSolanaMessage({
-    required String privateKeyHex,
+    required Uint8List privateKeyBytes,
     required Uint8List message,
   }) async {
     try {
       return await rust_bip32.signSolanaMessage(
-        privateKeyHex: privateKeyHex,
+        privateKeyBytes: privateKeyBytes.toList(),
         message: message.toList(),
       );
     } catch (e) {

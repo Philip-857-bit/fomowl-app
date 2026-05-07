@@ -6,6 +6,8 @@ import 'package:web3dart/web3dart.dart';
 import 'package:hex/hex.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'http_client_service.dart';
+import 'package:hex/hex.dart' as pkg_hex;
+
 import '../config/app_environment.dart';
 import '../models/chain.dart';
 import '../models/wallet_account.dart';
@@ -204,7 +206,7 @@ class WalletService {
       final keyMaterial = await NativeCrypto.normalizeSolanaPrivateKey(
         Uint8List.fromList(keyBytes),
       );
-      final hexKey = hex.encode(keyMaterial.privateKeyBytes);
+      final hexKey = pkg_hex.HEX.encode(keyMaterial.privateKeyBytes);
       final address = keyMaterial.address;
 
       await _storage.saveWallet(
@@ -618,7 +620,7 @@ class WalletService {
     if (amountLamports > maxU64) {
       throw Exception('amountLamports exceeds maximum u64 value');
     }
-    final privateKeyHex = await _getSolanaPrivateKey(fromAddress);
+    final privateKeyBytes = await _getSolanaPrivateKey(fromAddress);
 
     // 1. Ask the backend to build the serialized unsigned message.
     final prepareUri = AppEnvironment.blockchain(
@@ -653,7 +655,7 @@ class WalletService {
     // 2. Sign the message bytes with the Ed25519 key via Rust FFI.
     //    signSolanaMessage returns a base58-encoded 64-byte signature.
     final signatureBase58 = await NativeCrypto.signSolanaMessage(
-      privateKeyHex: privateKeyHex,
+      privateKeyBytes: privateKeyBytes,
       message: messageBytes,
     );
     final sigBytes = decodeBase58Signature(signatureBase58);
@@ -699,9 +701,9 @@ class WalletService {
     String address,
     Uint8List messageBytes,
   ) async {
-    final privateKeyHex = await _getSolanaPrivateKey(address);
+    final privateKeyBytes = await _getSolanaPrivateKey(address);
     return NativeCrypto.signSolanaMessage(
-      privateKeyHex: privateKeyHex,
+      privateKeyBytes: privateKeyBytes,
       message: messageBytes,
     );
   }
@@ -712,9 +714,9 @@ class WalletService {
     String address,
     Uint8List messageBytes,
   ) async {
-    final privateKeyHex = await _getSolanaPrivateKey(address);
+    final privateKeyBytes = await _getSolanaPrivateKey(address);
     final signatureBase58 = await NativeCrypto.signSolanaMessage(
-      privateKeyHex: privateKeyHex,
+      privateKeyBytes: privateKeyBytes,
       message: messageBytes,
     );
     final sigBytes = decodeBase58Signature(signatureBase58);
@@ -1100,14 +1102,16 @@ class WalletService {
     return NativeCrypto.mnemonicToSeed(mnemonic);
   }
 
-  /// Returns the Ed25519 private key hex for the given Solana [address].
+  /// Returns the Ed25519 private key bytes for the given Solana [address].
   /// Checks for a directly-imported key first; falls back to mnemonic derivation.
-  Future<String> _getSolanaPrivateKey(String address) async {
+  Future<Uint8List> _getSolanaPrivateKey(String address) async {
     final imported = await _storage.getFamilyPrivateKey(
       ChainFamily.solana,
       address,
     );
-    if (imported != null && imported.isNotEmpty) return imported;
+    if (imported != null && imported.isNotEmpty) {
+      return Uint8List.fromList(pkg_hex.HEX.decode(imported));
+    }
     final seed = await _getSeedBytes();
     final account = await getActiveWalletAccount();
     final derivationIndex = account?.derivationIndex ?? 0;

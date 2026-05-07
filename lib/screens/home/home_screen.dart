@@ -43,8 +43,6 @@ import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
 import '../wallet/widgets/nft_detail_sheet.dart';
-import '../../services/blockchain/solana_catalog.dart';
-import '../../services/blockchain/tron_catalog.dart';
 import '../../services/home_snapshot_service.dart';
 import '../../services/app_release_checker.dart';
 import 'widgets/whats_new_sheet.dart';

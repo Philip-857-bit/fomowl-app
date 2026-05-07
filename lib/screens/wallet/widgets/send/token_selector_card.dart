@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../../../models/chain.dart';
 import '../../../../models/token.dart';
 import '../../../../services/blockchain_service.dart';
 import '../../../../widgets/token_icon.dart';
