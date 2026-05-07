@@ -79,6 +79,11 @@ class StorageService {
     );
 
     if (mnemonic != null) {
+      await _secureStore.write(
+        key: _walletMnemonicKey(address),
+        value: mnemonic,
+      );
+      // Keep global key for legacy single-wallet access
       await _secureStore.write(key: _keyMnemonic, value: mnemonic);
     }
 
@@ -122,7 +127,21 @@ class StorageService {
     return _secureStore.read(key: _walletPrivateKeyKey(address));
   }
 
-  Future<String?> getMnemonic() => _secureStore.read(key: _keyMnemonic);
+  Future<String?> getMnemonic([String? address]) async {
+    if (address != null) {
+      return _secureStore.read(key: _walletMnemonicKey(address));
+    }
+    // Fallback to active address specific key
+    final activeAddress = await getWalletAddress();
+    if (activeAddress != null) {
+      final existing = await _secureStore.read(
+        key: _walletMnemonicKey(activeAddress),
+      );
+      if (existing != null) return existing;
+    }
+    // Legacy fallback
+    return _secureStore.read(key: _keyMnemonic);
+  }
 
   Future<String?> getWalletName() => _secureStore.read(key: _keyWalletName);
 
@@ -218,6 +237,11 @@ class StorageService {
   }
 
   Future<void> deleteWallet() async {
+    final address = await getWalletAddress();
+    if (address != null) {
+      await _secureStore.delete(key: _walletMnemonicKey(address));
+      await _secureStore.delete(key: _walletPrivateKeyKey(address));
+    }
     await _secureStore.delete(key: _keyAddress);
     await _secureStore.delete(key: _keyPrivateKey);
     await _secureStore.delete(key: _keyMnemonic);
@@ -387,6 +411,9 @@ class StorageService {
 
   String _walletPrivateKeyKey(String address) =>
       'wallet_private_key_${address.toLowerCase()}';
+
+  String _walletMnemonicKey(String address) =>
+      'mnemonic_${address.toLowerCase()}';
 
   String _familyPrivateKeyKey(ChainFamily family, String address) =>
       'family_pk_${family.name}_${address.toLowerCase()}';

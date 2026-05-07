@@ -65,7 +65,10 @@ class SplashScreenBody extends StatelessWidget {
                   child: RichText(
                     textAlign: TextAlign.center,
                     text: TextSpan(
-                      style: GoogleFonts.poppins(fontSize: 22),
+                      style: GoogleFonts.poppins(
+                        fontSize: 22,
+                        color: Colors.white,
+                      ),
                       children: const [
                         TextSpan(
                           text: 'by ',
@@ -76,10 +79,7 @@ class SplashScreenBody extends StatelessWidget {
                         ),
                         TextSpan(
                           text: 'FOMOwl Inc',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),

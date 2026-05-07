@@ -347,7 +347,7 @@ class _FakeWalletService extends WalletService {
   Future<WalletAccount?> getActiveWalletAccount() async => null;
 
   @override
-  Future<String?> getMnemonic() async => mnemonic;
+  Future<String?> getMnemonic([String? address]) async => mnemonic;
 }
 
 class _FakeScreenCaptureGuard extends ScreenCaptureGuard {

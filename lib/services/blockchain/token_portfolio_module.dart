@@ -121,6 +121,13 @@ class TokenPortfolioModule {
           ? 0.0
           : (customPrices['${customCoinGeckoId}_change'] ?? 0.0);
 
+      // Ensure we only merge custom tokens that belong to the correct network.
+      // If networkKey is missing (legacy), we assume it matches.
+      final matchesNetwork =
+          custom.networkKey == null ||
+          custom.networkKey == existing.firstOrNull?.networkKey;
+      if (!matchesNetwork) continue;
+
       merged.add(
         Token(
           symbol: custom.symbol,
@@ -136,6 +143,8 @@ class TokenPortfolioModule {
           isCertified: false,
           // PATCH: Custom token prices from simple price lookup have no source metadata.
           priceSource: 'Unknown',
+          networkKey: custom.networkKey ?? existing.firstOrNull?.networkKey,
+          tokenStandard: custom.tokenStandard,
         ),
       );
     }

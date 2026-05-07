@@ -48,7 +48,26 @@ class WalletService {
   }
 
   String normalizeMnemonic(String mnemonic) {
-    return mnemonic
+    // Strip invisible/non-printable characters (zero-width spaces, BOM, smart
+    // quotes, non-breaking spaces, punctuation, numbering, etc.) that copy-paste
+    // from phones/browsers can silently inject, then normalize to English
+    // BIP-39 words separated by single spaces.
+    final cleaned = mnemonic
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F-\u009F]'), ' ')
+        .replaceAll(
+          RegExp(
+            r'[\u00A0\u1680\u2000-\u200F\u2028\u2029\u202F\u205F\u3000\uFEFF]',
+          ),
+          ' ',
+        )
+        .replaceAll(
+          RegExp(
+            r'[\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F\u2032\u2033]',
+          ),
+          ' ',
+        )
+        .replaceAll(RegExp(r'[^A-Za-z]+'), ' ');
+    return cleaned
         .trim()
         .toLowerCase()
         .split(RegExp(r'\s+'))
@@ -171,76 +190,22 @@ class WalletService {
 
   /// Import wallet from a Solana private key.
   /// Accepts multiple formats:
-  ///   • 64 hex chars  — 32-byte raw private key
-  ///   • 128 hex chars — 64-byte keypair (first 32 bytes used)
-  ///   • JSON array    — `[b0,b1,...,b63]` or `[b0,...,b31]`
-  ///   • Base58 string — 32-byte (44 chars) or 64-byte keypair (≈88 chars)
+  ///   - 64 hex chars: 32-byte raw private key
+  ///   - 128 hex chars: 64-byte keypair export
+  ///   - JSON array: `[b0,b1,...,b63]` or `[b0,...,b31]`
+  ///   - Base58 string: 32-byte seed or 64-byte keypair
   Future<Map<String, String>> importWalletFromSolanaKey(
     String privateKey, {
     String? walletName,
   }) async {
     try {
       privateKey = privateKey.trim();
-
-      // Normalise to 64-char hex (32-byte private key).
-      String hexKey;
-
-      final jsonMatch = RegExp(r'^\[[\d,\s]+\]$').hasMatch(privateKey);
-      if (jsonMatch) {
-        // JSON byte array: [b0, b1, ..., b31] or [b0, ..., b63].
-        final bytes = (jsonDecode(privateKey) as List)
-            .map<int>((v) => (v as int) & 0xFF)
-            .toList();
-        if (bytes.length == 64) {
-          hexKey = bytes
-              .sublist(0, 32)
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join();
-        } else if (bytes.length == 32) {
-          hexKey = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-        } else {
-          throw Exception(
-            'Invalid Solana key: JSON array must have 32 or 64 bytes (got ${bytes.length})',
-          );
-        }
-      } else if (privateKey.startsWith('0x')) {
-        hexKey = privateKey.substring(2);
-        if (hexKey.length == 128) hexKey = hexKey.substring(0, 64);
-      } else if (RegExp(r'^[0-9a-fA-F]+$').hasMatch(privateKey)) {
-        // Pure hex string.
-        if (privateKey.length == 64) {
-          hexKey = privateKey;
-        } else if (privateKey.length == 128) {
-          hexKey = privateKey.substring(0, 64);
-        } else {
-          throw Exception(
-            'Invalid Solana hex key length (expected 64 or 128 chars, got ${privateKey.length})',
-          );
-        }
-      } else {
-        // Treat as base58 (Phantom/Solflare export).
-        final bytes = _decodeBase58ToBytes(privateKey);
-        if (bytes.length == 64) {
-          hexKey = bytes
-              .sublist(0, 32)
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join();
-        } else if (bytes.length == 32) {
-          hexKey = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-        } else {
-          throw Exception(
-            'Invalid Solana base58 key: expected 32 or 64 bytes (decoded ${bytes.length})',
-          );
-        }
-      }
-
-      if (hexKey.length != 64 || !RegExp(r'^[0-9a-fA-F]+$').hasMatch(hexKey)) {
-        throw Exception('Could not normalise Solana private key to 32 bytes');
-      }
-
-      final address = await NativeCrypto.deriveSolanaAddressFromPrivateKey(
-        hexKey,
+      final keyBytes = utf8.encode(privateKey);
+      final keyMaterial = await NativeCrypto.normalizeSolanaPrivateKey(
+        Uint8List.fromList(keyBytes),
       );
+      final hexKey = hex.encode(keyMaterial.privateKeyBytes);
+      final address = keyMaterial.address;
 
       await _storage.saveWallet(
         address: address,
@@ -328,8 +293,8 @@ class WalletService {
   }
 
   /// Get wallet mnemonic (if available)
-  Future<String?> getMnemonic() async {
-    return await _storage.getMnemonic();
+  Future<String?> getMnemonic([String? address]) async {
+    return await _storage.getMnemonic(address);
   }
 
   /// Check if wallet exists
@@ -383,7 +348,8 @@ class WalletService {
   Future<Map<String, String>> createAdditionalWallet({
     String? walletName,
   }) async {
-    final mnemonic = await _storage.getMnemonic();
+    final address = await getCurrentWalletAddress();
+    final mnemonic = await _storage.getMnemonic(address);
     if (mnemonic == null || mnemonic.isEmpty) {
       throw Exception(
         'Original seed phrase not available. Unable to derive new wallet.',
@@ -836,13 +802,48 @@ class WalletService {
     return signature.startsWith('0x') ? signature : '0x$signature';
   }
 
-  /// Decode any base58-encoded byte sequence to raw bytes.
-  static Uint8List _decodeBase58ToBytes(String input) =>
-      decodeBase58Signature(input);
+  /// Encode raw bytes as a base58 string.
+  static String encodeBase58Bytes(Uint8List bytes) {
+    const alphabet =
+        '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
-  /// Decode a base58-encoded Ed25519 signature (64 bytes) to raw bytes.
+    int leadingZeros = 0;
+    for (final byte in bytes) {
+      if (byte == 0) {
+        leadingZeros++;
+      } else {
+        break;
+      }
+    }
+
+    final digits = List<int>.filled((bytes.length * 138 ~/ 100) + 1, 0);
+    int digitLen = 0;
+    for (final byte in bytes) {
+      int carry = byte;
+      for (int i = 0; i < digitLen; i++) {
+        carry += digits[i] << 8;
+        digits[i] = carry % 58;
+        carry ~/= 58;
+      }
+      while (carry > 0) {
+        digits[digitLen++] = carry % 58;
+        carry ~/= 58;
+      }
+    }
+
+    final result = StringBuffer();
+    for (int i = 0; i < leadingZeros; i++) {
+      result.write('1');
+    }
+    for (int i = digitLen - 1; i >= 0; i--) {
+      result.write(alphabet[digits[i]]);
+    }
+    return result.toString();
+  }
+
+  /// Decode any base58-encoded byte sequence to raw bytes.
   /// Uses an O(n) lookup-table approach instead of BigInt arithmetic.
-  static Uint8List decodeBase58Signature(String input) {
+  static Uint8List decodeBase58Bytes(String input) {
     // Lookup table: ASCII code ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base58 digit value, -1 for invalid chars.
     const int invalidDigit = -1;
     const List<int> base58Table = [
@@ -975,6 +976,12 @@ class WalletService {
       result[leadingZeros + i] = output[outputLen - 1 - i];
     }
 
+    return result;
+  }
+
+  /// Decode a base58-encoded Ed25519 signature (64 bytes) to raw bytes.
+  static Uint8List decodeBase58Signature(String input) {
+    final result = decodeBase58Bytes(input);
     if (result.length != 64) {
       throw FormatException(
         'Expected 64-byte Ed25519 signature, got ${result.length} bytes',

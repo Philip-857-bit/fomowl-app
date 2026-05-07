@@ -2991,11 +2991,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Widget _buildNonEvmNetworkCard(BlockchainService blockchain) {
-    final networkName = switch (blockchain.activeFamily) {
-      ChainFamily.solana => blockchain.activeNetworkName,
-      ChainFamily.tron => blockchain.activeNetworkName,
-      ChainFamily.evm => blockchain.activeChain.name,
-    };
+    final networkName = blockchain.activeNetworkName;
     final networkColor = switch (blockchain.activeFamily) {
       ChainFamily.solana => AppColors.primaryAccent,
       ChainFamily.tron => AppColors.primaryAccent,
@@ -3358,7 +3354,7 @@ class _SwapScreenState extends State<SwapScreen> {
               fromSymbol: fromToken.symbol,
               toAmountText: toAmountText,
               toSymbol: toToken.symbol,
-              networkName: blockchain.activeChain.name,
+              networkName: blockchain.activeNetworkName,
               rewardReferralOnSwap: true,
               swapAmountUsd: referralSwapAmountUsd,
             );
@@ -3387,7 +3383,7 @@ class _SwapScreenState extends State<SwapScreen> {
           fromSymbol: fromToken.symbol,
           toAmountText: toAmountText,
           toSymbol: toToken.symbol,
-          networkName: blockchain.activeChain.name,
+          networkName: blockchain.activeNetworkName,
           rewardReferralOnSwap: true,
           swapAmountUsd: referralSwapAmountUsd,
         );
@@ -3423,7 +3419,7 @@ class _SwapScreenState extends State<SwapScreen> {
             fromSymbol: fromToken.symbol,
             toAmount: toAmountText,
             toSymbol: toToken.symbol,
-            networkName: blockchain.activeChain.name,
+            networkName: blockchain.activeNetworkName,
           ),
         );
         _recordSwapHistory(
@@ -3433,7 +3429,7 @@ class _SwapScreenState extends State<SwapScreen> {
           fromTokenSymbol: fromToken.symbol,
           toAmount: toAmountText,
           toTokenSymbol: toToken.symbol,
-          networkName: blockchain.activeChain.name,
+          networkName: blockchain.activeNetworkName,
           chainId: blockchain.activeChain.chainId,
           networkKey: blockchain.activeNetworkKey,
         );

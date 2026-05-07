@@ -21,11 +21,7 @@ class TokenSelectorCard extends StatelessWidget {
   });
 
   String _activeNetworkName() {
-    return switch (blockchain.activeFamily) {
-      ChainFamily.solana => 'Solana',
-      ChainFamily.tron => 'TRON',
-      ChainFamily.evm => blockchain.activeChain.name,
-    };
+    return blockchain.activeNetworkName;
   }
 
   @override

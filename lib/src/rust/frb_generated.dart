@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 2022949558;
+  int get rustContentHash => -299535280;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -103,7 +103,7 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<String> crateApiBip32DeriveSolanaAddressFromPrivateKey({
-    required String privateKeyHex,
+    required List<int> privateKeyBytes,
   });
 
   Future<String> crateApiBip32DeriveSolanaAddressFromSeed({
@@ -111,7 +111,7 @@ abstract class RustLibApi extends BaseApi {
     required int derivationIndex,
   });
 
-  Future<String> crateApiBip32DeriveSolanaPrivateKeyFromSeed({
+  Future<Uint8List> crateApiBip32DeriveSolanaPrivateKeyFromSeed({
     required List<int> seed,
     required int derivationIndex,
   });
@@ -143,13 +143,17 @@ abstract class RustLibApi extends BaseApi {
 
   Future<Uint8List> crateApiBip39MnemonicToSeed({required String phrase});
 
+  Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
+    required List<int> privateKeyBytes,
+  });
+
   Future<String> crateApiSecp256K1ApiSignPersonalMessage({
     required String privateKeyHex,
     required String message,
   });
 
   Future<String> crateApiBip32SignSolanaMessage({
-    required String privateKeyHex,
+    required List<int> privateKeyBytes,
     required List<int> message,
   });
 
@@ -318,13 +322,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<String> crateApiBip32DeriveSolanaAddressFromPrivateKey({
-    required String privateKeyHex,
+    required List<int> privateKeyBytes,
   }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_list_prim_u_8_loose(privateKeyBytes, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -337,7 +341,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiBip32DeriveSolanaAddressFromPrivateKeyConstMeta,
-        argValues: [privateKeyHex],
+        argValues: [privateKeyBytes],
         apiImpl: this,
       ),
     );
@@ -346,7 +350,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiBip32DeriveSolanaAddressFromPrivateKeyConstMeta =>
       const TaskConstMeta(
         debugName: "derive_solana_address_from_private_key",
-        argNames: ["privateKeyHex"],
+        argNames: ["privateKeyBytes"],
       );
 
   @override
@@ -385,7 +389,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<String> crateApiBip32DeriveSolanaPrivateKeyFromSeed({
+  Future<Uint8List> crateApiBip32DeriveSolanaPrivateKeyFromSeed({
     required List<int> seed,
     required int derivationIndex,
   }) {
@@ -403,7 +407,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_String,
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiBip32DeriveSolanaPrivateKeyFromSeedConstMeta,
@@ -663,6 +667,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "mnemonic_to_seed", argNames: ["phrase"]);
 
   @override
+  Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
+    required List<int> privateKeyBytes,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_prim_u_8_loose(privateKeyBytes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_solana_private_key_import,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBip32NormalizeSolanaPrivateKeyConstMeta,
+        argValues: [privateKeyBytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBip32NormalizeSolanaPrivateKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "normalize_solana_private_key",
+        argNames: ["privateKeyBytes"],
+      );
+
+  @override
   Future<String> crateApiSecp256K1ApiSignPersonalMessage({
     required String privateKeyHex,
     required String message,
@@ -676,7 +713,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 17,
             port: port_,
           );
         },
@@ -699,19 +736,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<String> crateApiBip32SignSolanaMessage({
-    required String privateKeyHex,
+    required List<int> privateKeyBytes,
     required List<int> message,
   }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_list_prim_u_8_loose(privateKeyBytes, serializer);
           sse_encode_list_prim_u_8_loose(message, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 18,
             port: port_,
           );
         },
@@ -720,7 +757,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiBip32SignSolanaMessageConstMeta,
-        argValues: [privateKeyHex, message],
+        argValues: [privateKeyBytes, message],
         apiImpl: this,
       ),
     );
@@ -729,7 +766,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiBip32SignSolanaMessageConstMeta =>
       const TaskConstMeta(
         debugName: "sign_solana_message",
-        argNames: ["privateKeyHex", "message"],
+        argNames: ["privateKeyBytes", "message"],
       );
 
   @override
@@ -746,7 +783,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -781,7 +818,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -812,7 +849,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -852,6 +889,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  SolanaPrivateKeyImport dco_decode_solana_private_key_import(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return SolanaPrivateKeyImport(
+      privateKeyBytes: dco_decode_list_prim_u_8_strict(arr[0]),
+      address: dco_decode_String(arr[1]),
+    );
   }
 
   @protected
@@ -897,6 +946,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  SolanaPrivateKeyImport sse_decode_solana_private_key_import(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_privateKeyBytes = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_address = sse_decode_String(deserializer);
+    return SolanaPrivateKeyImport(
+      privateKeyBytes: var_privateKeyBytes,
+      address: var_address,
+    );
   }
 
   @protected
@@ -954,6 +1016,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_solana_private_key_import(
+    SolanaPrivateKeyImport self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(self.privateKeyBytes, serializer);
+    sse_encode_String(self.address, serializer);
   }
 
   @protected

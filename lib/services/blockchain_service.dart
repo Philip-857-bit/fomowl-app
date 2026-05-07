@@ -1698,6 +1698,13 @@ class BlockchainService extends ChangeNotifier {
       // Added tokens should appear in wallet/home even when balance is zero.
       for (final custom in customTokens) {
         final address = custom.address;
+        // Strictly check that the custom token belongs to the requested network
+        // to prevent token leakage (e.g., BNB tokens showing up in Solana).
+        final matchesNetwork =
+            custom.networkKey == null ||
+            custom.networkKey == requestedChain.networkKey;
+        if (!matchesNetwork) continue;
+
         final alreadyAdded = tokens.any(
           (t) =>
               (t.contractAddress ?? '').toLowerCase() == address.toLowerCase(),
@@ -1729,7 +1736,7 @@ class BlockchainService extends ChangeNotifier {
             imageUrl: custom.imageUrl,
             coinGeckoId: custom.coinGeckoId,
             isCertified: false,
-            networkKey: custom.networkKey ?? NetworkKey.evm(requestedChainId),
+            networkKey: custom.networkKey ?? requestedChain.networkKey,
             tokenStandard: custom.tokenStandard,
           ),
         );

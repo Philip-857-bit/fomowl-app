@@ -333,6 +333,8 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                   : 18,
               coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
               imageUrl: token.imageUrl ?? detected?.imageUrl,
+              networkKey: token.networkKey ?? blockchain.activeNetworkKey,
+              tokenStandard: token.tokenStandard,
             );
           } else {
             // Solana / Tron — trust the search-result metadata.

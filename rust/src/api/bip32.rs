@@ -1,11 +1,16 @@
+use base64::{engine::general_purpose, Engine as _};
 use bip32::{DerivationPath, XPrv};
-use ed25519_dalek::{Signer, SigningKey};
 use hmac::{Hmac, Mac};
 use secp256k1::{PublicKey, Secp256k1, SecretKey};
 use sha2::{Digest, Sha256, Sha512};
 use sha3::Keccak256;
+use solana_keypair::Keypair;
+use solana_signer::Signer;
 use std::str::FromStr;
 use zeroize::Zeroize;
+
+use flutter_rust_bridge::frb;
+use std::fmt;
 
 type HmacSha512 = Hmac<Sha512>;
 
@@ -14,6 +19,32 @@ const EVM_DERIVATION_PURPOSE: u32 = 44;
 const EVM_COIN_TYPE: u32 = 60;
 const SOLANA_COIN_TYPE: u32 = 501;
 const TRON_COIN_TYPE: u32 = 195;
+
+#[frb(dart_code = "
+  @override
+  String toString() {
+    return 'SolanaPrivateKeyImport(privateKeyBytes: ***REDACTED***, address: $address)';
+  }
+")]
+pub struct SolanaPrivateKeyImport {
+    pub private_key_bytes: Vec<u8>,
+    pub address: String,
+}
+
+impl Drop for SolanaPrivateKeyImport {
+    fn drop(&mut self) {
+        self.private_key_bytes.zeroize();
+    }
+}
+
+impl fmt::Debug for SolanaPrivateKeyImport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SolanaPrivateKeyImport")
+            .field("private_key_bytes", &"***REDACTED***")
+            .field("address", &self.address)
+            .finish()
+    }
+}
 
 pub fn derive_wallet_from_seed(seed: Vec<u8>, derivation_index: u32) -> Result<String, String> {
     derive_evm_private_key_from_seed(seed, derivation_index)
@@ -70,7 +101,7 @@ pub fn derive_tron_address_from_private_key(private_key_hex: String) -> Result<S
 pub fn derive_solana_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
-) -> Result<String, String> {
+) -> Result<Vec<u8>, String> {
     validate_seed(&seed)?;
 
     let path = [
@@ -84,30 +115,38 @@ pub fn derive_solana_private_key_from_seed(
         key = slip10_ed25519_derive_child(&key, child)?;
     }
 
-    let private_key_hex = hex::encode(key.key);
+    let mut private_key_bytes = key.key.to_vec();
     key.zeroize();
-    Ok(private_key_hex)
+    Ok(private_key_bytes)
 }
 
 pub fn derive_solana_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
-    let private_key_hex = derive_solana_private_key_from_seed(seed, derivation_index)?;
-    derive_solana_address_from_private_key(private_key_hex)
+    let private_key_bytes = derive_solana_private_key_from_seed(seed, derivation_index)?;
+    derive_solana_address_from_private_key(private_key_bytes)
 }
 
-pub fn derive_solana_address_from_private_key(private_key_hex: String) -> Result<String, String> {
-    let secret = parse_32_byte_hex(&private_key_hex, "Solana private key")?;
-    let signing_key = SigningKey::from_bytes(&secret);
-    Ok(bs58::encode(signing_key.verifying_key().to_bytes()).into_string())
+pub fn derive_solana_address_from_private_key(mut private_key_bytes: Vec<u8>) -> Result<String, String> {
+    let keypair = solana_keypair_from_bytes(private_key_bytes.clone(), "Solana private key")?;
+    private_key_bytes.zeroize();
+    Ok(keypair.pubkey().to_string())
 }
 
-pub fn sign_solana_message(private_key_hex: String, message: Vec<u8>) -> Result<String, String> {
-    let secret = parse_32_byte_hex(&private_key_hex, "Solana private key")?;
-    let signing_key = SigningKey::from_bytes(&secret);
-    let signature = signing_key.sign(&message);
-    Ok(bs58::encode(signature.to_bytes()).into_string())
+pub fn sign_solana_message(mut private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
+    let keypair = solana_keypair_from_bytes(private_key_bytes.clone(), "Solana private key")?;
+    private_key_bytes.zeroize();
+    Ok(keypair.sign_message(&message).to_string())
+}
+
+pub fn normalize_solana_private_key(mut private_key_bytes: Vec<u8>) -> Result<SolanaPrivateKeyImport, String> {
+    let keypair = parse_solana_private_key(&private_key_bytes)?;
+    private_key_bytes.zeroize();
+    Ok(SolanaPrivateKeyImport {
+        private_key_bytes: keypair.secret_bytes().to_vec(),
+        address: keypair.pubkey().to_string(),
+    })
 }
 
 pub fn sign_tron_raw_hash(private_key_hex: String, raw_hash_hex: String) -> Result<String, String> {
@@ -148,6 +187,85 @@ fn derive_secp256k1_private_key(seed: Vec<u8>, path_str: &str) -> Result<String,
         }
     }
     Ok(key_hex)
+}
+
+fn parse_solana_private_key(private_key: &str) -> Result<Keypair, String> {
+    let trimmed = private_key.trim();
+    if trimmed.is_empty() {
+        return Err("Solana private key is empty".to_string());
+    }
+
+    if trimmed.starts_with('[') {
+        let bytes: Vec<u8> = serde_json::from_str(trimmed)
+            .map_err(|e| format!("Invalid Solana JSON byte array: {e}"))?;
+        return solana_keypair_from_bytes(bytes, "JSON array");
+    }
+
+    let compact = trimmed.split_whitespace().collect::<String>();
+    if let Some(hex_value) = compact
+        .strip_prefix("0x")
+        .or_else(|| compact.strip_prefix("0X"))
+    {
+        return solana_keypair_from_bytes(parse_solana_key_hex(hex_value)?, "hex");
+    }
+
+    if !compact.is_empty() && compact.chars().all(|c| c.is_ascii_hexdigit()) {
+        return solana_keypair_from_bytes(parse_solana_key_hex(&compact)?, "hex");
+    }
+
+    if let Ok(keypair) = Keypair::try_from_base58_string(&compact) {
+        return Ok(keypair);
+    }
+
+    match bs58::decode(&compact).into_vec() {
+        Ok(bytes) => solana_keypair_from_bytes(bytes, "base58"),
+        Err(base58_error) => {
+            let bytes = general_purpose::STANDARD
+                .decode(&compact)
+                .map_err(|base64_error| {
+                    format!(
+                        "Invalid Solana private key format: base58 decode failed ({base58_error}); base64 decode failed ({base64_error})"
+                    )
+                })?;
+            solana_keypair_from_bytes(bytes, "base64")
+        }
+    }
+}
+
+fn parse_solana_key_hex(value: &str) -> Result<Vec<u8>, String> {
+    if value.len() != 64 && value.len() != 128 {
+        return Err(format!(
+            "Invalid Solana hex key length: expected 64 or 128 hex characters, got {}",
+            value.len()
+        ));
+    }
+    hex::decode(value).map_err(|e| format!("Invalid Solana hex key: {e}"))
+}
+
+fn solana_keypair_from_private_key_hex(private_key_hex: &str) -> Result<Keypair, String> {
+    let mut secret = parse_32_byte_hex(private_key_hex, "Solana private key")?;
+    let keypair = Keypair::new_from_array(secret);
+    secret.zeroize();
+    Ok(keypair)
+}
+
+fn solana_keypair_from_bytes(mut bytes: Vec<u8>, source: &str) -> Result<Keypair, String> {
+    let result = match bytes.len() {
+        32 => {
+            let mut secret = [0u8; 32];
+            secret.copy_from_slice(&bytes);
+            let keypair = Keypair::new_from_array(secret);
+            secret.zeroize();
+            Ok(keypair)
+        }
+        64 => Keypair::try_from(bytes.as_slice())
+            .map_err(|e| format!("Invalid Solana {source} keypair bytes: {e}")),
+        len => Err(format!(
+            "Invalid Solana {source} key length: expected 32-byte seed or 64-byte keypair, got {len} bytes"
+        )),
+    };
+    bytes.zeroize();
+    result
 }
 
 fn validate_seed(seed: &[u8]) -> Result<(), String> {
@@ -288,12 +406,13 @@ mod tests {
     use super::{
         derive_evm_address_from_seed, derive_evm_private_key_from_seed,
         derive_solana_address_from_seed, derive_solana_private_key_from_seed,
-        derive_tron_address_from_seed, derive_tron_private_key_from_seed, sign_solana_message,
-        sign_tron_raw_hash,
+        derive_tron_address_from_seed, derive_tron_private_key_from_seed,
+        normalize_solana_private_key, sign_solana_message, sign_tron_raw_hash,
     };
     use bip39::{Language, Mnemonic};
     use ed25519_dalek::{Signature, Verifier, VerifyingKey};
     use secp256k1::{ecdsa::RecoverableSignature, Message, Secp256k1};
+    use solana_keypair::Keypair;
 
     fn fixture_seed() -> Vec<u8> {
         Mnemonic::parse_in(
@@ -356,6 +475,40 @@ mod tests {
         verifying_key
             .verify(&message, &parsed_signature)
             .expect("signature verification");
+    }
+
+    #[test]
+    fn normalizes_phantom_style_solana_base58_keypair() {
+        let private_key =
+            derive_solana_private_key_from_seed(fixture_seed(), 0).expect("solana private key");
+        let secret = hex::decode(&private_key).expect("private key hex");
+        let secret: [u8; 32] = secret.as_slice().try_into().expect("32-byte private key");
+        let keypair = Keypair::new_from_array(secret);
+
+        let imported =
+            normalize_solana_private_key(keypair.to_base58_string()).expect("imported key");
+
+        assert_eq!(imported.private_key_hex, private_key);
+        assert_eq!(
+            imported.address,
+            derive_solana_address_from_seed(fixture_seed(), 0).expect("solana address")
+        );
+    }
+
+    #[test]
+    fn rejects_mismatched_solana_keypair_public_half() {
+        let private_key =
+            derive_solana_private_key_from_seed(fixture_seed(), 0).expect("solana private key");
+        let secret = hex::decode(private_key).expect("private key hex");
+        let secret: [u8; 32] = secret.as_slice().try_into().expect("32-byte private key");
+        let keypair = Keypair::new_from_array(secret);
+        let mut bytes = keypair.to_bytes();
+        bytes[63] ^= 1;
+        let encoded = bs58::encode(bytes).into_string();
+
+        let error = normalize_solana_private_key(encoded).expect_err("invalid keypair");
+
+        assert!(error.contains("Invalid Solana base58 keypair bytes"));
     }
 
     #[test]

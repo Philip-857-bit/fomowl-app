@@ -319,7 +319,7 @@ class _LimitActiveOrdersSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Open Owllet limit orders on ${blockchain.activeChain.name}.',
+            'Open Owllet limit orders on ${blockchain.activeNetworkName}.',
             style: GoogleFonts.inter(
               fontSize: 12,
               color: const Color(0xFF909090),

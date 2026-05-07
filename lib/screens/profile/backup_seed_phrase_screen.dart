@@ -53,6 +53,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   bool _isLoading = false;
   bool _isCheckingAvailability = true;
   bool _seedPhraseUnavailable = false;
+  bool _isImportedWallet = false;
   bool _backupVerified = false;
   List<String>? _revealedWords;
   List<String>? _verificationWords;
@@ -122,7 +123,8 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       return;
     }
 
-    final mnemonic = await _walletService.getMnemonic();
+    final activeWallet = await _walletService.getActiveWalletAccount();
+    final mnemonic = await _walletService.getMnemonic(activeWallet?.address);
     if (!mounted || sessionId != _revealSession) return;
 
     if (mnemonic == null || mnemonic.trim().isEmpty) {
@@ -130,6 +132,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
         _isLoading = false;
         _isCheckingAvailability = false;
         _seedPhraseUnavailable = true;
+        _isImportedWallet = false; // It's missing, not necessarily imported
         _clearSensitiveState(updateUi: false);
       });
       return;
@@ -154,16 +157,16 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   Future<void> _checkSeedPhraseAvailability() async {
     try {
       final activeWallet = await _walletService.getActiveWalletAccount();
-      final mnemonic = await _walletService.getMnemonic();
+      final mnemonic = await _walletService.getMnemonic(activeWallet?.address);
       if (!mounted) return;
 
-      final importedWithoutMnemonic =
-          activeWallet?.origin == WalletOrigin.imported &&
-          (mnemonic == null || mnemonic.trim().isEmpty);
+      final isImported = activeWallet?.origin == WalletOrigin.imported;
+      final isMnemonicMissing = mnemonic == null || mnemonic.trim().isEmpty;
 
       setState(() {
         _isCheckingAvailability = false;
-        _seedPhraseUnavailable = importedWithoutMnemonic;
+        _seedPhraseUnavailable = isImported || isMnemonicMissing;
+        _isImportedWallet = isImported;
       });
     } catch (_) {
       if (!mounted) return;
@@ -456,7 +459,9 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                l.noSeedPhraseAvailablePrivateKey,
+                                _isImportedWallet
+                                    ? l.noSeedPhraseAvailablePrivateKey
+                                    : l.noSeedPhraseStored,
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.outfit(
                                   fontSize: 15,

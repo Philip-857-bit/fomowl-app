@@ -400,7 +400,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       );
     }
     final blockchain = Provider.of<BlockchainService>(context);
-    final networkName = blockchain.activeChain.name;
+    final networkName = blockchain.activeNetworkName;
     final marketCapText = _isLoadingInfo
         ? l.loading
         : _formatFiatValue(_marketData?.marketCapUsd);

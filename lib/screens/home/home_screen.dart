@@ -1426,16 +1426,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         await Navigator.pushNamed(context, '/wallets');
                         await _loadWalletData();
                       },
-                      chainSymbol: switch (blockchain.activeFamily) {
-                        ChainFamily.solana => 'SOL',
-                        ChainFamily.tron => 'TRX',
-                        ChainFamily.evm => blockchain.activeChain.symbol,
-                      },
-                      chainLogoUrl: switch (blockchain.activeFamily) {
-                        ChainFamily.solana => SolanaCatalog.mainnet.logoUrl,
-                        ChainFamily.tron => TronCatalog.mainnet.logoUrl,
-                        ChainFamily.evm => blockchain.activeChain.logoUrl,
-                      },
+                      chainSymbol: blockchain.activeNetworkSymbol,
+                      chainLogoUrl: blockchain.activeNetworkLogoUrl,
                       onChainTap: _showNetworkSelector,
                       showNotificationDot: _hasUnreadNotifications,
                       onNotificationsTap: () async {
@@ -1537,18 +1529,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 onSend: () =>
                                     Navigator.pushNamed(context, '/send-token'),
-                                onSwap:
-                                    blockchain.activeFamily == ChainFamily.evm
-                                    ? () {
-                                        if (widget.showBottomNavigation) {
-                                          Navigator.pushNamed(context, '/swap');
-                                          return;
-                                        }
-                                        context
-                                            .read<AppShellController>()
-                                            .selectTab(AppShellTab.swap);
-                                      }
-                                    : null,
+                                onSwap: () {
+                                  if (widget.showBottomNavigation) {
+                                    Navigator.pushNamed(context, '/swap');
+                                    return;
+                                  }
+                                  context.read<AppShellController>().selectTab(
+                                    AppShellTab.swap,
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(height: 18),

@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-05-05)
+# Graph Report - .  (2026-05-07)
 
 ## Corpus Check
-- 44 files · ~339,256 words
+- 44 files · ~339,950 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 193 nodes · 251 edges · 47 communities detected
+- 207 nodes · 280 edges · 47 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -59,16 +59,16 @@
 - [[_COMMUNITY_Community 46|Community 46]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `pde_ffi_dispatcher_primary_impl()` - 20 edges
-2. `derive_solana_private_key_from_seed()` - 8 edges
-3. `Create()` - 6 edges
-4. `Destroy()` - 6 edges
-5. `parse_32_byte_hex()` - 5 edges
+1. `pde_ffi_dispatcher_primary_impl()` - 21 edges
+2. `derive_solana_private_key_from_seed()` - 10 edges
+3. `fixture_seed()` - 6 edges
+4. `Create()` - 6 edges
+5. `Destroy()` - 6 edges
 6. `solana_message_signature_verifies()` - 5 edges
 7. `parse_key_material()` - 5 edges
 8. `MessageHandler()` - 5 edges
 9. `GeneratedPluginRegistrant` - 4 edges
-10. `derive_evm_private_key_from_seed()` - 4 edges
+10. `crate::api::bip32::SolanaPrivateKeyImport` - 4 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -76,20 +76,20 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.14
-Nodes (28): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), derive_secp256k1_private_key(), derive_solana_address_from_private_key(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_address_from_private_key() (+20 more)
+Cohesion: 0.11
+Nodes (36): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), derive_secp256k1_private_key(), derive_solana_address_from_private_key(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_address_from_private_key() (+28 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.22
-Nodes (22): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_seed_impl() (+14 more)
+Cohesion: 0.21
+Nodes (23): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_seed_impl() (+15 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.17
 Nodes (16): Create(), Destroy(), EnableFullDpiSupportIfAvailable(), GetClientArea(), GetThisFromHandle(), GetWindowClass(), MessageHandler(), OnCreate() (+8 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.25
-Nodes (3): i32, String, Vec<u8>
+Cohesion: 0.17
+Nodes (4): crate::api::bip32::SolanaPrivateKeyImport, i32, String, Vec<u8>
 
 ### Community 4 - "Community 4"
 Cohesion: 0.52
@@ -264,7 +264,7 @@ Cohesion: 1.0
 Nodes (0): 
 
 ## Knowledge Gaps
-- **2 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`
+- **3 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `SolanaPrivateKeyImport`
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 22`** (2 nodes): `derive_passcode_hash_argon2()`, `argon2.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -322,7 +322,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `i32` connect `Community 3` to `Community 1`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry` to the rest of the system?**
-  _2 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `SolanaPrivateKeyImport` to the rest of the system?**
+  _3 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.14 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11 - nodes in this community are weakly interconnected._

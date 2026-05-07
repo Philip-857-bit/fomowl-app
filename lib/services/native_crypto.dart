@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:bip39/bip39.dart' as dart_bip39;
 
 import '../src/rust/api/argon2.dart' as rust_argon2;
 import '../src/rust/api/bip32.dart' as rust_bip32;
@@ -30,17 +31,18 @@ class NativeCrypto {
       return await rust_bip39.generateMnemonic();
     } catch (e) {
       debugPrint('[NativeCrypto] generateMnemonic Rust error, using Dart: $e');
-      rethrow;
+      return dart_bip39.generateMnemonic();
     }
   }
 
   /// Validate a BIP-39 mnemonic phrase.
   static Future<bool> validateMnemonic(String phrase) async {
     try {
-      return await rust_bip39.validateMnemonic(phrase: phrase);
+      final isValid = await rust_bip39.validateMnemonic(phrase: phrase);
+      return isValid;
     } catch (e) {
-      debugPrint('[NativeCrypto] validateMnemonic Rust error: $e');
-      rethrow;
+      debugPrint('[NativeCrypto] validateMnemonic Rust error, using Dart: $e');
+      return dart_bip39.validateMnemonic(phrase);
     }
   }
 
@@ -50,8 +52,8 @@ class NativeCrypto {
       final seed = await rust_bip39.mnemonicToSeed(phrase: phrase);
       return Uint8List.fromList(seed);
     } catch (e) {
-      debugPrint('[NativeCrypto] mnemonicToSeed Rust error: $e');
-      rethrow;
+      debugPrint('[NativeCrypto] mnemonicToSeed Rust error, using Dart: $e');
+      return dart_bip39.mnemonicToSeed(phrase);
     }
   }
 
@@ -182,6 +184,24 @@ class NativeCrypto {
       debugPrint(
         '[NativeCrypto] deriveSolanaAddressFromPrivateKey Rust error: $e',
       );
+      rethrow;
+    }
+  }
+
+  /// Normalize a Solana private key export using Rust/Solana keypair handling.
+  ///
+  /// Accepts 32-byte seed or 64-byte keypair material encoded as hex, JSON byte
+  /// array, base58, or base64. Returns normalized 32-byte private key hex and
+  /// the derived Solana address.
+  static Future<rust_bip32.SolanaPrivateKeyImport> normalizeSolanaPrivateKey(
+    Uint8List privateKeyBytes,
+  ) async {
+    try {
+      return await rust_bip32.normalizeSolanaPrivateKey(
+        privateKeyBytes: privateKeyBytes,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] normalizeSolanaPrivateKey Rust error: $e');
       rethrow;
     }
   }

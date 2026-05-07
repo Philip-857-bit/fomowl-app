@@ -26,6 +26,7 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+  bool _splashPrecached = false;
 
   @override
   void initState() {
@@ -43,36 +44,60 @@ class _AppBootstrapperState extends State<AppBootstrapper>
     _initializeApp();
   }
 
-  Future<void> _initializeApp() async {
-    // Determine the next route while the native splash is still visible.
-    final hasWallet = await _walletService.hasWallet();
-    var nextRoute = '/welcome';
-    if (hasWallet) {
-      nextRoute = await _storage.hasPasscode() ? '/unlock' : '/shell';
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_splashPrecached) {
+      _splashPrecached = true;
+      // Precache the splash asset so it's ready the moment the native splash is removed.
+      // This prevents the "black screen" flash during asset decoding.
+      precacheImage(
+        const AssetImage('assets/images/splash.png'),
+        context,
+        onError: (exception, stackTrace) {
+          debugPrint(
+            '[AppBootstrapper] Failed to precache splash image: $exception',
+          );
+        },
+      );
     }
+  }
 
-    if (!mounted) return;
+  Future<void> _initializeApp() async {
+    try {
+      // Determine the next route while the native splash is still visible.
+      final hasWallet = await _walletService.hasWallet();
+      var nextRoute = '/welcome';
+      if (hasWallet) {
+        nextRoute = await _storage.hasPasscode() ? '/unlock' : '/shell';
+      }
 
-    // Wait for the first frame so [SplashScreenBody] is definitely painted
-    // with the matching [kSplashBackground] before we dismiss the native
-    // splash.  Without this the OS window briefly shows the wrong colour.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      // Remove native splash — the custom splash beneath is already drawn
-      // with the same background so the transition is invisible.
-      FlutterNativeSplash.remove();
-      // Reset before forwarding so the animation reliably plays on every
-      // cold launch (guards against edge-cases in debug hot-restart).
-      _animationController
-        ..reset()
-        ..forward();
-    });
 
-    // Hold on splash long enough for the full animation + a brief pause.
-    await Future.delayed(const Duration(milliseconds: 1900));
+      // Wait for the first frame so [SplashScreenBody] is definitely painted
+      // with the matching [kSplashBackground] before we dismiss the native
+      // splash.
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        // Remove native splash — the custom splash beneath is already drawn
+        // with the same background so the transition is invisible.
+        FlutterNativeSplash.remove();
+        // Start animation
+        _animationController.forward();
+      });
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(nextRoute);
+      // Hold on splash long enough for the full animation + a brief pause.
+      await Future.delayed(const Duration(milliseconds: 1900));
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(nextRoute);
+    } catch (e) {
+      debugPrint('[AppBootstrapper] Init failed: $e');
+      if (mounted) {
+        FlutterNativeSplash.remove();
+        Navigator.of(context).pushReplacementNamed('/welcome');
+      }
+    }
   }
 
   @override

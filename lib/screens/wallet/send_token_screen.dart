@@ -167,23 +167,9 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       ChainFamily.evm => 18,
     };
 
-    final String nativeSymbol;
-    final String nativeName;
-    final String? nativeCoinGeckoId;
-    switch (family) {
-      case ChainFamily.solana:
-        nativeSymbol = 'SOL';
-        nativeName = 'Solana';
-        nativeCoinGeckoId = 'solana';
-      case ChainFamily.tron:
-        nativeSymbol = 'TRX';
-        nativeName = 'TRON';
-        nativeCoinGeckoId = 'tron';
-      case ChainFamily.evm:
-        nativeSymbol = blockchain.activeChain.symbol;
-        nativeName = blockchain.activeChain.name;
-        nativeCoinGeckoId = blockchain.activeChain.coinGeckoId;
-    }
+    final String nativeSymbol = blockchain.activeNetworkSymbol;
+    final String nativeName = blockchain.activeNetworkName;
+    final String? nativeCoinGeckoId = blockchain.activeNetworkCoinGeckoId;
 
     final address = await _walletService.getWalletAddressForFamily(family);
     if (!mounted) return;
@@ -356,11 +342,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       return;
     }
 
-    final String activeNetworkDisplayName = switch (family) {
-      ChainFamily.solana => 'Solana',
-      ChainFamily.tron => 'TRON',
-      ChainFamily.evm => blockchain.activeChain.name,
-    };
+    final String activeNetworkDisplayName = blockchain.activeNetworkName;
 
     Navigator.pushNamed(
       context,

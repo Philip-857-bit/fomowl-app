@@ -1565,7 +1565,7 @@ class DappProviderBridge {
         sessionController.activeDapp?.title ??
         ((originHost != null && originHost.isNotEmpty) ? originHost : 'DApp');
     final blockchain = context.read<BlockchainService>();
-    final activeChainName = blockchain.activeChain.name;
+    final activeChainName = blockchain.activeNetworkName;
     final walletAddress = await _walletService.getCurrentWalletAddress();
     if (!context.mounted) {
       return false;

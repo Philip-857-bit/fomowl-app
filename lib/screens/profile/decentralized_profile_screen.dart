@@ -544,7 +544,9 @@ class _DecentralizedProfileScreenState
                         SettingsItemTile(
                           icon: Icons.hub_outlined,
                           title: l.switchNetwork,
-                          trailing: _valueTrailing(blockchain.activeChain.name),
+                          trailing: _valueTrailing(
+                            blockchain.activeNetworkName,
+                          ),
                           onTap: _showNetworkSheet,
                         ),
                         SettingsItemTile(
@@ -664,13 +666,14 @@ class _DecentralizedProfileScreenState
                           onTap: () =>
                               Navigator.pushNamed(context, '/two-factor-setup'),
                         ),
-                        SettingsItemTile(
-                          icon: Icons.vpn_key_rounded,
-                          title: l.seedPhraseBackup,
-                          subtitle: l.actionRequired,
-                          attention: true,
-                          onTap: _openSeedPhraseBackup,
-                        ),
+                        if (_walletOrigin == WalletOrigin.derived)
+                          SettingsItemTile(
+                            icon: Icons.vpn_key_rounded,
+                            title: l.seedPhraseBackup,
+                            subtitle: l.actionRequired,
+                            attention: true,
+                            onTap: _openSeedPhraseBackup,
+                          ),
                       ],
                     ),
 

@@ -6,9 +6,9 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `derive_secp256k1_private_key`, `evm_address_from_public_key`, `hardened`, `parse_32_byte_hex`, `public_key_from_private_key`, `slip10_ed25519_derive_child`, `slip10_ed25519_master_key`, `slip10_key_from_hmac`, `to_eip55_address`, `tron_address_from_public_key`, `validate_seed`
+// These functions are ignored because they are not marked as `pub`: `derive_secp256k1_private_key`, `evm_address_from_public_key`, `hardened`, `parse_32_byte_hex`, `parse_solana_key_hex`, `parse_solana_private_key`, `public_key_from_private_key`, `slip10_ed25519_derive_child`, `slip10_ed25519_master_key`, `slip10_key_from_hmac`, `solana_keypair_from_bytes`, `solana_keypair_from_private_key_hex`, `to_eip55_address`, `tron_address_from_public_key`, `validate_seed`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Ed25519Slip10Key`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `drop`, `zeroize`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `drop`, `drop`, `fmt`, `zeroize`
 
 Future<String> deriveWalletFromSeed({
   required List<int> seed,
@@ -62,7 +62,7 @@ Future<String> deriveTronAddressFromPrivateKey({
   privateKeyHex: privateKeyHex,
 );
 
-Future<String> deriveSolanaPrivateKeyFromSeed({
+Future<Uint8List> deriveSolanaPrivateKeyFromSeed({
   required List<int> seed,
   required int derivationIndex,
 }) => RustLib.instance.api.crateApiBip32DeriveSolanaPrivateKeyFromSeed(
@@ -79,17 +79,23 @@ Future<String> deriveSolanaAddressFromSeed({
 );
 
 Future<String> deriveSolanaAddressFromPrivateKey({
-  required String privateKeyHex,
+  required List<int> privateKeyBytes,
 }) => RustLib.instance.api.crateApiBip32DeriveSolanaAddressFromPrivateKey(
-  privateKeyHex: privateKeyHex,
+  privateKeyBytes: privateKeyBytes,
 );
 
 Future<String> signSolanaMessage({
-  required String privateKeyHex,
+  required List<int> privateKeyBytes,
   required List<int> message,
 }) => RustLib.instance.api.crateApiBip32SignSolanaMessage(
-  privateKeyHex: privateKeyHex,
+  privateKeyBytes: privateKeyBytes,
   message: message,
+);
+
+Future<SolanaPrivateKeyImport> normalizeSolanaPrivateKey({
+  required List<int> privateKeyBytes,
+}) => RustLib.instance.api.crateApiBip32NormalizeSolanaPrivateKey(
+  privateKeyBytes: privateKeyBytes,
 );
 
 Future<String> signTronRawHash({
@@ -99,3 +105,29 @@ Future<String> signTronRawHash({
   privateKeyHex: privateKeyHex,
   rawHashHex: rawHashHex,
 );
+
+class SolanaPrivateKeyImport {
+  final Uint8List privateKeyBytes;
+  final String address;
+
+  const SolanaPrivateKeyImport({
+    required this.privateKeyBytes,
+    required this.address,
+  });
+
+  @override
+  String toString() {
+    return 'SolanaPrivateKeyImport(privateKeyBytes: ***REDACTED***, address: $address)';
+  }
+
+  @override
+  int get hashCode => privateKeyBytes.hashCode ^ address.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SolanaPrivateKeyImport &&
+          runtimeType == other.runtimeType &&
+          privateKeyBytes == other.privateKeyBytes &&
+          address == other.address;
+}

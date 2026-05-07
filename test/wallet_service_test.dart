@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,9 +20,22 @@ void main() {
     );
   });
 
+  test('normalizeMnemonic handles numbered and punctuated phrase pastes', () {
+    final walletService = WalletService();
+    final normalized = walletService.normalizeMnemonic(
+      '1. Abandon, 2) abandon; 3: abandon\n4 - abandon 5. abandon '
+      '6) abandon 7: abandon 8. abandon 9) abandon 10: abandon '
+      '11. abandon 12) about',
+    );
+
+    expect(
+      normalized,
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    );
+  });
+
   test(
     'validateMnemonic accepts valid phrases pasted with irregular spacing',
-    skip: 'Requires Rust FFI initialized',
     () async {
       const pasted =
           ' abandon   abandon\nabandon\tabandon abandon abandon abandon abandon abandon abandon abandon about ';
@@ -28,6 +43,29 @@ void main() {
       expect(await WalletService().validateMnemonic(pasted), isTrue);
     },
   );
+
+  group('Solana base58 helpers', () {
+    test('decodeBase58Bytes accepts 32-byte seed material', () {
+      final bytes = Uint8List.fromList(List<int>.generate(32, (i) => i));
+      final encoded = WalletService.encodeBase58Bytes(bytes);
+
+      expect(WalletService.decodeBase58Bytes(encoded), orderedEquals(bytes));
+      expect(
+        () => WalletService.decodeBase58Signature(encoded),
+        throwsFormatException,
+      );
+    });
+
+    test('decodeBase58Signature still requires a 64-byte signature', () {
+      final bytes = Uint8List.fromList(List<int>.generate(64, (i) => i));
+      final encoded = WalletService.encodeBase58Bytes(bytes);
+
+      expect(
+        WalletService.decodeBase58Signature(encoded),
+        orderedEquals(bytes),
+      );
+    });
+  });
 
   group('importWalletFromPrivateKey validation', () {
     late WalletService walletService;
