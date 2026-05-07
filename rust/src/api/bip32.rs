@@ -31,12 +31,6 @@ pub struct SolanaPrivateKeyImport {
     pub address: String,
 }
 
-impl Drop for SolanaPrivateKeyImport {
-    fn drop(&mut self) {
-        self.private_key_bytes.zeroize();
-    }
-}
-
 impl fmt::Debug for SolanaPrivateKeyImport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SolanaPrivateKeyImport")
@@ -115,7 +109,7 @@ pub fn derive_solana_private_key_from_seed(
         key = slip10_ed25519_derive_child(&key, child)?;
     }
 
-    let mut private_key_bytes = key.key.to_vec();
+    let private_key_bytes = key.key.to_vec();
     key.zeroize();
     Ok(private_key_bytes)
 }
@@ -141,7 +135,7 @@ pub fn sign_solana_message(mut private_key_bytes: Vec<u8>, message: Vec<u8>) -> 
 }
 
 pub fn normalize_solana_private_key(mut private_key_bytes: Vec<u8>) -> Result<SolanaPrivateKeyImport, String> {
-    let keypair = parse_solana_private_key(&private_key_bytes)?;
+    let keypair = solana_keypair_from_bytes(private_key_bytes.clone(), "Solana private key")?;
     private_key_bytes.zeroize();
     Ok(SolanaPrivateKeyImport {
         private_key_bytes: keypair.secret_bytes().to_vec(),
