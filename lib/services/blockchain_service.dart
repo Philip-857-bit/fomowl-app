@@ -408,7 +408,11 @@ class BlockchainService extends ChangeNotifier {
   }
 
   List<CustomTokenDefinition> get customTokensForActiveChain =>
-      List.unmodifiable(_customTokens[_customTokenChainKey] ?? []);
+      List.unmodifiable(
+        (_customTokens[_customTokenChainKey] ?? const []).where(
+          _customTokenMatchesActiveNetwork,
+        ),
+      );
 
   String get lastDiscoverySource => _lastDiscoverySource;
   bool get lastDiscoveryPartialFailure => _lastDiscoveryPartialFailure;
@@ -419,8 +423,84 @@ class BlockchainService extends ChangeNotifier {
   Map<String, dynamic> get performanceMetrics => _metrics.toJson();
 
   List<Token> get tokens {
-    if (_walletTokens.isNotEmpty) return _walletTokens;
+    final scopedTokens = _walletTokens
+        .where(_tokenMatchesActiveNetwork)
+        .toList(growable: false);
+    if (scopedTokens.isNotEmpty) return scopedTokens;
     return [activeNativeToken];
+  }
+
+  bool _tokenMatchesActiveNetwork(Token token) {
+    return _tokenMatchesNetwork(token, activeNetworkKey);
+  }
+
+  bool _tokenMatchesNetwork(Token token, String networkKey) {
+    final expectedKey = networkKey.trim().toLowerCase();
+    if (expectedKey.isEmpty) {
+      return true;
+    }
+    final expectedFamily = NetworkKey.familyOf(expectedKey);
+    final tokenKey = token.networkKey?.trim().toLowerCase();
+    if (tokenKey != null && tokenKey.isNotEmpty) {
+      return tokenKey == expectedKey;
+    }
+
+    // Legacy EVM tokens were stored before networkKey existed.
+    if (expectedFamily == ChainFamily.evm) {
+      return true;
+    }
+
+    // Permit a legacy native placeholder only when it is clearly the active
+    // network's native asset; this avoids ETH/BNB leaking into Solana/Tron.
+    final contract = token.contractAddress?.trim();
+    return (contract == null || contract.isEmpty) &&
+        token.symbol.trim().toLowerCase() ==
+            activeNetworkSymbol.trim().toLowerCase();
+  }
+
+  bool _tokenAddressLooksForeignForActiveNetwork(String? contractAddress) {
+    return _tokenAddressLooksForeignForNetwork(
+      contractAddress,
+      activeNetworkKey,
+    );
+  }
+
+  bool _tokenAddressLooksForeignForNetwork(
+    String? contractAddress,
+    String networkKey,
+  ) {
+    final address = contractAddress?.trim();
+    if (address == null || address.isEmpty) {
+      return false;
+    }
+    switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.evm:
+        return !RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address);
+      case ChainFamily.solana:
+      case ChainFamily.tron:
+        return address.startsWith(RegExp(r'0x', caseSensitive: false));
+    }
+  }
+
+  TokenStandard _defaultTokenStandardForActiveNetwork({
+    required bool isNative,
+  }) {
+    if (isNative) return TokenStandard.native;
+    return switch (activeFamily) {
+      ChainFamily.solana => TokenStandard.spl,
+      ChainFamily.tron => TokenStandard.trc20,
+      ChainFamily.evm => TokenStandard.erc20,
+    };
+  }
+
+  bool _customTokenMatchesActiveNetwork(CustomTokenDefinition token) {
+    final tokenNetworkKey = token.networkKey?.trim().toLowerCase();
+    if (tokenNetworkKey != null &&
+        tokenNetworkKey.isNotEmpty &&
+        tokenNetworkKey != activeNetworkKey.toLowerCase()) {
+      return false;
+    }
+    return !_tokenAddressLooksForeignForActiveNetwork(token.address);
   }
 
   Token get activeNativeToken {
@@ -1057,6 +1137,8 @@ class BlockchainService extends ChangeNotifier {
         imageUrl:
             token.imageUrl ??
             _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+        networkKey: token.networkKey ?? activeNetworkKey,
+        tokenStandard: token.tokenStandard,
       );
     }
 
@@ -1091,15 +1173,21 @@ class BlockchainService extends ChangeNotifier {
       decimals: decimals,
       coinGeckoId: null,
       imageUrl: _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+      networkKey: activeNetworkKey,
+      tokenStandard: TokenStandard.erc20,
     );
   }
 
   Future<CustomTokenDefinition?> _fetchBackendTokenMetadata(
     String contractAddress,
   ) async {
-    final url = AppEnvironment.blockchain(
-      '/${_activeChain.chainId}/token-details/$contractAddress',
-    );
+    final url = activeFamily == ChainFamily.evm
+        ? AppEnvironment.blockchain(
+            '/${_activeChain.chainId}/token-details/$contractAddress',
+          )
+        : AppEnvironment.blockchain(
+            '/networks/${Uri.encodeComponent(activeNetworkKey)}/token-details/$contractAddress',
+          );
 
     try {
       final response = await _httpClientService
@@ -1130,6 +1218,12 @@ class BlockchainService extends ChangeNotifier {
             : _buildTrustWalletTokenLogoUrl(
                 _activeChain.chainId,
                 contractAddress,
+              ),
+        networkKey: _asTrimmedString(data['networkKey']) ?? activeNetworkKey,
+        tokenStandard: _asTrimmedString(data['tokenStandard']) == null
+            ? _defaultTokenStandardForActiveNetwork(isNative: false)
+            : TokenStandardCodec.fromWireValue(
+                _asTrimmedString(data['tokenStandard']),
               ),
       );
     } catch (_) {
@@ -1247,6 +1341,15 @@ class BlockchainService extends ChangeNotifier {
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
     final requestedChainId = chainId ?? _activeChain.chainId;
+    if (!_walletAddressLooksValidForNetwork(
+      walletAddress,
+      effectiveNetworkKey,
+    )) {
+      debugPrint(
+        'Skipping wallet token fetch for invalid ${NetworkKey.familyOf(effectiveNetworkKey).wireValue} address: $walletAddress',
+      );
+      return const <Token>[];
+    }
     // Non-EVM chains must use a network-key-based cache key to avoid colliding
     // with an EVM chain that happens to share the same numeric chainId slot.
     final cacheKey = (activeFamily != ChainFamily.evm && chainId == null)
@@ -1329,6 +1432,23 @@ class BlockchainService extends ChangeNotifier {
       chainId: chainId,
       forceRefresh: true,
     );
+  }
+
+  bool _walletAddressLooksValidForNetwork(
+    String walletAddress,
+    String networkKey,
+  ) {
+    final address = walletAddress.trim();
+    if (address.isEmpty) return false;
+    return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.evm => RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address),
+      ChainFamily.solana => RegExp(
+        r'^[1-9A-HJ-NP-Za-km-z]{32,44}$',
+      ).hasMatch(address),
+      ChainFamily.tron => RegExp(
+        r'^T[1-9A-HJ-NP-Za-km-z]{33}$',
+      ).hasMatch(address),
+    };
   }
 
   void applyOptimisticSwap({
@@ -1533,15 +1653,21 @@ class BlockchainService extends ChangeNotifier {
         }
       }
 
-      final nextTokens = merged.isEmpty && previousTokens.isNotEmpty
-          ? previousTokens
-          : merged;
-      final nextMessage = merged.isEmpty && previousTokens.isNotEmpty
+      final scopedMerged = merged
+          .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
+          .toList(growable: false);
+      final scopedPrevious = previousTokens
+          .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
+          .toList(growable: false);
+      final nextTokens = scopedMerged.isEmpty && scopedPrevious.isNotEmpty
+          ? scopedPrevious
+          : scopedMerged;
+      final nextMessage = scopedMerged.isEmpty && scopedPrevious.isNotEmpty
           ? (discovered.message ??
                 'Using cached wallet tokens because the latest backend refresh returned no token entries.')
           : discovered.message;
       final nextStale =
-          (merged.isEmpty && previousTokens.isNotEmpty) ||
+          (scopedMerged.isEmpty && scopedPrevious.isNotEmpty) ||
           discovered.partialFailure;
       final fetchedAt = DateTime.now();
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
@@ -1574,8 +1700,11 @@ class BlockchainService extends ChangeNotifier {
     // adapter is the only data source. Return whatever we already cached.
     if (isNonEvm) {
       final fetchedAt = DateTime.now();
-      final fallbackTokens = previousTokens.isNotEmpty
-          ? previousTokens
+      final scopedPrevious = previousTokens
+          .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
+          .toList(growable: false);
+      final fallbackTokens = scopedPrevious.isNotEmpty
+          ? scopedPrevious
           : const <Token>[];
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
         tokens: List<Token>.from(fallbackTokens),
@@ -1836,48 +1965,61 @@ class BlockchainService extends ChangeNotifier {
           final symbol = (entry['symbol'] as String?)?.trim() ?? '';
           final name = (entry['name'] as String?)?.trim() ?? '';
           final contractAddress = (entry['contractAddress'] as String?)?.trim();
-          // Allow native tokens (no contract address) through the filter.
           if (symbol.isEmpty || name.isEmpty) {
             continue;
           }
+          if (_tokenAddressLooksForeignForActiveNetwork(contractAddress)) {
+            continue;
+          }
 
-          parsed.add(
-            Token(
-              symbol: symbol,
-              name: name,
-              contractAddress: contractAddress,
-              balance: 0,
-              valueUsd: 0,
-              priceUsd: _toDouble(entry['priceUsd']),
-              changePercent24h: _toDouble(entry['changePercent24h']),
-              decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
-              imageUrl: (entry['imageUrl'] as String?)?.trim(),
-              coinGeckoId: ((entry['coinGeckoId'] ?? entry['id']) as String?)
-                  ?.trim(),
-              isCertified:
-                  entry['isCertified'] == true || entry['isNative'] == true,
-              // PATCH: Preserve backend price source for DEX badges.
-              priceSource:
-                  _asTrimmedString(entry['priceSource']) ??
-                  _asTrimmedString(entry['price_source']) ??
-                  'Unknown',
-              // PATCH: Preserve backend DEX liquidity estimate when supplied.
-              liquidityUsd: _nullableDouble(
-                entry['liquidityUsd'] ?? entry['liquidity_usd'],
-              ),
-              // PATCH: Preserve backend DEX-only marker when supplied.
-              isDexOnly:
-                  entry['isDexOnly'] == true || entry['is_dex_only'] == true,
-              networkKey:
-                  _asTrimmedString(entry['networkKey']) ??
-                  (activeFamily == ChainFamily.evm
-                      ? NetworkKey.evm(_activeChain.chainId)
-                      : activeNetworkKey),
-              tokenStandard: TokenStandardCodec.fromWireValue(
-                _asTrimmedString(entry['tokenStandard']),
-              ),
+          final tokenNetworkKey =
+              _asTrimmedString(entry['networkKey']) ??
+              (activeFamily == ChainFamily.evm
+                  ? NetworkKey.evm(_activeChain.chainId)
+                  : activeNetworkKey);
+          final isNative =
+              contractAddress == null ||
+              contractAddress.isEmpty ||
+              entry['isNative'] == true;
+          final tokenStandard = _asTrimmedString(entry['tokenStandard']) == null
+              ? _defaultTokenStandardForActiveNetwork(isNative: isNative)
+              : TokenStandardCodec.fromWireValue(
+                  _asTrimmedString(entry['tokenStandard']),
+                );
+          final token = Token(
+            symbol: symbol,
+            name: name,
+            contractAddress: contractAddress,
+            balance: 0,
+            valueUsd: 0,
+            priceUsd: _toDouble(entry['priceUsd']),
+            changePercent24h: _toDouble(entry['changePercent24h']),
+            decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
+            imageUrl: (entry['imageUrl'] as String?)?.trim(),
+            coinGeckoId: ((entry['coinGeckoId'] ?? entry['id']) as String?)
+                ?.trim(),
+            isCertified:
+                entry['isCertified'] == true || entry['isNative'] == true,
+            // PATCH: Preserve backend price source for DEX badges.
+            priceSource:
+                _asTrimmedString(entry['priceSource']) ??
+                _asTrimmedString(entry['price_source']) ??
+                'Unknown',
+            // PATCH: Preserve backend DEX liquidity estimate when supplied.
+            liquidityUsd: _nullableDouble(
+              entry['liquidityUsd'] ?? entry['liquidity_usd'],
             ),
+            // PATCH: Preserve backend DEX-only marker when supplied.
+            isDexOnly:
+                entry['isDexOnly'] == true || entry['is_dex_only'] == true,
+            networkKey: tokenNetworkKey,
+            tokenStandard: tokenStandard,
           );
+          if (!_tokenMatchesActiveNetwork(token)) {
+            continue;
+          }
+
+          parsed.add(token);
         }
         if (parsed.isNotEmpty) {
           return _deduplicateSearchTokens(parsed).take(safeLimit).toList();
@@ -1904,14 +2046,13 @@ class BlockchainService extends ChangeNotifier {
             imageUrl: token.imageUrl,
             coinGeckoId: token.coinGeckoId,
             isCertified: false,
-            networkKey:
-                token.networkKey ?? NetworkKey.evm(_activeChain.chainId),
+            networkKey: token.networkKey ?? activeNetworkKey,
             tokenStandard: token.tokenStandard,
           ),
         )
         .toList();
     final candidates = _deduplicateSearchTokens([
-      ..._walletTokens,
+      ..._walletTokens.where(_tokenMatchesActiveNetwork),
       ...customTokens,
       ...customTokensForActiveChain.map(
         (token) => Token(
@@ -1925,13 +2066,16 @@ class BlockchainService extends ChangeNotifier {
           imageUrl: token.imageUrl,
           coinGeckoId: token.coinGeckoId,
           isCertified: false,
-          networkKey: token.networkKey ?? NetworkKey.evm(_activeChain.chainId),
+          networkKey: token.networkKey ?? activeNetworkKey,
           tokenStandard: token.tokenStandard,
         ),
       ),
     ]);
 
     final filtered = candidates.where((token) {
+      if (!_tokenMatchesActiveNetwork(token)) {
+        return false;
+      }
       if (normalized.isEmpty) {
         return true;
       }
@@ -1946,12 +2090,10 @@ class BlockchainService extends ChangeNotifier {
     final seen = <String>{};
     final result = <Token>[];
     for (final token in tokens) {
+      final scope = token.networkKey?.trim().toLowerCase() ?? activeNetworkKey;
       final key =
-          (token.contractAddress?.trim().isNotEmpty == true
-                  ? token.contractAddress
-                  : token.symbol)
-              ?.toLowerCase();
-      if (key == null || !seen.add(key)) {
+          '$scope:${(token.contractAddress?.trim().isNotEmpty == true ? token.contractAddress : token.symbol)?.toLowerCase()}';
+      if (!seen.add(key)) {
         continue;
       }
       result.add(token);
@@ -2110,9 +2252,15 @@ class BlockchainService extends ChangeNotifier {
       final tokens = list.map((entry) {
         final e = _asMap(entry) ?? const <String, dynamic>{};
         final contractAddress = _asTrimmedString(e['contractAddress']);
+        final entryNetworkKey =
+            _asTrimmedString(e['networkKey']) ?? payloadNetworkKey;
+        final defaultStandard = switch (NetworkKey.familyOf(entryNetworkKey)) {
+          ChainFamily.solana => contractAddress == null ? 'native' : 'spl',
+          ChainFamily.tron => contractAddress == null ? 'native' : 'trc20',
+          ChainFamily.evm => contractAddress == null ? 'native' : 'erc20',
+        };
         final tokenStandard = TokenStandardCodec.fromWireValue(
-          _asTrimmedString(e['tokenStandard']) ??
-              (contractAddress == null ? 'native' : 'erc20'),
+          _asTrimmedString(e['tokenStandard']) ?? defaultStandard,
         );
         return Token(
           symbol: e['symbol']?.toString() ?? '',
@@ -2137,7 +2285,7 @@ class BlockchainService extends ChangeNotifier {
           ),
           // PATCH: Preserve backend DEX-only marker when supplied.
           isDexOnly: e['isDexOnly'] == true || e['is_dex_only'] == true,
-          networkKey: _asTrimmedString(e['networkKey']) ?? payloadNetworkKey,
+          networkKey: entryNetworkKey,
           tokenStandard: tokenStandard,
         );
       }).toList();
@@ -2257,14 +2405,35 @@ class BlockchainService extends ChangeNotifier {
       final jsonStr = prefs.getString(_keyCustomTokens);
       if (jsonStr == null) return;
       final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+      var changed = false;
       data.forEach((k, v) {
         final chainId = int.tryParse(k);
         if (chainId != null) {
-          _customTokens[chainId] = (v as List)
-              .map((e) => CustomTokenDefinition.fromJson(e))
+          final tokens = (v as List)
+              .whereType<Map>()
+              .map(
+                (e) => CustomTokenDefinition.fromJson(
+                  Map<String, dynamic>.from(e),
+                ),
+              )
+              .map((token) {
+                final normalized = _normalizeCustomTokenDefinition(
+                  token,
+                  chainId,
+                );
+                if (normalized.networkKey != token.networkKey ||
+                    normalized.tokenStandard != token.tokenStandard) {
+                  changed = true;
+                }
+                return normalized;
+              })
               .toList();
+          _customTokens[chainId] = tokens;
         }
       });
+      if (changed) {
+        unawaited(_saveCustomTokens());
+      }
     } catch (e) {
       debugPrint('Error loading custom tokens: $e');
     }
@@ -2286,18 +2455,64 @@ class BlockchainService extends ChangeNotifier {
     required int chainId,
     required CustomTokenDefinition token,
   }) async {
-    final list = _customTokens.putIfAbsent(chainId, () => []);
-    if (list.any(
-      (t) => t.address.toLowerCase() == token.address.toLowerCase(),
+    final scopedToken = _normalizeCustomTokenDefinition(token, chainId);
+    if (_tokenAddressLooksForeignForNetwork(
+      scopedToken.address,
+      scopedToken.networkKey ?? _networkKeyForTokenStorageChainId(chainId),
     )) {
       return false;
     }
-    list.add(token);
+    final list = _customTokens.putIfAbsent(chainId, () => []);
+    if (list.any(
+      (t) => t.address.toLowerCase() == scopedToken.address.toLowerCase(),
+    )) {
+      return false;
+    }
+    list.add(scopedToken);
     await _saveCustomTokens();
-    _applyCustomTokenMutationToLocalState(chainId, addedToken: token);
+    _applyCustomTokenMutationToLocalState(chainId, addedToken: scopedToken);
     unawaited(_syncWalletTokenSnapshotsForChain(chainId));
     notifyListeners();
     return true;
+  }
+
+  CustomTokenDefinition _normalizeCustomTokenDefinition(
+    CustomTokenDefinition token,
+    int chainId,
+  ) {
+    final networkKey = token.networkKey?.trim().isNotEmpty == true
+        ? token.networkKey!.trim()
+        : _networkKeyForTokenStorageChainId(chainId);
+    final family = NetworkKey.familyOf(networkKey);
+    final tokenStandard = switch (family) {
+      ChainFamily.solana =>
+        token.tokenStandard == TokenStandard.erc20
+            ? TokenStandard.spl
+            : token.tokenStandard,
+      ChainFamily.tron =>
+        token.tokenStandard == TokenStandard.erc20
+            ? TokenStandard.trc20
+            : token.tokenStandard,
+      ChainFamily.evm => token.tokenStandard,
+    };
+    return CustomTokenDefinition(
+      symbol: token.symbol,
+      name: token.name,
+      address: token.address,
+      decimals: token.decimals,
+      coinGeckoId: token.coinGeckoId,
+      imageUrl: token.imageUrl,
+      networkKey: networkKey,
+      tokenStandard: tokenStandard,
+    );
+  }
+
+  String _networkKeyForTokenStorageChainId(int chainId) {
+    return switch (chainId) {
+      -501 => NetworkKey.solana('mainnet'),
+      -195 => NetworkKey.tron('mainnet'),
+      _ => NetworkKey.evm(chainId),
+    };
   }
 
   Future<void> removeCustomToken(int chainId, String address) async {
@@ -2372,7 +2587,7 @@ class BlockchainService extends ChangeNotifier {
       _walletTokenStates.addAll(updatedStates);
     }
 
-    if (_activeChain.chainId != chainId) {
+    if (_customTokenChainKey != chainId) {
       return;
     }
 
@@ -2432,7 +2647,7 @@ class BlockchainService extends ChangeNotifier {
         imageUrl: token.imageUrl,
         coinGeckoId: token.coinGeckoId,
         isCertified: false,
-        networkKey: token.networkKey ?? NetworkKey.evm(_activeChain.chainId),
+        networkKey: token.networkKey ?? activeNetworkKey,
         tokenStandard: token.tokenStandard,
       ),
     );

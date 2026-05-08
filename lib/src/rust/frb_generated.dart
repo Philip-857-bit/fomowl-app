@@ -144,7 +144,7 @@ abstract class RustLibApi extends BaseApi {
   Future<Uint8List> crateApiBip39MnemonicToSeed({required String phrase});
 
   Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
-    required List<int> privateKeyBytes,
+    required String privateKey,
   });
 
   Future<String> crateApiSecp256K1ApiSignPersonalMessage({
@@ -668,13 +668,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
-    required List<int> privateKeyBytes,
+    required String privateKey,
   }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_list_prim_u_8_loose(privateKeyBytes, serializer);
+          sse_encode_String(privateKey, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -687,7 +687,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiBip32NormalizeSolanaPrivateKeyConstMeta,
-        argValues: [privateKeyBytes],
+        argValues: [privateKey],
         apiImpl: this,
       ),
     );
@@ -696,7 +696,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiBip32NormalizeSolanaPrivateKeyConstMeta =>
       const TaskConstMeta(
         debugName: "normalize_solana_private_key",
-        argNames: ["privateKeyBytes"],
+        argNames: ["privateKey"],
       );
 
   @override

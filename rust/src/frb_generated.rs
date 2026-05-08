@@ -599,12 +599,12 @@ fn wire__crate__api__bip32__normalize_solana_private_key_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_private_key_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
+            let api_private_key = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok =
-                        crate::api::bip32::normalize_solana_private_key(api_private_key_bytes)?;
+                        crate::api::bip32::normalize_solana_private_key(api_private_key)?;
                     Ok(output_ok)
                 })())
             }

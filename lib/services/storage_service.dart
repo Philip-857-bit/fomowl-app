@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:argon2/argon2.dart' as dart_argon2;
@@ -30,6 +31,9 @@ class StorageService {
   static const String _keyWalletList = 'wallet_list';
   static const String _keyNextDerivationIndex = 'next_derivation_index';
   static const String _keyCurrentDerivationIndex = 'current_derivation_index';
+  static const String _legacySeedGroupId = 'seed_legacy';
+  static const String _keySeedGroupNextDerivationIndexPrefix =
+      'seed_group_next_derivation_index_';
 
   static const String _keyBiometricEnabled = 'biometric_enabled';
   static const String _keyFaceIdEnabled = 'face_id_enabled';
@@ -68,6 +72,7 @@ class StorageService {
     String? walletName,
     WalletOrigin origin = WalletOrigin.derived,
     int? derivationIndex,
+    String? seedGroupId,
     DateTime? createdAt,
     Map<ChainFamily, String>? addressesByFamily,
   }) async {
@@ -79,6 +84,13 @@ class StorageService {
     );
 
     if (mnemonic != null) {
+      final normalizedSeedGroupId = _normalizeSeedGroupId(seedGroupId);
+      if (normalizedSeedGroupId != null) {
+        await _secureStore.write(
+          key: _seedGroupMnemonicKey(normalizedSeedGroupId),
+          value: mnemonic,
+        );
+      }
       await _secureStore.write(
         key: _walletMnemonicKey(address),
         value: mnemonic,
@@ -96,6 +108,7 @@ class StorageService {
       name: walletName ?? 'Wallet',
       origin: origin,
       derivationIndex: derivationIndex,
+      seedGroupId: _normalizeSeedGroupId(seedGroupId),
       createdAt: createdAt ?? DateTime.now(),
       addressesByFamily: addressesByFamily,
     );
@@ -106,6 +119,18 @@ class StorageService {
       final nextIndex = await getNextDerivationIndex();
       if (derivationIndex >= nextIndex) {
         await setNextDerivationIndex(derivationIndex + 1);
+      }
+      final normalizedSeedGroupId = _normalizeSeedGroupId(seedGroupId);
+      if (normalizedSeedGroupId != null) {
+        final groupNextIndex = await getNextDerivationIndex(
+          normalizedSeedGroupId,
+        );
+        if (derivationIndex >= groupNextIndex) {
+          await setNextDerivationIndex(
+            derivationIndex + 1,
+            normalizedSeedGroupId,
+          );
+        }
       }
     }
   }
@@ -129,7 +154,41 @@ class StorageService {
 
   Future<String?> getMnemonic([String? address]) async {
     if (address != null) {
-      return _secureStore.read(key: _walletMnemonicKey(address));
+      final account = await _findWallet(address);
+      final seedGroupId = _normalizeSeedGroupId(account?.seedGroupId);
+      if (seedGroupId != null) {
+        final grouped = await getMnemonicForSeedGroup(seedGroupId);
+        if (grouped != null && grouped.isNotEmpty) return grouped;
+      }
+      final addressMnemonic = await _secureStore.read(
+        key: _walletMnemonicKey(address),
+      );
+      if (addressMnemonic != null &&
+          addressMnemonic.isNotEmpty &&
+          seedGroupId != null) {
+        await _secureStore.write(
+          key: _seedGroupMnemonicKey(seedGroupId),
+          value: addressMnemonic,
+        );
+      }
+      if (addressMnemonic != null && addressMnemonic.isNotEmpty) {
+        return addressMnemonic;
+      }
+
+      final legacyMnemonic = await _secureStore.read(key: _keyMnemonic);
+      if (legacyMnemonic != null &&
+          legacyMnemonic.isNotEmpty &&
+          seedGroupId != null) {
+        await _secureStore.write(
+          key: _seedGroupMnemonicKey(seedGroupId),
+          value: legacyMnemonic,
+        );
+        await _secureStore.write(
+          key: _walletMnemonicKey(address),
+          value: legacyMnemonic,
+        );
+      }
+      return legacyMnemonic;
     }
     // Fallback to active address specific key
     final activeAddress = await getWalletAddress();
@@ -141,6 +200,10 @@ class StorageService {
     }
     // Legacy fallback
     return _secureStore.read(key: _keyMnemonic);
+  }
+
+  Future<String?> getMnemonicForSeedGroup(String seedGroupId) {
+    return _secureStore.read(key: _seedGroupMnemonicKey(seedGroupId));
   }
 
   Future<String?> getWalletName() => _secureStore.read(key: _keyWalletName);
@@ -285,6 +348,7 @@ class StorageService {
       name: newName,
       origin: account.origin,
       derivationIndex: account.derivationIndex,
+      seedGroupId: account.seedGroupId,
       createdAt: account.createdAt,
       addressesByFamily: account.addressesByFamily,
     );
@@ -349,24 +413,39 @@ class StorageService {
           name: name,
           origin: WalletOrigin.derived,
           derivationIndex: index,
+          seedGroupId: _legacySeedGroupId,
           createdAt: DateTime.now(),
         ),
       ];
     }
     final List<dynamic> data = jsonDecode(jsonStr) as List<dynamic>;
-    return data
+    final accounts = data
         .map((e) => WalletAccount.fromJson(e as Map<String, dynamic>))
         .toList();
+    return _migrateLegacyDerivedSeedGroups(accounts);
   }
 
-  Future<int> getNextDerivationIndex() async {
+  Future<int> getNextDerivationIndex([String? seedGroupId]) async {
     final prefs = await _prefs;
+    final normalizedSeedGroupId = _normalizeSeedGroupId(seedGroupId);
+    if (normalizedSeedGroupId != null) {
+      return prefs.getInt(
+            _seedGroupNextDerivationIndexKey(normalizedSeedGroupId),
+          ) ??
+          1;
+    }
     return prefs.getInt(_keyNextDerivationIndex) ?? 1;
   }
 
-  Future<void> setNextDerivationIndex(int index) async {
+  Future<void> setNextDerivationIndex(int index, [String? seedGroupId]) async {
     final prefs = await _prefs;
-    await prefs.setInt(_keyNextDerivationIndex, index);
+    final normalizedSeedGroupId = _normalizeSeedGroupId(seedGroupId);
+    await prefs.setInt(
+      normalizedSeedGroupId == null
+          ? _keyNextDerivationIndex
+          : _seedGroupNextDerivationIndexKey(normalizedSeedGroupId),
+      index,
+    );
   }
 
   Future<int?> getCurrentDerivationIndex() async {
@@ -414,6 +493,46 @@ class StorageService {
 
   String _walletMnemonicKey(String address) =>
       'mnemonic_${address.toLowerCase()}';
+
+  String _seedGroupMnemonicKey(String seedGroupId) =>
+      'mnemonic_seed_group_${seedGroupId.toLowerCase()}';
+
+  String _seedGroupNextDerivationIndexKey(String seedGroupId) =>
+      '$_keySeedGroupNextDerivationIndexPrefix${seedGroupId.toLowerCase()}';
+
+  String? _normalizeSeedGroupId(String? seedGroupId) {
+    final normalized = seedGroupId?.trim();
+    if (normalized == null || normalized.isEmpty) return null;
+    return normalized;
+  }
+
+  List<WalletAccount> _migrateLegacyDerivedSeedGroups(
+    List<WalletAccount> accounts,
+  ) {
+    var changed = false;
+    final migrated = accounts.map((account) {
+      if (account.origin != WalletOrigin.derived ||
+          _normalizeSeedGroupId(account.seedGroupId) != null) {
+        return account;
+      }
+      changed = true;
+      return WalletAccount(
+        address: account.address,
+        name: account.name,
+        origin: account.origin,
+        derivationIndex: account.derivationIndex,
+        seedGroupId: _legacySeedGroupId,
+        createdAt: account.createdAt,
+        addressesByFamily: account.addressesByFamily,
+      );
+    }).toList();
+    if (changed) {
+      // Best-effort migration; callers can keep using the migrated in-memory
+      // accounts even if the async persist is interrupted.
+      unawaited(_saveWalletAccounts(migrated));
+    }
+    return migrated;
+  }
 
   String _familyPrivateKeyKey(ChainFamily family, String address) =>
       'family_pk_${family.name}_${address.toLowerCase()}';

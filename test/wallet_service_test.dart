@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:fomowl_wallet/models/chain.dart';
+import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
@@ -138,6 +140,76 @@ void main() {
         // Ethereum addresses are 42 chars including 0x prefix
         expect(result['address']!.length, 42);
         expect(result['address'], startsWith('0x'));
+      },
+    );
+  });
+
+  group('active family addresses', () {
+    late WalletService walletService;
+    late StorageService storage;
+
+    setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      storage = StorageService(
+        secureStore: _InMemorySecureStore(),
+        sharedPreferences: prefs,
+      );
+      walletService = WalletService(storageService: storage);
+    });
+
+    test('returns EVM, Solana, and Tron addresses for a seed wallet', () async {
+      await storage.saveWallet(
+        address: '0x1234567890123456789012345678901234567890',
+        privateKey: 'private-key',
+        walletName: 'Wallet 1',
+        origin: WalletOrigin.derived,
+        derivationIndex: 0,
+        seedGroupId: 'seed_alpha',
+        addressesByFamily: const {
+          ChainFamily.solana: 'solanaAddress',
+          ChainFamily.tron: 'tronAddress',
+        },
+      );
+
+      expect(
+        await walletService.getActiveAddressForFamily(ChainFamily.evm),
+        '0x1234567890123456789012345678901234567890',
+      );
+      expect(
+        await walletService.getActiveAddressForFamily(ChainFamily.solana),
+        'solanaAddress',
+      );
+      expect(
+        await walletService.getActiveAddressForFamily(ChainFamily.tron),
+        'tronAddress',
+      );
+    });
+
+    test(
+      'returns null for unsupported families on private-key imports',
+      () async {
+        await storage.saveWallet(
+          address: 'solanaAddress',
+          privateKey: 'solana-private-key',
+          walletName: 'Imported Solana',
+          origin: WalletOrigin.imported,
+          addressesByFamily: const {ChainFamily.solana: 'solanaAddress'},
+        );
+
+        expect(
+          await walletService.getActiveAddressForFamily(ChainFamily.solana),
+          'solanaAddress',
+        );
+        expect(
+          await walletService.getActiveAddressForFamily(ChainFamily.evm),
+          isNull,
+        );
+        expect(
+          await walletService.getActiveAddressForFamily(ChainFamily.tron),
+          isNull,
+        );
       },
     );
   });

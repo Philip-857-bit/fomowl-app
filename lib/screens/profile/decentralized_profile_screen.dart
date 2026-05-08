@@ -428,7 +428,7 @@ class _DecentralizedProfileScreenState
     );
     if (confirm != true) return;
     try {
-      await _walletService.deleteWallet();
+      await _walletService.resetAppData();
     } catch (e) {
       if (!mounted) return;
       await showDialog<void>(

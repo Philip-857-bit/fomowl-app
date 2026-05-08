@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-05-07)
+# Graph Report - .  (2026-05-08)
 
 ## Corpus Check
-- 44 files · ~339,950 words
+- 44 files · ~339,976 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 207 nodes · 280 edges · 47 communities detected
+- 207 nodes · 279 edges · 47 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -64,11 +64,11 @@
 3. `fixture_seed()` - 6 edges
 4. `Create()` - 6 edges
 5. `Destroy()` - 6 edges
-6. `solana_message_signature_verifies()` - 5 edges
-7. `parse_key_material()` - 5 edges
-8. `MessageHandler()` - 5 edges
-9. `GeneratedPluginRegistrant` - 4 edges
-10. `crate::api::bip32::SolanaPrivateKeyImport` - 4 edges
+6. `solana_keypair_from_bytes()` - 5 edges
+7. `solana_message_signature_verifies()` - 5 edges
+8. `parse_key_material()` - 5 edges
+9. `MessageHandler()` - 5 edges
+10. `GeneratedPluginRegistrant` - 4 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -77,7 +77,7 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.11
-Nodes (36): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), derive_secp256k1_private_key(), derive_solana_address_from_private_key(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_address_from_private_key() (+28 more)
+Nodes (35): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), derive_secp256k1_private_key(), derive_solana_address_from_private_key(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_address_from_private_key() (+27 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.21
@@ -264,7 +264,7 @@ Cohesion: 1.0
 Nodes (0): 
 
 ## Knowledge Gaps
-- **3 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `SolanaPrivateKeyImport`
+- **2 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`
   These have ≤1 connection - possible missing edges or undocumented components.
 - **Thin community `Community 22`** (2 nodes): `derive_passcode_hash_argon2()`, `argon2.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -322,7 +322,7 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `i32` connect `Community 3` to `Community 1`?**
   _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `SolanaPrivateKeyImport` to the rest of the system?**
-  _3 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry` to the rest of the system?**
+  _2 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.11 - nodes in this community are weakly interconnected._

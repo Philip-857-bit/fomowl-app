@@ -54,7 +54,7 @@ class TokenVisibilityService {
     if (hidden) {
       entry.add(identifier);
     } else {
-      entry.remove(identifier);
+      entry.removeAll(TokenVisibilityUtils.identifiers(token));
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_key(chainId), entry.toList());
@@ -65,7 +65,7 @@ class TokenVisibilityService {
   bool isHidden(int chainId, Token token) {
     final entry = _cache[chainId];
     if (entry == null) return false;
-    return entry.contains(TokenVisibilityUtils.identifier(token));
+    return TokenVisibilityUtils.contains(entry, token);
   }
 
   void _emitChange(int chainId, Set<String> hiddenTokens) {

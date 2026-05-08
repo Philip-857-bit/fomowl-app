@@ -193,12 +193,10 @@ class NativeCrypto {
   /// array, base58, or base64. Returns normalized 32-byte private key hex and
   /// the derived Solana address.
   static Future<rust_bip32.SolanaPrivateKeyImport> normalizeSolanaPrivateKey(
-    Uint8List privateKeyBytes,
+    String privateKey,
   ) async {
     try {
-      return await rust_bip32.normalizeSolanaPrivateKey(
-        privateKeyBytes: privateKeyBytes.toList(),
-      );
+      return await rust_bip32.normalizeSolanaPrivateKey(privateKey: privateKey);
     } catch (e) {
       debugPrint('[NativeCrypto] normalizeSolanaPrivateKey Rust error: $e');
       rethrow;

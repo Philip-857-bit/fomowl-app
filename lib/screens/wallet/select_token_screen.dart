@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/chain.dart';
 import '../../models/token.dart';
 import '../../widgets/token_icon.dart';
 
@@ -105,7 +106,9 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
         chainId,
       );
-      final address = await _walletService.getCurrentWalletAddress();
+      final address = await _walletService.getActiveAddressForFamily(
+        blockchain.activeFamily,
+      );
       final cachedTokens = await _loadCachedTokens(
         blockchain: blockchain,
         walletAddress: address,
@@ -194,11 +197,15 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       if (contractAddress.isEmpty) {
         return true;
       }
-      return !hiddenTokens.contains(TokenVisibilityUtils.identifier(token));
+      return !TokenVisibilityUtils.contains(hiddenTokens, token);
     }).toList();
   }
 
   List<Token> _getDefaultTokens() {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (blockchain.activeFamily != ChainFamily.evm) {
+      return [blockchain.activeNativeToken];
+    }
     return [
       Token(
         symbol: 'ETH',

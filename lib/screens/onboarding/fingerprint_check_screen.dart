@@ -35,14 +35,14 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
         if (ok) {
           Navigator.pushReplacementNamed(context, '/biometric-success');
         } else {
-          ToastUtils.showError(l.fingerprintVerificationFailed);
-          setState(() => _isVerifying = false);
+          ToastUtils.showInfo(l.biometricUnavailable);
+          Navigator.pushReplacementNamed(context, '/congratulations');
         }
       }
     } catch (e) {
       if (mounted) {
-        ToastUtils.showError(l.biometricUnavailable);
-        setState(() => _isVerifying = false);
+        ToastUtils.showInfo(l.biometricUnavailable);
+        Navigator.pushReplacementNamed(context, '/congratulations');
       }
     }
   }
@@ -53,7 +53,7 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
@@ -67,105 +67,109 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
               ),
             ),
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 240,
-                        height: 240,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.1),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 211,
-                        height: 211,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.2),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 192,
-                        height: 192,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0E0E0E),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(
-                              0xFF5D3F3D,
-                            ).withValues(alpha: 0.15),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 240,
+                          height: 240,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
                               color: const Color(
                                 0xFFEA2A33,
-                              ).withValues(alpha: 0.4),
-                              blurRadius: 7.5,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Image.asset(
-                            'assets/images/fingerprint_red.png',
-                            width: 74,
-                            height: 82,
-                            fit: BoxFit.contain,
-                            errorBuilder: (e, s, t) => const Icon(
-                              Icons.fingerprint,
-                              color: Color(0xFFEA2A33),
-                              size: 80,
+                              ).withValues(alpha: 0.1),
                             ),
                           ),
                         ),
-                      ),
-                      if (_isVerifying)
-                        SizedBox(
+                        Container(
+                          width: 211,
+                          height: 211,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(
+                                0xFFEA2A33,
+                              ).withValues(alpha: 0.2),
+                            ),
+                          ),
+                        ),
+                        Container(
                           width: 192,
                           height: 192,
-                          child: CircularProgressIndicator(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.6),
-                            strokeWidth: 2,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0E0E0E),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(
+                                0xFF5D3F3D,
+                              ).withValues(alpha: 0.15),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFEA2A33,
+                                ).withValues(alpha: 0.4),
+                                blurRadius: 7.5,
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/fingerprint_red.png',
+                              width: 74,
+                              height: 82,
+                              fit: BoxFit.contain,
+                              errorBuilder: (e, s, t) => const Icon(
+                                Icons.fingerprint,
+                                color: Color(0xFFEA2A33),
+                                size: 80,
+                              ),
+                            ),
                           ),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 48),
-                  Text(
-                    'Security Check',
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFE2E2E2),
-                      letterSpacing: -0.6,
+                        if (_isVerifying)
+                          SizedBox(
+                            width: 192,
+                            height: 192,
+                            child: CircularProgressIndicator(
+                              color: const Color(
+                                0xFFEA2A33,
+                              ).withValues(alpha: 0.6),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Place your finger to verify',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      color: const Color(0xFFC8C6C5),
-                      letterSpacing: 0.4,
+                    const SizedBox(height: 48),
+                    Text(
+                      'Security Check',
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFE2E2E2),
+                        letterSpacing: -0.6,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    Text(
+                      'Place your finger to verify',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: const Color(0xFFC8C6C5),
+                        letterSpacing: 0.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
             Padding(

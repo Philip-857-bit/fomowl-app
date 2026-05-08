@@ -99,8 +99,8 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
     });
 
     try {
-      // Import wallet from mnemonic
-      await _walletService.createWalletFromMnemonic(
+      // Import wallet from mnemonic and discover additional used accounts.
+      await _walletService.importWalletsFromMnemonic(
         phrase,
         walletName: walletName,
       );

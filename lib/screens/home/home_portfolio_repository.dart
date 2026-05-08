@@ -107,7 +107,7 @@ class HomePortfolioRepository {
   }) {
     final deduped = <String, Token>{};
     for (final token in tokens) {
-      if (hiddenTokenKeys.contains(TokenVisibilityUtils.identifier(token))) {
+      if (TokenVisibilityUtils.contains(hiddenTokenKeys, token)) {
         continue;
       }
       final isNativeToken =

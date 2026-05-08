@@ -73,12 +73,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
     try {
       final accounts = await _walletService.getWalletAccounts();
       final active = await _walletService.getCurrentWalletAddress();
-      final mnemonic = await _storage.getMnemonic();
+      final hasMnemonic = await _hasAnySeedPhrase(accounts);
       if (!mounted) return;
       setState(() {
         _walletAccounts = accounts;
         _activeAddress = active;
-        _hasMnemonic = mnemonic != null && mnemonic.isNotEmpty;
+        _hasMnemonic = hasMnemonic;
         _loading = false;
       });
       _syncActiveWalletContext(accounts, active);
@@ -88,6 +88,15 @@ class _WalletsScreenState extends State<WalletsScreen> {
       setState(() => _loading = false);
       ToastUtils.showError(l.unableToLoadWallets);
     }
+  }
+
+  Future<bool> _hasAnySeedPhrase(List<WalletAccount> accounts) async {
+    for (final account in accounts) {
+      if (account.origin != WalletOrigin.derived) continue;
+      final mnemonic = await _walletService.getMnemonic(account.address);
+      if (mnemonic != null && mnemonic.isNotEmpty) return true;
+    }
+    return false;
   }
 
   Future<void> _openCreateSheet() async {
@@ -135,7 +144,9 @@ class _WalletsScreenState extends State<WalletsScreen> {
   Future<void> _createWallet() async {
     final l = AppLocalizations.of(context);
     try {
-      await _walletService.createAdditionalWallet();
+      final seedGroupId = await _selectSeedGroupForNewAccount();
+      if (seedGroupId == null) return;
+      await _walletService.createAdditionalWallet(seedGroupId: seedGroupId);
       await _loadWallets();
       ToastUtils.showSuccess(l.newWalletCreated);
     } catch (e) {
@@ -146,6 +157,73 @@ class _WalletsScreenState extends State<WalletsScreen> {
         ),
       );
     }
+  }
+
+  Map<String, List<WalletAccount>> _seedGroups() {
+    final groups = <String, List<WalletAccount>>{};
+    for (final account in _walletAccounts) {
+      if (account.origin != WalletOrigin.derived) continue;
+      final groupId = account.seedGroupId?.trim().isNotEmpty == true
+          ? account.seedGroupId!.trim()
+          : 'seed_legacy';
+      groups.putIfAbsent(groupId, () => <WalletAccount>[]).add(account);
+    }
+    return groups;
+  }
+
+  Future<String?> _selectSeedGroupForNewAccount() async {
+    final groups = _seedGroups();
+    if (groups.isEmpty) return null;
+    if (groups.length == 1) return groups.keys.first;
+
+    final ordered = groups.entries.toList()
+      ..sort(
+        (a, b) => a.value.first.createdAt.compareTo(b.value.first.createdAt),
+      );
+    return showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: AppColors.cardDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Add account to',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (var i = 0; i < ordered.length; i++)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: Color(0xFFAFC2E8),
+                  ),
+                  title: Text(
+                    _seedGroupLabel(ordered[i].key, i),
+                    style: GoogleFonts.outfit(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    '${ordered[i].value.length} account${ordered[i].value.length == 1 ? '' : 's'}',
+                    style: GoogleFonts.outfit(color: Colors.white54),
+                  ),
+                  onTap: () => Navigator.pop(ctx, ordered[i].key),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Pushes the active wallet's address and the chain families it actually
@@ -469,6 +547,88 @@ class _WalletsScreenState extends State<WalletsScreen> {
     return ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(0));
   }
 
+  String _seedGroupLabel(String seedGroupId, int index) {
+    return 'Wallet ${index + 1}';
+  }
+
+  Widget _sectionHeader(String title, {String? subtitle}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 16, 2, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: GoogleFonts.outfit(color: Colors.white38, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _walletTile(WalletAccount account) {
+    return ManageWalletTile(
+      account: account,
+      isActive:
+          account.address.toLowerCase() == (_activeAddress ?? '').toLowerCase(),
+      balanceLabel: _walletValueLabel(account),
+      onTap: () => _switchWallet(account),
+      onEdit: () => _showWalletActions(account),
+    );
+  }
+
+  List<Widget> _walletListItems() {
+    final items = <Widget>[];
+    final seedGroups = _seedGroups().entries.toList()
+      ..sort(
+        (a, b) => a.value.first.createdAt.compareTo(b.value.first.createdAt),
+      );
+
+    for (var i = 0; i < seedGroups.length; i++) {
+      final entry = seedGroups[i];
+      items.add(
+        _sectionHeader(
+          _seedGroupLabel(entry.key, i),
+          subtitle: 'Seed phrase accounts',
+        ),
+      );
+      final accounts = List<WalletAccount>.from(entry.value)
+        ..sort(
+          (a, b) => (a.derivationIndex ?? 0).compareTo(b.derivationIndex ?? 0),
+        );
+      for (final account in accounts) {
+        items.add(_walletTile(account));
+      }
+    }
+
+    final importedAccounts =
+        _walletAccounts
+            .where((account) => account.origin == WalletOrigin.imported)
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    if (importedAccounts.isNotEmpty) {
+      items.add(
+        _sectionHeader('Imported accounts', subtitle: 'Private-key wallets'),
+      );
+      for (final account in importedAccounts) {
+        items.add(_walletTile(account));
+      }
+    }
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -520,18 +680,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
                     )
                   : ListView(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                      children: [
-                        for (final account in _walletAccounts)
-                          ManageWalletTile(
-                            account: account,
-                            isActive:
-                                account.address.toLowerCase() ==
-                                (_activeAddress ?? '').toLowerCase(),
-                            balanceLabel: _walletValueLabel(account),
-                            onTap: () => _switchWallet(account),
-                            onEdit: () => _showWalletActions(account),
-                          ),
-                      ],
+                      children: _walletListItems(),
                     ),
             ),
             Padding(

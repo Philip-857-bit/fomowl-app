@@ -122,21 +122,20 @@ pub fn derive_solana_address_from_seed(
     derive_solana_address_from_private_key(private_key_bytes)
 }
 
-pub fn derive_solana_address_from_private_key(mut private_key_bytes: Vec<u8>) -> Result<String, String> {
-    let keypair = solana_keypair_from_bytes(private_key_bytes.clone(), "Solana private key")?;
-    private_key_bytes.zeroize();
+pub fn derive_solana_address_from_private_key(
+    private_key_bytes: Vec<u8>,
+) -> Result<String, String> {
+    let keypair = solana_keypair_from_bytes(private_key_bytes, "Solana private key")?;
     Ok(keypair.pubkey().to_string())
 }
 
-pub fn sign_solana_message(mut private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
-    let keypair = solana_keypair_from_bytes(private_key_bytes.clone(), "Solana private key")?;
-    private_key_bytes.zeroize();
+pub fn sign_solana_message(private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
+    let keypair = solana_keypair_from_bytes(private_key_bytes, "Solana private key")?;
     Ok(keypair.sign_message(&message).to_string())
 }
 
-pub fn normalize_solana_private_key(mut private_key_bytes: Vec<u8>) -> Result<SolanaPrivateKeyImport, String> {
-    let keypair = solana_keypair_from_bytes(private_key_bytes.clone(), "Solana private key")?;
-    private_key_bytes.zeroize();
+pub fn normalize_solana_private_key(private_key: String) -> Result<SolanaPrivateKeyImport, String> {
+    let keypair = parse_solana_private_key(&private_key)?;
     Ok(SolanaPrivateKeyImport {
         private_key_bytes: keypair.secret_bytes().to_vec(),
         address: keypair.pubkey().to_string(),
@@ -234,13 +233,6 @@ fn parse_solana_key_hex(value: &str) -> Result<Vec<u8>, String> {
         ));
     }
     hex::decode(value).map_err(|e| format!("Invalid Solana hex key: {e}"))
-}
-
-fn solana_keypair_from_private_key_hex(private_key_hex: &str) -> Result<Keypair, String> {
-    let mut secret = parse_32_byte_hex(private_key_hex, "Solana private key")?;
-    let keypair = Keypair::new_from_array(secret);
-    secret.zeroize();
-    Ok(keypair)
 }
 
 fn solana_keypair_from_bytes(mut bytes: Vec<u8>, source: &str) -> Result<Keypair, String> {
@@ -475,14 +467,16 @@ mod tests {
     fn normalizes_phantom_style_solana_base58_keypair() {
         let private_key =
             derive_solana_private_key_from_seed(fixture_seed(), 0).expect("solana private key");
-        let secret = hex::decode(&private_key).expect("private key hex");
-        let secret: [u8; 32] = secret.as_slice().try_into().expect("32-byte private key");
+        let secret: [u8; 32] = private_key
+            .as_slice()
+            .try_into()
+            .expect("32-byte private key");
         let keypair = Keypair::new_from_array(secret);
 
         let imported =
             normalize_solana_private_key(keypair.to_base58_string()).expect("imported key");
 
-        assert_eq!(imported.private_key_hex, private_key);
+        assert_eq!(imported.private_key_bytes, private_key);
         assert_eq!(
             imported.address,
             derive_solana_address_from_seed(fixture_seed(), 0).expect("solana address")
@@ -493,8 +487,10 @@ mod tests {
     fn rejects_mismatched_solana_keypair_public_half() {
         let private_key =
             derive_solana_private_key_from_seed(fixture_seed(), 0).expect("solana private key");
-        let secret = hex::decode(private_key).expect("private key hex");
-        let secret: [u8; 32] = secret.as_slice().try_into().expect("32-byte private key");
+        let secret: [u8; 32] = private_key
+            .as_slice()
+            .try_into()
+            .expect("32-byte private key");
         let keypair = Keypair::new_from_array(secret);
         let mut bytes = keypair.to_bytes();
         bytes[63] ^= 1;

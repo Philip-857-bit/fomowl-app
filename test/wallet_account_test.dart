@@ -25,6 +25,7 @@ void main() {
         name: 'Wallet 1',
         origin: WalletOrigin.derived,
         derivationIndex: 0,
+        seedGroupId: 'seed_abc',
         createdAt: DateTime.utc(2026, 4, 24),
         addressesByFamily: const {
           ChainFamily.solana: 'solanaAddress',
@@ -43,9 +44,24 @@ void main() {
       );
 
       final json = account.toJson();
+      expect(json['seedGroupId'], 'seed_abc');
       expect(json['addressesByFamily']['evm'], '0xabc');
       expect(json['addressesByFamily']['solana'], 'solanaAddress');
       expect(json['addressesByFamily']['tron'], 'tronAddress');
+    });
+
+    test('round-trips seed group metadata', () {
+      final account = WalletAccount.fromJson({
+        'address': '0xabc',
+        'name': 'Wallet 1',
+        'origin': 'derived',
+        'derivationIndex': 1,
+        'seedGroupId': ' seed_group_1 ',
+        'createdAt': '2026-04-24T00:00:00.000Z',
+      });
+
+      expect(account.seedGroupId, 'seed_group_1');
+      expect(account.toJson()['seedGroupId'], 'seed_group_1');
     });
   });
 }

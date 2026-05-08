@@ -149,11 +149,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
 
     final hidden = await _visibilityService.loadHiddenTokens(effectiveChainId);
-    final address = isEvm
-        ? await _walletService.getCurrentWalletAddress()
-        : await _walletService.getWalletAddressForFamily(
-            blockchain.activeFamily,
-          );
+    final address = await _walletService.getActiveAddressForFamily(
+      blockchain.activeFamily,
+    );
     List<Token> fetched = blockchain.tokens;
     if (isEvm && address != null && address.isNotEmpty) {
       final state = blockchain.getWalletTokenState(
@@ -251,7 +249,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       return true;
     }
     // If it's in hidden set, it's disabled
-    if (_hiddenKeys.contains(_tokenKey(token))) return false;
+    if (TokenVisibilityUtils.contains(_hiddenKeys, token)) return false;
     // If it's in wallet tokens or custom tokens, it's enabled
     if (_walletTokens.any(
       (t) =>

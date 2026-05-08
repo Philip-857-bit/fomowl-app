@@ -7,6 +7,7 @@ class WalletAccount {
   final String name;
   final WalletOrigin origin;
   final int? derivationIndex;
+  final String? seedGroupId;
   final DateTime createdAt;
   final Map<ChainFamily, String> addressesByFamily;
 
@@ -15,6 +16,7 @@ class WalletAccount {
     required this.name,
     required this.origin,
     this.derivationIndex,
+    this.seedGroupId,
     required this.createdAt,
     Map<ChainFamily, String>? addressesByFamily,
   }) : addressesByFamily = Map.unmodifiable(
@@ -32,6 +34,9 @@ class WalletAccount {
         orElse: () => WalletOrigin.derived,
       ),
       derivationIndex: json['derivationIndex'] as int?,
+      seedGroupId: (json['seedGroupId'] as String?)?.trim().isNotEmpty == true
+          ? (json['seedGroupId'] as String).trim()
+          : null,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
@@ -47,7 +52,7 @@ class WalletAccount {
     if (mapped != null && mapped.isNotEmpty) {
       return mapped;
     }
-    if (family == ChainFamily.evm && address.trim().isNotEmpty) {
+    if (family == ChainFamily.evm && address.trim().startsWith('0x')) {
       return address;
     }
     return null;
@@ -61,6 +66,8 @@ class WalletAccount {
     'name': name,
     'origin': origin.name,
     'derivationIndex': derivationIndex,
+    if (seedGroupId != null && seedGroupId!.isNotEmpty)
+      'seedGroupId': seedGroupId,
     'createdAt': createdAt.toIso8601String(),
   };
 

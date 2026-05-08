@@ -171,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!identical(_blockchain, newService)) {
       _blockchain?.removeListener(_handleBlockchainChange);
       _blockchain = newService;
-      _lastChainId = newService.activeChain.chainId;
+      _lastChainId = _activePortfolioChainId(newService);
       _lastNetworkKey = newService.activeNetworkKey;
       _blockchain?.addListener(_handleBlockchainChange);
     }
@@ -295,13 +295,11 @@ class _HomeScreenState extends State<HomeScreen> {
         imageUrl: custom.imageUrl,
         coinGeckoId: custom.coinGeckoId,
         isCertified: false,
-        networkKey:
-            custom.networkKey ?? NetworkKey.evm(blockchain.activeChain.chainId),
+        networkKey: custom.networkKey ?? blockchain.activeNetworkKey,
         tokenStandard: custom.tokenStandard,
       );
 
-      final hiddenKey = TokenVisibilityUtils.identifier(customToken);
-      if (_hiddenTokenKeys.contains(hiddenKey)) {
+      if (TokenVisibilityUtils.contains(_hiddenTokenKeys, customToken)) {
         continue;
       }
       final key =
@@ -319,6 +317,55 @@ class _HomeScreenState extends State<HomeScreen> {
             right.totalValueUsdDecimal.compareTo(left.totalValueUsdDecimal),
       );
     return nextTokens;
+  }
+
+  int _activePortfolioChainId(BlockchainService blockchain) {
+    return blockchain.activeTokenStorageChainId;
+  }
+
+  EvmChain _activePortfolioChain(BlockchainService blockchain) {
+    return EvmChain(
+      name: blockchain.activeNetworkName,
+      symbol: blockchain.activeNetworkSymbol,
+      chainId: _activePortfolioChainId(blockchain),
+      rpcUrl: '',
+      coinGeckoId: blockchain.activeNetworkCoinGeckoId,
+      explorerUrl: blockchain.activeNetworkExplorerUrl,
+      logoUrl: blockchain.activeNetworkLogoUrl,
+      family: blockchain.activeFamily,
+    );
+  }
+
+  EvmChain _portfolioChainForId(BlockchainService blockchain, int chainId) {
+    if (chainId == _activePortfolioChainId(blockchain)) {
+      return _activePortfolioChain(blockchain);
+    }
+    if (chainId == -501) {
+      return const EvmChain(
+        name: 'Solana',
+        symbol: 'SOL',
+        chainId: -501,
+        rpcUrl: '',
+        coinGeckoId: 'solana',
+        logoUrl: 'https://cryptologos.cc/logos/solana-sol-logo.png',
+        family: ChainFamily.solana,
+      );
+    }
+    if (chainId == -195) {
+      return const EvmChain(
+        name: 'Tron',
+        symbol: 'TRX',
+        chainId: -195,
+        rpcUrl: '',
+        coinGeckoId: 'tron',
+        logoUrl: 'https://cryptologos.cc/logos/tron-trx-logo.png',
+        family: ChainFamily.tron,
+      );
+    }
+    return blockchain.allChains.firstWhere(
+      (candidate) => candidate.chainId == chainId,
+      orElse: () => blockchain.activeChain,
+    );
   }
 
   Future<HomePortfolioData> _buildPortfolioDataFromSections(
@@ -383,10 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return HomePortfolioData.empty();
     }
 
-    final chain = _blockchain!.allChains.firstWhere(
-      (candidate) => candidate.chainId == _lastChainId,
-      orElse: () => _blockchain!.activeChain,
-    );
+    final chain = _portfolioChainForId(_blockchain!, _lastChainId!);
     final visibleTokens = _displayableTokens(_tokens);
     if (visibleTokens.isEmpty) {
       return HomePortfolioData.empty();
@@ -460,10 +504,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return snapshot;
     }
 
-    final chain = blockchain.allChains.firstWhere(
-      (candidate) => candidate.chainId == currentChainId,
-      orElse: () => blockchain.activeChain,
-    );
+    final chain = _portfolioChainForId(blockchain, currentChainId);
     final mergedSections = snapshot.sections
         .where((section) => section.chain.chainId != currentChainId)
         .toList(growable: true);
@@ -487,10 +528,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    final sectionChain = blockchain.allChains.firstWhere(
-      (chain) => chain.chainId == currentChainId,
-      orElse: () => blockchain.activeChain,
-    );
+    final sectionChain = _portfolioChainForId(blockchain, currentChainId);
 
     final nextSections = List<HomePortfolioSection>.from(_portfolioRawSections);
     final existingIndex = nextSections.indexWhere(
@@ -700,7 +738,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (address != null && address.isNotEmpty) {
         // Load snapshot immediately — don't wait for blockchain.init().
         // We use the last known chainId if available, otherwise fall through.
-        final preChainId = _lastChainId ?? blockchain.activeChain.chainId;
+        final preChainId = _lastChainId ?? _activePortfolioChainId(blockchain);
         final snapshot = await _snapshotService.loadSnapshot(
           preChainId,
           address,
@@ -740,14 +778,28 @@ class _HomeScreenState extends State<HomeScreen> {
         await initFuture;
         if (!mounted) return;
 
-        _lastChainId = blockchain.activeChain.chainId;
+        _lastChainId = _activePortfolioChainId(blockchain);
         debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
         await _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
+        final balanceAddress = await _walletService.getActiveAddressForFamily(
+          blockchain.activeFamily,
+        );
 
         debugPrint('[OWLLET] Triggering background data sync...');
-        unawaited(_fetchRealBalances(address));
-        unawaited(_fetchPortfolioData(address, sync: forcePortfolioSync));
-        _scheduleDeferredHomeTasks(address);
+        if (balanceAddress != null && balanceAddress.isNotEmpty) {
+          unawaited(_fetchRealBalances(balanceAddress));
+        } else if (mounted) {
+          setState(() {
+            _replaceDisplayedTokens(const [], isUsingCachedData: false);
+            _isLoadingBalances = false;
+          });
+        }
+        if (balanceAddress != null && balanceAddress.isNotEmpty) {
+          unawaited(
+            _fetchPortfolioData(balanceAddress, sync: forcePortfolioSync),
+          );
+        }
+        _scheduleDeferredHomeTasks(balanceAddress ?? address);
         unawaited(_checkWhatsNew());
       } else {
         // No wallet — still need blockchain init to know the chain.
@@ -922,7 +974,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (shouldAdd != true || !mounted) return;
       final added = await blockchain.addCustomToken(
-        chainId: blockchain.activeChain.chainId,
+        chainId: blockchain.activeTokenStorageChainId,
         token: detected,
       );
       if (!added) {
@@ -957,7 +1009,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _tokens,
           scope: _livePriceScope,
         );
-        _lastChainId = blockchain.activeChain.chainId;
+        _lastChainId = _activePortfolioChainId(blockchain);
         await _upsertLiveChainPortfolioSection(realTokens);
 
         // Save fresh snapshot
@@ -989,18 +1041,20 @@ class _HomeScreenState extends State<HomeScreen> {
           // Keep existing tokens on transient failures. Only inject a native
           // placeholder when we truly have nothing to show.
           if (_tokens.isEmpty && !_isUsingCachedData) {
-            final chain = Provider.of<BlockchainService>(
+            final blockchain = Provider.of<BlockchainService>(
               context,
               listen: false,
-            ).activeChain;
+            );
             _replaceDisplayedTokens([
               Token(
-                symbol: chain.symbol,
-                name: chain.name,
+                symbol: blockchain.activeNetworkSymbol,
+                name: blockchain.activeNetworkName,
                 balance: 0,
                 valueUsd: 0,
                 changePercent24h: 0,
-                coinGeckoId: chain.coinGeckoId,
+                coinGeckoId: blockchain.activeNetworkCoinGeckoId,
+                imageUrl: blockchain.activeNetworkLogoUrl,
+                networkKey: blockchain.activeNetworkKey,
               ),
             ], isUsingCachedData: false);
           }
@@ -1012,7 +1066,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleBlockchainChange() {
     if (!mounted) return;
     final blockchain = _blockchain;
-    final chainId = blockchain?.activeChain.chainId;
+    final chainId = blockchain == null
+        ? null
+        : _activePortfolioChainId(blockchain);
     if (blockchain == null || chainId == null) return;
 
     final currentNetworkKey = blockchain.activeNetworkKey;
@@ -1052,8 +1108,17 @@ class _HomeScreenState extends State<HomeScreen> {
     _lastChainId = chainId;
     _lastNetworkKey = currentNetworkKey;
     _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
-    _walletService.getCurrentWalletAddress().then((address) async {
-      if (!mounted || address == null) return;
+    _walletService.getActiveAddressForFamily(blockchain.activeFamily).then((
+      address,
+    ) async {
+      if (!mounted) return;
+      if (address == null || address.isEmpty) {
+        setState(() {
+          _replaceDisplayedTokens(const [], isUsingCachedData: false);
+          _applyPortfolioData(_fallbackPortfolioData());
+        });
+        return;
+      }
 
       // For EVM chains, try to load a cached snapshot instantly.
       // For non-EVM, clear the list so stale EVM tokens don't show.
@@ -1112,7 +1177,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _isTokenHidden(Token token) {
-    return _hiddenTokenKeys.contains(TokenVisibilityUtils.identifier(token));
+    return TokenVisibilityUtils.contains(_hiddenTokenKeys, token);
   }
 
   Future<void> _refreshNotificationDot({String? address}) async {
@@ -1363,7 +1428,9 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
 
-      final address = await _walletService.getCurrentWalletAddress();
+      final address = await _walletService.getActiveAddressForFamily(
+        blockchain.activeFamily,
+      );
       if (address != null && address.isNotEmpty) {
         unawaited(_fetchRealBalances(address));
         unawaited(_fetchPortfolioData(address, sync: true));

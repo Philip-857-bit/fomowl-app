@@ -136,7 +136,12 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     }
   }
 
-  Widget _chainChip(String label, ChainFamily family, String iconPath) {
+  Widget _chainChip(
+    String label,
+    ChainFamily family, {
+    String? assetPath,
+    required String logoUrl,
+  }) {
     final selected = _selectedChain == family;
     return Expanded(
       child: GestureDetector(
@@ -159,15 +164,11 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                iconPath,
-                width: 24,
-                height: 24,
-                errorBuilder: (_, _, _) => Icon(
-                  Icons.link,
-                  color: selected ? AppColors.primaryAccent : Colors.white54,
-                  size: 22,
-                ),
+              _ChainLogo(
+                label: label,
+                assetPath: assetPath,
+                logoUrl: logoUrl,
+                selected: selected,
               ),
               const SizedBox(height: 4),
               Text(
@@ -229,18 +230,25 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
 
                 Row(
                   children: [
-                    _chainChip('EVM', ChainFamily.evm, 'assets/images/evm.png'),
+                    _chainChip(
+                      'EVM',
+                      ChainFamily.evm,
+                      assetPath: 'assets/images/tokens/eth.png',
+                      logoUrl:
+                          'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+                    ),
                     const SizedBox(width: 10),
                     _chainChip(
                       'Solana',
                       ChainFamily.solana,
-                      'assets/images/solana.png',
+                      logoUrl:
+                          'https://cryptologos.cc/logos/solana-sol-logo.png',
                     ),
                     const SizedBox(width: 10),
                     _chainChip(
                       'Tron',
                       ChainFamily.tron,
-                      'assets/images/tron.png',
+                      logoUrl: 'https://cryptologos.cc/logos/tron-trx-logo.png',
                     ),
                   ],
                 ),
@@ -406,6 +414,66 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ChainLogo extends StatelessWidget {
+  const _ChainLogo({
+    required this.label,
+    required this.logoUrl,
+    required this.selected,
+    this.assetPath,
+  });
+
+  final String label;
+  final String? assetPath;
+  final String logoUrl;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget fallback() {
+      return Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: selected
+              ? AppColors.primaryAccent.withValues(alpha: 0.18)
+              : Colors.white10,
+        ),
+        child: Text(
+          label.isEmpty ? '?' : label.substring(0, 1),
+          style: GoogleFonts.outfit(
+            color: selected ? AppColors.primaryAccent : Colors.white70,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      );
+    }
+
+    final localPath = assetPath;
+    if (localPath != null && localPath.isNotEmpty) {
+      return Image.asset(
+        localPath,
+        width: 24,
+        height: 24,
+        errorBuilder: (_, _, _) => Image.network(
+          logoUrl,
+          width: 24,
+          height: 24,
+          errorBuilder: (_, _, _) => fallback(),
+        ),
+      );
+    }
+    return Image.network(
+      logoUrl,
+      width: 24,
+      height: 24,
+      errorBuilder: (_, _, _) => fallback(),
     );
   }
 }

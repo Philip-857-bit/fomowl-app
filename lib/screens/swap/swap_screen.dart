@@ -209,10 +209,8 @@ class _SwapScreenState extends State<SwapScreen> {
       if (_isGasless && !_isGaslessSupported) {
         _isGasless = false;
       }
+      _walletAddress = null;
       _loadWalletBalance();
-      if (_activeTab == SwapTab.limit) {
-        unawaited(_refreshLimitOrders(showLoading: false));
-      }
     } else if (_fromToken == null || _toToken == null) {
       final tokens = _visibleTokens(blockchain.tokens);
       _syncSelectedTokens(tokens);
@@ -598,9 +596,11 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Future<void> _loadWalletBalance() async {
-    final address = await _walletService.getCurrentWalletAddress();
-    if (!mounted) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final family = blockchain.activeFamily;
+    final address = await _walletService.getActiveAddressForFamily(family);
+    if (!mounted) return;
+    if (blockchain.activeFamily != family) return;
     await _tokenVisibilityService.loadHiddenTokens(
       _tokenStorageChainId(blockchain),
     );
@@ -612,7 +612,12 @@ class _SwapScreenState extends State<SwapScreen> {
 
     if (address == null || address.isEmpty) {
       if (mounted) {
-        setState(() => _limitOrders = const []);
+        setState(() {
+          _limitOrders = const [];
+          _solanaLimitOrders = const [];
+          _quoteStatusMessage =
+              'This wallet does not support ${blockchain.activeNetworkName}.';
+        });
       }
     } else {
       unawaited(_refreshLimitOrders(showLoading: false));
@@ -763,7 +768,7 @@ class _SwapScreenState extends State<SwapScreen> {
       if (contractAddress.isEmpty) {
         return true;
       }
-      return !hiddenTokens.contains(TokenVisibilityUtils.identifier(token));
+      return !TokenVisibilityUtils.contains(hiddenTokens, token);
     }).toList();
   }
 
@@ -1431,7 +1436,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (address == null || address.isEmpty) {
       return;
     }
-    final chainId = blockchain.activeChain.chainId;
+    final chainId = blockchain.activeTokenStorageChainId;
     blockchain.applyOptimisticSwap(
       walletAddress: address,
       chainId: chainId,
@@ -2230,6 +2235,15 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     if (blockchain.activeFamily == ChainFamily.solana) {
+      if (!_looksLikeSolanaPublicKey(walletAddress)) {
+        if (mounted) {
+          setState(() {
+            _solanaLimitOrders = const [];
+            _isLoadingSolanaLimitOrders = false;
+          });
+        }
+        return;
+      }
       // Fetch Jupiter Trigger orders for Solana
       if (showLoading && mounted) {
         setState(() => _isLoadingSolanaLimitOrders = true);
@@ -2276,6 +2290,10 @@ class _SwapScreenState extends State<SwapScreen> {
       _limitOrders = orders;
       _isLoadingLimitOrders = false;
     });
+  }
+
+  bool _looksLikeSolanaPublicKey(String value) {
+    return RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(value.trim());
   }
 
   Future<void> _cancelLimitOrder(LimitOrderSummary order) async {

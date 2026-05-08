@@ -11,6 +11,7 @@ import '../../../models/token.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../services/token_visibility_service.dart';
 import '../../../utils/app_error_utils.dart';
+import '../../../utils/token_visibility_utils.dart';
 import '../../../utils/toast_utils.dart';
 import '../../wallet/helpers/token_management_query_helper.dart';
 import '../../../widgets/token_icon.dart';
@@ -97,7 +98,11 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       _isResolvingContract = false;
     });
 
-    if (!TokenManagementQueryHelper.isContractAddress(nextQuery)) {
+    final family = context.read<BlockchainService>().activeFamily;
+    if (!TokenManagementQueryHelper.isContractAddress(
+      nextQuery,
+      family: family,
+    )) {
       return;
     }
 
@@ -160,7 +165,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
           _findExistingToken(blockchain, normalizedAddress) ??
           _tokenFromDefinition(detected);
 
-      if (hiddenTokens.contains(normalizedAddress)) {
+      if (TokenVisibilityUtils.contains(hiddenTokens, selectedToken)) {
         await _tokenVisibilityService.setTokenHidden(
           widget.chainId,
           selectedToken,
@@ -241,6 +246,8 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       decimals: definition.decimals,
       imageUrl: definition.imageUrl,
       coinGeckoId: definition.coinGeckoId,
+      networkKey: definition.networkKey,
+      tokenStandard: definition.tokenStandard,
     );
   }
 

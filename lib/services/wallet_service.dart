@@ -15,13 +15,25 @@ import 'storage_service.dart';
 import '../utils/amount_utils.dart';
 import 'native_crypto.dart';
 
+typedef SeedAccountActivityChecker =
+    Future<bool> Function({
+      required String evmAddress,
+      required String solanaAddress,
+      required String tronAddress,
+      required int derivationIndex,
+    });
+
 /// Wallet Service
 /// Handles wallet creation, import, and key management
 class WalletService {
-  WalletService({StorageService? storageService})
-    : _storage = storageService ?? StorageService();
+  WalletService({
+    StorageService? storageService,
+    SeedAccountActivityChecker? seedAccountActivityChecker,
+  }) : _storage = storageService ?? StorageService(),
+       _seedAccountActivityChecker = seedAccountActivityChecker;
 
   final StorageService _storage;
+  final SeedAccountActivityChecker? _seedAccountActivityChecker;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
   static final ContractAbi _erc20Abi = ContractAbi.fromJson('''[
@@ -83,15 +95,89 @@ class WalletService {
     String mnemonic, {
     String? walletName,
     int derivationIndex = 0,
+    String? seedGroupId,
   }) async {
     final normalizedMnemonic = normalizeMnemonic(mnemonic);
     if (!await validateMnemonic(normalizedMnemonic)) {
       throw Exception('Invalid mnemonic phrase');
     }
 
-    // Generate seed from mnemonic (Rust FFI)
     final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
+    final material = await _deriveWalletMaterialFromSeed(seed, derivationIndex);
+    final resolvedSeedGroupId =
+        seedGroupId ?? _seedGroupIdFromMnemonic(normalizedMnemonic);
 
+    await _saveDerivedWalletMaterial(
+      material,
+      mnemonic: normalizedMnemonic,
+      walletName: walletName ?? 'Wallet ${derivationIndex + 1}',
+      seedGroupId: resolvedSeedGroupId,
+    );
+
+    return material.toResult();
+  }
+
+  Future<List<Map<String, String>>> importWalletsFromMnemonic(
+    String mnemonic, {
+    String? walletName,
+  }) async {
+    final normalizedMnemonic = normalizeMnemonic(mnemonic);
+    if (!await validateMnemonic(normalizedMnemonic)) {
+      throw Exception('Invalid mnemonic phrase');
+    }
+
+    final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
+    final seedGroupId = _seedGroupIdFromMnemonic(normalizedMnemonic);
+    final imported = <Map<String, String>>[];
+    var consecutiveUnused = 0;
+
+    for (var index = 0; index < 20; index++) {
+      final material = await _deriveWalletMaterialFromSeed(seed, index);
+      var shouldSave = index == 0;
+
+      if (index > 0) {
+        try {
+          shouldSave = await _hasSeedAccountActivity(
+            evmAddress: material.evmAddress,
+            solanaAddress: material.solanaAddress,
+            tronAddress: material.tronAddress,
+            derivationIndex: index,
+          );
+        } catch (error) {
+          debugPrint(
+            '[WalletService] Seed account discovery stopped at index $index: $error',
+          );
+          break;
+        }
+
+        if (!shouldSave) {
+          consecutiveUnused++;
+          if (consecutiveUnused >= 5) break;
+          continue;
+        }
+        consecutiveUnused = 0;
+      }
+
+      await _saveDerivedWalletMaterial(
+        material,
+        mnemonic: normalizedMnemonic,
+        walletName: index == 0
+            ? (walletName?.trim().isNotEmpty == true
+                  ? walletName!.trim()
+                  : 'Wallet 1')
+            : 'Wallet ${index + 1}',
+        seedGroupId: seedGroupId,
+      );
+      imported.add(material.toResult());
+    }
+
+    return imported;
+  }
+
+  Future<_DerivedWalletMaterial> _deriveWalletMaterialFromSeed(
+    Uint8List seed,
+    int derivationIndex,
+  ) async {
     // Derive family addresses from the same seed/account index.
     final privateKey = await NativeCrypto.deriveEvmPrivateKeyFromSeed(
       seed,
@@ -121,30 +207,89 @@ class WalletService {
 
     final publicKey = HEX.encode(credentials.encodedPublicKey);
 
-    // Store wallet data securely
-    await _storage.saveWallet(
-      address: address,
-      privateKey: privateKey,
-      mnemonic: normalizedMnemonic,
-      walletName: walletName ?? 'Wallet ${derivationIndex + 1}',
-      origin: WalletOrigin.derived,
+    return _DerivedWalletMaterial(
       derivationIndex: derivationIndex,
+      privateKey: privateKey,
+      evmAddress: address,
+      solanaAddress: solanaAddress,
+      tronAddress: tronAddress,
+      publicKey: publicKey,
+    );
+  }
+
+  Future<void> _saveDerivedWalletMaterial(
+    _DerivedWalletMaterial material, {
+    required String mnemonic,
+    required String walletName,
+    required String seedGroupId,
+  }) async {
+    await _storage.saveWallet(
+      address: material.evmAddress,
+      privateKey: material.privateKey,
+      mnemonic: mnemonic,
+      walletName: walletName,
+      origin: WalletOrigin.derived,
+      derivationIndex: material.derivationIndex,
+      seedGroupId: seedGroupId,
       addressesByFamily: {
-        ChainFamily.evm: address,
-        ChainFamily.solana: solanaAddress,
-        ChainFamily.tron: tronAddress,
+        ChainFamily.evm: material.evmAddress,
+        ChainFamily.solana: material.solanaAddress,
+        ChainFamily.tron: material.tronAddress,
       },
     );
+  }
 
-    return {
-      'address': address,
-      'evmAddress': address,
-      'solanaAddress': solanaAddress,
-      'tronAddress': tronAddress,
-      'privateKey': privateKey,
-      'publicKey': publicKey,
-      'derivationIndex': derivationIndex.toString(),
-    };
+  String _seedGroupIdFromMnemonic(String normalizedMnemonic) {
+    final digest = pkg_crypto.sha256.convert(utf8.encode(normalizedMnemonic));
+    return 'seed_${digest.toString().substring(0, 16)}';
+  }
+
+  Future<bool> _hasSeedAccountActivity({
+    required String evmAddress,
+    required String solanaAddress,
+    required String tronAddress,
+    required int derivationIndex,
+  }) async {
+    final checker = _seedAccountActivityChecker;
+    if (checker != null) {
+      return checker(
+        evmAddress: evmAddress,
+        solanaAddress: solanaAddress,
+        tronAddress: tronAddress,
+        derivationIndex: derivationIndex,
+      );
+    }
+
+    final response = await _httpClientService
+        .sendWithRetry(
+          () => _httpClientService.client.get(
+            AppEnvironment.blockchain('/portfolio/${evmAddress.toLowerCase()}'),
+          ),
+        )
+        .timeout(const Duration(seconds: 5));
+    if (response.statusCode != 200) return false;
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) return false;
+    final sections = decoded['sections'];
+    if (sections is! List) return false;
+    for (final section in sections) {
+      if (section is! Map) continue;
+      final tokens = section['tokens'];
+      if (tokens is! List) continue;
+      for (final token in tokens) {
+        if (token is! Map) continue;
+        final balance = _asDouble(token['balance']);
+        final valueUsd = _asDouble(token['valueUsd']);
+        if (balance > 0 || valueUsd > 0) return true;
+      }
+    }
+    return false;
+  }
+
+  double _asDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   /// Import wallet from private key
@@ -202,9 +347,8 @@ class WalletService {
   }) async {
     try {
       privateKey = privateKey.trim();
-      final keyBytes = utf8.encode(privateKey);
       final keyMaterial = await NativeCrypto.normalizeSolanaPrivateKey(
-        Uint8List.fromList(keyBytes),
+        privateKey,
       );
       final hexKey = pkg_hex.HEX.encode(keyMaterial.privateKeyBytes);
       final address = keyMaterial.address;
@@ -285,6 +429,10 @@ class WalletService {
     return account?.getWalletAddressForFamily(family);
   }
 
+  Future<String?> getActiveAddressForFamily(ChainFamily family) {
+    return getWalletAddressForFamily(family);
+  }
+
   /// Get wallet private key (use with caution!)
   /// Prefer signing helpers for transactional/auth flows.
   Future<String?> getPrivateKey([String? address]) async {
@@ -308,6 +456,12 @@ class WalletService {
   /// Delete wallet (logout)
   Future<void> deleteWallet() async {
     await _storage.deleteWallet();
+  }
+
+  /// Fully reset local wallet state, including passcode, wallet lists, cached
+  /// token visibility, backend sessions, and all stored key material.
+  Future<void> resetAppData() async {
+    await _storage.clearAll();
   }
 
   /// Get wallet name
@@ -349,20 +503,62 @@ class WalletService {
 
   Future<Map<String, String>> createAdditionalWallet({
     String? walletName,
+    String? seedGroupId,
   }) async {
-    final address = await getCurrentWalletAddress();
-    final mnemonic = await _storage.getMnemonic(address);
+    final targetSeedGroupId = await _resolveSeedGroupId(seedGroupId);
+    if (targetSeedGroupId == null) {
+      throw Exception(
+        'Seed phrase not available. Import or create a seed phrase wallet first.',
+      );
+    }
+
+    final mnemonic = await _mnemonicForSeedGroup(targetSeedGroupId);
     if (mnemonic == null || mnemonic.isEmpty) {
       throw Exception(
         'Original seed phrase not available. Unable to derive new wallet.',
       );
     }
-    final index = await _storage.getNextDerivationIndex();
+    final index = await _storage.getNextDerivationIndex(targetSeedGroupId);
     return await createWalletFromMnemonic(
       mnemonic,
       walletName: walletName ?? 'Wallet ${index + 1}',
       derivationIndex: index,
+      seedGroupId: targetSeedGroupId,
     );
+  }
+
+  Future<String?> _resolveSeedGroupId(String? seedGroupId) async {
+    final provided = seedGroupId?.trim();
+    if (provided != null && provided.isNotEmpty) return provided;
+
+    final active = await getActiveWalletAccount();
+    final activeGroup = active?.seedGroupId?.trim();
+    if (activeGroup != null && activeGroup.isNotEmpty) return activeGroup;
+
+    final accounts = await getWalletAccounts();
+    for (final account in accounts) {
+      final group = account.seedGroupId?.trim();
+      if (account.origin == WalletOrigin.derived &&
+          group != null &&
+          group.isNotEmpty) {
+        return group;
+      }
+    }
+    return null;
+  }
+
+  Future<String?> _mnemonicForSeedGroup(String seedGroupId) async {
+    final grouped = await _storage.getMnemonicForSeedGroup(seedGroupId);
+    if (grouped != null && grouped.isNotEmpty) return grouped;
+
+    final accounts = await getWalletAccounts();
+    for (final account in accounts) {
+      if (account.seedGroupId == seedGroupId) {
+        final mnemonic = await _storage.getMnemonic(account.address);
+        if (mnemonic != null && mnemonic.isNotEmpty) return mnemonic;
+      }
+    }
+    return null;
   }
 
   /// Sign a message with the active wallet.
@@ -1093,7 +1289,8 @@ class WalletService {
   }
 
   Future<Uint8List> _getSeedBytes() async {
-    final mnemonic = await getMnemonic();
+    final activeAccount = await getActiveWalletAccount();
+    final mnemonic = await getMnemonic(activeAccount?.address);
     if (mnemonic == null || mnemonic.isEmpty) {
       throw Exception(
         'Seed phrase not available. Non-EVM transactions require a seed-phrase wallet.',
@@ -1155,4 +1352,32 @@ class WalletService {
     }
     return Uint8List.fromList(HEX.decode(normalized));
   }
+}
+
+class _DerivedWalletMaterial {
+  const _DerivedWalletMaterial({
+    required this.derivationIndex,
+    required this.privateKey,
+    required this.evmAddress,
+    required this.solanaAddress,
+    required this.tronAddress,
+    required this.publicKey,
+  });
+
+  final int derivationIndex;
+  final String privateKey;
+  final String evmAddress;
+  final String solanaAddress;
+  final String tronAddress;
+  final String publicKey;
+
+  Map<String, String> toResult() => {
+    'address': evmAddress,
+    'evmAddress': evmAddress,
+    'solanaAddress': solanaAddress,
+    'tronAddress': tronAddress,
+    'privateKey': privateKey,
+    'publicKey': publicKey,
+    'derivationIndex': derivationIndex.toString(),
+  };
 }

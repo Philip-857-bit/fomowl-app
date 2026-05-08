@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fomowl_wallet/models/chain.dart';
+import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/models/token_standard.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:fomowl_wallet/utils/token_visibility_utils.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -130,5 +132,80 @@ void main() {
     expect(tokens[0].tokenStandard, TokenStandard.native);
     expect(tokens[1].networkKey, 'evm:1');
     expect(tokens[1].tokenStandard, TokenStandard.erc20);
+  });
+
+  test('parses Solana backend tokens as SPL scoped to Solana network', () {
+    final service = BlockchainService();
+    service.setActiveNetworkKey('solana:mainnet');
+
+    final tokens = service.parseBackendDiscoveredTokensForTest(
+      jsonEncode({
+        'networkKey': 'solana:mainnet',
+        'tokens': [
+          {
+            'symbol': 'USDC',
+            'name': 'USD Coin',
+            'contractAddress': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+            'balance': '1.5',
+            'valueUsd': 1.5,
+            'priceUsd': 1,
+          },
+        ],
+        'discovery': {'tokenCount': 1},
+      }),
+    );
+
+    expect(tokens, hasLength(1));
+    expect(tokens!.single.networkKey, 'solana:mainnet');
+    expect(tokens.single.tokenStandard, TokenStandard.spl);
+  });
+
+  test('token visibility identifiers include network scope', () {
+    const evmHello = Token(
+      symbol: 'HELLO',
+      name: 'HELLO',
+      contractAddress: '0x0f1c00000000000000000000000000000000ac00',
+      balance: 0,
+      valueUsd: 0,
+      changePercent24h: 0,
+      networkKey: 'evm:56',
+    );
+    const solUsdc = Token(
+      symbol: 'USDC',
+      name: 'USD Coin',
+      contractAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      balance: 0,
+      valueUsd: 0,
+      changePercent24h: 0,
+      networkKey: 'solana:mainnet',
+      tokenStandard: TokenStandard.spl,
+    );
+
+    expect(
+      TokenVisibilityUtils.identifier(evmHello),
+      'evm:56:0x0f1c00000000000000000000000000000000ac00',
+    );
+    expect(
+      TokenVisibilityUtils.identifier(solUsdc),
+      'solana:mainnet:epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v',
+    );
+  });
+
+  test('rejects EVM custom token addresses on Solana', () async {
+    final service = BlockchainService();
+    service.setActiveNetworkKey('solana:mainnet');
+
+    final added = await service.addCustomToken(
+      chainId: -501,
+      token: const CustomTokenDefinition(
+        symbol: 'HELLO',
+        name: 'HELLO',
+        address: '0x0f1c00000000000000000000000000000000ac00',
+        decimals: 18,
+      ),
+    );
+
+    expect(added, isFalse);
+    expect(service.customTokensForActiveChain, isEmpty);
   });
 }
