@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/token.dart';
+import 'package:fomowl_wallet/models/token_standard.dart';
 import 'package:fomowl_wallet/screens/home/home_portfolio_data.dart';
 import 'package:fomowl_wallet/screens/home/home_portfolio_repository.dart';
 import 'package:fomowl_wallet/utils/value_formatter.dart';
@@ -189,5 +190,63 @@ void main() {
       expect(data.sections.single.tokens, hasLength(1));
       expect(data.sections.single.tokens.single.symbol, 'ETH');
     });
+
+    test(
+      'does not allow Solana tokens inside EVM portfolio sections',
+      () async {
+        final data = await repository.filterSections(
+          sections: [
+            HomePortfolioSection(
+              chain: chain(name: 'Ethereum', symbol: 'ETH', chainId: 1),
+              tokens: [
+                const Token(
+                  symbol: 'SOL',
+                  name: 'Solana',
+                  balance: 1,
+                  valueUsd: 100,
+                  changePercent24h: 0,
+                  networkKey: 'solana:mainnet',
+                  tokenStandard: TokenStandard.native,
+                ),
+                token(
+                  symbol: 'ETH',
+                  name: 'Ethereum',
+                  valueUsd: 50,
+                  changePercent24h: 0,
+                ),
+              ],
+            ),
+            const HomePortfolioSection(
+              chain: EvmChain(
+                name: 'Solana',
+                symbol: 'SOL',
+                chainId: -501,
+                rpcUrl: '',
+                family: ChainFamily.solana,
+              ),
+              tokens: [
+                Token(
+                  symbol: 'SOL',
+                  name: 'Solana',
+                  balance: 1,
+                  valueUsd: 100,
+                  changePercent24h: 0,
+                  networkKey: 'solana:mainnet',
+                  tokenStandard: TokenStandard.native,
+                ),
+              ],
+            ),
+          ],
+          loadHiddenTokens: (_) async => <String>{},
+        );
+
+        expect(data.sections, hasLength(2));
+        final ethereum = data.sections.singleWhere(
+          (section) => section.chain.chainId == 1,
+        );
+        expect(ethereum.tokens, hasLength(1));
+        expect(ethereum.tokens.single.symbol, 'ETH');
+      },
+    );
   });
 }

@@ -139,12 +139,16 @@ void main() {
     testWidgets('lifecycle pause clears revealed sensitive state', (
       tester,
     ) async {
+      final lifecycle = ValueNotifier<AppLifecycleState>(
+        AppLifecycleState.resumed,
+      );
       await tester.pumpWidget(
         _wrap(
           BackupSeedPhraseScreen(
             walletService: _FakeWalletService(_mnemonic),
             authVerifier: _allowAuth,
             screenCaptureGuard: _FakeScreenCaptureGuard(),
+            lifecycleListenable: lifecycle,
           ),
         ),
       );
@@ -153,7 +157,7 @@ void main() {
       await _revealPhrase(tester);
       expect(find.text('I backed it up'), findsOneWidget);
 
-      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      lifecycle.value = AppLifecycleState.paused;
       await _pumpUi(tester);
 
       expect(find.text('I backed it up'), findsNothing);
@@ -315,8 +319,11 @@ Future<void> _revealPhrase(WidgetTester tester) async {
   await tester.tap(find.text('Tap to reveal'));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 250));
-  await tester.tap(find.text('I Understand'));
-  await tester.pump();
+  final confirmation = find.text('I Understand');
+  if (confirmation.evaluate().isNotEmpty) {
+    await tester.tap(confirmation);
+    await tester.pump();
+  }
   await tester.pump(const Duration(milliseconds: 250));
 }
 

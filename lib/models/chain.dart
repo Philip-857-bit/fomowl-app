@@ -73,7 +73,11 @@ class EvmChain {
     this.family = ChainFamily.evm,
   });
 
-  String get networkKey => NetworkKey.evm(chainId);
+  String get networkKey => switch (family) {
+    ChainFamily.solana => NetworkKey.solana('mainnet'),
+    ChainFamily.tron => NetworkKey.tron('mainnet'),
+    ChainFamily.evm => NetworkKey.evm(chainId),
+  };
 
   Map<String, dynamic> toJson() => {
     'name': name,

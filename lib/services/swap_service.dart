@@ -534,7 +534,7 @@ class SwapService {
           response.body,
           fallback: 'Unable to fetch a swap quote right now.',
         );
-        debugPrint('Backend Swap Quote Error: ${response.body}');
+        debugPrint('Backend Swap Quote Error: $_lastError');
         return null;
       }
     } catch (e) {

@@ -47,6 +47,26 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
+      'failed to get quotes',
+      'no solana swap route',
+      'no swap route',
+      'no quote',
+      'route not found',
+    ])) {
+      return 'No swap route is available for this token pair or amount. Try a larger amount or different token.';
+    }
+
+    if (_containsAny(lowered, const [
+      'jupiter',
+      '/order',
+      '/execute',
+      'requestid',
+      'swap provider',
+    ])) {
+      return fallback;
+    }
+
+    if (_containsAny(lowered, const [
       'invalid mnemonic',
       'invalid private key',
       'amount is required',
@@ -112,6 +132,7 @@ class AppErrorUtils {
       'rpc',
       'provider',
       'upstream',
+      'requestid',
       'response was incomplete',
       'response was malformed',
     ])) {
@@ -129,6 +150,15 @@ class AppErrorUtils {
     if (body == null || body.trim().isEmpty) return fallback;
     final lowered = body.toLowerCase();
     if (_containsAny(lowered, const [
+      'failed to get quotes',
+      'no solana swap route',
+      'no swap route',
+      'no quote',
+      'route not found',
+    ])) {
+      return 'No swap route is available for this token pair or amount. Try a larger amount or different token.';
+    }
+    if (_containsAny(lowered, const [
       'challenge',
       'signature',
       'wallet session',
@@ -138,6 +168,10 @@ class AppErrorUtils {
       'sql',
       'rpc',
       'provider',
+      'jupiter',
+      '/order',
+      '/execute',
+      'requestid',
     ])) {
       return fallback;
     }

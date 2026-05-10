@@ -136,12 +136,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     }
   }
 
-  Widget _chainChip(
-    String label,
-    ChainFamily family, {
-    String? assetPath,
-    required String logoUrl,
-  }) {
+  Widget _chainChip(String label, ChainFamily family, {String? assetPath}) {
     final selected = _selectedChain == family;
     return Expanded(
       child: GestureDetector(
@@ -166,8 +161,8 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
             children: [
               _ChainLogo(
                 label: label,
+                family: family,
                 assetPath: assetPath,
-                logoUrl: logoUrl,
                 selected: selected,
               ),
               const SizedBox(height: 4),
@@ -234,22 +229,11 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                       'EVM',
                       ChainFamily.evm,
                       assetPath: 'assets/images/tokens/eth.png',
-                      logoUrl:
-                          'https://cryptologos.cc/logos/ethereum-eth-logo.png',
                     ),
                     const SizedBox(width: 10),
-                    _chainChip(
-                      'Solana',
-                      ChainFamily.solana,
-                      logoUrl:
-                          'https://cryptologos.cc/logos/solana-sol-logo.png',
-                    ),
+                    _chainChip('Solana', ChainFamily.solana),
                     const SizedBox(width: 10),
-                    _chainChip(
-                      'Tron',
-                      ChainFamily.tron,
-                      logoUrl: 'https://cryptologos.cc/logos/tron-trx-logo.png',
-                    ),
+                    _chainChip('Tron', ChainFamily.tron),
                   ],
                 ),
 
@@ -421,14 +405,14 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
 class _ChainLogo extends StatelessWidget {
   const _ChainLogo({
     required this.label,
-    required this.logoUrl,
+    required this.family,
     required this.selected,
     this.assetPath,
   });
 
   final String label;
+  final ChainFamily family;
   final String? assetPath;
-  final String logoUrl;
   final bool selected;
 
   @override
@@ -461,19 +445,88 @@ class _ChainLogo extends StatelessWidget {
         localPath,
         width: 24,
         height: 24,
-        errorBuilder: (_, _, _) => Image.network(
-          logoUrl,
-          width: 24,
-          height: 24,
-          errorBuilder: (_, _, _) => fallback(),
-        ),
+        errorBuilder: (_, _, _) => fallback(),
       );
     }
-    return Image.network(
-      logoUrl,
-      width: 24,
-      height: 24,
-      errorBuilder: (_, _, _) => fallback(),
-    );
+    return switch (family) {
+      ChainFamily.solana => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CustomPaint(painter: _SolanaLogoPainter()),
+      ),
+      ChainFamily.tron => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CustomPaint(painter: _TronLogoPainter()),
+      ),
+      ChainFamily.evm => fallback(),
+    };
   }
+}
+
+class _SolanaLogoPainter extends CustomPainter {
+  const _SolanaLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final radius = Radius.circular(size.height * 0.09);
+    final barHeight = size.height * 0.18;
+    final gap = size.height * 0.12;
+    final leftInset = size.width * 0.12;
+    final rightInset = size.width * 0.08;
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF14F195), Color(0xFF9945FF)],
+      ).createShader(Offset.zero & size);
+
+    for (var i = 0; i < 3; i++) {
+      final y = size.height * 0.22 + i * (barHeight + gap);
+      final shift = i.isEven ? 0.0 : size.width * 0.08;
+      final rect = Rect.fromLTWH(
+        leftInset + shift,
+        y,
+        size.width - leftInset - rightInset,
+        barHeight,
+      );
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, radius), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SolanaLogoPainter oldDelegate) => false;
+}
+
+class _TronLogoPainter extends CustomPainter {
+  const _TronLogoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.08
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final fill = Paint()
+      ..color = const Color(0xFFFF0013)
+      ..style = PaintingStyle.fill;
+
+    final a = Offset(size.width * 0.18, size.height * 0.14);
+    final b = Offset(size.width * 0.84, size.height * 0.32);
+    final c = Offset(size.width * 0.42, size.height * 0.86);
+    final path = Path()
+      ..moveTo(a.dx, a.dy)
+      ..lineTo(b.dx, b.dy)
+      ..lineTo(c.dx, c.dy)
+      ..close();
+    canvas.drawPath(path, fill);
+    canvas.drawPath(path, stroke);
+    canvas.drawLine(a, c, stroke);
+    canvas.drawLine(a, Offset(size.width * 0.58, size.height * 0.42), stroke);
+    canvas.drawLine(b, Offset(size.width * 0.58, size.height * 0.42), stroke);
+    canvas.drawLine(c, Offset(size.width * 0.58, size.height * 0.42), stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TronLogoPainter oldDelegate) => false;
 }

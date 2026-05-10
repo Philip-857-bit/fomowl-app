@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 
 import '../../models/chain.dart';
 import '../../models/token.dart';
+import '../../models/token_standard.dart';
 import '../../utils/token_visibility_utils.dart';
 import 'home_portfolio_data.dart';
 
@@ -88,16 +89,67 @@ class HomePortfolioRepository {
     required Future<Set<String>> Function(int chainId) loadHiddenTokens,
   }) async {
     final hiddenTokenKeys = await loadHiddenTokens(section.chain.chainId);
-    final visibleTokens = _prepareVisibleTokens(
-      section.tokens,
-      hiddenTokenKeys,
-    );
+    final scopedTokens = section.tokens
+        .where((token) => _tokenBelongsToSection(token, section.chain))
+        .toList();
+    final visibleTokens = _prepareVisibleTokens(scopedTokens, hiddenTokenKeys);
 
     if (visibleTokens.isEmpty) {
       return null;
     }
 
     return HomePortfolioSection(chain: section.chain, tokens: visibleTokens);
+  }
+
+  bool _tokenBelongsToSection(Token token, EvmChain chain) {
+    final expectedNetworkKey = _sectionNetworkKey(chain).toLowerCase();
+    final tokenNetworkKey = token.networkKey?.trim().toLowerCase();
+    if (tokenNetworkKey != null && tokenNetworkKey.isNotEmpty) {
+      return tokenNetworkKey == expectedNetworkKey;
+    }
+
+    final contract = token.contractAddress?.trim() ?? '';
+    final isNative =
+        contract.isEmpty ||
+        token.effectiveTokenStandard == TokenStandard.native;
+    final symbol = token.symbol.trim().toUpperCase();
+    switch (chain.family) {
+      case ChainFamily.evm:
+        if (token.effectiveTokenStandard == TokenStandard.spl ||
+            token.effectiveTokenStandard == TokenStandard.trc20) {
+          return false;
+        }
+        if (isNative) {
+          return symbol == chain.symbol.trim().toUpperCase();
+        }
+        return contract.startsWith(RegExp(r'0x', caseSensitive: false));
+      case ChainFamily.solana:
+        if (token.effectiveTokenStandard == TokenStandard.erc20 ||
+            token.effectiveTokenStandard == TokenStandard.trc20) {
+          return false;
+        }
+        if (isNative) {
+          return symbol == 'SOL' || symbol == chain.symbol.trim().toUpperCase();
+        }
+        return !contract.startsWith(RegExp(r'0x', caseSensitive: false));
+      case ChainFamily.tron:
+        if (token.effectiveTokenStandard == TokenStandard.erc20 ||
+            token.effectiveTokenStandard == TokenStandard.spl) {
+          return false;
+        }
+        if (isNative) {
+          return symbol == 'TRX' || symbol == chain.symbol.trim().toUpperCase();
+        }
+        return contract.startsWith('T');
+    }
+  }
+
+  String _sectionNetworkKey(EvmChain chain) {
+    return switch (chain.family) {
+      ChainFamily.solana => NetworkKey.solana('mainnet'),
+      ChainFamily.tron => NetworkKey.tron('mainnet'),
+      ChainFamily.evm => NetworkKey.evm(chain.chainId),
+    };
   }
 
   List<Token> _prepareVisibleTokens(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,6 +25,7 @@ class BackupSeedPhraseScreen extends StatefulWidget {
     this.authVerifier,
     this.screenCaptureGuard,
     this.randomFactory,
+    this.lifecycleListenable,
     this.revealDuration = const Duration(seconds: 60),
   });
 
@@ -31,6 +33,7 @@ class BackupSeedPhraseScreen extends StatefulWidget {
   final SensitiveAuthVerifier? authVerifier;
   final ScreenCaptureGuard? screenCaptureGuard;
   final VerificationRandomFactory? randomFactory;
+  final ValueListenable<AppLifecycleState>? lifecycleListenable;
   final Duration revealDuration;
 
   @override
@@ -55,6 +58,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   bool _seedPhraseUnavailable = false;
   bool _isImportedWallet = false;
   bool _backupVerified = false;
+  bool _authInProgress = false;
   List<String>? _revealedWords;
   List<String>? _verificationWords;
   SeedPhraseVerificationChallenge? _verificationChallenge;
@@ -66,12 +70,26 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.lifecycleListenable?.addListener(_handleLifecycleListenable);
     unawaited(_screenCaptureGuard.enableProtection());
     unawaited(_checkSeedPhraseAvailability());
   }
 
   @override
+  void didUpdateWidget(covariant BackupSeedPhraseScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lifecycleListenable == widget.lifecycleListenable) {
+      return;
+    }
+    oldWidget.lifecycleListenable?.removeListener(_handleLifecycleListenable);
+    widget.lifecycleListenable?.addListener(_handleLifecycleListenable);
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_authInProgress && !_hasRevealedPhrase && !_isVerifyingBackup) {
+      return;
+    }
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
@@ -82,9 +100,17 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.lifecycleListenable?.removeListener(_handleLifecycleListenable);
     _clearSensitiveState(updateUi: false);
     unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
+  }
+
+  void _handleLifecycleListenable() {
+    final state = widget.lifecycleListenable?.value;
+    if (state != null) {
+      didChangeAppLifecycleState(state);
+    }
   }
 
   void _handleExit() {
@@ -103,10 +129,16 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       _verificationChallenge = null;
     });
 
-    final authenticated = await _authVerifier(
-      context,
-      reason: l.authenticateToViewSeedPhrase,
-    );
+    _authInProgress = true;
+    late final bool authenticated;
+    try {
+      authenticated = await _authVerifier(
+        context,
+        reason: l.authenticateToViewSeedPhrase,
+      );
+    } finally {
+      _authInProgress = false;
+    }
     if (!mounted || sessionId != _revealSession) return;
 
     if (!authenticated) {
@@ -115,16 +147,12 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       return;
     }
 
-    final confirmed = await _showRevealWarningDialog(l);
-    if (!mounted || sessionId != _revealSession) return;
-
-    if (confirmed != true) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
     final activeWallet = await _walletService.getActiveWalletAccount();
-    final mnemonic = await _walletService.getMnemonic(activeWallet?.address);
+    var mnemonic = await _walletService.getMnemonic(activeWallet?.address);
+    if ((mnemonic == null || mnemonic.trim().isEmpty) &&
+        activeWallet?.address != null) {
+      mnemonic = await _walletService.getMnemonic();
+    }
     if (!mounted || sessionId != _revealSession) return;
 
     if (mnemonic == null || mnemonic.trim().isEmpty) {
@@ -174,84 +202,6 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
         _isCheckingAvailability = false;
       });
     }
-  }
-
-  Future<bool?> _showRevealWarningDialog(AppLocalizations l) {
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: AppColors.warning,
-              size: 26,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                l.securityWarning,
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.seedPhraseMasterKeyWarning,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.82),
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l.seedPhraseSafetyBullets,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                color: AppColors.warning,
-                height: 1.55,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              l.cancel,
-              style: GoogleFonts.outfit(color: Colors.white54),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentRed,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: Text(
-              l.iUnderstand,
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _beginBackupVerification() {

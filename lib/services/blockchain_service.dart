@@ -284,11 +284,13 @@ class BlockchainService extends ChangeNotifier {
     required String address,
     required Set<ChainFamily> supportedFamilies,
   }) {
-    final normalizedAddress = address.trim().toLowerCase();
+    final trimmedAddress = address.trim();
+    final normalizedAddress = trimmedAddress.toLowerCase();
     final normalizedFamilies = supportedFamilies.isEmpty
         ? <ChainFamily>{ChainFamily.evm}
         : Set<ChainFamily>.of(supportedFamilies);
-    final addressChanged = normalizedAddress != _activeWalletAddress;
+    final addressChanged =
+        normalizedAddress != _activeWalletAddress.toLowerCase();
     final familiesChanged = !_setEquals(
       normalizedFamilies,
       _activeWalletSupportedFamilies,
@@ -296,9 +298,64 @@ class BlockchainService extends ChangeNotifier {
     if (!addressChanged && !familiesChanged) {
       return;
     }
-    _activeWalletAddress = normalizedAddress;
+    _activeWalletAddress = trimmedAddress;
     _activeWalletSupportedFamilies = normalizedFamilies;
+    final activeNetworkChanged = _ensureActiveNetworkSupportedByWallet();
+    if (activeNetworkChanged) {
+      _walletTokens = [];
+      unawaited(_saveActiveChain());
+      unawaited(_syncNetworkSettingsToBackend());
+    }
     notifyListeners();
+  }
+
+  bool _ensureActiveNetworkSupportedByWallet() {
+    if (_activeWalletSupportedFamilies.contains(activeFamily)) {
+      return false;
+    }
+    final fallbackFamily = _fallbackFamilyForActiveWallet();
+    if (fallbackFamily == null) {
+      return false;
+    }
+    return _activateDefaultNetworkForFamily(fallbackFamily);
+  }
+
+  ChainFamily? _fallbackFamilyForActiveWallet() {
+    const preferredOrder = [
+      ChainFamily.evm,
+      ChainFamily.solana,
+      ChainFamily.tron,
+    ];
+    for (final family in preferredOrder) {
+      if (_activeWalletSupportedFamilies.contains(family) &&
+          _enabledFamilies.contains(family)) {
+        return family;
+      }
+    }
+    for (final family in preferredOrder) {
+      if (_activeWalletSupportedFamilies.contains(family)) {
+        _enabledFamilies.add(family);
+        unawaited(_storageService.setEnabledChainFamilies(_enabledFamilies));
+        return family;
+      }
+    }
+    return null;
+  }
+
+  bool _activateDefaultNetworkForFamily(ChainFamily family) {
+    final before = activeNetworkKey;
+    switch (family) {
+      case ChainFamily.evm:
+        _activeNetworkKeyOverride = '';
+        break;
+      case ChainFamily.solana:
+        _activeNetworkKeyOverride = NetworkKey.solana('mainnet-beta');
+        break;
+      case ChainFamily.tron:
+        _activeNetworkKeyOverride = NetworkKey.tron('mainnet');
+        break;
+    }
+    return activeNetworkKey != before;
   }
 
   bool _setEquals<T>(Set<T> a, Set<T> b) {
@@ -768,6 +825,17 @@ class BlockchainService extends ChangeNotifier {
 
   void setActiveNetworkKey(String networkKey) {
     final family = NetworkKey.familyOf(networkKey);
+    if (_activeWalletAddress.isNotEmpty &&
+        !_activeWalletSupportedFamilies.contains(family)) {
+      final fallbackFamily = _fallbackFamilyForActiveWallet();
+      if (fallbackFamily != null &&
+          _activateDefaultNetworkForFamily(fallbackFamily)) {
+        refresh();
+        _saveActiveChain();
+        unawaited(_syncNetworkSettingsToBackend());
+      }
+      return;
+    }
     if (family == ChainFamily.solana || family == ChainFamily.tron) {
       _activeNetworkKeyOverride = networkKey;
       refresh();

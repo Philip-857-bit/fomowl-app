@@ -60,7 +60,8 @@ class _WalletsScreenState extends State<WalletsScreen> {
 
   void _handleBlockchainChange() {
     if (!mounted) return;
-    final nextActive = _blockchain?.activeWalletAddress ?? '';
+    final nextActive =
+        _blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
     final currentActive = (_activeAddress ?? '').toLowerCase();
     if (nextActive.isEmpty || nextActive == currentActive) {
       return;

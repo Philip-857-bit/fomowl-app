@@ -65,7 +65,7 @@ class _TokenSelectorDialogState extends State<TokenSelectorDialog> {
       if (contractAddress.isEmpty) {
         return true;
       }
-      return !_hiddenTokens.contains(TokenVisibilityUtils.identifier(token));
+      return !TokenVisibilityUtils.contains(_hiddenTokens, token);
     }).toList();
   }
 

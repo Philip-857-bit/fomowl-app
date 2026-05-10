@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fomowl_wallet/models/token_standard.dart';
 import 'package:fomowl_wallet/screens/home/home_portfolio_api_service.dart';
 
 void main() {
@@ -49,9 +50,38 @@ void main() {
       'https://example.com/bnb.png',
     );
     expect(snapshot.sections.first.tokens.single.symbol, 'BNB');
+    expect(snapshot.sections.first.tokens.single.networkKey, 'evm:56');
     expect(
       snapshot.timestamp.toUtc().toIso8601String(),
       '2026-04-04T12:30:00.000Z',
     );
+  });
+
+  test('preserves token network metadata from portfolio response', () {
+    final snapshot = HomePortfolioApiService.parseResponse('''
+{
+  "walletAddress": "0xabc",
+  "sections": [
+    {
+      "chainId": 1,
+      "chainName": "Ethereum",
+      "tokens": [
+        {
+          "symbol": "SOL",
+          "name": "Solana",
+          "balance": 1.0,
+          "valueUsd": 100.0,
+          "networkKey": "solana:mainnet",
+          "tokenStandard": "native"
+        }
+      ]
+    }
+  ]
+}
+''');
+
+    final token = snapshot.sections.single.tokens.single;
+    expect(token.networkKey, 'solana:mainnet');
+    expect(token.tokenStandard, TokenStandard.native);
   });
 }

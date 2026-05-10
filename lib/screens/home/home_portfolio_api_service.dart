@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../config/app_environment.dart';
 import '../../models/chain.dart';
 import '../../models/token.dart';
+import '../../models/token_standard.dart';
 import '../../services/blockchain/blockchain_catalog.dart';
 import '../../services/http_client_service.dart';
 import 'home_portfolio_data.dart';
@@ -51,10 +52,15 @@ class HomePortfolioApiService {
       final chainId = (section['chainId'] as num?)?.toInt() ?? 0;
       final chainName = section['chainName'] as String? ?? 'Unknown Chain';
       final chainLogoUrl = section['chainLogoUrl'] as String?;
+      final sectionNetworkKey = _networkKeyForSection(chainId, chainName);
       final tokens = (section['tokens'] as List? ?? const [])
           .whereType<Map>()
           .map((token) {
             final mapped = token.map((key, value) => MapEntry('$key', value));
+            final tokenNetworkKey =
+                mapped['networkKey'] as String? ??
+                mapped['network_key'] as String? ??
+                sectionNetworkKey;
             return Token(
               symbol: mapped['symbol'] as String? ?? '',
               name: mapped['name'] as String? ?? '',
@@ -68,6 +74,11 @@ class HomePortfolioApiService {
               imageUrl: mapped['imageUrl'] as String?,
               coinGeckoId: mapped['coinGeckoId'] as String?,
               isCertified: mapped['isCertified'] == true,
+              networkKey: tokenNetworkKey,
+              tokenStandard: TokenStandardCodec.fromWireValue(
+                mapped['tokenStandard'] as String? ??
+                    mapped['token_standard'] as String?,
+              ),
               // PATCH: Preserve backend price source metadata for DEX badges.
               priceSource:
                   mapped['priceSource'] as String? ??
@@ -114,6 +125,33 @@ class HomePortfolioApiService {
     required String chainName,
     required String? chainLogoUrl,
   }) {
+    if (chainId == -501 || chainName.trim().toLowerCase() == 'solana') {
+      return EvmChain(
+        name: chainName.isEmpty ? 'Solana' : chainName,
+        symbol: 'SOL',
+        chainId: -501,
+        rpcUrl: '',
+        coinGeckoId: 'solana',
+        logoUrl:
+            chainLogoUrl ??
+            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+        family: ChainFamily.solana,
+      );
+    }
+    if (chainId == -195 || chainName.trim().toLowerCase() == 'tron') {
+      return EvmChain(
+        name: chainName.isEmpty ? 'Tron' : chainName,
+        symbol: 'TRX',
+        chainId: -195,
+        rpcUrl: '',
+        coinGeckoId: 'tron',
+        logoUrl:
+            chainLogoUrl ??
+            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
+        family: ChainFamily.tron,
+      );
+    }
+
     for (final chain in BlockchainCatalog.builtInChains) {
       if (chain.chainId != chainId) {
         continue;
@@ -138,5 +176,16 @@ class HomePortfolioApiService {
       logoUrl: chainLogoUrl,
       isCustom: false,
     );
+  }
+
+  static String _networkKeyForSection(int chainId, String chainName) {
+    final normalizedName = chainName.trim().toLowerCase();
+    if (chainId == -501 || normalizedName == 'solana') {
+      return NetworkKey.solana('mainnet');
+    }
+    if (chainId == -195 || normalizedName == 'tron') {
+      return NetworkKey.tron('mainnet');
+    }
+    return NetworkKey.evm(chainId);
   }
 }

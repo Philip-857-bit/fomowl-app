@@ -88,9 +88,24 @@ void main() {
 
     test('sanitizes messages with backend/RPC details to fallback', () {
       const body = '{"message": "upstream rpc node unreachable"}';
-      // Body-level denylist fires before extraction — returns main fallback
       expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
     });
+
+    test('maps raw Jupiter quote failures to a route message', () {
+      const body =
+          '{"error":"Swap failed","message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\",\\"error\\":\\"Failed to get quotes\\"}"}';
+      expect(
+        AppErrorUtils.backendMessage(body, fallback: fallback),
+        'No swap route is available for this token pair or amount. Try a larger amount or different token.',
+      );
+    });
+
+    test('sanitizes Jupiter request identifiers without route details', () {
+      const body =
+          '{"message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\"}"}';
+      expect(AppErrorUtils.backendMessage(body, fallback: fallback), fallback);
+    });
+
     test('returns fallback when backend message exposes a remote URL', () {
       const body =
           '{"message": "Request to https://core.owlletapp.com/api failed"}';
@@ -108,6 +123,16 @@ void main() {
           fallback: fallback,
         ),
         fallback,
+      );
+    });
+
+    test('maps Jupiter quote errors to a route message', () {
+      expect(
+        AppErrorUtils.userMessage(
+          'Jupiter /order failed: {"requestId":"abc","error":"Failed to get quotes"}',
+          fallback: fallback,
+        ),
+        'No swap route is available for this token pair or amount. Try a larger amount or different token.',
       );
     });
   });

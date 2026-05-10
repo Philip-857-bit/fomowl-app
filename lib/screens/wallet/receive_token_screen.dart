@@ -129,20 +129,132 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
 
   void _showTokenSelector() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    // Only show tokens that belong to the currently active network.
-    final activeNetworkKey = blockchain.activeNetworkKey;
-    final familyTokens = blockchain.tokens
-        .where((t) => t.networkKey == activeNetworkKey)
-        .toList();
+    final familyTokens = await _loadSelectableTokens(blockchain);
+    if (!mounted) {
+      return;
+    }
     final result = await showDialog<Token>(
       context: context,
-      builder: (context) => TokenSelectorDialog(tokens: familyTokens),
+      builder: (context) => TokenSelectorDialog(
+        tokens: familyTokens,
+        chainId: blockchain.activeTokenStorageChainId,
+      ),
     );
     if (result != null && mounted) {
       setState(() {
         _selectedToken = result;
       });
     }
+  }
+
+  Future<List<Token>> _loadSelectableTokens(
+    BlockchainService blockchain,
+  ) async {
+    final suggestedTokens = await _loadSuggestedTokens(blockchain);
+    return _mergeSelectableTokens(blockchain, [
+      [blockchain.activeNativeToken],
+      blockchain.tokens,
+      suggestedTokens,
+      _customTokensForActiveNetwork(blockchain),
+    ]);
+  }
+
+  Future<List<Token>> _loadSuggestedTokens(BlockchainService blockchain) async {
+    try {
+      return await blockchain.searchTokensFromBackend('', limit: 60);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  List<Token> _customTokensForActiveNetwork(BlockchainService blockchain) {
+    return blockchain.customTokensForActiveChain.map((token) {
+      return Token(
+        symbol: token.symbol,
+        name: token.name,
+        contractAddress: token.address,
+        balance: 0,
+        valueUsd: 0,
+        changePercent24h: 0,
+        decimals: token.decimals,
+        imageUrl: token.imageUrl,
+        coinGeckoId: token.coinGeckoId,
+        isCertified: false,
+        networkKey: token.networkKey ?? blockchain.activeNetworkKey,
+        tokenStandard: token.tokenStandard,
+      );
+    }).toList();
+  }
+
+  List<Token> _mergeSelectableTokens(
+    BlockchainService blockchain,
+    List<List<Token>> tokenGroups,
+  ) {
+    final byKey = <String, Token>{};
+    for (final token in tokenGroups.expand((tokens) => tokens)) {
+      if (!_tokenMatchesActiveNetwork(token, blockchain)) {
+        continue;
+      }
+      final key = _tokenScopedKey(token, blockchain.activeNetworkKey);
+      final existing = byKey[key];
+      if (existing == null || _shouldReplaceToken(existing, token)) {
+        byKey[key] = token.networkKey == null
+            ? token.copyWith(networkKey: blockchain.activeNetworkKey)
+            : token;
+      }
+    }
+
+    final nativeKey = _tokenScopedKey(
+      blockchain.activeNativeToken,
+      blockchain.activeNetworkKey,
+    );
+    final native = byKey.remove(nativeKey) ?? blockchain.activeNativeToken;
+    final rest = byKey.values.toList()
+      ..sort((left, right) => left.symbol.compareTo(right.symbol));
+    return [native, ...rest];
+  }
+
+  bool _tokenMatchesActiveNetwork(Token token, BlockchainService blockchain) {
+    final expectedKey = blockchain.activeNetworkKey.trim().toLowerCase();
+    final tokenKey = token.networkKey?.trim().toLowerCase();
+    if (tokenKey != null && tokenKey.isNotEmpty) {
+      return tokenKey == expectedKey;
+    }
+    if (blockchain.activeFamily == ChainFamily.evm) {
+      return true;
+    }
+    final contract = token.contractAddress?.trim();
+    final isNative = contract == null || contract.isEmpty;
+    return isNative &&
+        token.symbol.trim().toUpperCase() ==
+            blockchain.activeNetworkSymbol.trim().toUpperCase();
+  }
+
+  String _tokenScopedKey(Token token, String activeNetworkKey) {
+    final scope = token.networkKey?.trim().toLowerCase() ?? activeNetworkKey;
+    final identity = token.contractAddress?.trim().isNotEmpty == true
+        ? token.contractAddress!.trim().toLowerCase()
+        : token.symbol.trim().toLowerCase();
+    return '$scope:$identity';
+  }
+
+  bool _shouldReplaceToken(Token current, Token next) {
+    if (current.balance != next.balance) {
+      return next.balance > current.balance;
+    }
+    if (current.totalValueUsd != next.totalValueUsd) {
+      return next.totalValueUsd > current.totalValueUsd;
+    }
+    if (!current.isCertified && next.isCertified) {
+      return true;
+    }
+    if ((current.imageUrl == null || current.imageUrl!.isEmpty) &&
+        next.imageUrl != null &&
+        next.imageUrl!.isNotEmpty) {
+      return true;
+    }
+    return current.tokenStandard == TokenStandard.erc20 &&
+        next.tokenStandard != TokenStandard.erc20;
   }
 
   @override

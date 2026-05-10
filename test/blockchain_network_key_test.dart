@@ -76,6 +76,49 @@ void main() {
     expect(service.tokens.single.symbol, 'BNB');
   });
 
+  test('wallet switch falls back when active family is unsupported', () {
+    final service = BlockchainService();
+
+    service.setActiveNetworkKey('solana:mainnet');
+    expect(service.activeFamily, ChainFamily.solana);
+
+    service.setActiveWalletContext(
+      address: '0x1111111111111111111111111111111111111111',
+      supportedFamilies: {ChainFamily.evm},
+    );
+
+    expect(service.activeFamily, ChainFamily.evm);
+    expect(service.activeNetworkKey, startsWith('evm:'));
+    expect(service.activeWalletSupportedFamilies, {ChainFamily.evm});
+    expect(service.tokens.single.networkKey, service.activeNetworkKey);
+  });
+
+  test('active wallet context preserves non-EVM address casing', () {
+    final service = BlockchainService();
+    const solanaAddress = 'AJJF89F1ndCEu2zYCsGzznqmZQRmeKbrBwDF5fpyFuMP';
+
+    service.setActiveWalletContext(
+      address: solanaAddress,
+      supportedFamilies: {ChainFamily.solana},
+    );
+
+    expect(service.activeWalletAddress, solanaAddress);
+    expect(service.activeFamily, ChainFamily.solana);
+  });
+
+  test('blocks manual network switches unsupported by active wallet', () {
+    final service = BlockchainService();
+    service.setActiveWalletContext(
+      address: '0x1111111111111111111111111111111111111111',
+      supportedFamilies: {ChainFamily.evm},
+    );
+
+    service.setActiveNetworkKey('solana:mainnet');
+
+    expect(service.activeFamily, ChainFamily.evm);
+    expect(service.activeNetworkKey, startsWith('evm:'));
+  });
+
   test('prefers canonical network wallet token endpoint before legacy alias', () {
     final service = BlockchainService();
 

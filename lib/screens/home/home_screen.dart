@@ -108,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _homeShowcaseScheduled = false;
   bool _showFallbackSocialBanner = true;
   bool _whatsNewChecked = false;
+  int _walletLoadGeneration = 0;
   final AppReleaseChecker _releaseChecker = AppReleaseChecker();
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
@@ -179,6 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _walletLoadGeneration++;
     _deferredLoadGeneration++;
     _homeBannerRotationTimer?.cancel();
     _connectivityTimer?.cancel();
@@ -448,6 +450,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted || walletAddress.isEmpty) {
       return;
     }
+    final requestNetworkKey = _blockchain?.activeNetworkKey;
+    if (requestNetworkKey == null) return;
 
     setState(() => _isLoadingPortfolio = true);
 
@@ -457,6 +461,12 @@ class _HomeScreenState extends State<HomeScreen> {
             .fetchPortfolio(walletAddress, sync: sync)
             .timeout(const Duration(seconds: 45)),
       );
+      if (!await _isStillActiveWalletRequest(
+        walletAddress,
+        requestNetworkKey,
+      )) {
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -471,9 +481,21 @@ class _HomeScreenState extends State<HomeScreen> {
       await _portfolioSnapshotService.saveSnapshot(snapshot);
     } catch (error) {
       debugPrint('Error fetching portfolio data: $error');
+      if (!await _isStillActiveWalletRequest(
+        walletAddress,
+        requestNetworkKey,
+      )) {
+        return;
+      }
       final fallbackSnapshot = await _buildPortfolioFallbackSnapshot(
         walletAddress,
       );
+      if (!await _isStillActiveWalletRequest(
+        walletAddress,
+        requestNetworkKey,
+      )) {
+        return;
+      }
       if (!mounted) {
         return;
       }
@@ -627,6 +649,7 @@ class _HomeScreenState extends State<HomeScreen> {
         walletAddress.isEmpty) {
       return;
     }
+    final requestNetworkKey = blockchain.activeNetworkKey;
 
     final data = _portfolioRawSections.isNotEmpty
         ? await _buildPortfolioDataFromSections(_portfolioRawSections)
@@ -640,7 +663,8 @@ class _HomeScreenState extends State<HomeScreen> {
             loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
           );
 
-    if (!mounted) {
+    if (!await _isStillActiveWalletRequest(walletAddress, requestNetworkKey) ||
+        !mounted) {
       return;
     }
 
@@ -653,9 +677,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _applyPortfolioSnapshot(String walletAddress) async {
+    final requestNetworkKey = _blockchain?.activeNetworkKey;
     final snapshot = await _portfolioSnapshotService.loadSnapshot(
       walletAddress,
     );
+    if (requestNetworkKey == null ||
+        !await _isStillActiveWalletRequest(walletAddress, requestNetworkKey)) {
+      return;
+    }
     if (!mounted) {
       return;
     }
@@ -699,6 +728,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadWalletData({bool forcePortfolioSync = false}) async {
     if (!mounted) return;
+    final loadGeneration = ++_walletLoadGeneration;
     debugPrint('[OWLLET] Starting wallet data load...');
     setState(() => _isLoading = true);
 
@@ -723,17 +753,43 @@ class _HomeScreenState extends State<HomeScreen> {
       final address = await addressFuture;
       final name = await nameFuture;
       final activeAccount = await activeAccountFuture;
+      if (!mounted || loadGeneration != _walletLoadGeneration) return;
 
       // Remember the active wallet so cross-tab switches can be detected,
       // and push the wallet context so the network selector hides families
       // the wallet does not actually support (e.g. EVM-only imports).
-      _lastWalletAddress = address?.toLowerCase();
+      final normalizedAddress = address?.trim().toLowerCase();
+      final walletChanged =
+          normalizedAddress != null && normalizedAddress != _lastWalletAddress;
+      _lastWalletAddress = normalizedAddress;
       blockchain.setActiveWalletContext(
         address: address ?? '',
         supportedFamilies:
             activeAccount?.addressesByFamily.keys.toSet() ??
             const {ChainFamily.evm},
       );
+      final l = AppLocalizations.of(context);
+      final activeAccountName = activeAccount?.name.trim();
+      final displayName =
+          activeAccountName != null && activeAccountName.isNotEmpty
+          ? activeAccountName
+          : name ?? l.mainWallet;
+      setState(() {
+        _walletName = displayName;
+        if (walletChanged) {
+          _replaceDisplayedTokens(const [], isUsingCachedData: false);
+          _applyPortfolioData(HomePortfolioData.empty());
+          _portfolioRawSections = const [];
+          _portfolioUpdatedAt = null;
+          _latestLiveBalanceWallet = null;
+          _nftPreview = const [];
+          _hasMoreNfts = false;
+          _hasUnreadNotifications = false;
+          _isLoadingBalances = false;
+          _isLoadingPortfolio = false;
+          _isLoadingNfts = false;
+        }
+      });
 
       if (address != null && address.isNotEmpty) {
         // Load snapshot immediately — don't wait for blockchain.init().
@@ -745,13 +801,15 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         final portfolioSnapshotFuture = _applyPortfolioSnapshot(address);
 
-        if (snapshot != null && mounted) {
+        if (snapshot != null &&
+            mounted &&
+            loadGeneration == _walletLoadGeneration) {
           setState(() {
             _replaceDisplayedTokens(
               snapshot.tokens,
               isUsingCachedData: snapshot.isStale,
             );
-            _walletName = snapshot.walletName;
+            _walletName = displayName;
           });
           blockchain.setLivePriceTrackingForTokens(
             _tokens,
@@ -765,10 +823,9 @@ class _HomeScreenState extends State<HomeScreen> {
         await portfolioSnapshotFuture;
 
         // Unblock the UI now — cached data is shown.
-        if (mounted) {
-          final l = AppLocalizations.of(context);
+        if (mounted && loadGeneration == _walletLoadGeneration) {
           setState(() {
-            _walletName ??= name ?? l.mainWallet;
+            _walletName = displayName;
             _isLoading = false;
           });
           debugPrint('[OWLLET] Loading state cleared. UI unblocked (cached).');
@@ -776,14 +833,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Now wait for blockchain.init() to finish before the live refresh.
         await initFuture;
-        if (!mounted) return;
+        if (!mounted || loadGeneration != _walletLoadGeneration) return;
 
         _lastChainId = _activePortfolioChainId(blockchain);
         debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
         await _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
+        if (!mounted || loadGeneration != _walletLoadGeneration) return;
         final balanceAddress = await _walletService.getActiveAddressForFamily(
           blockchain.activeFamily,
         );
+        if (!mounted || loadGeneration != _walletLoadGeneration) return;
 
         debugPrint('[OWLLET] Triggering background data sync...');
         if (balanceAddress != null && balanceAddress.isNotEmpty) {
@@ -804,8 +863,7 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         // No wallet — still need blockchain init to know the chain.
         await initFuture;
-        if (mounted) {
-          final l = AppLocalizations.of(context);
+        if (mounted && loadGeneration == _walletLoadGeneration) {
           setState(() {
             _walletName = name ?? l.mainWallet;
             _applyPortfolioData(HomePortfolioData.empty());
@@ -817,7 +875,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e, stack) {
       debugPrint('[OWLLET] ERROR in _loadWalletData: $e');
       debugPrint('[OWLLET] STACKTRACE: $stack');
-      if (mounted) {
+      if (mounted && loadGeneration == _walletLoadGeneration) {
         setState(() {
           _isLoading = false;
           if (_portfolioSections.isEmpty) {
@@ -848,6 +906,29 @@ class _HomeScreenState extends State<HomeScreen> {
   void _scheduleDeferredHomeTasks(String address) {
     final generation = ++_deferredLoadGeneration;
     unawaited(_runDeferredHomeTasks(address, generation));
+  }
+
+  bool _sameWalletAddress(String? left, String? right) {
+    final normalizedLeft = left?.trim().toLowerCase();
+    final normalizedRight = right?.trim().toLowerCase();
+    return normalizedLeft != null &&
+        normalizedLeft.isNotEmpty &&
+        normalizedLeft == normalizedRight;
+  }
+
+  Future<bool> _isStillActiveWalletRequest(
+    String walletAddress,
+    String networkKey,
+  ) async {
+    if (!mounted) return false;
+    final blockchain = _blockchain;
+    if (blockchain == null || blockchain.activeNetworkKey != networkKey) {
+      return false;
+    }
+    final currentAddress = await _walletService.getActiveAddressForFamily(
+      blockchain.activeFamily,
+    );
+    return mounted && _sameWalletAddress(currentAddress, walletAddress);
   }
 
   Future<void> _runDeferredHomeTasks(String address, int generation) async {
@@ -995,9 +1076,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final requestNetworkKey = blockchain.activeNetworkKey;
       final realTokens = await blockchain
           .fetchWalletTokens(address)
           .timeout(const Duration(seconds: 45));
+
+      if (!await _isStillActiveWalletRequest(address, requestNetworkKey)) {
+        return;
+      }
 
       if (mounted) {
         setState(() {
@@ -1014,6 +1100,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Save fresh snapshot
         final name = await _storage.getWalletName();
+        if (!await _isStillActiveWalletRequest(address, requestNetworkKey)) {
+          return;
+        }
         if (!mounted) return;
         final l = AppLocalizations.of(context);
         _snapshotService.saveSnapshot(
@@ -1035,6 +1124,12 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching balances: $e');
+      final blockchain = _blockchain;
+      final requestNetworkKey = blockchain?.activeNetworkKey;
+      if (requestNetworkKey == null ||
+          !await _isStillActiveWalletRequest(address, requestNetworkKey)) {
+        return;
+      }
       if (mounted) {
         setState(() {
           _isLoadingBalances = false;
@@ -1079,11 +1174,10 @@ class _HomeScreenState extends State<HomeScreen> {
     // shell (e.g. from settings → wallets). When the active wallet address
     // changes, the home screen needs to reload the wallet name, snapshot,
     // and balances — not just the token list.
-    final currentWallet = blockchain.activeWalletAddress;
+    final currentWallet = blockchain.activeWalletAddress.trim().toLowerCase();
     final walletChanged =
         currentWallet.isNotEmpty && currentWallet != (_lastWalletAddress ?? '');
     if (walletChanged) {
-      _lastWalletAddress = currentWallet;
       unawaited(_loadWalletData(forcePortfolioSync: true));
       return;
     }

@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
 import '../../models/token.dart';
+import '../../models/token_standard.dart';
 import '../../widgets/token_icon.dart';
 
 import '../../services/blockchain_service.dart';
@@ -38,6 +38,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   bool _isLoading = true;
   BlockchainService? _blockchain;
   int? _observedChainId;
+  String _observedWalletTokenSignature = '';
 
   @override
   void initState() {
@@ -63,6 +64,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     _blockchain?.removeListener(_handleBlockchainChanged);
     _blockchain = blockchain;
     _observedChainId = blockchain.activeTokenStorageChainId;
+    _observedWalletTokenSignature = _walletTokenSignature(blockchain.tokens);
     _blockchain?.addListener(_handleBlockchainChanged);
   }
 
@@ -78,23 +80,12 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       return;
     }
 
-    final nextTokens = blockchain.tokens;
-    final nextSignature = nextTokens
-        .map(
-          (token) =>
-              '${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
-        )
-        .toList();
-    final currentSignature = _allTokens
-        .map(
-          (token) =>
-              '${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
-        )
-        .toList();
-    if (listEquals(nextSignature, currentSignature)) {
+    final nextSignature = _walletTokenSignature(blockchain.tokens);
+    if (nextSignature == _observedWalletTokenSignature) {
       return;
     }
-    _applyLoadedTokens(List<Token>.from(nextTokens), isLoading: false);
+    _observedWalletTokenSignature = nextSignature;
+    unawaited(_loadTokens());
   }
 
   Future<void> _loadTokens() async {
@@ -115,32 +106,70 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
         chainId: chainId,
         hiddenTokens: hiddenTokens,
       );
-      if (cachedTokens.isNotEmpty && mounted) {
-        _applyLoadedTokens(cachedTokens, isLoading: false);
+      var mergedTokens = _mergeSelectableTokens(
+        blockchain: blockchain,
+        hiddenTokens: hiddenTokens,
+        tokenGroups: [
+          _getDefaultTokens(),
+          cachedTokens,
+          _customTokensForActiveNetwork(blockchain),
+        ],
+      );
+      if (mergedTokens.isNotEmpty && mounted) {
+        _applyLoadedTokens(mergedTokens, isLoading: false);
       }
 
       if (address != null) {
         if (!mounted) return;
         final tokens = await blockchain.fetchWalletTokens(address);
-        final visibleTokens = _applyVisibility(tokens, hiddenTokens);
-        if (mounted) {
-          _applyLoadedTokens(visibleTokens, isLoading: false);
-        }
-      } else {
-        // Show default token list even without wallet
-        final defaultTokens = _applyVisibility(
-          _getDefaultTokens(),
-          hiddenTokens,
+        _observedWalletTokenSignature = _walletTokenSignature(
+          blockchain.tokens,
+        );
+        mergedTokens = _mergeSelectableTokens(
+          blockchain: blockchain,
+          hiddenTokens: hiddenTokens,
+          tokenGroups: [
+            mergedTokens,
+            tokens,
+            _customTokensForActiveNetwork(blockchain),
+          ],
         );
         if (mounted) {
-          _applyLoadedTokens(defaultTokens, isLoading: false);
+          _applyLoadedTokens(mergedTokens, isLoading: false);
         }
+      }
+
+      final suggestedTokens = await _loadSuggestedTokens(
+        blockchain: blockchain,
+        hiddenTokens: hiddenTokens,
+      );
+      mergedTokens = _mergeSelectableTokens(
+        blockchain: blockchain,
+        hiddenTokens: hiddenTokens,
+        tokenGroups: [
+          mergedTokens,
+          suggestedTokens,
+          _customTokensForActiveNetwork(blockchain),
+        ],
+      );
+      if (mounted) {
+        _applyLoadedTokens(
+          mergedTokens.isNotEmpty ? mergedTokens : _getDefaultTokens(),
+          isLoading: false,
+        );
       }
     } catch (e) {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
         chainId,
       );
-      final defaultTokens = _applyVisibility(_getDefaultTokens(), hiddenTokens);
+      final defaultTokens = _mergeSelectableTokens(
+        blockchain: blockchain,
+        hiddenTokens: hiddenTokens,
+        tokenGroups: [
+          _getDefaultTokens(),
+          _customTokensForActiveNetwork(blockchain),
+        ],
+      );
       if (mounted) {
         _applyLoadedTokens(defaultTokens, isLoading: false);
       }
@@ -203,51 +232,128 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
 
   List<Token> _getDefaultTokens() {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    if (blockchain.activeFamily != ChainFamily.evm) {
-      return [blockchain.activeNativeToken];
+    return [blockchain.activeNativeToken];
+  }
+
+  Future<List<Token>> _loadSuggestedTokens({
+    required BlockchainService blockchain,
+    required Set<String> hiddenTokens,
+  }) async {
+    try {
+      final tokens = await blockchain.searchTokensFromBackend('', limit: 60);
+      return _applyVisibility(
+        tokens
+            .where((token) => _tokenMatchesActiveNetwork(token, blockchain))
+            .toList(),
+        hiddenTokens,
+      );
+    } catch (_) {
+      return const [];
     }
-    return [
-      Token(
-        symbol: 'ETH',
-        name: 'Ethereum',
+  }
+
+  List<Token> _customTokensForActiveNetwork(BlockchainService blockchain) {
+    return blockchain.customTokensForActiveChain.map((token) {
+      return Token(
+        symbol: token.symbol,
+        name: token.name,
+        contractAddress: token.address,
         balance: 0,
         valueUsd: 0,
         changePercent24h: 0,
-        contractAddress: '',
-        decimals: 18,
-        coinGeckoId: 'ethereum',
-      ),
-      Token(
-        symbol: 'BNB',
-        name: 'BNB',
-        balance: 0,
-        valueUsd: 0,
-        changePercent24h: 0,
-        contractAddress: '',
-        decimals: 18,
-        coinGeckoId: 'binancecoin',
-      ),
-      Token(
-        symbol: 'MATIC',
-        name: 'Polygon',
-        balance: 0,
-        valueUsd: 0,
-        changePercent24h: 0,
-        contractAddress: '',
-        decimals: 18,
-        coinGeckoId: 'matic-network',
-      ),
-      Token(
-        symbol: 'USDC',
-        name: 'USD Coin',
-        balance: 0,
-        valueUsd: 0,
-        changePercent24h: 0,
-        contractAddress: '',
-        decimals: 6,
-        coinGeckoId: 'usd-coin',
-      ),
-    ];
+        decimals: token.decimals,
+        imageUrl: token.imageUrl,
+        coinGeckoId: token.coinGeckoId,
+        isCertified: false,
+        networkKey: token.networkKey ?? blockchain.activeNetworkKey,
+        tokenStandard: token.tokenStandard,
+      );
+    }).toList();
+  }
+
+  List<Token> _mergeSelectableTokens({
+    required BlockchainService blockchain,
+    required Set<String> hiddenTokens,
+    required List<List<Token>> tokenGroups,
+  }) {
+    final byKey = <String, Token>{};
+    for (final token in tokenGroups.expand((tokens) => tokens)) {
+      if (!_tokenMatchesActiveNetwork(token, blockchain)) {
+        continue;
+      }
+      if (_applyVisibility([token], hiddenTokens).isEmpty) {
+        continue;
+      }
+      final scopedKey = _tokenScopedKey(token, blockchain.activeNetworkKey);
+      final existing = byKey[scopedKey];
+      if (existing == null || _shouldReplaceToken(existing, token)) {
+        byKey[scopedKey] = token.networkKey == null
+            ? token.copyWith(networkKey: blockchain.activeNetworkKey)
+            : token;
+      }
+    }
+    final nativeKey = _tokenScopedKey(
+      blockchain.activeNativeToken,
+      blockchain.activeNetworkKey,
+    );
+    final native = byKey.remove(nativeKey) ?? blockchain.activeNativeToken;
+    final rest = byKey.values.toList()
+      ..sort((left, right) => left.symbol.compareTo(right.symbol));
+    return [native, ...rest];
+  }
+
+  bool _tokenMatchesActiveNetwork(Token token, BlockchainService blockchain) {
+    final expectedKey = blockchain.activeNetworkKey.trim().toLowerCase();
+    final tokenKey = token.networkKey?.trim().toLowerCase();
+    if (tokenKey != null && tokenKey.isNotEmpty) {
+      return tokenKey == expectedKey;
+    }
+
+    if (blockchain.activeFamily == ChainFamily.evm) {
+      return true;
+    }
+
+    final contract = token.contractAddress?.trim();
+    final isNative = contract == null || contract.isEmpty;
+    return isNative &&
+        token.symbol.trim().toUpperCase() ==
+            blockchain.activeNetworkSymbol.trim().toUpperCase();
+  }
+
+  String _tokenScopedKey(Token token, String activeNetworkKey) {
+    final scope = token.networkKey?.trim().toLowerCase() ?? activeNetworkKey;
+    final identity = token.contractAddress?.trim().isNotEmpty == true
+        ? token.contractAddress!.trim().toLowerCase()
+        : token.symbol.trim().toLowerCase();
+    return '$scope:$identity';
+  }
+
+  bool _shouldReplaceToken(Token current, Token next) {
+    if (current.balance != next.balance) {
+      return next.balance > current.balance;
+    }
+    if (current.totalValueUsd != next.totalValueUsd) {
+      return next.totalValueUsd > current.totalValueUsd;
+    }
+    if (!current.isCertified && next.isCertified) {
+      return true;
+    }
+    if ((current.imageUrl == null || current.imageUrl!.isEmpty) &&
+        next.imageUrl != null &&
+        next.imageUrl!.isNotEmpty) {
+      return true;
+    }
+    return current.tokenStandard == TokenStandard.erc20 &&
+        next.tokenStandard != TokenStandard.erc20;
+  }
+
+  String _walletTokenSignature(List<Token> tokens) {
+    return tokens
+        .map(
+          (token) =>
+              '${token.networkKey ?? ''}:${token.contractAddress ?? token.symbol}:${token.balance}:${token.imageUrl ?? ''}:${token.coinGeckoId ?? ''}',
+        )
+        .join('|');
   }
 
   void _filterTokens(String query) {
