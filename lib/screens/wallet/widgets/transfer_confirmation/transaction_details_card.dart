@@ -11,7 +11,7 @@ class TransactionDetailsCard extends StatelessWidget {
   final String toAddress;
   final String network;
   final Token? token;
-  final int chainId;
+  final int? chainId;
   final bool isLoadingGas;
   final bool gasEstimationFailed;
   final String gasLabel;

@@ -171,6 +171,9 @@ class _SwapScreenState extends State<SwapScreen> {
   Token? _fromToken;
   Token? _toToken;
   String? _lastNetworkKey;
+  String? _lastWalletKey;
+  String? _lastTokenSignature;
+  int _walletBalanceLoadGeneration = 0;
   int _quoteRequestId = 0;
   SwapTab _activeTab = SwapTab.swap;
   _LimitExpiryOption _limitExpiryOption = _LimitExpiryOption.hours24;
@@ -200,20 +203,29 @@ class _SwapScreenState extends State<SwapScreen> {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
     final networkKey = blockchain.activeNetworkKey;
+    final walletKey = _walletSyncKey(blockchain);
+    final visibleTokens = _visibleTokens(blockchain.tokens);
+    final tokenSignature = _tokenSignature(visibleTokens);
+    final walletChanged = _lastWalletKey != null && _lastWalletKey != walletKey;
+    final tokensChanged = _lastTokenSignature != tokenSignature;
     if (_activeTab == SwapTab.limit && !_supportsLimitTab(blockchain)) {
       _activeTab = SwapTab.swap;
     }
-    if (_lastNetworkKey != networkKey) {
+    if (_lastNetworkKey != networkKey || walletChanged) {
       _lastNetworkKey = networkKey;
+      _lastWalletKey = walletKey;
+      _lastTokenSignature = tokenSignature;
       _resetQuoteState(clearInputAmounts: true);
       if (_isGasless && !_isGaslessSupported) {
         _isGasless = false;
       }
       _walletAddress = null;
+      _syncSelectedTokens(visibleTokens);
       _loadWalletBalance();
-    } else if (_fromToken == null || _toToken == null) {
-      final tokens = _visibleTokens(blockchain.tokens);
-      _syncSelectedTokens(tokens);
+    } else if (_fromToken == null || _toToken == null || tokensChanged) {
+      _lastWalletKey = walletKey;
+      _lastTokenSignature = tokenSignature;
+      _syncSelectedTokens(visibleTokens);
     }
     if (_activeTab == SwapTab.limit) {
       _ensureLimitEligiblePair();
@@ -596,16 +608,22 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Future<void> _loadWalletBalance() async {
+    final loadGeneration = ++_walletBalanceLoadGeneration;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final family = blockchain.activeFamily;
+    final networkKey = blockchain.activeNetworkKey;
     final address = await _walletService.getActiveAddressForFamily(family);
     if (!mounted) return;
-    if (blockchain.activeFamily != family) return;
+    if (loadGeneration != _walletBalanceLoadGeneration ||
+        blockchain.activeFamily != family ||
+        blockchain.activeNetworkKey != networkKey) {
+      return;
+    }
     await _tokenVisibilityService.loadHiddenTokens(
       _tokenStorageChainId(blockchain),
     );
     // Always sync with whatever token set we currently have so selectors never look empty.
-    _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+    _syncVisibleTokensFrom(blockchain);
     if (mounted) {
       setState(() => _walletAddress = address);
     }
@@ -627,28 +645,70 @@ class _SwapScreenState extends State<SwapScreen> {
       if (!mounted) return;
       try {
         await blockchain.fetchWalletTokens(address);
+        if (loadGeneration != _walletBalanceLoadGeneration ||
+            blockchain.activeFamily != family ||
+            blockchain.activeNetworkKey != networkKey) {
+          return;
+        }
         if (mounted) {
           setState(() {
-            _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+            _syncVisibleTokensFrom(blockchain);
           });
         }
       } catch (e) {
         debugPrint('Error fetching balance for swap: $e');
+        if (loadGeneration != _walletBalanceLoadGeneration ||
+            blockchain.activeFamily != family ||
+            blockchain.activeNetworkKey != networkKey) {
+          return;
+        }
         if (mounted) {
           setState(() {
-            _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+            _syncVisibleTokensFrom(blockchain);
           });
         }
       }
     } else if (mounted) {
       setState(() {
-        _syncSelectedTokens(_visibleTokens(blockchain.tokens));
+        _syncVisibleTokensFrom(blockchain);
       });
     }
 
     // Fetch live prices for all tokens with coinGeckoId to fill price gaps.
     await _refreshTokenPrices();
     _activateSwapLiveTracking();
+  }
+
+  String _walletSyncKey(BlockchainService blockchain) {
+    return [
+      blockchain.activeNetworkKey,
+      blockchain.activeWalletAddress.trim().toLowerCase(),
+    ].join(':');
+  }
+
+  String _tokenSignature(List<Token> tokens) {
+    return tokens
+        .map((token) {
+          final contract = token.contractAddress?.trim().toLowerCase() ?? '';
+          final networkKey = token.networkKey?.trim().toLowerCase() ?? '';
+          return [
+            networkKey,
+            contract,
+            token.symbol.trim().toLowerCase(),
+            token.balance.toStringAsPrecision(12),
+            token.valueUsd.toStringAsPrecision(12),
+            token.priceUsd.toStringAsPrecision(12),
+            token.decimals.toString(),
+          ].join(':');
+        })
+        .join('|');
+  }
+
+  void _syncVisibleTokensFrom(BlockchainService blockchain) {
+    final tokens = _visibleTokens(blockchain.tokens);
+    _lastWalletKey = _walletSyncKey(blockchain);
+    _lastTokenSignature = _tokenSignature(tokens);
+    _syncSelectedTokens(tokens);
   }
 
   /// Fetches live prices from CoinGecko for tokens whose priceUsd is 0.
@@ -691,11 +751,17 @@ class _SwapScreenState extends State<SwapScreen> {
       final addr = (current.contractAddress ?? '').toLowerCase();
       if (addr.isNotEmpty) {
         for (final t in tokens) {
-          if ((t.contractAddress ?? '').toLowerCase() == addr) return t;
+          if ((t.contractAddress ?? '').toLowerCase() == addr &&
+              _tokensShareNetwork(current, t)) {
+            return t;
+          }
         }
       }
       for (final t in tokens) {
-        if (t.symbol.toLowerCase() == current.symbol.toLowerCase()) return t;
+        if (t.symbol.toLowerCase() == current.symbol.toLowerCase() &&
+            _tokensShareNetwork(current, t)) {
+          return t;
+        }
       }
       return null;
     }
@@ -1032,6 +1098,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   bool _tokensAreIdentical(Token? a, Token? b) {
     if (a == null || b == null) return false;
+    if (!_tokensShareNetwork(a, b)) return false;
     final addrA = (a.contractAddress ?? '').toLowerCase();
     final addrB = (b.contractAddress ?? '').toLowerCase();
     if (addrA.isNotEmpty && addrB.isNotEmpty) {
@@ -1041,6 +1108,12 @@ class _SwapScreenState extends State<SwapScreen> {
       return a.symbol.toLowerCase() == b.symbol.toLowerCase();
     }
     return false;
+  }
+
+  bool _tokensShareNetwork(Token a, Token b) {
+    final keyA = a.networkKey?.trim().toLowerCase() ?? '';
+    final keyB = b.networkKey?.trim().toLowerCase() ?? '';
+    return keyA.isEmpty || keyB.isEmpty || keyA == keyB;
   }
 
   bool _tokenRequiresApproval(Token token) {
@@ -1449,7 +1522,7 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
     setState(() {
-      _syncSelectedTokens(_visibleTokensForChain(blockchain.tokens, chainId));
+      _syncVisibleTokensFrom(blockchain);
     });
   }
 
@@ -1649,7 +1722,6 @@ class _SwapScreenState extends State<SwapScreen> {
     if (address == null) return;
     final activeBlockchain =
         blockchain ?? Provider.of<BlockchainService>(context, listen: false);
-    final chainId = _tokenStorageChainId(activeBlockchain);
     if (activeBlockchain.activeFamily == ChainFamily.evm) {
       await activeBlockchain.refreshWalletTokens(
         address,
@@ -1661,9 +1733,7 @@ class _SwapScreenState extends State<SwapScreen> {
     await _refreshTokenPrices();
     if (!mounted) return;
     setState(() {
-      _syncSelectedTokens(
-        _visibleTokensForChain(activeBlockchain.tokens, chainId),
-      );
+      _syncVisibleTokensFrom(activeBlockchain);
     });
     unawaited(
       Future<void>.delayed(_followUpWalletRefreshDelay, () async {
@@ -1679,9 +1749,7 @@ class _SwapScreenState extends State<SwapScreen> {
           await _refreshTokenPrices();
           if (!mounted) return;
           setState(() {
-            _syncSelectedTokens(
-              _visibleTokensForChain(activeBlockchain.tokens, chainId),
-            );
+            _syncVisibleTokensFrom(activeBlockchain);
           });
         } catch (_) {}
       }),

@@ -109,9 +109,80 @@ class _TransferConfirmationScreenState
     return 0.0;
   }
 
+  String _transferNetworkKey(BlockchainService blockchain) {
+    final argKey = _args?['networkKey']?.toString().trim();
+    if (argKey != null && argKey.isNotEmpty) {
+      return argKey;
+    }
+    final token = _args?['token'] as Token?;
+    final tokenKey = token?.networkKey?.trim();
+    if (tokenKey != null && tokenKey.isNotEmpty) {
+      return tokenKey;
+    }
+    return blockchain.activeNetworkKey;
+  }
+
+  ChainFamily _transferFamily(BlockchainService blockchain) {
+    return NetworkKey.familyOf(_transferNetworkKey(blockchain));
+  }
+
+  int? _argChainId() {
+    final value = _args?['chainId'];
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  EvmChain _evmChainForTransfer(
+    BlockchainService blockchain,
+    String networkKey,
+  ) {
+    final chainId =
+        NetworkKey.evmChainIdOf(networkKey) ??
+        _argChainId() ??
+        blockchain.activeChain.chainId;
+    return blockchain.allChains.firstWhere(
+      (chain) => chain.chainId == chainId,
+      orElse: () => blockchain.activeChain,
+    );
+  }
+
+  String _networkNameForTransfer(BlockchainService blockchain) {
+    final argNetwork = _args?['network']?.toString().trim();
+    if (argNetwork != null && argNetwork.isNotEmpty) {
+      return argNetwork;
+    }
+    final networkKey = _transferNetworkKey(blockchain);
+    return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.solana => 'Solana',
+      ChainFamily.tron => 'TRON',
+      ChainFamily.evm => _evmChainForTransfer(blockchain, networkKey).name,
+    };
+  }
+
+  String _nativeSymbolForTransfer(BlockchainService blockchain) {
+    final argSymbol = _args?['networkSymbol']?.toString().trim();
+    if (argSymbol != null && argSymbol.isNotEmpty) {
+      return argSymbol;
+    }
+    final networkKey = _transferNetworkKey(blockchain);
+    return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.solana => 'SOL',
+      ChainFamily.tron => 'TRX',
+      ChainFamily.evm => _evmChainForTransfer(blockchain, networkKey).symbol,
+    };
+  }
+
+  int? _tokenIconChainIdForTransfer(BlockchainService blockchain) {
+    final networkKey = _transferNetworkKey(blockchain);
+    if (NetworkKey.familyOf(networkKey) != ChainFamily.evm) {
+      return null;
+    }
+    return _evmChainForTransfer(blockchain, networkKey).chainId;
+  }
+
   Future<void> _loadFromAddress() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final family = blockchain.activeFamily;
+    final family = _transferFamily(blockchain);
     final address = await _walletService.getWalletAddressForFamily(family);
     if (mounted) {
       setState(() => _fromAddress = address);
@@ -122,7 +193,8 @@ class _TransferConfirmationScreenState
   Future<void> _fetchGasEstimate() async {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final activeFamily = blockchain.activeFamily;
+      final networkKey = _transferNetworkKey(blockchain);
+      final activeFamily = NetworkKey.familyOf(networkKey);
 
       // Solana and Tron don't use EVM gas — skip estimation entirely.
       if (activeFamily != ChainFamily.evm) {
@@ -139,7 +211,8 @@ class _TransferConfirmationScreenState
         return;
       }
 
-      final effectiveCoinId = blockchain.activeChain.coinGeckoId;
+      final evmChain = _evmChainForTransfer(blockchain, networkKey);
+      final effectiveCoinId = evmChain.coinGeckoId;
       final token = _args?['token'] as Token?;
       final toAddress = _args?['toAddress'] as String? ?? '';
       final amountInBaseUnits =
@@ -160,7 +233,7 @@ class _TransferConfirmationScreenState
               fromAddress: _fromAddress!,
               toAddress: toAddress,
               amountInBaseUnits: amountInBaseUnits,
-              rpcUrl: blockchain.activeChain.rpcUrl,
+              rpcUrl: evmChain.rpcUrl,
               tokenAddress: token?.contractAddress?.isNotEmpty == true
                   ? token!.contractAddress
                   : null,
@@ -231,7 +304,8 @@ class _TransferConfirmationScreenState
   }
 
   String? _transactionDetailsUrl(String hash, BlockchainService blockchain) {
-    final family = blockchain.activeFamily;
+    final networkKey = _transferNetworkKey(blockchain);
+    final family = NetworkKey.familyOf(networkKey);
 
     switch (family) {
       case ChainFamily.solana:
@@ -239,7 +313,7 @@ class _TransferConfirmationScreenState
         if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {
           return null;
         }
-        final solanaExplorer = blockchain.activeNetworkKey == 'solana:mainnet'
+        final solanaExplorer = networkKey == 'solana:mainnet'
             ? 'https://explorer.solana.com'
             : 'https://explorer.solana.com/?cluster=devnet';
         return '$solanaExplorer/tx/$hash';
@@ -251,7 +325,10 @@ class _TransferConfirmationScreenState
 
       case ChainFamily.evm:
         if (!RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
-        final explorerUrl = blockchain.activeChain.explorerUrl?.trim();
+        final explorerUrl = _evmChainForTransfer(
+          blockchain,
+          networkKey,
+        ).explorerUrl?.trim();
         if (explorerUrl == null || explorerUrl.isEmpty) return null;
         final normalized = explorerUrl.endsWith('/')
             ? explorerUrl.substring(0, explorerUrl.length - 1)
@@ -323,13 +400,25 @@ class _TransferConfirmationScreenState
     progressController.setPreparing();
 
     try {
-      final chain = blockchain.activeChain;
-      final activeFamily = blockchain.activeFamily;
+      final transferNetworkKey = _transferNetworkKey(blockchain);
+      final activeFamily = NetworkKey.familyOf(transferNetworkKey);
+      final evmChain = activeFamily == ChainFamily.evm
+          ? _evmChainForTransfer(blockchain, transferNetworkKey)
+          : null;
+      final nativeSymbol = _nativeSymbolForTransfer(blockchain);
+      final networkName = _networkNameForTransfer(blockchain);
       progressController.setSwapSubmitting();
 
       final isNative =
           token?.contractAddress == null ||
           (token?.contractAddress?.isEmpty ?? true);
+
+      if (_fromAddress == null || _fromAddress!.isEmpty) {
+        progressController.setError(
+          'This wallet does not have an address for $networkName.',
+        );
+        return;
+      }
 
       // EVM balance/gas checks only apply to EVM families.
       if (activeFamily == ChainFamily.evm && _fromAddress != null) {
@@ -338,26 +427,13 @@ class _TransferConfirmationScreenState
         );
         if (isNative && amountInBaseUnits + _gasFeeWei > availableBalance) {
           progressController.setError(
-            'Insufficient ${chain.symbol} to cover the transfer amount and gas fee.',
+            'Insufficient $nativeSymbol to cover the transfer amount and network fee.',
           );
           return;
         }
         if (!isNative && _gasFeeWei > availableBalance) {
           progressController.setError(
-            'Insufficient ${chain.symbol} to cover the network gas fee for this token transfer.',
-          );
-          return;
-        }
-      }
-
-      if (activeFamily == ChainFamily.solana ||
-          activeFamily == ChainFamily.tron) {
-        final mnemonic = await _walletService.getMnemonic();
-        if (mnemonic == null || mnemonic.trim().isEmpty) {
-          progressController.setError(
-            'This wallet was imported via private key and cannot sign '
-            'Solana or Tron transactions. Create a new wallet from a seed '
-            'phrase to use this network.',
+            'Insufficient $nativeSymbol to cover the network fee for this token transfer.',
           );
           return;
         }
@@ -383,15 +459,15 @@ class _TransferConfirmationScreenState
             ? await _walletService.sendNativeTransaction(
                 toAddress: toAddress,
                 amountInBaseUnits: amountInBaseUnits,
-                rpcUrl: chain.rpcUrl,
-                chainId: chain.chainId,
+                rpcUrl: evmChain!.rpcUrl,
+                chainId: evmChain.chainId,
               )
             : await _walletService.sendTokenTransaction(
                 tokenAddress: token!.contractAddress!,
                 toAddress: toAddress,
                 amountInBaseUnits: amountInBaseUnits,
-                rpcUrl: chain.rpcUrl,
-                chainId: chain.chainId,
+                rpcUrl: evmChain!.rpcUrl,
+                chainId: evmChain.chainId,
               );
       }
 
@@ -404,6 +480,8 @@ class _TransferConfirmationScreenState
       final confirmed = await _transactionMonitor.waitForConfirmation(
         txHash: txHash,
         blockchain: blockchain,
+        networkKey: transferNetworkKey,
+        evmChain: evmChain,
       );
       if (!mounted) {
         return;
@@ -418,18 +496,15 @@ class _TransferConfirmationScreenState
           _refreshWalletStateAfterTransfer(
             blockchain: blockchain,
             family: activeFamily,
-            chainId: chain.chainId,
+            chainId: evmChain?.chainId,
           ),
         );
         if (_fromAddress != null && token != null) {
           // For non-EVM families use 0 as a sentinel chainId and rely on
           // networkKey for chain identification in history/notification services.
           final effectiveChainId = activeFamily == ChainFamily.evm
-              ? chain.chainId
+              ? evmChain!.chainId
               : 0;
-          final effectiveNetworkName = activeFamily == ChainFamily.evm
-              ? chain.name
-              : blockchain.activeNetworkKey;
           unawaited(
             _walletNotificationService.notifySendConfirmed(
               walletAddress: _fromAddress!,
@@ -438,7 +513,7 @@ class _TransferConfirmationScreenState
               amountText: amountText,
               tokenSymbol: token.symbol,
               toAddress: toAddress,
-              networkName: effectiveNetworkName,
+              networkName: networkName,
             ),
           );
           unawaited(
@@ -446,12 +521,12 @@ class _TransferConfirmationScreenState
               walletAddress: _fromAddress!,
               txHash: txHash,
               chainId: effectiveChainId,
-              networkName: effectiveNetworkName,
+              networkName: networkName,
               tokenName: token.name,
               tokenSymbol: token.symbol,
               amountText: amountText,
               toAddress: toAddress,
-              networkKey: token.networkKey,
+              networkKey: transferNetworkKey,
             ),
           );
         }
@@ -487,10 +562,12 @@ class _TransferConfirmationScreenState
     final amountText = _args?['amount'] as String? ?? '0';
     final amountInBaseUnits =
         _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
-    final network = _args?['network'] as String? ?? 'Ethereum';
-    final symbol = token?.symbol ?? 'ETH';
     final blockchain = Provider.of<BlockchainService>(context);
     final l = AppLocalizations.of(context);
+    final transferFamily = _transferFamily(blockchain);
+    final network = _networkNameForTransfer(blockchain);
+    final nativeSymbol = _nativeSymbolForTransfer(blockchain);
+    final symbol = token?.symbol ?? nativeSymbol;
 
     final isNative =
         token?.contractAddress == null ||
@@ -518,15 +595,20 @@ class _TransferConfirmationScreenState
         ? '${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? 18)} $symbol'
         : '$amountText $symbol';
 
-    final gasLabel = _gasEstimationFailed
+    final isEvmTransfer = transferFamily == ChainFamily.evm;
+    final gasLabel = !isEvmTransfer
+        ? l.networkFeeLabel
+        : _gasEstimationFailed
         ? '${l.networkFeeLabel} (${l.estimationFailed})'
         : '${l.networkFeeLabel} (${_formatGasPriceGwei(_gasPriceGwei)} Gwei)';
 
-    final gasValue = _gasEstimationFailed
+    final gasValue = !isEvmTransfer
+        ? 'Paid in $nativeSymbol'
+        : _gasEstimationFailed
         ? 'Error'
-        : _formatGasFeeNative(_gasFeeEth, blockchain.activeChain.symbol);
+        : _formatGasFeeNative(_gasFeeEth, nativeSymbol);
 
-    final gasValueUsd = _gasEstimationFailed
+    final gasValueUsd = !isEvmTransfer || _gasEstimationFailed
         ? ''
         : ValueFormatter.formatUsdValueOrLessThanCent(
             ValueFormatter.decimalFromNum(_gasFeeUsd),
@@ -612,7 +694,7 @@ class _TransferConfirmationScreenState
                               toAddress: _shortenAddress(toAddress),
                               network: network,
                               token: token,
-                              chainId: blockchain.activeChain.chainId,
+                              chainId: _tokenIconChainIdForTransfer(blockchain),
                               isLoadingGas: _isLoadingGas,
                               gasEstimationFailed: _gasEstimationFailed,
                               gasLabel: gasLabel,

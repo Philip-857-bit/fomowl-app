@@ -17,17 +17,22 @@ class TransactionMonitor {
   Future<bool> waitForConfirmation({
     required String txHash,
     required BlockchainService blockchain,
+    String? networkKey,
+    EvmChain? evmChain,
     Duration pollInterval = const Duration(seconds: 2),
     Duration timeout = const Duration(minutes: 2),
     Duration receiptTimeout = const Duration(seconds: 8),
     void Function(int attempts)? onPoll,
   }) async {
-    final family = blockchain.activeFamily;
+    final effectiveNetworkKey = networkKey?.trim().isNotEmpty == true
+        ? networkKey!.trim()
+        : blockchain.activeNetworkKey;
+    final family = NetworkKey.familyOf(effectiveNetworkKey);
 
     if (family == ChainFamily.solana || family == ChainFamily.tron) {
       return _waitForNonEvmConfirmation(
         txHash: txHash,
-        networkKey: blockchain.activeNetworkKey,
+        networkKey: effectiveNetworkKey,
         pollInterval: pollInterval,
         timeout: timeout,
         receiptTimeout: receiptTimeout,
@@ -38,6 +43,7 @@ class TransactionMonitor {
     return _waitForEvmConfirmation(
       txHash: txHash,
       blockchain: blockchain,
+      evmChain: evmChain,
       pollInterval: pollInterval,
       timeout: timeout,
       receiptTimeout: receiptTimeout,
@@ -50,14 +56,16 @@ class TransactionMonitor {
   Future<bool> _waitForEvmConfirmation({
     required String txHash,
     required BlockchainService blockchain,
+    EvmChain? evmChain,
     required Duration pollInterval,
     required Duration timeout,
     required Duration receiptTimeout,
     void Function(int attempts)? onPoll,
   }) async {
+    final chain = evmChain ?? blockchain.activeChain;
     final rpcUrl = await _rpcService.resolveWorkingRpcUrl(
-      chainId: blockchain.activeChain.chainId,
-      primaryRpcUrl: blockchain.activeChain.rpcUrl,
+      chainId: chain.chainId,
+      primaryRpcUrl: chain.rpcUrl,
     );
     final client = Web3Client(rpcUrl, _httpClientService.client);
     final completer = Completer<bool>();

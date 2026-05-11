@@ -343,6 +343,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     }
 
     final String activeNetworkDisplayName = blockchain.activeNetworkName;
+    final String activeNetworkKey =
+        _selectedToken?.networkKey ?? blockchain.activeNetworkKey;
 
     Navigator.pushNamed(
       context,
@@ -353,6 +355,12 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         'amount': amountText,
         'amountBaseUnits': amountInBaseUnits,
         'network': activeNetworkDisplayName,
+        'networkKey': activeNetworkKey,
+        'chainFamily': family.wireValue,
+        'chainId': family == ChainFamily.evm
+            ? blockchain.activeChain.chainId
+            : null,
+        'networkSymbol': blockchain.activeNetworkSymbol,
         'isInterTransfer': false,
       },
     );

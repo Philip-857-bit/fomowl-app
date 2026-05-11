@@ -13,6 +13,7 @@ import '../models/chain.dart';
 import '../models/wallet_account.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
+import '../utils/app_error_utils.dart';
 import 'native_crypto.dart';
 
 typedef SeedAccountActivityChecker =
@@ -836,7 +837,13 @@ class WalletService {
         .timeout(const Duration(seconds: 15));
 
     if (prepareResp.statusCode < 200 || prepareResp.statusCode >= 300) {
-      throw Exception('Failed to prepare Solana transfer: ${prepareResp.body}');
+      throw Exception(
+        AppErrorUtils.backendMessage(
+          prepareResp.body,
+          fallback:
+              'Solana transaction failed. Please check your balance and try again.',
+        ),
+      );
     }
     final prepareData = jsonDecode(prepareResp.body) as Map<String, dynamic>;
 
@@ -877,7 +884,11 @@ class WalletService {
 
     if (broadcastResp.statusCode < 200 || broadcastResp.statusCode >= 300) {
       throw Exception(
-        'Failed to broadcast Solana transaction: ${broadcastResp.body}',
+        AppErrorUtils.backendMessage(
+          broadcastResp.body,
+          fallback:
+              'Solana transaction failed. Please check your balance and try again.',
+        ),
       );
     }
     final broadcastData =
@@ -943,7 +954,11 @@ class WalletService {
         .timeout(const Duration(seconds: 30));
     if (broadcastResp.statusCode < 200 || broadcastResp.statusCode >= 300) {
       throw Exception(
-        'Failed to broadcast Solana transaction: ${broadcastResp.body}',
+        AppErrorUtils.backendMessage(
+          broadcastResp.body,
+          fallback:
+              'Solana transaction failed. Please check your balance and try again.',
+        ),
       );
     }
     final broadcastData =
@@ -1226,7 +1241,13 @@ class WalletService {
         .timeout(const Duration(seconds: 15));
 
     if (prepareResp.statusCode < 200 || prepareResp.statusCode >= 300) {
-      throw Exception('Failed to prepare Tron transfer: ${prepareResp.body}');
+      throw Exception(
+        AppErrorUtils.backendMessage(
+          prepareResp.body,
+          fallback:
+              'Tron transaction failed. Please check your balance and try again.',
+        ),
+      );
     }
     final prepareData = jsonDecode(prepareResp.body) as Map<String, dynamic>;
     final unsignedTx = prepareData['unsignedTransaction'];
@@ -1271,7 +1292,11 @@ class WalletService {
 
     if (broadcastResp.statusCode < 200 || broadcastResp.statusCode >= 300) {
       throw Exception(
-        'Failed to broadcast Tron transaction: ${broadcastResp.body}',
+        AppErrorUtils.backendMessage(
+          broadcastResp.body,
+          fallback:
+              'Tron transaction failed. Please check your balance and try again.',
+        ),
       );
     }
     final broadcastData =
