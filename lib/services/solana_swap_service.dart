@@ -53,6 +53,8 @@ class SolanaSwapService {
   ///
   /// [fromMint] and [toMint] are SPL mint addresses; use the special
   /// "So11111111111111111111111111111111111111112" for native SOL.
+  /// Jupiter /order applies RTSE automatically; sending slippageBps would put
+  /// the quote into manual mode and reduce router coverage.
   Future<SolanaSwapQuote?> getQuote({
     required String fromMint,
     required String toMint,
@@ -68,7 +70,6 @@ class SolanaSwapService {
         'dst': toMint,
         'amount': amountLamports,
         'taker': walletAddress,
-        'slippageBps': '$slippageBps',
       });
 
       final response = await _http
@@ -158,10 +159,16 @@ class SolanaSwapService {
   }
 
   SolanaSwapQuote? _parseQuote(Map<String, dynamic> data) {
-    final swapTx =
-        data['swapTransaction']?.toString() ??
-        data['transaction']?.toString() ??
-        data['serializedTransaction']?.toString();
+    final txData =
+        _asStringMap(data['tx_data']) ?? _asStringMap(data['txData']);
+    final swapTx = _firstNonEmptyString([
+      data['swapTransaction'],
+      data['transaction'],
+      data['serializedTransaction'],
+      txData?['swapTransaction'],
+      txData?['transaction'],
+      txData?['serializedTransaction'],
+    ]);
     if (swapTx == null || swapTx.isEmpty) {
       _lastError =
           'Swap quote response was missing the unsigned transaction. Please try again.';
@@ -169,24 +176,49 @@ class SolanaSwapService {
     }
 
     final requestId =
-        data['requestId']?.toString() ?? data['request_id']?.toString() ?? '';
+        _firstNonEmptyString([
+          data['requestId'],
+          data['request_id'],
+          txData?['requestId'],
+          txData?['request_id'],
+        ]) ??
+        '';
 
     final outAmount =
-        data['outAmount']?.toString() ??
-        data['amountOut']?.toString() ??
-        data['toAmount']?.toString() ??
+        _firstNonEmptyString([
+          data['outAmount'],
+          data['amountOut'],
+          data['amount_out'],
+          data['toAmount'],
+          txData?['outAmount'],
+          txData?['amountOut'],
+          txData?['amount_out'],
+        ]) ??
         '0';
 
-    final outDecimals = (data['toDecimals'] as num?)?.toInt() ?? 9;
+    final outDecimals =
+        _asInt(data['toDecimals']) ?? _asInt(txData?['toDecimals']) ?? 9;
     final outAmountNum = double.tryParse(outAmount) ?? 0.0;
     final outAmountFormatted = _formatTokenAmount(outAmountNum, outDecimals);
 
     final feeUsd =
-        (data['networkFeeUsd'] as num?)?.toDouble() ??
-        (data['networkFee'] as num?)?.toDouble() ??
+        _asDouble(data['networkFeeUsd']) ??
+        _asDouble(data['networkFee']) ??
+        _asDouble(txData?['networkFeeUsd']) ??
+        _asDouble(txData?['networkFee']) ??
         0.0;
-    final platformFeeUsd = (data['platformFeeUsd'] as num?)?.toDouble() ?? 0.0;
-    final platformFeeBps = (data['platformFeeBps'] as num?)?.toInt() ?? 100;
+    final platformFeeUsd =
+        _asDouble(data['platformFeeUsd']) ??
+        _asDouble(data['fee_usd']) ??
+        _asDouble(txData?['platformFeeUsd']) ??
+        _asDouble(txData?['feeUsd']) ??
+        0.0;
+    final platformFeeBps =
+        _asInt(data['platformFeeBps']) ??
+        _asInt(data['fee_bps']) ??
+        _asInt(txData?['platformFeeBps']) ??
+        _asInt(txData?['feeBps']) ??
+        100;
 
     return SolanaSwapQuote(
       amountOutFormatted: outAmountFormatted,
@@ -197,6 +229,33 @@ class SolanaSwapService {
       swapTransaction: swapTx,
       requestId: requestId,
     );
+  }
+
+  Map<String, dynamic>? _asStringMap(Object? value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return null;
+  }
+
+  String? _firstNonEmptyString(Iterable<Object?> values) {
+    for (final value in values) {
+      final text = value?.toString().trim();
+      if (text != null && text.isNotEmpty) {
+        return text;
+      }
+    }
+    return null;
+  }
+
+  double? _asDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  int? _asInt(Object? value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 
   String _formatTokenAmount(double rawBaseUnits, int decimals) {

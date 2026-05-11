@@ -88,6 +88,44 @@ void main() {
       expect(quote!.swapTransaction, 'altbase64tx==');
     });
 
+    test('parses backend SwapResponse tx_data payload', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'amount_out': '1234500',
+            'fee_usd': 0.02,
+            'fee_bps': 75,
+            'request_id': 'req-nested',
+            'tx_data': {
+              'transaction': 'nestedbase64tx==',
+              'outAmount': '1234500',
+              'feeBps': 75,
+              'router': 'jupiter-v2',
+              'mode': 'manual',
+            },
+          }),
+          200,
+        );
+      });
+      final service = SolanaSwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final quote = await service.getQuote(
+        fromMint: 'So11111111111111111111111111111111111111112',
+        toMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        amountLamports: '222000',
+        walletAddress: 'SoLWaLLetAddresS',
+      );
+
+      expect(quote, isNotNull);
+      expect(quote!.swapTransaction, 'nestedbase64tx==');
+      expect(quote.requestId, 'req-nested');
+      expect(quote.amountOutRaw, '1234500');
+      expect(quote.platformFeeUsd, 0.02);
+      expect(quote.platformFeeBps, 75);
+    });
+
     test('falls back to "serializedTransaction" field', () async {
       final mockClient = MockClient((request) async {
         return http.Response(

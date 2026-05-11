@@ -46,9 +46,9 @@ class _WalletImportedScreenState extends State<WalletImportedScreen>
 
   void _onContinue() {
     if (_hasPasscode == true) {
-      Navigator.pop(context, true);
+      Navigator.pushNamedAndRemoveUntil(context, '/shell', (route) => false);
     } else {
-      Navigator.pushNamed(context, '/create-passcode');
+      Navigator.pushReplacementNamed(context, '/create-passcode');
     }
   }
 

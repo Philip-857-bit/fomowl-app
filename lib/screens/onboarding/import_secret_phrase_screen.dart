@@ -72,6 +72,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   }
 
   Future<void> _importWallet() async {
+    if (_isLoading) return;
     final l = AppLocalizations.of(context);
     final phrase = _walletService.normalizeMnemonic(
       _secretPhraseController.text,
@@ -122,7 +123,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
         final storage = StorageService();
         final hasPasscode = await storage.hasPasscode();
         if (mounted) {
-          Navigator.pushNamed(
+          Navigator.pushReplacementNamed(
             context,
             '/wallet-imported',
             arguments: {'hasPasscode': hasPasscode},
@@ -376,35 +377,38 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                     ),
                   ],
                 ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEA2A33),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child: AbsorbPointer(
+                  absorbing: _isLoading,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEA2A33),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    onPressed: _importWallet,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            l.importWallet,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
                   ),
-                  onPressed: _isLoading ? null : _importWallet,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          l.importWallet,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.4,
-                          ),
-                        ),
                 ),
               ),
             ),
