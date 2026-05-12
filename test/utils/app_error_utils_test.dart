@@ -43,7 +43,7 @@ void main() {
       const sensitiveBody = '{"message": "Invalid challenge token"}';
       expect(
         AppErrorUtils.backendMessage(sensitiveBody, fallback: fallback),
-        fallback,
+        'Authentication failed. Please try again.',
       );
     });
 
@@ -96,7 +96,25 @@ void main() {
           '{"error":"Swap failed","message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\",\\"error\\":\\"Failed to get quotes\\"}"}';
       expect(
         AppErrorUtils.backendMessage(body, fallback: fallback),
-        'No swap route is available for this token pair or amount. Try a larger amount or different token.',
+        'Amount is too low for this swap. Try a larger amount.',
+      );
+    });
+
+    test('maps Solana insufficient lamports failures to a clear message', () {
+      const body =
+          '{"error":"Failed to broadcast Solana transaction","message":"RPC error: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit."}';
+      expect(
+        AppErrorUtils.backendMessage(body, fallback: fallback),
+        'Insufficient SOL to cover the transfer amount and network fee.',
+      );
+    });
+
+    test('maps missing Solana recipient token account to a clear message', () {
+      const body =
+          '{"error":"Failed to build SPL transfer","message":"Destination token account ABC does not exist. The recipient must have an associated token account for mint XYZ."}';
+      expect(
+        AppErrorUtils.backendMessage(body, fallback: fallback),
+        'The recipient does not have a token account for this asset. They must first receive or create an account for this token before you can send it.',
       );
     });
 
@@ -132,7 +150,7 @@ void main() {
           'Jupiter /order failed: {"requestId":"abc","error":"Failed to get quotes"}',
           fallback: fallback,
         ),
-        'No swap route is available for this token pair or amount. Try a larger amount or different token.',
+        'Amount is too low for this swap. Try a larger amount.',
       );
     });
   });

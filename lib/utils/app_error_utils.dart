@@ -52,8 +52,11 @@ class AppErrorUtils {
       'no swap route',
       'no quote',
       'route not found',
+      'amount too low',
+      'swap quote response was missing',
+      'missing the unsigned transaction',
     ])) {
-      return 'No swap route is available for this token pair or amount. Try a larger amount or different token.';
+      return 'Amount is too low for this swap. Try a larger amount.';
     }
 
     if (_containsAny(lowered, const [
@@ -90,6 +93,42 @@ class AppErrorUtils {
       'associated token account',
     ])) {
       return 'The recipient does not have a token account for this asset. They must first receive or create an account for this token before you can send it.';
+    }
+
+    if (_containsAny(lowered, const [
+      'insufficient lamports',
+      'insufficient funds for fee',
+      'insufficient funds',
+      'attempt to debit an account',
+      'custom program error: 0x1',
+    ])) {
+      return 'Insufficient SOL to cover the transfer amount and network fee.';
+    }
+
+    if (_containsAny(lowered, const [
+      'blockhash not found',
+      'blockhash expired',
+      'missing blockhash',
+      'failed to fetch blockhash',
+    ])) {
+      return 'Solana network is busy. Please try the transfer again.';
+    }
+
+    if (_containsAny(lowered, const [
+      'signature verification failed',
+      'transaction signature verification failure',
+      'invalid signature',
+    ])) {
+      return 'Transaction signing failed. Please try again.';
+    }
+
+    if (_containsAny(lowered, const [
+      'invalid from_address',
+      'invalid to_address',
+      'invalid solana',
+      'invalid public key',
+    ])) {
+      return 'Invalid Solana address.';
     }
 
     if (_containsAny(lowered, const [
@@ -155,8 +194,15 @@ class AppErrorUtils {
       'no swap route',
       'no quote',
       'route not found',
+      'amount too low',
+      'swap quote response was missing',
+      'missing the unsigned transaction',
     ])) {
-      return 'No swap route is available for this token pair or amount. Try a larger amount or different token.';
+      return 'Amount is too low for this swap. Try a larger amount.';
+    }
+    final backendJsonMessage = _extractBackendJsonMessage(body);
+    if (backendJsonMessage != null && backendJsonMessage.isNotEmpty) {
+      return userMessage(backendJsonMessage, fallback: fallback);
     }
     if (_containsAny(lowered, const [
       'challenge',
@@ -175,20 +221,20 @@ class AppErrorUtils {
     ])) {
       return fallback;
     }
+    return fallback;
+  }
+
+  static String? _extractBackendJsonMessage(String body) {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map<String, dynamic>) {
         final message = decoded['message']?.toString();
         if (message != null && message.isNotEmpty) {
-          // Run the extracted message through the same sanitisation pipeline
-          // used for all user-visible error strings so that internal infra
-          // details (e.g. "dial tcp 10.0.0.5:5432: connection refused") are
-          // never exposed to users.
-          return userMessage(message, fallback: fallback);
+          return message;
         }
       }
     } catch (_) {}
-    return fallback;
+    return null;
   }
 
   static String _normalize(Object? error) {

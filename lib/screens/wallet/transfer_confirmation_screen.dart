@@ -38,6 +38,8 @@ class TransferConfirmationScreen extends StatefulWidget {
 
 class _TransferConfirmationScreenState
     extends State<TransferConfirmationScreen> {
+  static final BigInt _solanaTransferFeeLamports = BigInt.from(5000);
+
   final WalletService _walletService = WalletService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   final WalletNotificationService _walletNotificationService =
@@ -196,14 +198,31 @@ class _TransferConfirmationScreenState
       final networkKey = _transferNetworkKey(blockchain);
       final activeFamily = NetworkKey.familyOf(networkKey);
 
-      // Solana and Tron don't use EVM gas — skip estimation entirely.
       if (activeFamily != ChainFamily.evm) {
+        final estimatedFeeBaseUnits = _estimatedNonEvmFeeBaseUnits(
+          activeFamily,
+        );
+        final nativeDecimals = _nativeDecimalsForFamily(activeFamily);
+        final estimatedFeeNative = _baseUnitsToDouble(
+          estimatedFeeBaseUnits,
+          nativeDecimals,
+        );
+        double estimatedFeeUsd = 0;
+        final coinId = _nativeCoinGeckoIdForTransfer(blockchain, activeFamily);
+        if (estimatedFeeNative > 0 && coinId != null && coinId.isNotEmpty) {
+          try {
+            final prices = await blockchain.getTokenPrices([coinId]);
+            estimatedFeeUsd = estimatedFeeNative * (prices[coinId] ?? 0);
+          } catch (_) {
+            estimatedFeeUsd = 0;
+          }
+        }
         if (mounted) {
           setState(() {
             _gasPriceGwei = 0;
-            _gasFeeEth = 0;
-            _gasFeeUsd = 0;
-            _gasFeeWei = BigInt.zero;
+            _gasFeeEth = estimatedFeeNative;
+            _gasFeeUsd = estimatedFeeUsd;
+            _gasFeeWei = estimatedFeeBaseUnits;
             _isLoadingGas = false;
             _gasEstimationFailed = false;
           });
@@ -301,6 +320,82 @@ class _TransferConfirmationScreenState
         ? formatted.substring(0, formatted.length - 1)
         : formatted;
     return '$normalized $symbol';
+  }
+
+  BigInt _estimatedNonEvmFeeBaseUnits(ChainFamily family) {
+    return switch (family) {
+      ChainFamily.solana => _solanaTransferFeeLamports,
+      ChainFamily.tron => BigInt.zero,
+      ChainFamily.evm => BigInt.zero,
+    };
+  }
+
+  int _nativeDecimalsForFamily(ChainFamily family) {
+    return switch (family) {
+      ChainFamily.solana => 9,
+      ChainFamily.tron => 6,
+      ChainFamily.evm => 18,
+    };
+  }
+
+  double _baseUnitsToDouble(BigInt value, int decimals) {
+    return double.tryParse(
+          AmountUtils.formatBaseUnits(
+            value,
+            decimals,
+            maxFractionDigits: decimals,
+          ),
+        ) ??
+        0;
+  }
+
+  String? _nativeCoinGeckoIdForTransfer(
+    BlockchainService blockchain,
+    ChainFamily family,
+  ) {
+    return switch (family) {
+      ChainFamily.solana => 'solana',
+      ChainFamily.tron => 'tron',
+      ChainFamily.evm => blockchain.activeNetworkCoinGeckoId,
+    };
+  }
+
+  String _formatNonEvmNetworkFeeValue(ChainFamily family, String nativeSymbol) {
+    if (_gasFeeWei > BigInt.zero) {
+      final decimals = _nativeDecimalsForFamily(family);
+      return '≈ ${AmountUtils.formatBaseUnits(_gasFeeWei, decimals, maxFractionDigits: decimals)} $nativeSymbol';
+    }
+    return 'Calculated by network';
+  }
+
+  BigInt? _nativeBalanceBaseUnits(
+    BlockchainService blockchain,
+    ChainFamily family, {
+    Token? nativeToken,
+  }) {
+    final decimals = _nativeDecimalsForFamily(family);
+    Token? candidate;
+    if (nativeToken != null &&
+        (nativeToken.contractAddress == null ||
+            nativeToken.contractAddress!.isEmpty)) {
+      candidate = nativeToken;
+    } else {
+      for (final token in blockchain.tokens) {
+        if (token.contractAddress == null || token.contractAddress!.isEmpty) {
+          candidate = token;
+          break;
+        }
+      }
+    }
+    if (candidate == null) return null;
+    try {
+      return AmountUtils.parseDecimalToBaseUnits(
+        candidate.balance.toStringAsFixed(decimals),
+        decimals,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   String? _transactionDetailsUrl(String hash, BlockchainService blockchain) {
@@ -432,6 +527,27 @@ class _TransferConfirmationScreenState
           return;
         }
         if (!isNative && _gasFeeWei > availableBalance) {
+          progressController.setError(
+            'Insufficient $nativeSymbol to cover the network fee for this token transfer.',
+          );
+          return;
+        }
+      }
+      if (activeFamily == ChainFamily.solana && _gasFeeWei > BigInt.zero) {
+        final nativeBalance = _nativeBalanceBaseUnits(
+          blockchain,
+          activeFamily,
+          nativeToken: isNative ? token : null,
+        );
+        if (nativeBalance != null &&
+            isNative &&
+            amountInBaseUnits + _gasFeeWei > nativeBalance) {
+          progressController.setError(
+            'Insufficient $nativeSymbol to cover the transfer amount and network fee.',
+          );
+          return;
+        }
+        if (nativeBalance != null && !isNative && _gasFeeWei > nativeBalance) {
           progressController.setError(
             'Insufficient $nativeSymbol to cover the network fee for this token transfer.',
           );
@@ -603,12 +719,12 @@ class _TransferConfirmationScreenState
         : '${l.networkFeeLabel} (${_formatGasPriceGwei(_gasPriceGwei)} Gwei)';
 
     final gasValue = !isEvmTransfer
-        ? 'Paid in $nativeSymbol'
+        ? _formatNonEvmNetworkFeeValue(transferFamily, nativeSymbol)
         : _gasEstimationFailed
         ? 'Error'
         : _formatGasFeeNative(_gasFeeEth, nativeSymbol);
 
-    final gasValueUsd = !isEvmTransfer || _gasEstimationFailed
+    final gasValueUsd = _gasEstimationFailed || _gasFeeUsd <= 0
         ? ''
         : ValueFormatter.formatUsdValueOrLessThanCent(
             ValueFormatter.decimalFromNum(_gasFeeUsd),

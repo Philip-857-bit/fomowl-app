@@ -29,6 +29,8 @@ class SendTokenScreen extends StatefulWidget {
 }
 
 class _SendTokenScreenState extends State<SendTokenScreen> {
+  static final BigInt _solanaTransferFeeLamports = BigInt.from(5000);
+
   final TextEditingController _addressController = TextEditingController();
   // Canonical amount in token units — source of truth for submission.
   final TextEditingController _amountController = TextEditingController();
@@ -283,8 +285,18 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   void _setMax() {
     final decimals = _selectedToken?.decimals ?? 18;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final isNative =
+        _selectedToken?.contractAddress == null ||
+        (_selectedToken?.contractAddress?.isEmpty ?? true);
+    var maxBaseUnits = _availableBalanceBaseUnits;
+    if (blockchain.activeFamily == ChainFamily.solana && isNative) {
+      maxBaseUnits = maxBaseUnits > _solanaTransferFeeLamports
+          ? maxBaseUnits - _solanaTransferFeeLamports
+          : BigInt.zero;
+    }
     final tokenText = AmountUtils.formatBaseUnits(
-      _availableBalanceBaseUnits,
+      maxBaseUnits,
       decimals,
       maxFractionDigits: decimals,
     );
@@ -345,6 +357,18 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final String activeNetworkDisplayName = blockchain.activeNetworkName;
     final String activeNetworkKey =
         _selectedToken?.networkKey ?? blockchain.activeNetworkKey;
+    final isNative =
+        _selectedToken?.contractAddress == null ||
+        (_selectedToken?.contractAddress?.isEmpty ?? true);
+    if (family == ChainFamily.solana &&
+        isNative &&
+        amountInBaseUnits + _solanaTransferFeeLamports >
+            _availableBalanceBaseUnits) {
+      _showError(
+        'Insufficient SOL to cover the transfer amount and network fee.',
+      );
+      return;
+    }
 
     Navigator.pushNamed(
       context,

@@ -1329,6 +1329,20 @@ class _SwapScreenState extends State<SwapScreen> {
     final lower = raw.toLowerCase();
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final nativeSymbol = blockchain.activeNetworkSymbol;
+    if (lower.contains('failed to get quotes') ||
+        lower.contains('could not find any route') ||
+        lower.contains('no solana swap route') ||
+        lower.contains('no swap route') ||
+        lower.contains('route not found') ||
+        lower.contains('amount too low')) {
+      return 'Amount is too low for this swap. Try a larger amount.';
+    }
+    if (lower.contains('swap quote response was missing') ||
+        lower.contains('missing the unsigned transaction') ||
+        lower.contains('transaction":""') ||
+        lower.contains('transaction is empty')) {
+      return 'Amount is too low for this swap. Try a larger amount.';
+    }
     if (lower.contains('unable to fetch a swap price right now') ||
         lower.contains('upstream request failed') ||
         lower.contains('unable to fetch a swap quote right now') ||
@@ -1388,7 +1402,7 @@ class _SwapScreenState extends State<SwapScreen> {
         lower.contains('minimum sell amount') ||
         lower.contains('minimum buy amount') ||
         lower.contains('too small to cover fees required to execute swap')) {
-      return 'Swap output amount is too small to cover fees required to execute swap';
+      return 'Amount is too low for this swap. Try a larger amount.';
     }
     if (lower.contains('invalid chain id')) {
       return l.noQuoteAvailable;
@@ -1409,7 +1423,7 @@ class _SwapScreenState extends State<SwapScreen> {
       return 'Gasless mode only supports ERC-20 source tokens. Select a token like USDC/USDT.';
     }
     if (lower.contains('no route found') || lower.contains('no liquidity')) {
-      return 'No route found for this pair on this network right now.';
+      return 'Amount is too low for this swap. Try a larger amount.';
     }
     if (lower.contains('user denied') ||
         lower.contains('user rejected') ||
