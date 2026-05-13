@@ -2941,9 +2941,7 @@ class _SwapScreenState extends State<SwapScreen> {
       }
     } finally {
       if (mounted) {
-        setState(
-          () => _cancellingSolanaOrderAccounts.remove(order.orderId),
-        );
+        setState(() => _cancellingSolanaOrderAccounts.remove(order.orderId));
       }
     }
   }

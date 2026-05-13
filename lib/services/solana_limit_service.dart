@@ -37,16 +37,19 @@ class SolanaLimitOrder {
 
   factory SolanaLimitOrder.fromJson(Map<String, dynamic> json) {
     return SolanaLimitOrder(
-      orderId: json['orderId']?.toString() ??
+      orderId:
+          json['orderId']?.toString() ??
           json['orderAccount']?.toString() ??
           json['id']?.toString() ??
           '',
       inputMint: json['inputMint']?.toString() ?? '',
       outputMint: json['outputMint']?.toString() ?? '',
-      inputAmount: json['inputAmount']?.toString() ??
+      inputAmount:
+          json['inputAmount']?.toString() ??
           json['inAmount']?.toString() ??
           '0',
-      expectedOutputAmount: json['expectedOutputAmount']?.toString() ??
+      expectedOutputAmount:
+          json['expectedOutputAmount']?.toString() ??
           json['outAmount']?.toString() ??
           '0',
       status: json['status']?.toString() ?? 'active',
