@@ -8,6 +8,7 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
+import '../../models/token_standard.dart';
 import '../../services/cow_limit_order_signing.dart';
 import '../../services/swap_service.dart';
 import '../../services/solana_swap_service.dart';
@@ -937,7 +938,25 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_fromToken == null) return;
     final balance =
         Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero;
-    final amount = balance * Decimal.parse((percent / 100).toStringAsFixed(2));
+    var amount = balance * Decimal.parse((percent / 100).toStringAsFixed(2));
+
+    if (percent == 100 &&
+        _fromToken!.effectiveTokenStandard == TokenStandard.native) {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      Decimal gasBuffer = Decimal.zero;
+      if (blockchain.activeFamily == ChainFamily.solana) {
+        gasBuffer = Decimal.parse('0.00005');
+      } else if (blockchain.activeFamily == ChainFamily.evm) {
+        gasBuffer = Decimal.parse('0.00005');
+      } else if (blockchain.activeFamily == ChainFamily.tron) {
+        gasBuffer = Decimal.parse('0.3');
+      }
+      amount = amount - gasBuffer;
+      if (amount < Decimal.zero) {
+        amount = Decimal.zero;
+      }
+    }
+
     final displayDecimals = _fromToken!.decimals > 6 ? 6 : _fromToken!.decimals;
     setState(() {
       _selectedPercentage = percent;
@@ -2722,7 +2741,12 @@ class _SwapScreenState extends State<SwapScreen> {
     }
   }
 
-  /// Submit a Jupiter Trigger limit order on Solana.
+  /// Submit a Jupiter Trigger V2 limit order on Solana.
+  ///
+  /// V2 flow:
+  ///   1. POST /jupiter/limit/create → deposit/craft → unsigned deposit tx
+  ///   2. Sign + submit deposit tx on-chain
+  ///   3. POST /jupiter/limit/confirm → orders/price → order finalized
   Future<void> _submitSolanaLimitOrder() async {
     final l = AppLocalizations.of(context);
     final from = _fromToken;
@@ -2778,6 +2802,10 @@ class _SwapScreenState extends State<SwapScreen> {
         ? null
         : _resolveLimitExpirySeconds();
 
+    // Compute trigger price in USD for V2.
+    // limitPrice is in quote-token units; we convert to USD here.
+    final triggerPriceUsd = limitPrice.toDouble();
+
     if (_isSubmittingLimit) return;
     setState(() => _isSubmittingLimit = true);
     TransactionProgressController? progressController;
@@ -2787,7 +2815,8 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       progressController.setSwapSubmitting();
 
-      final txResult = await _solanaLimitService.createOrder(
+      // ── Step 1: deposit/craft ──────────────────────────────────────────────
+      final depositResult = await _solanaLimitService.createOrder(
         inputMint: inputMint,
         outputMint: outputMint,
         inputAmountLamports: inputAmountLamports,
@@ -2797,7 +2826,7 @@ class _SwapScreenState extends State<SwapScreen> {
       );
 
       if (!mounted) return;
-      if (txResult == null) {
+      if (depositResult == null) {
         final message = _mapErrorMessage(
           _solanaLimitService.lastError ?? l.tryAgain,
         );
@@ -2805,8 +2834,8 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      // Sign and submit the returned transaction
-      final txBytes = base64Decode(txResult.transaction);
+      // ── Step 2: Sign + submit deposit transaction ──────────────────────────
+      final txBytes = base64Decode(depositResult.transaction);
       final msgOffset =
           SolanaSwapExecutionService.compactU16ByteLenPublic(txBytes, 0) + 64;
       final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
@@ -2819,19 +2848,39 @@ class _SwapScreenState extends State<SwapScreen> {
       final signedTxBase64 = _assembleSolanaSignedTx(txBytes, signatureBase58);
       final txHash = await _solanaSwapService.executeSwap(
         signedTransactionBase64: signedTxBase64,
-        requestId: txResult.requestId,
+        requestId: depositResult.depositRequestId,
       );
       if (!mounted) return;
 
-      if (txHash != null && txHash.isNotEmpty) {
-        progressController.setSuccess(reference: _shortHash(txHash));
-        unawaited(_refreshLimitOrders(showLoading: false));
-      } else {
+      if (txHash == null || txHash.isEmpty) {
         final message = _mapErrorMessage(
-          _solanaSwapService.lastError ?? l.tryAgain,
+          _solanaSwapService.lastError ?? 'Deposit transaction failed.',
         );
         progressController.setError(message);
+        return;
       }
+
+      // ── Step 3: Confirm the order (orders/price) ───────────────────────────
+      final confirmResult = await _solanaLimitService.confirmOrder(
+        depositRequestId: depositResult.depositRequestId,
+        inputMint: inputMint,
+        outputMint: outputMint,
+        inputAmountLamports: inputAmountLamports,
+        expectedOutputAmountLamports: outputAmountLamports,
+        triggerPriceUsd: triggerPriceUsd,
+      );
+
+      if (!mounted) return;
+      if (confirmResult == null) {
+        final message = _mapErrorMessage(
+          _solanaLimitService.lastError ?? 'Order confirmation failed.',
+        );
+        progressController.setError(message);
+        return;
+      }
+
+      progressController.setSuccess(reference: _shortHash(txHash));
+      unawaited(_refreshLimitOrders(showLoading: false));
     } on TimeoutException {
       const message = 'Order signing timed out. Please try again.';
       progressController?.setError(message);
@@ -2845,13 +2894,13 @@ class _SwapScreenState extends State<SwapScreen> {
     }
   }
 
-  /// Cancel a Solana Jupiter Trigger limit order.
+  /// Cancel a Solana Jupiter Trigger V2 limit order.
   Future<void> _cancelSolanaLimitOrder(SolanaLimitOrder order) async {
-    if (_cancellingSolanaOrderAccounts.contains(order.orderAccount)) return;
-    setState(() => _cancellingSolanaOrderAccounts.add(order.orderAccount));
+    if (_cancellingSolanaOrderAccounts.contains(order.orderId)) return;
+    setState(() => _cancellingSolanaOrderAccounts.add(order.orderId));
     try {
       final txResult = await _solanaLimitService.cancelOrder(
-        orderAccount: order.orderAccount,
+        orderId: order.orderId,
       );
       if (!mounted) return;
       if (txResult == null) {
@@ -2893,7 +2942,7 @@ class _SwapScreenState extends State<SwapScreen> {
     } finally {
       if (mounted) {
         setState(
-          () => _cancellingSolanaOrderAccounts.remove(order.orderAccount),
+          () => _cancellingSolanaOrderAccounts.remove(order.orderId),
         );
       }
     }

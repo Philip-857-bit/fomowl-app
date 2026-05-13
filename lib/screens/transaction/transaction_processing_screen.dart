@@ -416,6 +416,9 @@ class _ProcessingScaffold extends StatelessWidget {
     final detailsUrl = state.detailsUrl;
     if (detailsUrl != null && detailsUrl.isNotEmpty) {
       await InAppLinkRouter.open(context, detailsUrl);
+      if (context.mounted) {
+        _close(context);
+      }
       return;
     }
 

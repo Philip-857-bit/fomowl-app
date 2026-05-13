@@ -1402,6 +1402,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (blockchain.activeFamily != ChainFamily.evm ||
+        !RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address.trim())) {
+      if (mounted) {
+        setState(() {
+          _nftPreview = [];
+          _hasMoreNfts = false;
+          _isLoadingNfts = false;
+        });
+      }
+      return;
+    }
 
     if (mounted) {
       setState(() => _isLoadingNfts = true);
