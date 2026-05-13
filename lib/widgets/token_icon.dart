@@ -146,10 +146,16 @@ class TokenIcon extends StatelessWidget {
     final trimmed = address.trim();
     final values = <String>{trimmed};
     values.add(trimmed.toLowerCase());
-    try {
-      values.add(EthereumAddress.fromHex(trimmed).hexEip55);
-    } catch (e) {
-      debugPrint('Error converting checksum address: $e');
+
+    // Only EVM contracts can be converted to EIP-55. Solana mints such as
+    // JUP/ORCA are base58 strings and should never hit web3dart's hex parser.
+    final isEvmHexAddress = RegExp(r'^(0x)?[a-fA-F0-9]{40}$').hasMatch(trimmed);
+    if (isEvmHexAddress) {
+      try {
+        values.add(EthereumAddress.fromHex(trimmed).hexEip55);
+      } catch (_) {
+        // The lower-case candidate remains usable as a CDN fallback.
+      }
     }
     return values.toList();
   }

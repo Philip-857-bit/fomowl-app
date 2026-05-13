@@ -47,6 +47,14 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
+      'recipient account is not active',
+      'rent exemption',
+      'rent-exempt',
+    ])) {
+      return raw.replaceAll(RegExp(r'\s+'), ' ');
+    }
+
+    if (_containsAny(lowered, const [
       'failed to get quotes',
       'no solana swap route',
       'no swap route',
@@ -188,6 +196,10 @@ class AppErrorUtils {
   static String backendMessage(String? body, {required String fallback}) {
     if (body == null || body.trim().isEmpty) return fallback;
     final lowered = body.toLowerCase();
+    final backendJsonMessage = _extractBackendJsonMessage(body);
+    if (backendJsonMessage != null && backendJsonMessage.isNotEmpty) {
+      return userMessage(backendJsonMessage, fallback: fallback);
+    }
     if (_containsAny(lowered, const [
       'failed to get quotes',
       'no solana swap route',
@@ -199,10 +211,6 @@ class AppErrorUtils {
       'missing the unsigned transaction',
     ])) {
       return 'Amount is too low for this swap. Try a larger amount.';
-    }
-    final backendJsonMessage = _extractBackendJsonMessage(body);
-    if (backendJsonMessage != null && backendJsonMessage.isNotEmpty) {
-      return userMessage(backendJsonMessage, fallback: fallback);
     }
     if (_containsAny(lowered, const [
       'challenge',

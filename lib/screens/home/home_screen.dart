@@ -452,8 +452,48 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final requestNetworkKey = _blockchain?.activeNetworkKey;
     if (requestNetworkKey == null) return;
+    final requestFamily = NetworkKey.familyOf(requestNetworkKey);
 
     setState(() => _isLoadingPortfolio = true);
+
+    if (requestFamily != ChainFamily.evm) {
+      try {
+        final fallbackSnapshot = await _buildPortfolioFallbackSnapshot(
+          walletAddress,
+        );
+        if (!await _isStillActiveWalletRequest(
+          walletAddress,
+          requestNetworkKey,
+        )) {
+          return;
+        }
+        if (!mounted) {
+          return;
+        }
+        if (fallbackSnapshot != null) {
+          await _applyPortfolioSnapshotState(
+            fallbackSnapshot,
+            isUsingCachedData: false,
+          );
+          await _portfolioSnapshotService.saveSnapshot(fallbackSnapshot);
+        } else {
+          setState(() {
+            _applyPortfolioData(_fallbackPortfolioData());
+          });
+        }
+      } catch (error) {
+        debugPrint('Error building $requestNetworkKey portfolio data: $error');
+      } finally {
+        if (mounted &&
+            await _isStillActiveWalletRequest(
+              walletAddress,
+              requestNetworkKey,
+            )) {
+          setState(() => _isLoadingPortfolio = false);
+        }
+      }
+      return;
+    }
 
     try {
       final snapshot = _mergePortfolioSnapshotWithLiveChain(
@@ -593,6 +633,41 @@ class _HomeScreenState extends State<HomeScreen> {
   ) async {
     final blockchain =
         _blockchain ?? Provider.of<BlockchainService>(context, listen: false);
+
+    if (blockchain.activeFamily != ChainFamily.evm) {
+      try {
+        final tokens = await blockchain.fetchWalletTokens(walletAddress);
+        final hiddenTokenKeys = await _tokenVisibilityService.loadHiddenTokens(
+          _effectiveVisibilityChainId(blockchain),
+        );
+        final visibleTokens = _portfolioRepository.prepareVisibleTokens(
+          tokens,
+          hiddenTokenKeys,
+        );
+        if (visibleTokens.isEmpty) {
+          return null;
+        }
+        return HomeAggregatedPortfolioSnapshot(
+          walletAddress: walletAddress,
+          sections: [
+            HomePortfolioSection(
+              chain: _activePortfolioChain(blockchain),
+              tokens: visibleTokens,
+            ),
+          ],
+          timestamp: DateTime.now().toUtc(),
+          source: 'client-fallback',
+          isStale: false,
+          partialFailure: false,
+          chainsPending: const <int>[],
+        );
+      } catch (error) {
+        debugPrint(
+          'Portfolio fallback fetch failed for ${blockchain.activeNetworkKey}: $error',
+        );
+        return null;
+      }
+    }
 
     final rawSections = await Future.wait(
       blockchain.allChains.map((chain) async {

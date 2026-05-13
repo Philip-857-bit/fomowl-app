@@ -118,6 +118,15 @@ void main() {
       );
     });
 
+    test('keeps Solana inactive recipient guidance user-facing', () {
+      const body =
+          '{"error":"Solana transfer amount too low","message":"This Solana recipient account is not active yet. Send at least 0.000890880 SOL to activate it, or send to an address that already has SOL."}';
+      expect(
+        AppErrorUtils.backendMessage(body, fallback: fallback),
+        'This Solana recipient account is not active yet. Send at least 0.000890880 SOL to activate it, or send to an address that already has SOL.',
+      );
+    });
+
     test('sanitizes Jupiter request identifiers without route details', () {
       const body =
           '{"message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\"}"}';

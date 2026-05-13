@@ -583,8 +583,8 @@ class BlockchainService extends ChangeNotifier {
   }
 
   WalletTokenState getWalletTokenState(String walletAddress, {int? chainId}) {
-    final effectiveChainId = chainId ?? _activeChain.chainId;
-    final cacheKey = _walletTokenStateKey(effectiveChainId, walletAddress);
+    final effectiveChainId = _walletTokenChainIdForRequest(chainId);
+    final cacheKey = _walletTokenCacheKeyForRequest(walletAddress, chainId);
     return _walletTokenStates[cacheKey] ??
         WalletTokenState(
           tokens: getCachedWalletTokens(
@@ -598,8 +598,7 @@ class BlockchainService extends ChangeNotifier {
   }
 
   List<Token> getCachedWalletTokens(String walletAddress, {int? chainId}) {
-    final effectiveChainId = chainId ?? _activeChain.chainId;
-    final cacheKey = _walletTokenStateKey(effectiveChainId, walletAddress);
+    final cacheKey = _walletTokenCacheKeyForRequest(walletAddress, chainId);
     final now = DateTime.now();
     final state = _walletTokenStates[cacheKey];
     final stateLastUpdatedAt = state?.lastUpdatedAt;
@@ -618,6 +617,25 @@ class BlockchainService extends ChangeNotifier {
     return const [];
   }
 
+  int _walletTokenChainIdForRequest(int? chainId) {
+    if (_isActiveNonEvmTokenRequest(chainId)) {
+      return activeTokenStorageChainId;
+    }
+    return chainId ?? _activeChain.chainId;
+  }
+
+  String _walletTokenCacheKeyForRequest(String walletAddress, int? chainId) {
+    if (_isActiveNonEvmTokenRequest(chainId)) {
+      return _walletTokenStateKeyForNetwork(activeNetworkKey, walletAddress);
+    }
+    return _walletTokenStateKey(chainId ?? _activeChain.chainId, walletAddress);
+  }
+
+  bool _isActiveNonEvmTokenRequest(int? chainId) {
+    return activeFamily != ChainFamily.evm &&
+        (chainId == null || chainId == activeTokenStorageChainId);
+  }
+
   String _walletTokenStateKey(int chainId, String walletAddress) =>
       '$chainId:${walletAddress.toLowerCase()}';
 
@@ -634,7 +652,7 @@ class BlockchainService extends ChangeNotifier {
     bool notify = false,
   }) {
     _walletTokenStates[cacheKey] = state;
-    if (_activeChain.chainId == chainId) {
+    if (activeTokenStorageChainId == chainId) {
       _walletTokens = List<Token>.from(state.tokens);
     }
     if (notify) {
@@ -1404,11 +1422,10 @@ class BlockchainService extends ChangeNotifier {
     bool forceRefresh = false,
   }) async {
     // For non-EVM families, use the full activeNetworkKey; chainId is irrelevant.
-    final effectiveNetworkKey =
-        (activeFamily != ChainFamily.evm && chainId == null)
+    final effectiveNetworkKey = _isActiveNonEvmTokenRequest(chainId)
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
-    final requestedChainId = chainId ?? _activeChain.chainId;
+    final requestedChainId = _walletTokenChainIdForRequest(chainId);
     if (!_walletAddressLooksValidForNetwork(
       walletAddress,
       effectiveNetworkKey,
@@ -1420,7 +1437,7 @@ class BlockchainService extends ChangeNotifier {
     }
     // Non-EVM chains must use a network-key-based cache key to avoid colliding
     // with an EVM chain that happens to share the same numeric chainId slot.
-    final cacheKey = (activeFamily != ChainFamily.evm && chainId == null)
+    final cacheKey = _isActiveNonEvmTokenRequest(chainId)
         ? _walletTokenStateKeyForNetwork(effectiveNetworkKey, walletAddress)
         : _walletTokenStateKey(requestedChainId, walletAddress);
     final now = DateTime.now();
