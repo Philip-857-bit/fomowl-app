@@ -140,7 +140,7 @@ class SolanaLimitService {
         // but we send them explicitly for clarity.
         'orderType': 'price',
         'orderSubType': 'single',
-        ?'expiredAt': expiredAt,
+        'expiredAt': ?expiredAt,
       };
 
       final response = await _http
@@ -221,7 +221,7 @@ class SolanaLimitService {
         'outAmount': expectedOutputAmountLamports,
         'triggerPriceUsd': triggerPriceUsd,
         'orderType': 'single',
-        ?'slippageBps': slippageBps,
+        'slippageBps': ?slippageBps,
       };
 
       final response = await _http
