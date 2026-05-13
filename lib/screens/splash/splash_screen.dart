@@ -14,20 +14,15 @@ const Color _kSplashAccent = Color(0xFFEA2A33);
 const String _kSplashMarkAsset = 'assets/images/splash.png';
 
 class SplashScreenBody extends StatelessWidget {
-  final Animation<double> scaleAnimation;
-
-  const SplashScreenBody({super.key, required this.scaleAnimation});
+  const SplashScreenBody({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kSplashBackground,
-      body: ScaleTransition(
-        alignment: Alignment.center,
-        scale: scaleAnimation,
-        child: SizedBox.expand(
-          child: Stack(
-            alignment: Alignment.center,
+      body: SizedBox.expand(
+        child: Stack(
+          alignment: Alignment.center,
             children: [
               Align(
                 alignment: const Alignment(0, -0.07),

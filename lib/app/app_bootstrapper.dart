@@ -19,28 +19,15 @@ class AppBootstrapper extends StatefulWidget {
   State<AppBootstrapper> createState() => _AppBootstrapperState();
 }
 
-class _AppBootstrapperState extends State<AppBootstrapper>
-    with SingleTickerProviderStateMixin {
+class _AppBootstrapperState extends State<AppBootstrapper> {
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
 
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
   bool _splashPrecached = false;
 
   @override
   void initState() {
     super.initState();
-
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
-
     _initializeApp();
   }
 
@@ -74,20 +61,12 @@ class _AppBootstrapperState extends State<AppBootstrapper>
 
       if (!mounted) return;
 
-      // Wait for the first frame so [SplashScreenBody] is definitely painted
-      // with the matching [kSplashBackground] before we dismiss the native
-      // splash.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
-        // Remove native splash — the custom splash beneath is already drawn
-        // with the same background so the transition is invisible.
         FlutterNativeSplash.remove();
-        // Start animation
-        _animationController.forward();
       });
 
-      // Hold on splash long enough for the full animation + a brief pause.
-      await Future.delayed(const Duration(milliseconds: 1900));
+      await Future.delayed(const Duration(seconds: 3));
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(nextRoute);
@@ -101,13 +80,7 @@ class _AppBootstrapperState extends State<AppBootstrapper>
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SplashScreenBody(scaleAnimation: _scaleAnimation);
+    return const SplashScreenBody();
   }
 }
