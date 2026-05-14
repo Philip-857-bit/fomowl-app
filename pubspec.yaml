@@ -142,7 +142,7 @@ flutter:
 # Flutter Native Splash Configuration
 flutter_native_splash:
   color: "#000000"
-  image: "assets/images/splash_logo.png"
+  image: "assets/images/splash_icon_padded.png"
   android: true
   ios: true
   web: false
@@ -151,7 +151,7 @@ flutter_native_splash:
   # Android 12+ specific
   android_12:
     color: "#000000"
-    image: "assets/images/splash_logo.png"
+    image: "assets/images/splash_icon_padded.png"
 
 
 # Flutter Launcher Icons Configuration

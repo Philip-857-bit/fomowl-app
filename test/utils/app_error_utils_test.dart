@@ -100,6 +100,15 @@ void main() {
       );
     });
 
+    test('maps Jupiter insufficient funds to a short Solana swap message', () {
+      const body =
+          '{"error":"Swap quote unavailable","message":"Jupiter /order returned a successful quote without an unsigned transaction: request_id=abc | jupiterError: Insufficient funds"}';
+      expect(
+        AppErrorUtils.backendMessage(body, fallback: fallback),
+        'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.',
+      );
+    });
+
     test('maps Solana insufficient lamports failures to a clear message', () {
       const body =
           '{"error":"Failed to broadcast Solana transaction","message":"RPC error: Transaction simulation failed: Attempt to debit an account but found no record of a prior credit."}';
@@ -162,5 +171,18 @@ void main() {
         'Amount is too low for this swap. Try a larger amount.',
       );
     });
+
+    test(
+      'maps Jupiter empty transaction insufficient funds before route message',
+      () {
+        expect(
+          AppErrorUtils.userMessage(
+            'Jupiter /order returned a successful quote without an unsigned transaction: request_id=abc | jupiterError: Insufficient funds',
+            fallback: fallback,
+          ),
+          'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.',
+        );
+      },
+    );
   });
 }

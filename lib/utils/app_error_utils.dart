@@ -54,6 +54,18 @@ class AppErrorUtils {
       return raw.replaceAll(RegExp(r'\s+'), ' ');
     }
 
+    if (_isSolanaSwapBalanceError(lowered)) {
+      return 'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.';
+    }
+
+    if (_isSolanaSwapAddressError(lowered)) {
+      return 'Selected Solana wallet address is invalid. Switch to a Solana wallet and try again.';
+    }
+
+    if (_isSwapSlippageError(lowered)) {
+      return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
+    }
+
     if (_containsAny(lowered, const [
       'failed to get quotes',
       'no solana swap route',
@@ -200,6 +212,15 @@ class AppErrorUtils {
     if (backendJsonMessage != null && backendJsonMessage.isNotEmpty) {
       return userMessage(backendJsonMessage, fallback: fallback);
     }
+    if (_isSolanaSwapBalanceError(lowered)) {
+      return 'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.';
+    }
+    if (_isSolanaSwapAddressError(lowered)) {
+      return 'Selected Solana wallet address is invalid. Switch to a Solana wallet and try again.';
+    }
+    if (_isSwapSlippageError(lowered)) {
+      return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
+    }
     if (_containsAny(lowered, const [
       'failed to get quotes',
       'no solana swap route',
@@ -262,6 +283,46 @@ class AppErrorUtils {
       if (value.contains(needle)) return true;
     }
     return false;
+  }
+
+  static bool _isSolanaSwapBalanceError(String lowered) {
+    final hasBalanceSignal =
+        lowered.contains('insufficient funds') ||
+        lowered.contains('not enough sol') ||
+        lowered.contains('don\'t have enough sol') ||
+        lowered.contains('dont have enough sol');
+    if (!hasBalanceSignal) return false;
+    return _containsAny(lowered, const [
+      'swap',
+      'jupiter',
+      '/order',
+      '/execute',
+      'quote',
+      'unsigned transaction',
+      'transaction":""',
+    ]);
+  }
+
+  static bool _isSolanaSwapAddressError(String lowered) {
+    final hasAddressSignal =
+        lowered.contains('invalid taker') ||
+        lowered.contains('valid public key') ||
+        lowered.contains('selected solana wallet address is invalid');
+    if (!hasAddressSignal) return false;
+    return _containsAny(lowered, const [
+      'solana',
+      'jupiter',
+      'swap',
+      'taker',
+      '`user`',
+    ]);
+  }
+
+  static bool _isSwapSlippageError(String lowered) {
+    if (!lowered.contains('slippage') && !lowered.contains('price movement')) {
+      return false;
+    }
+    return _containsAny(lowered, const ['swap', 'jupiter', '/order', 'quote']);
   }
 
   static bool _containsSensitiveEndpoint(String raw, String lowered) {

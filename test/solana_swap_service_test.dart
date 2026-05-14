@@ -175,7 +175,45 @@ void main() {
         );
 
         expect(quote, isNull);
-        expect(service.lastError, contains('missing the unsigned transaction'));
+        expect(
+          service.lastError,
+          'Amount is too low for this swap. Try a larger amount.',
+        );
+      },
+    );
+
+    test(
+      'sanitizes 2xx Jupiter insufficient funds without transaction',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'outAmount': '8902176519',
+              'tx_data': {
+                'transaction': '',
+                'error': 'Insufficient funds',
+                'router': 'metis',
+              },
+            }),
+            200,
+          );
+        });
+        final service = SolanaSwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
+
+        final quote = await service.getQuote(
+          fromMint: 'So11111111111111111111111111111111111111112',
+          toMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          amountLamports: '100000000000',
+          walletAddress: 'SoLWaLLetAddresS',
+        );
+
+        expect(quote, isNull);
+        expect(
+          service.lastError,
+          'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.',
+        );
       },
     );
 

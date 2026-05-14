@@ -1348,6 +1348,17 @@ class _SwapScreenState extends State<SwapScreen> {
     final lower = raw.toLowerCase();
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final nativeSymbol = blockchain.activeNetworkSymbol;
+
+    if (_isSolanaSwapBalanceError(lower)) {
+      return 'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.';
+    }
+    if (_isSolanaSwapAddressError(lower)) {
+      return 'Selected Solana wallet address is invalid. Switch to a Solana wallet and try again.';
+    }
+    if (_isSwapPriceMovementError(lower)) {
+      return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
+    }
+
     if (lower.contains('failed to get quotes') ||
         lower.contains('could not find any route') ||
         lower.contains('no solana swap route') ||
@@ -1456,6 +1467,44 @@ class _SwapScreenState extends State<SwapScreen> {
       raw,
       fallback: '${l.swapFailedTitle}. ${l.tryAgain}.',
     );
+  }
+
+  bool _isSolanaSwapBalanceError(String lower) {
+    final hasBalanceSignal =
+        lower.contains('insufficient funds') ||
+        lower.contains('not enough sol') ||
+        lower.contains('don\'t have enough sol') ||
+        lower.contains('dont have enough sol');
+    if (!hasBalanceSignal) return false;
+    return lower.contains('jupiter') ||
+        lower.contains('/order') ||
+        lower.contains('swap') ||
+        lower.contains('quote') ||
+        lower.contains('unsigned transaction') ||
+        lower.contains('transaction":""');
+  }
+
+  bool _isSolanaSwapAddressError(String lower) {
+    final hasAddressSignal =
+        lower.contains('invalid taker') ||
+        lower.contains('valid public key') ||
+        lower.contains('selected solana wallet address is invalid');
+    if (!hasAddressSignal) return false;
+    return lower.contains('solana') ||
+        lower.contains('jupiter') ||
+        lower.contains('swap') ||
+        lower.contains('taker') ||
+        lower.contains('`user`');
+  }
+
+  bool _isSwapPriceMovementError(String lower) {
+    if (!lower.contains('slippage') && !lower.contains('price movement')) {
+      return false;
+    }
+    return lower.contains('swap') ||
+        lower.contains('jupiter') ||
+        lower.contains('/order') ||
+        lower.contains('quote');
   }
 
   String? _extractGaslessStatusValue(Map<String, dynamic> data) {

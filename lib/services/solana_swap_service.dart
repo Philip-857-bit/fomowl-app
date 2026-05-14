@@ -170,8 +170,23 @@ class SolanaSwapService {
       txData?['serializedTransaction'],
     ]);
     if (swapTx == null || swapTx.isEmpty) {
-      _lastError =
-          'Swap quote response was missing the unsigned transaction. Please try again.';
+      final providerMessage = _firstNonEmptyString([
+        data['message'],
+        data['errorMessage'],
+        data['error'],
+        data['jupiterError'],
+        txData?['message'],
+        txData?['errorMessage'],
+        txData?['error'],
+        txData?['jupiterError'],
+      ]);
+      final rawError = providerMessage == null
+          ? 'Swap quote response was missing the unsigned transaction. Please try again.'
+          : 'Jupiter swap quote error: $providerMessage';
+      _lastError = AppErrorUtils.userMessage(
+        rawError,
+        fallback: 'Unable to fetch Solana swap quote right now.',
+      );
       return null;
     }
 
