@@ -36,7 +36,7 @@ class AmountInputModeToggle extends StatelessWidget {
         onTap: isDisabled ? null : onToggle,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(999),
@@ -46,13 +46,13 @@ class AmountInputModeToggle extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 54),
+                constraints: const BoxConstraints(maxWidth: 46),
                 child: Text(
                   primaryLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w600,
                     color: Colors.white.withValues(alpha: 0.85),
                   ),
@@ -61,18 +61,18 @@ class AmountInputModeToggle extends StatelessWidget {
               const SizedBox(width: 4),
               Icon(
                 Icons.swap_vert,
-                size: 14,
+                size: 13,
                 color: AppColors.accentRed.withValues(alpha: 0.9),
               ),
               const SizedBox(width: 4),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 54),
+                constraints: const BoxConstraints(maxWidth: 46),
                 child: Text(
                   secondaryLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
                     color: Colors.white.withValues(alpha: 0.55),
                   ),

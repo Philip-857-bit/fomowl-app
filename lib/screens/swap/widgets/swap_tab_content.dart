@@ -175,14 +175,8 @@ class SwapTabContent extends StatelessWidget {
           label: buttonLabel,
         ),
         if (showGaslessToggle) ...[
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SwapGaslessToggle(
-              value: isGasless,
-              onChanged: onGaslessChanged,
-            ),
-          ),
+          const SizedBox(height: 18),
+          SwapGaslessToggle(value: isGasless, onChanged: onGaslessChanged),
         ],
       ],
     );

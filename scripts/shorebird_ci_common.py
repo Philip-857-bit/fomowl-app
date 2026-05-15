@@ -10,6 +10,11 @@ from typing import Iterable
 
 
 VERSION_RE = re.compile(r"^version:\s*([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+)\s*$")
+VOLATILE_PATH_PARTS = (
+    "android/.kotlin/",
+    "android/build/",
+    "android/app/build/",
+)
 
 
 def read_pubspec_release(repo_root: pathlib.Path) -> tuple[str, str]:
@@ -63,6 +68,10 @@ def digest_files(repo_root: pathlib.Path, files: Iterable[pathlib.Path]) -> tupl
     combined = hashlib.sha256()
     for path in sorted(files):
         relative_path = path.relative_to(repo_root).as_posix()
+        if any(relative_path.startswith(part) for part in VOLATILE_PATH_PARTS):
+            continue
+        if not path.is_file():
+            continue
         file_hash = sha256_file(path)
         manifest[relative_path] = file_hash
         combined.update(relative_path.encode("utf-8"))

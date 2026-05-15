@@ -74,14 +74,15 @@ class SwapFromCard extends StatelessWidget {
               if (headerLabel != null || showInternalChips) ...[
                 _ResponsiveHeader(
                   headerLabel: headerLabel,
-                  children: [
-                    if (showInternalChips) ...[
-                      if (onToggleInputMode != null)
-                        AmountInputModeToggle(
+                  leadingControl: showInternalChips && onToggleInputMode != null
+                      ? AmountInputModeToggle(
                           mode: inputMode,
                           tokenSymbol: token?.symbol ?? '',
                           onToggle: onToggleInputMode!,
-                        ),
+                        )
+                      : null,
+                  trailingControls: [
+                    if (showInternalChips) ...[
                       _PercentChip(
                         percent: 25,
                         isSelected: selectedPercentage == 25,
@@ -200,54 +201,69 @@ class SwapFromCard extends StatelessWidget {
 }
 
 class _ResponsiveHeader extends StatelessWidget {
-  const _ResponsiveHeader({required this.headerLabel, required this.children});
+  const _ResponsiveHeader({
+    required this.headerLabel,
+    required this.leadingControl,
+    required this.trailingControls,
+  });
 
   final String? headerLabel;
-  final List<Widget> children;
+  final Widget? leadingControl;
+  final List<Widget> trailingControls;
 
   @override
   Widget build(BuildContext context) {
-    final label = headerLabel == null
-        ? const SizedBox.shrink()
-        : Text(
-            headerLabel!,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFFA1A1A1),
-              letterSpacing: 1.0,
-            ),
-          );
+    final leadingChildren = <Widget>[
+      if (headerLabel != null)
+        Text(
+          headerLabel!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFFA1A1A1),
+            letterSpacing: 1.0,
+          ),
+        ),
+      ?leadingControl,
+    ];
+    final leading = Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: leadingChildren,
+    );
+    final trailing = Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: WrapAlignment.end,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: trailingControls,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final controls = Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          alignment: WrapAlignment.end,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: children,
-        );
-
-        if (constraints.maxWidth < 330) {
+        if (constraints.maxWidth < 370) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (headerLabel != null) label,
-              if (headerLabel != null && children.isNotEmpty)
+              if (leadingChildren.isNotEmpty) leading,
+              if (leadingChildren.isNotEmpty && trailingControls.isNotEmpty)
                 const SizedBox(height: 8),
-              Align(alignment: Alignment.centerRight, child: controls),
+              Align(alignment: Alignment.centerRight, child: trailing),
             ],
           );
         }
 
         return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (headerLabel != null) label,
-            if (headerLabel != null) const SizedBox(width: 10),
+            Flexible(flex: 2, child: leading),
+            const SizedBox(width: 10),
             Expanded(
-              child: Align(alignment: Alignment.centerRight, child: controls),
+              flex: 3,
+              child: Align(alignment: Alignment.centerRight, child: trailing),
             ),
           ],
         );

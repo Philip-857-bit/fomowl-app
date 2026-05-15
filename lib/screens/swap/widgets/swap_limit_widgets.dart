@@ -24,28 +24,33 @@ class SwapTabSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return SizedBox(
+      width: double.infinity,
       child: Container(
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
           color: const Color(0xFF151C24),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: const Color(0x0DFFFFFF)),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            _SwapTabChip(
-              label: 'SWAP',
-              isActive: activeTab == SwapTab.swap,
-              onTap: () => onChanged(SwapTab.swap),
+            Expanded(
+              child: _SwapTabChip(
+                label: 'SWAP',
+                isActive: activeTab == SwapTab.swap,
+                onTap: () => onChanged(SwapTab.swap),
+              ),
             ),
-            if (showLimitTab)
-              _SwapTabChip(
+            const SizedBox(width: 6),
+            Expanded(
+              child: _SwapTabChip(
                 label: 'LIMIT',
                 isActive: activeTab == SwapTab.limit,
-                onTap: () => onChanged(SwapTab.limit),
+                isEnabled: showLimitTab,
+                onTap: showLimitTab ? () => onChanged(SwapTab.limit) : null,
               ),
+            ),
           ],
         ),
       ),
@@ -56,21 +61,30 @@ class SwapTabSelector extends StatelessWidget {
 class _SwapTabChip extends StatelessWidget {
   final String label;
   final bool isActive;
-  final VoidCallback onTap;
+  final bool isEnabled;
+  final VoidCallback? onTap;
 
   const _SwapTabChip({
     required this.label,
     required this.isActive,
+    this.isEnabled = true,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = isActive
+        ? Colors.white
+        : isEnabled
+        ? const Color(0xFFA1A1A1)
+        : const Color(0xFF777F8B);
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: isActive ? const Color(0xFFEA2A33) : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
@@ -86,10 +100,13 @@ class _SwapTabChip extends StatelessWidget {
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: isActive ? Colors.white : const Color(0xFFA1A1A1),
+            color: effectiveColor,
             letterSpacing: 0.6,
           ),
         ),

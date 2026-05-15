@@ -3198,86 +3198,89 @@ class _SwapScreenState extends State<SwapScreen> {
     // (i.e. a mnemonic wallet). Pure Solana / Tron PK wallets have a single
     // family and have nothing to switch to.
     final canSwitch = blockchain.enabledFamilies.length > 1;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: canSwitch ? _showNetworkSelector : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0x991F1F1F),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x265D3F3D)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: networkColor.withAlpha(40),
-                  shape: BoxShape.circle,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: logoUrl != null && logoUrl.isNotEmpty
-                    ? Image.network(
-                        logoUrl,
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, err, stack) =>
-                            Icon(Icons.language, color: networkColor, size: 16),
-                      )
-                    : Icon(Icons.language, color: networkColor, size: 16),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'NETWORK',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFFC8C6C5),
-                        height: 1.5,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      networkName,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFE2E2E2),
-                        height: 1.43,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (canSwitch) ...[
-                Text(
-                  'Change',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 10,
-                  color: AppColors.textSecondary,
-                ),
-              ],
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Network',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF8894A0),
+            letterSpacing: 0.3,
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: canSwitch ? _showNetworkSelector : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Ink(
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: const Color(0xFF151C24),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF2A333D)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: networkColor.withAlpha(40),
+                      shape: BoxShape.circle,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: logoUrl != null && logoUrl.isNotEmpty
+                        ? Image.network(
+                            logoUrl,
+                            width: 32,
+                            height: 32,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, err, stack) => Icon(
+                              Icons.language,
+                              color: networkColor,
+                              size: 16,
+                            ),
+                          )
+                        : Icon(Icons.language, color: networkColor, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      networkName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  if (canSwitch) ...[
+                    Text(
+                      'Change',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -3763,39 +3766,70 @@ class _SwapScreenState extends State<SwapScreen> {
         child: Column(
           children: [
             SizedBox(
-              height: _activeTab == SwapTab.limit ? 80 : 63,
-              child: Center(
-                child: _activeTab == SwapTab.limit
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Limit Order',
+              height: _activeTab == SwapTab.limit ? 82 : 64,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Navigator.of(context).canPop()
+                        ? IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                            color: Colors.white,
+                            iconSize: 20,
+                            tooltip: MaterialLocalizations.of(
+                              context,
+                            ).backButtonTooltip,
+                          )
+                        : const SizedBox(width: 48),
+                  ),
+                  Center(
+                    child: _activeTab == SwapTab.limit
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Limit Order',
+                                style: GoogleFonts.inter(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Place a limit order to buy or sell tokens',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: const Color(0xFF8894A0),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            'SWAP',
                             style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                               color: Colors.white,
+                              letterSpacing: 1.8,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Place a limit order to buy or sell tokens',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: const Color(0xFF8894A0),
-                            ),
-                          ),
-                        ],
-                      )
-                    : Text(
-                        'SWAP',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 1.4,
-                        ),
+                  ),
+                  if (_activeTab == SwapTab.limit)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: () {
+                          unawaited(_startLimitShowcaseIfNeeded(force: true));
+                        },
+                        icon: const Icon(Icons.help_outline_rounded),
+                        color: const Color(0xFF8894A0),
+                        tooltip: 'Limit order help',
                       ),
+                    ),
+                ],
               ),
             ),
 

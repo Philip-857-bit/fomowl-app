@@ -25,9 +25,9 @@ class SwapTokenChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 132),
+        constraints: const BoxConstraints(maxWidth: 124),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(999),
@@ -47,7 +47,7 @@ class SwapTokenChip extends StatelessWidget {
                   chainId: chainId,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Flexible(
                 child: Text(
                   symbol,
@@ -61,7 +61,7 @@ class SwapTokenChip extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               const FigmaDropdownIcon(width: 6, color: Color(0xFFC8C6C5)),
             ],
           ),
