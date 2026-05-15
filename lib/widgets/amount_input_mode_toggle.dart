@@ -45,12 +45,17 @@ class AmountInputModeToggle extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                primaryLabel,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withValues(alpha: 0.85),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 54),
+                child: Text(
+                  primaryLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
                 ),
               ),
               const SizedBox(width: 4),
@@ -60,12 +65,17 @@ class AmountInputModeToggle extends StatelessWidget {
                 color: AppColors.accentRed.withValues(alpha: 0.9),
               ),
               const SizedBox(width: 4),
-              Text(
-                secondaryLabel,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: 0.55),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 54),
+                child: Text(
+                  secondaryLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withValues(alpha: 0.55),
+                  ),
                 ),
               ),
             ],

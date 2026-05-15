@@ -17,6 +17,14 @@ class CurrencyController extends ChangeNotifier {
 
   static const _supportedCurrencies = {'USD', 'EUR', 'GBP', 'NGN'};
   static const _exchangeRatesBaseUrl = 'https://api.frankfurter.dev/v1/latest';
+  static const _exchangeRateApiBaseUrl =
+      'https://open.er-api.com/v6/latest/USD';
+  static const _staticFallbackRates = <String, double>{
+    'USD': 1.0,
+    'NGN': 1600.0,
+    'EUR': 0.92,
+    'GBP': 0.79,
+  };
 
   String _currencyCode = 'USD';
   bool _initialized = false;
@@ -49,54 +57,84 @@ class CurrencyController extends ChangeNotifier {
   }
 
   Future<void> _refreshRates() async {
+    final rates = <String, double>{'USD': 1.0};
     try {
-      final targets = _supportedCurrencies
-          .where((code) => code != 'USD')
-          .join(',');
-      final uri = Uri.parse('$_exchangeRatesBaseUrl?base=USD&symbols=$targets');
-      final response = await _httpClient.client
-          .get(uri)
-          .timeout(const Duration(seconds: 8));
-      if (response.statusCode != 200) {
-        return;
-      }
-
-      final decoded = jsonDecode(response.body);
-      final rates = <String, double>{'USD': 1.0};
-      if (decoded is Map<String, dynamic>) {
-        final rawRates = decoded['rates'];
-        if (rawRates is Map) {
-          for (final code in _supportedCurrencies) {
-            if (code == 'USD') continue;
-            final value = rawRates[code];
-            if (value is num && value > 0) {
-              rates[code] = value.toDouble();
-            }
-          }
-        }
-      }
-
-      // Apply static fallbacks if the API misses any supported currencies
-      if (!rates.containsKey('NGN') || rates['NGN']! <= 0) {
-        rates['NGN'] = 1600.0;
-      }
-      if (!rates.containsKey('EUR') || rates['EUR']! <= 0) {
-        rates['EUR'] = 0.92;
-      }
-      if (!rates.containsKey('GBP') || rates['GBP']! <= 0) {
-        rates['GBP'] = 0.79;
-      }
-
-      ValueFormatter.updateUsdConversionRates(rates);
+      rates.addAll(await _fetchFrankfurterRates());
     } catch (_) {
-      // In case of total network failure, apply static fallbacks before updating
-      final fallbackRates = <String, double>{
-        'USD': 1.0,
-        'NGN': 1600.0,
-        'EUR': 0.92,
-        'GBP': 0.79,
-      };
-      ValueFormatter.updateUsdConversionRates(fallbackRates);
+      // Fall through to the secondary live source.
     }
+
+    if (_hasMissingRates(rates)) {
+      try {
+        final secondaryRates = await _fetchExchangeRateApiRates();
+        for (final entry in secondaryRates.entries) {
+          rates.putIfAbsent(entry.key, () => entry.value);
+        }
+      } catch (_) {
+        // Fall through to static last-resort values.
+      }
+    }
+
+    for (final entry in _staticFallbackRates.entries) {
+      rates.putIfAbsent(entry.key, () => entry.value);
+    }
+
+    ValueFormatter.updateUsdConversionRates(rates);
+  }
+
+  Future<Map<String, double>> _fetchFrankfurterRates() async {
+    final targets = _supportedCurrencies
+        .where((code) => code != 'USD')
+        .join(',');
+    final uri = Uri.parse('$_exchangeRatesBaseUrl?base=USD&symbols=$targets');
+    final response = await _httpClient.client
+        .get(uri)
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      return const <String, double>{};
+    }
+
+    final decoded = jsonDecode(response.body);
+    return _extractRates(decoded);
+  }
+
+  Future<Map<String, double>> _fetchExchangeRateApiRates() async {
+    final uri = Uri.parse(_exchangeRateApiBaseUrl);
+    final response = await _httpClient.client
+        .get(uri)
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      return const <String, double>{};
+    }
+
+    final decoded = jsonDecode(response.body);
+    return _extractRates(decoded);
+  }
+
+  Map<String, double> _extractRates(dynamic decoded) {
+    final rates = <String, double>{};
+    if (decoded is! Map<String, dynamic>) {
+      return rates;
+    }
+
+    final rawRates = decoded['rates'];
+    if (rawRates is! Map) {
+      return rates;
+    }
+
+    for (final code in _supportedCurrencies) {
+      if (code == 'USD') continue;
+      final value = rawRates[code];
+      if (value is num && value > 0) {
+        rates[code] = value.toDouble();
+      }
+    }
+    return rates;
+  }
+
+  bool _hasMissingRates(Map<String, double> rates) {
+    return _supportedCurrencies.any(
+      (code) => !rates.containsKey(code) || rates[code]! <= 0,
+    );
   }
 }

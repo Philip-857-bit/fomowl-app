@@ -53,140 +53,205 @@ class SwapFromCard extends StatelessWidget {
         ValueFormatter.formatCurrencyWithGrouping(
           ValueFormatter.decimalFromNum(usdValue),
         );
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151C24),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0x0DFFFFFF)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (headerLabel != null || showInternalChips) ...[
-            Row(
-              children: [
-                if (headerLabel != null)
-                  Text(
-                    headerLabel!,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFFA1A1A1),
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                if (headerLabel != null) const Spacer(),
-                if (showInternalChips) ...[
-                  if (onToggleInputMode != null) ...[
-                    AmountInputModeToggle(
-                      mode: inputMode,
-                      tokenSymbol: token?.symbol ?? '',
-                      onToggle: onToggleInputMode!,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  _PercentChip(
-                    percent: 25,
-                    isSelected: selectedPercentage == 25,
-                    onTap: () => onPercentSelected(25),
-                  ),
-                  const SizedBox(width: 6),
-                  _PercentChip(
-                    percent: 50,
-                    isSelected: selectedPercentage == 50,
-                    onTap: () => onPercentSelected(50),
-                  ),
-                  const SizedBox(width: 6),
-                  _PercentChip(
-                    percent: 75,
-                    isSelected: selectedPercentage == 75,
-                    onTap: () => onPercentSelected(75),
-                  ),
-                  const SizedBox(width: 6),
-                  _MaxChip(
-                    isSelected: selectedPercentage == 100,
-                    onTap: () => onPercentSelected(100),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 14),
-          ],
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  onChanged: onAmountChanged,
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFE2E2E2),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: '0',
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0x4DE2E2E2),
-                    ),
-                    prefixText: inputMode == AmountInputMode.fiat
-                        ? ValueFormatter.currencyPrefix
-                        : null,
-                    prefixStyle: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFE2E2E2),
-                    ),
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ),
-              SwapTokenChip(
-                token: token,
-                onTap: onSelectToken,
-                chainId: chainId,
-              ),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = constraints.maxWidth < 340 ? 16.0 : 24.0;
+        return Container(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            16,
+            horizontalPadding,
+            16,
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          decoration: BoxDecoration(
+            color: const Color(0xFF151C24),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0x0DFFFFFF)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                fiatDisplay,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: const Color(0xFF848E9C),
+              if (headerLabel != null || showInternalChips) ...[
+                _ResponsiveHeader(
+                  headerLabel: headerLabel,
+                  children: [
+                    if (showInternalChips) ...[
+                      if (onToggleInputMode != null)
+                        AmountInputModeToggle(
+                          mode: inputMode,
+                          tokenSymbol: token?.symbol ?? '',
+                          onToggle: onToggleInputMode!,
+                        ),
+                      _PercentChip(
+                        percent: 25,
+                        isSelected: selectedPercentage == 25,
+                        onTap: () => onPercentSelected(25),
+                      ),
+                      _PercentChip(
+                        percent: 50,
+                        isSelected: selectedPercentage == 50,
+                        onTap: () => onPercentSelected(50),
+                      ),
+                      _PercentChip(
+                        percent: 75,
+                        isSelected: selectedPercentage == 75,
+                        onTap: () => onPercentSelected(75),
+                      ),
+                      _MaxChip(
+                        isSelected: selectedPercentage == 100,
+                        onTap: () => onPercentSelected(100),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
+                const SizedBox(height: 14),
+              ],
               Row(
                 children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 11,
-                    color: Color(0xFF848E9C),
+                  Expanded(
+                    child: TextField(
+                      controller: controller,
+                      onChanged: onAmountChanged,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFE2E2E2),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '0',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0x4DE2E2E2),
+                        ),
+                        prefixText: inputMode == AmountInputMode.fiat
+                            ? ValueFormatter.currencyPrefix
+                            : null,
+                        prefixStyle: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFE2E2E2),
+                        ),
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SwapTokenChip(
+                    token: token,
+                    onTap: onSelectToken,
+                    chainId: chainId,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      fiatDisplay,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF848E9C),
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: const Color(0xFF848E9C),
+                  Flexible(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 11,
+                          color: Color(0xFF848E9C),
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '${balance.toStringAsFixed(4)} ${token?.symbol ?? ""}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: const Color(0xFF848E9C),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+}
+
+class _ResponsiveHeader extends StatelessWidget {
+  const _ResponsiveHeader({required this.headerLabel, required this.children});
+
+  final String? headerLabel;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = headerLabel == null
+        ? const SizedBox.shrink()
+        : Text(
+            headerLabel!,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFFA1A1A1),
+              letterSpacing: 1.0,
+            ),
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final controls = Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          alignment: WrapAlignment.end,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: children,
+        );
+
+        if (constraints.maxWidth < 330) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (headerLabel != null) label,
+              if (headerLabel != null && children.isNotEmpty)
+                const SizedBox(height: 8),
+              Align(alignment: Alignment.centerRight, child: controls),
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (headerLabel != null) label,
+            if (headerLabel != null) const SizedBox(width: 10),
+            Expanded(
+              child: Align(alignment: Alignment.centerRight, child: controls),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -255,7 +320,6 @@ class _MaxChip extends StatelessWidget {
             fontSize: 8,
             fontWeight: FontWeight.w900,
             color: const Color(0xFFEA2A33),
-            letterSpacing: -0.4,
           ),
         ),
       ),

@@ -17,6 +17,14 @@ class HomeTokenListItem extends StatelessWidget {
   final VoidCallback onTap;
   final int? chainId;
 
+  String get _displayName {
+    final symbol = token.symbol.trim();
+    if (symbol.isNotEmpty) {
+      return symbol;
+    }
+    return token.name.trim().isEmpty ? 'Token' : token.name.trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -44,7 +52,9 @@ class HomeTokenListItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    token.name,
+                    _displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -67,6 +77,8 @@ class HomeTokenListItem extends StatelessWidget {
               children: [
                 Text(
                   token.formattedValue,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,

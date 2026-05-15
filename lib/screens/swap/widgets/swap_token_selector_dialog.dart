@@ -515,7 +515,9 @@ class _SwapTokenOption extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    token.name,
+                    token.symbol,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -523,7 +525,9 @@ class _SwapTokenOption extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    token.symbol,
+                    token.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       color: Colors.white54,
@@ -532,12 +536,18 @@ class _SwapTokenOption extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              token.balance.toStringAsFixed(4),
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 88),
+              child: Text(
+                token.balance.toStringAsFixed(4),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

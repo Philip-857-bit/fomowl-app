@@ -44,6 +44,8 @@ class ValueFormatter {
   static String get _currencySymbol =>
       _currencySymbols[_currencyCode] ?? _currencySymbols['USD']!;
 
+  static bool get _usesFullFiatDisplay => _currencyCode == 'NGN';
+
   static Decimal _convertFromUsd(Decimal value) {
     final rate = _usdConversionRates[_currencyCode];
     if (_currencyCode != 'USD' && rate == null) {
@@ -99,6 +101,9 @@ class ValueFormatter {
 
   static String formatUsdValue(Decimal value) {
     final converted = _convertFromUsd(value);
+    if (_usesFullFiatDisplay) {
+      return _formatConvertedCurrencyWithGrouping(converted);
+    }
     if (converted >= _trillion) {
       return '$_currencySymbol${_fixed(divide(converted, _trillion), 2)}T';
     }
@@ -125,6 +130,9 @@ class ValueFormatter {
   static String formatUsdPrice(Decimal value) {
     final converted = _convertFromUsd(value);
     if (converted <= Decimal.zero) return '${_currencySymbol}0.00';
+    if (_usesFullFiatDisplay) {
+      return _formatConvertedCurrencyWithGrouping(converted);
+    }
     if (converted >= _thousand) {
       return '$_currencySymbol${_fixed(converted, 0)}';
     }
@@ -151,7 +159,11 @@ class ValueFormatter {
   }
 
   static String formatCurrencyWithGrouping(Decimal value) {
-    final fixed = _fixed(_convertFromUsd(value), 2);
+    return _formatConvertedCurrencyWithGrouping(_convertFromUsd(value));
+  }
+
+  static String _formatConvertedCurrencyWithGrouping(Decimal converted) {
+    final fixed = _fixed(converted, 2);
     final parts = fixed.split('.');
     final whole = _groupThousands(parts.first);
     return parts.length == 1

@@ -1,13 +1,23 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
+import '../../models/chain.dart';
+import '../../models/token.dart';
+import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
+import '../../services/blockchain_service.dart';
+import '../../services/transaction_monitor.dart';
+import '../../services/wallet_service.dart';
+import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
+import '../../screens/transaction/transaction_processing_screen.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
@@ -61,6 +71,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   static const String _scriptGroup = 'owllet-mini-app';
 
   final AuthService _authService = AuthService();
+  final WalletService _walletService = WalletService();
+  final TransactionMonitor _transactionMonitor = TransactionMonitor();
   InAppWebViewController? _controller;
   int _progress = 0;
   bool _canGoBack = false;
@@ -131,6 +143,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'close': true,
           'openExternal': true,
           'getContext': true,
+          'requestWalletTransfer': true,
         },
       };
       _loadingContext = false;
@@ -334,6 +347,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     openExternal: function(url) {
       return callHost({ type: 'open_external', url: url });
     },
+    requestWalletTransfer: function(payload) {
+      return callHost({ type: 'request_wallet_transfer', payload: payload || {} });
+    },
     getContext: function() {
       return context;
     }
@@ -367,12 +383,326 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         return const <String, dynamic>{'ok': true};
       case 'ready':
         return <String, dynamic>{'ok': true, 'context': _bridgeContext};
+      case 'request_wallet_transfer':
+        final payload = raw['payload'];
+        if (payload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid wallet transfer request.',
+          };
+        }
+        return _handleWalletTransferRequest(payload.cast<String, dynamic>());
       default:
         return <String, dynamic>{
           'ok': false,
           'error': 'Unsupported bridge action: $type',
         };
     }
+  }
+
+  Future<Map<String, dynamic>> _handleWalletTransferRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final reference = payload['reference']?.toString().trim() ?? '';
+    final networkKey = payload['networkKey']?.toString().trim() ?? '';
+    final symbol =
+        payload['assetSymbol']?.toString().trim().toUpperCase() ?? '';
+    final assetName = payload['assetName']?.toString().trim() ?? symbol;
+    final toAddress = payload['toAddress']?.toString().trim() ?? '';
+    final amountDisplay = payload['amountDisplay']?.toString().trim() ?? '';
+    final nativeSymbol = payload['nativeSymbol']?.toString().trim() ?? '';
+    final amountBaseUnits = BigInt.tryParse(
+      payload['amountBaseUnits']?.toString() ?? '',
+    );
+    final decimals = int.tryParse(payload['decimals']?.toString() ?? '') ?? 18;
+    final tokenContract = payload['tokenContract']?.toString().trim();
+
+    if (reference.isEmpty ||
+        networkKey.isEmpty ||
+        symbol.isEmpty ||
+        toAddress.isEmpty ||
+        amountBaseUnits == null ||
+        amountBaseUnits <= BigInt.zero) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Invalid wallet transfer request.',
+      };
+    }
+
+    final family = NetworkKey.familyOf(networkKey);
+    if (!_isValidAddressForFamily(toAddress, family)) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Invalid settlement route.',
+      };
+    }
+
+    final fromAddress = await _walletService.getWalletAddressForFamily(family);
+    if (fromAddress == null || fromAddress.trim().isEmpty) {
+      return <String, dynamic>{
+        'ok': false,
+        'error': 'This wallet does not support ${family.wireValue}.',
+      };
+    }
+
+    final confirmed = await _confirmHiddenSettlementTransfer(
+      reference: reference,
+      amountDisplay: amountDisplay.isEmpty ? symbol : amountDisplay,
+      assetSymbol: symbol,
+      nativeSymbol: nativeSymbol,
+    );
+    if (confirmed != true) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Wallet transfer was cancelled.',
+      };
+    }
+
+    final token = Token(
+      symbol: symbol,
+      name: assetName.isEmpty ? symbol : assetName,
+      contractAddress: tokenContract == null || tokenContract.isEmpty
+          ? null
+          : tokenContract,
+      balance: 0,
+      valueUsd: 0,
+      changePercent24h: 0,
+      decimals: decimals,
+      networkKey: networkKey,
+      tokenStandard: tokenContract == null || tokenContract.isEmpty
+          ? TokenStandard.native
+          : switch (family) {
+              ChainFamily.solana => TokenStandard.spl,
+              ChainFamily.tron => TokenStandard.trc20,
+              ChainFamily.evm => TokenStandard.erc20,
+            },
+    );
+
+    final controller = TransactionProgressController(
+      flow: TransactionProgressFlow.transfer,
+    );
+    if (mounted) {
+      unawaited(
+        Navigator.of(context).pushNamed(
+          '/transaction-processing',
+          arguments: TransactionProcessingArguments(controller: controller),
+        ),
+      );
+    }
+
+    try {
+      controller.setPreparing();
+      controller.setSwapSubmitting();
+      final txHash = await _sendBridgeTransfer(
+        networkKey: networkKey,
+        family: family,
+        fromAddress: fromAddress,
+        toAddress: toAddress,
+        amountBaseUnits: amountBaseUnits,
+        token: token,
+      );
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Transfer status could not be tracked.',
+        };
+      }
+      final detailsUrl = _transactionDetailsUrl(txHash, networkKey);
+      controller.setSwapPending(
+        reference: _shortHash(txHash),
+        detailsUrl: detailsUrl,
+      );
+
+      final blockchain = context.read<BlockchainService>();
+      final confirmed = await _transactionMonitor.waitForConfirmation(
+        txHash: txHash,
+        blockchain: blockchain,
+        networkKey: networkKey,
+        evmChain: family == ChainFamily.evm
+            ? _evmChainForNetwork(blockchain, networkKey)
+            : null,
+      );
+      if (confirmed) {
+        controller.setSuccess(
+          reference: _shortHash(txHash),
+          detailsUrl: detailsUrl,
+        );
+      } else {
+        controller.setError(
+          'Transfer submitted and awaiting network confirmation.',
+          reference: _shortHash(txHash),
+          detailsUrl: detailsUrl,
+        );
+      }
+
+      return <String, dynamic>{
+        'ok': true,
+        'transactionHash': txHash,
+        'confirmed': confirmed,
+      };
+    } catch (error) {
+      final message = AppErrorUtils.userMessage(
+        error,
+        fallback: 'Wallet transfer failed. Please try again.',
+      );
+      controller.setError(message);
+      return <String, dynamic>{'ok': false, 'error': message};
+    }
+  }
+
+  Future<bool?> _confirmHiddenSettlementTransfer({
+    required String reference,
+    required String amountDisplay,
+    required String assetSymbol,
+    required String nativeSymbol,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(
+            'Confirm Cash Out',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            'Send $amountDisplay for Cash Out request $reference. Owllet will route the settlement address internally.${nativeSymbol.isEmpty ? '' : '\n\nNetwork fees are paid in $nativeSymbol.'}',
+            style: GoogleFonts.outfit(
+              color: Colors.white.withValues(alpha: 0.72),
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Send $assetSymbol',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<String> _sendBridgeTransfer({
+    required String networkKey,
+    required ChainFamily family,
+    required String fromAddress,
+    required String toAddress,
+    required BigInt amountBaseUnits,
+    required Token token,
+  }) async {
+    final isNative =
+        token.contractAddress == null || token.contractAddress!.isEmpty;
+    switch (family) {
+      case ChainFamily.solana:
+        return _walletService.sendSolanaTransaction(
+          fromAddress: fromAddress,
+          toAddress: toAddress,
+          amountLamports: amountBaseUnits,
+          tokenMint: isNative ? null : token.contractAddress,
+        );
+      case ChainFamily.tron:
+        return _walletService.sendTronTransaction(
+          fromAddress: fromAddress,
+          toAddress: toAddress,
+          amount: amountBaseUnits,
+          tokenContract: isNative ? null : token.contractAddress,
+        );
+      case ChainFamily.evm:
+        final blockchain = context.read<BlockchainService>();
+        final chain = _evmChainForNetwork(blockchain, networkKey);
+        if (isNative) {
+          return _walletService.sendNativeTransaction(
+            toAddress: toAddress,
+            amountInBaseUnits: amountBaseUnits,
+            rpcUrl: chain.rpcUrl,
+            chainId: chain.chainId,
+          );
+        }
+        return _walletService.sendTokenTransaction(
+          tokenAddress: token.contractAddress!,
+          toAddress: toAddress,
+          amountInBaseUnits: amountBaseUnits,
+          rpcUrl: chain.rpcUrl,
+          chainId: chain.chainId,
+        );
+    }
+  }
+
+  EvmChain _evmChainForNetwork(
+    BlockchainService blockchain,
+    String networkKey,
+  ) {
+    final chainId =
+        NetworkKey.evmChainIdOf(networkKey) ?? blockchain.activeChain.chainId;
+    return blockchain.allChains.firstWhere(
+      (chain) => chain.chainId == chainId,
+      orElse: () => blockchain.activeChain,
+    );
+  }
+
+  bool _isValidAddressForFamily(String address, ChainFamily family) {
+    switch (family) {
+      case ChainFamily.evm:
+        return RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address);
+      case ChainFamily.solana:
+        return RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(address);
+      case ChainFamily.tron:
+        return RegExp(r'^T[1-9A-HJ-NP-Za-km-z]{33}$').hasMatch(address);
+    }
+  }
+
+  String? _transactionDetailsUrl(String hash, String networkKey) {
+    switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.solana:
+        if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {
+          return null;
+        }
+        return 'https://explorer.solana.com/tx/$hash';
+      case ChainFamily.tron:
+        if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
+        return 'https://tronscan.org/#/transaction/$hash';
+      case ChainFamily.evm:
+        if (!RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
+        final blockchain = context.read<BlockchainService>();
+        final explorerUrl = _evmChainForNetwork(
+          blockchain,
+          networkKey,
+        ).explorerUrl?.trim();
+        if (explorerUrl == null || explorerUrl.isEmpty) return null;
+        final normalized = explorerUrl.endsWith('/')
+            ? explorerUrl.substring(0, explorerUrl.length - 1)
+            : explorerUrl;
+        return '$normalized/tx/$hash';
+    }
+  }
+
+  String _shortHash(String hash) {
+    if (hash.length <= 10) {
+      return hash;
+    }
+    return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
   }
 
   bool _isTrustedOrigin(Uri uri) {

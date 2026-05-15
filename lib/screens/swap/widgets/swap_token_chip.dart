@@ -24,41 +24,47 @@ class SwapTokenChip extends StatelessWidget {
     final symbol = token?.symbol ?? '--';
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: const Color(0x265D3F3D)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: const BoxDecoration(shape: BoxShape.circle),
-              child: TokenIcon(
-                tokenSymbol: symbol,
-                tokenAddress: token?.contractAddress,
-                tokenImageUrl: token?.imageUrl,
-                size: 24,
-                chainId: chainId,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 132),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0x265D3F3D)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: TokenIcon(
+                  tokenSymbol: symbol,
+                  tokenAddress: token?.contractAddress,
+                  tokenImageUrl: token?.imageUrl,
+                  size: 24,
+                  chainId: chainId,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              symbol,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFFE2E2E2),
-                height: 1.43,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  symbol,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFE2E2E2),
+                    height: 1.43,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const FigmaDropdownIcon(width: 6, color: Color(0xFFC8C6C5)),
-          ],
+              const SizedBox(width: 8),
+              const FigmaDropdownIcon(width: 6, color: Color(0xFFC8C6C5)),
+            ],
+          ),
         ),
       ),
     );

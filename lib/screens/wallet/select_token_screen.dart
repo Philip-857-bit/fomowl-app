@@ -499,7 +499,9 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    token.name,
+                    token.symbol.trim().isEmpty ? token.name : token.symbol,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -508,7 +510,9 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    token.symbol,
+                    token.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.5),
@@ -520,20 +524,32 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  token.balance.toStringAsFixed(2),
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 96),
+                  child: Text(
+                    token.balance.toStringAsFixed(2),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  token.formattedValue,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.5),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 96),
+                  child: Text(
+                    token.formattedValue,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.5),
+                    ),
                   ),
                 ),
               ],
