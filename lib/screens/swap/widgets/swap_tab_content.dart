@@ -165,6 +165,7 @@ class SwapTabContent extends StatelessWidget {
             swapAmountUsd: fromUsdValue,
             gaslessFeeCovered: gaslessFeeCovered,
             nativePriceUsd: nativePriceUsd,
+            slippageBps: slippageBps,
           ),
         ],
         const SizedBox(height: 16),
@@ -921,84 +922,31 @@ class LimitTabContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        // ── YOU'LL SPEND / YOU'LL RECEIVE summary boxes ──
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF151C24),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF2A333D)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isBuyMode ? "YOU'LL SPEND (MAX)" : "YOU'LL SELL (MAX)",
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF848E9C),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      fromUsdValue > 0
-                          ? '\$${fromUsdValue.toStringAsFixed(2)}'
-                          : '--',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _LimitSummaryBox(
+                  label: isBuyMode ? "YOU'LL SPEND (MAX)" : "YOU'LL SELL (MAX)",
+                  value: fromUsdValue > 0
+                      ? '\$${fromUsdValue.toStringAsFixed(2)}'
+                      : '--',
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(13),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF151C24),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF2A333D)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isBuyMode
-                          ? "YOU'LL RECEIVE (ESTIMATED)"
-                          : "YOU'LL GET (ESTIMATED)",
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF848E9C),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      toAmountText.isNotEmpty && toAmountText != '0'
-                          ? '$toAmountText ${toToken?.symbol ?? ''}'
-                          : '--',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: _LimitSummaryBox(
+                  label: isBuyMode
+                      ? "YOU'LL RECEIVE (ESTIMATED)"
+                      : "YOU'LL GET (ESTIMATED)",
+                  value: toAmountText.isNotEmpty && toAmountText != '0'
+                      ? '$toAmountText ${toToken?.symbol ?? ''}'
+                      : '--',
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 20),
         _buildSectionLabel('4. Order expiry', null),
@@ -1185,6 +1133,56 @@ class LimitTabContent extends StatelessWidget {
       title: title,
       description: description,
       child: child,
+    );
+  }
+}
+
+class _LimitSummaryBox extends StatelessWidget {
+  const _LimitSummaryBox({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 96),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151C24),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF2A333D)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF848E9C),
+              letterSpacing: 0.5,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              height: 1.25,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

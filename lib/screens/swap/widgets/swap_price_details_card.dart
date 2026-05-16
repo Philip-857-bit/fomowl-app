@@ -14,6 +14,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
   final String priceSeparator;
   final double swapAmountUsd;
   final bool gaslessFeeCovered;
+  final int? slippageBps;
 
   /// Native token price in USD from the frontend CoinGecko cache.
   /// Used to compute network fee in USD when the backend returns 0.
@@ -32,15 +33,13 @@ class SwapPriceDetailsCard extends StatelessWidget {
     this.swapAmountUsd = 0.0,
     this.nativePriceUsd = 0.0,
     this.gaslessFeeCovered = false,
+    this.slippageBps,
   });
 
   @override
   Widget build(BuildContext context) {
     final feeText = _buildFeeText();
-    final resolvedPlatformFeePercent = _resolvedPlatformFeePercent();
-    final platformFeeText = resolvedPlatformFeePercent > 0
-        ? _formatPercent(resolvedPlatformFeePercent)
-        : '0';
+    final platformFeeText = _buildPlatformFeeText();
     final estTotalText = receiveText;
 
     return Column(
@@ -66,8 +65,12 @@ class SwapPriceDetailsCard extends StatelessWidget {
           child: Column(
             children: [
               _buildDetailRow('Rate', priceText, isPrice: true),
+              if (slippageBps != null) ...[
+                const SizedBox(height: 14),
+                _buildDetailRow('Slippage', _formatSlippage(slippageBps!)),
+              ],
               const SizedBox(height: 14),
-              _buildDetailRowWithInfo('Total tax', feeText),
+              _buildDetailRowWithInfo('Network Fee', feeText),
               const SizedBox(height: 14),
               _buildDetailRowWithInfo('Platform Fee', platformFeeText),
               const SizedBox(height: 14),
@@ -81,20 +84,23 @@ class SwapPriceDetailsCard extends StatelessWidget {
     );
   }
 
-  double _resolvedPlatformFeePercent() {
-    if (platformFeePercent > 0) {
-      return platformFeePercent;
-    }
-    if (swapAmountUsd > 0 && platformFeeUsd > 0) {
-      return (platformFeeUsd / swapAmountUsd) * 100;
+  double _resolvedPlatformFeeUsd() {
+    if (platformFeeUsd > 0) return platformFeeUsd;
+    if (swapAmountUsd > 0 && platformFeePercent > 0) {
+      return swapAmountUsd * (platformFeePercent / 100);
     }
     return 0.0;
   }
 
-  String _formatPercent(double value) {
-    if (value <= 0) return '0%';
-    if (value < 0.1) return '<0.1%';
-    return '${value.toStringAsFixed(1)}%';
+  String _buildPlatformFeeText() {
+    final feeText = _formatApproxFiat(_resolvedPlatformFeeUsd());
+    return feeText.isEmpty ? '0' : feeText;
+  }
+
+  String _formatSlippage(int bps) {
+    final pct = bps / 100.0;
+    if (pct == pct.floorToDouble()) return '${pct.toInt()}%';
+    return '${pct.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '')}%';
   }
 
   String _formatApproxFiat(double value) {
@@ -104,19 +110,26 @@ class SwapPriceDetailsCard extends StatelessWidget {
     );
     final convertedValue = ValueFormatter.doubleFromDecimal(converted);
     final prefix = ValueFormatter.currencyPrefix;
-    if (convertedValue < 0.1) return '<${prefix}0.1';
-    return '~$prefix${convertedValue.toStringAsFixed(1)}';
+    if (convertedValue < 0.01) return '<${prefix}0.01';
+    final decimals = convertedValue >= 10 ? 2 : 4;
+    return '~$prefix${convertedValue.toStringAsFixed(decimals)}';
   }
 
   String _formatApproxNative(double value) {
     if (value <= 0) return '';
-    if (value < 0.1) return '<0.1 $nativeFeeSymbol';
-    return '~${value.toStringAsFixed(1)} $nativeFeeSymbol';
+    if (value < 0.000001) return '<0.000001 $nativeFeeSymbol';
+    if (value < 0.01) return '~${value.toStringAsFixed(6)} $nativeFeeSymbol';
+    if (value < 1) return '~${value.toStringAsFixed(4)} $nativeFeeSymbol';
+    return '~${value.toStringAsFixed(3)} $nativeFeeSymbol';
   }
 
   String _buildFeeText() {
+    final resolvedFeeUsd =
+        feeAmountUsd > 0 || feeAmountNative <= 0 || nativePriceUsd <= 0
+        ? feeAmountUsd
+        : feeAmountNative * nativePriceUsd;
     final feeNativeText = _formatApproxNative(feeAmountNative);
-    final feeUsdText = _formatApproxFiat(feeAmountUsd);
+    final feeUsdText = _formatApproxFiat(resolvedFeeUsd);
 
     if (feeNativeText.isEmpty && feeUsdText.isEmpty) {
       return '0';
@@ -174,26 +187,42 @@ class SwapPriceDetailsCard extends StatelessWidget {
   Widget _buildDetailRowWithInfo(String label, String value) {
     return Row(
       children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: const Color(0xFF848E9C),
+        Flexible(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF848E9C),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(
+                Icons.info_outline_rounded,
+                size: 12,
+                color: Color(0xFF848E9C),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 4),
-        const Icon(
-          Icons.info_outline_rounded,
-          size: 12,
-          color: Color(0xFF848E9C),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFFEAECEF),
+        const SizedBox(width: 12),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFFEAECEF),
+            ),
           ),
         ),
       ],

@@ -213,27 +213,6 @@ class _ResponsiveHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final leadingChildren = <Widget>[
-      if (headerLabel != null)
-        Text(
-          headerLabel!,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFFA1A1A1),
-            letterSpacing: 1.0,
-          ),
-        ),
-      ?leadingControl,
-    ];
-    final leading = Wrap(
-      spacing: 8,
-      runSpacing: 6,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: leadingChildren,
-    );
     final trailing = Wrap(
       spacing: 6,
       runSpacing: 6,
@@ -246,28 +225,67 @@ class _ResponsiveHeader extends StatelessWidget {
       builder: (context, constraints) {
         if (constraints.maxWidth < 370) {
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (leadingChildren.isNotEmpty) leading,
-              if (leadingChildren.isNotEmpty && trailingControls.isNotEmpty)
-                const SizedBox(height: 8),
-              Align(alignment: Alignment.centerRight, child: trailing),
+              if (headerLabel != null) _HeaderLabel(headerLabel!),
+              if (leadingControl != null) ...[
+                if (headerLabel != null) const SizedBox(height: 8),
+                Center(child: leadingControl!),
+              ],
+              if (trailingControls.isNotEmpty) ...[
+                if (headerLabel != null || leadingControl != null)
+                  const SizedBox(height: 8),
+                Align(alignment: Alignment.centerRight, child: trailing),
+              ],
             ],
           );
         }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        return Stack(
+          alignment: Alignment.center,
           children: [
-            Flexible(flex: 2, child: leading),
-            const SizedBox(width: 10),
-            Expanded(
-              flex: 3,
-              child: Align(alignment: Alignment.centerRight, child: trailing),
-            ),
+            if (headerLabel != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _HeaderLabel(headerLabel!),
+              ),
+            if (leadingControl != null) Center(child: leadingControl!),
+            if (trailingControls.isNotEmpty)
+              Align(
+                alignment: Alignment.centerRight,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: leadingControl == null
+                        ? constraints.maxWidth
+                        : constraints.maxWidth * 0.44,
+                  ),
+                  child: trailing,
+                ),
+              ),
           ],
         );
       },
+    );
+  }
+}
+
+class _HeaderLabel extends StatelessWidget {
+  const _HeaderLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: GoogleFonts.inter(
+        fontSize: 10,
+        fontWeight: FontWeight.w500,
+        color: const Color(0xFFA1A1A1),
+        letterSpacing: 1.0,
+      ),
     );
   }
 }
