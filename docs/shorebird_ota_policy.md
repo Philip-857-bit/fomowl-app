@@ -65,6 +65,10 @@ The patch workflow also hard fails if a patch candidate touches trust-boundary D
 - `lib/utils/sensitive_access_guard.dart`
 - seed phrase, private key reveal, or recovery screens under profile/security flows
 
+CI-only support files under `.github/**`, `docs/**`, and `scripts/**` are ignored by
+the patch-diff guard because they are not packaged into the Flutter runtime. They
+must still be reviewed and merged separately from the app behavior being patched.
+
 If a change touches anything outside the approved maintenance surface, the patch workflow fails and the change must go through a normal store release.
 
 ## Release and Patch Lineage

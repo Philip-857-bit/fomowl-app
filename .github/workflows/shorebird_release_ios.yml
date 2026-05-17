@@ -261,6 +261,7 @@ jobs:
           name: shorebird-release-manifest-ios-${{ steps.manifest.outputs.release_version }}
           path: ${{ runner.temp }}/shorebird-release-manifest.json
           if-no-files-found: error
+          retention-days: 90
 
   validate_release_lineage:
     runs-on: ubuntu-latest

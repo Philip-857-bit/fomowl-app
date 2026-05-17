@@ -109,29 +109,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          artifact_id="$(
-            gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq ".artifacts[] | select(.name == \"$MANIFEST_NAME\" and .expired == false) | [.id, .created_at] | @tsv" \
-              | sort -k2 \
-              | tail -n1 \
-              | cut -f1
-          )"
-          if [ -z "$artifact_id" ]; then
-            echo "Unable to locate release manifest artifact named $MANIFEST_NAME" >&2
-            exit 1
-          fi
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$RUNNER_TEMP/shorebird-manifest.zip"
-          python - "$RUNNER_TEMP/shorebird-manifest.zip" "$RUNNER_TEMP/shorebird-manifest" <<'PY'
-          import pathlib
-          import sys
-          import zipfile
-
-          zip_path = pathlib.Path(sys.argv[1])
-          target = pathlib.Path(sys.argv[2])
-          target.mkdir(parents=True, exist_ok=True)
-          with zipfile.ZipFile(zip_path) as archive:
-              archive.extractall(target)
-          PY
+          python scripts/shorebird_fetch_release_manifest.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --manifest-name "$MANIFEST_NAME" \
+            --platform android \
+            --flutter-version "$FLUTTER_VERSION" \
+            --output "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --workdir "$RUNNER_TEMP"
 
       - name: Render Shorebird config
         run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
@@ -304,29 +288,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          artifact_id="$(
-            gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-              --jq ".artifacts[] | select(.name == \"$MANIFEST_NAME\" and .expired == false) | [.id, .created_at] | @tsv" \
-              | sort -k2 \
-              | tail -n1 \
-              | cut -f1
-          )"
-          if [ -z "$artifact_id" ]; then
-            echo "Unable to locate release manifest artifact named $MANIFEST_NAME" >&2
-            exit 1
-          fi
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "$RUNNER_TEMP/shorebird-manifest.zip"
-          python - "$RUNNER_TEMP/shorebird-manifest.zip" "$RUNNER_TEMP/shorebird-manifest" <<'PY'
-          import pathlib
-          import sys
-          import zipfile
-
-          zip_path = pathlib.Path(sys.argv[1])
-          target = pathlib.Path(sys.argv[2])
-          target.mkdir(parents=True, exist_ok=True)
-          with zipfile.ZipFile(zip_path) as archive:
-              archive.extractall(target)
-          PY
+          python scripts/shorebird_fetch_release_manifest.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --manifest-name "$MANIFEST_NAME" \
+            --platform ios \
+            --flutter-version "$FLUTTER_VERSION" \
+            --output "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --workdir "$RUNNER_TEMP"
 
       - name: Render Shorebird config
         run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false

@@ -55,12 +55,14 @@ def list_tracked_files(repo_root: pathlib.Path, roots: Iterable[str]) -> list[pa
     return sorted(set(files))
 
 
-def sha256_file(path: pathlib.Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as file:
-        for chunk in iter(lambda: file.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def sha256_git_blob(repo_root: pathlib.Path, relative_path: str) -> str:
+    result = subprocess.run(
+        ["git", "show", f"HEAD:{relative_path}"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    return hashlib.sha256(result.stdout).hexdigest()
 
 
 def digest_files(repo_root: pathlib.Path, files: Iterable[pathlib.Path]) -> tuple[dict[str, str], str]:
@@ -72,7 +74,7 @@ def digest_files(repo_root: pathlib.Path, files: Iterable[pathlib.Path]) -> tupl
             continue
         if not path.is_file():
             continue
-        file_hash = sha256_file(path)
+        file_hash = sha256_git_blob(repo_root, relative_path)
         manifest[relative_path] = file_hash
         combined.update(relative_path.encode("utf-8"))
         combined.update(b"\0")

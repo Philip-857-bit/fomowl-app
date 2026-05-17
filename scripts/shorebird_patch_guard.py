@@ -25,6 +25,12 @@ ALLOWED_ROOTS = (
     "integration_test/",
 )
 
+NON_RUNTIME_ROOTS = (
+    ".github/",
+    "docs/",
+    "scripts/",
+)
+
 FORBIDDEN_PATTERNS = (
     "lib/src/rust/**",
     "lib/screens/onboarding/**",
@@ -51,6 +57,10 @@ FORBIDDEN_PATTERNS = (
 
 def is_allowed_root(path: str) -> bool:
     return any(path.startswith(root) for root in ALLOWED_ROOTS)
+
+
+def is_non_runtime_root(path: str) -> bool:
+    return any(path.startswith(root) for root in NON_RUNTIME_ROOTS)
 
 
 def matches_forbidden(path: str) -> bool:
@@ -102,7 +112,11 @@ def main() -> int:
 
     release_commit = manifest["release_commit_sha"]
     diff_output = git_output(repo_root, "diff", "--name-only", f"{release_commit}...HEAD")
-    changed_files = [line.strip() for line in diff_output.splitlines() if line.strip()]
+    changed_files = [
+        line.strip()
+        for line in diff_output.splitlines()
+        if line.strip() and not is_non_runtime_root(line.strip())
+    ]
 
     if not changed_files and not args.allow_empty_diff:
         print(
