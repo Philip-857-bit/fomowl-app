@@ -7,11 +7,13 @@ import 'package:showcaseview/showcaseview.dart';
 
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import '../models/patch_status_snapshot.dart';
 import '../services/app_patch_service.dart';
 import '../services/language_controller.dart';
 import '../services/storage_service.dart';
 import '../services/wallet_service.dart';
 import '../utils/language_utils.dart';
+import '../utils/toast_utils.dart';
 import 'app_bootstrapper.dart';
 import 'app_navigator.dart';
 import 'app_routes.dart';
@@ -31,11 +33,13 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   bool _wasBackgrounded = false;
   DateTime _lastInteractionAt = DateTime.now();
   Timer? _foregroundLockTimer;
+  AppPatchStatus? _lastVisiblePatchStatus;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AppPatchService.instance.addListener(_showVisiblePatchStatus);
     ShowcaseView.register(enableAutoScroll: true, blurValue: 1);
     _foregroundLockTimer = Timer.periodic(
       const Duration(seconds: 15),
@@ -46,9 +50,38 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _foregroundLockTimer?.cancel();
+    AppPatchService.instance.removeListener(_showVisiblePatchStatus);
     ShowcaseView.get().unregister();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _showVisiblePatchStatus() {
+    final status = AppPatchService.instance.snapshot.status;
+    if (_lastVisiblePatchStatus == status) {
+      return;
+    }
+    _lastVisiblePatchStatus = status;
+
+    switch (status) {
+      case AppPatchStatus.downloading:
+        ToastUtils.showInfo('Downloading Owllet update...');
+        break;
+      case AppPatchStatus.restartRequired:
+        ToastUtils.showSuccess('Update downloaded. Restart Owllet to apply.');
+        break;
+      case AppPatchStatus.failed:
+        ToastUtils.showError(
+          'Update download failed. Owllet will retry later.',
+        );
+        break;
+      case AppPatchStatus.idle:
+      case AppPatchStatus.unavailable:
+      case AppPatchStatus.checking:
+      case AppPatchStatus.outdated:
+      case AppPatchStatus.upToDate:
+        break;
+    }
   }
 
   @override

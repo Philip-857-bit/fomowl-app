@@ -9,6 +9,7 @@ import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
+import '../../models/patch_status_snapshot.dart';
 import '../../models/wallet_account.dart';
 import '../../services/app_patch_service.dart';
 import '../../services/blockchain_service.dart';
@@ -478,6 +479,35 @@ class _DecentralizedProfileScreenState
     await Navigator.pushNamed(context, '/backup-seed-phrase');
   }
 
+  bool _shouldShowPatchStatus(AppPatchStatus status) {
+    return switch (status) {
+      AppPatchStatus.checking ||
+      AppPatchStatus.outdated ||
+      AppPatchStatus.downloading ||
+      AppPatchStatus.restartRequired ||
+      AppPatchStatus.failed => true,
+      AppPatchStatus.idle ||
+      AppPatchStatus.unavailable ||
+      AppPatchStatus.upToDate => false,
+    };
+  }
+
+  String _patchStatusText(AppPatchService patchService) {
+    final nextPatch = patchService.nextPatchNumber;
+    final patchSuffix = nextPatch == null ? '' : ' $nextPatch';
+    return switch (patchService.snapshot.status) {
+      AppPatchStatus.checking => 'Checking for updates',
+      AppPatchStatus.outdated => 'Update available',
+      AppPatchStatus.downloading => 'Downloading update$patchSuffix',
+      AppPatchStatus.restartRequired =>
+        'Update ready. Restart Owllet to apply.',
+      AppPatchStatus.failed => 'Update check failed. We will retry later.',
+      AppPatchStatus.idle ||
+      AppPatchStatus.unavailable ||
+      AppPatchStatus.upToDate => '',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -737,6 +767,21 @@ class _DecentralizedProfileScreenState
                                 fontSize: 15,
                               ),
                             ),
+                            if (_shouldShowPatchStatus(
+                              patchService.snapshot.status,
+                            )) ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                _patchStatusText(patchService),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.outfit(
+                                  color: AppColors.textSecondary.withValues(
+                                    alpha: 0.82,
+                                  ),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

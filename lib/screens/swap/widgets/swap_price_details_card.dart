@@ -86,10 +86,14 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   double _resolvedPlatformFeeUsd() {
     if (platformFeeUsd > 0) return platformFeeUsd;
-    if (swapAmountUsd > 0 && platformFeePercent > 0) {
-      return swapAmountUsd * (platformFeePercent / 100);
+    if (swapAmountUsd <= 0) return 0.0;
+    if (swapAmountUsd < 10) {
+      return swapAmountUsd * 0.10;
     }
-    return 0.0;
+    if (swapAmountUsd <= 100) {
+      return 1.0;
+    }
+    return swapAmountUsd * 0.01;
   }
 
   String _buildPlatformFeeText() {
@@ -111,7 +115,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
     final convertedValue = ValueFormatter.doubleFromDecimal(converted);
     final prefix = ValueFormatter.currencyPrefix;
     if (convertedValue < 0.01) return '<${prefix}0.01';
-    final decimals = convertedValue >= 10 ? 2 : 4;
+    final decimals = convertedValue >= 0.01 ? 2 : 4;
     return '~$prefix${convertedValue.toStringAsFixed(decimals)}';
   }
 
@@ -135,7 +139,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
       return '0';
     }
     if (feeNativeText.isNotEmpty && feeUsdText.isNotEmpty) {
-      return '$feeNativeText ($feeUsdText)';
+      return '$feeUsdText ($feeNativeText)';
     }
     return feeNativeText.isNotEmpty ? feeNativeText : feeUsdText;
   }
@@ -186,8 +190,10 @@ class SwapPriceDetailsCard extends StatelessWidget {
 
   Widget _buildDetailRowWithInfo(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Flexible(
+        Expanded(
+          flex: 3,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -212,16 +218,21 @@ class SwapPriceDetailsCard extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFFEAECEF),
+        Expanded(
+          flex: 5,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.start,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFEAECEF),
+                height: 1.35,
+              ),
             ),
           ),
         ),

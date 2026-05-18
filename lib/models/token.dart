@@ -155,11 +155,10 @@ class Token {
 
   /// Format USD value
   String get formattedValue {
-    // PATCH: A positive balance with no price should not render as $0.00.
     if (balanceDecimal > Decimal.zero &&
         valueUsdDecimal <= Decimal.zero &&
         !hasKnownPrice) {
-      return 'Price unavailable';
+      return ValueFormatter.formatUsdValue(Decimal.zero);
     }
     return ValueFormatter.formatUsdValue(totalValueUsdDecimal);
   }
