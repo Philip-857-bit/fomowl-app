@@ -111,39 +111,38 @@ class SwapTabContent extends StatelessWidget {
 
     return Column(
       children: [
-        Stack(
-          alignment: Alignment.center,
+        Column(
           children: [
-            Column(
-              children: [
-                SwapFromCard(
-                  controller: fromController,
-                  token: fromToken,
-                  usdValue: fromUsdValue,
-                  balance: fromToken?.balance ?? 0,
-                  selectedPercentage: selectedPercentage,
-                  onAmountChanged: onAmountChanged,
-                  onSelectToken: onSelectFromToken,
-                  onPercentSelected: onPercentSelected,
-                  chainId: tokenIconChainId,
-                  inputMode: fromInputMode,
-                  onToggleInputMode: onToggleFromInputMode,
-                  equivalentText: fromEquivalentText,
-                ),
-                const SizedBox(height: 12),
-                SwapToCard(
-                  token: toToken,
-                  amountText: toAmountText,
-                  usdValue: toUsdValue,
-                  balance: toBalance,
-                  isCalculating: isCalculating,
-                  onSelectToken: onSelectToToken,
-                  chainId: tokenIconChainId,
-                  statusMessage: isCalculating ? null : quoteStatusMessage,
-                ),
-              ],
+            SwapFromCard(
+              controller: fromController,
+              token: fromToken,
+              usdValue: fromUsdValue,
+              balance: fromToken?.balance ?? 0,
+              selectedPercentage: selectedPercentage,
+              onAmountChanged: onAmountChanged,
+              onSelectToken: onSelectFromToken,
+              onPercentSelected: onPercentSelected,
+              chainId: tokenIconChainId,
+              inputMode: fromInputMode,
+              onToggleInputMode: onToggleFromInputMode,
+              equivalentText: fromEquivalentText,
             ),
-            SwapDirectionButton(onPressed: onSwapTokens),
+            SizedBox(
+              height: 40,
+              child: Center(
+                child: SwapDirectionButton(onPressed: onSwapTokens),
+              ),
+            ),
+            SwapToCard(
+              token: toToken,
+              amountText: toAmountText,
+              usdValue: toUsdValue,
+              balance: toBalance,
+              isCalculating: isCalculating,
+              onSelectToken: onSelectToToken,
+              chainId: tokenIconChainId,
+              statusMessage: isCalculating ? null : quoteStatusMessage,
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -802,15 +801,15 @@ class LimitTabContent extends StatelessWidget {
 
         // ── Section 1 ──
         _buildSectionLabel(
-          isBuyMode ? '1. Amount to Receive' : '1. Amount to Sell',
+          isBuyMode ? '1. Amount to Buy' : '1. Amount to Sell',
           '(Estimated)',
         ),
         const SizedBox(height: 10),
         if (isBuyMode)
           _withShowcase(
             showcaseKey: amountShowcaseKey,
-            title: 'Amount to receive',
-            description: 'The estimated amount of the token you will receive.',
+            title: 'Amount to buy',
+            description: 'The estimated amount of the token you want to buy.',
             child: SwapToCard(
               token: toToken,
               amountText: toAmountText,
@@ -938,7 +937,7 @@ class LimitTabContent extends StatelessWidget {
               Expanded(
                 child: _LimitSummaryBox(
                   label: isBuyMode
-                      ? "YOU'LL RECEIVE (ESTIMATED)"
+                      ? "YOU'LL BUY (ESTIMATED)"
                       : "YOU'LL GET (ESTIMATED)",
                   value: toAmountText.isNotEmpty && toAmountText != '0'
                       ? '$toAmountText ${toToken?.symbol ?? ''}'

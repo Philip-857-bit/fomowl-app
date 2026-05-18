@@ -227,41 +227,49 @@ class _ResponsiveHeader extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (headerLabel != null) _HeaderLabel(headerLabel!),
-              if (leadingControl != null) ...[
-                if (headerLabel != null) const SizedBox(height: 8),
-                Center(child: leadingControl!),
-              ],
+              if (headerLabel != null || leadingControl != null)
+                Row(
+                  children: [
+                    if (headerLabel != null) _HeaderLabel(headerLabel!),
+                    if (headerLabel != null && leadingControl != null)
+                      const SizedBox(width: 8),
+                    if (leadingControl != null)
+                      Flexible(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: leadingControl!,
+                        ),
+                      ),
+                  ],
+                ),
               if (trailingControls.isNotEmpty) ...[
                 if (headerLabel != null || leadingControl != null)
                   const SizedBox(height: 8),
-                Align(alignment: Alignment.centerRight, child: trailing),
+                trailing,
               ],
             ],
           );
         }
 
-        return Stack(
-          alignment: Alignment.center,
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (headerLabel != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: _HeaderLabel(headerLabel!),
-              ),
-            if (leadingControl != null) Center(child: leadingControl!),
-            if (trailingControls.isNotEmpty)
-              Align(
-                alignment: Alignment.centerRight,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: leadingControl == null
-                        ? constraints.maxWidth
-                        : constraints.maxWidth * 0.44,
-                  ),
-                  child: trailing,
+            if (headerLabel != null) _HeaderLabel(headerLabel!),
+            if (headerLabel != null && leadingControl != null)
+              const SizedBox(width: 10),
+            if (leadingControl != null)
+              Align(alignment: Alignment.centerLeft, child: leadingControl!),
+            if (trailingControls.isNotEmpty) ...[
+              const Spacer(),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: leadingControl == null
+                      ? constraints.maxWidth
+                      : constraints.maxWidth * 0.48,
                 ),
+                child: trailing,
               ),
+            ],
           ],
         );
       },
