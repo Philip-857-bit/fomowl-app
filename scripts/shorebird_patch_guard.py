@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import json
 import pathlib
+import subprocess
 import sys
 
 from shorebird_ci_common import digest_files, git_output, list_tracked_files, read_pubspec_release
@@ -67,6 +68,20 @@ def matches_forbidden(path: str) -> bool:
     return any(fnmatch.fnmatch(path, pattern) for pattern in FORBIDDEN_PATTERNS)
 
 
+def ensure_commit_available(repo_root: pathlib.Path, commit_sha: str) -> None:
+    try:
+        git_output(repo_root, "cat-file", "-e", f"{commit_sha}^{{commit}}")
+        return
+    except subprocess.CalledProcessError:
+        pass
+
+    subprocess.run(
+        ["git", "fetch", "--depth=1", "origin", commit_sha],
+        cwd=repo_root,
+        check=True,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", default=".")
@@ -111,7 +126,8 @@ def main() -> int:
         return 1
 
     release_commit = manifest["release_commit_sha"]
-    diff_output = git_output(repo_root, "diff", "--name-only", f"{release_commit}...HEAD")
+    ensure_commit_available(repo_root, release_commit)
+    diff_output = git_output(repo_root, "diff", "--name-only", release_commit, "HEAD")
     changed_files = [
         line.strip()
         for line in diff_output.splitlines()
