@@ -1211,7 +1211,7 @@ class BlockchainService extends ChangeNotifier {
           normalized.toLowerCase()) {
         continue;
       }
-      if (token.symbol.trim().isEmpty || token.decimals <= 0) {
+      if (token.symbol.trim().isEmpty || token.decimals < 0) {
         continue;
       }
       return CustomTokenDefinition(
@@ -1289,10 +1289,11 @@ class BlockchainService extends ChangeNotifier {
       }
       final symbol = (data['symbol'] as String?)?.trim() ?? '';
       final name = (data['name'] as String?)?.trim() ?? '';
-      final decimals = (_toInt(data['decimals']) ?? 0).clamp(0, 255);
-      if (symbol.isEmpty || decimals <= 0) {
+      final rawDecimals = _toInt(data['decimals']);
+      if (symbol.isEmpty || rawDecimals == null || rawDecimals < 0) {
         return null;
       }
+      final decimals = rawDecimals.clamp(0, 255);
       return CustomTokenDefinition(
         symbol: symbol.toUpperCase(),
         name: name.isEmpty ? symbol.toUpperCase() : name,

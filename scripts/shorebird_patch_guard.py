@@ -10,20 +10,10 @@ import sys
 from shorebird_ci_common import digest_files, git_output, list_tracked_files, read_pubspec_release
 
 
-RESTRICTED_ROOTS = (
-    "pubspec.lock",
-    "shorebird.yaml",
-    "android",
-    "ios",
-    "rust",
-    "rust_builder",
-    "assets",
-)
-
-ALLOWED_ROOTS = (
-    "lib/",
-    "test/",
-    "integration_test/",
+RUST_FFI_BRIDGE_ROOTS = (
+    "rust/",
+    "rust_builder/",
+    "lib/src/rust/",
 )
 
 NON_RUNTIME_ROOTS = (
@@ -32,40 +22,25 @@ NON_RUNTIME_ROOTS = (
     "scripts/",
 )
 
-FORBIDDEN_PATTERNS = (
-    "lib/src/rust/**",
-    "lib/screens/onboarding/**",
-    "lib/screens/auth/**",
-    "lib/services/wallet_service.dart",
-    "lib/services/storage_service.dart",
-    "lib/services/auth_service.dart",
-    "lib/services/biometric_service.dart",
-    "lib/services/wallet_backend_auth_service.dart",
-    "lib/services/swap_service.dart",
-    "lib/services/swap_execution_service.dart",
-    "lib/services/token_approval_service.dart",
-    "lib/services/rpc_service.dart",
-    "lib/features/discover/provider/**",
-    "lib/features/discover/browser/**",
-    "lib/utils/sensitive_access_guard.dart",
-    "lib/screens/profile/backup_seed_phrase_screen.dart",
-    "lib/screens/profile/login_profile_screen.dart",
-    "lib/screens/profile/password_security_screen.dart",
-    "lib/screens/profile/register_profile_screen.dart",
-    "lib/screens/profile/two_factor_setup_screen.dart",
-)
-
-
-def is_allowed_root(path: str) -> bool:
-    return any(path.startswith(root) for root in ALLOWED_ROOTS)
-
 
 def is_non_runtime_root(path: str) -> bool:
     return any(path.startswith(root) for root in NON_RUNTIME_ROOTS)
 
 
-def matches_forbidden(path: str) -> bool:
-    return any(fnmatch.fnmatch(path, pattern) for pattern in FORBIDDEN_PATTERNS)
+def is_rust_ffi_bridge_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return any(
+        normalized == root.rstrip("/") or normalized.startswith(root)
+        for root in RUST_FFI_BRIDGE_ROOTS
+    )
+
+
+def rust_ffi_bridge_hashes(file_hashes: dict[str, str]) -> dict[str, str]:
+    return {
+        path.replace("\\", "/"): digest
+        for path, digest in file_hashes.items()
+        if is_rust_ffi_bridge_path(path)
+    }
 
 
 def ensure_commit_available(repo_root: pathlib.Path, commit_sha: str) -> None:
@@ -115,11 +90,23 @@ def main() -> int:
         )
         return 1
 
-    current_files = list_tracked_files(repo_root, RESTRICTED_ROOTS)
-    _, current_tree_hash = digest_files(repo_root, current_files)
-    if current_tree_hash != manifest["restricted_tree_hash"]:
+    current_files = list_tracked_files(repo_root, RUST_FFI_BRIDGE_ROOTS)
+    current_file_hashes, _ = digest_files(repo_root, current_files)
+    current_bridge_hashes = rust_ffi_bridge_hashes(current_file_hashes)
+    manifest_bridge_hashes = rust_ffi_bridge_hashes(manifest.get("file_hashes", {}))
+
+    changed_bridge_files = sorted(
+        path
+        for path, digest in manifest_bridge_hashes.items()
+        if current_bridge_hashes.get(path) != digest
+    )
+    added_bridge_files = sorted(set(current_bridge_hashes) - set(manifest_bridge_hashes))
+
+    if changed_bridge_files or added_bridge_files:
+        details = ", ".join(changed_bridge_files + added_bridge_files)
         print(
-            "Patch guard failed: restricted tree hash changed. "
+            "Patch guard failed: Rust FFI bridge files changed "
+            f"({details}). "
             "Use a store release instead of a Shorebird patch.",
             file=sys.stderr,
         )
@@ -141,29 +128,19 @@ def main() -> int:
         )
         return 1
 
-    disallowed_roots = [
-        path for path in changed_files if not is_allowed_root(path)
-    ]
-    if disallowed_roots:
+    bridge_changes = [path for path in changed_files if is_rust_ffi_bridge_path(path)]
+    if bridge_changes:
         print(
-            "Patch guard failed: files outside the approved maintenance surface "
-            f"changed: {', '.join(disallowed_roots)}",
-            file=sys.stderr,
-        )
-        return 1
-
-    forbidden_changes = [path for path in changed_files if matches_forbidden(path)]
-    if forbidden_changes:
-        print(
-            "Patch guard failed: trust-boundary files changed: "
-            f"{', '.join(forbidden_changes)}",
+            "Patch guard failed: Rust FFI bridge files changed: "
+            f"{', '.join(bridge_changes)}",
             file=sys.stderr,
         )
         return 1
 
     print(
         "Patch guard passed for release "
-        f"{manifest_release_version} with {len(changed_files)} changed files."
+        f"{manifest_release_version} with {len(changed_files)} changed files. "
+        "Runtime changes are allowed; Rust FFI bridge changes require a store release."
     )
     return 0
 

@@ -13,14 +13,10 @@ from shorebird_ci_common import (
 )
 
 
-RESTRICTED_ROOTS = (
-    "pubspec.lock",
-    "shorebird.yaml",
-    "android",
-    "ios",
-    "rust",
-    "rust_builder",
-    "assets",
+RUST_FFI_BRIDGE_ROOTS = (
+    "rust/",
+    "rust_builder/",
+    "lib/src/rust/",
 )
 
 
@@ -34,7 +30,7 @@ def main() -> int:
 
     repo_root = pathlib.Path(args.repo_root).resolve()
     app_version, build_number = read_pubspec_release(repo_root)
-    files = list_tracked_files(repo_root, RESTRICTED_ROOTS)
+    files = list_tracked_files(repo_root, RUST_FFI_BRIDGE_ROOTS)
     file_hashes, restricted_tree_hash = digest_files(repo_root, files)
 
     payload = {
@@ -45,7 +41,8 @@ def main() -> int:
         "flutter_version": args.flutter_version,
         "release_commit_sha": git_output(repo_root, "rev-parse", "HEAD"),
         "generated_at_utc": dt.datetime.now(tz=dt.timezone.utc).isoformat(),
-        "restricted_roots": list(RESTRICTED_ROOTS),
+        "patch_guard_scope": "rust_ffi_bridge",
+        "restricted_roots": list(RUST_FFI_BRIDGE_ROOTS),
         "restricted_tree_hash": restricted_tree_hash,
         "file_hashes": file_hashes,
     }

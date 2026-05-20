@@ -566,14 +566,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             borderRadius: BorderRadius.circular(18),
           ),
           title: Text(
-            'Confirm Cash Out',
+            'Confirm Withdrawal',
             style: GoogleFonts.outfit(
               color: Colors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
           content: Text(
-            'Send $amountDisplay for Cash Out request $reference. Owllet will route the settlement address internally.${nativeSymbol.isEmpty ? '' : '\n\nNetwork fees are paid in $nativeSymbol.'}',
+            'Send $amountDisplay for withdrawal request $reference. Owllet will route the settlement address internally.${nativeSymbol.isEmpty ? '' : '\n\nNetwork fees are paid in $nativeSymbol.'}',
             style: GoogleFonts.outfit(
               color: Colors.white.withValues(alpha: 0.72),
               height: 1.4,

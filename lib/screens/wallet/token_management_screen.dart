@@ -326,7 +326,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
               symbol: (detected?.symbol ?? token.symbol).toUpperCase(),
               name: detected?.name ?? token.name,
               address: detected?.address ?? contract,
-              decimals: (detected?.decimals ?? token.decimals) > 0
+              decimals: (detected?.decimals ?? token.decimals) >= 0
                   ? (detected?.decimals ?? token.decimals)
                   : 18,
               coinGeckoId: token.coinGeckoId ?? detected?.coinGeckoId,
@@ -340,7 +340,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
               symbol: token.symbol.toUpperCase(),
               name: token.name,
               address: contract,
-              decimals: token.decimals > 0 ? token.decimals : 9,
+              decimals: token.decimals >= 0 ? token.decimals : 9,
               coinGeckoId: token.coinGeckoId,
               imageUrl: token.imageUrl,
               networkKey: token.networkKey,
@@ -393,7 +393,11 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     });
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 200), () {
-      if (TokenManagementQueryHelper.isContractAddress(nextQuery)) {
+      final blockchain = context.read<BlockchainService>();
+      if (TokenManagementQueryHelper.isContractAddress(
+        nextQuery,
+        family: blockchain.activeFamily,
+      )) {
         _autoResolveContract(nextQuery);
       } else {
         _runRemoteSearch(nextQuery);
@@ -427,7 +431,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       });
       return;
     }
-    if (TokenManagementQueryHelper.isContractAddress(trimmed)) {
+
+    final blockchain = context.read<BlockchainService>();
+    if (TokenManagementQueryHelper.isContractAddress(
+      trimmed,
+      family: blockchain.activeFamily,
+    )) {
       setState(() {
         _isSearchingRemote = false;
         _remoteResults = [];
@@ -435,7 +444,6 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
       return;
     }
 
-    final blockchain = context.read<BlockchainService>();
     final cacheKey = '${blockchain.activeNetworkKey}:${trimmed.toLowerCase()}';
 
     // Show cached results immediately
