@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import fnmatch
 import json
 import pathlib
 import subprocess
@@ -123,7 +122,7 @@ def main() -> int:
 
     if not changed_files and not args.allow_empty_diff:
         print(
-            "Patch guard failed: no Dart-only maintenance changes detected.",
+            "Patch guard failed: no runtime changes detected.",
             file=sys.stderr,
         )
         return 1
