@@ -1956,11 +1956,6 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         return;
       }
-      final sellAmountUsd = _usdValueFor(
-        _fromToken,
-        _parseAmount(_fromController),
-      );
-
       final quote = await _swapService
           .get0xQuote(
             chainId: blockchain.activeChain.chainId,
@@ -1971,7 +1966,6 @@ class _SwapScreenState extends State<SwapScreen> {
             isGasless: _isGasless,
             walletAddress: _walletAddress,
             slippageBps: _slippageBps,
-            sellAmountUsd: sellAmountUsd,
           )
           .timeout(_quoteUiTimeout);
 
@@ -3041,7 +3035,6 @@ class _SwapScreenState extends State<SwapScreen> {
           walletAddress: _walletAddress,
           slippageBps: _slippageBps,
           useFirmQuote: true,
-          sellAmountUsd: _usdValueFor(fromToken, _parseAmount(_fromController)),
         )
         .timeout(_quoteUiTimeout);
 

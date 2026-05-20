@@ -388,7 +388,6 @@ class SwapService {
     String? walletAddress,
     int slippageBps = 50,
     bool useFirmQuote = false,
-    double? sellAmountUsd,
   }) async {
     _lastError = null;
     if (!isChainSupported(chainId, isGasless: isGasless)) {
@@ -421,11 +420,6 @@ class SwapService {
         'amount': amountWei,
         'slippageBps': '$slippageBps',
       };
-      if (sellAmountUsd != null &&
-          sellAmountUsd.isFinite &&
-          sellAmountUsd > 0) {
-        queryParams['sellAmountUsd'] = sellAmountUsd.toStringAsFixed(8);
-      }
       if (isGasless) {
         queryParams['fromTokenAddress'] = src;
         queryParams['toTokenAddress'] = dst;
