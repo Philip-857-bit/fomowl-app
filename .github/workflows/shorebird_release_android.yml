@@ -184,6 +184,16 @@ jobs:
           set -o pipefail
           exit $status
 
+      - name: Verify Android AAB output
+        run: |
+          set -euo pipefail
+          aab_path="build/app/outputs/bundle/release/app-release.aab"
+          if [ ! -f "$aab_path" ]; then
+            echo "Expected Shorebird AAB not found at $aab_path" >&2
+            exit 1
+          fi
+          ls -lh "$aab_path"
+
       - name: Generate release manifest
         id: manifest
         run: |
@@ -207,7 +217,7 @@ jobs:
           )"
           echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Android APK to Dropbox
+      - name: Upload Android artifacts to Dropbox
         env:
           DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
           DROPBOX_REFRESH_TOKEN: ${{ secrets.DROPBOX_REFRESH_TOKEN }}
@@ -254,6 +264,13 @@ jobs:
             exit 1
           fi
 
+          aab_path="build/app/outputs/bundle/release/app-release.aab"
+          if [ ! -f "$aab_path" ]; then
+            echo "Expected Shorebird AAB not found under build/app/outputs/bundle/release" >&2
+            exit 1
+          fi
+
+          # Upload APK
           curl -s -X POST https://content.dropboxapi.com/2/files/upload \
             --header "Authorization: Bearer $DROPBOX_ACCESS_TOKEN" \
             --header "Dropbox-API-Arg: {\"path\": \"/owllet1.apk\",\"mode\": \"overwrite\",\"autorename\": false,\"mute\": false,\"strict_conflict\": false}" \
@@ -261,6 +278,24 @@ jobs:
             --data-binary "@$apk_path"
           echo
           echo "Dropbox upload completed for owllet1.apk"
+
+          # Upload AAB
+          curl -s -X POST https://content.dropboxapi.com/2/files/upload \
+            --header "Authorization: Bearer $DROPBOX_ACCESS_TOKEN" \
+            --header "Dropbox-API-Arg: {\"path\": \"/owllet1.aab\",\"mode\": \"overwrite\",\"autorename\": false,\"mute\": false,\"strict_conflict\": false}" \
+            --header "Content-Type: application/octet-stream" \
+            --data-binary "@$aab_path"
+          echo
+          echo "Dropbox upload completed for owllet1.aab"
+
+      - name: Upload Android release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shorebird-android-release-${{ steps.manifest.outputs.release_version }}
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+          if-no-files-found: error
 
       - name: Upload release manifest
         uses: actions/upload-artifact@v4

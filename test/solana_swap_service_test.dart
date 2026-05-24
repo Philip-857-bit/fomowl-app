@@ -27,6 +27,7 @@ void main() {
   group('SolanaSwapService.getQuote', () {
     test('parses valid quote with swapTransaction field', () async {
       final mockClient = MockClient((request) async {
+        expect(request.url.queryParameters['sellAmountUsd'], isNull);
         return http.Response(
           jsonEncode({
             'swapTransaction': 'base64txhere==',
@@ -59,6 +60,35 @@ void main() {
       expect(quote.platformFeePercent, 0.5);
       expect(quote.networkFeeUsd, 0.001);
       expect(quote.platformFeeUsd, 0.05);
+    });
+
+    test('sends sellAmountUsd hint when available', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.queryParameters['sellAmountUsd'], '100.25');
+        return http.Response(
+          jsonEncode({
+            'swapTransaction': 'base64txhere==',
+            'requestId': 'req-usd-hint',
+            'outAmount': '1000000000',
+            'toDecimals': 9,
+          }),
+          200,
+        );
+      });
+      final service = SolanaSwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final quote = await service.getQuote(
+        fromMint: 'So11111111111111111111111111111111111111112',
+        toMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        amountLamports: '1000000000',
+        walletAddress: 'SoLWaLLetAddresS',
+        sellAmountUsd: 100.25,
+      );
+
+      expect(quote, isNotNull);
+      expect(quote!.requestId, 'req-usd-hint');
     });
 
     test('falls back to "transaction" field for swapTransaction', () async {

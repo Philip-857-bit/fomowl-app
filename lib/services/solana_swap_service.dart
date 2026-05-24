@@ -60,17 +60,24 @@ class SolanaSwapService {
     required String toMint,
     required String amountLamports,
     required String walletAddress,
+    double? sellAmountUsd,
     int slippageBps = 50,
   }) async {
     _lastError = null;
     try {
-      final url = AppEnvironment.swap('/quote', {
+      final queryParams = <String, String>{
         'chainId': 'solana',
         'src': fromMint,
         'dst': toMint,
         'amount': amountLamports,
         'taker': walletAddress,
-      });
+      };
+      if (sellAmountUsd != null &&
+          sellAmountUsd.isFinite &&
+          sellAmountUsd > 0) {
+        queryParams['sellAmountUsd'] = sellAmountUsd.toString();
+      }
+      final url = AppEnvironment.swap('/quote', queryParams);
 
       final response = await _http
           .sendWithRetry(() => _http.client.get(url))

@@ -144,6 +144,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'openExternal': true,
           'getContext': true,
           'requestWalletTransfer': true,
+          'requestSwapThenTransfer': false,
         },
       };
       _loadingContext = false;
@@ -404,6 +405,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     Map<String, dynamic> payload,
   ) async {
     final reference = payload['reference']?.toString().trim() ?? '';
+    final action = payload['action']?.toString().trim().toLowerCase();
     final networkKey = payload['networkKey']?.toString().trim() ?? '';
     final symbol =
         payload['assetSymbol']?.toString().trim().toUpperCase() ?? '';
@@ -416,6 +418,17 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     );
     final decimals = int.tryParse(payload['decimals']?.toString() ?? '') ?? 18;
     final tokenContract = payload['tokenContract']?.toString().trim();
+
+    if (action != null &&
+        action.isNotEmpty &&
+        action != 'transfer' &&
+        action != 'wallet_transfer') {
+      return const <String, dynamic>{
+        'ok': false,
+        'error':
+            'Automatic conversion is not available in this app version. Select USDT or USDC and try again.',
+      };
+    }
 
     if (reference.isEmpty ||
         networkKey.isEmpty ||

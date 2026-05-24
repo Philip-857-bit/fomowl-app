@@ -3,6 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../utils/value_formatter.dart';
 
+double resolveSwapPlatformFeeUsd({
+  required double platformFeeUsd,
+  required double platformFeePercent,
+  required double swapAmountUsd,
+}) {
+  if (platformFeeUsd > 0) return platformFeeUsd;
+  if (swapAmountUsd <= 0 || platformFeePercent <= 0) return 0.0;
+  return swapAmountUsd * (platformFeePercent / 100.0);
+}
+
 class SwapPriceDetailsCard extends StatelessWidget {
   final String priceText;
   final double platformFeePercent;
@@ -85,15 +95,11 @@ class SwapPriceDetailsCard extends StatelessWidget {
   }
 
   double _resolvedPlatformFeeUsd() {
-    if (platformFeeUsd > 0) return platformFeeUsd;
-    if (swapAmountUsd <= 0) return 0.0;
-    if (swapAmountUsd < 10) {
-      return swapAmountUsd * 0.10;
-    }
-    if (swapAmountUsd <= 100) {
-      return 1.0;
-    }
-    return swapAmountUsd * 0.01;
+    return resolveSwapPlatformFeeUsd(
+      platformFeeUsd: platformFeeUsd,
+      platformFeePercent: platformFeePercent,
+      swapAmountUsd: swapAmountUsd,
+    );
   }
 
   String _buildPlatformFeeText() {
@@ -221,12 +227,12 @@ class SwapPriceDetailsCard extends StatelessWidget {
         Expanded(
           flex: 5,
           child: Align(
-            alignment: Alignment.centerLeft,
+            alignment: Alignment.centerRight,
             child: Text(
               value,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.start,
+              textAlign: TextAlign.end,
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,

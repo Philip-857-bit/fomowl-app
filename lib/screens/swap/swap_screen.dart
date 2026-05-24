@@ -469,7 +469,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitUnsupportedMessage() {
-    return 'Limit orders are available on Solana and on Ethereum, BNB, Gnosis, Polygon, Base, Arbitrum, Avalanche, and Linea.';
+    return 'Limit orders are available on Solana and on supported OpenOcean EVM networks such as Ethereum, BNB, Polygon, Base, Arbitrum, Avalanche, Optimism, Fantom, Linea, Sonic, and Berachain.';
   }
 
   @override
@@ -1077,18 +1077,6 @@ class _SwapScreenState extends State<SwapScreen> {
     final feeUsd = quote.platformFeeUsd;
     if (feeUsd <= 0) {
       return 0.0;
-    }
-
-    if (quote.platformFeeBps >= 1000) {
-      return feeUsd / 0.10;
-    }
-
-    if ((feeUsd - 1.0).abs() < 0.0001 || (quote.platformFeeBps > 100)) {
-      return 10.0;
-    }
-
-    if (quote.platformFeeBps == 100) {
-      return feeUsd / 0.01;
     }
 
     final feeRate = quote.platformFeePercent / 100.0;
@@ -2057,6 +2045,11 @@ class _SwapScreenState extends State<SwapScreen> {
         _fromController.text,
         _fromToken!.decimals,
       );
+      final inAmount = _parseAmount(_fromController);
+      final fromTokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
+      final sellAmountUsd = inAmount > 0 && fromTokenPriceUsd > 0
+          ? inAmount * fromTokenPriceUsd
+          : null;
       if (amountLamports == null || amountLamports == '0') {
         if (mounted && requestId == _quoteRequestId) {
           setState(() {
@@ -2074,6 +2067,7 @@ class _SwapScreenState extends State<SwapScreen> {
             toMint: toMint,
             amountLamports: amountLamports,
             walletAddress: _walletAddress ?? '',
+            sellAmountUsd: sellAmountUsd,
             slippageBps: _slippageBps,
           )
           .timeout(_quoteUiTimeout);
@@ -2082,7 +2076,6 @@ class _SwapScreenState extends State<SwapScreen> {
 
       if (quote != null) {
         final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
-        final inAmount = _parseAmount(_fromController);
         final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
         setState(() {
           _currentSolanaQuote = quote;
@@ -2096,6 +2089,7 @@ class _SwapScreenState extends State<SwapScreen> {
             minAmountOutFormatted: quote.amountOutFormatted,
             networkFeeNative: 0.0,
             networkFeeUsd: quote.networkFeeUsd,
+            platformFeeBps: quote.platformFeeBps,
             platformFeeUsd: quote.platformFeeUsd,
             allowanceTarget: '',
             allowanceSpender: '',
@@ -2160,6 +2154,11 @@ class _SwapScreenState extends State<SwapScreen> {
         _fromController.text,
         _fromToken!.decimals,
       );
+      final inAmount = _parseAmount(_fromController);
+      final fromTokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
+      final sellAmountUsd = inAmount > 0 && fromTokenPriceUsd > 0
+          ? inAmount * fromTokenPriceUsd
+          : null;
       if (amountSun == null || amountSun == '0') {
         if (mounted && requestId == _quoteRequestId) {
           setState(() {
@@ -2177,6 +2176,7 @@ class _SwapScreenState extends State<SwapScreen> {
             toToken: toToken,
             amountSun: amountSun,
             walletAddress: _walletAddress ?? '',
+            sellAmountUsd: sellAmountUsd,
             slippageBps: _slippageBps,
           )
           .timeout(_quoteUiTimeout);
@@ -2185,7 +2185,6 @@ class _SwapScreenState extends State<SwapScreen> {
 
       if (quote != null) {
         final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
-        final inAmount = _parseAmount(_fromController);
         final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
         setState(() {
           _currentTronQuote = quote;
@@ -2199,6 +2198,7 @@ class _SwapScreenState extends State<SwapScreen> {
             minAmountOutFormatted: quote.amountOutFormatted,
             networkFeeNative: 0.0,
             networkFeeUsd: quote.networkFeeUsd,
+            platformFeeBps: quote.platformFeeBps,
             platformFeeUsd: quote.platformFeeUsd,
             allowanceTarget: '',
             allowanceSpender: '',
@@ -2462,18 +2462,26 @@ class _SwapScreenState extends State<SwapScreen> {
 
     setState(() => _cancellingLimitOrderIds.add(order.id));
     try {
-      final typedData = buildCowOrderCancellationTypedData(
-        chainId: order.chainId,
-        orderUids: [orderUid],
-      );
-      final signature = await _walletService.signTypedDataForAddress(
-        walletAddress,
-        jsonEncode(typedData),
-      );
+      final isOpenOcean = order.provider == 'openocean';
+      final signature = isOpenOcean
+          ? await _walletService.signMessageForAddress(
+              walletAddress,
+              buildOpenOceanCancelMessage(orderUid),
+            )
+          : await _walletService.signTypedDataForAddress(
+              walletAddress,
+              jsonEncode(
+                buildCowOrderCancellationTypedData(
+                  chainId: order.chainId,
+                  orderUids: [orderUid],
+                ),
+              ),
+            );
       final cancelled = await _swapService.cancelLimitOrder(
         orderId: order.id,
         walletAddress: walletAddress,
         signature: signature,
+        signingScheme: isOpenOcean ? 'personal_sign' : 'eip712',
       );
       if (!mounted) return;
 
@@ -2562,6 +2570,16 @@ class _SwapScreenState extends State<SwapScreen> {
         );
         return normalized.millisecondsSinceEpoch ~/ 1000;
     }
+  }
+
+  int _resolveOpenOceanLimitExpiryMs() {
+    final targetSeconds = _resolveLimitExpirySeconds();
+    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final rawSeconds = targetSeconds - nowSeconds;
+    final durationSeconds = rawSeconds
+        .clamp(10 * 60, 365 * 24 * 60 * 60)
+        .toInt();
+    return durationSeconds * 1000;
   }
 
   String _limitExpiryLabel() {
@@ -2670,7 +2688,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.enterValidAmount);
       return;
     }
-    final allowanceTarget = cowVaultRelayerForChain(chainId);
+    final allowanceTarget = openOceanLimitContractForChain(chainId);
     if (allowanceTarget == null || allowanceTarget.isEmpty) {
       _showError(_limitUnsupportedMessage());
       return;
@@ -2729,21 +2747,27 @@ class _SwapScreenState extends State<SwapScreen> {
         }
       }
 
-      final order = buildCowLimitOrderPayload(
-        sellToken: from.contractAddress!,
-        buyToken: to.contractAddress!,
-        receiver: _walletAddress!,
-        sellAmount: makerAmountWei,
-        buyAmount: buyAmountWei,
-        validTo: _resolveLimitExpirySeconds(),
+      final expireTimeMs = _resolveOpenOceanLimitExpiryMs();
+      final order = buildOpenOceanLimitOrderPayload(
+        makerAsset: from.contractAddress!,
+        takerAsset: to.contractAddress!,
+        makerAmount: makerAmountWei,
+        takerAmount: buyAmountWei,
+        orderMaker: _walletAddress!,
+        expireTimeMs: expireTimeMs,
         kind: _currentLimitKind,
       );
 
       progressController?.setSwapSubmitting();
-      final typedData = buildCowOrderTypedData(chainId: chainId, order: order);
-      final signature = await _walletService.signTypedDataForAddress(
+      final signature = await _walletService.signMessageForAddress(
         _walletAddress!,
-        jsonEncode(typedData),
+        buildOpenOceanLimitOrderMessage(
+          makerAsset: from.contractAddress!,
+          takerAsset: to.contractAddress!,
+          makerAmount: makerAmountWei,
+          takerAmount: buyAmountWei,
+          expireTimeMs: expireTimeMs,
+        ),
       );
 
       final result = await _swapService.createLimitOrder(
@@ -2751,7 +2775,8 @@ class _SwapScreenState extends State<SwapScreen> {
         walletAddress: _walletAddress!,
         order: order,
         signature: signature,
-        signingScheme: 'eip712',
+        signingScheme: 'personal_sign',
+        provider: 'openocean',
         targetPrice: limitPrice.toString(),
       );
 

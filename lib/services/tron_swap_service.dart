@@ -55,18 +55,25 @@ class TronSwapService {
     required String toToken,
     required String amountSun,
     required String walletAddress,
+    double? sellAmountUsd,
     int slippageBps = 50,
   }) async {
     _lastError = null;
     try {
-      final url = AppEnvironment.swap('/quote', {
+      final queryParams = <String, String>{
         'chainId': 'tron',
         'src': fromToken,
         'dst': toToken,
         'amount': amountSun,
         'taker': walletAddress,
         'slippageBps': '$slippageBps',
-      });
+      };
+      if (sellAmountUsd != null &&
+          sellAmountUsd.isFinite &&
+          sellAmountUsd > 0) {
+        queryParams['sellAmountUsd'] = sellAmountUsd.toString();
+      }
+      final url = AppEnvironment.swap('/quote', queryParams);
 
       final response = await _http
           .sendWithRetry(() => _http.client.get(url))

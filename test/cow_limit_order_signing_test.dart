@@ -70,4 +70,52 @@ void main() {
     expect(cowVaultRelayerForChain(1), cowVaultRelayerAddress);
     expect(cowVaultRelayerForChain(10), isNull);
   });
+
+  test('OpenOcean limit order message matches personal sign format', () {
+    final message = buildOpenOceanLimitOrderMessage(
+      makerAsset: '0x55d398326f99059ff775485246999027b3197955',
+      takerAsset: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      makerAmount: '1000000000000000000',
+      takerAmount: '990000000000000000',
+      expireTimeMs: 3600000,
+    );
+
+    expect(
+      message,
+      'makerAsset:\n'
+      '0x55d398326f99059ff775485246999027b3197955\n'
+      'takerAsset:\n'
+      '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d\n'
+      'makerAmount:\n'
+      '1000000000000000000\n'
+      'takerAmount:\n'
+      '990000000000000000\n'
+      'expireTime:\n'
+      '3600000',
+    );
+  });
+
+  test('OpenOcean payload uses provider and base-unit fields', () {
+    final payload = buildOpenOceanLimitOrderPayload(
+      makerAsset: '0x55d398326f99059ff775485246999027b3197955',
+      takerAsset: '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+      makerAmount: '1000000000000000000',
+      takerAmount: '990000000000000000',
+      orderMaker: '0x111111125421ca6dc452d289314280a0f8842a65',
+      expireTimeMs: 3600000,
+    );
+
+    expect(payload['provider'], 'openocean');
+    expect(payload['makerAmount'], '1000000000000000000');
+    expect(payload['takerAmount'], '990000000000000000');
+    expect(payload['expireTime'], 3600000);
+  });
+
+  test('OpenOcean limit contract is selected per supported chain', () {
+    expect(
+      openOceanLimitContractForChain(56),
+      '0xA8A0213bb2ce671E457Ec14D08EB9d40E6DA8e2d',
+    );
+    expect(openOceanLimitContractForChain(999999), isNull);
+  });
 }

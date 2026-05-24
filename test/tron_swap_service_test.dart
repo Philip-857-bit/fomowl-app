@@ -27,6 +27,7 @@ void main() {
   group('TronSwapService.getQuote', () {
     test('parses valid quote with raw_data_hex', () async {
       final mockClient = MockClient((request) async {
+        expect(request.url.queryParameters['sellAmountUsd'], isNull);
         return http.Response(
           jsonEncode({
             'outAmount': '1000000',
@@ -57,6 +58,34 @@ void main() {
       expect(quote.networkFeeUsd, 0.5);
       expect(quote.platformFeeUsd, 0.2);
       expect(quote.unsignedTx['raw_data_hex'], 'aabbcc');
+    });
+
+    test('sends sellAmountUsd hint when available', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.queryParameters['sellAmountUsd'], '42.5');
+        return http.Response(
+          jsonEncode({
+            'outAmount': '1000000',
+            'toDecimals': 6,
+            'transaction': {'raw_data_hex': 'aabbcc', 'visible': true},
+          }),
+          200,
+        );
+      });
+      final service = TronSwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final quote = await service.getQuote(
+        fromToken: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb',
+        toToken: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+        amountSun: '1000000',
+        walletAddress: 'TXyz',
+        sellAmountUsd: 42.5,
+      );
+
+      expect(quote, isNotNull);
+      expect(quote!.amountOutRaw, '1000000');
     });
 
     test('parses valid quote with rawDataHex (camelCase field)', () async {

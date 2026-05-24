@@ -84,6 +84,7 @@ class LimitOrderSummary {
   final String targetPrice;
   final int expiry;
   final String status;
+  final String provider;
   final String? orderUid;
   final String? txHash;
 
@@ -99,6 +100,7 @@ class LimitOrderSummary {
     required this.targetPrice,
     required this.expiry,
     required this.status,
+    this.provider = 'cow',
     this.orderUid,
     this.txHash,
   });
@@ -118,6 +120,7 @@ class LimitOrderSummary {
       targetPrice: json['targetPrice']?.toString() ?? '',
       expiry: int.tryParse(json['expiry']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? '',
+      provider: (json['provider']?.toString() ?? 'cow').toLowerCase(),
       orderUid: json['orderUid']?.toString() ?? json['orderHash']?.toString(),
       txHash: json['txHash']?.toString(),
     );
@@ -171,7 +174,8 @@ class SwapService {
     43114, // Avalanche
     59144, // Linea
   };
-  static const Set<int> supportedLimitChainIds = cowSupportedLimitChainIds;
+  static const Set<int> supportedLimitChainIds =
+      openOceanSupportedLimitChainIds;
   String? _lastError;
 
   String? get lastError => _lastError;
@@ -181,7 +185,8 @@ class SwapService {
     required String walletAddress,
     required Map<String, dynamic> order,
     required String signature,
-    String signingScheme = 'eip712',
+    String signingScheme = 'personal_sign',
+    String provider = 'openocean',
     String? targetPrice,
   }) async {
     _lastError = null;
@@ -193,6 +198,7 @@ class SwapService {
       final payload = {
         'chainId': chainId,
         'walletAddress': walletAddress,
+        'provider': provider,
         'order': order,
         'signature': signature,
         'signingScheme': signingScheme,
