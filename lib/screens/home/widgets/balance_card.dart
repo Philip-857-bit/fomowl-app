@@ -93,7 +93,7 @@ class BalanceCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      titleText.toUpperCase(),
+                      titleText,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
