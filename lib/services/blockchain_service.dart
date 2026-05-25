@@ -2072,8 +2072,7 @@ class BlockchainService extends ChangeNotifier {
           final name = (entry['name'] as String?)?.trim() ?? '';
           final contractAddress =
               (_asTrimmedString(entry['contractAddress']) ??
-                      _asTrimmedString(entry['contract_address']))
-                  ?.trim();
+                  _asTrimmedString(entry['contract_address']);
           if (symbol.isEmpty || name.isEmpty) {
             continue;
           }
