@@ -61,10 +61,13 @@ class HomePortfolioApiService {
                 mapped['networkKey'] as String? ??
                 mapped['network_key'] as String? ??
                 sectionNetworkKey;
+            final contractAddress =
+                mapped['contractAddress'] as String? ??
+                mapped['contract_address'] as String?;
             return Token(
               symbol: mapped['symbol'] as String? ?? '',
               name: mapped['name'] as String? ?? '',
-              contractAddress: mapped['contractAddress'] as String?,
+              contractAddress: contractAddress,
               balance: (mapped['balance'] as num?)?.toDouble() ?? 0,
               valueUsd: (mapped['valueUsd'] as num?)?.toDouble() ?? 0,
               priceUsd: (mapped['priceUsd'] as num?)?.toDouble() ?? 0,
@@ -73,7 +76,9 @@ class HomePortfolioApiService {
               decimals: (mapped['decimals'] as num?)?.toInt() ?? 18,
               imageUrl: mapped['imageUrl'] as String?,
               coinGeckoId: mapped['coinGeckoId'] as String?,
-              isCertified: mapped['isCertified'] == true,
+              isCertified: _isTruthy(
+                mapped['isCertified'] ?? mapped['is_certified'],
+              ),
               networkKey: tokenNetworkKey,
               tokenStandard: TokenStandardCodec.fromWireValue(
                 mapped['tokenStandard'] as String? ??
@@ -187,5 +192,17 @@ class HomePortfolioApiService {
       return NetworkKey.tron('mainnet');
     }
     return NetworkKey.evm(chainId);
+  }
+
+  static bool _isTruthy(Object? value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized == 'true' ||
+          normalized == '1' ||
+          normalized == 'yes';
+    }
+    return false;
   }
 }

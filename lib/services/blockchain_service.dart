@@ -2070,7 +2070,10 @@ class BlockchainService extends ChangeNotifier {
           if (entry is! Map<String, dynamic>) continue;
           final symbol = (entry['symbol'] as String?)?.trim() ?? '';
           final name = (entry['name'] as String?)?.trim() ?? '';
-          final contractAddress = (entry['contractAddress'] as String?)?.trim();
+          final contractAddress =
+              (_asTrimmedString(entry['contractAddress']) ??
+                      _asTrimmedString(entry['contract_address']))
+                  ?.trim();
           if (symbol.isEmpty || name.isEmpty) {
             continue;
           }
@@ -2086,7 +2089,8 @@ class BlockchainService extends ChangeNotifier {
           final isNative =
               contractAddress == null ||
               contractAddress.isEmpty ||
-              entry['isNative'] == true;
+              _isTruthy(entry['isNative']) ||
+              _isTruthy(entry['is_native']);
           final tokenStandard = _asTrimmedString(entry['tokenStandard']) == null
               ? _defaultTokenStandardForActiveNetwork(isNative: isNative)
               : TokenStandardCodec.fromWireValue(
@@ -2105,7 +2109,10 @@ class BlockchainService extends ChangeNotifier {
             coinGeckoId: ((entry['coinGeckoId'] ?? entry['id']) as String?)
                 ?.trim(),
             isCertified:
-                entry['isCertified'] == true || entry['isNative'] == true,
+                _isTruthy(entry['isCertified']) ||
+                _isTruthy(entry['is_certified']) ||
+                _isTruthy(entry['isNative']) ||
+                _isTruthy(entry['is_native']),
             // PATCH: Preserve backend price source for DEX badges.
             priceSource:
                 _asTrimmedString(entry['priceSource']) ??
@@ -2365,7 +2372,9 @@ class BlockchainService extends ChangeNotifier {
 
       final tokens = list.map((entry) {
         final e = _asMap(entry) ?? const <String, dynamic>{};
-        final contractAddress = _asTrimmedString(e['contractAddress']);
+        final contractAddress =
+            _asTrimmedString(e['contractAddress']) ??
+            _asTrimmedString(e['contract_address']);
         final entryNetworkKey =
             _asTrimmedString(e['networkKey']) ?? payloadNetworkKey;
         final defaultStandard = switch (NetworkKey.familyOf(entryNetworkKey)) {
@@ -2387,7 +2396,8 @@ class BlockchainService extends ChangeNotifier {
           decimals: _toInt(e['decimals']) ?? 18,
           imageUrl: _asTrimmedString(e['imageUrl']),
           coinGeckoId: _asTrimmedString(e['coinGeckoId']),
-          isCertified: e['isCertified'] == true,
+          isCertified:
+              _isTruthy(e['isCertified']) || _isTruthy(e['is_certified']),
           // PATCH: Preserve backend price source for DEX badges.
           priceSource:
               _asTrimmedString(e['priceSource']) ??
@@ -2976,6 +2986,16 @@ class BlockchainService extends ChangeNotifier {
     if (v is num) return v.toInt();
     if (v is String) return int.tryParse(v);
     return null;
+  }
+
+  bool _isTruthy(dynamic v) {
+    if (v is bool) return v;
+    if (v is num) return v != 0;
+    if (v is String) {
+      final normalized = v.trim().toLowerCase();
+      return normalized == 'true' || normalized == '1' || normalized == 'yes';
+    }
+    return false;
   }
 
   double _scaledBigIntToDouble(BigInt value, int decimals) {

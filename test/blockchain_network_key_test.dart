@@ -203,6 +203,34 @@ void main() {
     expect(tokens.single.tokenStandard, TokenStandard.spl);
   });
 
+  test('parses snake_case certification flags from discovered tokens', () {
+    final service = BlockchainService();
+
+    final tokens = service.parseBackendDiscoveredTokensForTest(
+      jsonEncode({
+        'chainId': 1,
+        'networkKey': 'evm:1',
+        'tokens': [
+          {
+            'symbol': 'USDT',
+            'name': 'Tether USD',
+            'contract_address': '0xdac17f958d2ee523a2206206994597c13d831ec7',
+            'balance': 10,
+            'valueUsd': 10,
+            'is_certified': 'true',
+          },
+        ],
+      }),
+    );
+
+    expect(tokens, hasLength(1));
+    expect(
+      tokens!.single.contractAddress,
+      '0xdac17f958d2ee523a2206206994597c13d831ec7',
+    );
+    expect(tokens.single.isCertified, isTrue);
+  });
+
   test('token visibility identifiers include network scope', () {
     const evmHello = Token(
       symbol: 'HELLO',

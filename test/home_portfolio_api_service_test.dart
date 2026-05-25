@@ -84,4 +84,35 @@ void main() {
     expect(token.networkKey, 'solana:mainnet');
     expect(token.tokenStandard, TokenStandard.native);
   });
+
+  test('parses snake_case token certification fields from backend payload', () {
+    final snapshot = HomePortfolioApiService.parseResponse('''
+{
+  "walletAddress": "0xabc",
+  "sections": [
+    {
+      "chainId": 1,
+      "chainName": "Ethereum",
+      "tokens": [
+        {
+          "symbol": "USDT",
+          "name": "Tether USD",
+          "contract_address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+          "balance": 10,
+          "valueUsd": 10,
+          "is_certified": "true"
+        }
+      ]
+    }
+  ]
+}
+''');
+
+    final token = snapshot.sections.single.tokens.single;
+    expect(
+      token.contractAddress,
+      '0xdac17f958d2ee523a2206206994597c13d831ec7',
+    );
+    expect(token.isCertified, isTrue);
+  });
 }
