@@ -135,7 +135,7 @@ class BlockchainService extends ChangeNotifier {
   late final TokenPortfolioModule _tokenPortfolioModule;
 
   // Configuration Constants
-  static const Duration _backendDiscoveryTimeout = Duration(seconds: 15);
+  static const Duration _backendDiscoveryTimeout = Duration(seconds: 25);
   static const Duration _walletTokensCacheTtl = Duration(minutes: 2);
   static const Duration _jitterMax = Duration(milliseconds: 100);
   static const int _circuitBreakerFailureThreshold = 3;
@@ -183,6 +183,7 @@ class BlockchainService extends ChangeNotifier {
   Duration _livePriceInterval = const Duration(seconds: 10);
   bool _isLivePriceTicking = false;
   bool _initialized = false;
+  Future<void>? _initFuture;
 
   // Circuit Breaker State
   final Map<String, _CircuitBreakerState> _circuitBreakers = {};
@@ -701,6 +702,25 @@ class BlockchainService extends ChangeNotifier {
       debugPrint('[OWLLET] BlockchainService: Already initialized.');
       return;
     }
+
+    final existingInit = _initFuture;
+    if (existingInit != null) {
+      await existingInit;
+      return;
+    }
+
+    final future = _runInit();
+    _initFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_initFuture, future)) {
+        _initFuture = null;
+      }
+    }
+  }
+
+  Future<void> _runInit() async {
     debugPrint('[OWLLET] BlockchainService: Starting initialization...');
     try {
       debugPrint('[OWLLET] BlockchainService: Loading custom chains...');
@@ -2270,6 +2290,14 @@ class BlockchainService extends ChangeNotifier {
         } catch (e) {
           if (!isLastUrl) {
             debugPrint('Canonical backend discovery failed for $url: $e');
+            if (e is TimeoutException) {
+              breaker.recordFailure(_circuitBreakerMaxBackoff);
+              _metrics.recordEndpointFailure('discovery_$base');
+              _backendDiscoveryBackoffUntil[base] = DateTime.now().add(
+                _calculateBackoffWithJitter(breaker.failureCount),
+              );
+              break;
+            }
             continue;
           }
           debugPrint('Backend discovery failed for $base: $e');
