@@ -23,6 +23,9 @@ class AppColors {
   static const Color inputBackground = Color(0xFF18181B);
   static const Color navBackground = Color(0xFF09090B); // Pure dark nav bar
   static const Color darkRed = Color(0xFF6C0808);
+  static const Color topBarSurface = Color(0xFF161616);
+  static const Color dangerBadge = Color(0xFFE53E3E);
+  static const Color canvasDark = Color(0xFF0A0A0A);
 
   // Status Colors
   static const Color success = Color(0xFF10B981); // Emerald
