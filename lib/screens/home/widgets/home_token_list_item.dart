@@ -19,10 +19,11 @@ class HomeTokenListItem extends StatelessWidget {
 
   String get _displayName {
     final symbol = token.symbol.trim();
-    if (symbol.isNotEmpty) {
-      return symbol;
+    final name = token.name.trim();
+    if (name.isNotEmpty) {
+      return name;
     }
-    return token.name.trim().isEmpty ? 'Token' : token.name.trim();
+    return symbol.isEmpty ? 'Token' : symbol;
   }
 
   @override
@@ -30,11 +31,13 @@ class HomeTokenListItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        constraints: const BoxConstraints(minHeight: 82),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
         ),
         child: Row(
           children: [
@@ -42,11 +45,11 @@ class HomeTokenListItem extends StatelessWidget {
               tokenSymbol: token.symbol,
               tokenAddress: token.contractAddress,
               tokenImageUrl: token.imageUrl,
-              size: 40,
+              size: 48,
               chainId: chainId,
               isCertified: token.isCertified,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,18 +58,19 @@ class HomeTokenListItem extends StatelessWidget {
                     _displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     token.formattedBalance,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white.withValues(alpha: 0.45),
                     ),
                   ),
                 ],
@@ -79,9 +83,9 @@ class HomeTokenListItem extends StatelessWidget {
                   token.formattedValue,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
@@ -91,8 +95,9 @@ class HomeTokenListItem extends StatelessWidget {
                   children: [
                     Text(
                       token.formattedChange,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 12,
+                        fontWeight: FontWeight.w700,
                         color: token.isPositiveChange
                             ? AppColors.success
                             : AppColors.error,
@@ -115,7 +120,7 @@ class HomeTokenListItem extends StatelessWidget {
                         ),
                         child: Text(
                           'DEX',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             // PATCH: Use the app's existing primary accent token.

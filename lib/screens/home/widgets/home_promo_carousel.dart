@@ -35,10 +35,10 @@ class HomePromoCarousel extends StatelessWidget {
     return Column(
       children: [
         if (isLoading)
-          const SizedBox(height: 72, child: _PromoSkeletonCard())
+          const SizedBox(height: 99, child: _PromoSkeletonCard())
         else if (shouldShowPager)
           SizedBox(
-            height: 72,
+            height: 99,
             child: PageView.builder(
               controller: pageController,
               itemCount: banners.length,
@@ -46,7 +46,7 @@ class HomePromoCarousel extends StatelessWidget {
               itemBuilder: (context, index) {
                 final banner = banners[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _PromoBannerCard(
                     banner: banner,
                     onTap: () => onTapBanner(banner),
@@ -57,7 +57,7 @@ class HomePromoCarousel extends StatelessWidget {
           )
         else if (shouldShowFallback)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: SocialBannerCard(
               margin: EdgeInsets.zero,
               onTap: onTapFallbackSocialBanner,
@@ -111,10 +111,11 @@ class _PromoBannerCard extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(15),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(18),
             child: Row(
               children: [
                 Container(
@@ -122,11 +123,11 @@ class _PromoBannerCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: AppColors.accentRed.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    shape: BoxShape.circle,
                   ),
                   child: imageUrl != null && imageUrl.isNotEmpty
                       ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(999),
                           child: Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
@@ -152,12 +153,12 @@ class _PromoBannerCard extends StatelessWidget {
                     children: [
                       Text(
                         banner.title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -170,7 +171,7 @@ class _PromoBannerCard extends StatelessWidget {
                               ? AppColors.accentRed
                               : Colors.white.withValues(alpha: 0.72),
                           fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -196,13 +197,14 @@ class _PromoSkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
         ),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(18),
         child: Row(
           children: [
             Container(

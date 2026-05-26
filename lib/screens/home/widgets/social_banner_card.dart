@@ -21,10 +21,12 @@ class SocialBannerCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: margin,
-        padding: const EdgeInsets.all(14),
+        constraints: const BoxConstraints(minHeight: 99),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(19),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
         ),
         child: Row(
           children: [
@@ -33,43 +35,43 @@ class SocialBannerCard extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 color: AppColors.accentRed.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
+                shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.rocket_launch,
+                Icons.campaign_rounded,
                 color: AppColors.accentRed,
                 size: 22,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     l.followSocialhq,
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 6),
                   Text(
-                    l.socialhqHandle,
-                    style: GoogleFonts.outfit(
+                    l.socialhqHandle == 'x.com/fomowlhq'
+                        ? 'Follow now'
+                        : l.socialhqHandle,
+                    style: GoogleFonts.inter(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.warning,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.accentRed,
                     ),
                   ),
                 ],
               ),
-            ),
-            Icon(
-              Icons.open_in_new,
-              color: Colors.white.withValues(alpha: 0.5),
-              size: 20,
             ),
           ],
         ),

@@ -88,7 +88,7 @@ class _TokensSectionState extends State<TokensSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
               _AssetTabChip(
@@ -338,15 +338,29 @@ class _AssetTabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Text(
-        label,
-        style: GoogleFonts.outfit(
-          fontSize: 16,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          color: selected
-              ? AppColors.accentRed
-              : Colors.white.withValues(alpha: 0.5),
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: selected ? AppColors.accentRed : const Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 8),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: selected ? 54 : 0,
+            height: 4,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.accentRed : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -360,11 +374,22 @@ class _AssetToolbarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, color: Colors.white.withValues(alpha: 0.5), size: 20),
-      onPressed: onTap,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white.withValues(alpha: 0.72),
+          size: 20,
+        ),
+      ),
     );
   }
 }

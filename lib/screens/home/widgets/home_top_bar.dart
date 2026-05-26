@@ -9,7 +9,8 @@ class HomeTopBar extends StatelessWidget {
   final VoidCallback onWalletTap;
   final String chainSymbol;
   final String? chainLogoUrl;
-  final VoidCallback onChainTap;
+  final VoidCallback onNetworkTap;
+  final VoidCallback onHelpTap;
   final VoidCallback onNotificationsTap;
   final bool showNotificationDot;
 
@@ -19,7 +20,8 @@ class HomeTopBar extends StatelessWidget {
     required this.onWalletTap,
     required this.chainSymbol,
     this.chainLogoUrl,
-    required this.onChainTap,
+    required this.onNetworkTap,
+    required this.onHelpTap,
     required this.onNotificationsTap,
     this.showNotificationDot = false,
   });
@@ -30,126 +32,37 @@ class HomeTopBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: onWalletTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.topBarSurface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: const BoxDecoration(
-                      color: AppColors.accentRed,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 150),
-                    child: Text(
-                      walletName,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: onChainTap,
-            child: Stack(
-              clipBehavior: Clip.none,
+          Expanded(
+            child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(10, 4, 8, 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.accentRed,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 14,
-                        decoration: const BoxDecoration(shape: BoxShape.circle),
-                        clipBehavior: Clip.antiAlias,
-                        child: chainLogoUrl != null && chainLogoUrl!.isNotEmpty
-                            ? Image.network(
-                                chainLogoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _symbolFallback(),
-                              )
-                            : _symbolFallback(),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                    ],
+                Flexible(
+                  child: _WalletSelector(
+                    walletName: walletName,
+                    onTap: onWalletTap,
                   ),
                 ),
-                Positioned(
-                  left: -8,
-                  top: -4,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.dangerBadge,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(width: 2, color: AppColors.canvasDark),
-                    ),
-                    child: Text(
-                      'HELP',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 8,
-                        height: 1.5,
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  ),
+                const SizedBox(width: 8),
+                _NetworkChip(
+                  chainSymbol: chainSymbol,
+                  chainLogoUrl: chainLogoUrl,
+                  onTap: onNetworkTap,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
+          _HelpButton(onTap: onHelpTap),
+          const SizedBox(width: 14),
           Stack(
+            clipBehavior: Clip.none,
             children: [
-              Container(
+              SizedBox(
                 width: 28,
                 height: 28,
-                alignment: Alignment.center,
                 child: IconButton(
                   icon: const Icon(
                     Icons.notifications_none_rounded,
-                    color: Colors.white,
+                    color: Color(0xFFCBD5E1),
                     size: 20,
                   ),
                   onPressed: onNotificationsTap,
@@ -162,14 +75,15 @@ class HomeTopBar extends StatelessWidget {
               ),
               if (showNotificationDot)
                 Positioned(
-                  right: 3,
-                  top: 2,
+                  right: 1,
+                  top: 0,
                   child: Container(
                     width: 10,
                     height: 10,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.dangerBadge,
                       shape: BoxShape.circle,
+                      border: Border.all(width: 2, color: AppColors.canvasDark),
                     ),
                   ),
                 ),
@@ -179,15 +93,190 @@ class HomeTopBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WalletSelector extends StatelessWidget {
+  const _WalletSelector({required this.walletName, required this.onTap});
+
+  final String walletName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.topBarSurface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: AppColors.canvasDark,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet,
+                size: 14,
+                color: AppColors.accentRed,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                walletName,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              color: Colors.white,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NetworkChip extends StatelessWidget {
+  const _NetworkChip({
+    required this.chainSymbol,
+    required this.chainLogoUrl,
+    required this.onTap,
+  });
+
+  final String chainSymbol;
+  final String? chainLogoUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Switch blockchain network',
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 38,
+          padding: const EdgeInsets.fromLTRB(8, 6, 7, 6),
+          decoration: BoxDecoration(
+            color: AppColors.topBarSurface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: AppColors.canvasDark,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accentRed.withValues(alpha: 0.28),
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: chainLogoUrl != null && chainLogoUrl!.isNotEmpty
+                    ? Image.network(
+                        chainLogoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _symbolFallback(),
+                      )
+                    : _symbolFallback(),
+              ),
+              const SizedBox(width: 3),
+              const Icon(
+                Icons.keyboard_arrow_down,
+                color: Color(0xFFCBD5E1),
+                size: 16,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _symbolFallback() {
+    final symbol = chainSymbol.trim();
     return Center(
       child: Text(
-        chainSymbol.isEmpty ? '?' : chainSymbol.substring(0, 1),
+        symbol.isEmpty ? '?' : symbol.substring(0, 1).toUpperCase(),
         style: GoogleFonts.inter(
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: Colors.white,
+          color: AppColors.accentRed,
+        ),
+      ),
+    );
+  }
+}
+
+class _HelpButton extends StatelessWidget {
+  const _HelpButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Open feedback',
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: Icon(
+                Icons.support_agent_rounded,
+                color: Color(0xFFCBD5E1),
+                size: 22,
+              ),
+            ),
+            Positioned(
+              left: -8,
+              top: -7,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.dangerBadge,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(width: 2, color: AppColors.canvasDark),
+                ),
+                child: Text(
+                  'HELP',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 8,
+                    height: 1.5,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

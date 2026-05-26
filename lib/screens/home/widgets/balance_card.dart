@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../../utils/value_formatter.dart';
 import '../home_portfolio_metrics.dart';
 
@@ -72,21 +71,68 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final changeColor = _changeColor();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       constraints: const BoxConstraints(minHeight: 173),
-      padding: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        gradient: AppColors.balanceGradient,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF181818), Color(0xFF0A0A0A), Color(0xFF151515)],
+          stops: [0.0, 0.5, 1.0],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
       ),
-      child: Column(
+      child: Stack(
+        clipBehavior: Clip.antiAlias,
         children: [
+          Positioned(
+            left: -22,
+            top: 16,
+            bottom: 16,
+            width: 72,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withValues(alpha: 0.14),
+                    Colors.white.withValues(alpha: 0.0),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: -18,
+            top: 0,
+            bottom: 0,
+            width: 96,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withValues(alpha: 0.0),
+                    Colors.white.withValues(alpha: 0.08),
+                  ],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -124,44 +170,9 @@ class BalanceCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: onHistoryTap,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              l.history,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Colors.white.withValues(alpha: 0.95),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              size: 10,
-                              color: Colors.white.withValues(alpha: 0.95),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 34),
                 if (statusText != null && statusText!.trim().isNotEmpty) ...[
                   Text(
                     statusText!,
@@ -171,7 +182,7 @@ class BalanceCard extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.68),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 10),
                 ],
                 SizedBox(
                   width: double.infinity,
@@ -182,8 +193,8 @@ class BalanceCard extends StatelessWidget {
                       formattedBalance,
                       maxLines: 1,
                       style: GoogleFonts.inter(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
                         height: 1.2,
                         color: Colors.white,
                       ),
@@ -198,9 +209,9 @@ class BalanceCard extends StatelessWidget {
                     Text(
                       _formatChangeText(),
                       style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        height: 1.54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.33,
                         color: changeColor,
                       ),
                     ),

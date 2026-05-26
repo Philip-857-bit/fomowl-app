@@ -19,10 +19,13 @@ class QuickActionsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final horizontalPadding = screenWidth < 360 ? 28.0 : 56.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _QuickActionButton(
             icon: Icons.arrow_downward_rounded,
@@ -62,26 +65,32 @@ class _QuickActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              color: AppColors.cardDark,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.darkRed.withValues(alpha: 0.4),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.10),
+                  const Color(0xFF161616),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
             ),
-            child: Icon(icon, color: AppColors.accentRed, size: 24),
+            child: Icon(icon, color: AppColors.accentRed, size: 23),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 7),
           Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 12,
-              fontWeight: FontWeight.w400,
-              color: Colors.white.withValues(alpha: 0.7),
+            label.toUpperCase(),
+            style: GoogleFonts.inter(
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              color: Colors.white.withValues(alpha: 0.62),
             ),
           ),
         ],

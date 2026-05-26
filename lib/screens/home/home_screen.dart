@@ -1660,11 +1660,12 @@ class _HomeScreenState extends State<HomeScreen> {
           : SafeArea(
               child: Column(
                 children: [
+                  const SizedBox(height: 20),
                   Showcase(
                     key: _walletSwitcherShowcaseKey,
-                    title: 'Wallet and network',
+                    title: 'Wallet and support',
                     description:
-                        'Switch wallets, confirm the active chain, and reach notifications from here.',
+                        'Switch wallets, send feedback, and reach notifications from here.',
                     child: HomeTopBar(
                       walletName: _walletName ?? l.mainWallet,
                       onWalletTap: () async {
@@ -1673,7 +1674,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       chainSymbol: blockchain.activeNetworkSymbol,
                       chainLogoUrl: blockchain.activeNetworkLogoUrl,
-                      onChainTap: _showNetworkSelector,
+                      onNetworkTap: _showNetworkSelector,
+                      onHelpTap: () =>
+                          Navigator.pushNamed(context, '/feedback'),
                       showNotificationDot: _hasUnreadNotifications,
                       onNotificationsTap: () async {
                         await Navigator.pushNamed(context, '/notifications');
@@ -1735,7 +1738,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 30),
                             Showcase(
                               key: _balanceShowcaseKey,
                               title: 'Portfolio status',
@@ -1761,7 +1764,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 38),
                             Showcase(
                               key: _quickActionsShowcaseKey,
                               title: 'Core wallet actions',
@@ -1785,7 +1788,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                               ),
                             ),
-                            const SizedBox(height: 18),
+                            const SizedBox(height: 38),
                             if (_shouldShowHomePromoSection) ...[
                               Showcase(
                                 key: _promoCarouselShowcaseKey,
@@ -1812,7 +1815,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       _openFallbackSocialBanner,
                                 ),
                               ),
-                              const SizedBox(height: 22),
+                              const SizedBox(height: 40),
                             ],
                             Showcase(
                               key: _assetTabsShowcaseKey,
