@@ -28,6 +28,7 @@ jobs:
         shell: bash
     env:
       FLUTTER_VERSION: 3.38.6
+      SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
       SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
@@ -128,10 +129,16 @@ jobs:
       - name: Enforce patch guard
         run: |
           set -euo pipefail
+          if [ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" = *"--no-tree-shake-icons"* ]; then
+            patch_guard_args=(--no-tree-shake-icons)
+          else
+            patch_guard_args=()
+          fi
           python scripts/shorebird_patch_guard.py \
             --repo-root . \
             --manifest "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
-            --flutter-version "$FLUTTER_VERSION"
+            --flutter-version "$FLUTTER_VERSION" \
+            "${patch_guard_args[@]}"
 
       - name: Run Analyze
         run: flutter analyze --no-fatal-infos
@@ -194,12 +201,15 @@ jobs:
         run: |
           set -euo pipefail
           readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird patch android \
             --release-version="${{ inputs.release_version }}" \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
             --private-key-path="$RUNNER_TEMP/shorebird_private.pem" \
-            -- "${DART_DEFINES[@]}"
+            -- \
+            "${SHOREBIRD_BUILD_ARGS[@]}" \
+            "${DART_DEFINES[@]}"
           status=$?
           set -o pipefail
           exit $status
@@ -213,6 +223,7 @@ jobs:
     env:
       FLUTTER_VERSION: 3.38.6
       XCODE_VERSION: '16.4'
+      SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
       SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
@@ -309,10 +320,16 @@ jobs:
       - name: Enforce patch guard
         run: |
           set -euo pipefail
+          if [ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" = *"--no-tree-shake-icons"* ]; then
+            patch_guard_args=(--no-tree-shake-icons)
+          else
+            patch_guard_args=()
+          fi
           python scripts/shorebird_patch_guard.py \
             --repo-root . \
             --manifest "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
-            --flutter-version "$FLUTTER_VERSION"
+            --flutter-version "$FLUTTER_VERSION" \
+            "${patch_guard_args[@]}"
 
       - name: Run Analyze
         run: flutter analyze --no-fatal-infos
@@ -416,12 +433,14 @@ jobs:
         run: |
           set -euo pipefail
           readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird patch ios \
             --release-version="${{ inputs.release_version }}" \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
             --private-key-path="$RUNNER_TEMP/shorebird_private.pem" \
             -- \
+            "${SHOREBIRD_BUILD_ARGS[@]}" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist" \
             "${DART_DEFINES[@]}"
           status=$?

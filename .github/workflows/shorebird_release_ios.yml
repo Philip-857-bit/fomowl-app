@@ -15,6 +15,7 @@ jobs:
     env:
       FLUTTER_VERSION: 3.38.6
       XCODE_VERSION: '16.4'
+      SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
       SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
@@ -212,11 +213,13 @@ jobs:
         run: |
           set -euo pipefail
           readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird release ios \
             --flutter-version="$FLUTTER_VERSION" \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
             -- \
+            "${SHOREBIRD_BUILD_ARGS[@]}" \
             --export-options-plist="$RUNNER_TEMP/ExportOptions.plist" \
             "${DART_DEFINES[@]}"
           status=$?
@@ -231,6 +234,7 @@ jobs:
             --repo-root . \
             --platform ios \
             --flutter-version "$FLUTTER_VERSION" \
+            --no-tree-shake-icons \
             --output "$RUNNER_TEMP/shorebird-release-manifest.json"
           release_version="$(python - <<'PY'
           import pathlib
@@ -272,6 +276,7 @@ jobs:
     env:
       FLUTTER_VERSION: 3.38.6
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+      SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
     steps:
       - uses: actions/checkout@v4
 
@@ -293,8 +298,14 @@ jobs:
       - name: Verify release-line OTA safety
         run: |
           set -euo pipefail
+          if [ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" = *"--no-tree-shake-icons"* ]; then
+            patch_guard_args=(--no-tree-shake-icons)
+          else
+            patch_guard_args=()
+          fi
           python scripts/shorebird_patch_guard.py \
             --repo-root . \
             --manifest "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
             --flutter-version "$FLUTTER_VERSION" \
+            "${patch_guard_args[@]}" \
             --allow-empty-diff
