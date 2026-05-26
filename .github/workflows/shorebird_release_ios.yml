@@ -298,7 +298,7 @@ jobs:
       - name: Verify release-line OTA safety
         run: |
           set -euo pipefail
-          if [ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" = *"--no-tree-shake-icons"* ]; then
+          if [[ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" == *"--no-tree-shake-icons"* ]]; then
             patch_guard_args=(--no-tree-shake-icons)
           else
             patch_guard_args=()
