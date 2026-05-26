@@ -26,11 +26,22 @@ if ([string]::IsNullOrWhiteSpace($flutterVersion)) {
   exit 1
 }
 
+$manifest = Get-Content $manifestPath | ConvertFrom-Json
+$patchGuardArgs = @(
+  "--repo-root",
+  $repoRoot,
+  "--manifest",
+  $manifestPath,
+  "--flutter-version",
+  $flutterVersion
+)
+
+if ($manifest.flutter_build_settings.no_tree_shake_icons) {
+  $patchGuardArgs += "--no-tree-shake-icons"
+}
+
 Write-Host "Running patch guard..."
-& $python.Source (Join-Path $repoRoot "scripts\shorebird_patch_guard.py") `
-  --repo-root $repoRoot `
-  --manifest $manifestPath `
-  --flutter-version $flutterVersion
+& $python.Source (Join-Path $repoRoot "scripts\shorebird_patch_guard.py") @patchGuardArgs
 
 if ($LASTEXITCODE -ne 0) {
   Write-Error "Patch guard failed. Use a store release instead."
@@ -57,9 +68,22 @@ if ([string]::IsNullOrWhiteSpace($publicKeyPath) -or [string]::IsNullOrWhiteSpac
 }
 
 Write-Host "Creating Shorebird patch..."
-& $shorebird.Source patch $platform `
-  --release-version $releaseVersion `
-  --public-key-path $publicKeyPath `
-  --private-key-path $privateKeyPath
+$shorebirdArgs = @(
+  "patch",
+  $platform,
+  "--release-version",
+  $releaseVersion,
+  "--public-key-path",
+  $publicKeyPath,
+  "--private-key-path",
+  $privateKeyPath
+)
+
+if ($manifest.flutter_build_settings.no_tree_shake_icons) {
+  $shorebirdArgs += "--"
+  $shorebirdArgs += "--no-tree-shake-icons"
+}
+
+& $shorebird.Source @shorebirdArgs
 
 exit $LASTEXITCODE

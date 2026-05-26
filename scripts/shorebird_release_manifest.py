@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--platform", required=True, choices=("android", "ios"))
     parser.add_argument("--flutter-version", required=True)
+    parser.add_argument("--no-tree-shake-icons", action="store_true")
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
@@ -39,6 +40,9 @@ def main() -> int:
         "build_number": build_number,
         "release_version": f"{app_version}+{build_number}",
         "flutter_version": args.flutter_version,
+        "flutter_build_settings": {
+            "no_tree_shake_icons": args.no_tree_shake_icons,
+        },
         "release_commit_sha": git_output(repo_root, "rev-parse", "HEAD"),
         "generated_at_utc": dt.datetime.now(tz=dt.timezone.utc).isoformat(),
         "patch_guard_scope": "rust_ffi_bridge",
