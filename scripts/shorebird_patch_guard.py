@@ -61,6 +61,7 @@ def main() -> int:
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--flutter-version", required=True)
+    parser.add_argument("--no-tree-shake-icons", action="store_true")
     parser.add_argument("--allow-empty-diff", action="store_true")
     args = parser.parse_args()
 
@@ -85,6 +86,20 @@ def main() -> int:
             "Patch guard failed: Flutter version "
             f"{args.flutter_version} does not match manifest "
             f"{manifest['flutter_version']}.",
+            file=sys.stderr,
+        )
+        return 1
+
+    manifest_build_settings = manifest.get("flutter_build_settings", {})
+    manifest_no_tree_shake_icons = bool(manifest_build_settings.get("no_tree_shake_icons", False))
+    if args.no_tree_shake_icons != manifest_no_tree_shake_icons:
+        current_value = str(args.no_tree_shake_icons).lower()
+        manifest_value = str(manifest_no_tree_shake_icons).lower()
+        print(
+            "Patch guard failed: no-tree-shake-icons setting "
+            f"{current_value} does not match manifest {manifest_value}. "
+            "Use the same Shorebird Flutter build flags as the release line "
+            "or create a new store release.",
             file=sys.stderr,
         )
         return 1

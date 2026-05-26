@@ -51,13 +51,13 @@ def fetch_artifacts(repo: str, manifest_name: str) -> list[dict]:
 
 def download_artifact(repo: str, artifact_id: int, output: pathlib.Path) -> None:
     zip_path = output.with_suffix(".zip")
+    zip_path.parent.mkdir(parents=True, exist_ok=True)
     with zip_path.open("wb") as file:
         run(
             ["gh", "api", f"/repos/{repo}/actions/artifacts/{artifact_id}/zip"],
             stdout=file,
         )
 
-    output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(zip_path) as archive:
         archive.extractall(output.parent)
 

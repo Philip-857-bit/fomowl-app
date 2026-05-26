@@ -77,6 +77,7 @@ Each Shorebird release stores a manifest artifact that records:
 - build number
 - release version
 - Flutter version
+- Shorebird Flutter build settings such as `--no-tree-shake-icons`
 - release commit SHA
 - a restricted tree hash for native, Rust, assets, lockfile, and Shorebird config inputs
 - per-file hashes for the restricted tree
@@ -84,10 +85,16 @@ Each Shorebird release stores a manifest artifact that records:
 Patch creation is only allowed when:
 - the current `pubspec.yaml` release version exactly matches the selected Shorebird release
 - the current Flutter version matches the release manifest
+- the current Shorebird Flutter build settings match the release manifest
 - the restricted tree hash matches the release manifest
 - the patch diff since the release commit only touches approved Dart maintenance paths
 
-This prevents dependency drift, native drift, asset drift, and release-line confusion.
+This prevents dependency drift, native drift, asset drift, icon tree-shaking drift, and release-line confusion.
+
+## Icon Tree-Shaking
+Material icon tree-shaking changes the generated `MaterialIcons-Regular.otf` asset when the set of referenced `Icons.*` symbols changes. Shorebird patches cannot ship asset diffs, so Owllet always builds Shorebird releases and patches with `--no-tree-shake-icons`.
+
+This build flag is recorded in the release manifest and the patch guard fails early if a selected release line used different Shorebird Flutter build settings. Older release lines that were built without this setting must use a normal store release instead of a Shorebird patch once icon usage changes.
 
 ## No-Op Validation
 Each Shorebird release workflow also runs a no-op validation against the newly created manifest. If the restricted tree already differs from the released state, that release line is treated as OTA-unsafe and patching must not continue for that version.
