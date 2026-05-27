@@ -76,11 +76,12 @@ class BalanceCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       constraints: const BoxConstraints(minHeight: 135),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        color: const Color(0xFF161616),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 22, 4, 20),
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
