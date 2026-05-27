@@ -110,9 +110,9 @@ class _PromoBannerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppColors.cardDark,
+            color: AppColors.topBarSurface,
             borderRadius: BorderRadius.circular(19),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(18),
@@ -200,9 +200,9 @@ class _PromoSkeletonCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardDark,
+          color: AppColors.topBarSurface,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         padding: const EdgeInsets.all(18),
         child: Row(

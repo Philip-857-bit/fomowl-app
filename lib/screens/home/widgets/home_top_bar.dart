@@ -186,6 +186,7 @@ class _NetworkChip extends StatelessWidget {
               Container(
                 width: 24,
                 height: 24,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: AppColors.canvasDark,
                   shape: BoxShape.circle,
@@ -195,11 +196,15 @@ class _NetworkChip extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: chainLogoUrl != null && chainLogoUrl!.isNotEmpty
-                    ? Image.network(
-                        chainLogoUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _symbolFallback(),
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: Image.network(
+                          chainLogoUrl!,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              _symbolFallback(),
+                        ),
                       )
                     : _symbolFallback(),
               ),

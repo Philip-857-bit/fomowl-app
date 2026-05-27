@@ -35,19 +35,29 @@ class HomeTokenListItem extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 82),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+          color: AppColors.topBarSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
-            TokenIcon(
-              tokenSymbol: token.symbol,
-              tokenAddress: token.contractAddress,
-              tokenImageUrl: token.imageUrl,
-              size: 48,
-              chainId: chainId,
-              isCertified: token.isCertified,
+            Container(
+              width: 48,
+              height: 48,
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: AppColors.canvasDark,
+                shape: BoxShape.circle,
+              ),
+              child: TokenIcon(
+                tokenSymbol: token.symbol,
+                tokenAddress: token.contractAddress,
+                tokenImageUrl: token.imageUrl,
+                size: 40,
+                backgroundColor: AppColors.canvasDark,
+                chainId: chainId,
+                isCertified: token.isCertified,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(

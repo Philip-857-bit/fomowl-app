@@ -24,9 +24,9 @@ class SocialBannerCard extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 99),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppColors.cardDark,
+          color: AppColors.topBarSurface,
           borderRadius: BorderRadius.circular(19),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.04)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [

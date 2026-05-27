@@ -77,8 +77,8 @@ class BalanceCard extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 173),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF181818), Color(0xFF0A0A0A), Color(0xFF151515)],
-          stops: [0.0, 0.5, 1.0],
+          colors: [Color(0xFF242424), Color(0xFF0A0A0A), Color(0xFF161616)],
+          stops: [0.0, 0.48, 1.0],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -95,6 +95,9 @@ class BalanceCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.antiAlias,
         children: [
+          const Positioned.fill(
+            child: CustomPaint(painter: _BalanceCardTexture()),
+          ),
           Positioned(
             left: -22,
             top: 16,
@@ -139,7 +142,7 @@ class BalanceCard extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      titleText,
+                      titleText.toUpperCase(),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -224,4 +227,31 @@ class BalanceCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _BalanceCardTexture extends CustomPainter {
+  const _BalanceCardTexture();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dotPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.018)
+      ..style = PaintingStyle.fill;
+    for (var x = 7.0; x < size.width; x += 14) {
+      for (var y = 7.0; y < size.height; y += 14) {
+        canvas.drawCircle(Offset(x, y), 1, dotPaint);
+      }
+    }
+
+    final shadePaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.14)
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(
+      Rect.fromLTWH(size.width * 0.36, 0, size.width * 0.28, size.height),
+      shadePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _BalanceCardTexture oldDelegate) => false;
 }
