@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
@@ -16,6 +17,13 @@ class SensitiveAccessGuard {
       WalletTwoFactorService();
   static final BiometricService _biometricService = BiometricService();
   static final StorageService _storage = StorageService();
+
+  // Passcode rules must match the unlock screen (digit-only PIN pad,
+  // 6-12 digits); otherwise a passcode set here could be impossible to
+  // re-enter and would lock the user out of the wallet.
+  static const int _minPasscodeLength = 6;
+  static const int _maxPasscodeLength = 12;
+  static final RegExp _digitsOnly = RegExp(r'^\d+$');
 
   /// Returns true if the user successfully authenticates.
   ///
@@ -202,8 +210,12 @@ class SensitiveAccessGuard {
                       controller: controller,
                       obscureText: true,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(_maxPasscodeLength),
+                      ],
                       decoration: InputDecoration(
-                        hintText: 'Enter a passcode (min 6 digits)',
+                        hintText: 'Enter a passcode (6-12 digits)',
                         hintStyle: GoogleFonts.outfit(color: Colors.white38),
                       ),
                       style: GoogleFonts.outfit(color: Colors.white),
@@ -213,6 +225,10 @@ class SensitiveAccessGuard {
                       controller: confirmController,
                       obscureText: true,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(_maxPasscodeLength),
+                      ],
                       decoration: InputDecoration(
                         hintText: 'Confirm passcode',
                         hintStyle: GoogleFonts.outfit(color: Colors.white38),
@@ -234,10 +250,16 @@ class SensitiveAccessGuard {
                     onPressed: () async {
                       final passcode = controller.text.trim();
                       final confirm = confirmController.text.trim();
-                      if (passcode.length < 6) {
+                      // Mirror the unlock screen's contract: the unlock PIN pad
+                      // is digit-only and caps at _maxPasscodeLength, so a
+                      // passcode that violates either rule could never be
+                      // re-entered to unlock the app.
+                      if (!_digitsOnly.hasMatch(passcode) ||
+                          passcode.length < _minPasscodeLength ||
+                          passcode.length > _maxPasscodeLength) {
                         setState(
-                          () =>
-                              errorText = 'Passcode must be at least 6 digits.',
+                          () => errorText =
+                              'Passcode must be $_minPasscodeLength-$_maxPasscodeLength digits.',
                         );
                         return;
                       }
