@@ -9,10 +9,15 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
+import '../../utils/rpc_url_validator.dart';
 import '../../utils/toast_utils.dart';
 
 class AddNetworkScreen extends StatefulWidget {
-  const AddNetworkScreen({super.key});
+  /// When non-null the screen edits this existing custom network instead of
+  /// adding a new one.
+  final EvmChain? existing;
+
+  const AddNetworkScreen({super.key, this.existing});
 
   @override
   State<AddNetworkScreen> createState() => _AddNetworkScreenState();
@@ -25,6 +30,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   final _rpcUrlController = TextEditingController();
   final _chainIdController = TextEditingController();
   final _explorerController = TextEditingController();
+  final _coinGeckoIdController = TextEditingController();
 
   bool _isTesting = false;
   bool _isSaving = false;
@@ -34,6 +40,8 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   static List<dynamic>? _chainRegistryCache;
   int? _lastAutofilledChainId;
 
+  bool get _isEditing => widget.existing != null;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -41,6 +49,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     _rpcUrlController.dispose();
     _chainIdController.dispose();
     _explorerController.dispose();
+    _coinGeckoIdController.dispose();
     _chainIdDebounce?.cancel();
     super.dispose();
   }
@@ -48,6 +57,16 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   @override
   void initState() {
     super.initState();
+    final existing = widget.existing;
+    if (existing != null) {
+      _nameController.text = existing.name;
+      _symbolController.text = existing.symbol;
+      _chainIdController.text = existing.chainId.toString();
+      _rpcUrlController.text = existing.rpcUrl;
+      _explorerController.text = existing.explorerUrl ?? '';
+      _coinGeckoIdController.text = existing.coinGeckoId ?? '';
+      _lastAutofilledChainId = existing.chainId;
+    }
     _chainIdController.addListener(_onChainIdChanged);
   }
 
@@ -122,23 +141,32 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       return;
     }
 
+    final coinGeckoId = _coinGeckoIdController.text.trim().toLowerCase();
     final chain = EvmChain(
       name: _nameController.text.trim(),
       symbol: _symbolController.text.trim().toUpperCase(),
       chainId: enteredChainId,
       rpcUrl: rpcUrl,
-      coinGeckoId: null,
+      coinGeckoId: coinGeckoId.isNotEmpty ? coinGeckoId : null,
       explorerUrl: _explorerController.text.trim().isNotEmpty
           ? _explorerController.text.trim()
           : null,
       isCustom: true,
     );
 
-    final added = await blockchain.addCustomChain(chain);
+    final bool saved;
+    if (_isEditing) {
+      saved = await blockchain.updateCustomChain(
+        widget.existing!.chainId,
+        chain,
+      );
+    } else {
+      saved = await blockchain.addCustomChain(chain);
+    }
 
     if (!mounted) return;
     setState(() => _isSaving = false);
-    if (added) {
+    if (saved) {
       ToastUtils.showSuccess(l.networkAddedSuccessfully(chain.name));
       Navigator.pop(context, true);
     } else {
@@ -356,10 +384,12 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                                   if (value == null || value.trim().isEmpty) {
                                     return l.requiredField;
                                   }
+                                  // Reject http/malformed/private-or-local
+                                  // hosts up front (backend also enforces this).
                                   if (!value.trim().startsWith('https://')) {
                                     return l.mustBeSecureHttps;
                                   }
-                                  return null;
+                                  return validateCustomRpcUrl(value);
                                 },
                               ),
                             ),
@@ -429,6 +459,22 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
                         _buildTextField(
                           controller: _explorerController,
                           hint: l.blockExplorerHint,
+                        ),
+                        const SizedBox(height: 14),
+                        _buildSectionLabel('CoinGecko ID (optional)'),
+                        _buildTextField(
+                          controller: _coinGeckoIdController,
+                          hint: 'e.g. ethereum, binancecoin',
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "Sets the native token's USD price. Find it on the "
+                          "token's CoinGecko page (the 'API id'). Leave blank "
+                          'if unavailable — the token will show without a price.',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Container(

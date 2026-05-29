@@ -12,12 +12,20 @@ class NetworkSelectorSheet extends StatelessWidget {
   final ValueChanged<NetworkEntry> onSelect;
   final VoidCallback? onAddCustomNetwork;
 
+  /// Invoked when the user chooses to edit a user-added (custom) EVM network.
+  final ValueChanged<EvmChain>? onEditCustom;
+
+  /// Invoked when the user chooses to delete a user-added (custom) EVM network.
+  final ValueChanged<EvmChain>? onDeleteCustom;
+
   const NetworkSelectorSheet({
     super.key,
     required this.entries,
     required this.activeNetworkKey,
     required this.onSelect,
     this.onAddCustomNetwork,
+    this.onEditCustom,
+    this.onDeleteCustom,
   });
 
   /// Backwards-compatible constructor for callers that still pass EVM chains.
@@ -27,6 +35,8 @@ class NetworkSelectorSheet extends StatelessWidget {
     required int activeChainId,
     required ValueChanged<EvmChain> onSelect,
     VoidCallback? onAddCustomNetwork,
+    ValueChanged<EvmChain>? onEditCustom,
+    ValueChanged<EvmChain>? onDeleteCustom,
   }) {
     return NetworkSelectorSheet(
       key: key,
@@ -38,6 +48,8 @@ class NetworkSelectorSheet extends StatelessWidget {
         }
       },
       onAddCustomNetwork: onAddCustomNetwork,
+      onEditCustom: onEditCustom,
+      onDeleteCustom: onDeleteCustom,
     );
   }
 
@@ -100,9 +112,7 @@ class NetworkSelectorSheet extends StatelessWidget {
               _subtitle(entry),
               style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
             ),
-            trailing: isActive
-                ? Icon(Icons.check_circle, color: accentColor)
-                : null,
+            trailing: _buildTrailing(entry, isActive, accentColor),
             onTap: () => onSelect(entry),
           );
         }),
@@ -134,6 +144,43 @@ class NetworkSelectorSheet extends StatelessWidget {
         const SizedBox(height: 20),
       ],
     );
+  }
+
+  /// Trailing widget: an active check, plus an edit/delete menu for custom
+  /// (user-added) EVM networks when the relevant callbacks are provided.
+  Widget? _buildTrailing(NetworkEntry entry, bool isActive, Color accentColor) {
+    final isCustomEvm =
+        entry is EvmNetworkEntry &&
+        entry.chain.isCustom &&
+        (onEditCustom != null || onDeleteCustom != null);
+
+    final activeIcon = isActive
+        ? Icon(Icons.check_circle, color: accentColor)
+        : null;
+
+    if (!isCustomEvm) return activeIcon;
+
+    final chain = entry.chain;
+    final menu = PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: Colors.white54),
+      color: AppColors.cardDark,
+      onSelected: (value) {
+        if (value == 'edit') {
+          onEditCustom?.call(chain);
+        } else if (value == 'delete') {
+          onDeleteCustom?.call(chain);
+        }
+      },
+      itemBuilder: (context) => [
+        if (onEditCustom != null)
+          const PopupMenuItem(value: 'edit', child: Text('Edit')),
+        if (onDeleteCustom != null)
+          const PopupMenuItem(value: 'delete', child: Text('Delete')),
+      ],
+    );
+
+    if (activeIcon == null) return menu;
+    return Row(mainAxisSize: MainAxisSize.min, children: [activeIcon, menu]);
   }
 
   Color _accentFor(ChainFamily family) => switch (family) {

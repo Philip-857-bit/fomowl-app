@@ -812,6 +812,29 @@ class BlockchainService extends ChangeNotifier {
     return true;
   }
 
+  /// Update an existing custom chain identified by [originalChainId].
+  /// Returns false if the new chain id collides with a different existing
+  /// chain (built-in or custom). Keeps the edited network active if it was.
+  Future<bool> updateCustomChain(int originalChainId, EvmChain updated) async {
+    final index = _customChains.indexWhere((c) => c.chainId == originalChainId);
+    if (index < 0) return false;
+    // A changed chain id must not collide with any OTHER chain.
+    if (updated.chainId != originalChainId &&
+        allChains.any((c) => c.chainId == updated.chainId)) {
+      return false;
+    }
+    final normalized = _normalizeCustomChain(updated);
+    _customChains[index] = normalized;
+    if (_activeChain.chainId == originalChainId) {
+      _activeChain = normalized;
+      await _saveActiveChain();
+    }
+    await _saveCustomChains();
+    unawaited(_syncNetworkSettingsToBackend());
+    notifyListeners();
+    return true;
+  }
+
   Future<void> removeCustomChain(int chainId) async {
     _customChains.removeWhere((c) => c.chainId == chainId);
     if (_activeChain.chainId == chainId) {

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +11,7 @@ import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../models/chain.dart';
+import '../profile/add_network_screen.dart';
 import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
@@ -1639,8 +1641,60 @@ class _HomeScreenState extends State<HomeScreen> {
                 await Navigator.pushNamed(context, '/add-network');
               }
             : null,
+        onEditCustom: (chain) async {
+          Navigator.pop(ctx);
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddNetworkScreen(existing: chain),
+            ),
+          );
+        },
+        onDeleteCustom: (chain) async {
+          Navigator.pop(ctx);
+          await _confirmDeleteCustomNetwork(blockchain, chain);
+        },
       ),
     );
+  }
+
+  Future<void> _confirmDeleteCustomNetwork(
+    BlockchainService blockchain,
+    EvmChain chain,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text(
+          'Remove ${chain.name}?',
+          style: GoogleFonts.outfit(color: Colors.white),
+        ),
+        content: Text(
+          'This removes the custom network from this device.',
+          style: GoogleFonts.outfit(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: Colors.white54),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: Text(
+              'Remove',
+              style: GoogleFonts.outfit(color: AppColors.accentRed),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await blockchain.removeCustomChain(chain.chainId);
+    }
   }
 
   @override
