@@ -20,6 +20,7 @@ import 'http_client_service.dart';
 import 'blockchain/token_portfolio_module.dart';
 import 'home_snapshot_service.dart';
 import 'blockchain/rpc_resilience.dart';
+import 'blockchain/evm_decoding.dart';
 
 
 /// Blockchain Service — Shared ChangeNotifier Provider
@@ -1140,7 +1141,7 @@ class BlockchainService extends ChangeNotifier {
         coinGeckoId: token.coinGeckoId,
         imageUrl:
             token.imageUrl ??
-            _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+            trustWalletTokenLogoUrl(_activeChain.chainId, normalized),
         networkKey: token.networkKey ?? activeNetworkKey,
         tokenStandard: token.tokenStandard,
       );
@@ -1176,7 +1177,7 @@ class BlockchainService extends ChangeNotifier {
       address: normalized,
       decimals: decimals,
       coinGeckoId: null,
-      imageUrl: _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+      imageUrl: trustWalletTokenLogoUrl(_activeChain.chainId, normalized),
       networkKey: activeNetworkKey,
       tokenStandard: TokenStandard.erc20,
     );
@@ -1220,7 +1221,7 @@ class BlockchainService extends ChangeNotifier {
         coinGeckoId: (data['coinGeckoId'] as String?)?.trim(),
         imageUrl: (data['imageUrl'] as String?)?.trim().isNotEmpty == true
             ? (data['imageUrl'] as String?)?.trim()
-            : _buildTrustWalletTokenLogoUrl(
+            : trustWalletTokenLogoUrl(
                 _activeChain.chainId,
                 contractAddress,
               ),
@@ -1236,26 +1237,6 @@ class BlockchainService extends ChangeNotifier {
     }
   }
 
-  String? _buildTrustWalletTokenLogoUrl(int chainId, String contractAddress) {
-    final normalized = contractAddress.trim().toLowerCase();
-    final folder = switch (chainId) {
-      1 => 'ethereum',
-      56 => 'smartchain',
-      137 => 'polygon',
-      42161 => 'arbitrum',
-      10 => 'optimism',
-      8453 => 'base',
-      43114 => 'avalanchec',
-      250 => 'fantom',
-      100 => 'xdai',
-      _ => null,
-    };
-    if (folder == null || normalized.length != 42) {
-      return null;
-    }
-    return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$folder/assets/$normalized/logo.png';
-  }
-
   Future<String?> _ethCallString(
     String contractAddress,
     String methodId,
@@ -1267,7 +1248,7 @@ class BlockchainService extends ChangeNotifier {
     if (result is! String || !result.startsWith('0x') || result.length <= 2) {
       return null;
     }
-    return _decodeStringResult(result);
+    return decodeAbiStringResult(result);
   }
 
   Future<BigInt?> _ethCallUint(String contractAddress, String methodId) async {
@@ -1284,52 +1265,6 @@ class BlockchainService extends ChangeNotifier {
       return BigInt.parse(hex, radix: 16);
     } catch (_) {
       return null;
-    }
-  }
-
-  String? _decodeStringResult(String rawHexResult) {
-    final hex = rawHexResult.startsWith('0x')
-        ? rawHexResult.substring(2)
-        : rawHexResult;
-    if (hex.isEmpty) return null;
-
-    if (hex.length >= 192) {
-      try {
-        final offset = int.parse(hex.substring(0, 64), radix: 16);
-        final lengthPos = offset * 2;
-        if (lengthPos + 64 <= hex.length) {
-          final strLen = int.parse(
-            hex.substring(lengthPos, lengthPos + 64),
-            radix: 16,
-          );
-          final dataStart = lengthPos + 64;
-          final dataEnd = dataStart + (strLen * 2);
-          if (strLen > 0 && dataEnd <= hex.length) {
-            return _hexToUtf8(hex.substring(dataStart, dataEnd));
-          }
-        }
-      } catch (e) {
-        debugPrint('Error parsing hex as string: $e');
-      }
-    }
-
-    final bytes32 = hex.substring(0, hex.length >= 64 ? 64 : hex.length);
-    return _hexToUtf8(bytes32);
-  }
-
-  String? _hexToUtf8(String hex) {
-    if (hex.isEmpty) return null;
-    final bytes = <int>[];
-    for (var i = 0; i + 1 < hex.length; i += 2) {
-      final byte = int.tryParse(hex.substring(i, i + 2), radix: 16);
-      if (byte == null || byte == 0) continue;
-      bytes.add(byte);
-    }
-    if (bytes.isEmpty) return null;
-    try {
-      return utf8.decode(bytes).trim();
-    } catch (_) {
-      return String.fromCharCodes(bytes).trim();
     }
   }
 
