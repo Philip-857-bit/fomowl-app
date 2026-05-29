@@ -97,7 +97,7 @@ void main() {
 
     expect(find.text('Featured DApps'), findsOneWidget);
     expect(find.text('Cash In'), findsOneWidget);
-    expect(find.text('Bulk Pay'), findsOneWidget);
+    // 'Bulk Pay' was removed from the Discover landing view.
     await tester.dragUntilVisible(
       find.text('Trending Tokens'),
       find.byType(ListView).first,

@@ -179,16 +179,22 @@ void main() {
   });
 
   group('SwapService limit orders', () {
-    test('supports only CoW limit-order chains', () {
+    test('supports only OpenOcean limit-order chains', () {
       final service = SwapService();
 
+      // Limit orders are backed by OpenOcean, whose supported chain set is a
+      // superset of the CoW chains.
+      for (final chainId in openOceanSupportedLimitChainIds) {
+        expect(service.isLimitChainSupported(chainId), isTrue);
+      }
       for (final chainId in cowSupportedLimitChainIds) {
         expect(service.isLimitChainSupported(chainId), isTrue);
       }
 
-      expect(service.isLimitChainSupported(10), isFalse);
-      expect(service.isLimitChainSupported(250), isFalse);
-      expect(service.isLimitChainSupported(324), isFalse);
+      // Chains outside the supported set.
+      expect(service.isLimitChainSupported(5), isFalse);
+      expect(service.isLimitChainSupported(25), isFalse);
+      expect(service.isLimitChainSupported(999999), isFalse);
     });
 
     test('createLimitOrder prefers canonical orderUid', () async {
