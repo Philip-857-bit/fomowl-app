@@ -115,11 +115,19 @@ void main() {
 
     expect(find.text('Operational overview'), findsOneWidget);
 
-    final sectionStrip = find.byWidgetPredicate(
+    // The section strip is a lazy horizontal ListView, so scroll until the
+    // last ('Registry') tab is built rather than relying on a fixed drag.
+    final horizontalScrollable = find.byWidgetPredicate(
       (widget) =>
-          widget is ListView && widget.scrollDirection == Axis.horizontal,
+          widget is Scrollable &&
+          (widget.axisDirection == AxisDirection.right ||
+              widget.axisDirection == AxisDirection.left),
     );
-    await tester.drag(sectionStrip, const Offset(-700, 0));
+    await tester.scrollUntilVisible(
+      find.text('Registry'),
+      200,
+      scrollable: horizontalScrollable.first,
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Registry'), findsOneWidget);
@@ -165,6 +173,6 @@ void main() {
 
     expect(find.text('Discover DApps'), findsOneWidget);
     expect(find.text('Uniswap'), findsWidgets);
-    expect(find.textContaining('auto when blank'), findsWidgets);
+    expect(find.textContaining('autofill from the site'), findsWidgets);
   });
 }

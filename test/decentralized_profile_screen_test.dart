@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 import 'package:fomowl_wallet/screens/profile/decentralized_profile_screen.dart';
+import 'package:fomowl_wallet/services/app_patch_service.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/services/currency_controller.dart';
 import 'package:fomowl_wallet/services/language_controller.dart';
@@ -46,6 +47,9 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
+          ChangeNotifierProvider<AppPatchService>.value(
+            value: AppPatchService.instance,
+          ),
           ChangeNotifierProvider<BlockchainService>(
             create: (_) => BlockchainService(),
           ),

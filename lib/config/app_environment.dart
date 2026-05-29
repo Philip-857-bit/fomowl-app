@@ -24,6 +24,15 @@ class AppEnvironment {
     'CASH_IN_MINI_APP_ALLOWED_ORIGINS',
   );
 
+  /// Optional certificate pinning for the backend host. Each entry is the
+  /// lowercase hex SHA-256 of the DER-encoded server certificate. When empty
+  /// (the default), no pinning is enforced and TLS behaves normally. Supply via
+  /// `--dart-define=BACKEND_CERT_SHA256_PINS=<fp1>,<fp2>` (include a backup pin
+  /// for cert rotation).
+  static final List<String> backendCertSha256Pins = _csvEnv(
+    'BACKEND_CERT_SHA256_PINS',
+  );
+
   static Future<void> initializeFirebaseApp() async {
     if (Firebase.apps.isNotEmpty) {
       return;

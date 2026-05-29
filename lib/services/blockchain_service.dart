@@ -19,110 +19,9 @@ import 'wallet_backend_auth_service.dart';
 import 'http_client_service.dart';
 import 'blockchain/token_portfolio_module.dart';
 import 'home_snapshot_service.dart';
-
-class _CircuitBreakerState {
-  int failureCount = 0;
-  DateTime? lastFailureTime;
-  Duration currentBackoff;
-  final int failureThreshold;
-
-  _CircuitBreakerState({
-    this.currentBackoff = const Duration(seconds: 30),
-    this.failureThreshold = 3,
-  });
-
-  bool isOpen() {
-    if (lastFailureTime == null) return false;
-    final elapsed = DateTime.now().difference(lastFailureTime!);
-    if (elapsed >= currentBackoff) {
-      return false;
-    }
-    return failureCount >= failureThreshold;
-  }
-
-  void recordFailure(Duration maxBackoff) {
-    failureCount++;
-    lastFailureTime = DateTime.now();
-    currentBackoff = Duration(
-      seconds: (currentBackoff.inSeconds * 2)
-          .clamp(30, maxBackoff.inSeconds)
-          .toInt(),
-    );
-  }
-
-  void reset(Duration initialBackoff) {
-    failureCount = 0;
-    lastFailureTime = null;
-    currentBackoff = initialBackoff;
-  }
-}
-
-class _PerformanceMetrics {
-  int totalDiscoveryCalls = 0;
-  int successfulDiscoveryCalls = 0;
-  int failedDiscoveryCalls = 0;
-  final List<Duration> priceRefreshLatencies = [];
-  int priceRefreshCount = 0;
-  int tokenMismatchCount = 0;
-  int registryFallbackCount = 0;
-  final Map<String, int> endpointFailureCount = {};
-
-  double get discoverySuccessRate => totalDiscoveryCalls == 0
-      ? 0.0
-      : (successfulDiscoveryCalls / totalDiscoveryCalls) * 100;
-
-  Duration get avgPriceRefreshLatency {
-    if (priceRefreshLatencies.isEmpty) return Duration.zero;
-    final total = priceRefreshLatencies.fold<Duration>(
-      Duration.zero,
-      (sum, d) => sum + d,
-    );
-    return total ~/ priceRefreshLatencies.length;
-  }
-
-  void recordDiscoveryCall({
-    required bool success,
-    required bool usedFallback,
-  }) {
-    totalDiscoveryCalls++;
-    if (success) {
-      successfulDiscoveryCalls++;
-    } else {
-      failedDiscoveryCalls++;
-    }
-    if (usedFallback) {
-      registryFallbackCount++;
-    }
-  }
-
-  void recordPriceRefresh({required Duration latency}) {
-    priceRefreshCount++;
-    if (priceRefreshLatencies.length >= 100) {
-      priceRefreshLatencies.removeAt(0);
-    }
-    priceRefreshLatencies.add(latency);
-  }
-
-  void recordTokenMismatch() {
-    tokenMismatchCount++;
-  }
-
-  void recordEndpointFailure(String endpoint) {
-    endpointFailureCount[endpoint] = (endpointFailureCount[endpoint] ?? 0) + 1;
-  }
-
-  Map<String, dynamic> toJson() => {
-    'totalDiscoveryCalls': totalDiscoveryCalls,
-    'successfulDiscoveryCalls': successfulDiscoveryCalls,
-    'failedDiscoveryCalls': failedDiscoveryCalls,
-    'discoverySuccessRate': '${discoverySuccessRate.toStringAsFixed(1)}%',
-    'priceRefreshCount': priceRefreshCount,
-    'avgPriceRefreshLatencyMs': avgPriceRefreshLatency.inMilliseconds,
-    'tokenMismatchCount': tokenMismatchCount,
-    'registryFallbackCount': registryFallbackCount,
-    'endpointFailures': endpointFailureCount,
-  };
-}
+import 'blockchain/rpc_resilience.dart';
+import 'blockchain/evm_decoding.dart';
+import 'blockchain/network_address.dart';
 
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
@@ -186,8 +85,8 @@ class BlockchainService extends ChangeNotifier {
   Future<void>? _initFuture;
 
   // Circuit Breaker State
-  final Map<String, _CircuitBreakerState> _circuitBreakers = {};
-  final _PerformanceMetrics _metrics = _PerformanceMetrics();
+  final Map<String, CircuitBreakerState> _circuitBreakers = {};
+  final PerformanceMetrics _metrics = PerformanceMetrics();
 
   String _lastDiscoverySource = 'unknown';
   bool _lastDiscoveryPartialFailure = false;
@@ -1242,7 +1141,7 @@ class BlockchainService extends ChangeNotifier {
         coinGeckoId: token.coinGeckoId,
         imageUrl:
             token.imageUrl ??
-            _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+            trustWalletTokenLogoUrl(_activeChain.chainId, normalized),
         networkKey: token.networkKey ?? activeNetworkKey,
         tokenStandard: token.tokenStandard,
       );
@@ -1278,7 +1177,7 @@ class BlockchainService extends ChangeNotifier {
       address: normalized,
       decimals: decimals,
       coinGeckoId: null,
-      imageUrl: _buildTrustWalletTokenLogoUrl(_activeChain.chainId, normalized),
+      imageUrl: trustWalletTokenLogoUrl(_activeChain.chainId, normalized),
       networkKey: activeNetworkKey,
       tokenStandard: TokenStandard.erc20,
     );
@@ -1322,10 +1221,7 @@ class BlockchainService extends ChangeNotifier {
         coinGeckoId: (data['coinGeckoId'] as String?)?.trim(),
         imageUrl: (data['imageUrl'] as String?)?.trim().isNotEmpty == true
             ? (data['imageUrl'] as String?)?.trim()
-            : _buildTrustWalletTokenLogoUrl(
-                _activeChain.chainId,
-                contractAddress,
-              ),
+            : trustWalletTokenLogoUrl(_activeChain.chainId, contractAddress),
         networkKey: _asTrimmedString(data['networkKey']) ?? activeNetworkKey,
         tokenStandard: _asTrimmedString(data['tokenStandard']) == null
             ? _defaultTokenStandardForActiveNetwork(isNative: false)
@@ -1336,26 +1232,6 @@ class BlockchainService extends ChangeNotifier {
     } catch (_) {
       return null;
     }
-  }
-
-  String? _buildTrustWalletTokenLogoUrl(int chainId, String contractAddress) {
-    final normalized = contractAddress.trim().toLowerCase();
-    final folder = switch (chainId) {
-      1 => 'ethereum',
-      56 => 'smartchain',
-      137 => 'polygon',
-      42161 => 'arbitrum',
-      10 => 'optimism',
-      8453 => 'base',
-      43114 => 'avalanchec',
-      250 => 'fantom',
-      100 => 'xdai',
-      _ => null,
-    };
-    if (folder == null || normalized.length != 42) {
-      return null;
-    }
-    return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$folder/assets/$normalized/logo.png';
   }
 
   Future<String?> _ethCallString(
@@ -1369,7 +1245,7 @@ class BlockchainService extends ChangeNotifier {
     if (result is! String || !result.startsWith('0x') || result.length <= 2) {
       return null;
     }
-    return _decodeStringResult(result);
+    return decodeAbiStringResult(result);
   }
 
   Future<BigInt?> _ethCallUint(String contractAddress, String methodId) async {
@@ -1389,52 +1265,6 @@ class BlockchainService extends ChangeNotifier {
     }
   }
 
-  String? _decodeStringResult(String rawHexResult) {
-    final hex = rawHexResult.startsWith('0x')
-        ? rawHexResult.substring(2)
-        : rawHexResult;
-    if (hex.isEmpty) return null;
-
-    if (hex.length >= 192) {
-      try {
-        final offset = int.parse(hex.substring(0, 64), radix: 16);
-        final lengthPos = offset * 2;
-        if (lengthPos + 64 <= hex.length) {
-          final strLen = int.parse(
-            hex.substring(lengthPos, lengthPos + 64),
-            radix: 16,
-          );
-          final dataStart = lengthPos + 64;
-          final dataEnd = dataStart + (strLen * 2);
-          if (strLen > 0 && dataEnd <= hex.length) {
-            return _hexToUtf8(hex.substring(dataStart, dataEnd));
-          }
-        }
-      } catch (e) {
-        debugPrint('Error parsing hex as string: $e');
-      }
-    }
-
-    final bytes32 = hex.substring(0, hex.length >= 64 ? 64 : hex.length);
-    return _hexToUtf8(bytes32);
-  }
-
-  String? _hexToUtf8(String hex) {
-    if (hex.isEmpty) return null;
-    final bytes = <int>[];
-    for (var i = 0; i + 1 < hex.length; i += 2) {
-      final byte = int.tryParse(hex.substring(i, i + 2), radix: 16);
-      if (byte == null || byte == 0) continue;
-      bytes.add(byte);
-    }
-    if (bytes.isEmpty) return null;
-    try {
-      return utf8.decode(bytes).trim();
-    } catch (_) {
-      return String.fromCharCodes(bytes).trim();
-    }
-  }
-
   // ─── TOKEN LIST ──────────────────────────────────
 
   Future<List<Token>> fetchWalletTokens(
@@ -1447,7 +1277,7 @@ class BlockchainService extends ChangeNotifier {
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
     final requestedChainId = _walletTokenChainIdForRequest(chainId);
-    if (!_walletAddressLooksValidForNetwork(
+    if (!walletAddressLooksValidForNetwork(
       walletAddress,
       effectiveNetworkKey,
     )) {
@@ -1538,23 +1368,6 @@ class BlockchainService extends ChangeNotifier {
       chainId: chainId,
       forceRefresh: true,
     );
-  }
-
-  bool _walletAddressLooksValidForNetwork(
-    String walletAddress,
-    String networkKey,
-  ) {
-    final address = walletAddress.trim();
-    if (address.isEmpty) return false;
-    return switch (NetworkKey.familyOf(networkKey)) {
-      ChainFamily.evm => RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address),
-      ChainFamily.solana => RegExp(
-        r'^[1-9A-HJ-NP-Za-km-z]{32,44}$',
-      ).hasMatch(address),
-      ChainFamily.tron => RegExp(
-        r'^T[1-9A-HJ-NP-Za-km-z]{33}$',
-      ).hasMatch(address),
-    };
   }
 
   void applyOptimisticSwap({
@@ -2221,7 +2034,7 @@ class BlockchainService extends ChangeNotifier {
       // Circuit breaker check
       final breaker = _circuitBreakers.putIfAbsent(
         'discovery_$base',
-        () => _CircuitBreakerState(
+        () => CircuitBreakerState(
           currentBackoff: _circuitBreakerInitialBackoff,
           failureThreshold: _circuitBreakerFailureThreshold,
         ),

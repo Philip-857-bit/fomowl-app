@@ -7,9 +7,19 @@ abstract class SecureStore {
   Future<void> deleteAll();
 }
 
+/// Shared iOS keychain options for all secret storage. `first_unlock_this_device`
+/// keeps secrets off iCloud keychain sync and out of encrypted device backups,
+/// while still allowing background access after the first unlock.
+const IOSOptions kSecureIosOptions = IOSOptions(
+  accessibility: KeychainAccessibility.first_unlock_this_device,
+);
+
 class FlutterSecureStoreAdapter implements SecureStore {
   const FlutterSecureStoreAdapter([
-    this._storage = const FlutterSecureStorage(aOptions: AndroidOptions()),
+    this._storage = const FlutterSecureStorage(
+      aOptions: AndroidOptions(),
+      iOptions: kSecureIosOptions,
+    ),
   ]);
 
   final FlutterSecureStorage _storage;

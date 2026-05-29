@@ -40,11 +40,19 @@ void main() {
     expect(tokens.first.changePercent24h, -1.12);
   });
 
-  test('fetchTrendingTokens throws on invalid backend response', () async {
-    final service = DiscoverTrendingTokenService(
-      client: MockClient((request) async => http.Response('[]', 200)),
-    );
+  test(
+    'fetchTrendingTokens falls back to defaults on invalid backend response',
+    () async {
+      final service = DiscoverTrendingTokenService(
+        client: MockClient((request) async => http.Response('[]', 200)),
+      );
 
-    expect(service.fetchTrendingTokens(), throwsA(isA<Exception>()));
-  });
+      // On an unparseable/invalid response the service degrades gracefully to a
+      // built-in fallback list rather than throwing.
+      final tokens = await service.fetchTrendingTokens();
+
+      expect(tokens, isNotEmpty);
+      expect(tokens.first.id, 'fomowl');
+    },
+  );
 }
