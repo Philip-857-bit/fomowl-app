@@ -5,9 +5,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/app_environment.dart';
 import '../utils/app_error_utils.dart';
+import 'secure_store.dart';
 
 class AuthService {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  // Use the same hardened iOS keychain options as the rest of the app so JWT
+  // session tokens are not synced to iCloud keychain or device backups.
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    iOptions: kSecureIosOptions,
+  );
   static const String _tokenKey = 'auth_jwt_token';
   static const String _profileKey = 'auth_profile_payload';
   static String? _sessionToken;

@@ -1,4 +1,8 @@
 #!/bin/sh
+# Block accidental commits of secret / signing files.
+# Robust across shells: the match loop reads from a here-doc (not a pipe), so a
+# detected violation sets a flag in the current shell rather than only exiting a
+# pipeline subshell.
 set -eu
 
 staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
@@ -7,12 +11,22 @@ if [ -z "$staged_files" ]; then
   exit 0
 fi
 
-echo "$staged_files" | while IFS= read -r file; do
+blocked=0
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
   case "$file" in
     .env|.env.local|.env.*.local|android/key.properties|*.jks|*.keystore|*.p12|keystore/*|android/app/google-services.base64.txt|*firebase-adminsdk*.json|*service-account*.json|*owllet-fc8d4-*.json)
       echo "Blocked commit: secret or signing file staged: $file" >&2
-      echo "Remove it from the index before committing." >&2
-      exit 1
+      blocked=1
       ;;
   esac
-done
+done <<EOF
+$staged_files
+EOF
+
+if [ "$blocked" -ne 0 ]; then
+  echo "Remove the file(s) above from the index before committing." >&2
+  exit 1
+fi
+
+exit 0

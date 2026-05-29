@@ -17,7 +17,12 @@ class SensitiveAccessGuard {
   static final BiometricService _biometricService = BiometricService();
   static final StorageService _storage = StorageService();
 
-  /// Returns true if the user successfully authenticates (or no auth is required).
+  /// Returns true if the user successfully authenticates.
+  ///
+  /// Security: this guard must never grant access to sensitive material (seed
+  /// phrase, private key) without an authentication factor. If neither
+  /// biometrics nor a passcode is configured, the user is required to create a
+  /// passcode here before access is granted — it is never auto-allowed.
   static Future<bool> verify(BuildContext context, {String? reason}) async {
     final l = AppLocalizations.of(context);
     var primaryAuthenticated = false;
@@ -33,10 +38,17 @@ class SensitiveAccessGuard {
       }
     }
 
-    // Fall back to passcode if configured. When no passcode is set, allow access.
-    final hasPasscode = await _storage.hasPasscode();
+    // Fall back to passcode. When no passcode exists, require the user to set
+    // one now rather than failing open and granting access with no factor.
+    var hasPasscode = await _storage.hasPasscode();
     if (!primaryAuthenticated) {
       if (!hasPasscode) {
+        if (!context.mounted) return false;
+        final created = await _promptToCreatePasscode(context);
+        if (!created) {
+          return false;
+        }
+        hasPasscode = true;
         primaryAuthenticated = true;
       } else {
         if (!context.mounted) return false;
@@ -120,18 +132,128 @@ class SensitiveAccessGuard {
                   ),
                   TextButton(
                     onPressed: () async {
+                      // Honor the same brute-force lockout the unlock screen
+                      // uses, so sensitive reveals can't bypass it.
+                      if (await _storage.isLockedOut()) {
+                        if (!context.mounted) return;
+                        setState(() => hasError = true);
+                        return;
+                      }
                       final isValid = await _storage.verifyPasscode(
                         controller.text.trim(),
                       );
                       if (!context.mounted) return;
                       if (isValid) {
+                        await _storage.resetFailedAttempts();
+                        if (!context.mounted) return;
                         Navigator.pop(context, true);
                       } else {
+                        await _storage.incrementFailedAttempts();
+                        final attempts = await _storage.getFailedAttempts();
+                        if (attempts >= StorageService.maxFailedAttempts) {
+                          await _storage.setLockout();
+                        }
+                        if (!context.mounted) return;
                         setState(() => hasError = true);
                       }
                     },
                     child: Text(
                       l.confirm,
+                      style: GoogleFonts.outfit(color: AppColors.accentRed),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ) ??
+        false;
+  }
+
+  /// Prompts the user to create a passcode when none exists, so the guard can
+  /// require an authentication factor instead of failing open. Returns true
+  /// only when a valid passcode is entered, confirmed, and saved.
+  static Future<bool> _promptToCreatePasscode(BuildContext context) async {
+    final controller = TextEditingController();
+    final confirmController = TextEditingController();
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            String? errorText;
+            return StatefulBuilder(
+              builder: (context, setState) => AlertDialog(
+                backgroundColor: AppColors.cardDark,
+                title: Text(
+                  'Set a passcode',
+                  style: GoogleFonts.outfit(color: Colors.white),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Create a passcode to protect access to sensitive wallet '
+                      'details. You will need it to reveal this information.',
+                      style: GoogleFonts.outfit(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: controller,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Enter a passcode (min 6 digits)',
+                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                      ),
+                      style: GoogleFonts.outfit(color: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: confirmController,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: 'Confirm passcode',
+                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                        errorText: errorText,
+                      ),
+                      style: GoogleFonts.outfit(color: Colors.white),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.outfit(color: Colors.white54),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final passcode = controller.text.trim();
+                      final confirm = confirmController.text.trim();
+                      if (passcode.length < 6) {
+                        setState(
+                          () => errorText =
+                              'Passcode must be at least 6 digits.',
+                        );
+                        return;
+                      }
+                      if (passcode != confirm) {
+                        setState(
+                          () => errorText = 'Passcodes do not match.',
+                        );
+                        return;
+                      }
+                      await _storage.savePasscode(passcode);
+                      await _storage.resetFailedAttempts();
+                      if (!context.mounted) return;
+                      Navigator.pop(context, true);
+                    },
+                    child: Text(
+                      'Save',
                       style: GoogleFonts.outfit(color: AppColors.accentRed),
                     ),
                   ),

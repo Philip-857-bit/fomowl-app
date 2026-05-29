@@ -17,11 +17,31 @@ Flutter wallet client for multi-chain EVM balances, swaps, gasless orders, and w
   - `FIREBASE_PROJECT_ID`
   - `FIREBASE_STORAGE_BUCKET`
   - `FIREBASE_IOS_BUNDLE_ID`
+  - `BACKEND_CERT_SHA256_PINS` (optional certificate pinning; see below)
 - If `BACKEND_BASE_URL` is omitted, local defaults are used:
   - Android emulator: `http://10.0.2.2:3000`
   - iOS/desktop/web: `http://127.0.0.1:3000`
 - Network settings sync uses wallet challenge-response auth instead of trusting a raw wallet address.
 - Swap and gasless flows route through the configured backend rather than hardcoded production URLs.
+
+## Certificate pinning (optional)
+
+On native (mobile/desktop) builds you can pin the backend's TLS certificate by
+passing the hex SHA-256 of the DER-encoded server certificate(s):
+
+```bash
+flutter build apk --release \
+  --dart-define=BACKEND_CERT_SHA256_PINS=<primary_fp>,<backup_fp>
+```
+
+When the value is empty (the default) TLS validation behaves normally — pinning
+is opt-in. Always include a backup pin so certificate rotation does not lock out
+clients. Pinning is a no-op on web builds (the browser manages trust).
+
+## Git hooks
+
+Run `sh scripts/install-git-hooks.sh` once after cloning to enable the
+pre-commit secret/keystore guard (`core.hooksPath` -> `.githooks`).
 
 ## Run locally
 
@@ -52,8 +72,8 @@ flutter run --dart-define-from-file=.env
 flutter build apk --release --dart-define-from-file=.env
 ```
 
-The repo now includes a local [`.env`](/c:/Users/HP/Desktop/fomowlwallet/fomowl_wallet/.env)
-with the Android Firebase values extracted from `google-services.json`.
+You can keep a local `.env` (gitignored) with the Android Firebase values
+extracted from `google-services.json`.
 
 Do not commit local secret files such as `.env`, `android/key.properties`,
 keystores, or Firebase service-account JSON files. `google-services.json` may be
@@ -109,7 +129,7 @@ Release builds no longer use the debug signing key.
 
 Configure one permanent release key using either:
 
-- `android/key.properties` based on [`android/key.properties.example`](/c:/Users/HP/Desktop/fomowlwallet/fomowl_wallet/android/key.properties.example)
+- `android/key.properties` based on `android/key.properties.example`
 - CI environment variables:
   - `KEYSTORE_BASE64`
   - `KEYSTORE_FILE`

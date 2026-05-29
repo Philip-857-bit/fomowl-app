@@ -1,39 +1,27 @@
 name: Dart Format
 
 on:
-  push:
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
+# Read-only: this workflow verifies formatting and fails the check if code is
+# not formatted. It no longer auto-commits/pushes on every push, which could
+# race concurrent jobs and write to unintended branches.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   format:
-    name: Format Dart code
+    name: Check Dart formatting
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Dart
         uses: dart-lang/setup-dart@v1
 
-      - name: Run dart format
-        run: dart format .
-
-      - name: Commit and push formatted changes
-        run: |
-          if [[ -n "$(git status --porcelain)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-            git add .
-            git commit -m "chore: format Dart code"
-            git push
-          else
-            echo "No formatting changes needed."
-          fi
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
