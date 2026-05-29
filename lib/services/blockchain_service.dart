@@ -19,110 +19,8 @@ import 'wallet_backend_auth_service.dart';
 import 'http_client_service.dart';
 import 'blockchain/token_portfolio_module.dart';
 import 'home_snapshot_service.dart';
+import 'blockchain/rpc_resilience.dart';
 
-class _CircuitBreakerState {
-  int failureCount = 0;
-  DateTime? lastFailureTime;
-  Duration currentBackoff;
-  final int failureThreshold;
-
-  _CircuitBreakerState({
-    this.currentBackoff = const Duration(seconds: 30),
-    this.failureThreshold = 3,
-  });
-
-  bool isOpen() {
-    if (lastFailureTime == null) return false;
-    final elapsed = DateTime.now().difference(lastFailureTime!);
-    if (elapsed >= currentBackoff) {
-      return false;
-    }
-    return failureCount >= failureThreshold;
-  }
-
-  void recordFailure(Duration maxBackoff) {
-    failureCount++;
-    lastFailureTime = DateTime.now();
-    currentBackoff = Duration(
-      seconds: (currentBackoff.inSeconds * 2)
-          .clamp(30, maxBackoff.inSeconds)
-          .toInt(),
-    );
-  }
-
-  void reset(Duration initialBackoff) {
-    failureCount = 0;
-    lastFailureTime = null;
-    currentBackoff = initialBackoff;
-  }
-}
-
-class _PerformanceMetrics {
-  int totalDiscoveryCalls = 0;
-  int successfulDiscoveryCalls = 0;
-  int failedDiscoveryCalls = 0;
-  final List<Duration> priceRefreshLatencies = [];
-  int priceRefreshCount = 0;
-  int tokenMismatchCount = 0;
-  int registryFallbackCount = 0;
-  final Map<String, int> endpointFailureCount = {};
-
-  double get discoverySuccessRate => totalDiscoveryCalls == 0
-      ? 0.0
-      : (successfulDiscoveryCalls / totalDiscoveryCalls) * 100;
-
-  Duration get avgPriceRefreshLatency {
-    if (priceRefreshLatencies.isEmpty) return Duration.zero;
-    final total = priceRefreshLatencies.fold<Duration>(
-      Duration.zero,
-      (sum, d) => sum + d,
-    );
-    return total ~/ priceRefreshLatencies.length;
-  }
-
-  void recordDiscoveryCall({
-    required bool success,
-    required bool usedFallback,
-  }) {
-    totalDiscoveryCalls++;
-    if (success) {
-      successfulDiscoveryCalls++;
-    } else {
-      failedDiscoveryCalls++;
-    }
-    if (usedFallback) {
-      registryFallbackCount++;
-    }
-  }
-
-  void recordPriceRefresh({required Duration latency}) {
-    priceRefreshCount++;
-    if (priceRefreshLatencies.length >= 100) {
-      priceRefreshLatencies.removeAt(0);
-    }
-    priceRefreshLatencies.add(latency);
-  }
-
-  void recordTokenMismatch() {
-    tokenMismatchCount++;
-  }
-
-  void recordEndpointFailure(String endpoint) {
-    endpointFailureCount[endpoint] = (endpointFailureCount[endpoint] ?? 0) + 1;
-  }
-
-  Map<String, dynamic> toJson() => {
-    'totalDiscoveryCalls': totalDiscoveryCalls,
-    'successfulDiscoveryCalls': successfulDiscoveryCalls,
-    'failedDiscoveryCalls': failedDiscoveryCalls,
-    'discoverySuccessRate': '${discoverySuccessRate.toStringAsFixed(1)}%',
-    'priceRefreshCount': priceRefreshCount,
-    'avgPriceRefreshLatencyMs': avgPriceRefreshLatency.inMilliseconds,
-    'tokenMismatchCount': tokenMismatchCount,
-    'registryFallbackCount': registryFallbackCount,
-    'endpointFailures': endpointFailureCount,
-  };
-}
 
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
@@ -186,8 +84,8 @@ class BlockchainService extends ChangeNotifier {
   Future<void>? _initFuture;
 
   // Circuit Breaker State
-  final Map<String, _CircuitBreakerState> _circuitBreakers = {};
-  final _PerformanceMetrics _metrics = _PerformanceMetrics();
+  final Map<String, CircuitBreakerState> _circuitBreakers = {};
+  final PerformanceMetrics _metrics = PerformanceMetrics();
 
   String _lastDiscoverySource = 'unknown';
   bool _lastDiscoveryPartialFailure = false;
@@ -2221,7 +2119,7 @@ class BlockchainService extends ChangeNotifier {
       // Circuit breaker check
       final breaker = _circuitBreakers.putIfAbsent(
         'discovery_$base',
-        () => _CircuitBreakerState(
+        () => CircuitBreakerState(
           currentBackoff: _circuitBreakerInitialBackoff,
           failureThreshold: _circuitBreakerFailureThreshold,
         ),
