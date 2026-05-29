@@ -23,7 +23,6 @@ import 'blockchain/rpc_resilience.dart';
 import 'blockchain/evm_decoding.dart';
 import 'blockchain/network_address.dart';
 
-
 /// Blockchain Service — Shared ChangeNotifier Provider
 /// Manages active chain, custom chains, and all blockchain interactions.
 /// Now delegates core RPC and Price logic to specialized services.
@@ -1222,10 +1221,7 @@ class BlockchainService extends ChangeNotifier {
         coinGeckoId: (data['coinGeckoId'] as String?)?.trim(),
         imageUrl: (data['imageUrl'] as String?)?.trim().isNotEmpty == true
             ? (data['imageUrl'] as String?)?.trim()
-            : trustWalletTokenLogoUrl(
-                _activeChain.chainId,
-                contractAddress,
-              ),
+            : trustWalletTokenLogoUrl(_activeChain.chainId, contractAddress),
         networkKey: _asTrimmedString(data['networkKey']) ?? activeNetworkKey,
         tokenStandard: _asTrimmedString(data['tokenStandard']) == null
             ? _defaultTokenStandardForActiveNetwork(isNative: false)

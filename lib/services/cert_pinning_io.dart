@@ -11,7 +11,9 @@ import 'package:dio/io.dart';
 /// validation proceeds normally — so this is safe to call unconditionally.
 void configureCertPinning(Dio dio, List<String> sha256Fingerprints) {
   final pins = sha256Fingerprints
-      .map((value) => value.replaceAll(':', '').replaceAll(' ', '').toLowerCase())
+      .map(
+        (value) => value.replaceAll(':', '').replaceAll(' ', '').toLowerCase(),
+      )
       .where((value) => value.isNotEmpty)
       .toSet();
 
@@ -24,7 +26,10 @@ void configureCertPinning(Dio dio, List<String> sha256Fingerprints) {
       if (certificate == null) {
         return false;
       }
-      final fingerprint = sha256.convert(certificate.der).toString().toLowerCase();
+      final fingerprint = sha256
+          .convert(certificate.der)
+          .toString()
+          .toLowerCase();
       return pins.contains(fingerprint);
     },
   );

@@ -236,15 +236,13 @@ class SensitiveAccessGuard {
                       final confirm = confirmController.text.trim();
                       if (passcode.length < 6) {
                         setState(
-                          () => errorText =
-                              'Passcode must be at least 6 digits.',
+                          () =>
+                              errorText = 'Passcode must be at least 6 digits.',
                         );
                         return;
                       }
                       if (passcode != confirm) {
-                        setState(
-                          () => errorText = 'Passcodes do not match.',
-                        );
+                        setState(() => errorText = 'Passcodes do not match.');
                         return;
                       }
                       await _storage.savePasscode(passcode);

@@ -22,7 +22,9 @@ void main() {
   group('looksLikeSolanaPublicKey', () {
     test('accepts base58 keys of length 32-44 and trims whitespace', () {
       expect(
-        looksLikeSolanaPublicKey('9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM'),
+        looksLikeSolanaPublicKey(
+          '9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM',
+        ),
         isTrue,
       );
       expect(
@@ -53,21 +55,23 @@ void main() {
   });
 
   group('swap error classification', () {
-    test('isSolanaSwapBalanceError requires a balance signal and a swap context',
-        () {
-      expect(
-        isSolanaSwapBalanceError('insufficient funds for jupiter swap'),
-        isTrue,
-      );
-      expect(
-        isSolanaSwapBalanceError('not enough sol to cover quote'),
-        isTrue,
-      );
-      // Balance signal without swap context.
-      expect(isSolanaSwapBalanceError('insufficient funds'), isFalse);
-      // No balance signal at all.
-      expect(isSolanaSwapBalanceError('jupiter swap failed'), isFalse);
-    });
+    test(
+      'isSolanaSwapBalanceError requires a balance signal and a swap context',
+      () {
+        expect(
+          isSolanaSwapBalanceError('insufficient funds for jupiter swap'),
+          isTrue,
+        );
+        expect(
+          isSolanaSwapBalanceError('not enough sol to cover quote'),
+          isTrue,
+        );
+        // Balance signal without swap context.
+        expect(isSolanaSwapBalanceError('insufficient funds'), isFalse);
+        // No balance signal at all.
+        expect(isSolanaSwapBalanceError('jupiter swap failed'), isFalse);
+      },
+    );
 
     test('isSolanaSwapAddressError requires an address signal and context', () {
       expect(
@@ -75,25 +79,22 @@ void main() {
         isTrue,
       );
       expect(
-        isSolanaSwapAddressError(
-          'selected solana wallet address is invalid',
-        ),
+        isSolanaSwapAddressError('selected solana wallet address is invalid'),
         isTrue,
       );
       expect(isSolanaSwapAddressError('valid public key'), isFalse);
       expect(isSolanaSwapAddressError('jupiter swap ok'), isFalse);
     });
 
-    test('isSwapPriceMovementError requires slippage/price wording + context',
-        () {
-      expect(isSwapPriceMovementError('slippage exceeded on swap'), isTrue);
-      expect(
-        isSwapPriceMovementError('price movement during quote'),
-        isTrue,
-      );
-      expect(isSwapPriceMovementError('slippage tolerance'), isFalse);
-      expect(isSwapPriceMovementError('swap failed'), isFalse);
-    });
+    test(
+      'isSwapPriceMovementError requires slippage/price wording + context',
+      () {
+        expect(isSwapPriceMovementError('slippage exceeded on swap'), isTrue);
+        expect(isSwapPriceMovementError('price movement during quote'), isTrue);
+        expect(isSwapPriceMovementError('slippage tolerance'), isFalse);
+        expect(isSwapPriceMovementError('swap failed'), isFalse);
+      },
+    );
   });
 
   group('amount parsing and formatting', () {
@@ -122,10 +123,7 @@ void main() {
 
   group('gasless response parsing', () {
     test('extractGaslessStatusValue checks top-level then trade/result', () {
-      expect(
-        extractGaslessStatusValue({'status': 'confirmed'}),
-        'confirmed',
-      );
+      expect(extractGaslessStatusValue({'status': 'confirmed'}), 'confirmed');
       expect(
         extractGaslessStatusValue({
           'trade': {'status': 'pending'},
