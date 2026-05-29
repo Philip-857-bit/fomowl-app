@@ -38,6 +38,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
+import 'swap_screen_helpers.dart';
 import 'widgets/swap_limit_widgets.dart';
 import 'widgets/swap_tab_content.dart';
 import 'widgets/swap_token_selector_dialog.dart';
@@ -389,10 +390,10 @@ class _SwapScreenState extends State<SwapScreen> {
             !_tokenRequiresApproval(_toToken!))) {
       return 'Use ERC-20 Tokens';
     }
-    if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
+    if (parseDecimalAmount(_fromController.text) <= Decimal.zero) {
       return _isBuyMode ? 'Enter Max Spend' : 'Enter Sell Amount';
     }
-    if (_parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
+    if (parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
       return 'Set Target Price';
     }
     return 'Place $sideLabel Order';
@@ -418,12 +419,12 @@ class _SwapScreenState extends State<SwapScreen> {
             !_tokenRequiresApproval(_toToken!))) {
       return 'Limit orders currently support ERC-20 token pairs only.';
     }
-    if (_parseDecimalAmount(_fromController.text) <= Decimal.zero) {
+    if (parseDecimalAmount(_fromController.text) <= Decimal.zero) {
       return _isBuyMode
           ? 'Enter the maximum amount you want to spend.'
           : 'Enter how much you want to sell.';
     }
-    if (_parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
+    if (parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
       return 'Set the execution price that should trigger this order.';
     }
     if (_isSubmittingLimit) {
@@ -961,7 +962,7 @@ class _SwapScreenState extends State<SwapScreen> {
     setState(() {
       _selectedPercentage = percent;
       _fromController.text = amount > Decimal.zero
-          ? _formatDecimalInput(amount, displayDecimals)
+          ? formatDecimalInput(amount, displayDecimals)
           : '0';
     });
     _syncFromDisplayFromTokenAmount();
@@ -997,34 +998,6 @@ class _SwapScreenState extends State<SwapScreen> {
 
   double _parseAmount(TextEditingController controller) {
     return double.tryParse(controller.text.replaceAll(',', '')) ?? 0.0;
-  }
-
-  Decimal _parseDecimalAmount(String rawValue) {
-    final cleaned = rawValue.trim().replaceAll(',', '');
-    if (cleaned.isEmpty) return Decimal.zero;
-    return Decimal.tryParse(cleaned) ?? Decimal.zero;
-  }
-
-  String? _toWeiAmount(String amountText, int decimals) {
-    final cleaned = amountText.trim().replaceAll(',', '');
-    if (cleaned.isEmpty) return null;
-    try {
-      return AmountUtils.parseDecimalToBaseUnits(cleaned, decimals).toString();
-    } on FormatException {
-      return null;
-    }
-  }
-
-  String _formatDecimalInput(Decimal value, int fractionDigits) {
-    final raw = value.toString();
-    if (!raw.contains('.')) return raw;
-    final parts = raw.split('.');
-    var fraction = parts[1];
-    if (fraction.length > fractionDigits) {
-      fraction = fraction.substring(0, fractionDigits);
-    }
-    fraction = fraction.replaceFirst(RegExp(r'0+$'), '');
-    return fraction.isEmpty ? parts[0] : '${parts[0]}.$fraction';
   }
 
   double _usdValueFor(Token? token, double amount) {
@@ -1165,11 +1138,6 @@ class _SwapScreenState extends State<SwapScreen> {
     if (from == null) return false;
     final enabled = gaslessEnabled ?? _isGasless;
     return enabled && !_tokenRequiresApproval(from);
-  }
-
-  String _shortHash(String hash) {
-    if (hash.length <= 10) return hash;
-    return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
   }
 
   String? _transactionDetailsUrl(String hash) {
@@ -1324,10 +1292,6 @@ class _SwapScreenState extends State<SwapScreen> {
     return controller;
   }
 
-  bool _looksLikeTxHash(String value) {
-    return RegExp(r'^0x[a-fA-F0-9]{64}$').hasMatch(value);
-  }
-
   String _mapErrorMessage(String? raw) {
     final l = AppLocalizations.of(context);
     if (raw == null || raw.isEmpty) {
@@ -1337,13 +1301,13 @@ class _SwapScreenState extends State<SwapScreen> {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final nativeSymbol = blockchain.activeNetworkSymbol;
 
-    if (_isSolanaSwapBalanceError(lower)) {
+    if (isSolanaSwapBalanceError(lower)) {
       return 'You don\'t have enough SOL to complete this swap. Add more SOL to cover the swap amount plus network fees.';
     }
-    if (_isSolanaSwapAddressError(lower)) {
+    if (isSolanaSwapAddressError(lower)) {
       return 'Selected Solana wallet address is invalid. Switch to a Solana wallet and try again.';
     }
-    if (_isSwapPriceMovementError(lower)) {
+    if (isSwapPriceMovementError(lower)) {
       return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
     }
 
@@ -1457,117 +1421,6 @@ class _SwapScreenState extends State<SwapScreen> {
     );
   }
 
-  bool _isSolanaSwapBalanceError(String lower) {
-    final hasBalanceSignal =
-        lower.contains('insufficient funds') ||
-        lower.contains('not enough sol') ||
-        lower.contains('don\'t have enough sol') ||
-        lower.contains('dont have enough sol');
-    if (!hasBalanceSignal) return false;
-    return lower.contains('jupiter') ||
-        lower.contains('/order') ||
-        lower.contains('swap') ||
-        lower.contains('quote') ||
-        lower.contains('unsigned transaction') ||
-        lower.contains('transaction":""');
-  }
-
-  bool _isSolanaSwapAddressError(String lower) {
-    final hasAddressSignal =
-        lower.contains('invalid taker') ||
-        lower.contains('valid public key') ||
-        lower.contains('selected solana wallet address is invalid');
-    if (!hasAddressSignal) return false;
-    return lower.contains('solana') ||
-        lower.contains('jupiter') ||
-        lower.contains('swap') ||
-        lower.contains('taker') ||
-        lower.contains('`user`');
-  }
-
-  bool _isSwapPriceMovementError(String lower) {
-    if (!lower.contains('slippage') && !lower.contains('price movement')) {
-      return false;
-    }
-    return lower.contains('swap') ||
-        lower.contains('jupiter') ||
-        lower.contains('/order') ||
-        lower.contains('quote');
-  }
-
-  String? _extractGaslessStatusValue(Map<String, dynamic> data) {
-    final direct = data['status']?.toString();
-    if (direct != null && direct.isNotEmpty) return direct;
-    final trade = data['trade'];
-    if (trade is Map<String, dynamic>) {
-      final nested = trade['status']?.toString();
-      if (nested != null && nested.isNotEmpty) return nested;
-    }
-    final result = data['result'];
-    if (result is Map<String, dynamic>) {
-      final nested = result['status']?.toString();
-      if (nested != null && nested.isNotEmpty) return nested;
-    }
-    return null;
-  }
-
-  String? _extractGaslessTxHash(Map<String, dynamic> data) {
-    final direct = _extractExplicitGaslessTxHash(data);
-    if (direct != null) return direct;
-    final trade = data['trade'];
-    if (trade is Map<String, dynamic>) {
-      final nested = _extractExplicitGaslessTxHash(trade);
-      if (nested != null) return nested;
-      final listed = _extractTransactionListHash(trade['transactions']);
-      if (listed != null) return listed;
-    }
-    final result = data['result'];
-    if (result is Map<String, dynamic>) {
-      final nested = _extractExplicitGaslessTxHash(result);
-      if (nested != null) return nested;
-      final listed = _extractTransactionListHash(result['transactions']);
-      if (listed != null) return listed;
-    }
-    return null;
-  }
-
-  String? _extractExplicitGaslessTxHash(Map<String, dynamic> data) {
-    const candidateKeys = [
-      'transactionHash',
-      'txHash',
-      'settlementTxHash',
-      'settledTxHash',
-      'fillTxHash',
-    ];
-    for (final key in candidateKeys) {
-      final value = data[key]?.toString();
-      if (value != null && _looksLikeTxHash(value)) {
-        return value;
-      }
-    }
-    return null;
-  }
-
-  String? _extractTransactionListHash(dynamic transactions) {
-    if (transactions is! List) {
-      return null;
-    }
-    for (final entry in transactions) {
-      if (entry is! Map<String, dynamic>) {
-        continue;
-      }
-      final explicit = _extractExplicitGaslessTxHash(entry);
-      if (explicit != null) {
-        return explicit;
-      }
-      final listedHash = entry['hash']?.toString();
-      if (listedHash != null && _looksLikeTxHash(listedHash)) {
-        return listedHash;
-      }
-    }
-    return null;
-  }
-
   void _applyOptimisticSwapResult({
     required BlockchainService blockchain,
     required Token fromToken,
@@ -1652,12 +1505,12 @@ class _SwapScreenState extends State<SwapScreen> {
         continue;
       }
 
-      final status = _extractGaslessStatusValue(statusData)?.toLowerCase();
-      final txHash = _extractGaslessTxHash(statusData);
+      final status = extractGaslessStatusValue(statusData)?.toLowerCase();
+      final txHash = extractGaslessTxHash(statusData);
 
-      if (txHash != null && _looksLikeTxHash(txHash)) {
+      if (txHash != null && looksLikeTxHash(txHash)) {
         progressController.setSwapPending(
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
         final confirmed = await _waitForTxConfirmation(
@@ -1700,13 +1553,13 @@ class _SwapScreenState extends State<SwapScreen> {
             );
           }
           progressController.setSuccess(
-            reference: _shortHash(txHash),
+            reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
         } else {
           progressController.setError(
             l.transactionPendingConfirmation,
-            reference: _shortHash(txHash),
+            reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
         }
@@ -1723,7 +1576,7 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmountText: toAmountText,
         );
         if (_walletAddress != null) {
-          final notificationTxHash = _looksLikeTxHash(tradeHash)
+          final notificationTxHash = looksLikeTxHash(tradeHash)
               ? tradeHash
               : null;
           if (notificationTxHash != null) {
@@ -1741,7 +1594,7 @@ class _SwapScreenState extends State<SwapScreen> {
             );
           }
           _recordSwapHistory(
-            txHash: _looksLikeTxHash(tradeHash) ? tradeHash : null,
+            txHash: looksLikeTxHash(tradeHash) ? tradeHash : null,
             fromAmount: fromAmountText,
             fromTokenName: fromSymbol,
             fromTokenSymbol: fromSymbol,
@@ -1752,7 +1605,7 @@ class _SwapScreenState extends State<SwapScreen> {
             networkKey: blockchain.activeNetworkKey,
           );
         }
-        progressController.setSuccess(reference: _shortHash(tradeHash));
+        progressController.setSuccess(reference: shortHash(tradeHash));
         unawaited(
           _runPostConfirmSwapSideEffects(
             blockchain: blockchain,
@@ -1771,7 +1624,7 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         progressController.setError(
           l.gaslessOrderFailedRetry,
-          reference: _shortHash(tradeHash),
+          reference: shortHash(tradeHash),
         );
         return;
       }
@@ -1783,7 +1636,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     if (mounted) {
-      progressController.setGaslessPending(reference: _shortHash(tradeHash));
+      progressController.setGaslessPending(reference: shortHash(tradeHash));
     }
   }
 
@@ -1835,7 +1688,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (rewardReferralOnSwap &&
         _walletAddress != null &&
         txHash != null &&
-        _looksLikeTxHash(txHash)) {
+        looksLikeTxHash(txHash)) {
       try {
         await _referralService.rewardOnSwap(
           walletAddress: _walletAddress!,
@@ -1884,7 +1737,7 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
     final amountText = _fromController.text;
-    final amount = _parseDecimalAmount(amountText);
+    final amount = parseDecimalAmount(amountText);
     if (amount <= Decimal.zero) {
       setState(() {
         _resetQuoteState();
@@ -1931,10 +1784,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     try {
-      final amountWei = _toWeiAmount(
-        _fromController.text,
-        _fromToken!.decimals,
-      );
+      final amountWei = toWeiAmount(_fromController.text, _fromToken!.decimals);
       if (amountWei == null || amountWei == '0') {
         if (mounted && requestId == _quoteRequestId) {
           setState(() {
@@ -2041,7 +1891,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final toMint = _toToken!.contractAddress?.isNotEmpty == true
           ? _toToken!.contractAddress!
           : 'So11111111111111111111111111111111111111112';
-      final amountLamports = _toWeiAmount(
+      final amountLamports = toWeiAmount(
         _fromController.text,
         _fromToken!.decimals,
       );
@@ -2150,10 +2000,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final toToken = _toToken!.contractAddress?.isNotEmpty == true
           ? _toToken!.contractAddress!
           : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
-      final amountSun = _toWeiAmount(
-        _fromController.text,
-        _fromToken!.decimals,
-      );
+      final amountSun = toWeiAmount(_fromController.text, _fromToken!.decimals);
       final inAmount = _parseAmount(_fromController);
       final fromTokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
       final sellAmountUsd = inAmount > 0 && fromTokenPriceUsd > 0
@@ -2275,8 +2122,8 @@ class _SwapScreenState extends State<SwapScreen> {
     var nextToAmount = '';
     if (from == null || to == null) {
     } else {
-      final fromAmount = _parseDecimalAmount(_fromController.text);
-      final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+      final fromAmount = parseDecimalAmount(_fromController.text);
+      final limitPrice = parseDecimalAmount(_limitPriceController.text);
       if (fromAmount > Decimal.zero && limitPrice > Decimal.zero) {
         // Buy mode: user enters price of toToken in fromToken units.
         //   toAmount = fromAmount / limitPrice
@@ -2291,7 +2138,7 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmount = fromAmount * limitPrice;
         }
         final displayDecimals = to.decimals > 6 ? 6 : to.decimals;
-        nextToAmount = _formatDecimalInput(toAmount, displayDecimals);
+        nextToAmount = formatDecimalInput(toAmount, displayDecimals);
       }
     }
 
@@ -2384,7 +2231,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     if (blockchain.activeFamily == ChainFamily.solana) {
-      if (!_looksLikeSolanaPublicKey(walletAddress)) {
+      if (!looksLikeSolanaPublicKey(walletAddress)) {
         if (mounted) {
           setState(() {
             _solanaLimitOrders = const [];
@@ -2439,10 +2286,6 @@ class _SwapScreenState extends State<SwapScreen> {
       _limitOrders = orders;
       _isLoadingLimitOrders = false;
     });
-  }
-
-  bool _looksLikeSolanaPublicKey(String value) {
-    return RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(value.trim());
   }
 
   Future<void> _cancelLimitOrder(LimitOrderSummary order) async {
@@ -2660,13 +2503,13 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError('Limit orders currently support ERC-20 token pairs only.');
       return;
     }
-    final makerAmount = _parseDecimalAmount(_fromController.text);
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final makerAmount = parseDecimalAmount(_fromController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     if (makerAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
       _showError(l.enterValidAmount);
       return;
     }
-    final makerAmountWei = _toWeiAmount(_fromController.text, from.decimals);
+    final makerAmountWei = toWeiAmount(_fromController.text, from.decimals);
     if (makerAmountWei == null || makerAmountWei == '0') {
       _showError(l.enterValidAmount);
       return;
@@ -2733,14 +2576,14 @@ class _SwapScreenState extends State<SwapScreen> {
           flow: TransactionProgressFlow.generic,
         );
         progressController!.setApprovalPending(
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
         final confirmed = await _waitForTxConfirmation(txHash);
         if (!confirmed) {
           progressController!.setError(
             l.approvalPendingConfirmation,
-            reference: _shortHash(txHash),
+            reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
           return;
@@ -2832,8 +2675,8 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.tryAgain);
       return;
     }
-    final makerAmount = _parseDecimalAmount(_fromController.text);
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final makerAmount = parseDecimalAmount(_fromController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     if (makerAmount <= Decimal.zero || limitPrice <= Decimal.zero) {
       _showError(l.enterValidAmount);
       return;
@@ -2846,7 +2689,7 @@ class _SwapScreenState extends State<SwapScreen> {
         ? to.contractAddress!
         : 'So11111111111111111111111111111111111111112';
 
-    final inputAmountLamports = _toWeiAmount(
+    final inputAmountLamports = toWeiAmount(
       _fromController.text,
       from.decimals,
     );
@@ -2918,7 +2761,11 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
 
-      final signedTxBase64 = _assembleSolanaSignedTx(txBytes, signatureBase58);
+      final signedTxBase64 =
+          SolanaSwapExecutionService.assembleSignedTransaction(
+            txBytes,
+            signatureBase58,
+          );
       final txHash = await _solanaSwapService.executeSwap(
         signedTransactionBase64: signedTxBase64,
         requestId: depositResult.depositRequestId,
@@ -2952,7 +2799,7 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      progressController.setSuccess(reference: _shortHash(txHash));
+      progressController.setSuccess(reference: shortHash(txHash));
       unawaited(_refreshLimitOrders(showLoading: false));
     } on TimeoutException {
       const message = 'Order signing timed out. Please try again.';
@@ -2993,7 +2840,11 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
 
-      final signedTxBase64 = _assembleSolanaSignedTx(txBytes, signatureBase58);
+      final signedTxBase64 =
+          SolanaSwapExecutionService.assembleSignedTransaction(
+            txBytes,
+            signatureBase58,
+          );
       final txHash = await _solanaSwapService.executeSwap(
         signedTransactionBase64: signedTxBase64,
         requestId: txResult.requestId,
@@ -3020,25 +2871,6 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   /// Assemble a signed Solana transaction from unsigned bytes + base58 signature.
-  String _assembleSolanaSignedTx(Uint8List txBytes, String signatureBase58) {
-    // Decode base58 signature → 64 bytes
-    final sigBytes = SolanaSwapExecutionService.decodeBase58Public(
-      signatureBase58,
-    );
-    // compact-u16 header byte count
-    final sigCountLen = SolanaSwapExecutionService.compactU16ByteLenPublic(
-      txBytes,
-      0,
-    );
-    final msgOffset = sigCountLen + 64;
-    final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
-    final signedTx = Uint8List(sigCountLen + 64 + messageBytes.length);
-    signedTx.setRange(0, sigCountLen, txBytes, 0);
-    signedTx.setRange(sigCountLen, sigCountLen + 64, sigBytes);
-    signedTx.setRange(sigCountLen + 64, signedTx.length, messageBytes);
-    return base64Encode(signedTx);
-  }
-
   Future<SwapQuote?> _refreshExecutionQuote({
     required Token fromToken,
     required Token toToken,
@@ -3114,7 +2946,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.noActiveWalletFound);
       return;
     }
-    final fromAmount = _parseDecimalAmount(_fromController.text);
+    final fromAmount = parseDecimalAmount(_fromController.text);
     if (fromAmount <= Decimal.zero) {
       _showError(l.enterValidAmount);
       return;
@@ -3146,10 +2978,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.networkError);
       return;
     }
-    final fromAmountWei = _toWeiAmount(
-      _fromController.text,
-      fromToken.decimals,
-    );
+    final fromAmountWei = toWeiAmount(_fromController.text, fromToken.decimals);
     if (fromAmountWei == null || fromAmountWei == '0') {
       _showError(l.enterValidAmount);
       return;
@@ -3395,14 +3224,14 @@ class _SwapScreenState extends State<SwapScreen> {
       if (result.approvalSubmitted && result.transactionHash != null) {
         final txHash = result.transactionHash!;
         progressController.setApprovalPending(
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
         final confirmed = await _waitForTxConfirmation(txHash);
         if (!confirmed) {
           progressController.setError(
             l.approvalPendingConfirmation,
-            reference: _shortHash(txHash),
+            reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
           return false;
@@ -3495,7 +3324,7 @@ class _SwapScreenState extends State<SwapScreen> {
           networkKey: blockchain.activeNetworkKey,
         );
         progressController.setSuccess(
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
         unawaited(_refreshWalletState(blockchain: blockchain));
@@ -3534,7 +3363,7 @@ class _SwapScreenState extends State<SwapScreen> {
           networkKey: blockchain.activeNetworkKey,
         );
         progressController.setSuccess(
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
         unawaited(_refreshWalletState(blockchain: blockchain));
@@ -3564,7 +3393,7 @@ class _SwapScreenState extends State<SwapScreen> {
           if (result.tradeHash != null) {
             _clearSubmittedSwapState();
             progressController.setGaslessPending(
-              reference: _shortHash(result.tradeHash!),
+              reference: shortHash(result.tradeHash!),
             );
             await _trackGaslessOrder(
               result.tradeHash!,
@@ -3590,10 +3419,10 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      if (_isGasless && !_looksLikeTxHash(result.transactionHash!)) {
+      if (_isGasless && !looksLikeTxHash(result.transactionHash!)) {
         _clearSubmittedSwapState();
         progressController.setGaslessPending(
-          reference: _shortHash(result.transactionHash!),
+          reference: shortHash(result.transactionHash!),
         );
         await _trackGaslessOrder(
           result.tradeHash ?? result.transactionHash!,
@@ -3616,7 +3445,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final txHash = result.transactionHash!;
       _clearSubmittedSwapState();
       progressController.setSwapPending(
-        reference: _shortHash(txHash),
+        reference: shortHash(txHash),
         detailsUrl: _transactionDetailsUrl(txHash),
       );
       final confirmed = await _waitForTxConfirmation(
@@ -3657,13 +3486,13 @@ class _SwapScreenState extends State<SwapScreen> {
           networkKey: blockchain.activeNetworkKey,
         );
         progressController.setSuccess(
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
       } else {
         progressController.setError(
           l.transactionPendingConfirmation,
-          reference: _shortHash(txHash),
+          reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
       }
@@ -3691,7 +3520,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final receiveText = _toController.text.isNotEmpty
         ? '${_currentQuote?.minAmountOutFormatted ?? _toController.text} ${_toToken?.symbol ?? ''} min'
         : '--';
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     if (_lastFiatCurrencyCode != selectedCurrencyCode) {
       _lastFiatCurrencyCode = selectedCurrencyCode;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -3722,7 +3551,7 @@ class _SwapScreenState extends State<SwapScreen> {
         );
     final localHasBalance =
         _fromToken != null &&
-        _parseDecimalAmount(_fromController.text) <=
+        parseDecimalAmount(_fromController.text) <=
             (Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero);
     final hasBalance = localHasBalance;
     final swapEnabled =
@@ -4114,8 +3943,8 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   bool _limitEnabled() {
-    final fromAmount = _parseDecimalAmount(_fromController.text);
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final fromAmount = parseDecimalAmount(_fromController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final isSolana = blockchain.activeFamily == ChainFamily.solana;
     // On Solana, SPL tokens don't use ERC-20 approval — skip that check.
@@ -4137,7 +3966,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitExecutionPriceText() {
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     if (limitPrice <= Decimal.zero) {
       return _selectedFiatToTokenRateText(_limitTargetToken);
     }
@@ -4147,7 +3976,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitExecutionPriceUsdText() {
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     if (limitPrice <= Decimal.zero) {
       return ValueFormatter.formatCurrencyWithGrouping(Decimal.zero);
     }
@@ -4168,7 +3997,7 @@ class _SwapScreenState extends State<SwapScreen> {
   /// Calculates the percentage deviation of the user's limit price from the
   /// current market price of the target token. Returns e.g. "+1.2%" or "-5.0%".
   String? _limitPriceDeviationLabel() {
-    final limitPrice = _parseDecimalAmount(_limitPriceController.text);
+    final limitPrice = parseDecimalAmount(_limitPriceController.text);
     if (limitPrice <= Decimal.zero) return null;
     final limitPriceValue = double.tryParse(limitPrice.toString()) ?? 0.0;
     if (limitPriceValue <= 0) return null;

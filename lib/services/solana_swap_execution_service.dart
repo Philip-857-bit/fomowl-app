@@ -133,6 +133,26 @@ class SolanaSwapExecutionService {
   /// Public alias used by swap_screen.dart to decode base58 signatures.
   static Uint8List decodeBase58Public(String input) => _decodeBase58(input);
 
+  /// Splice a base58-encoded [signatureBase58] into the unsigned transaction
+  /// [txBytes] (Solana wire format: compact-u16 signature count, signature
+  /// slots, then the message) and return the signed transaction as base64.
+  static String assembleSignedTransaction(
+    Uint8List txBytes,
+    String signatureBase58,
+  ) {
+    // Decode base58 signature → 64 bytes.
+    final sigBytes = decodeBase58Public(signatureBase58);
+    // compact-u16 header byte count.
+    final sigCountLen = compactU16ByteLenPublic(txBytes, 0);
+    final msgOffset = sigCountLen + 64;
+    final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
+    final signedTx = Uint8List(sigCountLen + 64 + messageBytes.length);
+    signedTx.setRange(0, sigCountLen, txBytes, 0);
+    signedTx.setRange(sigCountLen, sigCountLen + 64, sigBytes);
+    signedTx.setRange(sigCountLen + 64, signedTx.length, messageBytes);
+    return base64Encode(signedTx);
+  }
+
   /// Read a compact-u16 value from [buf] starting at [offset].
   /// Solana compact-u16: each byte's low 7 bits contribute; bit 7 signals continuation.
   static int _readCompactU16(Uint8List buf, int offset) {
