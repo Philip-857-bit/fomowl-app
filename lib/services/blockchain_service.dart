@@ -21,6 +21,7 @@ import 'blockchain/token_portfolio_module.dart';
 import 'home_snapshot_service.dart';
 import 'blockchain/rpc_resilience.dart';
 import 'blockchain/evm_decoding.dart';
+import 'blockchain/network_address.dart';
 
 
 /// Blockchain Service — Shared ChangeNotifier Provider
@@ -1280,7 +1281,7 @@ class BlockchainService extends ChangeNotifier {
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
     final requestedChainId = _walletTokenChainIdForRequest(chainId);
-    if (!_walletAddressLooksValidForNetwork(
+    if (!walletAddressLooksValidForNetwork(
       walletAddress,
       effectiveNetworkKey,
     )) {
@@ -1371,23 +1372,6 @@ class BlockchainService extends ChangeNotifier {
       chainId: chainId,
       forceRefresh: true,
     );
-  }
-
-  bool _walletAddressLooksValidForNetwork(
-    String walletAddress,
-    String networkKey,
-  ) {
-    final address = walletAddress.trim();
-    if (address.isEmpty) return false;
-    return switch (NetworkKey.familyOf(networkKey)) {
-      ChainFamily.evm => RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address),
-      ChainFamily.solana => RegExp(
-        r'^[1-9A-HJ-NP-Za-km-z]{32,44}$',
-      ).hasMatch(address),
-      ChainFamily.tron => RegExp(
-        r'^T[1-9A-HJ-NP-Za-km-z]{33}$',
-      ).hasMatch(address),
-    };
   }
 
   void applyOptimisticSwap({
