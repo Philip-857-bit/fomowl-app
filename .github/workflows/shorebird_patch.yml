@@ -120,6 +120,22 @@ jobs:
             --output "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
             --workdir "$RUNNER_TEMP"
 
+      - name: Align build args with release manifest
+        run: |
+          set -euo pipefail
+          # A Shorebird patch must be built with the same Flutter flags as the
+          # release line it targets, otherwise the patch guard (and Shorebird)
+          # reject it. Derive --no-tree-shake-icons from the release manifest
+          # instead of hardcoding it, so patches work regardless of which flag
+          # the original store release was built with.
+          no_tree_shake=$(python -c "import json; m=json.load(open('$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json')); print(str(bool(m.get('flutter_build_settings', {}).get('no_tree_shake_icons', False))).lower())")
+          if [[ "$no_tree_shake" == "true" ]]; then
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=--no-tree-shake-icons" >> "$GITHUB_ENV"
+          else
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=" >> "$GITHUB_ENV"
+          fi
+          echo "Release line no_tree_shake_icons=$no_tree_shake; aligned SHOREBIRD_FLUTTER_BUILD_ARGS to match."
+
       - name: Render Shorebird config
         run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
 
@@ -310,6 +326,22 @@ jobs:
             --flutter-version "$FLUTTER_VERSION" \
             --output "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
             --workdir "$RUNNER_TEMP"
+
+      - name: Align build args with release manifest
+        run: |
+          set -euo pipefail
+          # A Shorebird patch must be built with the same Flutter flags as the
+          # release line it targets, otherwise the patch guard (and Shorebird)
+          # reject it. Derive --no-tree-shake-icons from the release manifest
+          # instead of hardcoding it, so patches work regardless of which flag
+          # the original store release was built with.
+          no_tree_shake=$(python -c "import json; m=json.load(open('$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json')); print(str(bool(m.get('flutter_build_settings', {}).get('no_tree_shake_icons', False))).lower())")
+          if [[ "$no_tree_shake" == "true" ]]; then
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=--no-tree-shake-icons" >> "$GITHUB_ENV"
+          else
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=" >> "$GITHUB_ENV"
+          fi
+          echo "Release line no_tree_shake_icons=$no_tree_shake; aligned SHOREBIRD_FLUTTER_BUILD_ARGS to match."
 
       - name: Render Shorebird config
         run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
