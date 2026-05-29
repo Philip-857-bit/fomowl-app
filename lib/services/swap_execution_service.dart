@@ -62,6 +62,7 @@ class SwapExecutionService {
           fromToken: fromToken,
           toToken: toToken,
           fromAmountWei: fromAmountWei,
+          expectedToAmount: expectedToAmount,
           slippageBps: slippageBps,
           blockchain: blockchain,
           walletAddress: recipientAddress,
@@ -243,6 +244,7 @@ class SwapExecutionService {
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
+    required double expectedToAmount,
     required int slippageBps,
     required BlockchainService blockchain,
     required String walletAddress,
@@ -283,6 +285,25 @@ class SwapExecutionService {
         quoteResponse.body,
         fallback: 'Gasless quote response was incomplete. Please try again.',
       );
+
+      // SECURITY: enforce the slippage floor before signing the gasless order, so
+      // the user can't be made to sign an order that yields far less than the
+      // output they approved. (See _executeStandard for the same invariant.)
+      final quotedOut = _parseBigInt(
+        (quoteData['minBuyAmount'] ?? quoteData['buyAmount'])?.toString(),
+      );
+      if (quotedOut != null && expectedToAmount > 0) {
+        final floor = _minAcceptableOutBaseUnits(
+          expectedToAmount: expectedToAmount,
+          decimals: toToken.decimals,
+          slippageBps: slippageBps,
+        );
+        if (quotedOut < floor) {
+          throw Exception(
+            'The current swap rate is worse than the quote you approved. Please refresh the quote and try again.',
+          );
+        }
+      }
 
       // 0x Gasless Payload Extraction
       final trade = _asMap(quoteData['trade']);
