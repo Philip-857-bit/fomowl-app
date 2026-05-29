@@ -840,6 +840,14 @@ class BlockchainService extends ChangeNotifier {
     return _rpcService!.testRpcUrl(rpcUrl);
   }
 
+  /// Returns the chain id an RPC endpoint reports via `eth_chainId`, or null if
+  /// the endpoint is unreachable / returns an invalid response. Used to verify
+  /// a custom network's RPC actually serves the chain id the user entered.
+  Future<int?> getRpcChainId(String rpcUrl) async {
+    if (_rpcService == null) return null;
+    return _rpcService!.getChainIdForRpcUrl(rpcUrl);
+  }
+
   // ─── GAS ESTIMATION ──────────────────────────────
 
   Future<Map<String, dynamic>> getGasPriceData() async {

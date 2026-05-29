@@ -70,13 +70,31 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     });
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final valid = await blockchain.testRpcUrl(url);
+    // Fetch the chain id the RPC actually serves so we can confirm it matches
+    // the chain id the user entered. An RPC that reports a different chain id
+    // would cause transactions to be signed/broadcast on the wrong chain.
+    final reportedChainId = await blockchain.getRpcChainId(url);
+    final enteredChainId = int.tryParse(_chainIdController.text.trim());
 
     if (!mounted) return;
+    final matches =
+        reportedChainId != null &&
+        (enteredChainId == null || reportedChainId == enteredChainId);
     setState(() {
       _isTesting = false;
-      _rpcValid = valid;
+      _rpcValid = matches;
     });
+
+    if (reportedChainId != null &&
+        enteredChainId != null &&
+        reportedChainId != enteredChainId) {
+      ToastUtils.showError(
+        'This RPC serves chain $reportedChainId, not $enteredChainId. '
+        'Fix the Chain ID or the RPC URL.',
+      );
+    } else if (reportedChainId == null) {
+      ToastUtils.showError('Could not reach this RPC. Check the URL.');
+    }
   }
 
   Future<void> _saveNetwork() async {
@@ -86,11 +104,29 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     setState(() => _isSaving = true);
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final enteredChainId = int.parse(_chainIdController.text.trim());
+    final rpcUrl = _rpcUrlController.text.trim();
+
+    // Verify the RPC serves the entered chain id before saving. Block on a
+    // CONFIRMED mismatch (reachable RPC reporting a different chain) — that is
+    // the dangerous case. If the RPC is simply unreachable (null), allow the
+    // save so a temporarily-down endpoint doesn't block setup.
+    final reportedChainId = await blockchain.getRpcChainId(rpcUrl);
+    if (!mounted) return;
+    if (reportedChainId != null && reportedChainId != enteredChainId) {
+      setState(() => _isSaving = false);
+      ToastUtils.showError(
+        'This RPC serves chain $reportedChainId, not $enteredChainId. '
+        'Fix the Chain ID or the RPC URL before adding the network.',
+      );
+      return;
+    }
+
     final chain = EvmChain(
       name: _nameController.text.trim(),
       symbol: _symbolController.text.trim().toUpperCase(),
-      chainId: int.parse(_chainIdController.text.trim()),
-      rpcUrl: _rpcUrlController.text.trim(),
+      chainId: enteredChainId,
+      rpcUrl: rpcUrl,
       coinGeckoId: null,
       explorerUrl: _explorerController.text.trim().isNotEmpty
           ? _explorerController.text.trim()
