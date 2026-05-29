@@ -192,12 +192,12 @@ class BrowserSessionController extends ChangeNotifier {
       return false;
     }
 
-    // Allow provider availability for secure browser sessions.
-    // Account exposure is still gated per-origin by explicit eth_requestAccounts approval.
-    if (_viewState == DiscoverViewState.browser) {
-      return true;
-    }
-
+    // Restrict signing-provider injection to allowlisted dApp origins (known
+    // catalog entries) plus the origin the user explicitly launched/connected
+    // (the active dApp). Arbitrary websites visited via general browsing must
+    // NOT receive the full provider, even while in browser view state.
+    // Account exposure and signing remain additionally gated per-origin by
+    // explicit connection approval and the sensitive-access guard.
     final origin = normalizeOriginFromUri(uri);
     if (findDappByOrigin(origin) != null) {
       return true;

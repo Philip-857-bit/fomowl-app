@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import '../config/app_environment.dart';
+import 'pinned_http_client_stub.dart'
+    if (dart.library.io) 'pinned_http_client_io.dart';
 
 /// Centralized HTTP Client Service
 /// Manages a persistent http.Client for connection pooling and provides retry logic.
@@ -19,7 +22,9 @@ class HttpClientService {
   http.Client get client => _client;
 
   HttpClientService._internal() {
-    _client = http.Client();
+    // Enforce SHA-256 certificate pinning on the underlying client when
+    // BACKEND_CERT_SHA256_PINS is configured (no-op on web and when unset).
+    _client = createPinnedHttpClient(AppEnvironment.backendCertSha256Pins);
   }
 
   @visibleForTesting
