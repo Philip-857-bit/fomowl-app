@@ -61,7 +61,16 @@ class BiometricService {
         return false;
       }
 
-      return await _localAuth.authenticate(localizedReason: localizedReason);
+      return await _localAuth.authenticate(
+        localizedReason: localizedReason,
+        // Require a true biometric factor and keep the prompt sticky so a
+        // device-PIN fallback can't bypass the app's biometric lockout.
+        // (local_auth 3.x exposes these as named parameters; biometricOnly
+        // maps to options.biometricOnly and persistAcrossBackgrounding to
+        // options.stickyAuth.)
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
+      );
     } on PlatformException {
       return false;
     }

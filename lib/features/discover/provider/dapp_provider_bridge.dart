@@ -10,9 +10,16 @@ import '../../../models/chain.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../services/rpc_service.dart';
 import '../../../services/wallet_service.dart';
+import '../../../utils/sensitive_access_guard.dart';
 import '../browser/browser_session_controller.dart';
 import '../permissions/dapp_permission_service.dart';
 import 'discover_provider_approval_request.dart';
+
+/// Signature of the biometric/passcode guard used before signing or
+/// broadcasting. Mirrors [SensitiveAccessGuard.verify] so tests can inject a
+/// fake without driving real platform auth dialogs.
+typedef SensitiveAuthVerifier =
+    Future<bool> Function(BuildContext context, {String? reason});
 
 class DappProviderBridge {
   DappProviderBridge({
@@ -20,13 +27,16 @@ class DappProviderBridge {
     required this.permissionService,
     WalletService? walletService,
     DiscoverProviderApprovalHandler? approvalHandler,
+    SensitiveAuthVerifier? authVerifier,
   }) : _walletService = walletService ?? WalletService(),
-       _approvalHandler = approvalHandler;
+       _approvalHandler = approvalHandler,
+       _authVerifier = authVerifier ?? SensitiveAccessGuard.verify;
 
   final BrowserSessionController sessionController;
   final DappPermissionService permissionService;
   final WalletService _walletService;
   final DiscoverProviderApprovalHandler? _approvalHandler;
+  final SensitiveAuthVerifier _authVerifier;
 
   static const String handlerName = 'owlletProvider';
   static const String detectorHandlerName = 'owlletDappDetector';
@@ -582,13 +592,13 @@ class DappProviderBridge {
         case 'wallet_watchAsset':
           return _result(await _walletWatchAsset(context, params));
         case 'personal_sign':
-          return _result(await _personalSign(context, params));
+          return _result(await _personalSign(context, origin, params));
         case 'eth_signTypedData':
         case 'eth_signTypedData_v3':
         case 'eth_signTypedData_v4':
-          return _result(await _signTypedData(context, params));
+          return _result(await _signTypedData(context, origin, params));
         case 'eth_sendTransaction':
-          return _result(await _sendTransaction(context, params));
+          return _result(await _sendTransaction(context, origin, params));
 
         // ── Solana ──────────────────────────────────────────────────────────
         case 'solana_connect':
@@ -1061,6 +1071,7 @@ class DappProviderBridge {
 
   Future<String> _personalSign(
     BuildContext context,
+    String origin,
     List<dynamic> params,
   ) async {
     final walletAddress = await _walletService.getCurrentWalletAddress();
@@ -1069,6 +1080,13 @@ class DappProviderBridge {
     }
 
     final resolved = _resolveSignPayload(params, walletAddress);
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _ensureConnectionApproved(context, origin, walletAddress);
     if (!context.mounted) {
       throw _ProviderBridgeException(
         -32603,
@@ -1088,6 +1106,16 @@ class DappProviderBridge {
         'The signature request was rejected.',
       );
     }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to sign this message.',
+    );
 
     final signature = await _walletService.signMessageForAddress(
       walletAddress,
@@ -1098,6 +1126,7 @@ class DappProviderBridge {
 
   Future<String> _signTypedData(
     BuildContext context,
+    String origin,
     List<dynamic> params,
   ) async {
     final walletAddress = await _walletService.getCurrentWalletAddress();
@@ -1128,6 +1157,13 @@ class DappProviderBridge {
         'The request could not be completed.',
       );
     }
+    await _ensureConnectionApproved(context, origin, walletAddress);
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
     final approved = await _confirmAction(
       context,
       title: 'Sign typed data',
@@ -1141,6 +1177,16 @@ class DappProviderBridge {
         'The typed-data signature request was rejected.',
       );
     }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to sign this typed-data request.',
+    );
 
     final signature = await _walletService.signTypedDataForAddress(
       walletAddress,
@@ -1151,6 +1197,7 @@ class DappProviderBridge {
 
   Future<String> _sendTransaction(
     BuildContext context,
+    String origin,
     List<dynamic> params,
   ) async {
     final walletAddress = await _walletService.getCurrentWalletAddress();
@@ -1173,6 +1220,13 @@ class DappProviderBridge {
       );
     }
 
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _ensureConnectionApproved(context, origin, walletAddress);
     if (!context.mounted) {
       throw _ProviderBridgeException(
         -32603,
@@ -1208,6 +1262,16 @@ class DappProviderBridge {
         'The transaction request was rejected.',
       );
     }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to broadcast this transaction.',
+    );
 
     late final String txHash;
     try {
@@ -1271,8 +1335,9 @@ class DappProviderBridge {
       }
       await permissionService.grantConnectionApproval(origin, address);
     }
+    final addressLiteral = jsonEncode(address);
     await evaluateJavaScript(
-      "if (window.solana) { window.solana.publicKey = { toBase58: () => '$address', toString: () => '$address' }; window.solana._connected = true; }",
+      'if (window.solana) { const pk = $addressLiteral; window.solana.publicKey = { toBase58: () => pk, toString: () => pk }; window.solana._connected = true; }',
     );
     return {'publicKey': address};
   }
@@ -1320,6 +1385,16 @@ class DappProviderBridge {
       confirmLabel: 'Sign',
     );
     if (!approved) throw _ProviderBridgeException(4001, 'Signature rejected.');
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to sign this Solana message.',
+    );
     final messageBytes = base64Decode(messageB64);
     final signatureB58 = await _walletService.signSolanaMessageRaw(
       address,
@@ -1365,6 +1440,16 @@ class DappProviderBridge {
     if (!approved) {
       throw _ProviderBridgeException(4001, 'Transaction rejected.');
     }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to sign this Solana transaction.',
+    );
     final signedB64 = await _walletService.signSolanaTransactionRaw(
       address,
       base64Decode(txB64),
@@ -1408,6 +1493,16 @@ class DappProviderBridge {
     if (!approved) {
       throw _ProviderBridgeException(4001, 'Transaction rejected.');
     }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to send this Solana transaction.',
+    );
     final txHash = await _walletService.signAndBroadcastSolanaTransactionRaw(
       address,
       base64Decode(txB64),
@@ -1451,8 +1546,9 @@ class DappProviderBridge {
       }
       await permissionService.grantConnectionApproval(origin, address);
     }
+    final addressLiteral = jsonEncode(address);
     await evaluateJavaScript(
-      "if (window.tronWeb) { window.tronWeb.defaultAddress.base58 = '$address'; window.tronWeb.ready = true; } if (window.tronLink) { window.tronLink.ready = true; }",
+      'if (window.tronWeb) { window.tronWeb.defaultAddress.base58 = $addressLiteral; window.tronWeb.ready = true; } if (window.tronLink) { window.tronLink.ready = true; }',
     );
     return [address];
   }
@@ -1488,6 +1584,16 @@ class DappProviderBridge {
       confirmLabel: 'Sign',
     );
     if (!approved) throw _ProviderBridgeException(4001, 'Signature rejected.');
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to sign this Tron message.',
+    );
     final signature = await _walletService.signTronMessageRaw(
       address,
       messageHex,
@@ -1531,6 +1637,16 @@ class DappProviderBridge {
     if (!approved) {
       throw _ProviderBridgeException(4001, 'Transaction rejected.');
     }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    await _requireSensitiveAuth(
+      context,
+      reason: 'Authenticate to sign this Tron transaction.',
+    );
     final signedTx = await _walletService.signTronTransactionRaw(
       address,
       Map<String, dynamic>.from(txParam),
@@ -1547,6 +1663,64 @@ class DappProviderBridge {
         'This DApp is not approved to use the requested chain.',
       );
     }
+  }
+
+  /// Enforces a biometric/passcode check before signing or broadcasting,
+  /// mirroring the seed-reveal flow. Throws 4001 when the user fails or cancels.
+  Future<void> _requireSensitiveAuth(
+    BuildContext context, {
+    required String reason,
+  }) async {
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final authenticated = await _authVerifier(context, reason: reason);
+    if (!authenticated) {
+      throw _ProviderBridgeException(
+        4001,
+        'Authentication is required to continue.',
+      );
+    }
+  }
+
+  /// Requires prior per-origin connection approval before exposing signing.
+  /// If the origin is not yet connected, prompts the user to connect (and
+  /// records the grant on approval), matching the eth_requestAccounts flow.
+  Future<void> _ensureConnectionApproved(
+    BuildContext context,
+    String origin,
+    String walletAddress,
+  ) async {
+    final hasApproval = await permissionService.hasConnectionApproval(
+      origin,
+      walletAddress,
+    );
+    if (hasApproval) {
+      return;
+    }
+    if (!context.mounted) {
+      throw _ProviderBridgeException(
+        -32603,
+        'The request could not be completed.',
+      );
+    }
+    final approved = await _confirmAction(
+      context,
+      title: 'Connect wallet',
+      message:
+          '$origin wants access to ${_shortAddress(walletAddress)}. Connect before signing.',
+      confirmLabel: 'Connect',
+    );
+    if (!approved) {
+      throw _ProviderBridgeException(
+        4001,
+        'The connection request was rejected.',
+      );
+    }
+    await permissionService.grantConnectionApproval(origin, walletAddress);
   }
 
   Future<bool> _confirmAction(

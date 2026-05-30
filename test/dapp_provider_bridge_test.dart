@@ -354,6 +354,7 @@ void main() {
               BuildContext context,
               DiscoverProviderApprovalRequest request,
             ) async => true,
+        authVerifier: (context, {reason}) async => true,
       );
 
       final response = await bridge.handleRequest(
@@ -454,6 +455,7 @@ void main() {
               BuildContext context,
               DiscoverProviderApprovalRequest request,
             ) async => true,
+        authVerifier: (context, {reason}) async => true,
       );
 
       final response = await bridge.handleRequest(

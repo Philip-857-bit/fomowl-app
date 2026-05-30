@@ -62,6 +62,7 @@ class SwapExecutionService {
           fromToken: fromToken,
           toToken: toToken,
           fromAmountWei: fromAmountWei,
+          expectedToAmount: expectedToAmount,
           slippageBps: slippageBps,
           blockchain: blockchain,
           walletAddress: recipientAddress,
@@ -71,6 +72,7 @@ class SwapExecutionService {
           fromToken: fromToken,
           toToken: toToken,
           fromAmountWei: fromAmountWei,
+          expectedToAmount: expectedToAmount,
           slippageBps: slippageBps,
           blockchain: blockchain,
           walletAddress: recipientAddress,
@@ -92,6 +94,7 @@ class SwapExecutionService {
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
+    required double expectedToAmount,
     required int slippageBps,
     required BlockchainService blockchain,
     required String walletAddress,
@@ -168,6 +171,51 @@ class SwapExecutionService {
         );
       }
 
+      // SECURITY: do not blindly sign/broadcast backend-supplied calldata. We
+      // cannot fully decode arbitrary router calldata client-side, but we can
+      // enforce two strong invariants that bound what the transaction can do:
+      //
+      //  1. Native value invariant — for a native (gas-token) sale the tx must
+      //     send exactly the amount being sold; for an ERC-20 sale the router
+      //     pulls tokens via allowance and the tx must send zero native value.
+      //     This stops a tampered/compromised response from draining native
+      //     funds the user never intended to spend.
+      //  2. Minimum output — the freshly quoted output must still clear the
+      //     slippage floor of the amount the user approved, so the trade can't
+      //     be silently executed at a far worse rate than was displayed.
+      final sellAmountWei = _parseBigInt(fromAmountWei) ?? BigInt.zero;
+      if (_isNativeToken(fromToken)) {
+        if (valueWei != sellAmountWei) {
+          throw Exception(
+            'Swap transaction value does not match the amount you are selling. Aborting for your safety; please refresh the quote.',
+          );
+        }
+      } else if (valueWei != BigInt.zero) {
+        throw Exception(
+          'Swap transaction unexpectedly sends native funds for a token sale. Aborting for your safety; please refresh the quote.',
+        );
+      }
+
+      final quotedOut = _parseBigInt(
+        (txData['minBuyAmount'] ??
+                txData['buyAmount'] ??
+                data['minBuyAmount'] ??
+                data['buyAmount'])
+            ?.toString(),
+      );
+      if (quotedOut != null && expectedToAmount > 0) {
+        final floor = _minAcceptableOutBaseUnits(
+          expectedToAmount: expectedToAmount,
+          decimals: toToken.decimals,
+          slippageBps: slippageBps,
+        );
+        if (quotedOut < floor) {
+          throw Exception(
+            'The current swap rate is worse than the quote you approved. Please refresh the quote and try again.',
+          );
+        }
+      }
+
       final tx = Transaction(
         to: toAddress,
         data: dataBytes,
@@ -196,6 +244,7 @@ class SwapExecutionService {
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
+    required double expectedToAmount,
     required int slippageBps,
     required BlockchainService blockchain,
     required String walletAddress,
@@ -236,6 +285,25 @@ class SwapExecutionService {
         quoteResponse.body,
         fallback: 'Gasless quote response was incomplete. Please try again.',
       );
+
+      // SECURITY: enforce the slippage floor before signing the gasless order, so
+      // the user can't be made to sign an order that yields far less than the
+      // output they approved. (See _executeStandard for the same invariant.)
+      final quotedOut = _parseBigInt(
+        (quoteData['minBuyAmount'] ?? quoteData['buyAmount'])?.toString(),
+      );
+      if (quotedOut != null && expectedToAmount > 0) {
+        final floor = _minAcceptableOutBaseUnits(
+          expectedToAmount: expectedToAmount,
+          decimals: toToken.decimals,
+          slippageBps: slippageBps,
+        );
+        if (quotedOut < floor) {
+          throw Exception(
+            'The current swap rate is worse than the quote you approved. Please refresh the quote and try again.',
+          );
+        }
+      }
 
       // 0x Gasless Payload Extraction
       final trade = _asMap(quoteData['trade']);
@@ -435,6 +503,52 @@ class SwapExecutionService {
       'v': v,
       'signatureType': _eip712SignatureType,
     };
+  }
+
+  /// Sentinel address aggregators use for a chain's native gas token.
+  static const String _nativeTokenSentinel =
+      '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+  bool _isNativeToken(Token token) {
+    final address = token.contractAddress;
+    if (address == null || address.isEmpty) {
+      return true;
+    }
+    return address.toLowerCase() == _nativeTokenSentinel;
+  }
+
+  /// Minimum destination amount (in base units) the swap must yield, derived
+  /// from the output the user approved (`expectedToAmount`, in display units),
+  /// the accepted slippage, and a small safety margin to absorb float/quote
+  /// rounding so legitimate trades are not rejected.
+  static BigInt _minAcceptableOutBaseUnits({
+    required double expectedToAmount,
+    required int decimals,
+    required int slippageBps,
+  }) {
+    final expectedBase = _displayAmountToBaseUnits(expectedToAmount, decimals);
+    final bps = slippageBps.clamp(0, 10000);
+    var floor = expectedBase * BigInt.from(10000 - bps) ~/ BigInt.from(10000);
+    // Extra 0.5% tolerance for double/quote rounding drift.
+    floor = floor * BigInt.from(995) ~/ BigInt.from(1000);
+    return floor;
+  }
+
+  /// Converts a display amount (e.g. 123.456789) to integer base units for the
+  /// given decimals using a string path to avoid double precision loss on large
+  /// token amounts.
+  static BigInt _displayAmountToBaseUnits(double amount, int decimals) {
+    if (!amount.isFinite || amount <= 0) {
+      return BigInt.zero;
+    }
+    final fixed = amount.toStringAsFixed(decimals);
+    final parts = fixed.split('.');
+    final whole = parts.first;
+    final frac = parts.length > 1 ? parts[1] : '';
+    final fracPadded = frac.padRight(decimals, '0');
+    final fracTrimmed =
+        decimals == 0 ? '' : fracPadded.substring(0, decimals);
+    return BigInt.tryParse('$whole$fracTrimmed') ?? BigInt.zero;
   }
 
   /// Parse a numeric string that may be decimal ("1000000") or hex ("0x...").

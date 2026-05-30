@@ -155,6 +155,15 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   );
                   unawaited(_initializeWebView(controller, currentUri));
                 },
+                onPermissionRequest: (controller, request) async {
+                  // Deny device-capability requests (camera, microphone,
+                  // geolocation, etc.) by default so untrusted sites can't
+                  // auto-grant sensitive permissions, especially on Android.
+                  return PermissionResponse(
+                    resources: request.resources,
+                    action: PermissionResponseAction.DENY,
+                  );
+                },
                 shouldOverrideUrlLoading: (controller, action) async {
                   final next = action.request.url?.uriValue;
                   if (next == null) {
