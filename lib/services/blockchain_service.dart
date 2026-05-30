@@ -49,6 +49,8 @@ class BlockchainService extends ChangeNotifier {
   static List<EvmChain> get builtInChains => BlockchainCatalog.builtInChains;
 
   // Storage keys
+  // Base key for custom chains. Per-wallet entries use '$_keyCustomChains:<addr>';
+  // the bare key is the legacy device-global entry, migrated on first load.
   static const String _keyCustomChains = 'custom_evm_chains';
   static const String _keyActiveChainId = 'active_chain_id';
   static const String _keyActiveNetworkKey = 'active_network_key';
@@ -200,6 +202,10 @@ class BlockchainService extends ChangeNotifier {
     }
     _activeWalletAddress = trimmedAddress;
     _activeWalletSupportedFamilies = normalizedFamilies;
+    // Custom networks are stored per wallet; load this wallet's set on switch.
+    if (addressChanged) {
+      unawaited(_reloadCustomChainsForActiveWallet());
+    }
     final activeNetworkChanged = _ensureActiveNetworkSupportedByWallet();
     if (activeNetworkChanged) {
       _walletTokens = [];
@@ -665,16 +671,45 @@ class BlockchainService extends ChangeNotifier {
 
   // ─── CHAIN MANAGEMENT ───────────────────────────
 
+  /// SharedPreferences key for the active wallet's custom chains. Custom
+  /// networks are isolated per wallet so one wallet's networks don't leak into
+  /// another on a shared device. When no wallet is active yet, the legacy
+  /// device-global key is used.
+  String _customChainsStorageKey() {
+    final addr = _activeWalletAddress.trim().toLowerCase();
+    return addr.isEmpty ? _keyCustomChains : '$_keyCustomChains:$addr';
+  }
+
   Future<void> _loadCustomChains() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonStr = prefs.getString(_keyCustomChains);
+      final key = _customChainsStorageKey();
+      var jsonStr = prefs.getString(key);
+
+      // One-time migration: the custom-chain list used to be device-global.
+      // The first wallet that loads adopts any legacy list, then the global
+      // entry is removed so other wallets correctly start empty.
+      if (jsonStr == null && key != _keyCustomChains) {
+        final legacy = prefs.getString(_keyCustomChains);
+        if (legacy != null &&
+            legacy.trim().isNotEmpty &&
+            legacy.trim() != '[]') {
+          jsonStr = legacy;
+          await prefs.setString(key, legacy);
+          await prefs.remove(_keyCustomChains);
+        }
+      }
+
       if (jsonStr != null) {
         final list = jsonDecode(jsonStr) as List;
         _customChains = list
             .map((e) => EvmChain.fromJson(e as Map<String, dynamic>))
             .map(_normalizeCustomChain)
             .toList();
+      } else {
+        // No entry for this wallet — ensure a previous wallet's chains don't
+        // linger after a switch.
+        _customChains = [];
       }
     } catch (e) {
       debugPrint('Error loading custom chains: $e');
@@ -685,10 +720,25 @@ class BlockchainService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonStr = jsonEncode(_customChains.map((c) => c.toJson()).toList());
-      await prefs.setString(_keyCustomChains, jsonStr);
+      await prefs.setString(_customChainsStorageKey(), jsonStr);
     } catch (e) {
       debugPrint('Error saving custom chains: $e');
     }
+  }
+
+  /// Reload custom chains for the now-active wallet (called on wallet switch)
+  /// and fall back to a built-in network if the active chain belonged to the
+  /// previous wallet's custom set.
+  Future<void> _reloadCustomChainsForActiveWallet() async {
+    await _loadCustomChains();
+    final activeStillValid = allChains.any(
+      (c) => c.chainId == _activeChain.chainId,
+    );
+    if (!activeStillValid) {
+      _activeChain = builtInChains[0];
+      await _saveActiveChain();
+    }
+    notifyListeners();
   }
 
   Future<void> _loadActiveChain() async {
@@ -812,6 +862,29 @@ class BlockchainService extends ChangeNotifier {
     return true;
   }
 
+  /// Update an existing custom chain identified by [originalChainId].
+  /// Returns false if the new chain id collides with a different existing
+  /// chain (built-in or custom). Keeps the edited network active if it was.
+  Future<bool> updateCustomChain(int originalChainId, EvmChain updated) async {
+    final index = _customChains.indexWhere((c) => c.chainId == originalChainId);
+    if (index < 0) return false;
+    // A changed chain id must not collide with any OTHER chain.
+    if (updated.chainId != originalChainId &&
+        allChains.any((c) => c.chainId == updated.chainId)) {
+      return false;
+    }
+    final normalized = _normalizeCustomChain(updated);
+    _customChains[index] = normalized;
+    if (_activeChain.chainId == originalChainId) {
+      _activeChain = normalized;
+      await _saveActiveChain();
+    }
+    await _saveCustomChains();
+    unawaited(_syncNetworkSettingsToBackend());
+    notifyListeners();
+    return true;
+  }
+
   Future<void> removeCustomChain(int chainId) async {
     _customChains.removeWhere((c) => c.chainId == chainId);
     if (_activeChain.chainId == chainId) {
@@ -838,6 +911,14 @@ class BlockchainService extends ChangeNotifier {
   Future<bool> testRpcUrl(String rpcUrl) async {
     if (_rpcService == null) return false;
     return _rpcService!.testRpcUrl(rpcUrl);
+  }
+
+  /// Returns the chain id an RPC endpoint reports via `eth_chainId`, or null if
+  /// the endpoint is unreachable / returns an invalid response. Used to verify
+  /// a custom network's RPC actually serves the chain id the user entered.
+  Future<int?> getRpcChainId(String rpcUrl) async {
+    if (_rpcService == null) return null;
+    return _rpcService!.getChainIdForRpcUrl(rpcUrl);
   }
 
   // ─── GAS ESTIMATION ──────────────────────────────

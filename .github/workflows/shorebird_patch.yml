@@ -133,6 +133,7 @@ jobs:
             echo "SHOREBIRD_FLUTTER_BUILD_ARGS=--no-tree-shake-icons" >> "$GITHUB_ENV"
           else
             echo "SHOREBIRD_FLUTTER_BUILD_ARGS=" >> "$GITHUB_ENV"
+            echo "::warning::Release ${{ inputs.release_version }} was built with icon tree-shaking (no_tree_shake_icons=false), so it bundles a SUBSETTED MaterialIcons font. A patch that changes which Material icons the app uses will fail with UnpatchableChangeException because the tree-shaken font asset differs from the release. If this patch fails on 'asset changes' (MaterialIcons-Regular.otf), cut a NEW store release (the release workflow builds with --no-tree-shake-icons and bundles the full, stable font) and patch against that version instead."
           fi
           echo "Release line no_tree_shake_icons=$no_tree_shake; aligned SHOREBIRD_FLUTTER_BUILD_ARGS to match."
 
@@ -340,6 +341,7 @@ jobs:
             echo "SHOREBIRD_FLUTTER_BUILD_ARGS=--no-tree-shake-icons" >> "$GITHUB_ENV"
           else
             echo "SHOREBIRD_FLUTTER_BUILD_ARGS=" >> "$GITHUB_ENV"
+            echo "::warning::Release ${{ inputs.release_version }} was built with icon tree-shaking (no_tree_shake_icons=false), so it bundles a SUBSETTED MaterialIcons font. A patch that changes which Material icons the app uses will fail with UnpatchableChangeException because the tree-shaken font asset differs from the release. If this patch fails on 'asset changes' (MaterialIcons-Regular.otf), cut a NEW store release (the release workflow builds with --no-tree-shake-icons and bundles the full, stable font) and patch against that version instead."
           fi
           echo "Release line no_tree_shake_icons=$no_tree_shake; aligned SHOREBIRD_FLUTTER_BUILD_ARGS to match."
 
