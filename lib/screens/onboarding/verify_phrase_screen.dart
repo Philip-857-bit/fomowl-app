@@ -43,10 +43,15 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Get the original phrase passed from previous screen
+    // Get the original phrase passed from previous screen. Copy it so this
+    // screen owns an independent snapshot: the upstream screens wipe their own
+    // (shared-by-reference) list in dispose() as a security measure, which —
+    // without this copy — would blank out our phrase when the user navigates
+    // back and forward, making correct words fail verification.
     if (_originalPhrase == null) {
       _originalPhrase =
-          ModalRoute.of(context)?.settings.arguments as List<String>?;
+          (ModalRoute.of(context)?.settings.arguments as List<String>?)
+              ?.toList();
       _initializeVerificationChallenge();
     }
   }
