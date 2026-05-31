@@ -117,10 +117,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
       title: 'Withdraw to Bank',
       child: WithdrawToBankScreen(),
     ),
-    '/deposit-funds': (_) => const ComingSoonOverlay(
-      title: 'Deposit Funds',
-      child: DepositFundsScreen(),
-    ),
+    '/deposit-funds': (_) => const DepositFundsScreen(),
     '/third-party-deposit': (_) => const ThirdPartyDepositScreen(),
     '/electricity-suppliers': (_) => const ElectricitySuppliersScreen(),
     '/kyc-success': (_) => const KycSuccessScreen(),
