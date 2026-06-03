@@ -89,19 +89,27 @@ class AppNotificationService {
       return;
     }
 
+    final androidDetails = AndroidNotificationDetails(
+      _defaultChannelId,
+      _defaultChannelName,
+      channelDescription: _defaultChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      // Expandable ("big text") layout so the full message is shown when the
+      // notification is pulled down, instead of a single truncated line.
+      styleInformation: BigTextStyleInformation(
+        body ?? '',
+        contentTitle: title,
+      ),
+    );
+
     await _localNotifications.show(
       _notificationIdFor(message),
       title,
       body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _defaultChannelId,
-          _defaultChannelName,
-          channelDescription: _defaultChannelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
+      NotificationDetails(
+        android: androidDetails,
+        iOS: const DarwinNotificationDetails(),
       ),
       payload: '/notifications',
     );
