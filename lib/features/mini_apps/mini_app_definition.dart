@@ -7,6 +7,7 @@ class MiniAppDefinition {
     required this.description,
     required this.launchUrl,
     this.allowedOrigins = const <String>[],
+    this.requiresWalletSession = false,
   });
 
   final String id;
@@ -14,6 +15,13 @@ class MiniAppDefinition {
   final String description;
   final String? launchUrl;
   final List<String> allowedOrigins;
+
+  /// When true, the host proactively mints a wallet-auth (`ws_`) session token
+  /// (signing silently with the wallet key) before injecting the bridge, so the
+  /// mini app can call wallet-scoped backend endpoints (e.g. the affiliate
+  /// dashboard) immediately. When false, only a cached token is surfaced — used
+  /// by mini apps that handle their own auth (e.g. cash-in).
+  final bool requiresWalletSession;
 
   Uri? get configuredLaunchUri {
     final raw = launchUrl?.trim();

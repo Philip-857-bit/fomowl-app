@@ -22,6 +22,7 @@ class OwlletMiniApps {
         'referral code, and track 20% recurring commissions.',
     launchUrl: AppEnvironment.affiliateMiniAppUrl,
     allowedOrigins: AppEnvironment.affiliateMiniAppAllowedOrigins,
+    requiresWalletSession: true,
   );
 
   /// All registered mini apps. Order matters only for deterministic lookups.

@@ -115,15 +115,40 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final profile = await _authService.getCachedProfile();
     final isLoggedIn = await _authService.isLoggedIn();
 
+    // Resolve the EVM wallet address from the wallet itself first — the most
+    // reliable source. The cached backend profile does not always carry
+    // `primary_wallet_address`, which previously left mini-apps with no wallet
+    // context at all. Fall back to the profile field when the wallet lookup is
+    // unavailable.
+    String? rawWalletAddress;
+    try {
+      rawWalletAddress = await _walletService.getCurrentWalletAddress();
+    } catch (_) {
+      rawWalletAddress = null;
+    }
+    if (rawWalletAddress == null || rawWalletAddress.isEmpty) {
+      rawWalletAddress = profile?['primary_wallet_address']?.toString();
+    }
+    final String? walletAddress =
+        (rawWalletAddress != null && rawWalletAddress.isNotEmpty)
+        ? rawWalletAddress
+        : null;
+    final hasWallet = walletAddress != null;
+
     // Surface the wallet-auth (ws_) session token to the mini-app so it can call
     // wallet-scoped backend endpoints (e.g. the affiliate dashboard) as the user.
-    // Uses the cached token only — never triggers a signing prompt on open.
+    // For mini apps that require it we mint a session (signing silently with the
+    // wallet key); otherwise we only surface a cached token to keep open fast.
     String? walletSessionToken;
-    final walletAddress = profile?['primary_wallet_address']?.toString();
-    if (walletAddress != null && walletAddress.isNotEmpty) {
+    if (walletAddress != null) {
       try {
-        walletSessionToken = await _walletBackendAuthService
-            .getValidSessionToken(walletAddress);
+        walletSessionToken = widget.definition.requiresWalletSession
+            ? await _walletBackendAuthService
+                  .ensureWalletSession(walletAddress)
+                  .timeout(const Duration(seconds: 12))
+            : await _walletBackendAuthService.getValidSessionToken(
+                walletAddress,
+              );
       } catch (_) {
         walletSessionToken = null;
       }
@@ -132,19 +157,19 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     if (!mounted) {
       return;
     }
-    final profilePayload = profile == null
+    final profilePayload = (profile == null && !hasWallet)
         ? null
         : <String, dynamic>{
-            'id': profile['id'],
-            'email': profile['email'],
-            'username': profile['username'],
-            'country': profile['country'],
-            'primaryWalletAddress': profile['primary_wallet_address'],
-            'primary_wallet_address': profile['primary_wallet_address'],
-            'emailVerified': profile['email_verified'],
-            'twoFactorEnabled': profile['two_factor_enabled'],
-            'email_verified': profile['email_verified'],
-            'two_factor_enabled': profile['two_factor_enabled'],
+            'id': profile?['id'],
+            'email': profile?['email'],
+            'username': profile?['username'],
+            'country': profile?['country'],
+            'primaryWalletAddress': walletAddress,
+            'primary_wallet_address': walletAddress,
+            'emailVerified': profile?['email_verified'],
+            'twoFactorEnabled': profile?['two_factor_enabled'],
+            'email_verified': profile?['email_verified'],
+            'two_factor_enabled': profile?['two_factor_enabled'],
           };
     setState(() {
       _bridgeContext = <String, dynamic>{
