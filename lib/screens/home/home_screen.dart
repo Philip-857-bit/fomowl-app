@@ -1471,9 +1471,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (updatedAt == null) {
       return null;
     }
+    // `_portfolioUpdatedAt` is stored in UTC; convert to the device's local
+    // zone so the displayed time matches the user's clock (TimeOfDay reads the
+    // DateTime's hour/minute fields verbatim, so the conversion must happen
+    // before extracting it).
     final time = MaterialLocalizations.of(
       context,
-    ).formatTimeOfDay(TimeOfDay.fromDateTime(updatedAt));
+    ).formatTimeOfDay(TimeOfDay.fromDateTime(updatedAt.toLocal()));
     return l.balanceUpdatedAt(time);
   }
 
