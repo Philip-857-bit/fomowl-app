@@ -6,28 +6,85 @@ class AppEnvironment {
 
   static const String _productionBackendBaseUrl = 'https://core.owlletapp.com';
 
+  // ---------------------------------------------------------------------------
+  // Compile-time dart-define values.
+  //
+  // `String.fromEnvironment` only reads a `--dart-define` value when it is
+  // invoked as `const` with a *literal* key. Calling it with a variable key (or
+  // in a non-const context) returns the empty default at runtime on AOT/release
+  // builds. So every supported define MUST be declared here as a `const` literal
+  // and read through these fields — never via `String.fromEnvironment(someVar)`.
+  // ---------------------------------------------------------------------------
+  static const String _backendBaseUrlEnv = String.fromEnvironment(
+    'BACKEND_BASE_URL',
+  );
+  static const String _coinGeckoApiBaseUrlEnv = String.fromEnvironment(
+    'COINGECKO_API_BASE_URL',
+  );
+  static const String _connectivityCheckUrlEnv = String.fromEnvironment(
+    'CONNECTIVITY_CHECK_URL',
+  );
+  static const String _pushNotificationsEnabledEnv = String.fromEnvironment(
+    'PUSH_NOTIFICATIONS_ENABLED',
+  );
+  static const String _firebaseApiKeyEnv = String.fromEnvironment(
+    'FIREBASE_API_KEY',
+  );
+  static const String _firebaseAndroidAppIdEnv = String.fromEnvironment(
+    'FIREBASE_ANDROID_APP_ID',
+  );
+  static const String _firebaseIosAppIdEnv = String.fromEnvironment(
+    'FIREBASE_IOS_APP_ID',
+  );
+  static const String _firebaseMessagingSenderIdEnv = String.fromEnvironment(
+    'FIREBASE_MESSAGING_SENDER_ID',
+  );
+  static const String _firebaseProjectIdEnv = String.fromEnvironment(
+    'FIREBASE_PROJECT_ID',
+  );
+  static const String _firebaseStorageBucketEnv = String.fromEnvironment(
+    'FIREBASE_STORAGE_BUCKET',
+  );
+  static const String _firebaseIosBundleIdEnv = String.fromEnvironment(
+    'FIREBASE_IOS_BUNDLE_ID',
+  );
+  static const String _cashInMiniAppUrlEnv = String.fromEnvironment(
+    'CASH_IN_MINI_APP_URL',
+  );
+  static const String _cashInMiniAppAllowedOriginsEnv = String.fromEnvironment(
+    'CASH_IN_MINI_APP_ALLOWED_ORIGINS',
+  );
+  static const String _affiliateMiniAppUrlEnv = String.fromEnvironment(
+    'AFFILIATE_MINI_APP_URL',
+  );
+  static const String _affiliateMiniAppAllowedOriginsEnv =
+      String.fromEnvironment('AFFILIATE_MINI_APP_ALLOWED_ORIGINS');
+  static const String _backendCertSha256PinsEnv = String.fromEnvironment(
+    'BACKEND_CERT_SHA256_PINS',
+  );
+
   static final String backendBaseUrl = _resolveBackendBaseUrl();
   static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(
-    key: 'COINGECKO_API_BASE_URL',
+    rawValue: _coinGeckoApiBaseUrlEnv,
     fallback: 'https://api.coingecko.com/api/v3',
   );
   static final String connectivityCheckUrl = _resolveConfiguredUrl(
-    key: 'CONNECTIVITY_CHECK_URL',
+    rawValue: _connectivityCheckUrlEnv,
     fallback: 'https://www.google.com',
   );
   static final bool pushNotificationsEnabled =
       _resolvePushNotificationsEnabled();
   static final FirebaseOptions? firebaseOptions =
       _resolveFirebaseOptionsForCurrentPlatform();
-  static final String? cashInMiniAppUrl = _optionalEnv('CASH_IN_MINI_APP_URL');
+  static final String? cashInMiniAppUrl = _optionalEnv(_cashInMiniAppUrlEnv);
   static final List<String> cashInMiniAppAllowedOrigins = _csvEnv(
-    'CASH_IN_MINI_APP_ALLOWED_ORIGINS',
+    _cashInMiniAppAllowedOriginsEnv,
   );
   static final String? affiliateMiniAppUrl = _optionalEnv(
-    'AFFILIATE_MINI_APP_URL',
+    _affiliateMiniAppUrlEnv,
   );
   static final List<String> affiliateMiniAppAllowedOrigins = _csvEnv(
-    'AFFILIATE_MINI_APP_ALLOWED_ORIGINS',
+    _affiliateMiniAppAllowedOriginsEnv,
   );
 
   /// Optional certificate pinning for the backend host. Each entry is the
@@ -36,7 +93,7 @@ class AppEnvironment {
   /// `--dart-define=BACKEND_CERT_SHA256_PINS=<fp1>,<fp2>` (include a backup pin
   /// for cert rotation).
   static final List<String> backendCertSha256Pins = _csvEnv(
-    'BACKEND_CERT_SHA256_PINS',
+    _backendCertSha256PinsEnv,
   );
 
   static Future<void> initializeFirebaseApp() async {
@@ -122,7 +179,7 @@ class AppEnvironment {
 
   static String _resolveBackendBaseUrl() {
     final configured = _resolveConfiguredUrl(
-      key: 'BACKEND_BASE_URL',
+      rawValue: _backendBaseUrlEnv,
       fallback: kReleaseMode
           ? _productionBackendBaseUrl
           : _defaultBackendBaseUrl(),
@@ -149,11 +206,10 @@ class AppEnvironment {
   }
 
   static String _resolveConfiguredUrl({
-    required String key,
+    required String rawValue,
     required String fallback,
   }) {
-    final configured = String.fromEnvironment(key);
-    final normalized = configured.trim();
+    final normalized = rawValue.trim();
     if (normalized.isEmpty) {
       return _normalizeUrl(fallback);
     }
@@ -165,9 +221,7 @@ class AppEnvironment {
   }
 
   static bool _resolvePushNotificationsEnabled() {
-    final configured = const String.fromEnvironment(
-      'PUSH_NOTIFICATIONS_ENABLED',
-    ).trim();
+    final configured = _pushNotificationsEnabledEnv.trim();
     if (configured.isNotEmpty) {
       return configured.toLowerCase() == 'true';
     }
@@ -182,23 +236,19 @@ class AppEnvironment {
       return null;
     }
 
-    final platformPrefix = switch (defaultTargetPlatform) {
-      TargetPlatform.android => 'ANDROID',
-      TargetPlatform.iOS => 'IOS',
-      _ => '',
+    final appId = switch (defaultTargetPlatform) {
+      TargetPlatform.android => _optionalEnv(_firebaseAndroidAppIdEnv),
+      TargetPlatform.iOS => _optionalEnv(_firebaseIosAppIdEnv),
+      _ => null,
     };
-    if (platformPrefix.isEmpty) {
+    if (appId == null) {
       return null;
     }
 
-    final apiKey = _optionalEnv('FIREBASE_API_KEY');
-    final appId = _optionalEnv('FIREBASE_${platformPrefix}_APP_ID');
-    final senderId = _optionalEnv('FIREBASE_MESSAGING_SENDER_ID');
-    final projectId = _optionalEnv('FIREBASE_PROJECT_ID');
-    if (apiKey == null ||
-        appId == null ||
-        senderId == null ||
-        projectId == null) {
+    final apiKey = _optionalEnv(_firebaseApiKeyEnv);
+    final senderId = _optionalEnv(_firebaseMessagingSenderIdEnv);
+    final projectId = _optionalEnv(_firebaseProjectIdEnv);
+    if (apiKey == null || senderId == null || projectId == null) {
       return null;
     }
 
@@ -207,20 +257,23 @@ class AppEnvironment {
       appId: appId,
       messagingSenderId: senderId,
       projectId: projectId,
-      storageBucket: _optionalEnv('FIREBASE_STORAGE_BUCKET'),
+      storageBucket: _optionalEnv(_firebaseStorageBucketEnv),
       iosBundleId: defaultTargetPlatform == TargetPlatform.iOS
-          ? _optionalEnv('FIREBASE_IOS_BUNDLE_ID')
+          ? _optionalEnv(_firebaseIosBundleIdEnv)
           : null,
     );
   }
 
-  static String? _optionalEnv(String key) {
-    final value = String.fromEnvironment(key).trim();
+  /// Trims a compile-time define value (already read via a `const`
+  /// `String.fromEnvironment` literal) and returns null when empty.
+  static String? _optionalEnv(String rawValue) {
+    final value = rawValue.trim();
     return value.isEmpty ? null : value;
   }
 
-  static List<String> _csvEnv(String key) {
-    final value = String.fromEnvironment(key).trim();
+  /// Splits a comma-separated compile-time define value into a trimmed list.
+  static List<String> _csvEnv(String rawValue) {
+    final value = rawValue.trim();
     if (value.isEmpty) {
       return const <String>[];
     }
