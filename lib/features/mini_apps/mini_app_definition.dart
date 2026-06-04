@@ -47,10 +47,21 @@ class MiniAppDefinition {
   Uri? buildLaunchUri({
     String launchSource = 'mobile',
     Map<String, String> extraQueryParameters = const <String, String>{},
+    Uri? overrideUri,
   }) {
-    final uri = configuredLaunchUri;
-    if (uri == null) {
+    final base = configuredLaunchUri;
+    if (base == null) {
       return null;
+    }
+    // Honor a deep-link override (e.g. opened from the in-app browser address
+    // bar) only when it stays within this mini app's trusted origins. This lets
+    // a URL like `<origin>/dashboard?wallet=...` load directly while keeping the
+    // host's origin guarantee intact. Anything off-origin falls back to base.
+    var uri = base;
+    if (overrideUri != null &&
+        isSupportedDiscoverWebUri(overrideUri) &&
+        trustedOrigins.contains(normalizeOriginFromUri(overrideUri))) {
+      uri = overrideUri;
     }
     final merged = <String, String>{...uri.queryParameters};
     merged['owllet_host'] = 'mobile';

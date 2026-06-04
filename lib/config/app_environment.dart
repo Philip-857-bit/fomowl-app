@@ -23,6 +23,12 @@ class AppEnvironment {
   static final List<String> cashInMiniAppAllowedOrigins = _csvEnv(
     'CASH_IN_MINI_APP_ALLOWED_ORIGINS',
   );
+  static final String? affiliateMiniAppUrl = _optionalEnv(
+    'AFFILIATE_MINI_APP_URL',
+  );
+  static final List<String> affiliateMiniAppAllowedOrigins = _csvEnv(
+    'AFFILIATE_MINI_APP_ALLOWED_ORIGINS',
+  );
 
   /// Optional certificate pinning for the backend host. Each entry is the
   /// lowercase hex SHA-256 of the DER-encoded server certificate. When empty

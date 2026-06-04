@@ -78,7 +78,7 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
                 ),
                 const SizedBox(height: 50),
                 Text(
-                  'Congratulation',
+                  'Congratulations',
                   style: GoogleFonts.inter(
                     fontSize: 36,
                     fontWeight: FontWeight.w800,

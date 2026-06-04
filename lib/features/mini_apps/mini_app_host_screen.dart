@@ -12,6 +12,7 @@ import '../../models/chain.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
+import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
@@ -26,10 +27,15 @@ class MiniAppHostArguments {
   const MiniAppHostArguments({
     required this.miniAppId,
     this.launchSource = 'mobile',
+    this.initialUrl,
   });
 
   final String miniAppId;
   final String launchSource;
+
+  /// Optional deep-link URL to open instead of the mini app's base launch URL.
+  /// Only honored when it resolves to one of the mini app's trusted origins.
+  final String? initialUrl;
 }
 
 class MiniAppHostScreen extends StatefulWidget {
@@ -37,10 +43,12 @@ class MiniAppHostScreen extends StatefulWidget {
     super.key,
     required this.definition,
     this.launchSource = 'mobile',
+    this.initialUrl,
   });
 
   final MiniAppDefinition definition;
   final String launchSource;
+  final String? initialUrl;
 
   static Widget fromRoute(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments;
@@ -59,6 +67,7 @@ class MiniAppHostScreen extends StatefulWidget {
     return MiniAppHostScreen(
       definition: definition,
       launchSource: parsed.launchSource,
+      initialUrl: parsed.initialUrl,
     );
   }
 
@@ -71,6 +80,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   static const String _scriptGroup = 'owllet-mini-app';
 
   final AuthService _authService = AuthService();
+  final WalletBackendAuthService _walletBackendAuthService =
+      WalletBackendAuthService();
   final WalletService _walletService = WalletService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   InAppWebViewController? _controller;
@@ -79,8 +90,18 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   bool _loadingContext = true;
   Map<String, dynamic> _bridgeContext = const <String, dynamic>{};
 
-  Uri? get _launchUri =>
-      widget.definition.buildLaunchUri(launchSource: widget.launchSource);
+  Uri? get _overrideUri {
+    final raw = widget.initialUrl?.trim();
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    return Uri.tryParse(raw);
+  }
+
+  Uri? get _launchUri => widget.definition.buildLaunchUri(
+    launchSource: widget.launchSource,
+    overrideUri: _overrideUri,
+  );
 
   List<String> get _trustedOrigins => widget.definition.trustedOrigins;
 
@@ -93,6 +114,21 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   Future<void> _prepareBridgeContext() async {
     final profile = await _authService.getCachedProfile();
     final isLoggedIn = await _authService.isLoggedIn();
+
+    // Surface the wallet-auth (ws_) session token to the mini-app so it can call
+    // wallet-scoped backend endpoints (e.g. the affiliate dashboard) as the user.
+    // Uses the cached token only — never triggers a signing prompt on open.
+    String? walletSessionToken;
+    final walletAddress = profile?['primary_wallet_address']?.toString();
+    if (walletAddress != null && walletAddress.isNotEmpty) {
+      try {
+        walletSessionToken =
+            await _walletBackendAuthService.getValidSessionToken(walletAddress);
+      } catch (_) {
+        walletSessionToken = null;
+      }
+    }
+
     if (!mounted) {
       return;
     }
@@ -136,6 +172,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'authenticated': isLoggedIn,
           'hasSession': isLoggedIn,
           'profile': profilePayload,
+          'token': walletSessionToken,
         },
         'profile': profilePayload,
         'capabilities': const <String, dynamic>{

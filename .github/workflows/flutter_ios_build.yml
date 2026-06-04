@@ -21,6 +21,10 @@ jobs:
       FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
       FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
       FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || 'com.fomowl.fomowlWallet' }}
+      CASH_IN_MINI_APP_URL: ${{ vars.CASH_IN_MINI_APP_URL || secrets.CASH_IN_MINI_APP_URL || '' }}
+      CASH_IN_MINI_APP_ALLOWED_ORIGINS: ${{ vars.CASH_IN_MINI_APP_ALLOWED_ORIGINS || secrets.CASH_IN_MINI_APP_ALLOWED_ORIGINS || '' }}
+      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
       GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
       IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
       IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -127,6 +131,10 @@ jobs:
             echo "--dart-define=FIREBASE_PROJECT_ID=$(sanitize "$FIREBASE_PROJECT_ID")"
             echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
             echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
+            echo "--dart-define=CASH_IN_MINI_APP_URL=$(sanitize "$CASH_IN_MINI_APP_URL")"
+            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
+            echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 

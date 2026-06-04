@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
+import '../../features/mini_apps/mini_app_registry.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
 import 'browser/browser_session_controller.dart';
+import 'discover_url_utils.dart';
 import 'browser/widgets/discover_blocked_view.dart';
 import 'browser/widgets/discover_browser_view.dart';
 import 'catalog/discover_catalog_service.dart';
@@ -93,12 +95,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         if (nextUrl == null || nextUrl.trim().isEmpty) {
           return;
         }
-        final l = AppLocalizations.of(context);
-        _sessionController.openManualInput(
-          nextUrl,
-          invalidInputReason: l.discoverManualInputInvalid,
-          webSearchTitle: l.discoverWebSearchTitle,
-        );
+        _handleBrowserInput(nextUrl);
       });
     }
     return AnimatedBuilder(
@@ -185,11 +182,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           TextField(
             controller: _searchController,
             onChanged: _sessionController.updateQuery,
-            onSubmitted: (value) => _sessionController.openManualInput(
-              value,
-              invalidInputReason: l.discoverManualInputInvalid,
-              webSearchTitle: l.discoverWebSearchTitle,
-            ),
+            onSubmitted: _handleBrowserInput,
             style: GoogleFonts.outfit(color: Colors.white),
             decoration: InputDecoration(
               hintText: l.discoverSearchHint,
@@ -324,6 +317,36 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         });
       }
     }
+  }
+
+  /// Routes browser input. When the entered/opened URL belongs to a registered
+  /// Owllet mini app (e.g. the affiliate or cash-in app), it is opened in the
+  /// mini-app host — which injects the OwlletMiniApp bridge + wallet session —
+  /// instead of the plain provider-only browser. Everything else falls through
+  /// to normal browsing/search. This is what lets a mini-app link load its full
+  /// context just by being entered in the address bar, with no Discover tile.
+  void _handleBrowserInput(String value) {
+    final l = AppLocalizations.of(context);
+    final target = resolveDiscoverInput(value);
+    if (target != null && target.type == DiscoverInputType.url) {
+      final miniApp = OwlletMiniApps.findByUri(target.uri);
+      if (miniApp != null) {
+        Navigator.of(context).pushNamed(
+          '/mini-app-host',
+          arguments: MiniAppHostArguments(
+            miniAppId: miniApp.id,
+            launchSource: 'browser',
+            initialUrl: target.uri.toString(),
+          ),
+        );
+        return;
+      }
+    }
+    _sessionController.openManualInput(
+      value,
+      invalidInputReason: l.discoverManualInputInvalid,
+      webSearchTitle: l.discoverWebSearchTitle,
+    );
   }
 
   Future<void> _openExternal(String rawUrl) async {
