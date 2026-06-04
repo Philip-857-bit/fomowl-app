@@ -25,7 +25,10 @@ class OwlletMiniApps {
   );
 
   /// All registered mini apps. Order matters only for deterministic lookups.
-  static List<MiniAppDefinition> get all => <MiniAppDefinition>[cashIn, affiliate];
+  static List<MiniAppDefinition> get all => <MiniAppDefinition>[
+    cashIn,
+    affiliate,
+  ];
 
   static MiniAppDefinition? byId(String id) {
     switch (id.trim().toLowerCase()) {

@@ -546,8 +546,7 @@ class SwapExecutionService {
     final whole = parts.first;
     final frac = parts.length > 1 ? parts[1] : '';
     final fracPadded = frac.padRight(decimals, '0');
-    final fracTrimmed =
-        decimals == 0 ? '' : fracPadded.substring(0, decimals);
+    final fracTrimmed = decimals == 0 ? '' : fracPadded.substring(0, decimals);
     return BigInt.tryParse('$whole$fracTrimmed') ?? BigInt.zero;
   }
 

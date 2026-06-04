@@ -122,8 +122,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final walletAddress = profile?['primary_wallet_address']?.toString();
     if (walletAddress != null && walletAddress.isNotEmpty) {
       try {
-        walletSessionToken =
-            await _walletBackendAuthService.getValidSessionToken(walletAddress);
+        walletSessionToken = await _walletBackendAuthService
+            .getValidSessionToken(walletAddress);
       } catch (_) {
         walletSessionToken = null;
       }
