@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../screens/home/home_screen.dart';
@@ -51,19 +52,36 @@ class _AppShellScreenState extends State<AppShellScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<AppShellController>();
-    return Scaffold(
-      body: IndexedStack(
-        index: controller.currentIndex,
-        children: const [
-          HomeScreen(showBottomNavigation: false),
-          SwapScreen(showBottomNavigation: false),
-          DiscoverScreen(),
-          DecentralizedProfileScreen(showBottomNavigation: false),
-        ],
-      ),
-      bottomNavigationBar: AppShellBottomNavigation(
-        currentTab: controller.currentTab,
-        onTap: controller.selectTab,
+    // The shell is the root route. Without this guard, the hardware back button
+    // pops the shell off the Navigator, leaving an empty stack (black screen).
+    // Standard Android behavior: back from a sub-tab returns to the first tab;
+    // back from the first tab backgrounds the app instead of popping the route.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        if (controller.currentTab != AppShellTab.wallet) {
+          controller.selectTab(AppShellTab.wallet);
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: IndexedStack(
+          index: controller.currentIndex,
+          children: const [
+            HomeScreen(showBottomNavigation: false),
+            SwapScreen(showBottomNavigation: false),
+            DiscoverScreen(),
+            DecentralizedProfileScreen(showBottomNavigation: false),
+          ],
+        ),
+        bottomNavigationBar: AppShellBottomNavigation(
+          currentTab: controller.currentTab,
+          onTap: controller.selectTab,
+        ),
       ),
     );
   }

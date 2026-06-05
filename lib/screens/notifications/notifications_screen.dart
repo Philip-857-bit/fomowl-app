@@ -154,10 +154,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ? DateFormat('MM.dd.yyyy HH:mm').format(dt)
               : dtStr;
 
+          final rawImage =
+              item['imageUrl']?.toString() ?? item['image_url']?.toString();
           return _Notification(
             id: item['id']?.toString() ?? '',
             title: item['title']?.toString() ?? l.notifications,
             message: item['message']?.toString() ?? '',
+            imageUrl: (rawImage != null && rawImage.trim().isNotEmpty)
+                ? rawImage.trim()
+                : null,
             isRead: item['is_read'] == 1 || item['is_read'] == true,
             date: formatted,
           );
@@ -400,6 +405,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                           height: 1.4,
                                         ),
                                       ),
+                                      if (n.imageUrl != null) ...[
+                                        const SizedBox(height: 10),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.network(
+                                            n.imageUrl!,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) =>
+                                                const SizedBox.shrink(),
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 );
@@ -418,6 +438,7 @@ class _Notification {
   final String id;
   final String title;
   final String message;
+  final String? imageUrl;
   final bool isRead;
   final String date;
 
@@ -425,6 +446,7 @@ class _Notification {
     required this.id,
     required this.title,
     required this.message,
+    this.imageUrl,
     required this.isRead,
     required this.date,
   });
@@ -433,6 +455,7 @@ class _Notification {
     String? id,
     String? title,
     String? message,
+    String? imageUrl,
     bool? isRead,
     String? date,
   }) {
@@ -440,6 +463,7 @@ class _Notification {
       id: id ?? this.id,
       title: title ?? this.title,
       message: message ?? this.message,
+      imageUrl: imageUrl ?? this.imageUrl,
       isRead: isRead ?? this.isRead,
       date: date ?? this.date,
     );
