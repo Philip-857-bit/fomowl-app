@@ -25,7 +25,7 @@ class SwapTokenChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 168),
+        constraints: const BoxConstraints(maxWidth: 124),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           decoration: BoxDecoration(
