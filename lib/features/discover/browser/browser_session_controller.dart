@@ -129,6 +129,30 @@ class BrowserSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Optional hook that lets the embedded web view consume a back press by
+  /// navigating back in its own page history. Returns true if it handled it.
+  Future<bool> Function()? _webViewBackHandler;
+
+  void setWebViewBackHandler(Future<bool> Function()? handler) {
+    _webViewBackHandler = handler;
+  }
+
+  /// Handle a system back press while a page/dapp is open in Discover: first
+  /// let the web view go back in its history, otherwise close the page back to
+  /// the catalog. Returns true if the back press was consumed (so the shell
+  /// should not leave the Discover tab).
+  Future<bool> handleBackRequest() async {
+    final handler = _webViewBackHandler;
+    if (handler != null && await handler()) {
+      return true;
+    }
+    if (_currentUri != null || _viewState != DiscoverViewState.landing) {
+      returnToLanding();
+      return true;
+    }
+    return false;
+  }
+
   void openDapp(
     DiscoverDappEntry dapp, {
     String invalidLaunchUrlReason = 'The DApp launch URL is invalid.',

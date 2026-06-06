@@ -245,7 +245,15 @@ class _ResponsiveHeader extends StatelessWidget {
               if (trailingControls.isNotEmpty) ...[
                 if (headerLabel != null || leadingControl != null)
                   const SizedBox(height: 8),
-                trailing,
+                // Spread the chips edge-to-edge across the full width so they
+                // don't cluster on the right with empty space on the left.
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: trailingControls,
+                ),
               ],
             ],
           );
