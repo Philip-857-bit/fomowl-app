@@ -47,14 +47,30 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     DappPermissionService.permissionRevision.addListener(
       _onPermissionRevisionChanged,
     );
+    widget.sessionController.setWebViewBackHandler(_handleWebViewBack);
   }
 
   @override
   void dispose() {
+    widget.sessionController.setWebViewBackHandler(null);
     DappPermissionService.permissionRevision.removeListener(
       _onPermissionRevisionChanged,
     );
     super.dispose();
+  }
+
+  /// Navigate back in the web view's page history if possible. Returns true if
+  /// a back navigation happened (so the system back press is consumed).
+  Future<bool> _handleWebViewBack() async {
+    final controller = _controller;
+    if (controller == null) {
+      return false;
+    }
+    if (await controller.canGoBack()) {
+      await controller.goBack();
+      return true;
+    }
+    return false;
   }
 
   void _onPermissionRevisionChanged() {

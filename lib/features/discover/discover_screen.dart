@@ -32,6 +32,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   late final BrowserSessionController _sessionController;
   late final DappPermissionService _permissionService;
   late final DappProviderBridge _providerBridge;
+  AppShellController? _shellController;
   final TextEditingController _searchController = TextEditingController();
   List<DiscoverTrendingToken> _trendingTokens = const <DiscoverTrendingToken>[];
   bool _loadingTrendingTokens = false;
@@ -58,7 +59,19 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Let the shell route the hardware back button into the in-app browser
+    // (page history / close page) before leaving the Discover tab.
+    _shellController ??= context.read<AppShellController>();
+    _shellController!.setDiscoverBackHandler(
+      _sessionController.handleBackRequest,
+    );
+  }
+
+  @override
   void dispose() {
+    _shellController?.setDiscoverBackHandler(null);
     _sessionController.removeListener(_syncSearchField);
     _sessionController.dispose();
     _searchController.dispose();

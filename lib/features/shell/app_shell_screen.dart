@@ -58,8 +58,14 @@ class _AppShellScreenState extends State<AppShellScreen> {
     // back from the first tab backgrounds the app instead of popping the route.
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) {
+          return;
+        }
+        // On the Discover tab, let the in-app browser go back (page history /
+        // close page) before leaving the tab.
+        if (controller.currentTab == AppShellTab.discover &&
+            await controller.handleDiscoverBack()) {
           return;
         }
         if (controller.currentTab != AppShellTab.wallet) {

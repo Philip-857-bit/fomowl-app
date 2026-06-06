@@ -43,4 +43,21 @@ class AppShellController extends ChangeNotifier {
     }
     selectTab(AppShellTab.values[index]);
   }
+
+  /// Back-press handler registered by the Discover tab so the shell can let the
+  /// in-app browser go back (page history / close page) before leaving the tab.
+  Future<bool> Function()? _discoverBackHandler;
+
+  void setDiscoverBackHandler(Future<bool> Function()? handler) {
+    _discoverBackHandler = handler;
+  }
+
+  /// Returns true if the Discover tab consumed the back press.
+  Future<bool> handleDiscoverBack() async {
+    final handler = _discoverBackHandler;
+    if (handler == null) {
+      return false;
+    }
+    return handler();
+  }
 }
