@@ -58,8 +58,13 @@ class _CreateWalletScreenState extends State<CreateWalletScreen>
   }
 
   void _continue() {
-    // Navigate to confirmation screen
-    Navigator.pushNamed(context, '/confirm-phrase', arguments: _mnemonicWords);
+    // Pass a copy: this screen wipes its own list in dispose(), so handing off
+    // the same reference would blank the phrase for the downstream screens.
+    Navigator.pushNamed(
+      context,
+      '/confirm-phrase',
+      arguments: List<String>.from(_mnemonicWords),
+    );
   }
 
   @override

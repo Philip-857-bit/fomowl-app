@@ -34,9 +34,12 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Get the mnemonic words passed from previous screen
+    // Get the mnemonic words passed from previous screen. Copy them so this
+    // screen owns an independent snapshot — the previous screen wipes its own
+    // (shared-by-reference) list in dispose(), which would otherwise blank out
+    // the phrase we forward to the verify screen.
     _mnemonicWords ??=
-        ModalRoute.of(context)?.settings.arguments as List<String>?;
+        (ModalRoute.of(context)?.settings.arguments as List<String>?)?.toList();
   }
 
   @override
@@ -60,8 +63,13 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen>
 
   void _continue() {
     if (_allChecked) {
-      // Navigate to verify phrase screen
-      Navigator.pushNamed(context, '/verify-phrase', arguments: _mnemonicWords);
+      // Pass a copy: this screen wipes its own list in dispose(), so handing
+      // off the same reference would blank the phrase for the verify screen.
+      Navigator.pushNamed(
+        context,
+        '/verify-phrase',
+        arguments: _mnemonicWords?.toList(),
+      );
     }
   }
 
