@@ -203,7 +203,16 @@ class SwapExecutionService {
                 data['buyAmount'])
             ?.toString(),
       );
-      if (quotedOut != null && expectedToAmount > 0) {
+      // Fail CLOSED: if the response carries no parseable output amount we
+      // cannot enforce the slippage floor, so refuse rather than sign a trade
+      // at an unknown rate. (Previously this check was skipped when the field
+      // was absent, letting a tampered response execute at any rate.)
+      if (expectedToAmount > 0) {
+        if (quotedOut == null) {
+          throw Exception(
+            'The swap quote is missing its output amount and cannot be safely executed. Please refresh the quote and try again.',
+          );
+        }
         final floor = _minAcceptableOutBaseUnits(
           expectedToAmount: expectedToAmount,
           decimals: toToken.decimals,
@@ -292,7 +301,12 @@ class SwapExecutionService {
       final quotedOut = _parseBigInt(
         (quoteData['minBuyAmount'] ?? quoteData['buyAmount'])?.toString(),
       );
-      if (quotedOut != null && expectedToAmount > 0) {
+      if (expectedToAmount > 0) {
+        if (quotedOut == null) {
+          throw Exception(
+            'The swap quote is missing its output amount and cannot be safely executed. Please refresh the quote and try again.',
+          );
+        }
         final floor = _minAcceptableOutBaseUnits(
           expectedToAmount: expectedToAmount,
           decimals: toToken.decimals,

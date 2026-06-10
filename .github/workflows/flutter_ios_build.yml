@@ -11,6 +11,7 @@ jobs:
         working-directory: fomowl_wallet
     env:
       BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://core.owlletapp.com' }}
+      BACKEND_CERT_SHA256_PINS: ${{ vars.BACKEND_CERT_SHA256_PINS || secrets.BACKEND_CERT_SHA256_PINS || '' }}
       COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
       CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
       PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
@@ -121,6 +122,7 @@ jobs:
           {
             echo "args<<EOF"
             echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
+            echo "--dart-define=BACKEND_CERT_SHA256_PINS=$(sanitize "$BACKEND_CERT_SHA256_PINS")"
             echo "--dart-define=COINGECKO_API_BASE_URL=$(sanitize "$COINGECKO_API_BASE_URL")"
             echo "--dart-define=CONNECTIVITY_CHECK_URL=$(sanitize "$CONNECTIVITY_CHECK_URL")"
             echo "--dart-define=PUSH_NOTIFICATIONS_ENABLED=$(sanitize "$PUSH_NOTIFICATIONS_ENABLED")"

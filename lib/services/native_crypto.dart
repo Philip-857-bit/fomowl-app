@@ -12,6 +12,7 @@ import '../src/rust/api/argon2.dart' as rust_argon2;
 import '../src/rust/api/bip32.dart' as rust_bip32;
 import '../src/rust/api/bip39.dart' as rust_bip39;
 import '../src/rust/api/secp256k1_api.dart' as rust_secp;
+import '../src/rust/api/solana_tx.dart' as rust_solana_tx;
 
 /// Singleton entry point for all native (Rust) crypto operations.
 ///
@@ -274,6 +275,29 @@ class NativeCrypto {
       );
     } catch (e) {
       debugPrint('[NativeCrypto] signSolanaMessage Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Compile Relay-style Solana instructions into a signed v0 transaction.
+  /// Returns the base64-encoded signed transaction ready to broadcast.
+  static Future<String> buildAndSignSolanaTransaction({
+    required String payer,
+    required String recentBlockhash,
+    required String instructionsJson,
+    required String lookupTablesJson,
+    required Uint8List privateKeyBytes,
+  }) async {
+    try {
+      return await rust_solana_tx.buildAndSignSolanaTransaction(
+        payer: payer,
+        recentBlockhash: recentBlockhash,
+        instructionsJson: instructionsJson,
+        lookupTablesJson: lookupTablesJson,
+        privateKeyBytes: privateKeyBytes.toList(),
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] buildAndSignSolanaTransaction Rust error: $e');
       rethrow;
     }
   }

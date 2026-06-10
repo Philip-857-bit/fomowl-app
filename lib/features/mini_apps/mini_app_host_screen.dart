@@ -14,6 +14,7 @@ import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/app_notification_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
@@ -207,6 +208,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'getContext': true,
           'requestWalletTransfer': true,
           'requestSwapThenTransfer': false,
+          'requestSignMessage': true,
+          'notify': true,
         },
       };
       _loadingContext = false;
@@ -413,6 +416,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     requestWalletTransfer: function(payload) {
       return callHost({ type: 'request_wallet_transfer', payload: payload || {} });
     },
+    requestSignMessage: function(payload) {
+      return callHost({ type: 'request_sign_message', payload: payload || {} });
+    },
+    notify: function(payload) {
+      return callHost({ type: 'notify', payload: payload || {} });
+    },
     getContext: function() {
       return context;
     }
@@ -455,6 +464,24 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           };
         }
         return _handleWalletTransferRequest(payload.cast<String, dynamic>());
+      case 'request_sign_message':
+        final signPayload = raw['payload'];
+        if (signPayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid sign-message request.',
+          };
+        }
+        return _handleSignMessageRequest(signPayload.cast<String, dynamic>());
+      case 'notify':
+        final notifyPayload = raw['payload'];
+        if (notifyPayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid notification request.',
+          };
+        }
+        return _handleNotifyRequest(notifyPayload.cast<String, dynamic>());
       default:
         return <String, dynamic>{
           'ok': false,
@@ -623,6 +650,172 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       controller.setError(message);
       return <String, dynamic>{'ok': false, 'error': message};
     }
+  }
+
+  /// Personal-sign a message with the host EVM wallet on behalf of the mini
+  /// app (SIWE-style sign-in). Always gated behind an explicit user approval
+  /// dialog — the mini app never gets a silent signature.
+  Future<Map<String, dynamic>> _handleSignMessageRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final message = payload['message']?.toString() ?? '';
+    if (message.trim().isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Missing message to sign.',
+      };
+    }
+    // Keep the host safe from absurd payloads; SIWE nonce messages are short.
+    if (message.length > 2000) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Message is too long to sign.',
+      };
+    }
+
+    final walletAddress = await _walletService.getWalletAddressForFamily(
+      ChainFamily.evm,
+    );
+    if (walletAddress == null || walletAddress.trim().isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'No EVM wallet is available in this Owllet account.',
+      };
+    }
+
+    // When the mini app pinned an address, it must match the host wallet —
+    // otherwise the backend nonce wouldn't verify anyway.
+    final requestedAddress = payload['address']?.toString().trim() ?? '';
+    if (requestedAddress.isNotEmpty &&
+        requestedAddress.toLowerCase() != walletAddress.toLowerCase()) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'The requested address does not match this Owllet wallet.',
+      };
+    }
+
+    final approved = await _confirmSignMessage(message: message);
+    if (approved != true) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Signature request was declined.',
+      };
+    }
+
+    try {
+      final signature = await _walletService.signMessageForAddress(
+        walletAddress,
+        message,
+      );
+      final prefixed = signature.startsWith('0x') ? signature : '0x$signature';
+      return <String, dynamic>{
+        'ok': true,
+        'signature': prefixed,
+        'address': walletAddress,
+      };
+    } catch (error) {
+      debugPrint('[MiniAppHost] sign-message failed: $error');
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Unable to sign with this wallet right now.',
+      };
+    }
+  }
+
+  Future<bool?> _confirmSignMessage({required String message}) {
+    final preview = message.length > 280
+        ? '${message.substring(0, 280)}…'
+        : message;
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(
+            'Sign in to ${widget.definition.title}',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This mini app wants your wallet signature to sign you in. Signing is free and does not move any funds.',
+                style: GoogleFonts.outfit(
+                  color: Colors.white.withValues(alpha: 0.72),
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  preview,
+                  style: GoogleFonts.robotoMono(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Sign In',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Surface a host (system) notification for the mini app — e.g. "your
+  /// electricity token has arrived". Title is prefixed with the mini-app name
+  /// so users always know the source.
+  Future<Map<String, dynamic>> _handleNotifyRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final title = payload['title']?.toString().trim() ?? '';
+    if (title.isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Missing notification title.',
+      };
+    }
+    final body = payload['body']?.toString().trim();
+    await AppNotificationService().showLocal(
+      title: '${widget.definition.title}: $title',
+      body: body,
+    );
+    return const <String, dynamic>{'ok': true};
   }
 
   Future<bool?> _confirmHiddenSettlementTransfer({

@@ -161,16 +161,15 @@ class SwapService {
     146,
     2741,
   };
+  // 0x Gasless v2 chains. Fantom, Celo, and Polygon zkEVM were v1-only and
+  // the v2 API rejects them.
   static const Set<int> supportedGaslessChainIds = {
     1, // Ethereum
     10, // Optimism
     56, // BSC
     137, // Polygon
-    250, // Fantom
-    1101, // Polygon zkEVM
     8453, // Base
     42161, // Arbitrum
-    42220, // Celo
     43114, // Avalanche
     59144, // Linea
   };
@@ -212,6 +211,9 @@ class SwapService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(payload),
             ),
+            // Non-idempotent: a timed-out-but-applied create would duplicate
+            // the order on retry.
+            retryOnException: false,
           )
           .timeout(const Duration(seconds: 20));
 
@@ -314,6 +316,8 @@ class SwapService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(payload),
             ),
+            // Non-idempotent cancel: don't retry on a timed-out response.
+            retryOnException: false,
           )
           .timeout(const Duration(seconds: 15));
 

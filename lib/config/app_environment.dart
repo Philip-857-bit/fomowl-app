@@ -87,14 +87,23 @@ class AppEnvironment {
     _affiliateMiniAppAllowedOriginsEnv,
   );
 
-  /// Optional certificate pinning for the backend host. Each entry is the
-  /// lowercase hex SHA-256 of the DER-encoded server certificate. When empty
+  /// Optional SPKI (public-key) pinning for the backend host. Each entry is
+  /// the lowercase hex SHA-256 of the certificate's DER-encoded
+  /// SubjectPublicKeyInfo — NOT of the whole certificate — so the pin survives
+  /// certificate renewals as long as the server keeps its key pair. When empty
   /// (the default), no pinning is enforced and TLS behaves normally. Supply via
   /// `--dart-define=BACKEND_CERT_SHA256_PINS=<fp1>,<fp2>` (include a backup pin
-  /// for cert rotation).
+  /// for key rotation). Generate with:
+  /// `openssl s_client -connect host:443 -servername host </dev/null |
+  ///  openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER |
+  ///  openssl dgst -sha256`
   static final List<String> backendCertSha256Pins = _csvEnv(
     _backendCertSha256PinsEnv,
   );
+
+  /// Host component of [backendBaseUrl]; pinning is scoped to this host so
+  /// third-party endpoints are unaffected.
+  static final String backendHost = Uri.parse(backendBaseUrl).host;
 
   static Future<void> initializeFirebaseApp() async {
     if (Firebase.apps.isNotEmpty) {
@@ -184,6 +193,25 @@ class AppEnvironment {
           ? _productionBackendBaseUrl
           : _defaultBackendBaseUrl(),
     );
+    // In release builds the backend MUST be HTTPS — a plaintext URL (from a
+    // mis-set --dart-define) would expose every "trust the backend" path
+    // (transaction calldata, approvals) to a trivial MITM. Refuse to downgrade.
+    if (kReleaseMode && configured.startsWith('http://')) {
+      final upgraded = configured.replaceFirst('http://', 'https://');
+      debugPrint(
+        'AppEnvironment: refusing plaintext backend URL in release; '
+        'upgraded to HTTPS.',
+      );
+      return upgraded;
+    }
+    if (kReleaseMode && backendCertSha256Pins.isEmpty) {
+      // Pinning is the defense-in-depth layer behind backend trust. Surface
+      // its absence loudly so release builds are shipped with pins configured.
+      debugPrint(
+        'AppEnvironment: WARNING — no backend certificate pins configured for '
+        'a release build (BACKEND_CERT_SHA256_PINS is empty).',
+      );
+    }
     return configured;
   }
 

@@ -1,36 +1,44 @@
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 
-/// Enforces certificate pinning on [dio] for native (mobile/desktop) platforms.
-///
-/// Each fingerprint is the hex-encoded SHA-256 of the DER-encoded server
-/// certificate. If [sha256Fingerprints] is empty, pinning is disabled and TLS
-/// validation proceeds normally — so this is safe to call unconditionally.
-void configureCertPinning(Dio dio, List<String> sha256Fingerprints) {
-  final pins = sha256Fingerprints
-      .map(
-        (value) => value.replaceAll(':', '').replaceAll(' ', '').toLowerCase(),
-      )
-      .where((value) => value.isNotEmpty)
-      .toSet();
+import 'spki_pinning.dart';
 
-  if (pins.isEmpty) {
+/// Enforces SPKI (public-key) pinning on [dio] for native (mobile/desktop)
+/// platforms.
+///
+/// Each fingerprint is the hex-encoded SHA-256 of the certificate's
+/// DER-encoded SubjectPublicKeyInfo, so the pin survives certificate renewals
+/// as long as the server keeps its key pair. Pinning is enforced only for
+/// [pinnedHost]; other hosts get normal TLS validation. If
+/// [sha256Fingerprints] is empty, pinning is disabled and TLS validation
+/// proceeds normally — so this is safe to call unconditionally.
+///
+/// Note: the pin is checked on top of normal chain validation, not instead of
+/// it — a certificate must be CA-valid AND match a pin.
+void configureCertPinning(
+  Dio dio,
+  List<String> sha256Fingerprints, {
+  required String pinnedHost,
+}) {
+  final pins = normalizePins(sha256Fingerprints);
+
+  if (pins.isEmpty || pinnedHost.isEmpty) {
     return;
   }
 
   dio.httpClientAdapter = IOHttpClientAdapter(
     validateCertificate: (X509Certificate? certificate, String host, int port) {
+      if (host != pinnedHost) {
+        return true;
+      }
+      // A null certificate means the connection is not TLS; with pins
+      // configured the backend must be reached over HTTPS.
       if (certificate == null) {
         return false;
       }
-      final fingerprint = sha256
-          .convert(certificate.der)
-          .toString()
-          .toLowerCase();
-      return pins.contains(fingerprint);
+      return certMatchesSpkiPins(certificate.der, pins);
     },
   );
 }

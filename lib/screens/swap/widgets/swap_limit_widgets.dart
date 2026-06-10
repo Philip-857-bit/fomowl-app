@@ -8,18 +8,20 @@ import '../../../widgets/amount_input_mode_toggle.dart';
 import 'swap_figma_icons.dart';
 import 'swap_token_chip.dart';
 
-enum SwapTab { swap, limit }
+enum SwapTab { swap, limit, bridge }
 
 class SwapTabSelector extends StatelessWidget {
   final SwapTab activeTab;
   final ValueChanged<SwapTab> onChanged;
   final bool showLimitTab;
+  final bool showBridgeTab;
 
   const SwapTabSelector({
     super.key,
     required this.activeTab,
     required this.onChanged,
     this.showLimitTab = true,
+    this.showBridgeTab = true,
   });
 
   @override
@@ -51,6 +53,16 @@ class SwapTabSelector extends StatelessWidget {
                 onTap: showLimitTab ? () => onChanged(SwapTab.limit) : null,
               ),
             ),
+            if (showBridgeTab) ...[
+              const SizedBox(width: 6),
+              Expanded(
+                child: _SwapTabChip(
+                  label: 'BRIDGE',
+                  isActive: activeTab == SwapTab.bridge,
+                  onTap: () => onChanged(SwapTab.bridge),
+                ),
+              ),
+            ],
           ],
         ),
       ),

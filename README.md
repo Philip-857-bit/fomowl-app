@@ -26,17 +26,33 @@ Flutter wallet client for multi-chain EVM balances, swaps, gasless orders, and w
 
 ## Certificate pinning (optional)
 
-On native (mobile/desktop) builds you can pin the backend's TLS certificate by
-passing the hex SHA-256 of the DER-encoded server certificate(s):
+On native (mobile/desktop) builds you can pin the backend's TLS public key
+(SPKI pinning) by passing the hex SHA-256 of the certificate's DER-encoded
+SubjectPublicKeyInfo:
 
 ```bash
 flutter build apk --release \
   --dart-define=BACKEND_CERT_SHA256_PINS=<primary_fp>,<backup_fp>
 ```
 
-When the value is empty (the default) TLS validation behaves normally — pinning
-is opt-in. Always include a backup pin so certificate rotation does not lock out
-clients. Pinning is a no-op on web builds (the browser manages trust).
+Generate a pin from the live server:
+
+```bash
+openssl s_client -connect core.owlletapp.com:443 -servername core.owlletapp.com </dev/null \
+  | openssl x509 -pubkey -noout \
+  | openssl pkey -pubin -outform DER \
+  | openssl dgst -sha256
+```
+
+Because the pin covers the public key rather than the certificate, routine
+certificate renewals (e.g. Let's Encrypt) do NOT invalidate it as long as the
+server reuses its key pair — the pin only changes when the key changes.
+
+Pinning is scoped to the `BACKEND_BASE_URL` host; RPC nodes, CoinGecko, and
+other third-party endpoints keep normal TLS validation. When the value is
+empty (the default) TLS validation behaves normally — pinning is opt-in.
+Include a backup pin (e.g. for a standby key) so key rotation does not lock
+out clients. Pinning is a no-op on web builds (the browser manages trust).
 
 ## Git hooks
 

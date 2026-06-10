@@ -26,9 +26,13 @@ class ApiClient {
       ),
     );
 
-    // Optional certificate pinning for the backend host (no-op unless
+    // Optional SPKI (public-key) pinning for the backend host (no-op unless
     // BACKEND_CERT_SHA256_PINS is configured at build time).
-    configureCertPinning(dio, AppEnvironment.backendCertSha256Pins);
+    configureCertPinning(
+      dio,
+      AppEnvironment.backendCertSha256Pins,
+      pinnedHost: AppEnvironment.backendHost,
+    );
 
     // Add smart retry logic
     dio.interceptors.add(

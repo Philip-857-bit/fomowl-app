@@ -200,10 +200,14 @@ class TokenApprovalService {
         );
       }
 
+      // Approve only the exact amount this swap needs, never the unlimited
+      // 2^256-1. The spender comes from the backend quote; bounding the
+      // allowance means a tampered/compromised spender can move at most this
+      // one swap's amount, not drain the entire balance forever.
       final tx = Transaction.callContract(
         contract: contract,
         function: approveFunc,
-        parameters: [spenderAddr, BigInt.two.pow(256) - BigInt.one],
+        parameters: [spenderAddr, requiredAmount],
       );
 
       // Timeout for the actual approval transaction broadcast — prevents

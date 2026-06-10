@@ -8,6 +8,7 @@ import 'api/bip32.dart';
 import 'api/bip39.dart';
 import 'api/secp256k1_api.dart';
 import 'api/simple.dart';
+import 'api/solana_tx.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;

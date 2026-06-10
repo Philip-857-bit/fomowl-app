@@ -22,20 +22,30 @@ class HttpClientService {
   http.Client get client => _client;
 
   HttpClientService._internal() {
-    // Enforce SHA-256 certificate pinning on the underlying client when
+    // Enforce SPKI (public-key) pinning for the backend host when
     // BACKEND_CERT_SHA256_PINS is configured (no-op on web and when unset).
-    _client = createPinnedHttpClient(AppEnvironment.backendCertSha256Pins);
+    // Other hosts reached through this shared client (RPC nodes, CoinGecko,
+    // swap aggregators, ...) keep normal TLS validation.
+    _client = createPinnedHttpClient(
+      AppEnvironment.backendCertSha256Pins,
+      pinnedHost: AppEnvironment.backendHost,
+    );
   }
 
   @visibleForTesting
   HttpClientService.internal();
 
   /// Sends a request with a simple retry strategy.
+  ///
+  /// Set [retryOnException] to false for non-idempotent POSTs (e.g. creating or
+  /// cancelling an order): a request that reached the server and succeeded but
+  /// whose response timed out must NOT be retried, or it would be applied twice.
   Future<http.Response> sendWithRetry(
     Future<http.Response> Function() request, {
     int maxRetries = 3,
     Duration delay = const Duration(seconds: 2),
     bool Function(http.Response)? retryIf,
+    bool retryOnException = true,
   }) async {
     int attempts = 0;
     while (true) {
@@ -50,7 +60,9 @@ class HttpClientService {
         }
         return response;
       } catch (e) {
-        if (attempts >= maxRetries || !_isRetryableException(e)) {
+        if (!retryOnException ||
+            attempts >= maxRetries ||
+            !_isRetryableException(e)) {
           rethrow;
         }
         await Future.delayed(_backoff(delay, attempts));

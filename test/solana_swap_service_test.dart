@@ -18,6 +18,7 @@ class HttpClientServiceMock extends HttpClientService {
     int maxRetries = 3,
     Duration delay = const Duration(seconds: 2),
     bool Function(http.Response)? retryIf,
+    bool retryOnException = true,
   }) {
     return request();
   }

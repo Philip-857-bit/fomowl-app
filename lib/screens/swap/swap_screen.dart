@@ -29,16 +29,19 @@ import '../../services/wallet_history_service.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
+import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'swap_screen_helpers.dart';
+import 'widgets/bridge_tab_content.dart';
 import 'widgets/swap_limit_widgets.dart';
 import 'widgets/swap_tab_content.dart';
 import 'widgets/swap_token_selector_dialog.dart';
@@ -211,6 +214,11 @@ class _SwapScreenState extends State<SwapScreen> {
     final walletChanged = _lastWalletKey != null && _lastWalletKey != walletKey;
     final tokensChanged = _lastTokenSignature != tokenSignature;
     if (_activeTab == SwapTab.limit && !_supportsLimitTab(blockchain)) {
+      _activeTab = SwapTab.swap;
+    }
+    // Bridge supports EVM and Solana origins; Tron isn't on Relay.
+    if (_activeTab == SwapTab.bridge &&
+        blockchain.activeFamily == ChainFamily.tron) {
       _activeTab = SwapTab.swap;
     }
     if (_lastNetworkKey != networkKey || walletChanged) {
@@ -437,20 +445,10 @@ class _SwapScreenState extends State<SwapScreen> {
     final bc = Provider.of<BlockchainService>(context, listen: false);
     if (bc.activeFamily != ChainFamily.evm) return false;
     final chainId = bc.activeChain.chainId;
-    // 0x Tx Relay (Gasless) supports 11+ chains: Ethereum, BSC, Polygon, Avalanche, Arbitrum, Optimism, Fantom, Base, Celo, Linea, and Polygon zkEVM.
-    return [
-      1,
-      56,
-      137,
-      43114,
-      42161,
-      10,
-      250,
-      8453,
-      42220,
-      59144,
-      1101,
-    ].contains(chainId);
+    // 0x Gasless v2 chains. Fantom (250), Celo (42220), and Polygon zkEVM
+    // (1101) were v1-only and are rejected by the v2 API — keep this list in
+    // sync with SwapService.supportedGaslessChainIds.
+    return SwapService.supportedGaslessChainIds.contains(chainId);
   }
 
   bool get _isLimitSupported {
@@ -935,10 +933,37 @@ class _SwapScreenState extends State<SwapScreen> {
     });
   }
 
+  /// Applies a slippage floor to a base-unit output amount, returning the
+  /// reduced raw amount and its formatted string. Used so the "minimum
+  /// received" shown for Solana/Tron reflects slippage instead of the
+  /// optimistic quote.
+  ({String raw, String formatted}) _applySlippageFloor(
+    String amountOutRaw,
+    int slippageBps,
+    int decimals,
+  ) {
+    final outRaw = BigInt.tryParse(amountOutRaw) ?? BigInt.zero;
+    final bps = slippageBps.clamp(0, 10000);
+    final minRaw = outRaw * BigInt.from(10000 - bps) ~/ BigInt.from(10000);
+    final formatted = AmountUtils.formatBaseUnits(
+      minRaw,
+      decimals,
+      maxFractionDigits: math.min(decimals, 8),
+    );
+    return (raw: minRaw.toString(), formatted: formatted);
+  }
+
+  /// Converts a token's `double` balance to a Decimal without losing tiny
+  /// values: `double.toString()` renders small numbers in scientific notation
+  /// (e.g. `1e-7`), which `Decimal.tryParse` rejects → 0.
+  Decimal _balanceAsDecimal(Token token) {
+    final fixed = token.balance.toStringAsFixed(token.decimals.clamp(0, 18));
+    return Decimal.tryParse(fixed) ?? Decimal.zero;
+  }
+
   void _setPercentage(int percent) {
     if (_fromToken == null) return;
-    final balance =
-        Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero;
+    final balance = _balanceAsDecimal(_fromToken!);
     var amount = balance * Decimal.parse((percent / 100).toStringAsFixed(2));
 
     if (percent == 100 &&
@@ -1927,6 +1952,13 @@ class _SwapScreenState extends State<SwapScreen> {
       if (quote != null) {
         final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
         final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
+        // Display a real slippage-adjusted minimum rather than the optimistic
+        // quote, so "minimum received" doesn't understate slippage risk.
+        final solMinOut = _applySlippageFloor(
+          quote.amountOutRaw,
+          _slippageBps,
+          _toToken?.decimals ?? 0,
+        );
         setState(() {
           _currentSolanaQuote = quote;
           _pricing = _formatRateText(unitRate);
@@ -1934,9 +1966,9 @@ class _SwapScreenState extends State<SwapScreen> {
           _toController.text = quote.amountOutFormatted;
           _currentQuote = SwapQuote(
             amountOutWei: quote.amountOutRaw,
-            minAmountOutWei: quote.amountOutRaw,
+            minAmountOutWei: solMinOut.raw,
             amountOutFormatted: quote.amountOutFormatted,
-            minAmountOutFormatted: quote.amountOutFormatted,
+            minAmountOutFormatted: solMinOut.formatted,
             networkFeeNative: 0.0,
             networkFeeUsd: quote.networkFeeUsd,
             platformFeeBps: quote.platformFeeBps,
@@ -2033,6 +2065,11 @@ class _SwapScreenState extends State<SwapScreen> {
       if (quote != null) {
         final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
         final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
+        final tronMinOut = _applySlippageFloor(
+          quote.amountOutRaw,
+          _slippageBps,
+          _toToken?.decimals ?? 0,
+        );
         setState(() {
           _currentTronQuote = quote;
           _pricing = _formatRateText(unitRate);
@@ -2040,9 +2077,9 @@ class _SwapScreenState extends State<SwapScreen> {
           _toController.text = quote.amountOutFormatted;
           _currentQuote = SwapQuote(
             amountOutWei: quote.amountOutRaw,
-            minAmountOutWei: quote.amountOutRaw,
+            minAmountOutWei: tronMinOut.raw,
             amountOutFormatted: quote.amountOutFormatted,
-            minAmountOutFormatted: quote.amountOutFormatted,
+            minAmountOutFormatted: tronMinOut.formatted,
             networkFeeNative: 0.0,
             networkFeeUsd: quote.networkFeeUsd,
             platformFeeBps: quote.platformFeeBps,
@@ -2183,8 +2220,8 @@ class _SwapScreenState extends State<SwapScreen> {
               buyToken: o.outputMint,
               sellAmount: o.inputAmount,
               buyAmount: o.expectedOutputAmount,
-              kind: 'sell',
-              targetPrice: '',
+              kind: o.triggerCondition == 'below' ? 'buy' : 'sell',
+              targetPrice: o.triggerPriceUsd?.toString() ?? '',
               expiry: o.expiredAt ?? 0,
               status: o.status,
               orderUid: o.orderAccount,
@@ -2240,13 +2277,17 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         return;
       }
-      // Fetch Jupiter Trigger orders for Solana
+      // Fetch Jupiter Trigger orders for Solana. Authentication signs a
+      // challenge with the local wallet key (no user prompt) and the JWT is
+      // cached for 24h, so this stays cheap on refresh.
       if (showLoading && mounted) {
         setState(() => _isLoadingSolanaLimitOrders = true);
       }
       final orders = await _solanaLimitService.getOrders(
         walletAddress: walletAddress,
-        status: 'open',
+        state: 'active',
+        signMessage: (message) =>
+            _walletService.signSolanaMessageRaw(walletAddress, message),
       );
       if (!mounted) return;
       if (_solanaLimitService.lastError != null &&
@@ -2523,8 +2564,12 @@ class _SwapScreenState extends State<SwapScreen> {
     } else {
       buyAmountDecimal = makerAmount * limitPrice;
     }
+    // Truncate to the buy token's decimals before converting — buyAmountDecimal
+    // can carry up to 18 fraction digits (division / multiplication), and
+    // parseDecimalToBaseUnits throws for any token with fewer decimals (e.g.
+    // USDC/USDT=6), which would silently fail every submission.
     final buyAmountWei = AmountUtils.parseDecimalToBaseUnits(
-      buyAmountDecimal.toString(),
+      formatDecimalInput(buyAmountDecimal, to.decimals),
       to.decimals,
     ).toString();
     if (buyAmountWei == '0') {
@@ -2698,29 +2743,49 @@ class _SwapScreenState extends State<SwapScreen> {
       return;
     }
 
-    final Decimal outputAmountDecimal;
-    if (_isBuyMode) {
-      final rational = makerAmount.toRational() / limitPrice.toRational();
-      outputAmountDecimal = rational.toDecimal(scaleOnInfinitePrecision: 18);
-    } else {
-      outputAmountDecimal = makerAmount * limitPrice;
-    }
-    final outputAmountLamports = AmountUtils.parseDecimalToBaseUnits(
-      outputAmountDecimal.toString(),
-      to.decimals,
-    ).toString();
-    if (outputAmountLamports == '0') {
-      _showError(l.enterValidAmount);
+    // Jupiter Trigger V2 enforces a 10 USD minimum order size — fail fast
+    // here instead of after the user has signed a deposit.
+    final fromUsd = from.priceUsd;
+    if (fromUsd > 0 && makerAmount.toDouble() * fromUsd < 10.0) {
+      _showError(
+        'Jupiter limit orders need a value of at least \$10. Increase the amount and try again.',
+      );
       return;
     }
 
-    final expiredAt = _limitExpiryOption == _LimitExpiryOption.never
-        ? null
-        : _resolveLimitExpirySeconds();
+    // Trigger V2 takes a USD trigger price for the target token. The entered
+    // limit price is denominated in the quote token, so convert via the quote
+    // token's USD price (stables count as $1 when no live price is loaded).
+    final quoteToken = _limitQuoteToken;
+    final targetToken = _limitTargetToken;
+    if (quoteToken == null || targetToken == null) {
+      _showError(l.selectTokenTitle);
+      return;
+    }
+    var quoteUsd = quoteToken.priceUsd;
+    if (quoteUsd <= 0 && _isStablecoin(quoteToken)) {
+      quoteUsd = 1.0;
+    }
+    if (quoteUsd <= 0) {
+      _showError(
+        'Live price data for ${quoteToken.symbol} is unavailable, so the trigger price cannot be set. Please try again shortly.',
+      );
+      return;
+    }
+    final triggerPriceUsd = limitPrice.toDouble() * quoteUsd;
+    // Sell: trigger when the sold token rises to the target price.
+    // Buy: trigger when the bought token falls to the target price.
+    final triggerMint = _isBuyMode ? outputMint : inputMint;
+    final triggerCondition = _isBuyMode ? 'below' : 'above';
 
-    // Compute trigger price in USD for V2.
-    // limitPrice is in quote-token units; we convert to USD here.
-    final triggerPriceUsd = limitPrice.toDouble();
+    // V2 requires an expiry; "never" maps to roughly one year out.
+    final expirySeconds = _limitExpiryOption == _LimitExpiryOption.never
+        ? DateTime.now()
+                  .add(const Duration(days: 365))
+                  .millisecondsSinceEpoch ~/
+              1000
+        : _resolveLimitExpirySeconds();
+    final expiresAtMs = expirySeconds * 1000;
 
     if (_isSubmittingLimit) return;
     setState(() => _isSubmittingLimit = true);
@@ -2731,14 +2796,36 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       progressController.setSwapSubmitting();
 
+      // ── Step 0: authenticate (24h JWT) and ensure the vault exists ────────
+      final authenticated = await _solanaLimitService.ensureAuthenticated(
+        walletAddress: _walletAddress!,
+        signMessage: (message) =>
+            _walletService.signSolanaMessageRaw(_walletAddress!, message),
+      );
+      if (!mounted) return;
+      if (!authenticated) {
+        progressController.setError(
+          _mapErrorMessage(_solanaLimitService.lastError ?? l.tryAgain),
+        );
+        return;
+      }
+      final hasVault = await _solanaLimitService.ensureVault(
+        walletAddress: _walletAddress!,
+      );
+      if (!mounted) return;
+      if (!hasVault) {
+        progressController.setError(
+          _mapErrorMessage(_solanaLimitService.lastError ?? l.tryAgain),
+        );
+        return;
+      }
+
       // ── Step 1: deposit/craft ──────────────────────────────────────────────
       final depositResult = await _solanaLimitService.createOrder(
         inputMint: inputMint,
         outputMint: outputMint,
         inputAmountLamports: inputAmountLamports,
-        expectedOutputAmountLamports: outputAmountLamports,
         walletAddress: _walletAddress!,
-        expiredAt: expiredAt,
       );
 
       if (!mounted) return;
@@ -2750,7 +2837,8 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      // ── Step 2: Sign + submit deposit transaction ──────────────────────────
+      // ── Step 2: Sign the deposit transaction. Do NOT broadcast it — the
+      // signed bytes go to /confirm and Jupiter submits it on-chain. ─────────
       final txBytes = base64Decode(depositResult.transaction);
       final msgOffset =
           SolanaSwapExecutionService.compactU16ByteLenPublic(txBytes, 0) + 64;
@@ -2761,33 +2849,24 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
 
-      final signedTxBase64 =
+      final depositSignedTx =
           SolanaSwapExecutionService.assembleSignedTransaction(
             txBytes,
             signatureBase58,
           );
-      final txHash = await _solanaSwapService.executeSwap(
-        signedTransactionBase64: signedTxBase64,
-        requestId: depositResult.depositRequestId,
-      );
-      if (!mounted) return;
-
-      if (txHash == null || txHash.isEmpty) {
-        final message = _mapErrorMessage(
-          _solanaSwapService.lastError ?? 'Deposit transaction failed.',
-        );
-        progressController.setError(message);
-        return;
-      }
 
       // ── Step 3: Confirm the order (orders/price) ───────────────────────────
       final confirmResult = await _solanaLimitService.confirmOrder(
         depositRequestId: depositResult.depositRequestId,
+        depositSignedTx: depositSignedTx,
+        walletAddress: _walletAddress!,
         inputMint: inputMint,
         outputMint: outputMint,
         inputAmountLamports: inputAmountLamports,
-        expectedOutputAmountLamports: outputAmountLamports,
+        triggerMint: triggerMint,
+        triggerCondition: triggerCondition,
         triggerPriceUsd: triggerPriceUsd,
+        expiresAtMs: expiresAtMs,
       );
 
       if (!mounted) return;
@@ -2799,7 +2878,12 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      progressController.setSuccess(reference: shortHash(txHash));
+      final txSignature = confirmResult['txSignature']?.toString() ?? '';
+      if (txSignature.isNotEmpty) {
+        progressController.setSuccess(reference: shortHash(txSignature));
+      } else {
+        progressController.setSuccess();
+      }
       unawaited(_refreshLimitOrders(showLoading: false));
     } on TimeoutException {
       const message = 'Order signing timed out. Please try again.';
@@ -2840,23 +2924,26 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
 
+      // Sign the withdrawal tx and hand it back to Jupiter via
+      // confirm-cancel — Jupiter broadcasts it and returns the funds.
       final signedTxBase64 =
           SolanaSwapExecutionService.assembleSignedTransaction(
             txBytes,
             signatureBase58,
           );
-      final txHash = await _solanaSwapService.executeSwap(
-        signedTransactionBase64: signedTxBase64,
-        requestId: txResult.requestId,
+      final confirmResult = await _solanaLimitService.confirmCancel(
+        orderId: order.orderId,
+        signedTransaction: signedTxBase64,
+        cancelRequestId: txResult.requestId,
       );
       if (!mounted) return;
 
-      if (txHash != null && txHash.isNotEmpty) {
+      if (confirmResult != null) {
         ToastUtils.showSuccess('Limit order cancelled');
         unawaited(_refreshLimitOrders(showLoading: false));
       } else {
         _showError(
-          _mapErrorMessage(_solanaSwapService.lastError ?? 'Cancel failed.'),
+          _mapErrorMessage(_solanaLimitService.lastError ?? 'Cancel failed.'),
         );
       }
     } catch (e) {
@@ -2983,6 +3070,18 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.enterValidAmount);
       return;
     }
+
+    // Require an authentication factor before signing/broadcasting in-app, the
+    // same checkpoint the dApp bridge enforces. Without it, an attacker with an
+    // unlocked session could drain funds; it's also a human confirmation step.
+    final authorized = await SensitiveAccessGuard.verify(
+      context,
+      reason: 'Authenticate to authorize this swap',
+    );
+    if (!authorized) {
+      return;
+    }
+    if (!mounted) return;
 
     TransactionProgressController? progressController;
     if (mounted) {
@@ -3552,7 +3651,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final localHasBalance =
         _fromToken != null &&
         parseDecimalAmount(_fromController.text) <=
-            (Decimal.tryParse(_fromToken!.balance.toString()) ?? Decimal.zero);
+            _balanceAsDecimal(_fromToken!);
     final hasBalance = localHasBalance;
     final swapEnabled =
         hasInputAmount &&
@@ -3661,7 +3760,7 @@ class _SwapScreenState extends State<SwapScreen> {
                             ],
                           )
                         : Text(
-                            'SWAP',
+                            _activeTab == SwapTab.bridge ? 'BRIDGE' : 'SWAP',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -3700,10 +3799,17 @@ class _SwapScreenState extends State<SwapScreen> {
                       child: SwapTabSelector(
                         activeTab: _activeTab,
                         showLimitTab: _supportsLimitTab(blockchain),
+                        showBridgeTab:
+                            blockchain.activeFamily == ChainFamily.evm ||
+                            blockchain.activeFamily == ChainFamily.solana,
                         onChanged: (tab) {
                           if (_activeTab == tab) return;
                           if (tab == SwapTab.limit &&
                               !_supportsLimitTab(blockchain)) {
+                            return;
+                          }
+                          if (tab == SwapTab.bridge &&
+                              blockchain.activeFamily == ChainFamily.tron) {
                             return;
                           }
                           setState(() {
@@ -3714,7 +3820,7 @@ class _SwapScreenState extends State<SwapScreen> {
                           });
                           if (tab == SwapTab.swap) {
                             _getQuote();
-                          } else {
+                          } else if (tab == SwapTab.limit) {
                             _updateLimitPreview();
                             unawaited(
                               _refreshLimitOrders(
@@ -3727,12 +3833,16 @@ class _SwapScreenState extends State<SwapScreen> {
                       ),
                     ),
                     const SizedBox(height: 19),
-                    if (blockchain.activeFamily == ChainFamily.evm)
+                    // The bridge tab embeds its own origin-chain selector in
+                    // the "BRIDGE FROM" card, so skip the network card there.
+                    if (blockchain.activeFamily == ChainFamily.evm &&
+                        _activeTab != SwapTab.bridge)
                       NetworkCard(
                         chain: blockchain.activeChain,
                         onTap: _showNetworkSelector,
                       )
-                    else
+                    else if (blockchain.activeFamily != ChainFamily.evm &&
+                        _activeTab != SwapTab.bridge)
                       _buildNonEvmNetworkCard(blockchain),
                     const SizedBox(height: 16),
                     if (_activeTab == SwapTab.swap)
@@ -3790,6 +3900,14 @@ class _SwapScreenState extends State<SwapScreen> {
                           _resetQuoteState();
                           _getQuote();
                         },
+                      )
+                    else if (_activeTab == SwapTab.bridge)
+                      BridgeTabContent(
+                        blockchain: blockchain,
+                        walletService: _walletService,
+                        walletAddress: _walletAddress,
+                        tokens: _visibleTokens(blockchain.tokens),
+                        onSelectFromChain: _showNetworkSelector,
                       )
                     else if (blockchain.activeFamily == ChainFamily.evm ||
                         blockchain.activeFamily == ChainFamily.solana)

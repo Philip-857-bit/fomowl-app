@@ -235,7 +235,10 @@ fn parse_solana_key_hex(value: &str) -> Result<Vec<u8>, String> {
     hex::decode(value).map_err(|e| format!("Invalid Solana hex key: {e}"))
 }
 
-fn solana_keypair_from_bytes(mut bytes: Vec<u8>, source: &str) -> Result<Keypair, String> {
+pub(crate) fn solana_keypair_from_bytes(
+    mut bytes: Vec<u8>,
+    source: &str,
+) -> Result<Keypair, String> {
     let result = match bytes.len() {
         32 => {
             let mut secret = [0u8; 32];

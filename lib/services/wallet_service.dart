@@ -915,6 +915,24 @@ class WalletService {
     );
   }
 
+  /// Compile Relay bridge instructions into a signed Solana v0 transaction
+  /// (base64) using the native Rust builder. [address] is the fee payer.
+  Future<String> buildAndSignSolanaBridgeTransaction({
+    required String address,
+    required String recentBlockhash,
+    required String instructionsJson,
+    required String lookupTablesJson,
+  }) async {
+    final privateKeyBytes = await _getSolanaPrivateKey(address);
+    return NativeCrypto.buildAndSignSolanaTransaction(
+      payer: address,
+      recentBlockhash: recentBlockhash,
+      instructionsJson: instructionsJson,
+      lookupTablesJson: lookupTablesJson,
+      privateKeyBytes: privateKeyBytes,
+    );
+  }
+
   /// Sign [messageBytes] and return the fully-serialised signed Solana
   /// transaction as a base64 string: [1, <64-byte sig>, <message bytes>].
   Future<String> signSolanaTransactionRaw(

@@ -108,6 +108,36 @@ class AppNotificationService {
     announceInboxChanged(walletAddress: message.data['wallet_address']);
   }
 
+  /// Show a simple local notification on behalf of a host feature (e.g. a
+  /// mini app raising "your token has arrived"). Unlike FCM foreground relays,
+  /// this displays on both platforms.
+  Future<void> showLocal({
+    required String title,
+    String? body,
+    String payloadRoute = '/notifications',
+  }) async {
+    final trimmedTitle = title.trim();
+    if (trimmedTitle.isEmpty) {
+      return;
+    }
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch.remainder(0x7fffffff),
+      trimmedTitle,
+      (body ?? '').trim().isEmpty ? null : body!.trim(),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _defaultChannelId,
+          _defaultChannelName,
+          channelDescription: _defaultChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      payload: payloadRoute,
+    );
+  }
+
   void announceInboxChanged({String? walletAddress}) {
     if (_events.isClosed) {
       return;
