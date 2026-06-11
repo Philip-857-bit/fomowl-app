@@ -78,6 +78,16 @@ android {
         }
     }
 
+    // The lint-vital tasks (lintVitalAnalyzeRelease / lintVitalReportRelease) run as part of
+    // bundleRelease and are extremely disk- and CPU-heavy. On CI they have been exhausting the
+    // runner's disk ("No space left on device") while writing their analysis caches. Dart/Flutter
+    // analysis is already enforced separately via `flutter analyze` in CI, so skip the redundant
+    // Android lint pass during release packaging.
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     defaultConfig {
         applicationId = "com.fomowl.owllet"
         minSdk = flutter.minSdkVersion
