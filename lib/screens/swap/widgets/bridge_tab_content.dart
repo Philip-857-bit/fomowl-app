@@ -60,6 +60,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
   Token? _fromToken;
   EvmChain? _toChain;
+
+  /// Selected destination token; null means the destination chain's native
+  /// coin. Relay supports settling into any supported token, not just native.
+  BridgeCurrency? _toCurrency;
   int _selectedPercentage = -1;
   BridgeQuote? _quote;
   bool _isQuoting = false;
@@ -303,13 +307,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _quoteError = null;
     });
 
+    // Destination token: a user-selected currency when present, otherwise the
+    // chain's native coin. Relay accepts any output token, not only native.
+    final destinationCurrency = _toCurrency?.address ??
+        (isSolanaDestination
+            ? BridgeService.solanaNativeCurrency
+            : BridgeService.nativeCurrency);
+
     final quote = await _bridgeService.getQuote(
       originChainId: originChainId,
       destinationChainId: toChain.chainId,
       originCurrency: originCurrency,
-      destinationCurrency: isSolanaDestination
-          ? BridgeService.solanaNativeCurrency
-          : BridgeService.nativeCurrency,
+      destinationCurrency: destinationCurrency,
       amountWei: amountWei,
       walletAddress: wallet,
       recipientAddress: recipient,
@@ -374,6 +383,37 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (selected != null && mounted) {
       setState(() {
         _toChain = selected;
+        // Reset to native when the destination chain changes; the previously
+        // selected token doesn't exist on the new chain.
+        _toCurrency = null;
+        _resetQuote();
+      });
+      _requestQuote();
+    }
+  }
+
+  /// Pick the destination token (native or any Relay-supported token on the
+  /// destination chain).
+  Future<void> _selectToCurrency() async {
+    final toChain = _toChain;
+    if (toChain == null) return;
+    final selected = await showModalBottomSheet<BridgeCurrency>(
+      context: context,
+      backgroundColor: const Color(0xFF0E0E0E),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => _CurrencyPickerSheet(
+        bridgeService: _bridgeService,
+        chainId: toChain.chainId,
+        chainName: toChain.name,
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        // A native selection clears back to the default native handling.
+        _toCurrency = selected.isNative ? null : selected;
         _resetQuote();
       });
       _requestQuote();
@@ -411,6 +451,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   void _afterFlip(EvmChain newDestination) {
     setState(() {
       _toChain = newDestination;
+      _toCurrency = null;
       _selectedPercentage = -1;
       _amountController.clear();
       _resetQuote();
@@ -606,8 +647,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     String toAmountText = '0.0';
     if (quote != null) {
       final outWei = BigInt.tryParse(quote.amountOut) ?? BigInt.zero;
-      // Native decimals differ per family: SOL uses 9, EVM gas tokens 18.
-      final outDecimals = toChain?.family == ChainFamily.solana ? 9 : 18;
+      // Use the selected token's decimals; otherwise the chain's native
+      // decimals (SOL uses 9, EVM gas tokens 18).
+      final outDecimals = _toCurrency?.decimals ??
+          (toChain?.family == ChainFamily.solana ? 9 : 18);
       toAmountText = AmountUtils.formatBaseUnits(
         outWei,
         outDecimals,
@@ -774,7 +817,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  _NativeTokenChip(chain: toChain),
+                  _DestinationTokenChip(
+                    chain: toChain,
+                    currency: _toCurrency,
+                    onTap: _isBridging ? null : _selectToCurrency,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -969,35 +1016,227 @@ class _ChainLogoDot extends StatelessWidget {
   }
 }
 
-/// Read-only chip showing the destination chain's native token.
-class _NativeTokenChip extends StatelessWidget {
+/// Tappable chip for the destination token: shows the selected token, or the
+/// chain's native coin by default. Tapping opens the destination token picker.
+class _DestinationTokenChip extends StatelessWidget {
   final EvmChain? chain;
+  final BridgeCurrency? currency;
+  final VoidCallback? onTap;
 
-  const _NativeTokenChip({required this.chain});
+  const _DestinationTokenChip({
+    required this.chain,
+    required this.currency,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A222B),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0x0DFFFFFF)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ChainLogoDot(url: chain?.logoUrl),
-          const SizedBox(width: 7),
-          Text(
-            chain?.symbol ?? '--',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFFE5E2E1),
+    final symbol = currency?.symbol ?? chain?.symbol ?? '--';
+    final logo = currency?.logoUri ?? chain?.logoUrl;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A222B),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: const Color(0x0DFFFFFF)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ChainLogoDot(url: logo),
+            const SizedBox(width: 7),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 90),
+              child: Text(
+                symbol,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFFE5E2E1),
+                ),
+              ),
             ),
+            const SizedBox(width: 7),
+            const FigmaDropdownIcon(width: 6, color: Color(0xFFC8C6C5)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet listing Relay-supported destination tokens for a chain, with
+/// a search box (Relay's `term` filter).
+class _CurrencyPickerSheet extends StatefulWidget {
+  final BridgeService bridgeService;
+  final int chainId;
+  final String chainName;
+
+  const _CurrencyPickerSheet({
+    required this.bridgeService,
+    required this.chainId,
+    required this.chainName,
+  });
+
+  @override
+  State<_CurrencyPickerSheet> createState() => _CurrencyPickerSheetState();
+}
+
+class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<BridgeCurrency> _currencies = const [];
+  bool _loading = true;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load({String? term}) async {
+    setState(() => _loading = true);
+    final results = await widget.bridgeService.getDestinationCurrencies(
+      chainId: widget.chainId,
+      term: term,
+    );
+    if (!mounted) return;
+    setState(() {
+      _currencies = results;
+      _loading = false;
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 400),
+      () => _load(term: value),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+                child: Text(
+                  'Receive on ${widget.chainName}',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  style: GoogleFonts.inter(fontSize: 14, color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search token or symbol',
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: const Color(0xFF6B7280),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF848E9C),
+                      size: 18,
+                    ),
+                    isDense: true,
+                    filled: true,
+                    fillColor: const Color(0xFF151C24),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: _loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    : _currencies.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'No tokens found.',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF848E9C),
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _currencies.length,
+                        itemBuilder: (ctx, index) {
+                          final c = _currencies[index];
+                          return ListTile(
+                            onTap: () => Navigator.of(ctx).pop(c),
+                            leading: _ChainLogoDot(url: c.logoUri),
+                            title: Text(
+                              c.symbol,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            subtitle: Text(
+                              c.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: const Color(0xFF848E9C),
+                              ),
+                            ),
+                            trailing: c.isNative
+                                ? Text(
+                                    'Native',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: const Color(0xFF848E9C),
+                                    ),
+                                  )
+                                : null,
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1075,7 +1314,7 @@ class _BridgeDetailsCard extends StatelessWidget {
                 if (q?.platformFeeBps != null)
                   _DetailRow(
                     label: 'Platform Fee',
-                    value: _platformFeeLabel(q!),
+                    value: _usdLabel(q!.platformFeeUsd),
                   ),
                 _DetailRow(
                   label: 'Bridge Fee',
@@ -1093,16 +1332,6 @@ class _BridgeDetailsCard extends StatelessWidget {
               ],
             ),
     );
-  }
-
-  static String _platformFeeLabel(BridgeQuote q) {
-    final bps = q.platformFeeBps ?? 0;
-    final percent = (bps / 100).toStringAsFixed(2);
-    final usd = q.platformFeeUsd;
-    if (usd != null && usd > 0) {
-      return '$percent% (${_usdLabel(usd)})';
-    }
-    return '$percent%';
   }
 
   static String _usdLabel(double? value) {

@@ -256,8 +256,24 @@ class _SwapScreenState extends State<SwapScreen> {
   SwapQuote? _currentQuote;
   int _selectedPercentage = -1; // -1 = none selected
   /// Cached per-token USD prices fetched from CoinGecko.
-  /// Made static to persist across screen navigation.
+  /// Made static to persist across screen navigation. Entries carry a fetch
+  /// timestamp and are treated as stale after [_priceCacheTtl] so token↔fiat
+  /// conversions never use arbitrarily old prices.
   static final Map<String, double> _tokenPriceCache = {};
+  static final Map<String, DateTime> _tokenPriceCacheTime = {};
+  static const Duration _priceCacheTtl = Duration(minutes: 2);
+
+  /// Reads a cached price, returning null when missing or stale.
+  double? _cachedTokenPrice(String? key) {
+    if (key == null || key.isEmpty) return null;
+    final price = _tokenPriceCache[key];
+    if (price == null) return null;
+    final at = _tokenPriceCacheTime[key];
+    if (at == null || DateTime.now().difference(at) > _priceCacheTtl) {
+      return null;
+    }
+    return price;
+  }
   bool _isApproving = false;
   bool _isSwapping = false;
   bool _isSwapFlowActive = false;
@@ -282,7 +298,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     final coinGeckoId = token.coinGeckoId;
     if (coinGeckoId != null && coinGeckoId.isNotEmpty) {
-      final cached = _tokenPriceCache[coinGeckoId];
+      final cached = _cachedTokenPrice(coinGeckoId);
       if (cached != null && cached > 0) {
         return cached;
       }
@@ -732,6 +748,10 @@ class _SwapScreenState extends State<SwapScreen> {
       if (mounted) {
         setState(() {
           _tokenPriceCache.addAll(prices);
+          final now = DateTime.now();
+          for (final key in prices.keys) {
+            _tokenPriceCacheTime[key] = now;
+          }
         });
       }
     } catch (_) {
@@ -961,7 +981,66 @@ class _SwapScreenState extends State<SwapScreen> {
     return Decimal.tryParse(fixed) ?? Decimal.zero;
   }
 
-  void _setPercentage(int percent) {
+  /// Native-token gas headroom to leave when the user taps MAX, so a 100% swap
+  /// of the gas token doesn't fail at execution for lack of fee funds.
+  ///
+  /// For EVM this is a LIVE estimate (current gas price × typical swap gas), so
+  /// it shrinks when the network is cheap — letting users MAX-swap small native
+  /// balances when gas actually allows it — and only grows under congestion.
+  /// The per-chain constants are conservative fallbacks used only when the live
+  /// estimate can't be fetched. Non-EVM chains use a flat headroom.
+  Future<Decimal> _nativeGasBuffer(BlockchainService blockchain) async {
+    if (blockchain.activeFamily == ChainFamily.solana) {
+      // Solana fees are near-deterministic, so a live "gas price" estimate
+      // doesn't apply. Size the flat buffer to cover the worst realistic case:
+      // a SOL→new-token swap that must create an associated token account
+      // (~0.00204 SOL rent) plus the base signature fee and a priority-fee
+      // margin. 0.003 SOL keeps that swap from stranding the user.
+      return Decimal.parse('0.003');
+    }
+    if (blockchain.activeFamily == ChainFamily.tron) {
+      // Tron meters Energy/Bandwidth, not a fetchable gas price. A precise
+      // figure needs simulating the swap's energy and accounting for the
+      // wallet's staked resources; this flat headroom covers the common case.
+      return Decimal.parse('3'); // TRX energy/bandwidth headroom
+    }
+
+    // EVM: prefer a live estimate so the buffer matches real gas cost.
+    final estimatedWei = await _tokenApprovalService.estimateNativeSwapGasWei(
+      blockchain: blockchain,
+    );
+    if (estimatedWei != null && estimatedWei > BigInt.zero) {
+      // EVM gas tokens are 18-decimal.
+      final buffer = Decimal.tryParse(
+        AmountUtils.formatBaseUnits(estimatedWei, 18, maxFractionDigits: 18),
+      );
+      if (buffer != null && buffer > Decimal.zero) {
+        return buffer;
+      }
+    }
+
+    // Fallback constants (live estimate unavailable).
+    switch (blockchain.activeChain.chainId) {
+      case 1: // Ethereum mainnet
+        return Decimal.parse('0.005');
+      case 42161: // Arbitrum
+      case 10: // Optimism
+      case 8453: // Base
+      case 59144: // Linea
+      case 534352: // Scroll
+        return Decimal.parse('0.0005');
+      case 56: // BNB
+        return Decimal.parse('0.002');
+      case 137: // Polygon
+        return Decimal.parse('0.03');
+      case 43114: // Avalanche
+        return Decimal.parse('0.01');
+      default:
+        return Decimal.parse('0.002');
+    }
+  }
+
+  Future<void> _setPercentage(int percent) async {
     if (_fromToken == null) return;
     final balance = _balanceAsDecimal(_fromToken!);
     var amount = balance * Decimal.parse((percent / 100).toStringAsFixed(2));
@@ -969,14 +1048,8 @@ class _SwapScreenState extends State<SwapScreen> {
     if (percent == 100 &&
         _fromToken!.effectiveTokenStandard == TokenStandard.native) {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      Decimal gasBuffer = Decimal.zero;
-      if (blockchain.activeFamily == ChainFamily.solana) {
-        gasBuffer = Decimal.parse('0.00005');
-      } else if (blockchain.activeFamily == ChainFamily.evm) {
-        gasBuffer = Decimal.parse('0.00005');
-      } else if (blockchain.activeFamily == ChainFamily.tron) {
-        gasBuffer = Decimal.parse('0.3');
-      }
+      final gasBuffer = await _nativeGasBuffer(blockchain);
+      if (!mounted) return;
       amount = amount - gasBuffer;
       if (amount < Decimal.zero) {
         amount = Decimal.zero;
@@ -1032,7 +1105,7 @@ class _SwapScreenState extends State<SwapScreen> {
     if (price <= 0 &&
         token.coinGeckoId != null &&
         token.coinGeckoId!.isNotEmpty) {
-      price = _tokenPriceCache[token.coinGeckoId] ?? 0.0;
+      price = _cachedTokenPrice(token.coinGeckoId) ?? 0.0;
     }
     // Fallback: infer from the counterpart token via quote rate.
     if (price <= 0 && _currentQuote != null) {
@@ -1045,7 +1118,7 @@ class _SwapScreenState extends State<SwapScreen> {
         if (otherPrice <= 0 &&
             other?.coinGeckoId != null &&
             other!.coinGeckoId!.isNotEmpty) {
-          otherPrice = _tokenPriceCache[other.coinGeckoId] ?? 0.0;
+          otherPrice = _cachedTokenPrice(other.coinGeckoId) ?? 0.0;
         }
         if (otherPrice > 0) {
           // Total USD of the counterpart side
@@ -1090,7 +1163,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final nativeId = blockchain.activeNetworkCoinGeckoId;
     if (nativeId != null && nativeId.isNotEmpty) {
-      final cached = _tokenPriceCache[nativeId];
+      final cached = _cachedTokenPrice(nativeId);
       if (cached != null && cached > 0) return cached;
     }
     // Fallback: check the first token (native) in the list.
@@ -3876,8 +3949,9 @@ class _SwapScreenState extends State<SwapScreen> {
                         receiveText: receiveText,
                         priceSeparator: _priceSeparator,
                         nativePriceUsd:
-                            _tokenPriceCache[blockchain
-                                .activeNetworkCoinGeckoId] ??
+                            _cachedTokenPrice(
+                              blockchain.activeNetworkCoinGeckoId,
+                            ) ??
                             0.0,
                         gaslessFeeCovered: _isGasless,
                         quoteStatusMessage: _quoteStatusMessage,
@@ -3958,8 +4032,9 @@ class _SwapScreenState extends State<SwapScreen> {
                             ? '${_toController.text} ${_toToken?.symbol ?? ''}'
                             : '--',
                         nativePriceUsd:
-                            _tokenPriceCache[blockchain
-                                .activeNetworkCoinGeckoId] ??
+                            _cachedTokenPrice(
+                              blockchain.activeNetworkCoinGeckoId,
+                            ) ??
                             0.0,
                         platformFeePercent: 0.0,
                         platformFeeUsd: _platformFeeUsd,

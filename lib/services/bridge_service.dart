@@ -119,6 +119,41 @@ class BridgeStatus {
   }
 }
 
+/// A Relay-supported currency a bridge can settle into on the destination chain.
+class BridgeCurrency {
+  final int chainId;
+  final String address;
+  final String symbol;
+  final String name;
+  final int decimals;
+  final bool isNative;
+  final String? logoUri;
+
+  const BridgeCurrency({
+    required this.chainId,
+    required this.address,
+    required this.symbol,
+    required this.name,
+    required this.decimals,
+    required this.isNative,
+    this.logoUri,
+  });
+
+  factory BridgeCurrency.fromJson(Map<String, dynamic> json) {
+    final metadata = json['metadata'];
+    final isNative = metadata is Map && metadata['isNative'] == true;
+    return BridgeCurrency(
+      chainId: (json['chainId'] as num?)?.toInt() ?? 0,
+      address: json['address']?.toString() ?? '',
+      symbol: json['symbol']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      decimals: (json['decimals'] as num?)?.toInt() ?? 18,
+      isNative: isNative,
+      logoUri: metadata is Map ? metadata['logoURI']?.toString() : null,
+    );
+  }
+}
+
 /// Service for Relay-powered cross-chain bridging via the Rust backend.
 ///
 /// Flow:
@@ -226,6 +261,58 @@ class BridgeService {
       );
       debugPrint('BridgeService.getQuote error: $e');
       return null;
+    }
+  }
+
+  /// GET /cross-chain/currencies?chainId=&term= — destination tokens Relay
+  /// can settle into on [chainId]. Returns native first, then the rest.
+  Future<List<BridgeCurrency>> getDestinationCurrencies({
+    required int chainId,
+    String? term,
+  }) async {
+    _lastError = null;
+    try {
+      final url = AppEnvironment.swap('/cross-chain/currencies', {
+        'chainId': '$chainId',
+        if (term != null && term.trim().isNotEmpty) 'term': term.trim(),
+      });
+      final response = await _http
+          .sendWithRetry(
+            () => _http.client.get(url),
+            retryIf: (r) => r.statusCode >= 500,
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const [];
+      }
+      final raw = jsonDecode(response.body);
+      // Relay returns an array (sometimes nested arrays) of currency objects.
+      final flat = <Map>[];
+      void collect(Object? node) {
+        if (node is List) {
+          for (final item in node) {
+            collect(item);
+          }
+        } else if (node is Map) {
+          flat.add(node);
+        }
+      }
+
+      collect(raw);
+      final currencies = flat
+          .map((e) => BridgeCurrency.fromJson(
+                e.map((k, v) => MapEntry(k.toString(), v)),
+              ))
+          .where((c) => c.symbol.isNotEmpty)
+          .toList();
+      currencies.sort((a, b) {
+        if (a.isNative != b.isNative) return a.isNative ? -1 : 1;
+        return 0;
+      });
+      return currencies;
+    } catch (e) {
+      debugPrint('BridgeService.getDestinationCurrencies error: $e');
+      return const [];
     }
   }
 

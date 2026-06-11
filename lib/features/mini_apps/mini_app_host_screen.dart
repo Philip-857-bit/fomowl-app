@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../models/chain.dart';
+import '../../models/wallet_account.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
@@ -673,29 +674,59 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       };
     }
 
-    final walletAddress = await _walletService.getWalletAddressForFamily(
+    final activeAddress = await _walletService.getWalletAddressForFamily(
       ChainFamily.evm,
     );
-    if (walletAddress == null || walletAddress.trim().isEmpty) {
+    // Multi-wallet support: list every EVM-capable account so the user picks
+    // which identity signs in (defaulting to the active wallet).
+    final accounts = await _walletService.getWalletAccounts();
+    final candidates = <MapEntry<String, String>>[]; // name -> evm address
+    final seen = <String>{};
+    for (final WalletAccount account in accounts) {
+      final evm = account.addressesByFamily[ChainFamily.evm]?.trim();
+      if (evm == null || evm.isEmpty) continue;
+      if (!seen.add(evm.toLowerCase())) continue;
+      candidates.add(MapEntry(account.name, evm));
+    }
+    if (candidates.isEmpty &&
+        activeAddress != null &&
+        activeAddress.trim().isNotEmpty) {
+      candidates.add(MapEntry('Wallet', activeAddress));
+    }
+    if (candidates.isEmpty) {
       return const <String, dynamic>{
         'ok': false,
         'error': 'No EVM wallet is available in this Owllet account.',
       };
     }
 
-    // When the mini app pinned an address, it must match the host wallet —
-    // otherwise the backend nonce wouldn't verify anyway.
+    // When the mini app pinned an address (re-auth of a known account), it must
+    // be one of this user's wallets — and we sign with exactly that one.
     final requestedAddress = payload['address']?.toString().trim() ?? '';
-    if (requestedAddress.isNotEmpty &&
-        requestedAddress.toLowerCase() != walletAddress.toLowerCase()) {
-      return const <String, dynamic>{
-        'ok': false,
-        'error': 'The requested address does not match this Owllet wallet.',
-      };
+    String? pinned;
+    if (requestedAddress.isNotEmpty) {
+      pinned = candidates
+          .where((c) => c.value.toLowerCase() == requestedAddress.toLowerCase())
+          .map((c) => c.value)
+          .firstOrNull;
+      if (pinned == null) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'The requested address does not match any wallet in this Owllet account.',
+        };
+      }
     }
 
-    final approved = await _confirmSignMessage(message: message);
-    if (approved != true) {
+    final walletAddress = await _confirmSignMessage(
+      message: message,
+      candidates: pinned != null
+          ? candidates
+                .where((c) => c.value.toLowerCase() == pinned!.toLowerCase())
+                .toList()
+          : candidates,
+      defaultAddress: pinned ?? activeAddress ?? candidates.first.value,
+    );
+    if (walletAddress == null || walletAddress.isEmpty) {
       return const <String, dynamic>{
         'ok': false,
         'error': 'Signature request was declined.',
@@ -722,76 +753,134 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
   }
 
-  Future<bool?> _confirmSignMessage({required String message}) {
+  Future<String?> _confirmSignMessage({
+    required String message,
+    required List<MapEntry<String, String>> candidates,
+    required String defaultAddress,
+  }) {
     final preview = message.length > 280
         ? '${message.substring(0, 280)}…'
         : message;
-    return showDialog<bool>(
+    String selected = candidates
+        .where((c) => c.value.toLowerCase() == defaultAddress.toLowerCase())
+        .map((c) => c.value)
+        .firstOrNull ?? candidates.first.value;
+    String shorten(String address) => address.length > 12
+        ? '${address.substring(0, 6)}…${address.substring(address.length - 4)}'
+        : address;
+
+    return showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardDark,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: Text(
-            'Sign in to ${widget.definition.title}',
-            style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'This mini app wants your wallet signature to sign you in. Signing is free and does not move any funds.',
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.cardDark,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              title: Text(
+                'Sign in to ${widget.definition.title}',
                 style: GoogleFonts.outfit(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  height: 1.4,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  preview,
-                  style: GoogleFonts.robotoMono(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 11,
-                    height: 1.35,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'This mini app wants your wallet signature to sign you in. Signing is free and does not move any funds.',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white.withValues(alpha: 0.72),
+                      height: 1.4,
+                    ),
+                  ),
+                  if (candidates.length > 1) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'SIGN IN AS',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white.withValues(alpha: 0.45),
+                        fontSize: 11,
+                        letterSpacing: 1.1,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...candidates.map(
+                      (candidate) => RadioListTile<String>(
+                        value: candidate.value,
+                        groupValue: selected,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: AppColors.success,
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => selected = value);
+                          }
+                        },
+                        title: Text(
+                          candidate.key,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          shorten(candidate.value),
+                          style: GoogleFonts.robotoMono(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      preview,
+                      style: GoogleFonts.robotoMono(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 11,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(null),
+                  child: Text(
+                    'Cancel',
+                    style: GoogleFonts.outfit(color: Colors.white70),
                   ),
                 ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.outfit(color: Colors.white70),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(
-                'Sign In',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
+                ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(selected),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(
+                    'Sign In',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );

@@ -40,6 +40,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   int _progress = 0;
   String? _lastLoadedUrl;
   String? _pageLoadErrorMessage;
+  // True between load start and stop. Drives a themed loading cover so the
+  // opaque (white) webview content area doesn't flash before a site paints.
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -106,7 +109,11 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   javaScriptEnabled: true,
                   useShouldOverrideUrlLoading: true,
                   supportZoom: false,
-                  transparentBackground: true,
+                  // Opaque white content area, like a normal browser. A
+                  // transparent webview over the app's dark scaffold makes
+                  // failed-load / native error pages (dark text) render onto
+                  // black and become unreadable.
+                  transparentBackground: false,
                   allowsBackForwardNavigationGestures: true,
                 ),
                 onWebViewCreated: (controller) {
@@ -196,8 +203,13 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                 },
                 onLoadStart: (controller, url) {
                   final next = url?.uriValue;
-                  if (mounted && _pageLoadErrorMessage != null) {
-                    setState(() => _pageLoadErrorMessage = null);
+                  if (mounted) {
+                    setState(() {
+                      _isLoading = true;
+                      if (_pageLoadErrorMessage != null) {
+                        _pageLoadErrorMessage = null;
+                      }
+                    });
                   }
                   if (next != null) {
                     _lastLoadedUrl = next.toString();
@@ -206,8 +218,13 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                 },
                 onLoadStop: (controller, url) async {
                   final next = url?.uriValue;
-                  if (mounted && _pageLoadErrorMessage != null) {
-                    setState(() => _pageLoadErrorMessage = null);
+                  if (mounted) {
+                    setState(() {
+                      _isLoading = false;
+                      if (_pageLoadErrorMessage != null) {
+                        _pageLoadErrorMessage = null;
+                      }
+                    });
                   }
                   if (next != null) {
                     final title = await controller.getTitle();
@@ -266,6 +283,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   setState(() {
                     _pageLoadErrorMessage = message;
                     _progress = 0;
+                    _isLoading = false;
                   });
                 },
                 onReceivedHttpError:
@@ -287,6 +305,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                         _pageLoadErrorMessage =
                             'Unable to load this page right now.';
                         _progress = 0;
+                        _isLoading = false;
                       });
                     },
                 onTitleChanged: (controller, title) {
@@ -311,6 +330,28 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   await _refreshNavigationState();
                 },
               ),
+              // Themed loading cover: hides the opaque (white) webview content
+              // area until the site paints, so dark sites don't flash white.
+              if (_isLoading && _pageLoadErrorMessage == null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      color: AppColors.background,
+                      child: const Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.accentRed,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               if (_pageLoadErrorMessage != null)
                 Positioned.fill(
                   child: _buildPageErrorState(

@@ -72,6 +72,28 @@ class TokenApprovalService {
         );
   }
 
+  /// Live estimate of the native gas cost of a swap on the active EVM chain,
+  /// in wei, used to size the MAX-swap gas buffer so it reflects ACTUAL current
+  /// gas (cheap when the network is quiet) instead of a flat over-reservation.
+  /// [swapGasUnits] approximates a DEX swap's gas; a 1.3x safety margin is
+  /// applied. Returns null on any RPC failure so the caller can fall back.
+  Future<BigInt?> estimateNativeSwapGasWei({
+    required BlockchainService blockchain,
+    int swapGasUnits = 250000,
+  }) async {
+    final rpcUrl = await _resolveRpcUrl(blockchain);
+    final client = Web3Client(rpcUrl, _httpClientService.client);
+    try {
+      final gasPrice = await client.getGasPrice().timeout(
+        const Duration(seconds: 8),
+      );
+      final units = BigInt.from((swapGasUnits * 1.3).ceil());
+      return gasPrice.getInWei * units;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<BigInt?> estimateApprovalFeeWei({
     required Token token,
     required String ownerAddress,
