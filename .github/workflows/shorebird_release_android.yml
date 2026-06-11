@@ -44,6 +44,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free up disk space
+        run: |
+          set -euo pipefail
+          echo "Disk space before cleanup:"
+          df -h /
+          # Remove large pre-installed toolchains that this build does not use. The Flutter +
+          # Rust + Android release build (4 native targets, ProGuard/R8, AAB) needs every spare
+          # gigabyte; the runner's default ~14 GB of free space is otherwise exhausted, producing
+          # "No space left on device" during Gradle packaging.
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          echo "Disk space after cleanup:"
+          df -h /
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
