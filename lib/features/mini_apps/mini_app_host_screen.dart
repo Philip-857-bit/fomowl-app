@@ -712,7 +712,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       if (pinned == null) {
         return const <String, dynamic>{
           'ok': false,
-          'error': 'The requested address does not match any wallet in this Owllet account.',
+          'error':
+              'The requested address does not match any wallet in this Owllet account.',
         };
       }
     }
@@ -761,10 +762,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final preview = message.length > 280
         ? '${message.substring(0, 280)}…'
         : message;
-    String selected = candidates
-        .where((c) => c.value.toLowerCase() == defaultAddress.toLowerCase())
-        .map((c) => c.value)
-        .firstOrNull ?? candidates.first.value;
+    String selected =
+        candidates
+            .where((c) => c.value.toLowerCase() == defaultAddress.toLowerCase())
+            .map((c) => c.value)
+            .firstOrNull ??
+        candidates.first.value;
     String shorten(String address) => address.length > 12
         ? '${address.substring(0, 6)}…${address.substring(address.length - 4)}'
         : address;

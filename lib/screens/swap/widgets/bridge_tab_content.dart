@@ -309,7 +309,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
     // Destination token: a user-selected currency when present, otherwise the
     // chain's native coin. Relay accepts any output token, not only native.
-    final destinationCurrency = _toCurrency?.address ??
+    final destinationCurrency =
+        _toCurrency?.address ??
         (isSolanaDestination
             ? BridgeService.solanaNativeCurrency
             : BridgeService.nativeCurrency);
@@ -649,7 +650,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       final outWei = BigInt.tryParse(quote.amountOut) ?? BigInt.zero;
       // Use the selected token's decimals; otherwise the chain's native
       // decimals (SOL uses 9, EVM gas tokens 18).
-      final outDecimals = _toCurrency?.decimals ??
+      final outDecimals =
+          _toCurrency?.decimals ??
           (toChain?.family == ChainFamily.solana ? 9 : 18);
       toAmountText = AmountUtils.formatBaseUnits(
         outWei,

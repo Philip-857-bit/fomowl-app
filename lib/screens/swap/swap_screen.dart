@@ -274,6 +274,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     return price;
   }
+
   bool _isApproving = false;
   bool _isSwapping = false;
   bool _isSwapFlowActive = false;

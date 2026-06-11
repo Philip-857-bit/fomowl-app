@@ -300,9 +300,11 @@ class BridgeService {
 
       collect(raw);
       final currencies = flat
-          .map((e) => BridgeCurrency.fromJson(
-                e.map((k, v) => MapEntry(k.toString(), v)),
-              ))
+          .map(
+            (e) => BridgeCurrency.fromJson(
+              e.map((k, v) => MapEntry(k.toString(), v)),
+            ),
+          )
           .where((c) => c.symbol.isNotEmpty)
           .toList();
       currencies.sort((a, b) {
