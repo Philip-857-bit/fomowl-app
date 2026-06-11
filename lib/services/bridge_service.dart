@@ -283,6 +283,15 @@ class BridgeService {
           )
           .timeout(const Duration(seconds: 15));
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        // Distinguish a real failure (e.g. backend without the currencies
+        // route, or upstream down) from a genuinely empty list, so the picker
+        // can show "couldn't load" + retry instead of a misleading "no tokens".
+        _lastError = response.statusCode == 404
+            ? 'Token list isn\'t available on this server yet.'
+            : AppErrorUtils.backendMessage(
+                response.body,
+                fallback: 'Couldn\'t load tokens right now.',
+              );
         return const [];
       }
       final raw = jsonDecode(response.body);

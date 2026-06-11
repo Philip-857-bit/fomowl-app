@@ -1092,6 +1092,7 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
   final TextEditingController _searchController = TextEditingController();
   List<BridgeCurrency> _currencies = const [];
   bool _loading = true;
+  String? _loadError;
   Timer? _debounce;
 
   @override
@@ -1116,6 +1117,7 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
     if (!mounted) return;
     setState(() {
       _currencies = results;
+      _loadError = results.isEmpty ? widget.bridgeService.lastError : null;
       _loading = false;
     });
   }
@@ -1191,11 +1193,32 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                     : _currencies.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'No tokens found.',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF848E9C),
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _loadError ?? 'No tokens found.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF848E9C),
+                              ),
+                            ),
+                            if (_loadError != null) ...[
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: () => _load(
+                                  term: _searchController.text,
+                                ),
+                                child: Text(
+                                  'Retry',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFFEA2A33),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       )
                     : ListView.builder(
