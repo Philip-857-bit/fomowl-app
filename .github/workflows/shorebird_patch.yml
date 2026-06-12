@@ -232,6 +232,7 @@ jobs:
           set +o pipefail
           printf 'y\n' | shorebird patch android \
             --release-version="${{ inputs.release_version }}" \
+            --allow-asset-diffs \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
             --private-key-path="$RUNNER_TEMP/shorebird_private.pem" \
             -- \
@@ -491,6 +492,7 @@ jobs:
           set +o pipefail
           printf 'y\n' | shorebird patch ios \
             --release-version="${{ inputs.release_version }}" \
+            --allow-asset-diffs \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
             --private-key-path="$RUNNER_TEMP/shorebird_private.pem" \
             -- \
