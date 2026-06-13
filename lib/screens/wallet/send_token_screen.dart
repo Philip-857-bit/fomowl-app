@@ -47,12 +47,14 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   bool _nonEvmAddressMissing = false;
 
   ChainFamily? _lastFamily;
+  bool _didApplyRouteToken = false;
 
   @override
   void initState() {
     super.initState();
     _displayController.addListener(_handleDisplayChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDefaultToken());
+    // Initial token selection happens in didChangeDependencies, where route
+    // arguments (a token forwarded from its detail screen) can be read.
   }
 
   @override
@@ -60,6 +62,19 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
     final currentFamily = blockchain.activeFamily;
+
+    // One-time: if the user came here via "Send" on a token's detail screen,
+    // pre-select that exact token instead of defaulting to the native token.
+    if (!_didApplyRouteToken) {
+      _didApplyRouteToken = true;
+      final arg = ModalRoute.of(context)?.settings.arguments;
+      if (arg is Token) {
+        _lastFamily = currentFamily;
+        _applySelectedToken(arg);
+        return;
+      }
+    }
+
     final tokenIsStale =
         _selectedToken != null &&
         _selectedToken!.networkKey != blockchain.activeNetworkKey;
@@ -67,6 +82,25 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       _lastFamily = currentFamily;
       _loadDefaultToken();
     }
+  }
+
+  /// Applies a fully-formed token (from the token selector or a detail-screen
+  /// hand-off) as the active send token, refreshing the available balance.
+  void _applySelectedToken(Token token) {
+    if (!mounted) return;
+    setState(() {
+      _selectedToken = token;
+      _availableBalance = token.balance;
+      _availableBalanceBaseUnits = AmountUtils.parseDecimalToBaseUnits(
+        token.balance.toString(),
+        token.decimals,
+      );
+      // Fall back to token mode if the new token has no USD price.
+      if (_inputMode == AmountInputMode.fiat && _currentTokenUsdPrice() <= 0) {
+        _inputMode = AmountInputMode.token;
+      }
+    });
+    _setDisplayFromTokenAmount(_amountController.text);
   }
 
   @override
@@ -266,20 +300,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   Future<void> _openTokenSelector() async {
     final token = await Navigator.pushNamed(context, '/select-token');
     if (token is Token && mounted) {
-      setState(() {
-        _selectedToken = token;
-        _availableBalance = token.balance;
-        _availableBalanceBaseUnits = AmountUtils.parseDecimalToBaseUnits(
-          token.balance.toString(),
-          token.decimals,
-        );
-        // Fall back to token mode if the new token has no USD price.
-        if (_inputMode == AmountInputMode.fiat &&
-            _currentTokenUsdPrice() <= 0) {
-          _inputMode = AmountInputMode.token;
-        }
-      });
-      _setDisplayFromTokenAmount(_amountController.text);
+      _applySelectedToken(token);
     }
   }
 

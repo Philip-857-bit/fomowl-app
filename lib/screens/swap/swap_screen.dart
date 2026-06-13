@@ -5,6 +5,7 @@ import 'package:decimal/decimal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../constants/app_colors.dart';
+import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
@@ -175,6 +176,9 @@ class _SwapScreenState extends State<SwapScreen> {
 
   Token? _fromToken;
   Token? _toToken;
+  // Set when the user opened Swap from a token's detail screen; forces that
+  // token as the "from" side on the next token sync, then is cleared.
+  Token? _initialFromOverride;
   String? _lastNetworkKey;
   String? _lastWalletKey;
   String? _lastTokenSignature;
@@ -207,6 +211,21 @@ class _SwapScreenState extends State<SwapScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
+
+    // If the user launched Swap from a token's detail screen, pre-select that
+    // token as the "from" side. Consumed once so normal tab switching is
+    // unaffected.
+    final pendingFrom = context
+        .read<AppShellController>()
+        .consumePendingSwapFromToken();
+    if (pendingFrom != null) {
+      _initialFromOverride = pendingFrom;
+      _fromToken = pendingFrom;
+      // Let the counter token re-pick a sensible default relative to the new
+      // "from" token rather than keeping a stale pairing.
+      _toToken = null;
+    }
+
     final networkKey = blockchain.activeNetworkKey;
     final walletKey = _walletSyncKey(blockchain);
     final visibleTokens = _visibleTokens(blockchain.tokens);
@@ -766,9 +785,15 @@ class _SwapScreenState extends State<SwapScreen> {
       return null;
     }
 
-    final from = findMatch(_fromToken) ?? tokens.first;
-    Token to =
-        findMatch(_toToken) ?? (tokens.length > 1 ? tokens[1] : tokens.first);
+    // A token explicitly chosen on the detail screen takes priority for "from";
+    // keep it even if it is not in the live list (it is still tradable).
+    final override = _initialFromOverride;
+    final from =
+        (override != null
+            ? (findMatch(override) ?? override)
+            : findMatch(_fromToken)) ??
+        tokens.first;
+    Token to = findMatch(_toToken) ?? _defaultCounterToken(from, tokens);
     if (_tokensAreIdentical(from, to)) {
       final alternative = tokens
           .where((t) => !_tokensAreIdentical(t, from))
@@ -780,7 +805,55 @@ class _SwapScreenState extends State<SwapScreen> {
 
     _fromToken = from;
     _toToken = to;
+    // One-shot override is now applied.
+    _initialFromOverride = null;
     _applySuggestedLimitSide();
+  }
+
+  /// Picks a sensible default counter ("to") token instead of an arbitrary
+  /// list position: prefer the chain-native token, otherwise a major stablecoin,
+  /// and only then any other distinct token. Keeps swaps defaulting to
+  /// blockchain/stablecoin pairs rather than random tokens.
+  Token _defaultCounterToken(Token from, List<Token> tokens) {
+    bool isNative(Token t) => (t.contractAddress ?? '').isEmpty;
+    const stableSymbols = {
+      'USDT',
+      'USDC',
+      'USDC.E',
+      'DAI',
+      'BUSD',
+      'TUSD',
+      'FDUSD',
+      'USDD',
+      'USDP',
+    };
+    bool isStable(Token t) => stableSymbols.contains(t.symbol.toUpperCase());
+
+    final candidates = tokens
+        .where((t) => !_tokensAreIdentical(t, from))
+        .toList();
+    if (candidates.isEmpty) {
+      return from;
+    }
+
+    Token? firstWhere(bool Function(Token) test) {
+      for (final t in candidates) {
+        if (test(t)) return t;
+      }
+      return null;
+    }
+
+    // Selling a non-native asset → default the counter to the native coin.
+    if (!isNative(from)) {
+      final native = firstWhere(isNative);
+      if (native != null) return native;
+    }
+    // Otherwise (e.g. selling the native coin) prefer a stablecoin.
+    final stable = firstWhere(isStable);
+    if (stable != null) return stable;
+
+    // Fall back to the native coin, then any distinct token.
+    return firstWhere(isNative) ?? candidates.first;
   }
 
   List<Token> _visibleTokens(List<Token> tokens) {

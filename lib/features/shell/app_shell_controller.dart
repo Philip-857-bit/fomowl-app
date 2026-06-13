@@ -1,13 +1,17 @@
 import 'package:flutter/foundation.dart';
 
+import '../../models/token.dart';
+
 enum AppShellTab { wallet, swap, discover, settings }
 
 class AppShellController extends ChangeNotifier {
   AppShellTab _currentTab = AppShellTab.wallet;
   String? _pendingDiscoverUrl;
+  Token? _pendingSwapFromToken;
 
   AppShellTab get currentTab => _currentTab;
   String? get pendingDiscoverUrl => _pendingDiscoverUrl;
+  Token? get pendingSwapFromToken => _pendingSwapFromToken;
 
   int get currentIndex => AppShellTab.values.indexOf(_currentTab);
 
@@ -34,6 +38,21 @@ class AppShellController extends ChangeNotifier {
   String? consumePendingDiscoverUrl() {
     final next = _pendingDiscoverUrl;
     _pendingDiscoverUrl = null;
+    return next;
+  }
+
+  /// Stash a token chosen elsewhere (e.g. the token-detail screen's "Swap"
+  /// action) so the Swap tab can pre-select it as the "from" token when it next
+  /// initializes. Intentionally does NOT notify listeners or switch tabs: the
+  /// navigation to the Swap tab handles visibility, and avoiding a notify keeps
+  /// any already-mounted Swap screen from consuming the token prematurely.
+  void openSwapWithToken(Token token) {
+    _pendingSwapFromToken = token;
+  }
+
+  Token? consumePendingSwapFromToken() {
+    final next = _pendingSwapFromToken;
+    _pendingSwapFromToken = null;
     return next;
   }
 
