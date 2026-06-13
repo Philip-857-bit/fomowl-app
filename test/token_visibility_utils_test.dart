@@ -2,11 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/utils/token_visibility_utils.dart';
 
-Token _token({
-  required String symbol,
-  String? address,
-  String? networkKey,
-}) {
+Token _token({required String symbol, String? address, String? networkKey}) {
   return Token(
     symbol: symbol,
     name: symbol,
@@ -20,31 +16,31 @@ Token _token({
 
 void main() {
   group('TokenVisibilityUtils.contains', () {
-    test(
-      'hides a token even when it is later seen without a networkKey scope '
-      '(Send/Swap pickers merge sources that drop the scope)',
-      () {
-        // Hidden from a context that has the scope (e.g. token management).
-        final hidden = _token(
-          symbol: 'SPAM',
-          address: '0xAbCdEf0000000000000000000000000000000001',
-          networkKey: 'evm:1',
-        );
-        final stored = {TokenVisibilityUtils.identifier(hidden)};
-        expect(stored, contains('evm:1:0xabcdef0000000000000000000000000000000001'));
+    test('hides a token even when it is later seen without a networkKey scope '
+        '(Send/Swap pickers merge sources that drop the scope)', () {
+      // Hidden from a context that has the scope (e.g. token management).
+      final hidden = _token(
+        symbol: 'SPAM',
+        address: '0xAbCdEf0000000000000000000000000000000001',
+        networkKey: 'evm:1',
+      );
+      final stored = {TokenVisibilityUtils.identifier(hidden)};
+      expect(
+        stored,
+        contains('evm:1:0xabcdef0000000000000000000000000000000001'),
+      );
 
-        // The same token arriving from the suggested list without a scope.
-        final sameTokenNoScope = _token(
-          symbol: 'SPAM',
-          address: '0xABCDEF0000000000000000000000000000000001',
-        );
-        expect(
-          TokenVisibilityUtils.contains(stored, sameTokenNoScope),
-          isTrue,
-          reason: 'address-only legacy id must still match the scoped hidden id',
-        );
-      },
-    );
+      // The same token arriving from the suggested list without a scope.
+      final sameTokenNoScope = _token(
+        symbol: 'SPAM',
+        address: '0xABCDEF0000000000000000000000000000000001',
+      );
+      expect(
+        TokenVisibilityUtils.contains(stored, sameTokenNoScope),
+        isTrue,
+        reason: 'address-only legacy id must still match the scoped hidden id',
+      );
+    });
 
     test('hides a token presented with the same scope', () {
       final hidden = _token(

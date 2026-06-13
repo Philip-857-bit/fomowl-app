@@ -719,30 +719,26 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             ],
           ),
         ),
-        // Flip separator, matching the swap tab's direction button.
+        // Flip separator, matching the swap tab's direction button: a full
+        // 40px-tall slot keeps the button in a clean gap between the cards
+        // instead of overflowing onto (overlapping) the From/To containers.
         SizedBox(
-          height: 14,
-          child: OverflowBox(
-            maxHeight: 40,
-            child: Center(
-              child: GestureDetector(
-                onTap: _isBridging ? null : _flipChains,
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF000000),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFF121212),
-                      width: 4,
-                    ),
-                  ),
-                  child: const Center(
-                    child: FigmaSwapDirectionIcon(
-                      color: Color(0xFFEA2A33),
-                      width: 16,
-                    ),
+          height: 40,
+          child: Center(
+            child: GestureDetector(
+              onTap: _isBridging ? null : _flipChains,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF000000),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF121212), width: 4),
+                ),
+                child: const Center(
+                  child: FigmaSwapDirectionIcon(
+                    color: Color(0xFFEA2A33),
+                    width: 16,
                   ),
                 ),
               ),
