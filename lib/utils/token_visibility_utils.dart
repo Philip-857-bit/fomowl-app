@@ -31,8 +31,22 @@ class TokenVisibilityUtils {
   }
 
   static bool contains(Set<String> identifiers, Token token) {
-    return TokenVisibilityUtils.identifiers(
+    if (TokenVisibilityUtils.identifiers(
       token,
-    ).any((id) => identifiers.contains(id));
+    ).any((id) => identifiers.contains(id))) {
+      return true;
+    }
+
+    // Robustness: a token hidden under one networkKey scope (e.g. "evm:1:0x..")
+    // must stay hidden even when it is later encountered with a different or
+    // absent scope. This happens in the Send/Swap token pickers, which merge
+    // tokens from several sources (wallet, cache, backend "suggested" list,
+    // custom) — some of which carry no networkKey, so their identifiers never
+    // match the scope-qualified stored id and the token leaks back into the
+    // list. Visibility is already bucketed per chain, so matching the un-scoped
+    // legacy id (contract address or native_<symbol>) as a scope suffix is
+    // unambiguous within a chain and never collides with a different token.
+    final suffix = ':${legacyIdentifier(token)}';
+    return identifiers.any((id) => id.endsWith(suffix));
   }
 }
