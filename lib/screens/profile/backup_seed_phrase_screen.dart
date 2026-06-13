@@ -294,14 +294,17 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
               ),
               const SizedBox(width: 5),
               Expanded(
-                child: Text(
-                  words[index],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    words[index],
+                    maxLines: 1,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

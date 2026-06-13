@@ -165,14 +165,18 @@ class _CreateWalletScreenState extends State<CreateWalletScreen>
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
-                                  child: Text(
-                                    _mnemonicWords[index],
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.white,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      _mnemonicWords[index],
+                                      maxLines: 1,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white,
+                                      ),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
