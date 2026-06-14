@@ -21,6 +21,7 @@ import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
 import '../../screens/transaction/transaction_processing_screen.dart';
+import '../../screens/home/home_portfolio_api_service.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
@@ -211,6 +212,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'requestSwapThenTransfer': false,
           'requestSignMessage': true,
           'notify': true,
+          'getBalances': true,
         },
       };
       _loadingContext = false;
@@ -423,6 +425,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     notify: function(payload) {
       return callHost({ type: 'notify', payload: payload || {} });
     },
+    getBalances: function() {
+      return callHost({ type: 'get_balances' });
+    },
     getContext: function() {
       return context;
     }
@@ -483,11 +488,62 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           };
         }
         return _handleNotifyRequest(notifyPayload.cast<String, dynamic>());
+      case 'get_balances':
+        return _handleGetBalancesRequest();
       default:
         return <String, dynamic>{
           'ok': false,
           'error': 'Unsupported bridge action: $type',
         };
+    }
+  }
+
+  /// Returns the user's wallet token balances (EVM chains) for the mini app.
+  /// Sourced from the same backend portfolio endpoint the home screen uses, so
+  /// the wallet address stays gated — only normalized per-token balances cross
+  /// the bridge.
+  Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
+    final evmAddress = await _walletService.getWalletAddressForFamily(
+      ChainFamily.evm,
+    );
+    if (evmAddress == null || evmAddress.trim().isEmpty) {
+      return const <String, dynamic>{
+        'ok': true,
+        'balances': <Map<String, dynamic>>[],
+      };
+    }
+
+    try {
+      final snapshot = await HomePortfolioApiService().fetchPortfolio(
+        evmAddress,
+      );
+      final balances = <Map<String, dynamic>>[];
+      for (final section in snapshot.sections) {
+        for (final token in section.tokens) {
+          final networkKey = (token.networkKey == null ||
+                  token.networkKey!.trim().isEmpty)
+              ? section.chain.networkKey
+              : token.networkKey!;
+          balances.add(<String, dynamic>{
+            'symbol': token.symbol,
+            'name': token.name,
+            'networkKey': networkKey,
+            'chainFamily': NetworkKey.familyOf(networkKey).wireValue,
+            'contractAddress': token.contractAddress,
+            'decimals': token.decimals,
+            'balance': token.balance,
+            'valueUsd': token.valueUsd,
+            'priceUsd': token.priceUsd,
+          });
+        }
+      }
+      return <String, dynamic>{'ok': true, 'balances': balances};
+    } catch (error) {
+      return <String, dynamic>{
+        'ok': false,
+        'error': 'Could not load balances.',
+        'balances': <Map<String, dynamic>>[],
+      };
     }
   }
 
