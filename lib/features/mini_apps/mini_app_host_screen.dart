@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
+import '../../config/app_environment.dart';
 import '../../models/chain.dart';
 import '../../models/wallet_account.dart';
 import '../../models/token.dart';
@@ -16,6 +17,7 @@ import '../../services/auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/http_client_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
@@ -498,52 +500,114 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
   }
 
-  /// Returns the user's wallet token balances (EVM chains) for the mini app.
-  /// Sourced from the same backend portfolio endpoint the home screen uses, so
-  /// the wallet address stays gated — only normalized per-token balances cross
-  /// the bridge.
+  /// Returns the user's wallet token balances for the mini app across EVM,
+  /// Solana, and Tron. Sourced from the same backend endpoints the wallet uses,
+  /// so the wallet address stays gated — only normalized per-token balances
+  /// cross the bridge. Each chain family is best-effort; a failure on one does
+  /// not drop the others. Including non-EVM balances lets off-ramp assets like
+  /// USDT·SOL surface a balance (previously only EVM chains were returned).
   Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
+    final balances = <Map<String, dynamic>>[];
+
+    // EVM balances via the aggregated portfolio endpoint.
     final evmAddress = await _walletService.getWalletAddressForFamily(
       ChainFamily.evm,
     );
-    if (evmAddress == null || evmAddress.trim().isEmpty) {
-      return const <String, dynamic>{
-        'ok': true,
-        'balances': <Map<String, dynamic>>[],
-      };
+    if (evmAddress != null && evmAddress.trim().isNotEmpty) {
+      try {
+        final snapshot = await HomePortfolioApiService().fetchPortfolio(
+          evmAddress,
+        );
+        for (final section in snapshot.sections) {
+          for (final token in section.tokens) {
+            final networkKey =
+                (token.networkKey == null || token.networkKey!.trim().isEmpty)
+                ? section.chain.networkKey
+                : token.networkKey!;
+            balances.add(<String, dynamic>{
+              'symbol': token.symbol,
+              'name': token.name,
+              'networkKey': networkKey,
+              'chainFamily': NetworkKey.familyOf(networkKey).wireValue,
+              'contractAddress': token.contractAddress,
+              'decimals': token.decimals,
+              'balance': token.balance,
+              'valueUsd': token.valueUsd,
+              'priceUsd': token.priceUsd,
+            });
+          }
+        }
+      } catch (error) {
+        debugPrint('Mini-app getBalances: EVM portfolio failed: $error');
+      }
     }
 
+    // Non-EVM balances (Solana, Tron) so off-ramp assets on those chains show a
+    // balance and can be validated client-side.
+    balances.addAll(
+      await _fetchNonEvmBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
+    );
+    balances.addAll(
+      await _fetchNonEvmBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
+    );
+
+    return <String, dynamic>{'ok': true, 'balances': balances};
+  }
+
+  /// Fetch non-EVM (Solana/Tron) wallet token balances statelessly via the
+  /// backend network-key wallet-tokens endpoint, normalized to the same shape
+  /// as the EVM balances above. Best-effort: returns empty on any failure.
+  Future<List<Map<String, dynamic>>> _fetchNonEvmBridgeBalances(
+    ChainFamily family,
+    String networkKey,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(family);
+    if (address == null || address.trim().isEmpty) {
+      return const <Map<String, dynamic>>[];
+    }
     try {
-      final snapshot = await HomePortfolioApiService().fetchPortfolio(
-        evmAddress,
+      final uri = AppEnvironment.blockchain(
+        '/networks/${Uri.encodeComponent(networkKey)}'
+        '/wallet-tokens/${Uri.encodeComponent(address)}',
       );
-      final balances = <Map<String, dynamic>>[];
-      for (final section in snapshot.sections) {
-        for (final token in section.tokens) {
-          final networkKey =
-              (token.networkKey == null || token.networkKey!.trim().isEmpty)
-              ? section.chain.networkKey
-              : token.networkKey!;
-          balances.add(<String, dynamic>{
-            'symbol': token.symbol,
-            'name': token.name,
-            'networkKey': networkKey,
-            'chainFamily': NetworkKey.familyOf(networkKey).wireValue,
-            'contractAddress': token.contractAddress,
-            'decimals': token.decimals,
-            'balance': token.balance,
-            'valueUsd': token.valueUsd,
-            'priceUsd': token.priceUsd,
-          });
-        }
+      final response = await HttpClientService().client
+          .get(uri)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const <Map<String, dynamic>>[];
       }
-      return <String, dynamic>{'ok': true, 'balances': balances};
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return const <Map<String, dynamic>>[];
+      }
+      final rawTokens = decoded['tokens'];
+      if (rawTokens is! List) {
+        return const <Map<String, dynamic>>[];
+      }
+      final defaultDecimals = family == ChainFamily.solana ? 9 : 6;
+      final result = <Map<String, dynamic>>[];
+      for (final raw in rawTokens) {
+        if (raw is! Map) continue;
+        final token = raw.map((key, value) => MapEntry('$key', value));
+        final symbol = (token['symbol'] as String?)?.trim() ?? '';
+        final balance = (token['balance'] as num?)?.toDouble() ?? 0;
+        if (symbol.isEmpty || balance <= 0) continue;
+        result.add(<String, dynamic>{
+          'symbol': symbol,
+          'name': (token['name'] as String?) ?? symbol,
+          'networkKey': networkKey,
+          'chainFamily': family.wireValue,
+          'contractAddress': token['contractAddress'],
+          'decimals': (token['decimals'] as num?)?.toInt() ?? defaultDecimals,
+          'balance': balance,
+          'valueUsd': (token['valueUsd'] as num?)?.toDouble() ?? 0,
+          'priceUsd': (token['priceUsd'] as num?)?.toDouble() ?? 0,
+        });
+      }
+      return result;
     } catch (error) {
-      return <String, dynamic>{
-        'ok': false,
-        'error': 'Could not load balances.',
-        'balances': <Map<String, dynamic>>[],
-      };
+      debugPrint('Mini-app getBalances: $networkKey fetch failed: $error');
+      return const <Map<String, dynamic>>[];
     }
   }
 
