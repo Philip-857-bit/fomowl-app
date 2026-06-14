@@ -700,9 +700,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'confirmed': confirmed,
       };
     } catch (error) {
-      final message = AppErrorUtils.userMessage(
+      final message = _bridgeTransferErrorMessage(
         error,
-        fallback: 'Wallet transfer failed. Please try again.',
+        nativeSymbol: nativeSymbol,
       );
       controller.setError(message);
       return <String, dynamic>{'ok': false, 'error': message};
@@ -1064,6 +1064,46 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           chainId: chain.chainId,
         );
     }
+  }
+
+  /// Turn a raw wallet-transfer failure into an actionable, chain-aware message.
+  ///
+  /// The crypto leg pays gas in the chain's native coin (e.g. BNB on BNB Smart
+  /// Chain), so a wallet that holds the stablecoin but no native coin fails to
+  /// broadcast. web3dart surfaces that as an `RPCError`, which the generic
+  /// mapper collapses to "Wallet transfer failed" — hiding the real cause. Map
+  /// the common gas/revert signatures explicitly before falling back.
+  String _bridgeTransferErrorMessage(
+    Object error, {
+    required String nativeSymbol,
+  }) {
+    final lowered = error.toString().toLowerCase();
+    final native = nativeSymbol.trim().isEmpty
+        ? 'the network fee coin'
+        : nativeSymbol.trim();
+
+    final insufficientGas =
+        lowered.contains('insufficient funds') ||
+        lowered.contains('insufficient balance') ||
+        lowered.contains('gas required exceeds') ||
+        lowered.contains('cannot afford') ||
+        (lowered.contains('not enough') && lowered.contains('gas'));
+    if (insufficientGas) {
+      return 'Not enough $native to pay the network fee. Add $native to this '
+          'wallet to cover gas, then try the withdrawal again.';
+    }
+
+    if (lowered.contains('execution reverted') ||
+        lowered.contains('transfer amount exceeds balance') ||
+        lowered.contains('reverted')) {
+      return 'The network rejected the transfer. Make sure you hold enough of '
+          'the token plus $native for gas, then try again.';
+    }
+
+    return AppErrorUtils.userMessage(
+      error,
+      fallback: 'Wallet transfer failed. Please try again.',
+    );
   }
 
   EvmChain _evmChainForNetwork(
