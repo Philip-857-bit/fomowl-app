@@ -520,8 +520,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       final balances = <Map<String, dynamic>>[];
       for (final section in snapshot.sections) {
         for (final token in section.tokens) {
-          final networkKey = (token.networkKey == null ||
-                  token.networkKey!.trim().isEmpty)
+          final networkKey =
+              (token.networkKey == null || token.networkKey!.trim().isEmpty)
               ? section.chain.networkKey
               : token.networkKey!;
           balances.add(<String, dynamic>{

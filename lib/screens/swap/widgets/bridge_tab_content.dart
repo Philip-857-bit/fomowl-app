@@ -1202,9 +1202,8 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                             if (_loadError != null) ...[
                               const SizedBox(height: 12),
                               TextButton(
-                                onPressed: () => _load(
-                                  term: _searchController.text,
-                                ),
+                                onPressed: () =>
+                                    _load(term: _searchController.text),
                                 child: Text(
                                   'Retry',
                                   style: GoogleFonts.inter(
