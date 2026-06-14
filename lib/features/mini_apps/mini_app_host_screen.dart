@@ -516,7 +516,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       return const <String, dynamic>{
         'ok': false,
         'error':
-            'Automatic conversion is not available in this app version. Select USDT or USDC and try again.',
+            'Withdrawals settle in USDT or USDC. To withdraw another token, swap it to USDT in your wallet first, then withdraw.',
       };
     }
 
