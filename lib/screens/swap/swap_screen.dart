@@ -2562,14 +2562,24 @@ class _SwapScreenState extends State<SwapScreen> {
       if (!mounted || _activeTab != SwapTab.limit) {
         return;
       }
-      ShowcaseView.get().startShowCase([
+      // Only include steps whose Showcase target is actually mounted. Some
+      // targets are conditional on the limit side (e.g. the amount card's
+      // showcase only renders in buy mode), and passing an unmounted key to
+      // startShowCase leaves showcaseview stuck on a blank blur barrier that
+      // swallows all input — which reads as the whole Limit tab freezing until
+      // the session is restarted.
+      final showcaseKeys = <GlobalKey>[
         _limitTabShowcaseKey,
         _limitAmountsShowcaseKey,
         _limitExecutionPriceShowcaseKey,
         _limitExpiryShowcaseKey,
         _limitSummaryShowcaseKey,
         _limitSubmitShowcaseKey,
-      ]);
+      ].where((key) => key.currentContext != null).toList();
+      if (showcaseKeys.isEmpty) {
+        return;
+      }
+      ShowcaseView.get().startShowCase(showcaseKeys);
     });
   }
 
