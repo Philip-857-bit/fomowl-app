@@ -84,15 +84,14 @@ class SolanaSwapExecutionService {
         );
       }
 
-      // Reconstruct the signed transaction:
-      // [compact-u16 = 1][64-byte signature][message]
-      final signedTx = Uint8List(sigCountLen + 64 + messageBytes.length);
-      // Copy original compact-u16 sig count header (it stays the same)
-      signedTx.setRange(0, sigCountLen, txBytes, 0);
-      // Write our signature in the first slot
+      // Reconstruct by copying the ORIGINAL transaction (its compact-u16 header,
+      // all signature slots, and the message) and overwriting only the fee-payer's
+      // slot (index 0) with our signature. Jupiter routes can require additional
+      // signers whose pre-filled signatures must be preserved — the previous code
+      // rebuilt a single-signature transaction and dropped them, which Jupiter
+      // rejects (execute 502).
+      final signedTx = Uint8List.fromList(txBytes);
       signedTx.setRange(sigCountLen, sigCountLen + 64, signatureBytes);
-      // Write the message
-      signedTx.setRange(sigCountLen + 64, signedTx.length, messageBytes);
 
       final signedTxBase64 = base64Encode(signedTx);
 
