@@ -9,7 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
-import '../../features/shell/app_shell_controller.dart';
+import '../../features/mini_apps/mini_app_host_screen.dart';
+import '../../features/mini_apps/mini_app_registry.dart';
 import '../../models/chain.dart';
 import '../profile/add_network_screen.dart';
 import '../../models/token.dart';
@@ -1596,6 +1597,25 @@ class _HomeScreenState extends State<HomeScreen> {
     await InAppLinkRouter.open(context, 'https://x.com/fomowlhq');
   }
 
+  /// Open the Cash-In mini app straight on its withdraw (off-ramp) page. The
+  /// hosted app's own middleware redirects unauthenticated users to its login
+  /// screen and returns them to `/withdraw` after signing in, so we only need to
+  /// point the host at the withdraw URL here. Falls back to the mini app's base
+  /// launch URL when the deep link can't be built.
+  void _openCashInWithdraw() {
+    final base = OwlletMiniApps.cashIn.configuredLaunchUri;
+    final withdrawUrl = base?.replace(path: '/withdraw').toString();
+    Navigator.pushNamed(
+      context,
+      '/cash-in',
+      arguments: MiniAppHostArguments(
+        miniAppId: 'cash_in',
+        launchSource: 'home',
+        initialUrl: withdrawUrl,
+      ),
+    );
+  }
+
   Future<void> _showNftDetails(NftAsset nft) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -1827,7 +1847,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               key: _quickActionsShowcaseKey,
                               title: 'Core wallet actions',
                               description:
-                                  'Receive, send, and swap stay visible on the home screen for the main wallet flow.',
+                                  'Receive, send, and withdraw stay visible on the home screen for the main wallet flow.',
                               child: QuickActionsRow(
                                 onReceive: () => Navigator.pushNamed(
                                   context,
@@ -1835,15 +1855,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 onSend: () =>
                                     Navigator.pushNamed(context, '/send-token'),
-                                onSwap: () {
-                                  if (widget.showBottomNavigation) {
-                                    Navigator.pushNamed(context, '/swap');
-                                    return;
-                                  }
-                                  context.read<AppShellController>().selectTab(
-                                    AppShellTab.swap,
-                                  );
-                                },
+                                onWithdraw: _openCashInWithdraw,
                               ),
                             ),
                             const SizedBox(height: 38),
