@@ -132,6 +132,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get receive => '接收';
 
   @override
+  String get withdraw => '提现';
+
+  @override
   String get buy => '购买';
 
   @override

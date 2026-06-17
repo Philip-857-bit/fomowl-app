@@ -41,6 +41,7 @@
   "nftPreviewDescription": "Your NFT preview will appear here on supported networks.",
   "send": "Send",
   "receive": "Receive",
+  "withdraw": "Withdraw",
   "buy": "Buy",
   "sell": "Sell",
   "wallets": "Wallets",

@@ -134,6 +134,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get receive => 'استقبال';
 
   @override
+  String get withdraw => 'سحب';
+
+  @override
   String get buy => 'شراء';
 
   @override
