@@ -1431,7 +1431,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seedPhraseVerificationSubtitle =>
-      'Select the requested words to confirm you stored the phrase offline.';
+      'write the requested words to confirm you stored the phrase offline.';
 
   @override
   String selectSeedPhraseWord(Object index) {

@@ -487,7 +487,7 @@
   "seedPhraseSecureScreenNotice": "Screen capture is blocked while this recovery phrase is visible where supported.",
   "iBackedItUp": "I backed it up",
   "seedPhraseVerificationTitle": "Confirm your backup",
-  "seedPhraseVerificationSubtitle": "Select the requested words to confirm you stored the phrase offline.",
+  "seedPhraseVerificationSubtitle": "Write the requested words to confirm you stored the phrase offline.",
   "selectSeedPhraseWord": "Select word #{index}",
   "verifyBackup": "Verify backup",
   "seedPhraseVerificationFailed": "That backup check did not match. Try again.",
