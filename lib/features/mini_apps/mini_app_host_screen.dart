@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +20,7 @@ import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/http_client_service.dart';
+import '../../services/system_picker_guard.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
@@ -83,6 +86,9 @@ class MiniAppHostScreen extends StatefulWidget {
 class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   static const String _handlerName = 'owlletMiniAppBridge';
   static const String _scriptGroup = 'owllet-mini-app';
+  static const MethodChannel _cameraPermissionChannel = MethodChannel(
+    'owllet/camera_permission',
+  );
 
   final AuthService _authService = AuthService();
   final WalletBackendAuthService _walletBackendAuthService =
@@ -114,6 +120,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   void initState() {
     super.initState();
     _prepareBridgeContext();
+  }
+
+  @override
+  void dispose() {
+    // Don't leave the lock-on-background suppressed once the user leaves the
+    // mini app; the guard is only meant to cover an in-flight capture here.
+    SystemPickerGuard.clear();
+    super.dispose();
   }
 
   Future<void> _prepareBridgeContext() async {
@@ -253,7 +267,36 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   transparentBackground: true,
                   useShouldOverrideUrlLoading: true,
                   allowsBackForwardNavigationGestures: true,
+                  // Allow the in-app live camera (getUserMedia) used by KYC
+                  // capture so the flow never has to background into the
+                  // external camera app (which trips the app lock and loses
+                  // the captured image).
+                  mediaPlaybackRequiresUserGesture: false,
+                  allowsInlineMediaPlayback: true,
+                  iframeAllow: 'camera; microphone',
+                  iframeAllowFullscreen: true,
                 ),
+                onPermissionRequest: (controller, request) async {
+                  // Only the trusted mini-app origin may use the device camera
+                  // (e.g. Cash In KYC selfie). Deny anything else outright.
+                  if (!_isTrustedOrigin(request.origin)) {
+                    return PermissionResponse(
+                      resources: request.resources,
+                      action: PermissionResponseAction.DENY,
+                    );
+                  }
+                  // Tell the host lock guard this backgrounding (system
+                  // permission dialog / camera) is expected so it doesn't throw
+                  // up the unlock screen and wipe the capture in progress.
+                  SystemPickerGuard.arm();
+                  final granted = await _ensureNativeCameraPermission();
+                  return PermissionResponse(
+                    resources: request.resources,
+                    action: granted
+                        ? PermissionResponseAction.GRANT
+                        : PermissionResponseAction.DENY,
+                  );
+                },
                 onWebViewCreated: (controller) {
                   _controller = controller;
                   controller.addJavaScriptHandler(
@@ -1223,6 +1266,26 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       return hash;
     }
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
+  }
+
+  /// Ensure the OS-level camera permission is held before granting the
+  /// WebView's getUserMedia request. flutter_inappwebview grants the web origin
+  /// but never requests the Android runtime permission, so we prompt natively.
+  /// iOS/macOS WKWebView surfaces its own prompt (gated by the Info.plist
+  /// NSCameraUsageDescription), so no runtime request is needed there.
+  Future<bool> _ensureNativeCameraPermission() async {
+    if (!Platform.isAndroid) {
+      return true;
+    }
+    try {
+      final granted = await _cameraPermissionChannel.invokeMethod<bool>(
+        'ensureCameraPermission',
+      );
+      return granted ?? false;
+    } catch (error) {
+      debugPrint('[MiniAppHost] camera permission request failed: $error');
+      return false;
+    }
   }
 
   bool _isTrustedOrigin(Uri uri) {

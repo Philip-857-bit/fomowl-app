@@ -63,7 +63,9 @@ fun isReleaseTaskRequested(): Boolean {
 
 android {
     namespace = "com.fomowl.owllet"
-    compileSdk = flutter.compileSdkVersion
+    // Target Android 16 (API 36) to meet Google Play's Aug 31, 2026 requirement.
+    // Overrides the Flutter SDK default (35); AGP 8.11.1 supports compileSdk 36.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -91,7 +93,7 @@ android {
     defaultConfig {
         applicationId = "com.fomowl.owllet"
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

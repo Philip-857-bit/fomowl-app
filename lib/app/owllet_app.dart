@@ -11,6 +11,7 @@ import '../models/patch_status_snapshot.dart';
 import '../services/app_patch_service.dart';
 import '../services/language_controller.dart';
 import '../services/storage_service.dart';
+import '../services/system_picker_guard.dart';
 import '../services/wallet_service.dart';
 import '../utils/language_utils.dart';
 import '../utils/toast_utils.dart';
@@ -101,6 +102,13 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     if (!_wasBackgrounded || _unlockInFlight) return;
     _wasBackgrounded = false;
 
+    // A system camera/file picker launched from within the app (e.g. Cash In
+    // KYC capture) briefly backgrounds us. Don't treat that as the user leaving
+    // the app, or the unlock screen would cover and wipe the capture in flight.
+    if (SystemPickerGuard.isActive) {
+      return;
+    }
+
     final routeName = currentRouteName.value;
     if (_shouldSkipLockForRoute(routeName)) {
       return;
@@ -126,6 +134,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
       return;
     }
+    if (SystemPickerGuard.isActive) return;
 
     final routeName = currentRouteName.value;
     if (_shouldSkipLockForRoute(routeName)) return;

@@ -159,7 +159,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/launcher_icon.png"
-  adaptive_icon_background: "#000000"
+  adaptive_icon_background: "#DC0000"
   adaptive_icon_foreground: "assets/images/launcher_foreground.png"
   
   # Remove default Flutter icon

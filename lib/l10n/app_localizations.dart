@@ -2687,7 +2687,7 @@ abstract class AppLocalizations {
   /// No description provided for @seedPhraseVerificationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Select the requested words to confirm you stored the phrase offline.'**
+  /// **'Write the requested words to confirm you stored the phrase offline.'**
   String get seedPhraseVerificationSubtitle;
 
   /// No description provided for @selectSeedPhraseWord.

@@ -20,7 +20,7 @@ jobs:
           channel: stable
           # Pin to the same SDK the release/Shorebird workflows ship with so
           # analyze/test run against the version that actually reaches users.
-          flutter-version: 3.38.6
+          flutter-version: 3.41.6
           cache: true
 
       - name: Install dependencies
