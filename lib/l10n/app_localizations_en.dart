@@ -134,6 +134,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receive => 'Receive';
 
   @override
+  String get withdraw => 'Withdraw';
+
+  @override
   String get buy => 'Buy';
 
   @override

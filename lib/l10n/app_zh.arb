@@ -41,6 +41,7 @@
   "nftPreviewDescription": "您的 NFT 预览将显示在支持的网络上。",
   "send": "发送",
   "receive": "接收",
+  "withdraw": "提现",
   "buy": "购买",
   "sell": "出售",
   "wallets": "钱包管理",

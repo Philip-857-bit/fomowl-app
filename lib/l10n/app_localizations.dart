@@ -356,6 +356,12 @@ abstract class AppLocalizations {
   /// **'Receive'**
   String get receive;
 
+  /// No description provided for @withdraw.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw'**
+  String get withdraw;
+
   /// No description provided for @buy.
   ///
   /// In en, this message translates to:

@@ -7,13 +7,13 @@ import '../../../l10n/app_localizations.dart';
 class QuickActionsRow extends StatelessWidget {
   final VoidCallback onReceive;
   final VoidCallback onSend;
-  final VoidCallback? onSwap;
+  final VoidCallback? onWithdraw;
 
   const QuickActionsRow({
     super.key,
     required this.onReceive,
     required this.onSend,
-    this.onSwap,
+    this.onWithdraw,
   });
 
   @override
@@ -37,11 +37,11 @@ class QuickActionsRow extends StatelessWidget {
             label: l.send,
             onTap: onSend,
           ),
-          if (onSwap != null)
+          if (onWithdraw != null)
             _QuickActionButton(
-              icon: Icons.swap_horiz_rounded,
-              label: l.swap,
-              onTap: onSwap!,
+              icon: Icons.account_balance_rounded,
+              label: l.withdraw,
+              onTap: onWithdraw!,
             ),
         ],
       ),

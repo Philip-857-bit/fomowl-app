@@ -134,6 +134,9 @@ class AppLocalizationsHa extends AppLocalizations {
   String get receive => 'Karba';
 
   @override
+  String get withdraw => 'Cire kuɗi';
+
+  @override
   String get buy => 'Saya';
 
   @override
