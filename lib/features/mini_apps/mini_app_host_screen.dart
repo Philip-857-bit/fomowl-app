@@ -83,6 +83,14 @@ class MiniAppHostScreen extends StatefulWidget {
   State<MiniAppHostScreen> createState() => _MiniAppHostScreenState();
 }
 
+/// Build-time opt-in to expose the mini-app webview to remote inspectors on a
+/// release build (debug builds are always inspectable). Set with
+/// `--dart-define=OWLLET_WEBVIEW_INSPECTABLE=true` when you need to debug the
+/// hosted website in a release artifact; defaults to false for production.
+const bool _webviewInspectable = bool.fromEnvironment(
+  'OWLLET_WEBVIEW_INSPECTABLE',
+);
+
 class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   static const String _handlerName = 'owlletMiniAppBridge';
   static const String _scriptGroup = 'owllet-mini-app';
@@ -267,6 +275,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   transparentBackground: true,
                   useShouldOverrideUrlLoading: true,
                   allowsBackForwardNavigationGestures: true,
+                  // Expose the webview to chrome://inspect (Android) and Safari
+                  // Web Inspector (iOS) for debugging the mini-app's JS console.
+                  // On by default in debug builds; to debug a RELEASE build, build
+                  // with --dart-define=OWLLET_WEBVIEW_INSPECTABLE=true. A normal
+                  // production release (no flag) stays locked.
+                  isInspectable: kDebugMode || _webviewInspectable,
                   // Allow the in-app live camera (getUserMedia) used by KYC
                   // capture so the flow never has to background into the
                   // external camera app (which trips the app lock and loses
@@ -277,9 +291,25 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   iframeAllowFullscreen: true,
                 ),
                 onPermissionRequest: (controller, request) async {
-                  // Only the trusted mini-app origin may use the device camera
-                  // (e.g. Cash In KYC selfie). Deny anything else outright.
-                  if (!_isTrustedOrigin(request.origin)) {
+                  // Only a trusted mini-app origin may use the device camera
+                  // (e.g. Cash In KYC selfie). Some Android WebView builds report
+                  // an empty/null permission-request origin, which previously
+                  // tripped the trust check and silently denied getUserMedia
+                  // (NotAllowedError) even with the OS camera permission granted.
+                  // Fall back to the CURRENTLY-LOADED page origin — that URL is
+                  // already origin-guarded by shouldOverrideUrlLoading, so only a
+                  // trusted page can ever be the top-level document here.
+                  final originTrusted = _isTrustedOrigin(request.origin);
+                  final pageTrusted =
+                      originTrusted || await _isCurrentPageTrusted();
+                  if (kDebugMode || _webviewInspectable) {
+                    debugPrint(
+                      '[MiniAppHost] onPermissionRequest origin=${request.origin} '
+                      'resources=${request.resources} originTrusted=$originTrusted '
+                      'pageTrusted=$pageTrusted',
+                    );
+                  }
+                  if (!pageTrusted) {
                     return PermissionResponse(
                       resources: request.resources,
                       action: PermissionResponseAction.DENY,
@@ -290,6 +320,11 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   // up the unlock screen and wipe the capture in progress.
                   SystemPickerGuard.arm();
                   final granted = await _ensureNativeCameraPermission();
+                  if (kDebugMode || _webviewInspectable) {
+                    debugPrint(
+                      '[MiniAppHost] camera native permission granted=$granted',
+                    );
+                  }
                   return PermissionResponse(
                     resources: request.resources,
                     action: granted
@@ -1294,6 +1329,24 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
     final origin = normalizeOriginFromUri(uri);
     return _trustedOrigins.contains(origin);
+  }
+
+  /// Whether the webview's currently-loaded top-level URL is a trusted mini-app
+  /// origin. Used as a fallback for camera permission when the permission
+  /// request's own origin is empty/unreliable on some Android WebView builds —
+  /// safe because shouldOverrideUrlLoading already guarantees only a trusted
+  /// origin can be the top-level document.
+  Future<bool> _isCurrentPageTrusted() async {
+    final controller = _controller;
+    if (controller == null) {
+      return false;
+    }
+    try {
+      final current = await controller.getUrl();
+      return current != null && _isTrustedOrigin(current);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _openExternal(Uri uri) async {
