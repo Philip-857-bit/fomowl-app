@@ -299,16 +299,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   // Fall back to the CURRENTLY-LOADED page origin — that URL is
                   // already origin-guarded by shouldOverrideUrlLoading, so only a
                   // trusted page can ever be the top-level document here.
-                  final originTrusted = _isTrustedOrigin(request.origin);
-                  final pageTrusted =
-                      originTrusted || await _isCurrentPageTrusted();
-                  if (kDebugMode || _webviewInspectable) {
-                    debugPrint(
-                      '[MiniAppHost] onPermissionRequest origin=${request.origin} '
-                      'resources=${request.resources} originTrusted=$originTrusted '
-                      'pageTrusted=$pageTrusted',
-                    );
-                  }
+                  final pageTrusted = _isTrustedOrigin(request.origin) ||
+                      await _isCurrentPageTrusted();
                   if (!pageTrusted) {
                     return PermissionResponse(
                       resources: request.resources,
@@ -320,11 +312,6 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   // up the unlock screen and wipe the capture in progress.
                   SystemPickerGuard.arm();
                   final granted = await _ensureNativeCameraPermission();
-                  if (kDebugMode || _webviewInspectable) {
-                    debugPrint(
-                      '[MiniAppHost] camera native permission granted=$granted',
-                    );
-                  }
                   return PermissionResponse(
                     resources: request.resources,
                     action: granted
