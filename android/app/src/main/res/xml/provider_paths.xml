@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider paths for flutter_inappwebview's <input capture> (camera/video)
+  uploads. On Android 6+ the plugin writes the capture output to
+  getExternalFilesDir(null) via File.createTempFile, so <external-files-path> is
+  the critical entry — the plugin's own bundled provider_paths only maps
+  <external-path> and would not cover it. The extra entries are harmless and
+  cover older paths / future use. This app-level resource intentionally overrides
+  the plugin's same-named res/xml/provider_paths.xml.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="external_files" path="." />
+    <external-path name="external_storage" path="." />
+    <files-path name="files" path="." />
+    <cache-path name="cache" path="." />
+    <external-cache-path name="external_cache" path="." />
+</paths>

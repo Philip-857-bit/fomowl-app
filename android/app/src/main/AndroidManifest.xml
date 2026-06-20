@@ -46,6 +46,22 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- flutter_inappwebview ships InAppWebViewFileProvider + provider_paths
+             but does NOT declare the <provider> in its own manifest, so the host
+             app must. Without this, <input capture> camera uploads (the KYC selfie
+             fallback) crash in getOutputUri with "Couldn't find meta-data for
+             provider with authority ...fileprovider" and the captured photo is
+             never returned to the page. -->
+        <provider
+            android:name="com.pichillilorenzo.flutter_inappwebview_android.InAppWebViewFileProvider"
+            android:authorities="${applicationId}.flutter_inappwebview_android.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
