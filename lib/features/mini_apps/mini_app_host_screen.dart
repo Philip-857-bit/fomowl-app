@@ -189,12 +189,26 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     // `activeNetworkKey` (NOT `activeChain.networkKey`): the latter is always the
     // EVM chain, so it would report e.g. evm:56 even when the user has switched
     // the wallet to Tron/Solana, hiding their balance on the truly-active chain.
+    // We also derive the chain family + (EVM) chain id from the key so the SDK's
+    // `activeNetwork` is fully populated, not just the bare key.
     // Best-effort: omitted if the provider isn't reachable.
     String? activeNetworkKey;
+    String? activeChainFamily;
+    int? activeChainId;
     try {
       activeNetworkKey = context.read<BlockchainService>().activeNetworkKey;
+      // networkKey is "<family>:<rest>" — e.g. "evm:56", "tron:mainnet".
+      if (activeNetworkKey != null && activeNetworkKey.contains(':')) {
+        final parts = activeNetworkKey.split(':');
+        activeChainFamily = parts.first;
+        if (parts.first == 'evm' && parts.length > 1) {
+          activeChainId = int.tryParse(parts[1]);
+        }
+      }
     } catch (_) {
       activeNetworkKey = null;
+      activeChainFamily = null;
+      activeChainId = null;
     }
     final profilePayload = (profile == null && !hasWallet)
         ? null
@@ -230,6 +244,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'platform': defaultTargetPlatform.name,
         'theme': 'dark',
         'activeNetworkKey': activeNetworkKey,
+        'activeChainFamily': activeChainFamily,
+        'activeChainId': activeChainId,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},
         'hasSession': isLoggedIn,
