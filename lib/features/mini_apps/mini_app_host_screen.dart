@@ -184,6 +184,18 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     if (!mounted) {
       return;
     }
+    // The wallet's currently-selected network, so mini apps can scope a balance
+    // headline to the active chain instead of summing every network. Use
+    // `activeNetworkKey` (NOT `activeChain.networkKey`): the latter is always the
+    // EVM chain, so it would report e.g. evm:56 even when the user has switched
+    // the wallet to Tron/Solana, hiding their balance on the truly-active chain.
+    // Best-effort: omitted if the provider isn't reachable.
+    String? activeNetworkKey;
+    try {
+      activeNetworkKey = context.read<BlockchainService>().activeNetworkKey;
+    } catch (_) {
+      activeNetworkKey = null;
+    }
     final profilePayload = (profile == null && !hasWallet)
         ? null
         : <String, dynamic>{
@@ -217,6 +229,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'launch': <String, dynamic>{'source': widget.launchSource},
         'platform': defaultTargetPlatform.name,
         'theme': 'dark',
+        'activeNetworkKey': activeNetworkKey,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},
         'hasSession': isLoggedIn,
