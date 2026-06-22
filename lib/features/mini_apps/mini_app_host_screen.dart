@@ -163,6 +163,16 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         : null;
     final hasWallet = walletAddress != null;
 
+    // The user's Solana address — needed by cross-chain flows (e.g. cash-in's
+    // sell-any-token saga uses it as the USDC refund address). Best-effort.
+    String? solanaWalletAddress;
+    try {
+      solanaWalletAddress =
+          await _walletService.getWalletAddressForFamily(ChainFamily.solana);
+    } catch (_) {
+      solanaWalletAddress = null;
+    }
+
     // Surface the wallet-auth (ws_) session token to the mini-app so it can call
     // wallet-scoped backend endpoints (e.g. the affiliate dashboard) as the user.
     // For mini apps that require it we mint a session (signing silently with the
@@ -247,6 +257,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'activeNetworkKey': activeNetworkKey,
         'activeChainFamily': activeChainFamily,
         'activeChainId': activeChainId,
+        'solanaWalletAddress': solanaWalletAddress,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},
         'hasSession': isLoggedIn,
