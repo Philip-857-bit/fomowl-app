@@ -8,7 +8,16 @@ class ScreenCaptureGuard {
 
   final ScreenSecurity _screenSecurity;
 
+  /// Master switch for screenshot/screen-recording protection (FLAG_SECURE on
+  /// Android, secure overlay on iOS).
+  ///
+  /// Temporarily set to `false` so the team can record tutorial videos of the
+  /// app, including the otherwise-protected onboarding and backup screens.
+  /// Restore to `true` to re-enable protection before shipping to production.
+  static bool protectionEnabled = false;
+
   Future<void> enableProtection() async {
+    if (!protectionEnabled) return;
     if (!_supportsProtection) return;
     try {
       await _screenSecurity.enable();

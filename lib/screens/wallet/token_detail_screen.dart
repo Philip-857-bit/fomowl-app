@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
 import '../../constants/app_colors.dart';
+import '../../features/shell/app_shell_controller.dart';
 import '../../models/chain.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
@@ -486,14 +487,24 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                             TokenActionData(
                               icon: Icons.north_rounded,
                               label: 'Send',
-                              onTap: () =>
-                                  Navigator.pushNamed(context, '/send-token'),
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/send-token',
+                                arguments: token,
+                              ),
                             ),
                             TokenActionData(
                               icon: Icons.sync_alt_rounded,
                               label: 'Swap',
-                              onTap: () =>
-                                  Navigator.pushNamed(context, '/swap'),
+                              onTap: () {
+                                // Pre-select this token as the swap "from" side
+                                // so opening Swap from a token's page acts on
+                                // that token instead of a default/first token.
+                                context
+                                    .read<AppShellController>()
+                                    .openSwapWithToken(token);
+                                Navigator.pushNamed(context, '/swap');
+                              },
                             ),
                           ],
                         ),

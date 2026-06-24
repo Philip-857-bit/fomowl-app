@@ -134,6 +134,9 @@ class AppLocalizationsIg extends AppLocalizations {
   String get receive => 'Nweta';
 
   @override
+  String get withdraw => 'Wepụ ego';
+
+  @override
   String get buy => 'Zụta';
 
   @override

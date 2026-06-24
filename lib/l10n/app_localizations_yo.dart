@@ -134,6 +134,9 @@ class AppLocalizationsYo extends AppLocalizations {
   String get receive => 'Gba wọle';
 
   @override
+  String get withdraw => 'Yọ owó';
+
+  @override
   String get buy => 'Ra';
 
   @override

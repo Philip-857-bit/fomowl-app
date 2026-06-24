@@ -134,6 +134,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get receive => 'Receive';
 
   @override
+  String get withdraw => 'Withdraw';
+
+  @override
   String get buy => 'Buy';
 
   @override
@@ -1431,7 +1434,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get seedPhraseVerificationSubtitle =>
-      'Select the requested words to confirm you stored the phrase offline.';
+      'Write the requested words to confirm you stored the phrase offline.';
 
   @override
   String selectSeedPhraseWord(Object index) {

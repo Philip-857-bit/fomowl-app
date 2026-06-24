@@ -1,13 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
+import '../../config/app_environment.dart';
 import '../../models/chain.dart';
 import '../../models/wallet_account.dart';
 import '../../models/token.dart';
@@ -16,11 +19,14 @@ import '../../services/auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/app_notification_service.dart';
+import '../../services/http_client_service.dart';
+import '../../services/system_picker_guard.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
 import '../../screens/transaction/transaction_processing_screen.dart';
+import '../../screens/home/home_portfolio_api_service.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
@@ -77,9 +83,20 @@ class MiniAppHostScreen extends StatefulWidget {
   State<MiniAppHostScreen> createState() => _MiniAppHostScreenState();
 }
 
+/// Build-time opt-in to expose the mini-app webview to remote inspectors on a
+/// release build (debug builds are always inspectable). Set with
+/// `--dart-define=OWLLET_WEBVIEW_INSPECTABLE=true` when you need to debug the
+/// hosted website in a release artifact; defaults to false for production.
+const bool _webviewInspectable = bool.fromEnvironment(
+  'OWLLET_WEBVIEW_INSPECTABLE',
+);
+
 class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   static const String _handlerName = 'owlletMiniAppBridge';
   static const String _scriptGroup = 'owllet-mini-app';
+  static const MethodChannel _cameraPermissionChannel = MethodChannel(
+    'owllet/camera_permission',
+  );
 
   final AuthService _authService = AuthService();
   final WalletBackendAuthService _walletBackendAuthService =
@@ -111,6 +128,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   void initState() {
     super.initState();
     _prepareBridgeContext();
+  }
+
+  @override
+  void dispose() {
+    // Don't leave the lock-on-background suppressed once the user leaves the
+    // mini app; the guard is only meant to cover an in-flight capture here.
+    SystemPickerGuard.clear();
+    super.dispose();
   }
 
   Future<void> _prepareBridgeContext() async {
@@ -159,6 +184,32 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     if (!mounted) {
       return;
     }
+    // The wallet's currently-selected network, so mini apps can scope a balance
+    // headline to the active chain instead of summing every network. Use
+    // `activeNetworkKey` (NOT `activeChain.networkKey`): the latter is always the
+    // EVM chain, so it would report e.g. evm:56 even when the user has switched
+    // the wallet to Tron/Solana, hiding their balance on the truly-active chain.
+    // We also derive the chain family + (EVM) chain id from the key so the SDK's
+    // `activeNetwork` is fully populated, not just the bare key.
+    // Best-effort: omitted if the provider isn't reachable.
+    String? activeNetworkKey;
+    String? activeChainFamily;
+    int? activeChainId;
+    try {
+      activeNetworkKey = context.read<BlockchainService>().activeNetworkKey;
+      // networkKey is "<family>:<rest>" — e.g. "evm:56", "tron:mainnet".
+      if (activeNetworkKey != null && activeNetworkKey.contains(':')) {
+        final parts = activeNetworkKey.split(':');
+        activeChainFamily = parts.first;
+        if (parts.first == 'evm' && parts.length > 1) {
+          activeChainId = int.tryParse(parts[1]);
+        }
+      }
+    } catch (_) {
+      activeNetworkKey = null;
+      activeChainFamily = null;
+      activeChainId = null;
+    }
     final profilePayload = (profile == null && !hasWallet)
         ? null
         : <String, dynamic>{
@@ -192,6 +243,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'launch': <String, dynamic>{'source': widget.launchSource},
         'platform': defaultTargetPlatform.name,
         'theme': 'dark',
+        'activeNetworkKey': activeNetworkKey,
+        'activeChainFamily': activeChainFamily,
+        'activeChainId': activeChainId,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},
         'hasSession': isLoggedIn,
@@ -211,6 +265,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'requestSwapThenTransfer': false,
           'requestSignMessage': true,
           'notify': true,
+          'getBalances': true,
         },
       };
       _loadingContext = false;
@@ -249,7 +304,50 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   transparentBackground: true,
                   useShouldOverrideUrlLoading: true,
                   allowsBackForwardNavigationGestures: true,
+                  // Expose the webview to chrome://inspect (Android) and Safari
+                  // Web Inspector (iOS) for debugging the mini-app's JS console.
+                  // On by default in debug builds; to debug a RELEASE build, build
+                  // with --dart-define=OWLLET_WEBVIEW_INSPECTABLE=true. A normal
+                  // production release (no flag) stays locked.
+                  isInspectable: kDebugMode || _webviewInspectable,
+                  // Allow the in-app live camera (getUserMedia) used by KYC
+                  // capture so the flow never has to background into the
+                  // external camera app (which trips the app lock and loses
+                  // the captured image).
+                  mediaPlaybackRequiresUserGesture: false,
+                  allowsInlineMediaPlayback: true,
+                  iframeAllow: 'camera; microphone',
+                  iframeAllowFullscreen: true,
                 ),
+                onPermissionRequest: (controller, request) async {
+                  // Only a trusted mini-app origin may use the device camera
+                  // (e.g. Cash In KYC selfie). Some Android WebView builds report
+                  // an empty/null permission-request origin, which previously
+                  // tripped the trust check and silently denied getUserMedia
+                  // (NotAllowedError) even with the OS camera permission granted.
+                  // Fall back to the CURRENTLY-LOADED page origin — that URL is
+                  // already origin-guarded by shouldOverrideUrlLoading, so only a
+                  // trusted page can ever be the top-level document here.
+                  final pageTrusted = _isTrustedOrigin(request.origin) ||
+                      await _isCurrentPageTrusted();
+                  if (!pageTrusted) {
+                    return PermissionResponse(
+                      resources: request.resources,
+                      action: PermissionResponseAction.DENY,
+                    );
+                  }
+                  // Tell the host lock guard this backgrounding (system
+                  // permission dialog / camera) is expected so it doesn't throw
+                  // up the unlock screen and wipe the capture in progress.
+                  SystemPickerGuard.arm();
+                  final granted = await _ensureNativeCameraPermission();
+                  return PermissionResponse(
+                    resources: request.resources,
+                    action: granted
+                        ? PermissionResponseAction.GRANT
+                        : PermissionResponseAction.DENY,
+                  );
+                },
                 onWebViewCreated: (controller) {
                   _controller = controller;
                   controller.addJavaScriptHandler(
@@ -423,6 +521,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     notify: function(payload) {
       return callHost({ type: 'notify', payload: payload || {} });
     },
+    getBalances: function() {
+      return callHost({ type: 'get_balances' });
+    },
     getContext: function() {
       return context;
     }
@@ -483,11 +584,124 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           };
         }
         return _handleNotifyRequest(notifyPayload.cast<String, dynamic>());
+      case 'get_balances':
+        return _handleGetBalancesRequest();
       default:
         return <String, dynamic>{
           'ok': false,
           'error': 'Unsupported bridge action: $type',
         };
+    }
+  }
+
+  /// Returns the user's wallet token balances for the mini app across EVM,
+  /// Solana, and Tron. Sourced from the same backend endpoints the wallet uses,
+  /// so the wallet address stays gated — only normalized per-token balances
+  /// cross the bridge. Each chain family is best-effort; a failure on one does
+  /// not drop the others. Including non-EVM balances lets off-ramp assets like
+  /// USDT·SOL surface a balance (previously only EVM chains were returned).
+  Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
+    final balances = <Map<String, dynamic>>[];
+
+    // EVM balances via the aggregated portfolio endpoint.
+    final evmAddress = await _walletService.getWalletAddressForFamily(
+      ChainFamily.evm,
+    );
+    if (evmAddress != null && evmAddress.trim().isNotEmpty) {
+      try {
+        final snapshot = await HomePortfolioApiService().fetchPortfolio(
+          evmAddress,
+        );
+        for (final section in snapshot.sections) {
+          for (final token in section.tokens) {
+            final networkKey =
+                (token.networkKey == null || token.networkKey!.trim().isEmpty)
+                ? section.chain.networkKey
+                : token.networkKey!;
+            balances.add(<String, dynamic>{
+              'symbol': token.symbol,
+              'name': token.name,
+              'networkKey': networkKey,
+              'chainFamily': NetworkKey.familyOf(networkKey).wireValue,
+              'contractAddress': token.contractAddress,
+              'decimals': token.decimals,
+              'balance': token.balance,
+              'valueUsd': token.valueUsd,
+              'priceUsd': token.priceUsd,
+            });
+          }
+        }
+      } catch (error) {
+        debugPrint('Mini-app getBalances: EVM portfolio failed: $error');
+      }
+    }
+
+    // Non-EVM balances (Solana, Tron) so off-ramp assets on those chains show a
+    // balance and can be validated client-side.
+    balances.addAll(
+      await _fetchNonEvmBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
+    );
+    balances.addAll(
+      await _fetchNonEvmBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
+    );
+
+    return <String, dynamic>{'ok': true, 'balances': balances};
+  }
+
+  /// Fetch non-EVM (Solana/Tron) wallet token balances statelessly via the
+  /// backend network-key wallet-tokens endpoint, normalized to the same shape
+  /// as the EVM balances above. Best-effort: returns empty on any failure.
+  Future<List<Map<String, dynamic>>> _fetchNonEvmBridgeBalances(
+    ChainFamily family,
+    String networkKey,
+  ) async {
+    final address = await _walletService.getWalletAddressForFamily(family);
+    if (address == null || address.trim().isEmpty) {
+      return const <Map<String, dynamic>>[];
+    }
+    try {
+      final uri = AppEnvironment.blockchain(
+        '/networks/${Uri.encodeComponent(networkKey)}'
+        '/wallet-tokens/${Uri.encodeComponent(address)}',
+      );
+      final response = await HttpClientService().client
+          .get(uri)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return const <Map<String, dynamic>>[];
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return const <Map<String, dynamic>>[];
+      }
+      final rawTokens = decoded['tokens'];
+      if (rawTokens is! List) {
+        return const <Map<String, dynamic>>[];
+      }
+      final defaultDecimals = family == ChainFamily.solana ? 9 : 6;
+      final result = <Map<String, dynamic>>[];
+      for (final raw in rawTokens) {
+        if (raw is! Map) continue;
+        final token = raw.map((key, value) => MapEntry('$key', value));
+        final symbol = (token['symbol'] as String?)?.trim() ?? '';
+        final balance = (token['balance'] as num?)?.toDouble() ?? 0;
+        if (symbol.isEmpty || balance <= 0) continue;
+        result.add(<String, dynamic>{
+          'symbol': symbol,
+          'name': (token['name'] as String?) ?? symbol,
+          'networkKey': networkKey,
+          'chainFamily': family.wireValue,
+          'contractAddress': token['contractAddress'],
+          'decimals': (token['decimals'] as num?)?.toInt() ?? defaultDecimals,
+          'balance': balance,
+          'valueUsd': (token['valueUsd'] as num?)?.toDouble() ?? 0,
+          'priceUsd': (token['priceUsd'] as num?)?.toDouble() ?? 0,
+        });
+      }
+      return result;
+    } catch (error) {
+      debugPrint('Mini-app getBalances: $networkKey fetch failed: $error');
+      return const <Map<String, dynamic>>[];
     }
   }
 
@@ -516,7 +730,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       return const <String, dynamic>{
         'ok': false,
         'error':
-            'Automatic conversion is not available in this app version. Select USDT or USDC and try again.',
+            'Withdrawals settle in USDT or USDC. To withdraw another token, swap it to USDT in your wallet first, then withdraw.',
       };
     }
 
@@ -644,9 +858,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'confirmed': confirmed,
       };
     } catch (error) {
-      final message = AppErrorUtils.userMessage(
+      final message = _bridgeTransferErrorMessage(
         error,
-        fallback: 'Wallet transfer failed. Please try again.',
+        nativeSymbol: nativeSymbol,
       );
       controller.setError(message);
       return <String, dynamic>{'ok': false, 'error': message};
@@ -1010,6 +1224,46 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
   }
 
+  /// Turn a raw wallet-transfer failure into an actionable, chain-aware message.
+  ///
+  /// The crypto leg pays gas in the chain's native coin (e.g. BNB on BNB Smart
+  /// Chain), so a wallet that holds the stablecoin but no native coin fails to
+  /// broadcast. web3dart surfaces that as an `RPCError`, which the generic
+  /// mapper collapses to "Wallet transfer failed" — hiding the real cause. Map
+  /// the common gas/revert signatures explicitly before falling back.
+  String _bridgeTransferErrorMessage(
+    Object error, {
+    required String nativeSymbol,
+  }) {
+    final lowered = error.toString().toLowerCase();
+    final native = nativeSymbol.trim().isEmpty
+        ? 'the network fee coin'
+        : nativeSymbol.trim();
+
+    final insufficientGas =
+        lowered.contains('insufficient funds') ||
+        lowered.contains('insufficient balance') ||
+        lowered.contains('gas required exceeds') ||
+        lowered.contains('cannot afford') ||
+        (lowered.contains('not enough') && lowered.contains('gas'));
+    if (insufficientGas) {
+      return 'Not enough $native to pay the network fee. Add $native to this '
+          'wallet to cover gas, then try the withdrawal again.';
+    }
+
+    if (lowered.contains('execution reverted') ||
+        lowered.contains('transfer amount exceeds balance') ||
+        lowered.contains('reverted')) {
+      return 'The network rejected the transfer. Make sure you hold enough of '
+          'the token plus $native for gas, then try again.';
+    }
+
+    return AppErrorUtils.userMessage(
+      error,
+      fallback: 'Wallet transfer failed. Please try again.',
+    );
+  }
+
   EvmChain _evmChainForNetwork(
     BlockchainService blockchain,
     String networkKey,
@@ -1065,12 +1319,50 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
   }
 
+  /// Ensure the OS-level camera permission is held before granting the
+  /// WebView's getUserMedia request. flutter_inappwebview grants the web origin
+  /// but never requests the Android runtime permission, so we prompt natively.
+  /// iOS/macOS WKWebView surfaces its own prompt (gated by the Info.plist
+  /// NSCameraUsageDescription), so no runtime request is needed there.
+  Future<bool> _ensureNativeCameraPermission() async {
+    if (!Platform.isAndroid) {
+      return true;
+    }
+    try {
+      final granted = await _cameraPermissionChannel.invokeMethod<bool>(
+        'ensureCameraPermission',
+      );
+      return granted ?? false;
+    } catch (error) {
+      debugPrint('[MiniAppHost] camera permission request failed: $error');
+      return false;
+    }
+  }
+
   bool _isTrustedOrigin(Uri uri) {
     if (!isSupportedDiscoverWebUri(uri)) {
       return false;
     }
     final origin = normalizeOriginFromUri(uri);
     return _trustedOrigins.contains(origin);
+  }
+
+  /// Whether the webview's currently-loaded top-level URL is a trusted mini-app
+  /// origin. Used as a fallback for camera permission when the permission
+  /// request's own origin is empty/unreliable on some Android WebView builds —
+  /// safe because shouldOverrideUrlLoading already guarantees only a trusted
+  /// origin can be the top-level document.
+  Future<bool> _isCurrentPageTrusted() async {
+    final controller = _controller;
+    if (controller == null) {
+      return false;
+    }
+    try {
+      final current = await controller.getUrl();
+      return current != null && _isTrustedOrigin(current);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _openExternal(Uri uri) async {
