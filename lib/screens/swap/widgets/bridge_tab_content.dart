@@ -608,6 +608,23 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       controller.setSuccess(
         reference: firstTxHash != null ? shortHash(firstTxHash) : null,
       );
+
+      // Best-effort: log the platform fee on this completed bridge for the admin
+      // Bridge Fees analytics. Fire-and-forget — never affects the user.
+      unawaited(
+        _bridgeService.recordExecutedBridge(
+          originChainId: _isSolanaOrigin
+              ? BridgeService.relaySolanaChainId
+              : widget.blockchain.activeChain.chainId,
+          destinationChainId: _toChain?.chainId ?? 0,
+          walletAddress: widget.walletAddress,
+          sellToken: from.symbol,
+          buyToken: _toCurrency?.symbol,
+          amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
+          txHash: firstTxHash,
+        ),
+      );
+
       if (mounted) {
         setState(() {
           _amountController.clear();

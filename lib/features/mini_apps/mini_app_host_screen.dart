@@ -18,6 +18,7 @@ import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/bridge_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/http_client_service.dart';
 import '../../services/system_picker_guard.dart';
@@ -162,6 +163,16 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         : null;
     final hasWallet = walletAddress != null;
 
+    // The user's Solana address — needed by cross-chain flows (e.g. cash-in's
+    // sell-any-token saga uses it as the USDC refund address). Best-effort.
+    String? solanaWalletAddress;
+    try {
+      solanaWalletAddress =
+          await _walletService.getWalletAddressForFamily(ChainFamily.solana);
+    } catch (_) {
+      solanaWalletAddress = null;
+    }
+
     // Surface the wallet-auth (ws_) session token to the mini-app so it can call
     // wallet-scoped backend endpoints (e.g. the affiliate dashboard) as the user.
     // For mini apps that require it we mint a session (signing silently with the
@@ -246,6 +257,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'activeNetworkKey': activeNetworkKey,
         'activeChainFamily': activeChainFamily,
         'activeChainId': activeChainId,
+        'solanaWalletAddress': solanaWalletAddress,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},
         'hasSession': isLoggedIn,
@@ -263,6 +275,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'getContext': true,
           'requestWalletTransfer': true,
           'requestSwapThenTransfer': false,
+          'requestCrossChainSwap': true,
           'requestSignMessage': true,
           'notify': true,
           'getBalances': true,
@@ -515,6 +528,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     requestWalletTransfer: function(payload) {
       return callHost({ type: 'request_wallet_transfer', payload: payload || {} });
     },
+    requestCrossChainSwap: function(payload) {
+      return callHost({ type: 'request_cross_chain_swap', payload: payload || {} });
+    },
     requestSignMessage: function(payload) {
       return callHost({ type: 'request_sign_message', payload: payload || {} });
     },
@@ -566,6 +582,15 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           };
         }
         return _handleWalletTransferRequest(payload.cast<String, dynamic>());
+      case 'request_cross_chain_swap':
+        final swapPayload = raw['payload'];
+        if (swapPayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid cross-chain swap request.',
+          };
+        }
+        return _handleCrossChainSwapRequest(swapPayload.cast<String, dynamic>());
       case 'request_sign_message':
         final signPayload = raw['payload'];
         if (signPayload is! Map) {
@@ -1122,6 +1147,182 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       body: body,
     );
     return const <String, dynamic>{'ok': true};
+  }
+
+  /// Execute a cross-chain swap/bridge requested by a mini app (e.g. cash-in's
+  /// sell-any-token saga). The mini app supplies the provider (Relay) steps it
+  /// got from its backend; we sign+broadcast them via the same path the wallet's
+  /// own Bridge tab uses.
+  ///
+  /// SECURITY NOTE: like `requestWalletTransfer`, this signs transactions the
+  /// mini app supplies, gated only by the user confirmation below — there is no
+  /// per-step native-value bound here (the host has no quote to check against),
+  /// so only first-party mini apps should advertise/use this capability.
+  Future<Map<String, dynamic>> _handleCrossChainSwapRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final steps = BridgeService.parseSteps(payload['relaySteps']);
+    if (steps.isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'No swap steps to execute.',
+      };
+    }
+
+    final fromSymbol = payload['fromAssetSymbol']?.toString() ?? '';
+    final toSymbol = payload['toAssetSymbol']?.toString() ?? 'USDC';
+    final fromAmount = payload['fromAmountDisplay']?.toString() ?? '';
+    final toAmount = payload['toAmountDisplay']?.toString() ?? '';
+
+    final confirmed = await _confirmCrossChainSwap(
+      fromLabel: fromAmount.isEmpty ? fromSymbol : '$fromAmount $fromSymbol',
+      toLabel: toAmount.isEmpty ? toSymbol : '$toAmount $toSymbol',
+    );
+    if (confirmed != true) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Swap was cancelled.',
+      };
+    }
+
+    final controller = TransactionProgressController(
+      flow: TransactionProgressFlow.generic,
+    );
+    if (mounted) {
+      unawaited(
+        Navigator.of(context).pushNamed(
+          '/transaction-processing',
+          arguments: TransactionProcessingArguments(controller: controller),
+        ),
+      );
+    }
+    controller.setPreparing();
+    controller.setSwapSubmitting();
+
+    final bridgeService = BridgeService();
+    final blockchain = context.read<BlockchainService>();
+    String? firstTxHash;
+
+    try {
+      for (final step in steps) {
+        if (step.isSolana) {
+          final solanaContext = await bridgeService.getSolanaContext(
+            lookupTableAddresses: step.lookupTableAddresses,
+          );
+          if (solanaContext == null) {
+            final msg = bridgeService.lastError ??
+                'Unable to prepare the Solana transaction.';
+            controller.setError(msg);
+            return <String, dynamic>{'ok': false, 'error': msg};
+          }
+          final solanaAddress = await _walletService.getWalletAddressForFamily(
+            ChainFamily.solana,
+          );
+          if (solanaAddress == null || solanaAddress.trim().isEmpty) {
+            const msg = 'This wallet does not support Solana.';
+            controller.setError(msg);
+            return const <String, dynamic>{'ok': false, 'error': msg};
+          }
+          final signedTx =
+              await _walletService.buildAndSignSolanaBridgeTransaction(
+            address: solanaAddress,
+            recentBlockhash: solanaContext.blockhash,
+            instructionsJson: step.instructionsJson!,
+            lookupTablesJson: solanaContext.lookupTablesJson,
+          );
+          final signature = await bridgeService.broadcastSolanaTransaction(
+            signedTransaction: signedTx,
+          );
+          if (signature == null) {
+            final msg = bridgeService.lastError ??
+                'Unable to broadcast the Solana transaction.';
+            controller.setError(msg);
+            return <String, dynamic>{'ok': false, 'error': msg};
+          }
+          firstTxHash ??= signature;
+          controller.setSwapPending(reference: _shortHash(signature));
+        } else {
+          final chain = blockchain.allChains.firstWhere(
+            (c) => c.chainId == step.chainId,
+            orElse: () => blockchain.activeChain,
+          );
+          final txHash = await _walletService.sendRawTransactionRequest(
+            rpcUrl: chain.rpcUrl,
+            chainId: step.chainId,
+            toAddress: step.to,
+            valueInWei: step.value,
+            dataHex: step.data,
+          );
+          firstTxHash ??= txHash;
+          controller.setSwapPending(reference: _shortHash(txHash));
+        }
+      }
+
+      controller.setSuccess(
+        reference: firstTxHash != null ? _shortHash(firstTxHash) : null,
+      );
+      return <String, dynamic>{
+        'ok': true,
+        'transactionHash': firstTxHash,
+        'confirmed': true,
+      };
+    } catch (e) {
+      final msg = 'Swap failed: ${e.toString()}';
+      controller.setError(msg);
+      return <String, dynamic>{'ok': false, 'error': msg};
+    }
+  }
+
+  Future<bool?> _confirmCrossChainSwap({
+    required String fromLabel,
+    required String toLabel,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Text(
+            'Confirm Swap',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            'Swap $fromLabel to $toLabel. You will sign the transaction(s) in your wallet to complete it.',
+            style: GoogleFonts.outfit(
+              color: Colors.white.withValues(alpha: 0.72),
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(color: Colors.white70),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentRed,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(
+                'Swap',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<bool?> _confirmHiddenSettlementTransfer({

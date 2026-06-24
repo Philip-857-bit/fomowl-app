@@ -494,6 +494,43 @@ class BridgeService {
     }
   }
 
+  /// POST /cross-chain/record — best-effort log of the platform fee earned on a
+  /// completed bridge, so the admin "Bridge Fees" view reflects *executed*
+  /// bridges. The backend recomputes the fee from `amountUsd`, so the values
+  /// here are facts, not trusted fee figures. Fire-and-forget: never throws and
+  /// never blocks the bridge UX.
+  Future<void> recordExecutedBridge({
+    required int originChainId,
+    required int destinationChainId,
+    String? walletAddress,
+    String? sellToken,
+    String? buyToken,
+    double? amountUsd,
+    String? txHash,
+  }) async {
+    try {
+      final url = AppEnvironment.swap('/cross-chain/record');
+      await _http.client
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'walletAddress': walletAddress,
+              'originChainId': originChainId,
+              'destinationChainId': destinationChainId,
+              'sellToken': sellToken,
+              'buyToken': buyToken,
+              'amountUsd': amountUsd,
+              'txHash': txHash,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (e) {
+      // Analytics only — a failure here must not affect the completed bridge.
+      debugPrint('BridgeService.recordExecutedBridge error: $e');
+    }
+  }
+
   /// Relay reports the USD value of the output under details.currencyOut.
   static double _readAmountOutUsd(Map<String, dynamic> data) {
     final details = data['details'];
@@ -502,6 +539,11 @@ class BridgeService {
     if (currencyOut is! Map) return 0.0;
     return double.tryParse(currencyOut['amountUsd']?.toString() ?? '') ?? 0.0;
   }
+
+  /// Parse raw Relay `steps` (as returned by the backend, e.g. the cash-in
+  /// saga's /cashin/initiate) into executable [BridgeStepTx]s. Public so the
+  /// mini-app host can run the same steps the Bridge tab does.
+  static List<BridgeStepTx> parseSteps(Object? rawSteps) => _parseSteps(rawSteps);
 
   static List<BridgeStepTx> _parseSteps(Object? rawSteps) {
     if (rawSteps is! List) return const [];
