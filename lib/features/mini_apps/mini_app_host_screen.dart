@@ -198,7 +198,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     try {
       activeNetworkKey = context.read<BlockchainService>().activeNetworkKey;
       // networkKey is "<family>:<rest>" — e.g. "evm:56", "tron:mainnet".
-      if (activeNetworkKey != null && activeNetworkKey.contains(':')) {
+      if (activeNetworkKey.contains(':')) {
         final parts = activeNetworkKey.split(':');
         activeChainFamily = parts.first;
         if (parts.first == 'evm' && parts.length > 1) {
@@ -328,7 +328,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   // Fall back to the CURRENTLY-LOADED page origin — that URL is
                   // already origin-guarded by shouldOverrideUrlLoading, so only a
                   // trusted page can ever be the top-level document here.
-                  final pageTrusted = _isTrustedOrigin(request.origin) ||
+                  final pageTrusted =
+                      _isTrustedOrigin(request.origin) ||
                       await _isCurrentPageTrusted();
                   if (!pageTrusted) {
                     return PermissionResponse(
@@ -1030,10 +1031,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                     ...candidates.map(
                       (candidate) => RadioListTile<String>(
                         value: candidate.value,
+                        // ignore: deprecated_member_use
                         groupValue: selected,
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                         activeColor: AppColors.success,
+                        // ignore: deprecated_member_use
                         onChanged: (value) {
                           if (value != null) {
                             setDialogState(() => selected = value);

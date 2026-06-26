@@ -114,78 +114,83 @@ class _PromoBannerCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(19),
             border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
+          child: imageUrl != null && imageUrl.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.network(
+                    imageUrl,
+                    width: double.infinity,
+                    height: 99,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        _buildFallbackContent(hasCta, ctaLabel),
+                  ),
+                )
+              : _buildFallbackContent(hasCta, ctaLabel),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackContent(bool hasCta, String? ctaLabel) {
+    return Padding(
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.accentRed.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.campaign_rounded,
+              color: AppColors.accentRed,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentRed.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                if (banner.title.isNotEmpty) ...[
+                  Text(
+                    banner.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  child: imageUrl != null && imageUrl.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  Icons.campaign_rounded,
-                                  color: AppColors.accentRed,
-                                  size: 22,
-                                ),
-                          ),
-                        )
-                      : const Icon(
-                          Icons.campaign_rounded,
-                          color: AppColors.accentRed,
-                          size: 22,
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        banner.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        hasCta ? ctaLabel : banner.description,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                          color: hasCta
-                              ? AppColors.accentRed
-                              : Colors.white.withValues(alpha: 0.72),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 2),
+                ],
+                if (hasCta || banner.description.isNotEmpty)
+                  Text(
+                    hasCta ? ctaLabel! : banner.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      color: hasCta
+                          ? AppColors.accentRed
+                          : Colors.white.withValues(alpha: 0.72),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                Icon(
-                  Icons.open_in_new,
-                  color: Colors.white.withValues(alpha: 0.5),
-                  size: 20,
-                ),
               ],
             ),
           ),
-        ),
+          Icon(
+            Icons.open_in_new,
+            color: Colors.white.withValues(alpha: 0.5),
+            size: 20,
+          ),
+        ],
       ),
     );
   }
