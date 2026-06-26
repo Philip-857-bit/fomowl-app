@@ -160,6 +160,24 @@ class DiscoverLandingView extends StatelessWidget {
               error: trendingTokensError,
               onOpenToken: onOpenTrendingToken,
             ),
+            const SizedBox(height: 24),
+            _SectionHeader(
+              title: l.discoverAllApprovedDappsTitle,
+              subtitle: filteredDapps.isEmpty
+                  ? l.discoverAllApprovedDappsNoMatches
+                  : l.discoverAllApprovedDappsCount(filteredDapps.length),
+            ),
+            const SizedBox(height: 12),
+            ...filteredDapps.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _CompactDappCard(
+                  key: ValueKey('discover-all-${entry.id}'),
+                  entry: entry,
+                  onTap: () => onOpenDapp(entry),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
           ],
         ],
