@@ -106,22 +106,40 @@ class DiscoverLandingView extends StatelessWidget {
               ),
             ),
           ] else ...[
-            _SectionHeader(
-              title: l.discoverFeaturedDappsTitle,
-              subtitle: l.discoverFeaturedDappsSubtitle,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  l.discoverFeaturedDappsTitle,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  'View all',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.accentRed,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 210,
+              height: 230,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: visibleFeaturedDapps.length.clamp(0, 10),
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                separatorBuilder: (_, _) => const SizedBox(width: 14),
                 itemBuilder: (context, index) {
                   final entry = visibleFeaturedDapps[index];
                   return SizedBox(
-                    width: 240,
-                    child: _CompactDappCard(
+                    width: 280,
+                    child: _FeaturedDappCard(
                       key: ValueKey('discover-featured-${entry.id}'),
                       entry: entry,
                       onTap: () => onOpenDapp(entry),
@@ -550,6 +568,135 @@ class _CompactDappCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FeaturedDappCard extends StatelessWidget {
+  const _FeaturedDappCard({
+    super.key,
+    required this.entry,
+    required this.onTap,
+  });
+
+  final DiscoverDappEntry entry;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardDark,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(21),
+                  topRight: Radius.circular(21),
+                ),
+                child: _buildBanner(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  _DappArtwork(entry: entry, size: 40),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          entry.subtitle?.trim().isNotEmpty == true
+                              ? entry.subtitle!
+                              : entry.origin,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBanner() {
+    final heroUrl = entry.heroImageUrl?.trim();
+    final hasBadge = (entry.badgeText ?? '').trim().isNotEmpty;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (heroUrl != null && heroUrl.isNotEmpty)
+          Image.network(
+            heroUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _buildFallbackBanner(),
+          )
+        else
+          _buildFallbackBanner(),
+
+        if (hasBadge)
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              ),
+              child: Text(
+                entry.badgeText!,
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildFallbackBanner() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.03),
+      child: const Center(
+        child: Icon(Icons.image_not_supported_outlined, color: Colors.white12),
       ),
     );
   }
