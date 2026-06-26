@@ -167,8 +167,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     // sell-any-token saga uses it as the USDC refund address). Best-effort.
     String? solanaWalletAddress;
     try {
-      solanaWalletAddress =
-          await _walletService.getWalletAddressForFamily(ChainFamily.solana);
+      solanaWalletAddress = await _walletService.getWalletAddressForFamily(
+        ChainFamily.solana,
+      );
     } catch (_) {
       solanaWalletAddress = null;
     }
@@ -591,7 +592,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             'error': 'Invalid cross-chain swap request.',
           };
         }
-        return _handleCrossChainSwapRequest(swapPayload.cast<String, dynamic>());
+        return _handleCrossChainSwapRequest(
+          swapPayload.cast<String, dynamic>(),
+        );
       case 'request_sign_message':
         final signPayload = raw['payload'];
         if (signPayload is! Map) {
@@ -1213,7 +1216,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             lookupTableAddresses: step.lookupTableAddresses,
           );
           if (solanaContext == null) {
-            final msg = bridgeService.lastError ??
+            final msg =
+                bridgeService.lastError ??
                 'Unable to prepare the Solana transaction.';
             controller.setError(msg);
             return <String, dynamic>{'ok': false, 'error': msg};
@@ -1226,18 +1230,19 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             controller.setError(msg);
             return const <String, dynamic>{'ok': false, 'error': msg};
           }
-          final signedTx =
-              await _walletService.buildAndSignSolanaBridgeTransaction(
-            address: solanaAddress,
-            recentBlockhash: solanaContext.blockhash,
-            instructionsJson: step.instructionsJson!,
-            lookupTablesJson: solanaContext.lookupTablesJson,
-          );
+          final signedTx = await _walletService
+              .buildAndSignSolanaBridgeTransaction(
+                address: solanaAddress,
+                recentBlockhash: solanaContext.blockhash,
+                instructionsJson: step.instructionsJson!,
+                lookupTablesJson: solanaContext.lookupTablesJson,
+              );
           final signature = await bridgeService.broadcastSolanaTransaction(
             signedTransaction: signedTx,
           );
           if (signature == null) {
-            final msg = bridgeService.lastError ??
+            final msg =
+                bridgeService.lastError ??
                 'Unable to broadcast the Solana transaction.';
             controller.setError(msg);
             return <String, dynamic>{'ok': false, 'error': msg};

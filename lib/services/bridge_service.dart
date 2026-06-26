@@ -543,7 +543,8 @@ class BridgeService {
   /// Parse raw Relay `steps` (as returned by the backend, e.g. the cash-in
   /// saga's /cashin/initiate) into executable [BridgeStepTx]s. Public so the
   /// mini-app host can run the same steps the Bridge tab does.
-  static List<BridgeStepTx> parseSteps(Object? rawSteps) => _parseSteps(rawSteps);
+  static List<BridgeStepTx> parseSteps(Object? rawSteps) =>
+      _parseSteps(rawSteps);
 
   static List<BridgeStepTx> _parseSteps(Object? rawSteps) {
     if (rawSteps is! List) return const [];
