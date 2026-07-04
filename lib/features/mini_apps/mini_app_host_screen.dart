@@ -26,6 +26,8 @@ import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
+import '../../utils/token_visibility_utils.dart';
+import '../../services/token_visibility_service.dart';
 import '../../screens/transaction/transaction_processing_screen.dart';
 import '../../screens/home/home_portfolio_api_service.dart';
 import '../discover/discover_url_utils.dart';
@@ -631,6 +633,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   /// USDT·SOL surface a balance (previously only EVM chains were returned).
   Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
     final balances = <Map<String, dynamic>>[];
+    final visibilityService = TokenVisibilityService();
 
     // EVM balances via the aggregated portfolio endpoint.
     final evmAddress = await _walletService.getWalletAddressForFamily(
@@ -642,7 +645,22 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           evmAddress,
         );
         for (final section in snapshot.sections) {
+          final chainId = section.chain.chainId;
+          final hiddenTokens = await visibilityService.loadHiddenTokens(
+            chainId,
+          );
           for (final token in section.tokens) {
+            // Skip tokens the user has hidden in the wallet.
+            if (TokenVisibilityUtils.contains(hiddenTokens, token)) {
+              continue;
+            }
+            // Skip uncertified spam tokens with no meaningful value.
+            final isNative =
+                token.contractAddress == null ||
+                token.contractAddress!.trim().isEmpty;
+            if (!isNative && !token.isCertified && token.valueUsd < 0.01) {
+              continue;
+            }
             final networkKey =
                 (token.networkKey == null || token.networkKey!.trim().isEmpty)
                 ? section.chain.networkKey
@@ -657,6 +675,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
               'balance': token.balance,
               'valueUsd': token.valueUsd,
               'priceUsd': token.priceUsd,
+              'isCertified': token.isCertified,
             });
           }
         }
@@ -715,15 +734,22 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         final symbol = (token['symbol'] as String?)?.trim() ?? '';
         final balance = (token['balance'] as num?)?.toDouble() ?? 0;
         if (symbol.isEmpty || balance <= 0) continue;
+        final contractAddress = token['contractAddress'] as String?;
+        final isNative =
+            contractAddress == null || contractAddress.trim().isEmpty;
+        final isCertified = token['isCertified'] == true;
+        final valueUsd = (token['valueUsd'] as num?)?.toDouble() ?? 0;
+        // Skip uncertified spam tokens with no meaningful value.
+        if (!isNative && !isCertified && valueUsd < 0.01) continue;
         result.add(<String, dynamic>{
           'symbol': symbol,
           'name': (token['name'] as String?) ?? symbol,
           'networkKey': networkKey,
           'chainFamily': family.wireValue,
-          'contractAddress': token['contractAddress'],
+          'contractAddress': contractAddress,
           'decimals': (token['decimals'] as num?)?.toInt() ?? defaultDecimals,
           'balance': balance,
-          'valueUsd': (token['valueUsd'] as num?)?.toDouble() ?? 0,
+          'valueUsd': valueUsd,
           'priceUsd': (token['priceUsd'] as num?)?.toDouble() ?? 0,
         });
       }
