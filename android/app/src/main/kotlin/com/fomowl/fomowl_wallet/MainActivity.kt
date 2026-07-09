@@ -3,18 +3,27 @@ package com.fomowl.owllet
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ContentValues
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.getSystemService
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 class MainActivity : FlutterFragmentActivity() {
 	private val cameraPermissionChannelName = "owllet/camera_permission"
+	private val receiptFilesChannelName = "owllet/receipt_files"
 	private val cameraPermissionRequestCode = 0xCA11
 	private var pendingCameraPermissionResult: MethodChannel.Result? = null
 
@@ -31,6 +40,16 @@ class MainActivity : FlutterFragmentActivity() {
 		).setMethodCallHandler { call, result ->
 			when (call.method) {
 				"ensureCameraPermission" -> ensureCameraPermission(result)
+				else -> result.notImplemented()
+			}
+		}
+		MethodChannel(
+			flutterEngine.dartExecutor.binaryMessenger,
+			receiptFilesChannelName,
+		).setMethodCallHandler { call, result ->
+			when (call.method) {
+				"saveReceiptImage" -> saveReceiptImage(call.arguments, result)
+				"shareReceiptImage" -> shareReceiptImage(call.arguments, result)
 				else -> result.notImplemented()
 			}
 		}
@@ -93,5 +112,96 @@ class MainActivity : FlutterFragmentActivity() {
 			description = "General Owllet notifications"
 		}
 		manager.createNotificationChannel(channel)
+	}
+
+	private fun receiptBytes(arguments: Any?): Pair<String, ByteArray>? {
+		val args = arguments as? Map<*, *> ?: return null
+		val rawName = args["filename"]?.toString()?.takeIf { it.isNotBlank() } ?: "owllet-receipt"
+		val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "-").trim('-').ifBlank {
+			"owllet-receipt"
+		}
+		val dataUrl = args["dataUrl"]?.toString() ?: return null
+		val marker = "base64,"
+		val markerIndex = dataUrl.indexOf(marker)
+		if (!dataUrl.startsWith("data:image/png") || markerIndex < 0) {
+			return null
+		}
+		val encoded = dataUrl.substring(markerIndex + marker.length)
+		val bytes = Base64.decode(encoded, Base64.DEFAULT)
+		return Pair(safeName, bytes)
+	}
+
+	private fun saveReceiptImage(arguments: Any?, result: MethodChannel.Result) {
+		val parsed = receiptBytes(arguments)
+		if (parsed == null) {
+			result.success(mapOf("ok" to false, "error" to "Invalid receipt image."))
+			return
+		}
+		val (safeName, bytes) = parsed
+		val filename = if (safeName.endsWith(".png", ignoreCase = true)) safeName else "$safeName.png"
+		try {
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+				val resolver = contentResolver
+				val values = ContentValues().apply {
+					put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+					put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+					put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/Owllet")
+					put(MediaStore.Images.Media.IS_PENDING, 1)
+				}
+				val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+				if (uri == null) {
+					result.success(mapOf("ok" to false, "error" to "Unable to create receipt file."))
+					return
+				}
+				resolver.openOutputStream(uri)?.use { it.write(bytes) }
+				values.clear()
+				values.put(MediaStore.Images.Media.IS_PENDING, 0)
+				resolver.update(uri, values, null, null)
+				result.success(mapOf("ok" to true, "uri" to uri.toString()))
+				return
+			}
+
+			val dir = getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: filesDir
+			val owlletDir = File(dir, "Owllet").apply { mkdirs() }
+			val file = File(owlletDir, filename)
+			file.outputStream().use { it.write(bytes) }
+			result.success(mapOf("ok" to true, "path" to file.absolutePath))
+		} catch (error: Exception) {
+			result.success(mapOf("ok" to false, "error" to (error.message ?: "Unable to save receipt.")))
+		}
+	}
+
+	private fun shareReceiptImage(arguments: Any?, result: MethodChannel.Result) {
+		val parsed = receiptBytes(arguments)
+		if (parsed == null) {
+			result.success(mapOf("ok" to false, "error" to "Invalid receipt image."))
+			return
+		}
+		val args = arguments as? Map<*, *>
+		val text = args?.get("text")?.toString().orEmpty()
+		val (safeName, bytes) = parsed
+		val filename = if (safeName.endsWith(".png", ignoreCase = true)) safeName else "$safeName.png"
+		try {
+			val dir = File(cacheDir, "shared_receipts").apply { mkdirs() }
+			val file = File(dir, filename)
+			file.outputStream().use { it.write(bytes) }
+			val uri: Uri = FileProvider.getUriForFile(
+				this,
+				"${applicationContext.packageName}.flutter_inappwebview_android.fileprovider",
+				file,
+			)
+			val intent = Intent(Intent.ACTION_SEND).apply {
+				type = "image/png"
+				putExtra(Intent.EXTRA_STREAM, uri)
+				if (text.isNotBlank()) {
+					putExtra(Intent.EXTRA_TEXT, text)
+				}
+				addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+			}
+			startActivity(Intent.createChooser(intent, "Share receipt"))
+			result.success(mapOf("ok" to true))
+		} catch (error: Exception) {
+			result.success(mapOf("ok" to false, "error" to (error.message ?: "Unable to share receipt.")))
+		}
 	}
 }

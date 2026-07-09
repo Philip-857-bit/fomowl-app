@@ -100,6 +100,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   static const MethodChannel _cameraPermissionChannel = MethodChannel(
     'owllet/camera_permission',
   );
+  static const MethodChannel _receiptFilesChannel = MethodChannel(
+    'owllet/receipt_files',
+  );
 
   final AuthService _authService = AuthService();
   final WalletBackendAuthService _walletBackendAuthService =
@@ -282,6 +285,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'requestSignMessage': true,
           'notify': true,
           'getBalances': true,
+          'saveReceiptImage': true,
+          'shareReceiptImage': true,
         },
       };
       _loadingContext = false;
@@ -538,6 +543,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     requestSignMessage: function(payload) {
       return callHost({ type: 'request_sign_message', payload: payload || {} });
     },
+    saveReceiptImage: function(payload) {
+      return callHost({ type: 'save_receipt_image', payload: payload || {} });
+    },
+    shareReceiptImage: function(payload) {
+      return callHost({ type: 'share_receipt_image', payload: payload || {} });
+    },
     notify: function(payload) {
       return callHost({ type: 'notify', payload: payload || {} });
     },
@@ -606,6 +617,21 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           };
         }
         return _handleSignMessageRequest(signPayload.cast<String, dynamic>());
+      case 'save_receipt_image':
+      case 'share_receipt_image':
+        final receiptPayload = raw['payload'];
+        if (receiptPayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid receipt image request.',
+          };
+        }
+        return _handleReceiptImageRequest(
+          type == 'save_receipt_image'
+              ? 'saveReceiptImage'
+              : 'shareReceiptImage',
+          receiptPayload.cast<String, dynamic>(),
+        );
       case 'notify':
         final notifyPayload = raw['payload'];
         if (notifyPayload is! Map) {
@@ -1205,10 +1231,13 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final toSymbol = payload['toAssetSymbol']?.toString() ?? 'USDC';
     final fromAmount = payload['fromAmountDisplay']?.toString() ?? '';
     final toAmount = payload['toAmountDisplay']?.toString() ?? '';
+    final reference = payload['reference']?.toString() ?? '';
 
     final confirmed = await _confirmCrossChainSwap(
       fromLabel: fromAmount.isEmpty ? fromSymbol : '$fromAmount $fromSymbol',
       toLabel: toAmount.isEmpty ? toSymbol : '$toAmount $toSymbol',
+      reference: reference,
+      stepCount: steps.length,
     );
     if (confirmed != true) {
       return const <String, dynamic>{
@@ -1310,7 +1339,11 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   Future<bool?> _confirmCrossChainSwap({
     required String fromLabel,
     required String toLabel,
+    required String reference,
+    required int stepCount,
   }) {
+    final txLabel = stepCount == 1 ? 'transaction' : 'transactions';
+    final refText = reference.trim().isEmpty ? '' : '\n\nReference: $reference';
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -1321,14 +1354,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             borderRadius: BorderRadius.circular(18),
           ),
           title: Text(
-            'Confirm Swap',
+            'Sign swap transaction',
             style: GoogleFonts.outfit(
               color: Colors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
           content: Text(
-            'Swap $fromLabel to $toLabel. You will sign the transaction(s) in your wallet to complete it.',
+            'Swap $fromLabel to $toLabel.\n\nOwllet will sign and submit $stepCount $txLabel from this wallet.$refText',
             style: GoogleFonts.outfit(
               color: Colors.white.withValues(alpha: 0.72),
               height: 1.4,
@@ -1349,7 +1382,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                 foregroundColor: Colors.white,
               ),
               child: Text(
-                'Swap',
+                'Sign and swap',
                 style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
               ),
             ),
@@ -1411,6 +1444,46 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         );
       },
     );
+  }
+
+  Future<Map<String, dynamic>> _handleReceiptImageRequest(
+    String method,
+    Map<String, dynamic> payload,
+  ) async {
+    final dataUrl = payload['dataUrl']?.toString() ?? '';
+    final filename = payload['filename']?.toString() ?? 'owllet-receipt';
+    final text = payload['text']?.toString() ?? '';
+    if (!dataUrl.startsWith('data:image/png;base64,')) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Receipt image must be a PNG data URL.',
+      };
+    }
+    try {
+      final result = await _receiptFilesChannel
+          .invokeMethod<Map<dynamic, dynamic>>(method, <String, dynamic>{
+            'filename': filename,
+            'dataUrl': dataUrl,
+            'text': text,
+          });
+      if (result == null) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Receipt action was not available on this device.',
+        };
+      }
+      return result.map((key, value) => MapEntry(key.toString(), value));
+    } on PlatformException catch (error) {
+      return <String, dynamic>{
+        'ok': false,
+        'error': error.message ?? 'Receipt action failed.',
+      };
+    } catch (error) {
+      return <String, dynamic>{
+        'ok': false,
+        'error': 'Receipt action failed: $error',
+      };
+    }
   }
 
   Future<String> _sendBridgeTransfer({
