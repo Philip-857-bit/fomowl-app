@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/rate_us_prompt_service.dart';
 import '../../utils/in_app_link_router.dart';
 import '../../widgets/entrance_motion.dart';
 
@@ -206,13 +209,63 @@ class TransactionProcessingScreen extends StatelessWidget {
 
     return AnimatedBuilder(
       animation: controller,
-      builder: (context, _) => _ProcessingScaffold(
+      builder: (context, _) => _RateUsPromptSuccessListener(
         state: controller.state,
-        terminalRouteName: args?.terminalRouteName,
-        clearStackOnTerminalRoute: args?.clearStackOnTerminalRoute ?? false,
+        child: _ProcessingScaffold(
+          state: controller.state,
+          terminalRouteName: args?.terminalRouteName,
+          clearStackOnTerminalRoute: args?.clearStackOnTerminalRoute ?? false,
+        ),
       ),
     );
   }
+}
+
+class _RateUsPromptSuccessListener extends StatefulWidget {
+  const _RateUsPromptSuccessListener({
+    required this.state,
+    required this.child,
+  });
+
+  final TransactionProgressState state;
+  final Widget child;
+
+  @override
+  State<_RateUsPromptSuccessListener> createState() =>
+      _RateUsPromptSuccessListenerState();
+}
+
+class _RateUsPromptSuccessListenerState
+    extends State<_RateUsPromptSuccessListener> {
+  bool _scheduled = false;
+
+  @override
+  void didUpdateWidget(covariant _RateUsPromptSuccessListener oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _maybeSchedulePrompt();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _maybeSchedulePrompt();
+  }
+
+  void _maybeSchedulePrompt() {
+    if (_scheduled ||
+        widget.state.stage != TransactionProgressStage.success ||
+        widget.state.flow == TransactionProgressFlow.generic) {
+      return;
+    }
+    _scheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(RateUsPromptService().maybeShowAfterPositiveMoment(context));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 class _ProcessingScaffold extends StatelessWidget {

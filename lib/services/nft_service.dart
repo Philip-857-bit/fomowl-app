@@ -11,9 +11,11 @@ class NftAsset {
   final String description;
   final int count;
   final String chainName;
+  final int chainId;
   final String imageUrl;
   final String contractAddress;
   final String tokenId;
+  final String tokenType;
   final bool isProjectNft;
 
   const NftAsset({
@@ -22,11 +24,15 @@ class NftAsset {
     required this.description,
     required this.count,
     required this.chainName,
+    this.chainId = 0,
     required this.imageUrl,
     required this.contractAddress,
     required this.tokenId,
+    this.tokenType = 'ERC721',
     required this.isProjectNft,
   });
+
+  bool get isErc1155 => tokenType.toUpperCase().contains('1155');
 }
 
 class NftService {
@@ -131,12 +137,17 @@ class NftService {
             description: nft['description']?.toString().trim() ?? '',
             count: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
             chainName: chainName,
+            chainId: chainId,
             imageUrl: normalizeImageUrl(
               image['cachedUrl']?.toString() ??
                   image['originalUrl']?.toString(),
             ),
             contractAddress: contractAddress,
             tokenId: normalizeTokenId(id['tokenId']?.toString()),
+            tokenType: normalizeTokenType(
+              nft['tokenType']?.toString() ?? contract['tokenType']?.toString(),
+              balance: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
+            ),
             isProjectNft:
                 contractAddress.toLowerCase() ==
                 _projectNftAddress.toLowerCase(),
@@ -205,5 +216,16 @@ class NftService {
       }
     }
     return trimmed;
+  }
+
+  String normalizeTokenType(String? value, {int balance = 1}) {
+    final normalized = value?.trim().toUpperCase() ?? '';
+    if (normalized.contains('1155')) {
+      return 'ERC1155';
+    }
+    if (normalized.contains('721')) {
+      return 'ERC721';
+    }
+    return balance > 1 ? 'ERC1155' : 'ERC721';
   }
 }

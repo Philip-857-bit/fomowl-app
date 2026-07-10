@@ -185,6 +185,24 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
+      'gas required exceeds allowance',
+      'intrinsic gas too low',
+      'out of gas',
+      'exceeds allowance',
+    ])) {
+      return 'Transaction failed because the network fee estimate was too low. Please try again or use a smaller amount.';
+    }
+
+    if (_containsAny(lowered, const [
+      'execution reverted',
+      'transaction underpriced',
+      'replacement transaction underpriced',
+      'nonce too low',
+    ])) {
+      return 'Transaction could not be completed on the network. Please check your balance and try again.';
+    }
+
+    if (_containsAny(lowered, const [
       'backend',
       'database',
       'sql',

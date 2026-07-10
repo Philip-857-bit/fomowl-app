@@ -51,6 +51,7 @@ import '../screens/wallet/deposit_funds_screen.dart';
 import '../screens/wallet/nft_gallery_screen.dart';
 import '../screens/wallet/qr_scanner_screen.dart';
 import '../screens/wallet/receive_token_screen.dart';
+import '../screens/wallet/send_nft_screen.dart';
 import '../screens/wallet/select_token_screen.dart';
 import '../screens/wallet/send_token_screen.dart';
 import '../screens/wallet/token_detail_screen.dart';
@@ -87,6 +88,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/swap': (_) => const ShellRouteRedirect(tab: AppShellTab.swap),
     '/select-token': (_) => const SelectTokenScreen(),
     '/send-token': (_) => const SendTokenScreen(),
+    '/send-nft': (_) => const SendNftScreen(),
     '/transfer-confirmation': (_) => const TransferConfirmationScreen(),
     '/token-detail': (_) => const TokenDetailScreen(),
     '/token-management': (_) => const TokenManagementScreen(),

@@ -13,6 +13,7 @@ import '../../../services/http_client_service.dart';
 import '../../../services/rpc_service.dart';
 import '../../../services/wallet_service.dart';
 import '../../../utils/amount_utils.dart';
+import '../../../utils/app_error_utils.dart';
 import '../../../utils/toast_utils.dart';
 import '../../../utils/value_formatter.dart';
 import '../../transaction/transaction_processing_screen.dart';
@@ -571,10 +572,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         );
         final credentials = await widget.walletService.getCredentials();
         final client = Web3Client(rpcUrl, _httpClientService.client);
-        final tx = Transaction(
-          to: EthereumAddress.fromHex(step.to),
-          data: hexToBytes(step.data.replaceFirst('0x', '')),
-          value: EtherAmount.inWei(step.value),
+        final tx = await _prepareEvmBridgeTransaction(
+          client: client,
+          credentials: credentials,
+          step: step,
+          nativeSymbol: chain.symbol,
         );
         final txHash = await client.sendTransaction(
           credentials,
@@ -634,7 +636,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       }
     } catch (e) {
       controller.setError(
-        'Bridge failed: ${e.toString().length > 140 ? '${e.toString().substring(0, 140)}…' : e}',
+        AppErrorUtils.userMessage(
+          e,
+          fallback: 'Bridge failed. Please check your balance and try again.',
+        ),
       );
     } finally {
       if (mounted) {
@@ -644,6 +649,82 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   // ── Build ───────────────────────────────────────────────────────────────
+
+  Future<Transaction> _prepareEvmBridgeTransaction({
+    required Web3Client client,
+    required EthPrivateKey credentials,
+    required BridgeStepTx step,
+    required String nativeSymbol,
+  }) async {
+    final to = EthereumAddress.fromHex(step.to);
+    final data = hexToBytes(step.data.replaceFirst('0x', ''));
+    final value = EtherAmount.inWei(step.value);
+    final symbol = nativeSymbol.trim().isEmpty
+        ? 'the native gas token'
+        : nativeSymbol.trim();
+    final nativeBalanceWei = (await client.getBalance(
+      credentials.address,
+    )).getInWei;
+    if (nativeBalanceWei <= step.value) {
+      throw Exception(
+        'Not enough $symbol to pay the bridge amount and network fee. Add more $symbol, then try again.',
+      );
+    }
+
+    final gasPrice = await client.getGasPrice();
+    late final BigInt estimatedGas;
+    try {
+      estimatedGas = await client.estimateGas(
+        sender: credentials.address,
+        to: to,
+        value: value,
+        data: data,
+      );
+    } catch (error) {
+      if (_isGasAllowanceError(error)) {
+        throw Exception(
+          'Not enough $symbol to cover the bridge network fee. Add more $symbol, then try again.',
+        );
+      }
+      rethrow;
+    }
+    final bufferedGas = _bufferGasLimit(estimatedGas);
+    final gasCostWei = gasPrice.getInWei * bufferedGas;
+    final requiredNativeWei = step.value + gasCostWei;
+
+    if (nativeBalanceWei < requiredNativeWei) {
+      final missingWei = requiredNativeWei - nativeBalanceWei;
+      final missing = EtherAmount.inWei(
+        missingWei,
+      ).getValueInUnit(EtherUnit.ether).toStringAsFixed(6);
+      throw Exception(
+        'Not enough $symbol to pay the bridge amount and network fee. Add at least $missing $symbol, then try again.',
+      );
+    }
+
+    return Transaction(
+      to: to,
+      data: data,
+      value: value,
+      gasPrice: gasPrice,
+      maxGas: bufferedGas.toInt(),
+    );
+  }
+
+  bool _isGasAllowanceError(Object error) {
+    final lower = error.toString().toLowerCase();
+    return lower.contains('gas required exceeds allowance') ||
+        lower.contains('insufficient funds') ||
+        lower.contains('insufficient native gas') ||
+        lower.contains('cannot afford') ||
+        (lower.contains('not enough') && lower.contains('gas'));
+  }
+
+  BigInt _bufferGasLimit(BigInt estimatedGas) {
+    final buffered =
+        (estimatedGas * BigInt.from(125) + BigInt.from(99)) ~/ BigInt.from(100);
+    return buffered > estimatedGas ? buffered : estimatedGas + BigInt.one;
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../services/app_release_checker.dart';
+import '../../../widgets/forced_update_dialog.dart';
 
 class WhatsNewSheet extends StatelessWidget {
   const WhatsNewSheet({super.key, required this.result});
@@ -10,6 +11,12 @@ class WhatsNewSheet extends StatelessWidget {
   final WhatsNewResult result;
 
   static Future<void> show(BuildContext context, WhatsNewResult result) {
+    if (result.isUpdateRequired) {
+      return ForcedUpdateDialog.show(
+        context,
+        version: 'v${result.serverVersion}',
+      );
+    }
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,

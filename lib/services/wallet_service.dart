@@ -49,6 +49,34 @@ class WalletService {
         "type": "function"
       }
     ]''', 'ERC20');
+  static final ContractAbi _erc721Abi = ContractAbi.fromJson('''[
+      {
+        "constant": false,
+        "inputs": [
+          {"name": "from", "type": "address"},
+          {"name": "to", "type": "address"},
+          {"name": "tokenId", "type": "uint256"}
+        ],
+        "name": "safeTransferFrom",
+        "outputs": [],
+        "type": "function"
+      }
+    ]''', 'ERC721');
+  static final ContractAbi _erc1155Abi = ContractAbi.fromJson('''[
+      {
+        "constant": false,
+        "inputs": [
+          {"name": "from", "type": "address"},
+          {"name": "to", "type": "address"},
+          {"name": "id", "type": "uint256"},
+          {"name": "amount", "type": "uint256"},
+          {"name": "data", "type": "bytes"}
+        ],
+        "name": "safeTransferFrom",
+        "outputs": [],
+        "type": "function"
+      }
+    ]''', 'ERC1155');
 
   /// Generate a new 12-word mnemonic phrase (Rust FFI)
   Future<String> generateMnemonic() async {
@@ -707,6 +735,63 @@ class WalletService {
     );
   }
 
+  Future<String> sendNftTransaction({
+    required String contractAddress,
+    required String fromAddress,
+    required String toAddress,
+    required BigInt tokenId,
+    required String tokenType,
+    required BigInt amount,
+    required String rpcUrl,
+    required int chainId,
+  }) async {
+    if (contractAddress.trim().isEmpty) {
+      throw Exception('NFT contract address is missing');
+    }
+    if (tokenId < BigInt.zero) {
+      throw Exception('NFT token ID is invalid');
+    }
+    if (amount <= BigInt.zero) {
+      throw Exception('NFT transfer amount must be greater than zero');
+    }
+
+    final credentials = await getCredentials();
+    final sender = EthereumAddress.fromHex(fromAddress);
+    final contractAddressHex = EthereumAddress.fromHex(contractAddress);
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final isErc1155 = tokenType.toUpperCase().contains('1155');
+    final contract = DeployedContract(
+      isErc1155 ? _erc1155Abi : _erc721Abi,
+      contractAddressHex,
+    );
+    final transferFunction = contract.function('safeTransferFrom');
+    final parameters = isErc1155
+        ? <dynamic>[sender, recipient, tokenId, amount, Uint8List(0)]
+        : <dynamic>[sender, recipient, tokenId];
+    final data = transferFunction.encodeCall(parameters);
+    final client = _clientForRpc(rpcUrl);
+    final gasPrice = await client.getGasPrice();
+    final estimatedGas = await client.estimateGas(
+      sender: sender,
+      to: contractAddressHex,
+      data: data,
+    );
+    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
+
+    return client.sendTransaction(
+      credentials,
+      Transaction.callContract(
+        contract: contract,
+        function: transferFunction,
+        parameters: parameters,
+        gasPrice: gasPrice,
+        maxGas: bufferedGas.toInt(),
+      ),
+      chainId: chainId,
+      fetchChainIdFromNetworkId: false,
+    );
+  }
+
   Future<String> sendRawTransactionRequest({
     required String rpcUrl,
     required int chainId,
@@ -771,6 +856,51 @@ class WalletService {
     }
 
     final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
+    final totalFeeWei = gasPrice.getInWei * bufferedGas;
+    final totalFeeNativeDouble = EtherAmount.inWei(
+      totalFeeWei,
+    ).getValueInUnit(EtherUnit.ether).toDouble();
+
+    return {
+      'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
+      'gasLimitUnits': bufferedGas.toDouble(),
+      'totalFeeEth': totalFeeNativeDouble,
+      'totalFeeUsd': totalFeeNativeDouble * nativePriceUsd,
+      'totalFeeWei': totalFeeWei,
+    };
+  }
+
+  Future<Map<String, dynamic>> estimateNftTransferFee({
+    required String fromAddress,
+    required String toAddress,
+    required String contractAddress,
+    required BigInt tokenId,
+    required String tokenType,
+    required BigInt amount,
+    required String rpcUrl,
+    double nativePriceUsd = 0,
+  }) async {
+    final client = _clientForRpc(rpcUrl);
+    final sender = EthereumAddress.fromHex(fromAddress);
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final nftContractAddress = EthereumAddress.fromHex(contractAddress);
+    final isErc1155 = tokenType.toUpperCase().contains('1155');
+    final contract = DeployedContract(
+      isErc1155 ? _erc1155Abi : _erc721Abi,
+      nftContractAddress,
+    );
+    final transferFunction = contract.function('safeTransferFrom');
+    final parameters = isErc1155
+        ? <dynamic>[sender, recipient, tokenId, amount, Uint8List(0)]
+        : <dynamic>[sender, recipient, tokenId];
+    final data = transferFunction.encodeCall(parameters);
+    final gasPrice = await client.getGasPrice();
+    final estimatedGas = await client.estimateGas(
+      sender: sender,
+      to: nftContractAddress,
+      data: data,
+    );
+    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
     final totalFeeWei = gasPrice.getInWei * bufferedGas;
     final totalFeeNativeDouble = EtherAmount.inWei(
       totalFeeWei,

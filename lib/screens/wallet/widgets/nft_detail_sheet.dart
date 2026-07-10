@@ -121,6 +121,11 @@ class NftDetailSheet extends StatelessWidget {
                               _copyValue(context, nft.contractAddress),
                         ),
                       ],
+                      if (nft.contractAddress.trim().isNotEmpty &&
+                          nft.tokenId.trim().isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        _SendNftButton(nft: nft),
+                      ],
                     ],
                   ),
                 ),
@@ -172,6 +177,53 @@ class NftDetailSheet extends StatelessWidget {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(AppLocalizations.of(context).copiedToClipboard)),
+    );
+  }
+}
+
+class _SendNftButton extends StatelessWidget {
+  const _SendNftButton({required this.nft});
+
+  final NftAsset nft;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        final navigator = Navigator.of(context);
+        navigator.pop();
+        navigator.pushNamed('/send-nft', arguments: nft);
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        decoration: BoxDecoration(
+          color: AppColors.accentRed,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentRed.withValues(alpha: 0.24),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.send_rounded, size: 18, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              'Send NFT',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

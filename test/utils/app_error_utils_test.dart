@@ -172,6 +172,16 @@ void main() {
       );
     });
 
+    test('maps raw EVM gas allowance errors to a friendly fee message', () {
+      expect(
+        AppErrorUtils.userMessage(
+          'Bridge failed: RPCError: got code -32000 with msg "gas required exceeds allowance (4956)"',
+          fallback: fallback,
+        ),
+        'Transaction failed because the network fee estimate was too low. Please try again or use a smaller amount.',
+      );
+    });
+
     test(
       'maps Jupiter empty transaction insufficient funds before route message',
       () {
