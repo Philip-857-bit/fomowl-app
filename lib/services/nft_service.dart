@@ -127,12 +127,13 @@ class NftService {
           final image = nft['image'] as Map<String, dynamic>? ?? const {};
           final id = nft['id'] as Map<String, dynamic>? ?? const {};
           final contractAddress = contract['address']?.toString() ?? '';
+          final name =
+              nft['name']?.toString() ??
+              contract['name']?.toString() ??
+              'Unknown Token';
 
           return NftAsset(
-            name:
-                nft['name']?.toString() ??
-                contract['name']?.toString() ??
-                'Unknown Token',
+            name: name,
             collection: contract['name']?.toString() ?? 'Unknown Collection',
             description: nft['description']?.toString().trim() ?? '',
             count: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
@@ -143,7 +144,7 @@ class NftService {
                   image['originalUrl']?.toString(),
             ),
             contractAddress: contractAddress,
-            tokenId: normalizeTokenId(id['tokenId']?.toString()),
+            tokenId: resolveTokenId(nft, id, name),
             tokenType: normalizeTokenType(
               nft['tokenType']?.toString() ?? contract['tokenType']?.toString(),
               balance: int.tryParse(nft['balance']?.toString() ?? '1') ?? 1,
@@ -216,6 +217,32 @@ class NftService {
       }
     }
     return trimmed;
+  }
+
+  String resolveTokenId(
+    Map<String, dynamic> nft,
+    Map<String, dynamic> id,
+    String name,
+  ) {
+    for (final value in [
+      nft['tokenId'],
+      nft['token_id'],
+      nft['tokenID'],
+      id['tokenId'],
+      id['token_id'],
+      id['tokenID'],
+    ]) {
+      final normalized = normalizeTokenId(value?.toString());
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    final nameMatch = RegExp(r'#\s*([0-9]+)\s*$').firstMatch(name.trim());
+    if (nameMatch != null) {
+      return nameMatch.group(1) ?? '';
+    }
+    return '';
   }
 
   String normalizeTokenType(String? value, {int balance = 1}) {
