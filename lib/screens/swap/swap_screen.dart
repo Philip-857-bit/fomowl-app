@@ -12,6 +12,8 @@ import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/cow_limit_order_signing.dart';
 import '../../services/swap_service.dart';
+import '../../services/bridge_service.dart';
+import '../../services/relay_swap_execution_service.dart';
 import '../../services/solana_swap_service.dart';
 import '../../services/tron_swap_service.dart';
 import '../../services/solana_limit_service.dart';
@@ -151,6 +153,9 @@ class _SwapScreenState extends State<SwapScreen> {
   AmountInputMode _limitPriceInputMode = AmountInputMode.token;
   bool _syncingFromDisplay = false;
   final SwapService _swapService = SwapService();
+  final BridgeService _relaySwapService = BridgeService();
+  final RelaySwapExecutionService _relaySwapExecutionService =
+      RelaySwapExecutionService();
   final WalletService _walletService = WalletService();
   final ReferralService _referralService = ReferralService();
   final TokenVisibilityService _tokenVisibilityService =
@@ -273,6 +278,7 @@ class _SwapScreenState extends State<SwapScreen> {
   double _platformFeeUsd = 0.0;
   String? _walletAddress;
   SwapQuote? _currentQuote;
+  BridgeQuote? _currentRelayQuote;
   int _selectedPercentage = -1; // -1 = none selected
   /// Cached per-token USD prices fetched from CoinGecko.
   /// Made static to persist across screen navigation. Entries carry a fetch
@@ -1291,6 +1297,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _quoteStatusMessage = null;
     }
     _currentQuote = null;
+    _currentRelayQuote = null;
     _currentSolanaQuote = null;
     _currentTronQuote = null;
     _feeUsd = 0.0;
@@ -1939,11 +1946,21 @@ class _SwapScreenState extends State<SwapScreen> {
       blockchain.activeChain.chainId,
       isGasless: _isGasless,
     )) {
-      setState(() {
-        _quoteStatusMessage = l.networkError;
-        _resetQuoteState(clearQuoteStatusMessage: false);
-        _isCalculating = false;
-      });
+      if (!_isGasless &&
+          await _tryRelaySwapQuote(
+            requestId: requestId,
+            blockchain: blockchain,
+            amountWei: toWeiAmount(_fromController.text, _fromToken!.decimals),
+          )) {
+        return;
+      }
+      if (mounted && requestId == _quoteRequestId) {
+        setState(() {
+          _quoteStatusMessage = l.networkError;
+          _resetQuoteState(clearQuoteStatusMessage: false);
+          _isCalculating = false;
+        });
+      }
       return;
     }
     if (_isGaslessSourceUnsupported()) {
@@ -2015,17 +2032,34 @@ class _SwapScreenState extends State<SwapScreen> {
           _platformFeeUsd = quote.platformFeeUsd;
         });
       } else {
-        final mapped = _mapErrorMessage(_swapService.lastError);
-        setState(() {
-          _quoteStatusMessage = mapped;
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-        });
+        final usedRelay =
+            !_isGasless &&
+            await _tryRelaySwapQuote(
+              requestId: requestId,
+              blockchain: blockchain,
+              amountWei: amountWei,
+            );
+        if (!usedRelay && mounted && requestId == _quoteRequestId) {
+          final mapped = _mapErrorMessage(_swapService.lastError);
+          setState(() {
+            _quoteStatusMessage = mapped;
+            _resetQuoteState(
+              preserveRequestId: true,
+              clearQuoteStatusMessage: false,
+            );
+          });
+        }
       }
     } on TimeoutException {
-      if (mounted && requestId == _quoteRequestId) {
+      final amountWei = toWeiAmount(_fromController.text, _fromToken!.decimals);
+      final usedRelay =
+          !_isGasless &&
+          await _tryRelaySwapQuote(
+            requestId: requestId,
+            blockchain: blockchain,
+            amountWei: amountWei,
+          );
+      if (!usedRelay && mounted && requestId == _quoteRequestId) {
         setState(() {
           _quoteStatusMessage = l.tryAgain;
           _resetQuoteState(
@@ -2049,6 +2083,82 @@ class _SwapScreenState extends State<SwapScreen> {
         setState(() => _isCalculating = false);
       }
     }
+  }
+
+  Future<bool> _tryRelaySwapQuote({
+    required int requestId,
+    required BlockchainService blockchain,
+    required String? amountWei,
+  }) async {
+    final from = _fromToken;
+    final to = _toToken;
+    final wallet = _walletAddress;
+    if (from == null ||
+        to == null ||
+        wallet == null ||
+        wallet.isEmpty ||
+        amountWei == null ||
+        amountWei == '0') {
+      return false;
+    }
+    final chainId = blockchain.activeChain.chainId;
+    final quote = await _relaySwapService
+        .getQuote(
+          originChainId: chainId,
+          destinationChainId: chainId,
+          originCurrency: (from.contractAddress ?? '').isEmpty
+              ? BridgeService.nativeCurrency
+              : from.contractAddress!,
+          destinationCurrency: (to.contractAddress ?? '').isEmpty
+              ? BridgeService.nativeCurrency
+              : to.contractAddress!,
+          amountWei: amountWei,
+          walletAddress: wallet,
+          recipientAddress: wallet,
+          amountUsd: from.priceUsd > 0
+              ? _parseAmount(_fromController) * from.priceUsd
+              : null,
+        )
+        .timeout(_quoteUiTimeout);
+    if (quote == null || !mounted || requestId != _quoteRequestId) return false;
+
+    final rawOut = BigInt.tryParse(quote.amountOut) ?? BigInt.zero;
+    if (rawOut <= BigInt.zero) return false;
+    final formatted = AmountUtils.formatBaseUnits(
+      rawOut,
+      to.decimals,
+      maxFractionDigits: 8,
+    );
+    final inAmount = _parseAmount(_fromController);
+    final outAmount = double.tryParse(formatted) ?? 0;
+    final synthetic = SwapQuote(
+      amountOutWei: quote.amountOut,
+      minAmountOutWei: quote.amountOut,
+      amountOutFormatted: formatted,
+      minAmountOutFormatted: formatted,
+      networkFeeUsd: quote.gasFeeUsd + quote.bridgeFeeUsd,
+      networkFeeNative: 0,
+      allowanceTarget: '',
+      allowanceSpender: null,
+      needsAllowance: false,
+      hasBalanceIssue: false,
+      balanceNeeded: null,
+      balanceActual: null,
+      platformFeeBps: quote.platformFeeBps ?? 0,
+      platformFeeUsd: quote.platformFeeUsd ?? 0,
+    );
+    setState(() {
+      _currentRelayQuote = quote;
+      _currentQuote = synthetic;
+      _toController.text = formatted;
+      _pricing = _formatRateText(inAmount > 0 ? outAmount / inAmount : 0);
+      _feeUsd = synthetic.networkFeeUsd;
+      _feeNative = 0;
+      _platformFeeUsd = synthetic.platformFeeUsd;
+      _quoteStatusMessage = null;
+      _isCalculating = false;
+    });
+    return true;
   }
 
   // ── Cached Solana/Tron quote objects (used during execution) ─────────────
@@ -3211,6 +3321,7 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     if (blockchain.activeFamily == ChainFamily.evm &&
+        _currentRelayQuote == null &&
         !_swapService.isChainSupported(
           blockchain.activeChain.chainId,
           isGasless: _isGasless,
@@ -3248,6 +3359,17 @@ class _SwapScreenState extends State<SwapScreen> {
     try {
       progressController = _openProgressFlow();
       progressController.setPreparing();
+
+      final relayQuote = _currentRelayQuote;
+      if (relayQuote != null) {
+        await _performRelaySwap(
+          quote: relayQuote,
+          fromToken: fromToken,
+          toToken: toToken,
+          progressController: progressController,
+        );
+        return;
+      }
 
       final executionQuote = await _refreshExecutionQuote(
         fromToken: fromToken,
@@ -3289,6 +3411,55 @@ class _SwapScreenState extends State<SwapScreen> {
         setState(() => _isSwapFlowActive = false);
       }
     }
+  }
+
+  Future<void> _performRelaySwap({
+    required BridgeQuote quote,
+    required Token fromToken,
+    required Token toToken,
+    required TransactionProgressController progressController,
+  }) async {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    progressController.setSwapSubmitting();
+    final result = await _relaySwapExecutionService.execute(
+      quote: quote,
+      blockchain: blockchain,
+      walletService: _walletService,
+      isNativeInput:
+          fromToken.contractAddress == null ||
+          fromToken.contractAddress!.isEmpty,
+    );
+    if (!mounted) return;
+    if (!result.success || result.transactionHash == null) {
+      progressController.setError(
+        _mapErrorMessage(result.error ?? 'Relay swap failed.'),
+        reference: result.transactionHash == null
+            ? null
+            : shortHash(result.transactionHash!),
+      );
+      return;
+    }
+
+    final hash = result.transactionHash!;
+    final fromAmountText = _fromController.text.trim();
+    final toAmountText = _toController.text.trim();
+    _recordSwapHistory(
+      txHash: hash,
+      fromAmount: fromAmountText,
+      fromTokenName: fromToken.name,
+      fromTokenSymbol: fromToken.symbol,
+      toAmount: toAmountText,
+      toTokenSymbol: toToken.symbol,
+      networkName: blockchain.activeChain.name,
+      chainId: blockchain.activeChain.chainId,
+      networkKey: blockchain.activeNetworkKey,
+    );
+    _clearSubmittedSwapState();
+    progressController.setSuccess(
+      reference: shortHash(hash),
+      detailsUrl: _transactionDetailsUrl(hash),
+    );
+    unawaited(_refreshWalletState(blockchain: blockchain));
   }
 
   void _showError(String message) {

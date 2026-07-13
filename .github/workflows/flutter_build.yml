@@ -84,11 +84,11 @@ jobs:
           channel: 'stable'
           flutter-version: 3.44.6
 
-      - name: Set up Android 17 SDK
+      - name: Set up Android SDK tools
         uses: android-actions/setup-android@v3
 
-      - name: Install Android 17 platform
-        run: sdkmanager --install "platforms;android-37" "build-tools;37.0.0" --channel=3
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses >/dev/null || true
 
       - name: Validate Firebase config for push
         shell: bash
