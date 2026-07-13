@@ -82,7 +82,13 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: 3.41.6
+          flutter-version: 3.44.6
+
+      - name: Set up Android 17 SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 17 platform
+        run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
 
       - name: Validate Firebase config for push
         shell: bash

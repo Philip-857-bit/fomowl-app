@@ -13,7 +13,7 @@ jobs:
       run:
         shell: bash
     env:
-      FLUTTER_VERSION: 3.41.6
+      FLUTTER_VERSION: 3.44.6
       XCODE_VERSION: '16.4'
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
@@ -70,6 +70,9 @@ jobs:
         uses: shorebirdtech/setup-shorebird@v1
         with:
           cache: true
+
+      - name: Report Shorebird toolchain
+        run: shorebird --version
 
       - name: Validate Shorebird release inputs
         run: |
@@ -284,7 +287,7 @@ jobs:
       run:
         shell: bash
     env:
-      FLUTTER_VERSION: 3.41.6
+      FLUTTER_VERSION: 3.44.6
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
     steps:

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../constants/app_colors.dart';
+
 class SendPrimaryButton extends StatelessWidget {
   final VoidCallback onPressed;
 
@@ -14,11 +16,11 @@ class SendPrimaryButton extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
         decoration: BoxDecoration(
-          color: const Color(0xFFB30000),
+          gradient: AppColors.primaryGradient,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
-              color: Color(0x66B30000),
+              color: AppColors.accentRed.withValues(alpha: 0.28),
               blurRadius: 20,
               spreadRadius: 1,
               offset: Offset(0, 8),
@@ -31,7 +33,7 @@ class SendPrimaryButton extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.textPrimary,
             ),
           ),
         ),

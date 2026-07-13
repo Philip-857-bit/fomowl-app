@@ -13,7 +13,7 @@ jobs:
       run:
         shell: bash
     env:
-      FLUTTER_VERSION: 3.41.6
+      FLUTTER_VERSION: 3.44.6
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
@@ -90,10 +90,19 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
+      - name: Set up Android 17 SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 17 platform
+        run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
+
       - name: Setup Shorebird
         uses: shorebirdtech/setup-shorebird@v1
         with:
           cache: true
+
+      - name: Report Shorebird toolchain
+        run: shorebird --version
 
       - name: Validate Shorebird release inputs
         run: |
@@ -347,7 +356,7 @@ jobs:
       run:
         shell: bash
     env:
-      FLUTTER_VERSION: 3.41.6
+      FLUTTER_VERSION: 3.44.6
       SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
     steps:

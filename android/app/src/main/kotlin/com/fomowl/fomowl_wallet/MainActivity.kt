@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
+import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
@@ -28,6 +29,9 @@ class MainActivity : FlutterFragmentActivity() {
 	private var pendingCameraPermissionResult: MethodChannel.Result? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
+		// Android 15+ enforces edge-to-edge for modern targets. Enable it on
+		// earlier versions too, so the Flutter SafeAreas behave consistently.
+		enableEdgeToEdge()
 		super.onCreate(savedInstanceState)
 		ensureDefaultNotificationChannel()
 	}

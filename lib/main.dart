@@ -71,10 +71,11 @@ Future<void> main() async {
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: AppColors.background,
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   if (kEnableRustBridge) {
     try {

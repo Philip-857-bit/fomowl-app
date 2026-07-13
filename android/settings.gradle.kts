@@ -19,6 +19,8 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
+    // API 37 requires Android Gradle Plugin 8.9.0 or newer; keep the
+    // project's newer compatible 8.11.1 release.
     id("com.android.application") version "8.11.1" apply false
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
 }

@@ -416,6 +416,8 @@ class _NftTransferPreview extends StatelessWidget {
                   ? Image.network(
                       nft.imageUrl,
                       fit: BoxFit.cover,
+                      cacheWidth: 256,
+                      cacheHeight: 256,
                       errorBuilder: (_, _, _) => const _NftImageFallback(),
                     )
                   : const _NftImageFallback(),
@@ -433,7 +435,7 @@ class _NftTransferPreview extends StatelessWidget {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -443,7 +445,7 @@ class _NftTransferPreview extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
                     fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.58),
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -474,7 +476,7 @@ class _NftImageFallback extends StatelessWidget {
       child: Center(
         child: Icon(
           Icons.image_outlined,
-          color: Colors.white.withValues(alpha: 0.2),
+          color: AppColors.textSecondary.withValues(alpha: 0.42),
           size: 32,
         ),
       ),

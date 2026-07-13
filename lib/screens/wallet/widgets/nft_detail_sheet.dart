@@ -151,6 +151,8 @@ class NftDetailSheet extends StatelessWidget {
               ? Image.network(
                   nft.imageUrl,
                   fit: BoxFit.cover,
+                  cacheWidth: 1080,
+                  cacheHeight: 1080,
                   errorBuilder: (context, error, stackTrace) =>
                       _buildArtworkFallback(),
                 )

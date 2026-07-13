@@ -343,6 +343,8 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                             ? Image.network(
                                 nft.imageUrl,
                                 fit: BoxFit.cover,
+                                cacheWidth: 512,
+                                cacheHeight: 512,
                                 errorBuilder: (context, error, stackTrace) =>
                                     Center(
                                       child: Icon(
