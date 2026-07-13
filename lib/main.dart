@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 import 'config/app_environment.dart';
 import 'app/app_providers.dart';
 import 'app/owllet_app.dart';
-import 'constants/app_colors.dart';
 import 'services/app_notification_service.dart';
 import 'services/app_patch_service.dart';
 

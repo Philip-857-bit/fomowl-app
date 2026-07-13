@@ -1245,18 +1245,22 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'error': 'Swap was cancelled.',
       };
     }
+    if (!mounted) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Mini-app was closed before the swap could start.',
+      };
+    }
 
     final controller = TransactionProgressController(
       flow: TransactionProgressFlow.generic,
     );
-    if (mounted) {
-      unawaited(
-        Navigator.of(context).pushNamed(
-          '/transaction-processing',
-          arguments: TransactionProcessingArguments(controller: controller),
-        ),
-      );
-    }
+    unawaited(
+      Navigator.of(context).pushNamed(
+        '/transaction-processing',
+        arguments: TransactionProcessingArguments(controller: controller),
+      ),
+    );
     controller.setPreparing();
     controller.setSwapSubmitting();
 
