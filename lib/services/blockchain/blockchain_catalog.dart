@@ -124,6 +124,14 @@ class BlockchainCatalog {
       logoUrl:
           'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png',
     ),
+    EvmChain(
+      name: 'Robinhood Chain',
+      symbol: 'ETH',
+      chainId: 4663,
+      rpcUrl: AppEnvironment.blockchain('/4663/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://robinhoodchain.blockscout.com',
+    ),
   ];
 
   static String? iconUrlForSymbol(String symbol) {

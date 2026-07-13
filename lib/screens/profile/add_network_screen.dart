@@ -38,7 +38,9 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   bool? _rpcValid;
   Timer? _chainIdDebounce;
   static List<dynamic>? _chainRegistryCache;
+  static Map<String, String>? _chainLogoCache;
   int? _lastAutofilledChainId;
+  String? _resolvedLogoUrl;
 
   bool get _isEditing => widget.existing != null;
 
@@ -66,6 +68,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       _explorerController.text = existing.explorerUrl ?? '';
       _coinGeckoIdController.text = existing.coinGeckoId ?? '';
       _lastAutofilledChainId = existing.chainId;
+      _resolvedLogoUrl = existing.logoUrl;
     }
     _chainIdController.addListener(_onChainIdChanged);
   }
@@ -151,6 +154,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
       explorerUrl: _explorerController.text.trim().isNotEmpty
           ? _explorerController.text.trim()
           : null,
+      logoUrl: _resolvedLogoUrl,
       isCustom: true,
     );
 
@@ -220,6 +224,10 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
           explorerCandidate != null) {
         _explorerController.text = explorerCandidate;
       }
+      final iconName = (match['icon'] as String?)?.trim();
+      if (iconName != null && iconName.isNotEmpty) {
+        _resolvedLogoUrl = await _resolveChainLogo(iconName);
+      }
       _lastAutofilledChainId = chainId;
     } catch (_) {
       // Best effort only.
@@ -243,6 +251,46 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
     }
     _chainRegistryCache = body;
     return body;
+  }
+
+  /// Resolves Chainlist's icon metadata only when it supplies an IPFS CID.
+  /// Do not load arbitrary image URLs from chain metadata or an RPC endpoint.
+  Future<String?> _resolveChainLogo(String iconName) async {
+    try {
+      final icons = await _loadChainLogoCache();
+      return icons[iconName];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, String>> _loadChainLogoCache() async {
+    if (_chainLogoCache != null) return _chainLogoCache!;
+    final response = await http
+        .get(Uri.parse('https://chainid.network/chain_icons.json'))
+        .timeout(const Duration(seconds: 8));
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch chain icon registry');
+    }
+    final data = jsonDecode(response.body);
+    if (data is! List) throw Exception('Invalid chain icon registry');
+
+    final icons = <String, String>{};
+    final cidPattern = RegExp(r'^[A-Za-z0-9]{32,128}$');
+    for (final item in data.whereType<Map>()) {
+      final name = item['name']?.toString().trim();
+      final variants = item['icons'];
+      if (name == null || name.isEmpty || variants is! List) continue;
+      for (final variant in variants.whereType<Map>()) {
+        final source = variant['url']?.toString().trim() ?? '';
+        if (!source.startsWith('ipfs://')) continue;
+        final cid = source.substring('ipfs://'.length).split('/').first;
+        if (!cidPattern.hasMatch(cid)) continue;
+        icons.putIfAbsent(name, () => 'https://cloudflare-ipfs.com/ipfs/$cid');
+      }
+    }
+    _chainLogoCache = icons;
+    return icons;
   }
 
   @override
