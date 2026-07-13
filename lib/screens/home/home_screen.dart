@@ -1751,6 +1751,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         await _loadWalletData();
                       },
                       chainSymbol: blockchain.activeNetworkSymbol,
+                      chainId: blockchain.activeFamily == ChainFamily.evm
+                          ? blockchain.activeChain.chainId
+                          : null,
                       chainLogoUrl: blockchain.activeNetworkLogoUrl,
                       onNetworkTap: _showNetworkSelector,
                       onHelpTap: () =>

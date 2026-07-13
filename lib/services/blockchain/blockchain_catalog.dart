@@ -131,6 +131,8 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/4663/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://robinhoodchain.blockscout.com',
+      logoUrl:
+          'https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/rh_favicon_152.png',
     ),
   ];
 
@@ -195,7 +197,17 @@ class BlockchainCatalog {
       1313161554 => 'aurora',
       _ => null,
     };
+    if (chainId == 4663) {
+      return 'https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/rh_favicon_152.png';
+    }
     if (blockchainName == null) return null;
     return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$blockchainName/info/logo.png';
   }
+
+  /// Logos bundled with the app for chains that do not have a stable entry in
+  /// the shared Trust Wallet asset repository.
+  static String? localChainLogoAsset(int chainId) => switch (chainId) {
+    4663 => 'assets/images/chains/robinhood_chain.png',
+    _ => null,
+  };
 }

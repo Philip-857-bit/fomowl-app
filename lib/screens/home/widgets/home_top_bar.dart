@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../widgets/chain_logo_image.dart';
 
 /// Wallet selector + actions row displayed at the top of the home screen.
 class HomeTopBar extends StatelessWidget {
   final String walletName;
   final VoidCallback onWalletTap;
   final String chainSymbol;
+  final int? chainId;
   final String? chainLogoUrl;
   final VoidCallback onNetworkTap;
   final VoidCallback onHelpTap;
@@ -19,6 +21,7 @@ class HomeTopBar extends StatelessWidget {
     required this.walletName,
     required this.onWalletTap,
     required this.chainSymbol,
+    this.chainId,
     this.chainLogoUrl,
     required this.onNetworkTap,
     required this.onHelpTap,
@@ -44,6 +47,7 @@ class HomeTopBar extends StatelessWidget {
                 const SizedBox(width: 8),
                 _NetworkChip(
                   chainSymbol: chainSymbol,
+                  chainId: chainId,
                   chainLogoUrl: chainLogoUrl,
                   onTap: onNetworkTap,
                 ),
@@ -157,11 +161,13 @@ class _WalletSelector extends StatelessWidget {
 class _NetworkChip extends StatelessWidget {
   const _NetworkChip({
     required this.chainSymbol,
+    required this.chainId,
     required this.chainLogoUrl,
     required this.onTap,
   });
 
   final String chainSymbol;
+  final int? chainId;
   final String? chainLogoUrl;
   final VoidCallback onTap;
 
@@ -195,18 +201,14 @@ class _NetworkChip extends StatelessWidget {
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: chainLogoUrl != null && chainLogoUrl!.isNotEmpty
-                    ? SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: Image.network(
-                          chainLogoUrl!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _symbolFallback(),
-                        ),
-                      )
-                    : _symbolFallback(),
+                child: ChainLogoImage(
+                  chainId: chainId,
+                  logoUrl: chainLogoUrl,
+                  width: 18,
+                  height: 18,
+                  fit: BoxFit.contain,
+                  fallback: _symbolFallback(),
+                ),
               ),
               const SizedBox(width: 3),
               const Icon(

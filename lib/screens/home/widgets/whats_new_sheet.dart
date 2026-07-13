@@ -14,7 +14,9 @@ class WhatsNewSheet extends StatelessWidget {
     if (result.isUpdateRequired) {
       return ForcedUpdateDialog.show(
         context,
-        version: 'v${result.serverVersion}',
+        version: result.serverVersion.toLowerCase().startsWith('v')
+            ? result.serverVersion
+            : 'v${result.serverVersion}',
       );
     }
     return showModalBottomSheet<void>(

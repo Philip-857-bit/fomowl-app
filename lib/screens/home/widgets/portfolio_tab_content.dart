@@ -5,6 +5,7 @@ import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
+import '../../../widgets/chain_logo_image.dart';
 import '../home_portfolio_data.dart';
 import 'home_token_list_item.dart';
 
@@ -122,7 +123,10 @@ class _PortfolioTabContentState extends State<PortfolioTabContent> {
             },
             child: Row(
               children: [
-                _ChainMarker(chainLogoUrl: section.chain.logoUrl),
+                _ChainMarker(
+                  chainId: section.chain.chainId,
+                  chainLogoUrl: section.chain.logoUrl,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -170,8 +174,9 @@ class _PortfolioTabContentState extends State<PortfolioTabContent> {
 }
 
 class _ChainMarker extends StatelessWidget {
-  const _ChainMarker({required this.chainLogoUrl});
+  const _ChainMarker({required this.chainId, required this.chainLogoUrl});
 
+  final int chainId;
   final String? chainLogoUrl;
 
   @override
@@ -184,14 +189,13 @@ class _ChainMarker extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: ClipOval(
-        child: chainLogoUrl != null && chainLogoUrl!.isNotEmpty
-            ? Image.network(
-                chainLogoUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.blur_on, color: Colors.white, size: 14),
-              )
-            : const Icon(Icons.blur_on, color: Colors.white, size: 14),
+        child: ChainLogoImage(
+          chainId: chainId,
+          logoUrl: chainLogoUrl,
+          width: 22,
+          height: 22,
+          fallback: const Icon(Icons.blur_on, color: Colors.white, size: 14),
+        ),
       ),
     );
   }

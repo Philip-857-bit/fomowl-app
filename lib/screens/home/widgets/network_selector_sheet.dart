@@ -5,6 +5,7 @@ import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/chain.dart';
 import '../../../models/network_entry.dart';
+import '../../../widgets/chain_logo_image.dart';
 
 class NetworkSelectorSheet extends StatelessWidget {
   final List<NetworkEntry> entries;
@@ -92,16 +93,15 @@ class NetworkSelectorSheet extends StatelessWidget {
                   ? accentColor.withValues(alpha: 0.2)
                   : Colors.white12,
               child: ClipOval(
-                child: entry.logoUrl != null && entry.logoUrl!.isNotEmpty
-                    ? Image.network(
-                        entry.logoUrl!,
-                        width: 36,
-                        height: 36,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) =>
-                            _fallbackSymbol(entry, isActive, accentColor),
-                      )
-                    : _fallbackSymbol(entry, isActive, accentColor),
+                child: ChainLogoImage(
+                  chainId: entry is EvmNetworkEntry
+                      ? entry.chain.chainId
+                      : null,
+                  logoUrl: entry.logoUrl,
+                  width: 36,
+                  height: 36,
+                  fallback: _fallbackSymbol(entry, isActive, accentColor),
+                ),
               ),
             ),
             title: Text(

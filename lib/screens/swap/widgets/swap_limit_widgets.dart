@@ -5,6 +5,7 @@ import '../../../models/chain.dart';
 import '../../../models/token.dart';
 import '../../../utils/value_formatter.dart';
 import '../../../widgets/amount_input_mode_toggle.dart';
+import '../../../widgets/chain_logo_image.dart';
 import 'swap_figma_icons.dart';
 import 'swap_token_chip.dart';
 
@@ -162,7 +163,7 @@ class NetworkCard extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  _ChainLogo(url: chain.logoUrl),
+                  _ChainLogo(chainId: chain.chainId, url: chain.logoUrl),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -186,39 +187,32 @@ class NetworkCard extends StatelessWidget {
 }
 
 class _ChainLogo extends StatelessWidget {
+  final int chainId;
   final String? url;
 
-  const _ChainLogo({this.url});
+  const _ChainLogo({required this.chainId, this.url});
 
   @override
   Widget build(BuildContext context) {
-    if (url == null || url!.trim().isEmpty) {
-      return Container(
-        width: 32,
-        height: 32,
-        decoration: const BoxDecoration(
+    const fallback = SizedBox(
+      width: 32,
+      height: 32,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
           color: Color(0xFF2A2A2A),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.language, color: Color(0xFFC8C6C5), size: 16),
-      );
-    }
+        child: Icon(Icons.language, color: Color(0xFFC8C6C5), size: 16),
+      ),
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: Image.network(
-        url!,
+      child: ChainLogoImage(
+        chainId: chainId,
+        logoUrl: url,
         width: 32,
         height: 32,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          width: 32,
-          height: 32,
-          decoration: const BoxDecoration(
-            color: Color(0xFF2A2A2A),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.language, color: Color(0xFFC8C6C5), size: 16),
-        ),
+        fallback: fallback,
       ),
     );
   }

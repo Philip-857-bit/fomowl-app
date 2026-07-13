@@ -9,12 +9,14 @@ import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
 import '../models/patch_status_snapshot.dart';
 import '../services/app_patch_service.dart';
+import '../services/app_release_checker.dart';
 import '../services/language_controller.dart';
 import '../services/storage_service.dart';
 import '../services/system_picker_guard.dart';
 import '../services/wallet_service.dart';
 import '../utils/language_utils.dart';
 import '../utils/toast_utils.dart';
+import '../widgets/forced_update_dialog.dart';
 import 'app_bootstrapper.dart';
 import 'app_navigator.dart';
 import 'app_routes.dart';
@@ -29,18 +31,24 @@ class OwlletApp extends StatefulWidget {
 class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   final StorageService _storage = StorageService();
   final WalletService _walletService = WalletService();
+  final AppReleaseChecker _releaseChecker = AppReleaseChecker();
 
   bool _unlockInFlight = false;
   bool _wasBackgrounded = false;
   DateTime _lastInteractionAt = DateTime.now();
   Timer? _foregroundLockTimer;
   AppPatchStatus? _lastVisiblePatchStatus;
+  bool _requiredUpdateCheckInFlight = false;
+  bool _requiredUpdateDialogVisible = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AppPatchService.instance.addListener(_showVisiblePatchStatus);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_enforceRequiredUpdate());
+    });
     ShowcaseView.register(enableAutoScroll: true, blurValue: 1);
     _foregroundLockTimer = Timer.periodic(
       const Duration(seconds: 15),
@@ -94,7 +102,33 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     }
     if (state == AppLifecycleState.resumed) {
       unawaited(AppPatchService.instance.handleAppResumed());
+      unawaited(_enforceRequiredUpdate());
       _maybeRequireUnlock();
+    }
+  }
+
+  Future<void> _enforceRequiredUpdate() async {
+    if (_requiredUpdateCheckInFlight || _requiredUpdateDialogVisible) return;
+    _requiredUpdateCheckInFlight = true;
+    try {
+      final result = await _releaseChecker.checkForRequiredUpdate();
+      if (result == null || !mounted || _requiredUpdateDialogVisible) return;
+
+      final navigatorContext = appNavigatorKey.currentContext;
+      if (navigatorContext == null || !navigatorContext.mounted) return;
+
+      _requiredUpdateDialogVisible = true;
+      await ForcedUpdateDialog.show(
+        navigatorContext,
+        version: result.serverVersion.toLowerCase().startsWith('v')
+            ? result.serverVersion
+            : 'v${result.serverVersion}',
+      );
+    } catch (error) {
+      debugPrint('[AppUpdate] Required update check failed: $error');
+    } finally {
+      _requiredUpdateCheckInFlight = false;
+      _requiredUpdateDialogVisible = false;
     }
   }
 

@@ -12,6 +12,30 @@ class AppReleaseChecker {
   AppReleaseChecker({ReleaseNotesService? releaseNotesService})
     : _releaseNotesService = releaseNotesService ?? ReleaseNotesService();
 
+  /// Checks the server's minimum supported version without consulting or
+  /// mutating the one-time "what's new" preferences. This is used by the app
+  /// root so mandatory updates are enforced before a wallet reaches Home.
+  Future<WhatsNewResult?> checkForRequiredUpdate() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final installedVersion = packageInfo.version;
+    final releaseInfo = await _releaseNotesService.fetchReleaseInfo();
+    if (releaseInfo == null || releaseInfo.minVersion.trim().isEmpty) {
+      return null;
+    }
+
+    final result = WhatsNewResult(
+      installedVersion: installedVersion,
+      serverVersion: releaseInfo.version.trim().isEmpty
+          ? releaseInfo.minVersion
+          : releaseInfo.version,
+      releaseNotes: releaseInfo.releaseNotes,
+      isUpdateAvailable:
+          compareAppVersions(releaseInfo.version, installedVersion) > 0,
+      minVersion: releaseInfo.minVersion,
+    );
+    return result.isUpdateRequired ? result : null;
+  }
+
   /// Returns a [WhatsNewResult] when there is something to show the user:
   ///   - A new version the user has not yet seen (local version bump).
   ///   - A newer version available on the server (update available banner).
@@ -28,7 +52,7 @@ class AppReleaseChecker {
     // If the installed version is newer than what we last showed, show notes.
     final isNewInstallOrUpdate =
         lastSeenVersion.isEmpty ||
-        _compareVersions(installedVersion, lastSeenVersion) > 0;
+        compareAppVersions(installedVersion, lastSeenVersion) > 0;
 
     // Fetch server release info
     final releaseInfo = await _releaseNotesService.fetchReleaseInfo();
@@ -38,15 +62,15 @@ class AppReleaseChecker {
 
     final isUpdateAvailable =
         serverVersion.isNotEmpty &&
-        _compareVersions(serverVersion, installedVersion) > 0;
+        compareAppVersions(serverVersion, installedVersion) > 0;
 
     final isUpdateRequired =
         minVersion.isNotEmpty &&
-        _compareVersions(minVersion, installedVersion) > 0;
+        compareAppVersions(minVersion, installedVersion) > 0;
 
     final hasAlreadySeenThisUpdate =
         isUpdateAvailable &&
-        _compareVersions(serverVersion, lastSeenServerUpdate) <= 0;
+        compareAppVersions(serverVersion, lastSeenServerUpdate) <= 0;
 
     final shouldShowUpdate =
         isUpdateRequired || (isUpdateAvailable && !hasAlreadySeenThisUpdate);
@@ -78,28 +102,39 @@ class AppReleaseChecker {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLastSeenVersion, packageInfo.version);
   }
+}
 
-  /// Semantic version compare: returns positive if a > b, negative if a < b, 0 if equal.
-  static int _compareVersions(String a, String b) {
-    final partsA = _versionParts(a);
-    final partsB = _versionParts(b);
-    for (int i = 0; i < 3; i++) {
-      final diff = partsA[i] - partsB[i];
-      if (diff != 0) return diff;
-    }
-    return 0;
+/// Compares app versions while accepting the formats commonly entered in the
+/// admin panel or returned by package metadata (`v1.6.2`, `1.6.2+31`, and
+/// `1.6.2-beta`). Build metadata and prerelease labels do not affect the
+/// minimum-compatible-version decision.
+int compareAppVersions(String a, String b) {
+  final partsA = _versionParts(a);
+  final partsB = _versionParts(b);
+  final length = partsA.length > partsB.length ? partsA.length : partsB.length;
+  for (var index = 0; index < length; index++) {
+    final left = index < partsA.length ? partsA[index] : 0;
+    final right = index < partsB.length ? partsB[index] : 0;
+    final difference = left - right;
+    if (difference != 0) return difference;
   }
+  return 0;
+}
 
-  static List<int> _versionParts(String version) {
-    final parts = version
-        .split('.')
-        .map((p) => int.tryParse(p.trim()) ?? 0)
-        .toList();
-    while (parts.length < 3) {
-      parts.add(0);
-    }
-    return parts.sublist(0, 3);
+List<int> _versionParts(String version) {
+  var normalized = version.trim().toLowerCase();
+  if (normalized.startsWith('v')) {
+    normalized = normalized.substring(1);
   }
+  normalized = normalized.split('+').first.split('-').first;
+  final parts = normalized
+      .split('.')
+      .map((part) => int.tryParse(part.trim()) ?? 0)
+      .toList(growable: true);
+  while (parts.length < 3) {
+    parts.add(0);
+  }
+  return parts;
 }
 
 class WhatsNewResult {
@@ -121,6 +156,6 @@ class WhatsNewResult {
 
   bool get isUpdateRequired {
     if (minVersion.isEmpty) return false;
-    return AppReleaseChecker._compareVersions(minVersion, installedVersion) > 0;
+    return compareAppVersions(minVersion, installedVersion) > 0;
   }
 }
