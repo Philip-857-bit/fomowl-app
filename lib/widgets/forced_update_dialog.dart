@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../constants/app_colors.dart';
 import '../services/app_store_service.dart';
 
 class ForcedUpdateDialog extends StatelessWidget {
@@ -35,13 +36,22 @@ class ForcedUpdateDialog extends StatelessWidget {
           width: width < 420 ? width - 64 : 360,
           padding: const EdgeInsets.fromLTRB(22, 28, 22, 24),
           decoration: BoxDecoration(
-            color: const Color(0xFF2E2E2E),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.divider,
+              width: 1,
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x66000000),
+                color: const Color(0xCC000000),
                 blurRadius: 30,
-                offset: Offset(0, 18),
+                offset: const Offset(0, 18),
+              ),
+              BoxShadow(
+                color: AppColors.primaryAccent.withValues(alpha: 0.08),
+                blurRadius: 60,
+                spreadRadius: 4,
               ),
             ],
           ),
@@ -62,7 +72,7 @@ class ForcedUpdateDialog extends StatelessWidget {
                             fontSize: 28,
                             height: 1.12,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -71,26 +81,17 @@ class ForcedUpdateDialog extends StatelessWidget {
                           style: GoogleFonts.outfit(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: AppColors.primaryAccent,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  Container(
+                  Image.asset(
+                    'assets/images/logo.png',
                     width: 96,
                     height: 96,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFFE6F5EA),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Image.asset(
-                        'assets/images/owl_wallet.png',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                    fit: BoxFit.contain,
                   ),
                 ],
               ),
@@ -101,7 +102,7 @@ class ForcedUpdateDialog extends StatelessWidget {
                   fontSize: 15,
                   height: 1.28,
                   fontWeight: FontWeight.w400,
-                  color: Colors.white.withValues(alpha: 0.74),
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 36),
@@ -112,13 +113,13 @@ class ForcedUpdateDialog extends StatelessWidget {
                   width: double.infinity,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF27D1A5),
+                    gradient: AppColors.primaryGradient,
                     borderRadius: BorderRadius.circular(999),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x3327D1A5),
-                        blurRadius: 16,
-                        offset: Offset(0, 8),
+                        color: AppColors.primaryAccent.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
@@ -128,7 +129,7 @@ class ForcedUpdateDialog extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
-                        color: const Color(0xFF173A34),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),

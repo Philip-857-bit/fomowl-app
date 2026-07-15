@@ -21,7 +21,7 @@ class RateUsPromptService {
        _storageService = storageService ?? StorageService(),
        _walletService = walletService ?? WalletService();
 
-  static const Duration cooldown = Duration(days: 7);
+  static const Duration cooldown = Duration(days: 3);
   static const String _lastShownKey = 'last_rate_us_prompt_shown_at_v1';
   static bool _dialogInFlight = false;
 

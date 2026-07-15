@@ -66,7 +66,8 @@ android {
     // Android 17 (API 37). Keep compile/target aligned so new platform
     // behaviour is tested before release.
     compileSdk = 37
-    ndkVersion = flutter.ndkVersion
+    // NDK r28 required by Play Console for 16 KB page size devices.
+    ndkVersion = "28.0.13004108"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
