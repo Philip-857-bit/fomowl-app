@@ -67,7 +67,7 @@ android {
     // behaviour is tested before release.
     compileSdk = 37
     // NDK r28 required by Play Console for 16 KB page size devices.
-    ndkVersion = "28.0.13004108"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
