@@ -612,5 +612,11 @@
   },
   "history": "Tarihi",
   "followSocialhq": "Bi @fomowlhq a X don samun sababbin labarai",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "Shafuka",
+  "discoverNewTab": "Sabuwar shafi",
+  "discoverMaxTabsReached": "An kai iyakar shafuka 5",
+  "discoverCloseTab": "Rufe shafi",
+  "discoverHome": "Shafin Discover",
+  "doneLabel": "An gama"
 }

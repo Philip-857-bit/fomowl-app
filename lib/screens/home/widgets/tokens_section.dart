@@ -24,7 +24,7 @@ class TokensSection extends StatefulWidget {
   final VoidCallback onOpenNfts;
   final bool Function(Token token) isTokenHidden;
   final void Function(Token token) onSelectToken;
-  final void Function(NftAsset nft) onSelectNft;
+  final void Function(NftCollectionGroup collection) onSelectNftCollection;
   final int? chainId;
   final HomeAssetTab initialTab;
   final ValueChanged<HomeAssetTab>? onTabChanged;
@@ -43,7 +43,7 @@ class TokensSection extends StatefulWidget {
     required this.onOpenNfts,
     required this.isTokenHidden,
     required this.onSelectToken,
-    required this.onSelectNft,
+    required this.onSelectNftCollection,
     this.chainId,
     this.initialTab = HomeAssetTab.tokens,
     this.onTabChanged,
@@ -113,11 +113,6 @@ class _TokensSectionState extends State<TokensSection> {
                 _AssetToolbarButton(
                   icon: Icons.tune,
                   onTap: widget.onManageTokens,
-                )
-              else if (_selectedTab == HomeAssetTab.nfts && widget.hasMoreNfts)
-                _AssetTextButton(
-                  label: widget.localization.viewAll,
-                  onTap: widget.onOpenNfts,
                 ),
             ],
           ),
@@ -241,7 +236,7 @@ class _TokensSectionState extends State<TokensSection> {
           nfts: widget.nftPreview,
           hasMoreNfts: widget.hasMoreNfts,
           onOpenNfts: widget.onOpenNfts,
-          onSelectNft: widget.onSelectNft,
+          onSelectCollection: widget.onSelectNftCollection,
           localization: widget.localization,
         ),
         const SizedBox(height: 10),
@@ -345,7 +340,7 @@ class _AssetTabChip extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
               color: selected ? AppColors.accentRed : const Color(0xFF94A3B8),
             ),
@@ -354,7 +349,7 @@ class _AssetTabChip extends StatelessWidget {
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             width: selected ? 54 : 0,
-            height: 4,
+            height: 5,
             decoration: BoxDecoration(
               color: selected ? AppColors.accentRed : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
@@ -423,19 +418,20 @@ class _NftPreviewStrip extends StatelessWidget {
   final List<NftAsset> nfts;
   final bool hasMoreNfts;
   final VoidCallback onOpenNfts;
-  final ValueChanged<NftAsset> onSelectNft;
+  final ValueChanged<NftCollectionGroup> onSelectCollection;
   final AppLocalizations localization;
 
   const _NftPreviewStrip({
     required this.nfts,
     required this.hasMoreNfts,
     required this.onOpenNfts,
-    required this.onSelectNft,
+    required this.onSelectCollection,
     required this.localization,
   });
 
   @override
   Widget build(BuildContext context) {
+    final collections = groupNftsByCollection(nfts);
     return SizedBox(
       height: 132,
       child: Column(
@@ -453,13 +449,13 @@ class _NftPreviewStrip extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                if (hasMoreNfts)
+                if (collections.isNotEmpty)
                   GestureDetector(
                     onTap: onOpenNfts,
                     child: Text(
                       localization.viewAll,
                       style: GoogleFonts.outfit(
-                        fontSize: 13,
+                        fontSize: 15,
                         color: AppColors.accentRed,
                         fontWeight: FontWeight.w600,
                       ),
@@ -473,17 +469,18 @@ class _NftPreviewStrip extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: nfts.length,
+              itemCount: collections.length,
               separatorBuilder: (_, index) => const SizedBox(width: 10),
               itemBuilder: (context, index) {
-                final nft = nfts[index];
+                final collection = collections[index];
+                final nft = collection.coverAsset;
                 return Material(
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () => onSelectNft(nft),
+                    onTap: () => onSelectCollection(collection),
                     child: Container(
-                      width: 98,
+                      width: 124,
                       decoration: BoxDecoration(
                         color: AppColors.cardDark,
                         borderRadius: BorderRadius.circular(12),
@@ -534,14 +531,25 @@ class _NftPreviewStrip extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
                             child: Text(
-                              nft.name,
+                              collection.name,
                               style: GoogleFonts.outfit(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                            child: Text(
+                              '${collection.totalCount} NFTs',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: Colors.white60,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],

@@ -1742,4 +1742,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get socialhqHandle => 'x.com/fomowlhq';
+
+  @override
+  String get discoverTabsTitle => '标签页';
+  @override
+  String get discoverNewTab => '新标签页';
+  @override
+  String get discoverMaxTabsReached => '已达到最多 5 个标签页';
+  @override
+  String get discoverCloseTab => '关闭标签页';
+  @override
+  String get discoverHome => 'Discover 首页';
+  @override
+  String get doneLabel => '完成';
 }

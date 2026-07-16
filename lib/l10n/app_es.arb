@@ -612,5 +612,11 @@
   },
   "history": "Historial",
   "followSocialhq": "Siga a @fomowlhq en X para actualizaciones",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "Pestañas",
+  "discoverNewTab": "Nueva pestaña",
+  "discoverMaxTabsReached": "Se alcanzó el máximo de 5 pestañas",
+  "discoverCloseTab": "Cerrar pestaña",
+  "discoverHome": "Inicio de Discover",
+  "doneLabel": "Listo"
 }

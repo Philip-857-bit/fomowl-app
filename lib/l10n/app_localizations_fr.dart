@@ -1859,4 +1859,17 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get socialhqHandle => 'x.com/fomowlhq';
+
+  @override
+  String get discoverTabsTitle => 'Onglets';
+  @override
+  String get discoverNewTab => 'Nouvel onglet';
+  @override
+  String get discoverMaxTabsReached => 'Le maximum de 5 onglets est atteint';
+  @override
+  String get discoverCloseTab => 'Fermer l’onglet';
+  @override
+  String get discoverHome => 'Accueil Discover';
+  @override
+  String get doneLabel => 'Terminé';
 }

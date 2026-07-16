@@ -9,6 +9,7 @@ import '../../services/nft_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import 'widgets/nft_detail_sheet.dart';
+import 'widgets/nft_rarity_badge.dart';
 
 /// NFT Gallery Screen
 /// Shows NFTs owned by the wallet across supported chains.
@@ -24,6 +25,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
   final NftService _nftService = NftService();
 
   List<NftAsset> _nfts = [];
+  String? _selectedCollectionKey;
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -32,6 +34,8 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        final argument = ModalRoute.of(context)?.settings.arguments;
+        _selectedCollectionKey = argument is String ? argument : null;
         _fetchNfts();
       }
     });
@@ -88,6 +92,7 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final selectedCollection = _selectedCollection();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -99,10 +104,16 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      if (_selectedCollectionKey != null) {
+                        setState(() => _selectedCollectionKey = null);
+                      } else {
+                        Navigator.pop(context);
+                      }
+                    },
                   ),
                   Text(
-                    l.nftCollection,
+                    selectedCollection?.name ?? l.nftCollection,
                     style: GoogleFonts.outfit(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -156,6 +167,8 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                   ? _buildErrorState()
                   : _nfts.isEmpty
                   ? _buildEmptyState(l)
+                  : _selectedCollectionKey == null
+                  ? _buildCollectionGrid()
                   : _buildNftGrid(),
             ),
           ],
@@ -302,6 +315,9 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
   }
 
   Widget _buildNftGrid() {
+    final nfts = _nfts
+        .where((nft) => _collectionKeyFor(nft) == _selectedCollectionKey)
+        .toList();
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -310,9 +326,9 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _nfts.length,
+      itemCount: nfts.length,
       itemBuilder: (context, index) {
-        final nft = _nfts[index];
+        final nft = nfts[index];
         return Material(
           color: Colors.transparent,
           child: InkWell(
@@ -335,34 +351,50 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
                           top: Radius.circular(16),
                         ),
                       ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(16),
-                        ),
-                        child: nft.imageUrl.isNotEmpty
-                            ? Image.network(
-                                nft.imageUrl,
-                                fit: BoxFit.cover,
-                                cacheWidth: 512,
-                                cacheHeight: 512,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Center(
-                                      child: Icon(
-                                        Icons.broken_image,
-                                        size: 48,
-                                        color: Colors.white.withValues(
-                                          alpha: 0.15,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                            child: nft.imageUrl.isNotEmpty
+                                ? Image.network(
+                                    nft.imageUrl,
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 512,
+                                    cacheHeight: 512,
+                                    errorBuilder:
+                                        (context, error, stackTrace) => Center(
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            size: 48,
+                                            color: Colors.white.withValues(
+                                              alpha: 0.15,
+                                            ),
+                                          ),
                                         ),
+                                  )
+                                : Center(
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 48,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.15,
                                       ),
                                     ),
-                              )
-                            : Center(
-                                child: Icon(
-                                  Icons.image,
-                                  size: 48,
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                ),
+                                  ),
+                          ),
+                          if (nft.hasRarity)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: NftRarityBadge(
+                                label: nft.rarity,
+                                rank: nft.rarityRank,
                               ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -414,6 +446,99 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
         );
       },
     );
+  }
+
+  Widget _buildCollectionGrid() {
+    final collections = groupNftsByCollection(_nfts);
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.9,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: collections.length,
+      itemBuilder: (context, index) {
+        final collection = collections[index];
+        final cover = collection.coverAsset;
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () =>
+                setState(() => _selectedCollectionKey = collection.key),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardDark,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: cover.imageUrl.isEmpty
+                        ? const Center(
+                            child: Icon(
+                              Icons.collections,
+                              color: Colors.white54,
+                              size: 40,
+                            ),
+                          )
+                        : Image.network(
+                            cover.imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          collection.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${collection.totalCount} NFTs · ${collection.chainName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            color: Colors.white60,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _collectionKeyFor(NftAsset nft) => nftCollectionKey(nft);
+
+  NftCollectionGroup? _selectedCollection() {
+    final key = _selectedCollectionKey;
+    if (key == null) return null;
+    for (final collection in groupNftsByCollection(_nfts)) {
+      if (collection.key == key) return collection;
+    }
+    return null;
   }
 
   Future<void> _showNftDetails(NftAsset nft) async {

@@ -1855,4 +1855,17 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get socialhqHandle => 'x.com/fomowlhq';
+
+  @override
+  String get discoverTabsTitle => 'Pestañas';
+  @override
+  String get discoverNewTab => 'Nueva pestaña';
+  @override
+  String get discoverMaxTabsReached => 'Se alcanzó el máximo de 5 pestañas';
+  @override
+  String get discoverCloseTab => 'Cerrar pestaña';
+  @override
+  String get discoverHome => 'Inicio de Discover';
+  @override
+  String get doneLabel => 'Listo';
 }

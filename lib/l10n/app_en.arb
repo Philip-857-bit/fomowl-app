@@ -612,5 +612,11 @@
   },
   "history": "History",
   "followSocialhq": "Follow @fomowlhq on X for live updates",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "Tabs",
+  "discoverNewTab": "New tab",
+  "discoverMaxTabsReached": "Maximum 5 tabs reached",
+  "discoverCloseTab": "Close tab",
+  "discoverHome": "Discover home",
+  "doneLabel": "Done"
 }

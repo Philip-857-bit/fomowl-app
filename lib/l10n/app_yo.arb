@@ -612,5 +612,11 @@
   },
   "history": "Itan",
   "followSocialhq": "Tẹle @fomowlhq lori X fun awọn imudojuiwọn",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "Àwọn taabu",
+  "discoverNewTab": "Taabu tuntun",
+  "discoverMaxTabsReached": "A ti dé iye taabu 5 ti o pọ julọ",
+  "discoverCloseTab": "Pa taabu",
+  "discoverHome": "Ojú-ìwé Discover",
+  "doneLabel": "Ti parí"
 }

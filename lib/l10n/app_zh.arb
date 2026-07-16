@@ -615,5 +615,11 @@
   },
   "history": "历史",
   "followSocialhq": "在X上关注@fomowlhq获取即时更新",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "标签页",
+  "discoverNewTab": "新标签页",
+  "discoverMaxTabsReached": "已达到最多 5 个标签页",
+  "discoverCloseTab": "关闭标签页",
+  "discoverHome": "Discover 首页",
+  "doneLabel": "完成"
 }

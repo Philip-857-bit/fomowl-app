@@ -192,6 +192,19 @@ class BrowserSessionController extends ChangeNotifier {
     _beginBrowsing(target.uri, activeDapp: matchingDapp, title: title);
   }
 
+  void restoreBrowsing(String rawUrl, {String? title}) {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null || !isSupportedDiscoverWebUri(uri)) return;
+    final matchingDapp = findDappByOrigin(normalizeOriginFromUri(uri));
+    _beginBrowsing(
+      uri,
+      activeDapp: matchingDapp,
+      title: title?.trim().isNotEmpty == true
+          ? title!.trim()
+          : matchingDapp?.title ?? uri.host,
+    );
+  }
+
   bool allowsNavigation(
     Uri uri, {
     String unsupportedSchemeReason =

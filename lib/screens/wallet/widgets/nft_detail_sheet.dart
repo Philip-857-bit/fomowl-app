@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/nft_service.dart';
+import 'nft_rarity_badge.dart';
 
 class NftDetailSheet extends StatelessWidget {
   const NftDetailSheet({super.key, required this.nft});
@@ -89,6 +90,12 @@ class NftDetailSheet extends StatelessWidget {
                           _NftMetaChip(label: '${nft.count}x'),
                           if (nft.tokenId.isNotEmpty)
                             _NftMetaChip(label: '#${nft.tokenId}'),
+                          if (nft.hasRarity)
+                            NftRarityBadge(
+                              label: nft.rarity,
+                              rank: nft.rarityRank,
+                              compact: false,
+                            ),
                           if (nft.isProjectNft)
                             _NftMetaChip(
                               label: l.officialProjectNft,

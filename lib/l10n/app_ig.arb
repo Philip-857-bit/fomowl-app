@@ -612,5 +612,11 @@
   },
   "history": "Akụkọ",
   "followSocialhq": "Soro @fomowlhq na X maka ozi ọhụrụ",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "Taabụ",
+  "discoverNewTab": "Taabụ ọhụrụ",
+  "discoverMaxTabsReached": "E ruru oke taabụ 5",
+  "discoverCloseTab": "Mechie taabụ",
+  "discoverHome": "Ụlọ Discover",
+  "doneLabel": "Emela"
 }

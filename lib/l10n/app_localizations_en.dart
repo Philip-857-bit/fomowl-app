@@ -1825,4 +1825,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get socialhqHandle => 'x.com/fomowlhq';
+
+  @override
+  String get discoverTabsTitle => 'Tabs';
+
+  @override
+  String get discoverNewTab => 'New tab';
+
+  @override
+  String get discoverMaxTabsReached => 'Maximum 5 tabs reached';
+
+  @override
+  String get discoverCloseTab => 'Close tab';
+
+  @override
+  String get discoverHome => 'Discover home';
+
+  @override
+  String get doneLabel => 'Done';
 }

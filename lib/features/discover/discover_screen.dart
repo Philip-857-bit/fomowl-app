@@ -10,16 +10,18 @@ import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
+import '../../services/wallet_service.dart';
 import 'browser/browser_session_controller.dart';
+import 'browser/discover_tab_manager.dart';
 import 'discover_url_utils.dart';
 import 'browser/widgets/discover_blocked_view.dart';
 import 'browser/widgets/discover_browser_view.dart';
+import 'browser/widgets/discover_tab_overview.dart';
 import 'catalog/discover_catalog_service.dart';
 import 'catalog/widgets/discover_landing_view.dart';
 import 'market/discover_trending_token.dart';
 import 'market/discover_trending_token_service.dart';
 import 'permissions/dapp_permission_service.dart';
-import 'provider/dapp_provider_bridge.dart';
 
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key});
@@ -31,14 +33,18 @@ class DiscoverScreen extends StatefulWidget {
 class _DiscoverScreenState extends State<DiscoverScreen> {
   late final DiscoverCatalogService _catalogService;
   late final DiscoverTrendingTokenService _trendingTokenService;
-  late final BrowserSessionController _sessionController;
+  late final DiscoverTabManager _tabManager;
   late final DappPermissionService _permissionService;
-  late final DappProviderBridge _providerBridge;
+  final WalletService _walletService = WalletService();
   AppShellController? _shellController;
   final TextEditingController _searchController = TextEditingController();
   List<DiscoverTrendingToken> _trendingTokens = const <DiscoverTrendingToken>[];
   bool _loadingTrendingTokens = false;
   String? _trendingTokensError;
+  bool _showTabOverview = false;
+
+  BrowserSessionController get _sessionController =>
+      _tabManager.activeTab.sessionController;
 
   @override
   void initState() {
@@ -46,17 +52,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     _catalogService = DiscoverCatalogService();
     _trendingTokenService = DiscoverTrendingTokenService();
     _permissionService = DappPermissionService();
-    _sessionController = BrowserSessionController(
+    _tabManager = DiscoverTabManager(
       catalogService: _catalogService,
-    );
-    _providerBridge = DappProviderBridge(
-      sessionController: _sessionController,
       permissionService: _permissionService,
     );
-    _sessionController.addListener(_syncSearchField);
+    _tabManager.addListener(_syncSearchField);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _sessionController.loadCatalog(forceRefresh: true);
-      _loadTrendingTokens();
+      _initializeDiscover();
     });
   }
 
@@ -66,16 +68,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     // Let the shell route the hardware back button into the in-app browser
     // (page history / close page) before leaving the Discover tab.
     _shellController ??= context.read<AppShellController>();
-    _shellController!.setDiscoverBackHandler(
-      _sessionController.handleBackRequest,
-    );
+    _shellController!.setDiscoverBackHandler(_handleDiscoverBack);
   }
 
   @override
   void dispose() {
     _shellController?.setDiscoverBackHandler(null);
-    _sessionController.removeListener(_syncSearchField);
-    _sessionController.dispose();
+    _tabManager.removeListener(_syncSearchField);
+    _tabManager.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -92,12 +92,35 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
+  Future<bool> _handleDiscoverBack() async {
+    if (_showTabOverview) {
+      setState(() => _showTabOverview = false);
+      return true;
+    }
+    return _tabManager.handleBackRequest();
+  }
+
+  Future<void> _initializeDiscover() async {
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    await _tabManager.initialize(scopeKey: walletAddress);
+    if (!mounted) return;
+    final pending = context
+        .read<AppShellController>()
+        .consumePendingDiscoverUrl();
+    if (pending != null && pending.trim().isNotEmpty) {
+      _handleBrowserInput(pending);
+    }
+    _loadTrendingTokens();
+  }
+
   @override
   Widget build(BuildContext context) {
     final pendingDiscoverUrl = context.select<AppShellController, String?>(
       (controller) => controller.pendingDiscoverUrl,
     );
-    if (pendingDiscoverUrl != null && pendingDiscoverUrl.trim().isNotEmpty) {
+    if (_tabManager.initialized &&
+        pendingDiscoverUrl != null &&
+        pendingDiscoverUrl.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {
           return;
@@ -112,25 +135,55 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       });
     }
     return AnimatedBuilder(
-      animation: _sessionController,
+      animation: _tabManager,
       builder: (context, _) {
-        final isBrowser =
-            _sessionController.viewState == DiscoverViewState.browser;
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: isBrowser
-                ? _buildBody()
-                : Column(
-                    children: [
-                      _buildLandingHeader(),
-                      Expanded(child: _buildBody()),
-                    ],
+          body: Stack(
+            children: [
+              SafeArea(
+                child: IndexedStack(
+                  index: _tabManager.activeIndex,
+                  children: _tabManager.tabs
+                      .map(
+                        (tab) => KeyedSubtree(
+                          key: ValueKey<String>('discover-tab-${tab.id}'),
+                          child: _buildTab(tab),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ),
+              if (_showTabOverview)
+                Positioned.fill(
+                  child: DiscoverTabOverview(
+                    manager: _tabManager,
+                    onDone: () => setState(() => _showTabOverview = false),
+                    onLimitReached: _showTabLimitMessage,
                   ),
+                ),
+            ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildTab(DiscoverBrowserTab tab) {
+    final session = tab.sessionController;
+    final isActive = tab.id == _tabManager.activeTabId;
+    if (!isActive && session.viewState != DiscoverViewState.browser) {
+      return const SizedBox.shrink();
+    }
+    final isBrowser = session.viewState == DiscoverViewState.browser;
+    return isBrowser
+        ? _buildBody(tab)
+        : Column(
+            children: [
+              _buildLandingHeader(),
+              Expanded(child: _buildBody(tab)),
+            ],
+          );
   }
 
   Widget _buildLandingHeader() {
@@ -182,6 +235,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                 ),
               ),
               const Spacer(),
+              _buildTabCountButton(),
               IconButton(
                 onPressed: () {},
                 icon: const Icon(
@@ -236,16 +290,52 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-  Widget _buildBody() {
-    switch (_sessionController.viewState) {
+  Widget _buildTabCountButton() {
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).discoverTabsTitle,
+      child: InkWell(
+        onTap: () => setState(() => _showTabOverview = true),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          child: Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white70, width: 1.8),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '${_tabManager.tabCount}',
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(DiscoverBrowserTab tab) {
+    final session = tab.sessionController;
+    switch (session.viewState) {
       case DiscoverViewState.browser:
         return DiscoverBrowserView(
-          sessionController: _sessionController,
-          providerBridge: _providerBridge,
-          onClose: _sessionController.returnToLanding,
+          sessionController: session,
+          providerBridge: tab.providerBridge,
+          onClose: session.returnToLanding,
+          tabCount: _tabManager.tabCount,
+          onShowTabs: () => setState(() => _showTabOverview = true),
         );
       case DiscoverViewState.blocked:
-        final state = _sessionController.blockedState;
+        final state = session.blockedState;
         if (state == null) {
           return const SizedBox.shrink();
         }
@@ -253,25 +343,25 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           state: state,
           onRequestSupport: () => _openRequestSupport(state),
           onOpenExternal: () => _openExternal(state.url),
-          onCancel: _sessionController.returnToLanding,
+          onCancel: session.returnToLanding,
         );
       case DiscoverViewState.landing:
         final l = AppLocalizations.of(context);
         return DiscoverLandingView(
-          query: _sessionController.query,
-          featuredDapps: _sessionController.featuredDapps,
-          trendingDapps: _sessionController.trendingDapps,
-          filteredDapps: _sessionController.filteredDapps,
-          categories: _sessionController.categories,
+          query: session.query,
+          featuredDapps: session.featuredDapps,
+          trendingDapps: session.trendingDapps,
+          filteredDapps: session.filteredDapps,
+          categories: session.categories,
           trendingTokens: _trendingTokens,
           loadingTrendingTokens: _loadingTrendingTokens,
           trendingTokensError: _trendingTokensError,
-          loading: _sessionController.loadingCatalog,
-          error: _sessionController.catalogError == null
+          loading: session.loadingCatalog,
+          error: session.catalogError == null
               ? null
               : l.discoverCatalogLoadError,
           onRefresh: _refreshLandingData,
-          onOpenDapp: (dapp) => _sessionController.openDapp(
+          onOpenDapp: (dapp) => session.openDapp(
             dapp,
             invalidLaunchUrlReason: l.discoverInvalidLaunchUrl,
           ),
@@ -293,6 +383,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       _sessionController.loadCatalog(forceRefresh: true),
       _loadTrendingTokens(),
     ]);
+  }
+
+  void _showTabLimitMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).discoverMaxTabsReached),
+      ),
+    );
   }
 
   Future<void> _loadTrendingTokens() async {

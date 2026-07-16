@@ -19,11 +19,15 @@ class DiscoverBrowserView extends StatefulWidget {
     required this.sessionController,
     required this.providerBridge,
     required this.onClose,
+    required this.tabCount,
+    required this.onShowTabs,
   });
 
   final BrowserSessionController sessionController;
   final DappProviderBridge providerBridge;
   final VoidCallback onClose;
+  final int tabCount;
+  final VoidCallback onShowTabs;
 
   @override
   State<DiscoverBrowserView> createState() => _DiscoverBrowserViewState();
@@ -107,8 +111,13 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
               InAppWebView(
                 initialSettings: InAppWebViewSettings(
                   javaScriptEnabled: true,
+                  javaScriptCanOpenWindowsAutomatically: true,
                   useShouldOverrideUrlLoading: true,
                   supportZoom: false,
+                  domStorageEnabled: true,
+                  databaseEnabled: true,
+                  cacheEnabled: true,
+                  thirdPartyCookiesEnabled: true,
                   // Opaque white content area, like a normal browser. A
                   // transparent webview over the app's dark scaffold makes
                   // failed-load / native error pages (dark text) render onto
@@ -257,6 +266,12 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   await _refreshNavigationState();
                 },
                 onReceivedError: (controller, request, error) async {
+                  // WebView reports failures for every subresource too. A
+                  // missing image/script must not replace an otherwise usable
+                  // page with the full-screen browser error state.
+                  if (request.isForMainFrame != true) {
+                    return;
+                  }
                   final requestUri = request.url.uriValue;
                   final current = widget.sessionController.currentUri;
                   final samePage =
@@ -288,6 +303,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                 },
                 onReceivedHttpError:
                     (controller, request, errorResponse) async {
+                      if (request.isForMainFrame != true) {
+                        return;
+                      }
                       final requestUri = request.url.uriValue;
                       final current = widget.sessionController.currentUri;
                       final samePage =
@@ -371,10 +389,30 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     Uri currentUri,
   ) async {
     _lastLoadedUrl = currentUri.toString();
+    await _applyBrowserUserAgent(controller);
     await _applyUserScriptsFor(currentUri);
     await controller.loadUrl(
       urlRequest: URLRequest(url: WebUri.uri(currentUri)),
     );
+  }
+
+  Future<void> _applyBrowserUserAgent(InAppWebViewController controller) async {
+    try {
+      final defaultUserAgent =
+          await InAppWebViewController.getDefaultUserAgent();
+      final browserUserAgent = defaultUserAgent
+          .replaceAll('; wv', '')
+          .replaceAll(RegExp(r'\sVersion/[\d.]+'), '');
+      if (browserUserAgent == defaultUserAgent || browserUserAgent.isEmpty) {
+        return;
+      }
+      final settings = await controller.getSettings();
+      if (settings == null) return;
+      settings.userAgent = browserUserAgent;
+      await controller.setSettings(settings: settings);
+    } catch (error) {
+      debugPrint('Discover browser user-agent setup failed: $error');
+    }
   }
 
   Future<void> _loadCurrentUri(Uri uri) async {
@@ -517,6 +555,36 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
               IconButton(
                 onPressed: () => unawaited(_reloadCurrentPage()),
                 icon: const Icon(Icons.refresh_rounded),
+              ),
+              Semantics(
+                button: true,
+                label: AppLocalizations.of(context).discoverTabsTitle,
+                child: InkWell(
+                  onTap: widget.onShowTabs,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: 25,
+                      height: 25,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white70, width: 1.8),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '${widget.tabCount}',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
               IconButton(
                 onPressed: widget.onClose,

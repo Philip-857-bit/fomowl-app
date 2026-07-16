@@ -26,6 +26,8 @@ void main() {
           contractAddress: '0x1234567890abcdef1234567890abcdef12345678',
           tokenId: '42',
           isProjectNft: true,
+          rarity: 'Legendary',
+          rarityRank: 7,
         ),
       ),
     );
@@ -35,6 +37,7 @@ void main() {
     expect(find.text('BNB Smart Chain'), findsAtLeastNWidgets(1));
     expect(find.text('#42'), findsOneWidget);
     expect(find.text('Rare founding NFT.'), findsOneWidget);
+    expect(find.text('Legendary · Rank #7'), findsOneWidget);
     expect(
       find.text('0x1234567890abcdef1234567890abcdef12345678'),
       findsOneWidget,

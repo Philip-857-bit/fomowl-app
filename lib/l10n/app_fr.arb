@@ -612,5 +612,11 @@
   },
   "history": "Historique",
   "followSocialhq": "Suivez @fomowlhq sur X pour les mises à jour",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "Onglets",
+  "discoverNewTab": "Nouvel onglet",
+  "discoverMaxTabsReached": "Le maximum de 5 onglets est atteint",
+  "discoverCloseTab": "Fermer l’onglet",
+  "discoverHome": "Accueil Discover",
+  "doneLabel": "Terminé"
 }

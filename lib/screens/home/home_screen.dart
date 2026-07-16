@@ -1435,8 +1435,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _nftPreview = nfts.take(8).toList();
-        _hasMoreNfts = nfts.length > 8;
+        _nftPreview = nfts;
+        _hasMoreNfts = nfts.isNotEmpty;
         _isLoadingNfts = false;
       });
     } catch (_) {
@@ -1936,8 +1936,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                     arguments: token,
                                   );
                                 },
-                                onSelectNft: (nft) {
-                                  unawaited(_showNftDetails(nft));
+                                onSelectNftCollection: (collection) {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/nft-gallery',
+                                    arguments: collection.key,
+                                  );
                                 },
                               ),
                             ),

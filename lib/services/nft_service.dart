@@ -17,6 +17,8 @@ class NftAsset {
   final String tokenId;
   final String tokenType;
   final bool isProjectNft;
+  final String rarity;
+  final int? rarityRank;
 
   const NftAsset({
     required this.name,
@@ -30,9 +32,61 @@ class NftAsset {
     required this.tokenId,
     this.tokenType = 'ERC721',
     required this.isProjectNft,
+    this.rarity = '',
+    this.rarityRank,
   });
 
   bool get isErc1155 => tokenType.toUpperCase().contains('1155');
+  bool get hasRarity => rarity.trim().isNotEmpty;
+}
+
+/// A collection-level view of the NFTs owned by a wallet.
+class NftCollectionGroup {
+  const NftCollectionGroup({
+    required this.key,
+    required this.name,
+    required this.chainName,
+    required this.chainId,
+    required this.contractAddress,
+    required this.assets,
+  });
+
+  final String key;
+  final String name;
+  final String chainName;
+  final int chainId;
+  final String contractAddress;
+  final List<NftAsset> assets;
+
+  int get totalCount => assets.fold(0, (sum, asset) => sum + asset.count);
+  NftAsset get coverAsset => assets.first;
+}
+
+List<NftCollectionGroup> groupNftsByCollection(Iterable<NftAsset> nfts) {
+  final groups = <String, List<NftAsset>>{};
+  for (final nft in nfts) {
+    final key = nftCollectionKey(nft);
+    groups.putIfAbsent(key, () => <NftAsset>[]).add(nft);
+  }
+  return groups.entries.map((entry) {
+    final first = entry.value.first;
+    return NftCollectionGroup(
+      key: entry.key,
+      name: first.collection,
+      chainName: first.chainName,
+      chainId: first.chainId,
+      contractAddress: first.contractAddress,
+      assets: List.unmodifiable(entry.value),
+    );
+  }).toList();
+}
+
+String nftCollectionKey(NftAsset nft) {
+  final contract = nft.contractAddress.trim().toLowerCase();
+  if (contract.isNotEmpty) {
+    return '${nft.chainId}:$contract';
+  }
+  return '${nft.chainId}:collection:${nft.collection.trim().toLowerCase()}';
 }
 
 class NftService {
@@ -152,6 +206,8 @@ class NftService {
             isProjectNft:
                 contractAddress.toLowerCase() ==
                 _projectNftAddress.toLowerCase(),
+            rarity: resolveRarity(nft),
+            rarityRank: resolveRarityRank(nft),
           );
         })
         .toList();
@@ -254,5 +310,105 @@ class NftService {
       return 'ERC721';
     }
     return balance > 1 ? 'ERC1155' : 'ERC721';
+  }
+
+  String resolveRarity(Map<String, dynamic> nft) {
+    for (final container in _metadataContainers(nft)) {
+      for (final key in const ['rarity', 'rarityTier', 'rarity_tier', 'tier']) {
+        final resolved = _rarityValue(container[key]);
+        if (resolved.isNotEmpty) {
+          return resolved;
+        }
+      }
+
+      final attributes = container['attributes'];
+      if (attributes is! List) {
+        continue;
+      }
+      for (final attribute in attributes.whereType<Map>()) {
+        final traitName =
+            [
+                  attribute['trait_type'],
+                  attribute['traitType'],
+                  attribute['type'],
+                  attribute['name'],
+                ]
+                .whereType<Object>()
+                .map((value) => value.toString().trim())
+                .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+        final normalizedTrait = traitName.toLowerCase().replaceAll(
+          RegExp(r'[_-]+'),
+          ' ',
+        );
+        if (normalizedTrait == 'rarity' ||
+            normalizedTrait == 'rarity tier' ||
+            normalizedTrait == 'tier') {
+          final resolved = _rarityValue(attribute['value']);
+          if (resolved.isNotEmpty) {
+            return resolved;
+          }
+        }
+      }
+    }
+    return '';
+  }
+
+  int? resolveRarityRank(Map<String, dynamic> nft) {
+    for (final container in _metadataContainers(nft)) {
+      for (final key in const ['rarityRank', 'rarity_rank', 'rank']) {
+        final rank = _positiveInt(container[key]);
+        if (rank != null) {
+          return rank;
+        }
+      }
+      final rarity = container['rarity'];
+      if (rarity is Map) {
+        final rank = _positiveInt(
+          rarity['rank'] ?? rarity['rarityRank'] ?? rarity['rarity_rank'],
+        );
+        if (rank != null) {
+          return rank;
+        }
+      }
+    }
+    return null;
+  }
+
+  Iterable<Map<String, dynamic>> _metadataContainers(
+    Map<String, dynamic> nft,
+  ) sync* {
+    yield nft;
+
+    final metadata = nft['metadata'];
+    if (metadata is Map<String, dynamic>) {
+      yield metadata;
+    }
+
+    final raw = nft['raw'];
+    if (raw is Map<String, dynamic>) {
+      yield raw;
+      final rawMetadata = raw['metadata'];
+      if (rawMetadata is Map<String, dynamic>) {
+        yield rawMetadata;
+      }
+    }
+  }
+
+  String _rarityValue(dynamic value) {
+    if (value is Map) {
+      return _rarityValue(
+        value['label'] ?? value['tier'] ?? value['name'] ?? value['value'],
+      );
+    }
+    if (value == null || value is num || value is bool) {
+      return '';
+    }
+    final resolved = value.toString().trim();
+    return resolved.length <= 32 ? resolved : '';
+  }
+
+  int? _positiveInt(dynamic value) {
+    final parsed = value is int ? value : int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
   }
 }

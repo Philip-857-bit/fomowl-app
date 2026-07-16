@@ -612,5 +612,11 @@
   },
   "history": "السجل",
   "followSocialhq": "تابع @fomowlhq على X للحصول على التحديثات",
-  "socialhqHandle": "x.com/fomowlhq"
+  "socialhqHandle": "x.com/fomowlhq",
+  "discoverTabsTitle": "علامات التبويب",
+  "discoverNewTab": "علامة تبويب جديدة",
+  "discoverMaxTabsReached": "تم الوصول إلى الحد الأقصى (5 علامات تبويب)",
+  "discoverCloseTab": "إغلاق علامة التبويب",
+  "discoverHome": "الرئيسية للاستكشاف",
+  "doneLabel": "تم"
 }

@@ -3403,6 +3403,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'x.com/fomowlhq'**
   String get socialhqHandle;
+
+  String get discoverTabsTitle;
+
+  String get discoverNewTab;
+
+  String get discoverMaxTabsReached;
+
+  String get discoverCloseTab;
+
+  String get discoverHome;
+
+  String get doneLabel;
 }
 
 class _AppLocalizationsDelegate
