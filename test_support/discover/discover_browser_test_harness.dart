@@ -16,6 +16,8 @@ class DiscoverBrowserTestHarness extends StatelessWidget {
     required this.blockchainService,
     required this.rpcService,
     this.onClose,
+    this.tabCount = 1,
+    this.onShowTabs,
   });
 
   final BrowserSessionController sessionController;
@@ -23,6 +25,8 @@ class DiscoverBrowserTestHarness extends StatelessWidget {
   final BlockchainService blockchainService;
   final RpcService rpcService;
   final VoidCallback? onClose;
+  final int tabCount;
+  final VoidCallback? onShowTabs;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +44,8 @@ class DiscoverBrowserTestHarness extends StatelessWidget {
             sessionController: sessionController,
             providerBridge: providerBridge,
             onClose: onClose ?? () {},
+            tabCount: tabCount,
+            onShowTabs: onShowTabs ?? () {},
           ),
         ),
       ),

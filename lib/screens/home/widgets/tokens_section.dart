@@ -389,31 +389,6 @@ class _AssetToolbarButton extends StatelessWidget {
   }
 }
 
-class _AssetTextButton extends StatelessWidget {
-  const _AssetTextButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 13,
-            color: AppColors.accentRed,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _NftPreviewStrip extends StatelessWidget {
   final List<NftAsset> nfts;
   final bool hasMoreNfts;

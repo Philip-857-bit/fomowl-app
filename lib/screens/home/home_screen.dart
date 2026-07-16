@@ -45,7 +45,6 @@ import 'widgets/home_top_bar.dart';
 import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
-import '../wallet/widgets/nft_detail_sheet.dart';
 import '../../services/home_snapshot_service.dart';
 import '../../services/app_release_checker.dart';
 import 'widgets/whats_new_sheet.dart';
@@ -1613,15 +1612,6 @@ class _HomeScreenState extends State<HomeScreen> {
         launchSource: 'home',
         initialUrl: withdrawUrl,
       ),
-    );
-  }
-
-  Future<void> _showNftDetails(NftAsset nft) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => NftDetailSheet(nft: nft),
     );
   }
 
