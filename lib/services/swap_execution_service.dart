@@ -16,12 +16,14 @@ class SwapExecutionResult {
   final bool success;
   final String? transactionHash;
   final String? tradeHash;
+  final String? analyticsEventId;
   final String? error;
 
   const SwapExecutionResult({
     required this.success,
     this.transactionHash,
     this.tradeHash,
+    this.analyticsEventId,
     this.error,
   });
 }
@@ -138,6 +140,7 @@ class SwapExecutionService {
         fallback: 'Swap execution response was incomplete. Please try again.',
       );
       final txData = _asMap(data['transaction']) ?? data;
+      final analyticsEventId = data['analyticsEventId']?.toString();
 
       // 2. Prepare Web3 Transaction
       if (txData['to'] == null) {
@@ -243,9 +246,48 @@ class SwapExecutionService {
         fetchChainIdFromNetworkId: false,
       );
 
-      return SwapExecutionResult(success: true, transactionHash: txHash);
+      return SwapExecutionResult(
+        success: true,
+        transactionHash: txHash,
+        analyticsEventId: analyticsEventId,
+      );
     } finally {
       // client.dispose() intentionally removed — HttpClient is a shared singleton.
+    }
+  }
+
+  /// Records analytics only after the UI's transaction monitor has confirmed
+  /// the receipt. The backend independently verifies the receipt before
+  /// promoting the quote event to a completed swap.
+  Future<void> recordConfirmedSwap({
+    required String eventId,
+    required int chainId,
+    required String transactionHash,
+    required String walletAddress,
+  }) async {
+    try {
+      final response = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              AppEnvironment.swap('/record'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'eventId': eventId,
+                'chainId': chainId,
+                'txHash': transactionHash,
+                'walletAddress': walletAddress,
+              }),
+            ),
+          )
+          .timeout(const Duration(seconds: 12));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint(
+          'Confirmed swap analytics was not recorded: ${response.statusCode}',
+        );
+      }
+    } catch (error) {
+      // Analytics must never turn a confirmed on-chain swap into a UI failure.
+      debugPrint('Confirmed swap analytics was not recorded: $error');
     }
   }
 

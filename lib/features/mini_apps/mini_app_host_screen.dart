@@ -263,6 +263,11 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'activeNetworkKey': activeNetworkKey,
         'activeChainFamily': activeChainFamily,
         'activeChainId': activeChainId,
+        // Keep the wallet available at the context root as well as inside
+        // profile/session. Older mini-app SDKs do not reliably expose nested
+        // profile fields, while Cash In needs the EVM recipient for quotes.
+        'walletAddress': walletAddress,
+        'evmWalletAddress': walletAddress,
         'solanaWalletAddress': solanaWalletAddress,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},

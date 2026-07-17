@@ -3882,6 +3882,17 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       if (!mounted) return;
       if (confirmed) {
+        final analyticsEventId = result.analyticsEventId;
+        if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
+          unawaited(
+            _swapExecutionService.recordConfirmedSwap(
+              eventId: analyticsEventId,
+              chainId: blockchain.activeChain.chainId,
+              transactionHash: txHash,
+              walletAddress: _walletAddress!,
+            ),
+          );
+        }
         _applyOptimisticSwapResult(
           blockchain: blockchain,
           fromToken: fromToken,
