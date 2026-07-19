@@ -20,6 +20,7 @@ class SolanaSwapQuote {
 
   /// Jupiter V2 requestId – must be forwarded on execute.
   final String requestId;
+  final String? analyticsEventId;
 
   const SolanaSwapQuote({
     required this.amountOutFormatted,
@@ -29,6 +30,7 @@ class SolanaSwapQuote {
     required this.platformFeeBps,
     required this.swapTransaction,
     required this.requestId,
+    this.analyticsEventId,
   });
 
   double get platformFeePercent => platformFeeBps / 100.0;
@@ -250,6 +252,11 @@ class SolanaSwapService {
       platformFeeBps: platformFeeBps,
       swapTransaction: swapTx,
       requestId: requestId,
+      analyticsEventId: _firstNonEmptyString([
+        data['analyticsEventId'],
+        data['analytics_event_id'],
+        txData?['analyticsEventId'],
+      ]),
     );
   }
 

@@ -3739,6 +3739,17 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         final txHash = execResult.transactionHash!;
         _clearSubmittedSwapState();
+        final analyticsEventId = execResult.analyticsEventId;
+        if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
+          unawaited(
+            _swapExecutionService.recordConfirmedSwap(
+              eventId: analyticsEventId,
+              chainId: 792703809,
+              transactionHash: txHash,
+              walletAddress: _walletAddress!,
+            ),
+          );
+        }
         _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
@@ -3747,8 +3758,20 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmount: toAmountText,
           toTokenSymbol: toToken.symbol,
           networkName: 'Solana',
-          chainId: -501,
+          chainId: 792703809,
           networkKey: blockchain.activeNetworkKey,
+        );
+        unawaited(
+          _walletNotificationService.notifySwapConfirmed(
+            walletAddress: _walletAddress!,
+            chainId: 792703809,
+            txHash: txHash,
+            fromAmount: fromAmountText,
+            fromSymbol: fromToken.symbol,
+            toAmount: toAmountText,
+            toSymbol: toToken.symbol,
+            networkName: 'Solana',
+          ),
         );
         progressController.setSuccess(
           reference: shortHash(txHash),

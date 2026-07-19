@@ -10,11 +10,13 @@ class SolanaSwapExecutionResult {
   final bool success;
   final String? transactionHash;
   final String? error;
+  final String? analyticsEventId;
 
   const SolanaSwapExecutionResult({
     required this.success,
     this.transactionHash,
     this.error,
+    this.analyticsEventId,
   });
 }
 
@@ -104,6 +106,7 @@ class SolanaSwapExecutionService {
         return SolanaSwapExecutionResult(
           success: true,
           transactionHash: txHash,
+          analyticsEventId: quote.analyticsEventId,
         );
       }
 
