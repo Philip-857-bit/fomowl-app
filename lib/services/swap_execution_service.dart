@@ -265,29 +265,42 @@ class SwapExecutionService {
     required String transactionHash,
     required String walletAddress,
   }) async {
-    try {
-      final response = await _httpClientService
-          .sendWithRetry(
-            () => _httpClientService.client.post(
-              AppEnvironment.swap('/record'),
-              headers: const {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'eventId': eventId,
-                'chainId': chainId,
-                'txHash': transactionHash,
-                'walletAddress': walletAddress,
-              }),
-            ),
-          )
-          .timeout(const Duration(seconds: 12));
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint(
-          'Confirmed swap analytics was not recorded: ${response.statusCode}',
-        );
+    // A receipt can be visible to the mobile RPC before it is visible to the
+    // backend RPC. Retry transient verification failures so a real swap does
+    // not disappear from analytics merely because the nodes were briefly out
+    // of sync. This remains fire-and-forget and never blocks the swap UI.
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await _httpClientService
+            .sendWithRetry(
+              () => _httpClientService.client.post(
+                AppEnvironment.swap('/record'),
+                headers: const {'Content-Type': 'application/json'},
+                body: jsonEncode({
+                  'eventId': eventId,
+                  'chainId': chainId,
+                  'txHash': transactionHash,
+                  'walletAddress': walletAddress,
+                }),
+              ),
+            )
+            .timeout(const Duration(seconds: 12));
+        if (response.statusCode >= 200 && response.statusCode < 300) return;
+        if (response.statusCode != 409 && response.statusCode != 503) {
+          debugPrint(
+            'Confirmed swap analytics was not recorded: ${response.statusCode}',
+          );
+          return;
+        }
+      } catch (error) {
+        if (attempt == 2) {
+          // Analytics must never turn a confirmed on-chain swap into a UI
+          // failure.
+          debugPrint('Confirmed swap analytics was not recorded: $error');
+          return;
+        }
       }
-    } catch (error) {
-      // Analytics must never turn a confirmed on-chain swap into a UI failure.
-      debugPrint('Confirmed swap analytics was not recorded: $error');
+      await Future<void>.delayed(Duration(seconds: attempt + 1));
     }
   }
 
