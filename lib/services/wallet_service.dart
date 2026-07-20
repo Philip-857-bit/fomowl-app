@@ -350,6 +350,8 @@ class WalletService {
       // Get address
       final address = credentials.address.hexEip55;
 
+      await _ensureFamilyAddressNotManaged(ChainFamily.evm, address);
+
       // Store wallet data securely (no mnemonic for imported private keys)
       await _storage.saveWallet(
         address: address,
@@ -381,6 +383,8 @@ class WalletService {
       );
       final hexKey = pkg_hex.HEX.encode(keyMaterial.privateKeyBytes);
       final address = keyMaterial.address;
+
+      await _ensureFamilyAddressNotManaged(ChainFamily.solana, address);
 
       await _storage.saveWallet(
         address: address,
@@ -423,6 +427,8 @@ class WalletService {
       final address = await NativeCrypto.deriveTronAddressFromPrivateKey(
         privateKey,
       );
+
+      await _ensureFamilyAddressNotManaged(ChainFamily.tron, address);
 
       await _storage.saveWallet(
         address: address,
@@ -469,6 +475,134 @@ class WalletService {
       return await _storage.getPrivateKey();
     }
     return await _storage.getPrivateKeyForAddress(address);
+  }
+
+  /// Exports the private key that belongs to [family] for [account].
+  ///
+  /// Seed-backed accounts use different derivation paths for EVM, Solana, and
+  /// Tron. Solana is returned as the standard base58-encoded 64-byte keypair;
+  /// EVM and Tron are returned as 32-byte hexadecimal keys.
+  Future<String> exportPrivateKeyForFamily(
+    WalletAccount account,
+    ChainFamily family,
+  ) async {
+    final familyAddress = account.getWalletAddressForFamily(family)?.trim();
+    if (familyAddress == null || familyAddress.isEmpty) {
+      throw Exception('This account does not support ${family.wireValue}.');
+    }
+
+    switch (family) {
+      case ChainFamily.evm:
+        final privateKey = await _storage.getPrivateKeyForAddress(
+          account.address,
+        );
+        if (privateKey == null || privateKey.isEmpty) {
+          throw Exception('EVM private key is unavailable for this account.');
+        }
+        final derivedAddress =
+            await NativeCrypto.deriveEvmAddressFromPrivateKey(privateKey);
+        if (derivedAddress.toLowerCase() != familyAddress.toLowerCase()) {
+          throw Exception('Stored EVM key does not match this account.');
+        }
+        return privateKey.startsWith('0x')
+            ? privateKey.substring(2)
+            : privateKey;
+
+      case ChainFamily.solana:
+        final privateKeyBytes = await _solanaPrivateKeyForAccount(
+          account,
+          familyAddress,
+        );
+        final publicKeyBytes = decodeBase58Bytes(familyAddress);
+        if (publicKeyBytes.length != 32) {
+          throw Exception('Stored Solana address is invalid.');
+        }
+        final derivedAddress =
+            await NativeCrypto.deriveSolanaAddressFromPrivateKey(
+              privateKeyBytes,
+            );
+        if (derivedAddress != familyAddress) {
+          throw Exception('Stored Solana key does not match this account.');
+        }
+        return encodeBase58Bytes(
+          Uint8List.fromList([...privateKeyBytes, ...publicKeyBytes]),
+        );
+
+      case ChainFamily.tron:
+        final privateKey = await _tronPrivateKeyForAccount(
+          account,
+          familyAddress,
+        );
+        final derivedAddress =
+            await NativeCrypto.deriveTronAddressFromPrivateKey(privateKey);
+        if (derivedAddress != familyAddress) {
+          throw Exception('Stored Tron key does not match this account.');
+        }
+        return privateKey.startsWith('0x')
+            ? privateKey.substring(2)
+            : privateKey;
+    }
+  }
+
+  Future<void> _ensureFamilyAddressNotManaged(
+    ChainFamily family,
+    String address,
+  ) async {
+    final accounts = await getWalletAccounts();
+    final duplicate = accounts.any((account) {
+      final existing = account.getWalletAddressForFamily(family)?.trim();
+      if (existing == null || existing.isEmpty) return false;
+      return family == ChainFamily.evm
+          ? existing.toLowerCase() == address.toLowerCase()
+          : existing == address;
+    });
+    if (duplicate) {
+      throw Exception(
+        'This ${family.wireValue.toUpperCase()} wallet is already in Owllet. Switch to the existing account instead.',
+      );
+    }
+  }
+
+  Future<Uint8List> _solanaPrivateKeyForAccount(
+    WalletAccount account,
+    String familyAddress,
+  ) async {
+    final imported = await _storage.getFamilyPrivateKey(
+      ChainFamily.solana,
+      familyAddress,
+    );
+    if (imported != null && imported.isNotEmpty) {
+      return Uint8List.fromList(pkg_hex.HEX.decode(imported));
+    }
+    final mnemonic = await getMnemonic(account.address);
+    if (mnemonic == null || mnemonic.isEmpty) {
+      throw Exception('Solana private key is unavailable for this account.');
+    }
+    final seed = await NativeCrypto.mnemonicToSeed(mnemonic);
+    return NativeCrypto.deriveSolanaPrivateKeyFromSeed(
+      seed,
+      account.derivationIndex ?? 0,
+    );
+  }
+
+  Future<String> _tronPrivateKeyForAccount(
+    WalletAccount account,
+    String familyAddress,
+  ) async {
+    final imported = await _storage.getFamilyPrivateKey(
+      ChainFamily.tron,
+      familyAddress,
+    );
+    if (imported != null && imported.isNotEmpty) return imported;
+    final mnemonic = await getMnemonic(account.address);
+    if (mnemonic == null || mnemonic.isEmpty) {
+      throw Exception('Tron private key is unavailable for this account.');
+    }
+    final seed = await NativeCrypto.mnemonicToSeed(mnemonic);
+    return NativeCrypto.deriveTronPrivateKeyFromSeed(
+      seed,
+      account.derivationIndex ?? 0,
+    );
   }
 
   /// Get wallet mnemonic (if available)

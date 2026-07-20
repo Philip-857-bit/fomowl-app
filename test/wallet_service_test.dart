@@ -8,8 +8,13 @@ import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
+import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
 void main() {
+  setUpAll(() async {
+    await RustLib.init();
+  });
+
   test('normalizeMnemonic collapses whitespace and lowercases', () {
     final walletService = WalletService();
     final normalized = walletService.normalizeMnemonic(
@@ -212,6 +217,106 @@ void main() {
         );
       },
     );
+  });
+
+  group('chain-specific private-key export', () {
+    const mnemonic =
+        'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+    test(
+      'exports distinct EVM, Solana, and Tron keys that reproduce each address',
+      () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final storage = StorageService(
+          secureStore: _InMemorySecureStore(),
+          sharedPreferences: prefs,
+        );
+        final walletService = WalletService(storageService: storage);
+
+        await walletService.createWalletFromMnemonic(mnemonic);
+        final account = await walletService.getActiveWalletAccount();
+        expect(account, isNotNull);
+
+        final evmKey = await walletService.exportPrivateKeyForFamily(
+          account!,
+          ChainFamily.evm,
+        );
+        final solanaKey = await walletService.exportPrivateKeyForFamily(
+          account,
+          ChainFamily.solana,
+        );
+        final tronKey = await walletService.exportPrivateKeyForFamily(
+          account,
+          ChainFamily.tron,
+        );
+
+        expect(evmKey, matches(RegExp(r'^[0-9a-fA-F]{64}$')));
+        expect(tronKey, matches(RegExp(r'^[0-9a-fA-F]{64}$')));
+        expect(tronKey, isNot(evmKey));
+        expect(WalletService.decodeBase58Bytes(solanaKey), hasLength(64));
+
+        SharedPreferences.setMockInitialValues({});
+        final importPrefs = await SharedPreferences.getInstance();
+        final importedWalletService = WalletService(
+          storageService: StorageService(
+            secureStore: _InMemorySecureStore(),
+            sharedPreferences: importPrefs,
+          ),
+        );
+        final imported = await importedWalletService.importWalletFromSolanaKey(
+          solanaKey,
+        );
+        expect(
+          imported['address'],
+          account.getWalletAddressForFamily(ChainFamily.solana),
+        );
+      },
+    );
+
+    test('duplicate EVM import cannot replace a seed-backed account', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final storage = StorageService(
+        secureStore: _InMemorySecureStore(),
+        sharedPreferences: prefs,
+      );
+      final walletService = WalletService(storageService: storage);
+
+      await walletService.createWalletFromMnemonic(mnemonic);
+      final original = (await walletService.getActiveWalletAccount())!;
+      final evmKey = await walletService.exportPrivateKeyForFamily(
+        original,
+        ChainFamily.evm,
+      );
+
+      await expectLater(
+        walletService.importWalletFromPrivateKey(
+          evmKey,
+          walletName: 'Duplicate import',
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (error) => error.toString(),
+            'message',
+            contains('already in Owllet'),
+          ),
+        ),
+      );
+
+      final accounts = await walletService.getWalletAccounts();
+      expect(accounts, hasLength(1));
+      expect(accounts.single.origin, WalletOrigin.derived);
+      expect(accounts.single.seedGroupId, original.seedGroupId);
+      expect(accounts.single.addressesByFamily.keys, {
+        ChainFamily.evm,
+        ChainFamily.solana,
+        ChainFamily.tron,
+      });
+      expect(await walletService.getCurrentWalletAddress(), original.address);
+    });
   });
 }
 

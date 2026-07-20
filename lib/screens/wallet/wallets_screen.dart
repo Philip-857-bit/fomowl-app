@@ -486,9 +486,18 @@ class _WalletsScreenState extends State<WalletsScreen> {
       return;
     }
     try {
-      final privateKey = await _walletService.getPrivateKey(account.address);
+      final activeFamily = _blockchain?.activeFamily ?? ChainFamily.evm;
+      final exportFamily = account.addressesByFamily.containsKey(activeFamily)
+          ? activeFamily
+          : account.addressesByFamily.keys.first;
+      final privateKey = await _walletService.exportPrivateKeyForFamily(
+        account,
+        exportFamily,
+      );
+      final familyAddress =
+          account.getWalletAddressForFamily(exportFamily) ?? account.address;
       if (!mounted) return;
-      if (privateKey == null || privateKey.isEmpty) {
+      if (privateKey.isEmpty) {
         ToastUtils.showError(l.noPrivateKeyFound);
         return;
       }
@@ -506,11 +515,19 @@ class _WalletsScreenState extends State<WalletsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l.privateKey,
+                  '${_familyLabel(exportFamily)} ${l.privateKey}',
                   style: GoogleFonts.outfit(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 18,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SelectableText(
+                  familyAddress,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white54,
+                    fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -540,6 +557,12 @@ class _WalletsScreenState extends State<WalletsScreen> {
       );
     }
   }
+
+  String _familyLabel(ChainFamily family) => switch (family) {
+    ChainFamily.evm => 'EVM',
+    ChainFamily.solana => 'Solana',
+    ChainFamily.tron => 'Tron',
+  };
 
   String _walletValueLabel(WalletAccount account) {
     if (account.address.toLowerCase() == (_activeAddress ?? '').toLowerCase()) {

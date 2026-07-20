@@ -59,6 +59,8 @@ class _DecentralizedProfileScreenState
   Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
   WalletOrigin _walletOrigin = WalletOrigin.derived;
   Set<ChainFamily> _supportedFamilies = {ChainFamily.evm};
+  String _canonicalWalletAddress = '';
+  ChainFamily _displayedFamily = ChainFamily.evm;
   BlockchainService? _blockchain;
 
   @override
@@ -90,8 +92,10 @@ class _DecentralizedProfileScreenState
     if (!mounted) return;
     final nextActive =
         _blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
-    final currentActive = _walletAddress.toLowerCase();
-    if (nextActive.isEmpty || nextActive == currentActive) {
+    final nextFamily = _blockchain?.activeFamily ?? ChainFamily.evm;
+    if (nextActive.isEmpty ||
+        (nextActive == _canonicalWalletAddress.toLowerCase() &&
+            nextFamily == _displayedFamily)) {
       return;
     }
     // Active wallet changed from another tab — refresh the settings header.
@@ -122,10 +126,15 @@ class _DecentralizedProfileScreenState
 
   Future<void> _load() async {
     final walletName = await _storageService.getWalletName();
-    final walletAddress = await _walletService.getCurrentWalletAddress();
+    final canonicalWalletAddress = await _walletService
+        .getCurrentWalletAddress();
     final currency = await _storageService.getCurrency();
     final savedFamilies = await _storageService.getEnabledChainFamilies();
     final activeAccount = await _walletService.getActiveWalletAccount();
+    final activeFamily = _blockchain?.activeFamily ?? ChainFamily.evm;
+    final walletAddress =
+        activeAccount?.getWalletAddressForFamily(activeFamily) ??
+        canonicalWalletAddress;
 
     if (!mounted) return;
 
@@ -142,12 +151,14 @@ class _DecentralizedProfileScreenState
       _enabledFamilies = savedFamilies ?? {ChainFamily.evm};
       _walletOrigin = origin;
       _supportedFamilies = supported;
+      _canonicalWalletAddress = canonicalWalletAddress ?? '';
+      _displayedFamily = activeFamily;
       _loading = false;
     });
     // Keep the global wallet context fresh so the network selector and other
     // tabs filter correctly when the user lands on this tab first.
     _blockchain?.setActiveWalletContext(
-      address: walletAddress ?? '',
+      address: canonicalWalletAddress ?? '',
       supportedFamilies: supported,
     );
   }

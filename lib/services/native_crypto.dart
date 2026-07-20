@@ -106,6 +106,22 @@ class NativeCrypto {
     }
   }
 
+  /// Derive an EIP-55 Ethereum address from a raw 32-byte private key.
+  static Future<String> deriveEvmAddressFromPrivateKey(
+    String privateKeyHex,
+  ) async {
+    try {
+      return await rust_bip32.deriveEvmAddressFromPrivateKey(
+        privateKeyHex: privateKeyHex,
+      );
+    } catch (e) {
+      debugPrint(
+        '[NativeCrypto] deriveEvmAddressFromPrivateKey Rust error: $e',
+      );
+      rethrow;
+    }
+  }
+
   /// Derive a Solana Ed25519 private key seed at m/44'/501'/{index}'/0'.
   static Future<Uint8List> deriveSolanaPrivateKeyFromSeed(
     Uint8List seed,

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
+import 'package:fomowl_wallet/models/chain.dart';
+import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/screens/profile/decentralized_profile_screen.dart';
 import 'package:fomowl_wallet/services/app_patch_service.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
@@ -89,6 +91,88 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Referral Route'), findsOneWidget);
+  });
+
+  testWidgets('settings header follows the active chain family address', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    PackageInfo.setMockInitialValues(
+      appName: 'Owllet',
+      packageName: 'com.fomowl.wallet',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    final storage = StorageService(
+      secureStore: _InMemorySecureStore(),
+      sharedPreferences: prefs,
+    );
+    const evmAddress = '0x1234567890123456789012345678901234567890';
+    const solanaAddress = '8h7meC5hcAWs3WNKMufRPVsbwEcK1rNExGvWWKniBXd2';
+    await storage.saveWallet(
+      address: evmAddress,
+      privateKey: 'test-private-key',
+      walletName: 'Main Wallet',
+      origin: WalletOrigin.derived,
+      derivationIndex: 0,
+      seedGroupId: 'seed_test',
+      addressesByFamily: const {
+        ChainFamily.evm: evmAddress,
+        ChainFamily.solana: solanaAddress,
+        ChainFamily.tron: 'TCgnc2fPN89r1V3zMBhax9K3YDTFCRfH8j',
+      },
+    );
+    final walletService = WalletService(storageService: storage);
+    final blockchain = BlockchainService();
+    blockchain.setActiveWalletContext(
+      address: evmAddress,
+      supportedFamilies: const {
+        ChainFamily.evm,
+        ChainFamily.solana,
+        ChainFamily.tron,
+      },
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<AppPatchService>.value(
+            value: AppPatchService.instance,
+          ),
+          ChangeNotifierProvider<BlockchainService>.value(value: blockchain),
+          ChangeNotifierProvider<CurrencyController>(
+            create: (_) => CurrencyController(storage: storage),
+          ),
+          ChangeNotifierProvider<LanguageController>(
+            create: (_) => LanguageController(
+              storage: storage,
+              walletService: walletService,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: DecentralizedProfileScreen(
+            showBottomNavigation: false,
+            walletService: walletService,
+            storageService: storage,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('0x1234...7890'), findsOneWidget);
+
+    blockchain.setActiveNetworkKey(NetworkKey.solana('mainnet-beta'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('8h7meC...BXd2'), findsOneWidget);
+    expect(find.text('0x1234...7890'), findsNothing);
   });
 }
 
