@@ -1,4 +1,4 @@
-# iOS Notification Service Extension — wiring steps
+# iOS Notification Service Extension - wiring steps
 
 This folder contains the source for an iOS **Notification Service Extension**
 that lets rich (image) push notifications display on iOS. The Swift handler and
@@ -6,7 +6,7 @@ that lets rich (image) push notifications display on iOS. The Swift handler and
 because adding a target + the "Embed App Extensions" build phase cannot be done
 safely by hand-editing `project.pbxproj`.
 
-> Android needs nothing extra — images already render via the FCM
+> Android needs nothing extra - images already render via the FCM
 > `notification.image` field. This is only required for **iOS**.
 
 ## One-time setup (on a Mac with Xcode)
@@ -50,4 +50,4 @@ POST /api/blockchain/{chainId}/admin/broadcast-push
 - The backend already sets the FCM `notification.image` field, and FCM adds
   `mutable-content: 1` for iOS automatically when an image is present.
 - With the extension installed, the image appears in the expanded notification
-  on iOS. Without it, iOS shows a normal (text) notification — no crash.
+  on iOS. Without it, iOS shows a normal (text) notification - no crash.

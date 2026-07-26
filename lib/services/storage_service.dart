@@ -44,6 +44,8 @@ class StorageService {
   static const String _keyFailedAttempts = 'failed_attempts';
   static const String _keyLockoutUntil = 'lockout_until';
   static const String _keyTwoFactorEnabled = 'two_factor_enabled';
+  static const String _keyTwoFactorAuthorityWallet =
+      'two_factor_authority_wallet';
   static const String _keyAutoLockMinutes = 'auto_lock_minutes';
   static const String _keyLockOnBackground = 'lock_on_background';
   static const String _keyBackendSessionPrefix = 'backend_session_';
@@ -373,6 +375,16 @@ class StorageService {
       throw Exception('You must keep at least one wallet');
     }
 
+    final authorityWallet = await getTwoFactorAuthorityWallet();
+    if (authorityWallet == normalized && await isTwoFactorEnabled()) {
+      throw Exception(
+        'Disable authenticator 2FA before removing its security wallet',
+      );
+    }
+    if (authorityWallet == normalized) {
+      await clearTwoFactorAuthorityWallet();
+    }
+
     final wasActive = (await getWalletAddress())?.toLowerCase() == normalized;
 
     if (wasActive) {
@@ -690,6 +702,28 @@ class StorageService {
   Future<bool> isTwoFactorEnabled() async {
     final prefs = await _prefs;
     return prefs.getBool(_keyTwoFactorEnabled) ?? false;
+  }
+
+  /// The EVM wallet that authorizes the single app-wide 2FA record.
+  ///
+  /// This is intentionally independent from the active wallet. The value is
+  /// kept in secure storage so changing networks or wallets cannot silently
+  /// select a different authenticator secret.
+  Future<void> setTwoFactorAuthorityWallet(String walletAddress) {
+    return _secureStore.write(
+      key: _keyTwoFactorAuthorityWallet,
+      value: walletAddress.trim().toLowerCase(),
+    );
+  }
+
+  Future<String?> getTwoFactorAuthorityWallet() async {
+    final value = await _secureStore.read(key: _keyTwoFactorAuthorityWallet);
+    final normalized = value?.trim().toLowerCase();
+    return normalized == null || normalized.isEmpty ? null : normalized;
+  }
+
+  Future<void> clearTwoFactorAuthorityWallet() {
+    return _secureStore.delete(key: _keyTwoFactorAuthorityWallet);
   }
 
   Future<void> setAutoLockMinutes(int minutes) async {

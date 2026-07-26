@@ -1,6 +1,6 @@
-# FOMOwl Wallet
+# Owllet Wallet
 
-Flutter wallet client for multi-chain EVM balances, swaps, gasless orders, and wallet-scoped backend sync.
+Self-custodial Flutter wallet for EVM, Solana, and TRON accounts, swaps, bridges, notifications, NFTs, dapps, and hosted mini apps. Rust FFI handles sensitive key derivation and signing operations.
 
 ## Current notes
 
@@ -46,11 +46,11 @@ openssl s_client -connect core.owlletapp.com:443 -servername core.owlletapp.com 
 
 Because the pin covers the public key rather than the certificate, routine
 certificate renewals (e.g. Let's Encrypt) do NOT invalidate it as long as the
-server reuses its key pair — the pin only changes when the key changes.
+server reuses its key pair - the pin only changes when the key changes.
 
 Pinning is scoped to the `BACKEND_BASE_URL` host; RPC nodes, CoinGecko, and
 other third-party endpoints keep normal TLS validation. When the value is
-empty (the default) TLS validation behaves normally — pinning is opt-in.
+empty (the default) TLS validation behaves normally - pinning is opt-in.
 Include a backup pin (e.g. for a standby key) so key rotation does not lock
 out clients. Pinning is a no-op on web builds (the browser manages trust).
 

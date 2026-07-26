@@ -68,7 +68,19 @@ class SensitiveAccessGuard {
       return false;
     }
 
-    final twoFactorEnabled = await _storage.isTwoFactorEnabled();
+    // The persisted app-wide 2FA authority is authoritative. Refreshing here
+    // keeps the decision independent of whichever wallet is currently active
+    // and repairs stale local state after startup or a wallet switch.
+    final cachedTwoFactorEnabled = await _storage.isTwoFactorEnabled();
+    final twoFactorStatus = await _walletTwoFactorService
+        .fetchTwoFactorStatus();
+    final twoFactorEnabled = twoFactorStatus['success'] == true
+        ? twoFactorStatus['enabled'] == true
+        : cachedTwoFactorEnabled;
+    if (twoFactorStatus['success'] == true &&
+        twoFactorEnabled != cachedTwoFactorEnabled) {
+      await _storage.setTwoFactorEnabled(twoFactorEnabled);
+    }
     if (!twoFactorEnabled) {
       return true;
     }
