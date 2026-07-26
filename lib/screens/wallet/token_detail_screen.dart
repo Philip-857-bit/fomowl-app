@@ -11,6 +11,7 @@ import '../../models/chain.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../models/token_market_data.dart';
+import '../swap/swap_screen.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/value_formatter.dart';
@@ -497,14 +498,20 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                               icon: Icons.sync_alt_rounded,
                               label: 'Swap',
                               onTap: () {
-                                // Return to the existing shell and switch its
-                                // selected tab. Pushing the legacy /swap route
-                                // here creates a second AppShellScreen above
-                                // token details and corrupts the back stack.
+                                // Open one standalone Swap route above token
+                                // details. This preserves the back button and
+                                // avoids the legacy /swap redirect creating a
+                                // second app shell.
                                 context
                                     .read<AppShellController>()
                                     .openSwapWithToken(token);
-                                Navigator.pop(context);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const SwapScreen(
+                                      showBottomNavigation: false,
+                                    ),
+                                  ),
+                                );
                               },
                             ),
                           ],

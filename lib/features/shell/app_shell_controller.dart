@@ -42,11 +42,13 @@ class AppShellController extends ChangeNotifier {
   }
 
   /// Stash a token chosen elsewhere (e.g. the token-detail screen's "Swap"
-  /// action) and select the Swap tab in the existing app shell.
+  /// action) so the next Swap screen can pre-select it.
+  ///
+  /// This must not switch the shell tab: token details opens a standalone Swap
+  /// route so Android back returns to token details without duplicating the
+  /// app shell or mutating the route underneath it.
   void openSwapWithToken(Token token) {
     _pendingSwapFromToken = token;
-    _currentTab = AppShellTab.swap;
-    notifyListeners();
   }
 
   Token? consumePendingSwapFromToken() {

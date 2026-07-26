@@ -220,11 +220,8 @@ class _SwapScreenState extends State<SwapScreen> {
     // If the user launched Swap from a token's detail screen, pre-select that
     // token as the "from" side. Consumed once so normal tab switching is
     // unaffected.
-    // Listen for launches from token details. The Swap screen stays mounted in
-    // the shell's IndexedStack, so a read-only lookup would not rerun this
-    // lifecycle method when a new pending token is supplied.
     final pendingFrom = context
-        .watch<AppShellController>()
+        .read<AppShellController>()
         .consumePendingSwapFromToken();
     if (pendingFrom != null) {
       _initialFromOverride = pendingFrom;
