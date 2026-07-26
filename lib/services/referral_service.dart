@@ -186,7 +186,6 @@ class ReferralService {
   Future<void> rewardOnSwap({
     required String walletAddress,
     required String txHash,
-    required double swapAmountUsd,
   }) async {
     try {
       final uri = AppEnvironment.referrals('/reward-on-swap');
@@ -198,7 +197,6 @@ class ReferralService {
               body: jsonEncode({
                 'walletAddress': _normalizeWallet(walletAddress),
                 'txHash': txHash,
-                'swapAmountUsd': swapAmountUsd,
               }),
             ),
           )

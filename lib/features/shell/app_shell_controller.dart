@@ -42,12 +42,11 @@ class AppShellController extends ChangeNotifier {
   }
 
   /// Stash a token chosen elsewhere (e.g. the token-detail screen's "Swap"
-  /// action) so the Swap tab can pre-select it as the "from" token when it next
-  /// initializes. Intentionally does NOT notify listeners or switch tabs: the
-  /// navigation to the Swap tab handles visibility, and avoiding a notify keeps
-  /// any already-mounted Swap screen from consuming the token prematurely.
+  /// action) and select the Swap tab in the existing app shell.
   void openSwapWithToken(Token token) {
     _pendingSwapFromToken = token;
+    _currentTab = AppShellTab.swap;
+    notifyListeners();
   }
 
   Token? consumePendingSwapFromToken() {

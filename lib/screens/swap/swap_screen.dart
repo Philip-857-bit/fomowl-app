@@ -220,8 +220,11 @@ class _SwapScreenState extends State<SwapScreen> {
     // If the user launched Swap from a token's detail screen, pre-select that
     // token as the "from" side. Consumed once so normal tab switching is
     // unaffected.
+    // Listen for launches from token details. The Swap screen stays mounted in
+    // the shell's IndexedStack, so a read-only lookup would not rerun this
+    // lifecycle method when a new pending token is supplied.
     final pendingFrom = context
-        .read<AppShellController>()
+        .watch<AppShellController>()
         .consumePendingSwapFromToken();
     if (pendingFrom != null) {
       _initialFromOverride = pendingFrom;
@@ -1872,7 +1875,6 @@ class _SwapScreenState extends State<SwapScreen> {
         await _referralService.rewardOnSwap(
           walletAddress: _walletAddress!,
           txHash: txHash,
-          swapAmountUsd: swapAmountUsd,
         );
       } catch (e) {
         debugPrint('Referral reward-on-swap failed: $e');
@@ -3857,7 +3859,9 @@ class _SwapScreenState extends State<SwapScreen> {
               toAmountText: toAmountText,
               toSymbol: toToken.symbol,
               networkName: blockchain.activeNetworkName,
-              rewardReferralOnSwap: true,
+              // Gasless orders do not currently expose the backend swap event
+              // needed for receipt-verified referral rewards.
+              rewardReferralOnSwap: false,
               swapAmountUsd: referralSwapAmountUsd,
             );
           } else {
@@ -3886,7 +3890,9 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmountText: toAmountText,
           toSymbol: toToken.symbol,
           networkName: blockchain.activeNetworkName,
-          rewardReferralOnSwap: true,
+          // Gasless orders do not currently expose the backend swap event
+          // needed for receipt-verified referral rewards.
+          rewardReferralOnSwap: false,
           swapAmountUsd: referralSwapAmountUsd,
         );
         return;
@@ -3900,20 +3906,24 @@ class _SwapScreenState extends State<SwapScreen> {
       );
       final confirmed = await _waitForTxConfirmation(
         txHash,
-        rewardReferralOnSwap: true,
+        rewardReferralOnSwap: false,
         swapAmountUsd: referralSwapAmountUsd,
       );
       if (!mounted) return;
       if (confirmed) {
         final analyticsEventId = result.analyticsEventId;
         if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
-          unawaited(
-            _swapExecutionService.recordConfirmedSwap(
-              eventId: analyticsEventId,
-              chainId: blockchain.activeChain.chainId,
-              transactionHash: txHash,
-              walletAddress: _walletAddress!,
-            ),
+          await _swapExecutionService.recordConfirmedSwap(
+            eventId: analyticsEventId,
+            chainId: blockchain.activeChain.chainId,
+            transactionHash: txHash,
+            walletAddress: _walletAddress!,
+          );
+          await _runPostConfirmSwapSideEffects(
+            blockchain: blockchain,
+            txHash: txHash,
+            rewardReferralOnSwap: true,
+            swapAmountUsd: referralSwapAmountUsd,
           );
         }
         _applyOptimisticSwapResult(

@@ -497,13 +497,14 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                               icon: Icons.sync_alt_rounded,
                               label: 'Swap',
                               onTap: () {
-                                // Pre-select this token as the swap "from" side
-                                // so opening Swap from a token's page acts on
-                                // that token instead of a default/first token.
+                                // Return to the existing shell and switch its
+                                // selected tab. Pushing the legacy /swap route
+                                // here creates a second AppShellScreen above
+                                // token details and corrupts the back stack.
                                 context
                                     .read<AppShellController>()
                                     .openSwapWithToken(token);
-                                Navigator.pushNamed(context, '/swap');
+                                Navigator.pop(context);
                               },
                             ),
                           ],

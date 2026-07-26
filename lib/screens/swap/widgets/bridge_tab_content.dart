@@ -11,6 +11,7 @@ import '../../../services/blockchain_service.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/http_client_service.dart';
 import '../../../services/rpc_service.dart';
+import '../../../services/transaction_monitor.dart';
 import '../../../services/wallet_service.dart';
 import '../../../utils/amount_utils.dart';
 import '../../../utils/app_error_utils.dart';
@@ -58,6 +59,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   final BridgeService _bridgeService = BridgeService();
   final HttpClientService _httpClientService = HttpClientService();
   final RpcService _rpcService = RpcService();
+  final TransactionMonitor _transactionMonitor = TransactionMonitor();
 
   Token? _fromToken;
   EvmChain? _toChain;
@@ -586,6 +588,21 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         );
         firstTxHash ??= txHash;
         controller.setSwapPending(reference: shortHash(txHash));
+
+        // Relay may return an approval followed by a deposit. Waiting for each
+        // transaction prevents the next step's gas estimation from running
+        // against stale allowance state and also stops on an on-chain revert.
+        final confirmed = await _transactionMonitor.waitForConfirmation(
+          txHash: txHash,
+          blockchain: widget.blockchain,
+          evmChain: chain,
+        );
+        if (!confirmed) {
+          controller.setError(
+            'A bridge transaction was not confirmed successfully. If it is still pending in your wallet, do not submit the bridge again.',
+          );
+          return;
+        }
       }
 
       // Relay fills the destination side once the origin deposit lands —
