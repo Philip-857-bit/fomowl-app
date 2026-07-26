@@ -1890,16 +1890,29 @@ class _SwapScreenState extends State<SwapScreen> {
         txHash != null &&
         looksLikeTxHash(txHash)) {
       try {
-        await _referralService.rewardOnSwap(
-          walletAddress: _walletAddress!,
-          txHash: txHash,
-        );
+        await _rewardReferralForSwap(_walletAddress!, txHash);
       } catch (e) {
         debugPrint('Referral reward-on-swap failed: $e');
       }
     }
 
     await _refreshWalletState(blockchain: blockchain);
+  }
+
+  Future<void> _rewardReferralForSwap(
+    String swapWalletAddress,
+    String txHash,
+  ) async {
+    final referralWalletAddress = await _walletService
+        .getCurrentWalletAddress();
+    if (referralWalletAddress == null || referralWalletAddress.isEmpty) {
+      return;
+    }
+    await _referralService.rewardOnSwap(
+      walletAddress: swapWalletAddress,
+      referralWalletAddress: referralWalletAddress,
+      txHash: txHash,
+    );
   }
 
   Future<bool> _waitForTxConfirmation(
@@ -3769,10 +3782,7 @@ class _SwapScreenState extends State<SwapScreen> {
           );
           if (recorded) {
             try {
-              await _referralService.rewardOnSwap(
-                walletAddress: _walletAddress!,
-                txHash: txHash,
-              );
+              await _rewardReferralForSwap(_walletAddress!, txHash);
             } catch (error) {
               debugPrint('Solana referral reward failed: $error');
             }
@@ -3839,10 +3849,7 @@ class _SwapScreenState extends State<SwapScreen> {
           );
           if (recorded) {
             try {
-              await _referralService.rewardOnSwap(
-                walletAddress: _walletAddress!,
-                txHash: txHash,
-              );
+              await _rewardReferralForSwap(_walletAddress!, txHash);
             } catch (error) {
               debugPrint('Tron referral reward failed: $error');
             }

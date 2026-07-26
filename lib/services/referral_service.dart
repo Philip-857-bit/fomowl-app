@@ -185,20 +185,27 @@ class ReferralService {
 
   Future<void> rewardOnSwap({
     required String walletAddress,
+    required String referralWalletAddress,
     required String txHash,
   }) async {
     try {
       final uri = AppEnvironment.referrals('/reward-on-swap');
-      final response = await _httpClientService
-          .sendWithRetry(
-            () => _httpClientService.client.post(
-              uri,
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'walletAddress': _normalizeWallet(walletAddress),
-                'txHash': txHash,
-              }),
+      final normalizedReferralWallet = _normalizeWallet(referralWalletAddress);
+      final response = await _walletBackendAuthService
+          .sendAuthorized(
+            normalizedReferralWallet,
+            (headers) => _httpClientService.sendWithRetry(
+              () => _httpClientService.client.post(
+                uri,
+                headers: headers,
+                body: jsonEncode({
+                  'walletAddress': _normalizeWallet(walletAddress),
+                  'referralWalletAddress': normalizedReferralWallet,
+                  'txHash': txHash,
+                }),
+              ),
             ),
+            {'Content-Type': 'application/json'},
           )
           .timeout(const Duration(seconds: 15));
 
