@@ -1645,6 +1645,7 @@ class _SwapScreenState extends State<SwapScreen> {
     required String networkName,
     bool rewardReferralOnSwap = false,
     double swapAmountUsd = 0.0,
+    String? analyticsEventId,
   }) async {
     final l = AppLocalizations.of(context);
     const pendingStates = {
@@ -1702,6 +1703,23 @@ class _SwapScreenState extends State<SwapScreen> {
         );
         if (!mounted) return;
         if (confirmed) {
+          final recorded =
+              analyticsEventId != null &&
+              analyticsEventId.isNotEmpty &&
+              await _swapExecutionService.recordConfirmedSwap(
+                eventId: analyticsEventId,
+                chainId: chainId,
+                transactionHash: txHash,
+                walletAddress: _walletAddress!,
+              );
+          if (recorded) {
+            await _runPostConfirmSwapSideEffects(
+              blockchain: blockchain,
+              txHash: txHash,
+              rewardReferralOnSwap: rewardReferralOnSwap,
+              swapAmountUsd: swapAmountUsd,
+            );
+          }
           _applyOptimisticSwapResult(
             blockchain: blockchain,
             fromToken: fromToken,
@@ -3743,14 +3761,22 @@ class _SwapScreenState extends State<SwapScreen> {
         _clearSubmittedSwapState();
         final analyticsEventId = execResult.analyticsEventId;
         if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
-          unawaited(
-            _swapExecutionService.recordConfirmedSwap(
-              eventId: analyticsEventId,
-              chainId: 792703809,
-              transactionHash: txHash,
-              walletAddress: _walletAddress!,
-            ),
+          final recorded = await _swapExecutionService.recordConfirmedSwap(
+            eventId: analyticsEventId,
+            chainId: 792703809,
+            transactionHash: txHash,
+            walletAddress: _walletAddress!,
           );
+          if (recorded) {
+            try {
+              await _referralService.rewardOnSwap(
+                walletAddress: _walletAddress!,
+                txHash: txHash,
+              );
+            } catch (error) {
+              debugPrint('Solana referral reward failed: $error');
+            }
+          }
         }
         _recordSwapHistory(
           txHash: txHash,
@@ -3803,6 +3829,25 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         final txHash = execResult.transactionHash!;
         _clearSubmittedSwapState();
+        final analyticsEventId = execResult.analyticsEventId;
+        if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
+          final recorded = await _swapExecutionService.recordConfirmedSwap(
+            eventId: analyticsEventId,
+            chainId: -195,
+            transactionHash: txHash,
+            walletAddress: _walletAddress!,
+          );
+          if (recorded) {
+            try {
+              await _referralService.rewardOnSwap(
+                walletAddress: _walletAddress!,
+                txHash: txHash,
+              );
+            } catch (error) {
+              debugPrint('Tron referral reward failed: $error');
+            }
+          }
+        }
         _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
@@ -3859,10 +3904,9 @@ class _SwapScreenState extends State<SwapScreen> {
               toAmountText: toAmountText,
               toSymbol: toToken.symbol,
               networkName: blockchain.activeNetworkName,
-              // Gasless orders do not currently expose the backend swap event
-              // needed for receipt-verified referral rewards.
-              rewardReferralOnSwap: false,
+              rewardReferralOnSwap: true,
               swapAmountUsd: referralSwapAmountUsd,
+              analyticsEventId: result.analyticsEventId,
             );
           } else {
             progressController.setGaslessPending();
@@ -3890,10 +3934,9 @@ class _SwapScreenState extends State<SwapScreen> {
           toAmountText: toAmountText,
           toSymbol: toToken.symbol,
           networkName: blockchain.activeNetworkName,
-          // Gasless orders do not currently expose the backend swap event
-          // needed for receipt-verified referral rewards.
-          rewardReferralOnSwap: false,
+          rewardReferralOnSwap: true,
           swapAmountUsd: referralSwapAmountUsd,
+          analyticsEventId: result.analyticsEventId,
         );
         return;
       }
@@ -3913,18 +3956,20 @@ class _SwapScreenState extends State<SwapScreen> {
       if (confirmed) {
         final analyticsEventId = result.analyticsEventId;
         if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
-          await _swapExecutionService.recordConfirmedSwap(
+          final recorded = await _swapExecutionService.recordConfirmedSwap(
             eventId: analyticsEventId,
             chainId: blockchain.activeChain.chainId,
             transactionHash: txHash,
             walletAddress: _walletAddress!,
           );
-          await _runPostConfirmSwapSideEffects(
-            blockchain: blockchain,
-            txHash: txHash,
-            rewardReferralOnSwap: true,
-            swapAmountUsd: referralSwapAmountUsd,
-          );
+          if (recorded) {
+            await _runPostConfirmSwapSideEffects(
+              blockchain: blockchain,
+              txHash: txHash,
+              rewardReferralOnSwap: true,
+              swapAmountUsd: referralSwapAmountUsd,
+            );
+          }
         }
         _applyOptimisticSwapResult(
           blockchain: blockchain,

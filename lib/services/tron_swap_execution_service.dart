@@ -9,11 +9,13 @@ class TronSwapExecutionResult {
   final bool success;
   final String? transactionHash;
   final String? error;
+  final String? analyticsEventId;
 
   const TronSwapExecutionResult({
     required this.success,
     this.transactionHash,
     this.error,
+    this.analyticsEventId,
   });
 }
 
@@ -51,7 +53,11 @@ class TronSwapExecutionService {
       final txid = await _swapService.broadcastSignedTx(signedTx);
 
       if (txid != null && txid.isNotEmpty) {
-        return TronSwapExecutionResult(success: true, transactionHash: txid);
+        return TronSwapExecutionResult(
+          success: true,
+          transactionHash: txid,
+          analyticsEventId: quote.analyticsEventId,
+        );
       }
 
       return TronSwapExecutionResult(

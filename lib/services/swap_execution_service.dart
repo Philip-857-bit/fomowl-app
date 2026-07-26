@@ -259,7 +259,7 @@ class SwapExecutionService {
   /// Records analytics only after the UI's transaction monitor has confirmed
   /// the receipt. The backend independently verifies the receipt before
   /// promoting the quote event to a completed swap.
-  Future<void> recordConfirmedSwap({
+  Future<bool> recordConfirmedSwap({
     required String eventId,
     required int chainId,
     required String transactionHash,
@@ -269,7 +269,7 @@ class SwapExecutionService {
     // backend RPC. Retry transient verification failures so a real swap does
     // not disappear from analytics merely because the nodes were briefly out
     // of sync. This remains fire-and-forget and never blocks the swap UI.
-    for (var attempt = 0; attempt < 3; attempt++) {
+    for (var attempt = 0; attempt < 8; attempt++) {
       try {
         final response = await _httpClientService
             .sendWithRetry(
@@ -285,23 +285,24 @@ class SwapExecutionService {
               ),
             )
             .timeout(const Duration(seconds: 12));
-        if (response.statusCode >= 200 && response.statusCode < 300) return;
+        if (response.statusCode >= 200 && response.statusCode < 300) return true;
         if (response.statusCode != 409 && response.statusCode != 503) {
           debugPrint(
             'Confirmed swap analytics was not recorded: ${response.statusCode}',
           );
-          return;
+          return false;
         }
       } catch (error) {
-        if (attempt == 2) {
+        if (attempt == 7) {
           // Analytics must never turn a confirmed on-chain swap into a UI
           // failure.
           debugPrint('Confirmed swap analytics was not recorded: $error');
-          return;
+          return false;
         }
       }
-      await Future<void>.delayed(Duration(seconds: attempt + 1));
+      await Future<void>.delayed(Duration(seconds: (attempt + 1).clamp(1, 3)));
     }
+    return false;
   }
 
   Future<SwapExecutionResult> _executeFusion({

@@ -13,6 +13,7 @@ class TronSwapQuote {
   final double networkFeeUsd;
   final double platformFeeUsd;
   final int platformFeeBps;
+  final String? analyticsEventId;
 
   /// Unsigned Tron transaction JSON returned by SunSwap / the backend.
   /// Contains a `raw_data_hex` field that must be signed.
@@ -25,6 +26,7 @@ class TronSwapQuote {
     required this.platformFeeUsd,
     required this.platformFeeBps,
     required this.unsignedTx,
+    this.analyticsEventId,
   });
 
   double get platformFeePercent => platformFeeBps / 100.0;
@@ -199,6 +201,9 @@ class TronSwapService {
       platformFeeUsd: platformFeeUsd,
       platformFeeBps: platformFeeBps,
       unsignedTx: unsignedTx,
+      analyticsEventId:
+          data['analyticsEventId']?.toString() ??
+          data['analytics_event_id']?.toString(),
     );
   }
 
