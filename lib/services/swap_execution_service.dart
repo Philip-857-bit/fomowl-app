@@ -285,7 +285,8 @@ class SwapExecutionService {
               ),
             )
             .timeout(const Duration(seconds: 12));
-        if (response.statusCode >= 200 && response.statusCode < 300) return true;
+        if (response.statusCode >= 200 && response.statusCode < 300)
+          return true;
         if (response.statusCode != 409 && response.statusCode != 503) {
           debugPrint(
             'Confirmed swap analytics was not recorded: ${response.statusCode}',

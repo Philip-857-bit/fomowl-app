@@ -62,6 +62,10 @@ class AppEnvironment {
   static const String _backendCertSha256PinsEnv = String.fromEnvironment(
     'BACKEND_CERT_SHA256_PINS',
   );
+  static const bool _backendCertPinningEnabledEnv = bool.fromEnvironment(
+    'BACKEND_CERT_PINNING_ENABLED',
+    defaultValue: false,
+  );
 
   static final String backendBaseUrl = _resolveBackendBaseUrl();
   static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(
@@ -87,7 +91,16 @@ class AppEnvironment {
     _affiliateMiniAppAllowedOriginsEnv,
   );
 
-  /// Optional SPKI (public-key) pinning for the backend host. Each entry is
+  /// Optional SPKI (public-key) pinning for the backend host.
+  ///
+  /// Pinning is deliberately disabled by default. The production endpoint uses
+  /// an automatically renewed certificate whose key can rotate, so enforcing a
+  /// leaf-key pin would turn a valid certificate renewal into a total API
+  /// outage. Normal platform certificate-chain and hostname validation remains
+  /// enabled when pinning is disabled.
+  ///
+  /// Only enable this for an endpoint whose TLS keys and backup rotation key
+  /// are controlled operationally. Each entry is
   /// the lowercase hex SHA-256 of the certificate's DER-encoded
   /// SubjectPublicKeyInfo — NOT of the whole certificate — so the pin survives
   /// certificate renewals as long as the server keeps its key pair. When empty
@@ -97,9 +110,11 @@ class AppEnvironment {
   /// `openssl s_client -connect host:443 -servername host </dev/null |
   ///  openssl x509 -pubkey -noout | openssl pkey -pubin -outform DER |
   ///  openssl dgst -sha256`
-  static final List<String> backendCertSha256Pins = _csvEnv(
-    _backendCertSha256PinsEnv,
-  );
+  static final List<String> backendCertSha256Pins =
+      resolveBackendCertificatePins(
+        rawPins: _backendCertSha256PinsEnv,
+        pinningEnabled: _backendCertPinningEnabledEnv,
+      );
 
   /// Host component of [backendBaseUrl]; pinning is scoped to this host so
   /// third-party endpoints are unaffected.
@@ -204,12 +219,12 @@ class AppEnvironment {
       );
       return upgraded;
     }
-    if (kReleaseMode && backendCertSha256Pins.isEmpty) {
-      // Pinning is the defense-in-depth layer behind backend trust. Surface
-      // its absence loudly so release builds are shipped with pins configured.
+    if (kReleaseMode &&
+        _backendCertPinningEnabledEnv &&
+        backendCertSha256Pins.isEmpty) {
       debugPrint(
-        'AppEnvironment: WARNING — no backend certificate pins configured for '
-        'a release build (BACKEND_CERT_SHA256_PINS is empty).',
+        'AppEnvironment: WARNING — backend certificate pinning was enabled '
+        'without any pins; standard TLS validation will be used.',
       );
     }
     return configured;
@@ -311,4 +326,19 @@ class AppEnvironment {
         .where((entry) => entry.isNotEmpty)
         .toList(growable: false);
   }
+}
+
+@visibleForTesting
+List<String> resolveBackendCertificatePins({
+  required String rawPins,
+  required bool pinningEnabled,
+}) {
+  if (!pinningEnabled) {
+    return const <String>[];
+  }
+  return rawPins
+      .split(',')
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toList(growable: false);
 }

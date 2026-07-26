@@ -38,10 +38,7 @@ class ForcedUpdateDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.cardDark,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.divider,
-              width: 1,
-            ),
+            border: Border.all(color: AppColors.divider, width: 1),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xCC000000),

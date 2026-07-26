@@ -22,8 +22,10 @@ class HttpClientService {
   http.Client get client => _client;
 
   HttpClientService._internal() {
-    // Enforce SPKI (public-key) pinning for the backend host when
-    // BACKEND_CERT_SHA256_PINS is configured (no-op on web and when unset).
+    // Enforce SPKI pinning only when it has been explicitly enabled for an
+    // endpoint with operationally controlled TLS keys. Production otherwise
+    // uses the platform trust store and hostname validation, allowing normal
+    // certificate/key rotation without taking every backend request offline.
     // Other hosts reached through this shared client (RPC nodes, CoinGecko,
     // swap aggregators, ...) keep normal TLS validation.
     _client = createPinnedHttpClient(

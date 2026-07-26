@@ -17,6 +17,7 @@ Self-custodial Flutter wallet for EVM, Solana, and TRON accounts, swaps, bridges
   - `FIREBASE_PROJECT_ID`
   - `FIREBASE_STORAGE_BUCKET`
   - `FIREBASE_IOS_BUNDLE_ID`
+  - `BACKEND_CERT_PINNING_ENABLED` (defaults to `false`)
   - `BACKEND_CERT_SHA256_PINS` (optional certificate pinning; see below)
 - If `BACKEND_BASE_URL` is omitted, local defaults are used:
   - Android emulator: `http://10.0.2.2:3000`
@@ -32,6 +33,7 @@ SubjectPublicKeyInfo:
 
 ```bash
 flutter build apk --release \
+  --dart-define=BACKEND_CERT_PINNING_ENABLED=true \
   --dart-define=BACKEND_CERT_SHA256_PINS=<primary_fp>,<backup_fp>
 ```
 
