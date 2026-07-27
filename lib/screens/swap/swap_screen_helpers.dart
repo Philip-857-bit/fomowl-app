@@ -1,5 +1,6 @@
 import 'package:decimal/decimal.dart';
 
+import '../../models/token.dart';
 import '../../utils/amount_utils.dart';
 
 /// Pure, widget-state-free helpers for the swap screen.
@@ -11,6 +12,71 @@ import '../../utils/amount_utils.dart';
 
 final RegExp _txHashPattern = RegExp(r'^0x[a-fA-F0-9]{64}$');
 final RegExp _solanaPublicKeyPattern = RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
+const Set<String> _stablecoinSymbols = {
+  'USDT',
+  'USDC',
+  'BUSD',
+  'DAI',
+  'TUSD',
+  'FDUSD',
+  'USDP',
+  'FRAX',
+  'GUSD',
+  'LUSD',
+  'PYUSD',
+  'USDD',
+  'SUSD',
+  'CUSD',
+  'USDCE',
+  'USDC.E',
+  'USDT.E',
+};
+
+bool isSwapStablecoin(Token? token) =>
+    token != null && _stablecoinSymbols.contains(token.symbol.toUpperCase());
+
+bool swapTokensShareNetwork(Token a, Token b) {
+  final keyA = a.networkKey?.trim().toLowerCase() ?? '';
+  final keyB = b.networkKey?.trim().toLowerCase() ?? '';
+  return keyA.isEmpty || keyB.isEmpty || keyA == keyB;
+}
+
+bool swapTokensAreIdentical(Token? a, Token? b) {
+  if (a == null || b == null || !swapTokensShareNetwork(a, b)) return false;
+  final addressA = (a.contractAddress ?? '').trim().toLowerCase();
+  final addressB = (b.contractAddress ?? '').trim().toLowerCase();
+  if (addressA.isNotEmpty && addressB.isNotEmpty) {
+    return addressA == addressB;
+  }
+  if (addressA.isEmpty && addressB.isEmpty) {
+    return a.symbol.toLowerCase() == b.symbol.toLowerCase();
+  }
+  return false;
+}
+
+/// Choose a distinct counter token, preferring native/stable pairs.
+Token defaultSwapCounterToken(Token from, List<Token> tokens) {
+  bool isNative(Token token) => (token.contractAddress ?? '').trim().isEmpty;
+  final candidates = tokens
+      .where((token) => !swapTokensAreIdentical(token, from))
+      .toList(growable: false);
+  if (candidates.isEmpty) return from;
+
+  Token? firstWhere(bool Function(Token) predicate) {
+    for (final token in candidates) {
+      if (predicate(token)) return token;
+    }
+    return null;
+  }
+
+  if (!isNative(from)) {
+    final native = firstWhere(isNative);
+    if (native != null) return native;
+  }
+  final stablecoin = firstWhere(isSwapStablecoin);
+  if (stablecoin != null) return stablecoin;
+  return firstWhere(isNative) ?? candidates.first;
+}
 
 /// Whether [value] is a 0x-prefixed 32-byte EVM transaction hash.
 bool looksLikeTxHash(String value) => _txHashPattern.hasMatch(value);

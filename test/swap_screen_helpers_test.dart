@@ -2,8 +2,62 @@ import 'package:decimal/decimal.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fomowl_wallet/screens/swap/swap_screen_helpers.dart';
+import 'package:fomowl_wallet/models/token.dart';
 
 void main() {
+  Token token(
+    String symbol, {
+    String? address,
+    String? networkKey = 'evm:56',
+  }) => Token(
+    symbol: symbol,
+    name: symbol,
+    contractAddress: address,
+    balance: 0,
+    valueUsd: 0,
+    changePercent24h: 0,
+    networkKey: networkKey,
+  );
+
+  group('swap token pairing', () {
+    test('recognizes stablecoins case-insensitively', () {
+      expect(isSwapStablecoin(token('usdt', address: '0x1')), isTrue);
+      expect(isSwapStablecoin(token('FDUSD', address: '0x2')), isTrue);
+      expect(isSwapStablecoin(token('SOL')), isFalse);
+    });
+
+    test('identity requires the same asset and compatible network', () {
+      expect(
+        swapTokensAreIdentical(
+          token('USDT', address: '0xABC'),
+          token('Other', address: '0xabc'),
+        ),
+        isTrue,
+      );
+      expect(
+        swapTokensAreIdentical(
+          token('USDT', address: '0xabc'),
+          token('USDT', address: '0xabc', networkKey: 'evm:1'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('counter token prefers native when selling a contract token', () {
+      final usdt = token('USDT', address: '0x1');
+      final native = token('BNB');
+      final other = token('OWL', address: '0x2');
+      expect(defaultSwapCounterToken(usdt, [usdt, other, native]), native);
+    });
+
+    test('counter token prefers stablecoin when selling native', () {
+      final native = token('BNB');
+      final other = token('OWL', address: '0x2');
+      final usdt = token('USDT', address: '0x1');
+      expect(defaultSwapCounterToken(native, [native, other, usdt]), usdt);
+    });
+  });
+
   group('looksLikeTxHash', () {
     test('accepts a 0x-prefixed 32-byte hash', () {
       expect(looksLikeTxHash('0x${'a' * 64}'), isTrue);

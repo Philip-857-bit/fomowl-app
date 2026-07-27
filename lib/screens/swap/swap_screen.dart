@@ -39,25 +39,21 @@ import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data';
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'swap_screen_helpers.dart';
+import 'logic/limit_order_draft.dart';
+import 'logic/limit_order_expiry.dart';
+import 'logic/limit_order_readiness.dart';
+import 'logic/non_evm_quote_coordinator.dart';
+import 'logic/swap_price_cache.dart';
+import 'logic/swap_quote_state.dart';
 import 'widgets/bridge_tab_content.dart';
 import 'widgets/swap_limit_widgets.dart';
+import 'widgets/swap_network_card.dart';
 import 'widgets/swap_tab_content.dart';
 import 'widgets/swap_token_selector_dialog.dart';
-
-enum _LimitExpiryOption {
-  minutes15,
-  hour1,
-  hours4,
-  hours24,
-  days7,
-  never,
-  custom,
-}
 
 /// Swap Screen — DEX token swap interface
 class SwapScreen extends StatefulWidget {
@@ -79,32 +75,9 @@ class _SwapScreenState extends State<SwapScreen> {
   static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
   static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
 
-  /// Known stablecoin symbols used to detect buy vs sell mode in limit orders.
-  static const Set<String> _stablecoinSymbols = {
-    'USDT',
-    'USDC',
-    'BUSD',
-    'DAI',
-    'TUSD',
-    'USDP',
-    'FRAX',
-    'GUSD',
-    'LUSD',
-    'PYUSD',
-    'USDD',
-    'SUSD',
-    'CUSD',
-    'USDCE',
-    'USDC.E',
-    'USDT.E',
-  };
+  bool _isStablecoin(Token? token) => isSwapStablecoin(token);
 
-  bool _isStablecoin(Token? token) {
-    if (token == null) return false;
-    return _stablecoinSymbols.contains(token.symbol.toUpperCase());
-  }
-
-  bool get _isBuyMode => _isLimitBuyMode;
+  bool get _isBuyMode => _limitDraft.isBuyMode;
 
   /// The token whose price the user is targeting in limit orders.
   Token? get _limitTargetToken => _isBuyMode ? _toToken : _fromToken;
@@ -117,22 +90,17 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   void _applySuggestedLimitSide() {
-    if (_hasManualLimitSideSelection) {
-      return;
-    }
-    _isLimitBuyMode = _suggestLimitBuyMode();
+    _limitDraft.applySuggestedSide(_suggestLimitBuyMode());
   }
 
   void _setLimitOrderSide(bool isBuyMode) {
-    if (_isLimitBuyMode == isBuyMode && _hasManualLimitSideSelection) {
+    if (!_limitDraft.selectSide(isBuyMode)) {
       return;
     }
     setState(() {
-      _isLimitBuyMode = isBuyMode;
-      _hasManualLimitSideSelection = true;
       _limitPriceController.clear();
       _limitUsdController.clear();
-      _selectedLimitPriceAdjustment = 0;
+      _limitDraft.resetPriceAdjustment();
       _toController.clear();
       _platformFeeUsd = 0.0;
       _feeUsd = 0.0;
@@ -171,6 +139,7 @@ class _SwapScreenState extends State<SwapScreen> {
   late final SolanaLimitService _solanaLimitService;
   late final SolanaSwapExecutionService _solanaSwapExecutionService;
   late final TronSwapExecutionService _tronSwapExecutionService;
+  late final NonEvmQuoteCoordinator _nonEvmQuoteCoordinator;
   // Solana limit orders (kept separate from EVM LimitOrderSummary list)
   List<SolanaLimitOrder> _solanaLimitOrders = const [];
   bool _isLoadingSolanaLimitOrders = false;
@@ -188,22 +157,16 @@ class _SwapScreenState extends State<SwapScreen> {
   String? _lastWalletKey;
   String? _lastTokenSignature;
   int _walletBalanceLoadGeneration = 0;
-  int _quoteRequestId = 0;
+  final SwapQuoteState _quoteState = SwapQuoteState();
   SwapTab _activeTab = SwapTab.swap;
-  _LimitExpiryOption _limitExpiryOption = _LimitExpiryOption.hours24;
-  DateTime? _customExpiryDate;
+  final LimitOrderDraft _limitDraft = LimitOrderDraft();
   bool _isSubmittingLimit = false;
-  bool _isLimitBuyMode = false;
-  bool _hasManualLimitSideSelection = false;
   bool _isLoadingLimitOrders = false;
   bool _limitTutorialControlHidden = false;
   List<LimitOrderSummary> _limitOrders = const [];
   final Set<String> _cancellingLimitOrderIds = <String>{};
-  int _selectedLimitPriceAdjustment = 0;
   String? _lastFiatCurrencyCode;
 
-  /// Whether the +/- price adjustment chips are in positive mode.
-  bool _isPositiveAdjust = false;
   bool _limitShowcaseScheduled = false;
   final GlobalKey _limitTabShowcaseKey = GlobalKey();
   final GlobalKey _limitAmountsShowcaseKey = GlobalKey();
@@ -267,42 +230,39 @@ class _SwapScreenState extends State<SwapScreen> {
     }
   }
 
-  bool _isCalculating = false;
-  String _pricing = '';
-  String? _quoteStatusMessage;
+  bool get _isCalculating => _quoteState.isCalculating;
+  set _isCalculating(bool value) => _quoteState.isCalculating = value;
+  String get _pricing => _quoteState.pricing;
+  set _pricing(String value) => _quoteState.pricing = value;
+  String? get _quoteStatusMessage => _quoteState.statusMessage;
+  set _quoteStatusMessage(String? value) => _quoteState.statusMessage = value;
+  int get _quoteRequestId => _quoteState.requestId;
+  set _quoteRequestId(int value) => _quoteState.requestId = value;
 
   /// Trading slippage tolerance for 0x swap execution (not the platform fee).
   int _slippageBps = 50;
-  double _feeUsd = 0.0;
-  double _feeNative = 0.0;
-  double _platformFeeUsd = 0.0;
+  double get _feeUsd => _quoteState.feeUsd;
+  set _feeUsd(double value) => _quoteState.feeUsd = value;
+  double get _feeNative => _quoteState.feeNative;
+  set _feeNative(double value) => _quoteState.feeNative = value;
+  double get _platformFeeUsd => _quoteState.platformFeeUsd;
+  set _platformFeeUsd(double value) => _quoteState.platformFeeUsd = value;
   String? _walletAddress;
-  SwapQuote? _currentQuote;
-  BridgeQuote? _currentRelayQuote;
+  SwapQuote? get _currentQuote => _quoteState.evmQuote;
+  set _currentQuote(SwapQuote? value) => _quoteState.evmQuote = value;
+  BridgeQuote? get _currentRelayQuote => _quoteState.relayQuote;
+  set _currentRelayQuote(BridgeQuote? value) => _quoteState.relayQuote = value;
   int _selectedPercentage = -1; // -1 = none selected
-  /// Cached per-token USD prices fetched from CoinGecko.
-  /// Made static to persist across screen navigation. Entries carry a fetch
-  /// timestamp and are treated as stale after [_priceCacheTtl] so token↔fiat
-  /// conversions never use arbitrarily old prices.
-  static final Map<String, double> _tokenPriceCache = {};
-  static final Map<String, DateTime> _tokenPriceCacheTime = {};
-  static const Duration _priceCacheTtl = Duration(minutes: 2);
+  static final SwapPriceCache _priceCache = SwapPriceCache.shared;
 
-  /// Reads a cached price, returning null when missing or stale.
-  double? _cachedTokenPrice(String? key) {
-    if (key == null || key.isEmpty) return null;
-    final price = _tokenPriceCache[key];
-    if (price == null) return null;
-    final at = _tokenPriceCacheTime[key];
-    if (at == null || DateTime.now().difference(at) > _priceCacheTtl) {
-      return null;
-    }
-    return price;
-  }
+  double? _cachedTokenPrice(String? key) => _priceCache.read(key);
 
-  bool _isApproving = false;
-  bool _isSwapping = false;
-  bool _isSwapFlowActive = false;
+  bool get _isApproving => _quoteState.isApproving;
+  set _isApproving(bool value) => _quoteState.isApproving = value;
+  bool get _isSwapping => _quoteState.isSwapping;
+  set _isSwapping(bool value) => _quoteState.isSwapping = value;
+  bool get _isSwapFlowActive => _quoteState.isFlowActive;
+  set _isSwapFlowActive(bool value) => _quoteState.isFlowActive = value;
   bool _isGasless = false;
 
   void _handleBackNavigation() {
@@ -427,76 +387,36 @@ class _SwapScreenState extends State<SwapScreen> {
     _toController.clear();
     _limitPriceController.clear();
     _limitUsdController.clear();
-    _selectedLimitPriceAdjustment = 0;
+    _limitDraft.resetPriceAdjustment();
     return true;
   }
 
-  String _limitButtonLabel() {
+  LimitOrderReadiness _limitReadiness() {
     final bc = Provider.of<BlockchainService>(context, listen: false);
-    final sideLabel = _isBuyMode ? 'Buy' : 'Sell';
-    if (_isSubmittingLimit) {
-      return 'Submitting $sideLabel...';
-    }
-    if ((_walletAddress ?? '').isEmpty) {
-      return 'Connect Wallet';
-    }
-    if (!_isLimitSupported) {
-      return 'Network Unsupported';
-    }
-    if (_fromToken == null || _toToken == null) {
-      return 'Select Tokens';
-    }
-    if (_tokensAreIdentical(_fromToken, _toToken)) {
-      return 'Choose Different Tokens';
-    }
-    if (bc.activeFamily != ChainFamily.solana &&
-        (_fromToken != null && _toToken != null) &&
-        (!_tokenRequiresApproval(_fromToken!) ||
-            !_tokenRequiresApproval(_toToken!))) {
-      return 'Use ERC-20 Tokens';
-    }
-    if (parseDecimalAmount(_fromController.text) <= Decimal.zero) {
-      return _isBuyMode ? 'Enter Max Spend' : 'Enter Sell Amount';
-    }
-    if (parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
-      return 'Set Target Price';
-    }
-    return 'Place $sideLabel Order';
+    final from = _fromToken;
+    final to = _toToken;
+    return resolveLimitOrderReadiness(
+      isBuyMode: _isBuyMode,
+      isSubmitting: _isSubmittingLimit,
+      hasWallet: (_walletAddress ?? '').isNotEmpty,
+      isNetworkSupported: _isLimitSupported,
+      hasTokenPair: from != null && to != null,
+      hasDistinctTokens: !_tokensAreIdentical(from, to),
+      requiresErc20Pair: bc.activeFamily != ChainFamily.solana,
+      hasErc20Pair:
+          from != null &&
+          to != null &&
+          _tokenRequiresApproval(from) &&
+          _tokenRequiresApproval(to),
+      hasAmount: parseDecimalAmount(_fromController.text) > Decimal.zero,
+      hasTargetPrice:
+          parseDecimalAmount(_limitPriceController.text) > Decimal.zero,
+    );
   }
 
-  String _limitStatusMessage() {
-    final bc = Provider.of<BlockchainService>(context, listen: false);
-    if ((_walletAddress ?? '').isEmpty) {
-      return 'Connect your wallet to create limit orders.';
-    }
-    if (!_isLimitSupported) {
-      return _limitUnsupportedMessage();
-    }
-    if (_fromToken == null || _toToken == null) {
-      return 'Select both sell and receive tokens to continue.';
-    }
-    if (_tokensAreIdentical(_fromToken, _toToken)) {
-      return 'Choose two different tokens for the limit pair.';
-    }
-    if (bc.activeFamily != ChainFamily.solana &&
-        (_fromToken != null && _toToken != null) &&
-        (!_tokenRequiresApproval(_fromToken!) ||
-            !_tokenRequiresApproval(_toToken!))) {
-      return 'Limit orders currently support ERC-20 token pairs only.';
-    }
-    if (parseDecimalAmount(_fromController.text) <= Decimal.zero) {
-      return _isBuyMode
-          ? 'Enter the maximum amount you want to spend.'
-          : 'Enter how much you want to sell.';
-    }
-    if (parseDecimalAmount(_limitPriceController.text) <= Decimal.zero) {
-      return 'Set the execution price that should trigger this order.';
-    }
-    if (_isSubmittingLimit) {
-      return 'Submitting your signed ${_currentLimitKind.toUpperCase()} limit order...';
-    }
-    return 'You pay no gas to place or cancel a limit order. Your first sell-token approval may still need a network fee.';
-  }
+  String _limitButtonLabel() => _limitReadiness().buttonLabel;
+
+  String _limitStatusMessage() => _limitReadiness().statusMessage;
 
   bool get _isGaslessSupported {
     final bc = Provider.of<BlockchainService>(context, listen: false);
@@ -525,7 +445,7 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   String _limitUnsupportedMessage() {
-    return 'Limit orders are available on Solana and on supported OpenOcean EVM networks such as Ethereum, BNB, Polygon, Base, Arbitrum, Avalanche, Optimism, Fantom, Linea, Sonic, and Berachain.';
+    return limitOrderUnsupportedMessage;
   }
 
   @override
@@ -550,6 +470,10 @@ class _SwapScreenState extends State<SwapScreen> {
     _tronSwapExecutionService = TronSwapExecutionService(
       walletService: _walletService,
       swapService: _tronSwapService,
+    );
+    _nonEvmQuoteCoordinator = NonEvmQuoteCoordinator(
+      solanaService: _solanaSwapService,
+      tronService: _tronSwapService,
     );
     _fromDisplayController.addListener(_handleFromDisplayChanged);
     unawaited(_loadLimitTutorialPreferences());
@@ -788,11 +712,7 @@ class _SwapScreenState extends State<SwapScreen> {
       final prices = await blockchain.getTokenPrices(priceIds.toList());
       if (mounted) {
         setState(() {
-          _tokenPriceCache.addAll(prices);
-          final now = DateTime.now();
-          for (final key in prices.keys) {
-            _tokenPriceCacheTime[key] = now;
-          }
+          _priceCache.putAll(prices);
         });
       }
     } catch (_) {
@@ -835,7 +755,7 @@ class _SwapScreenState extends State<SwapScreen> {
             ? (findMatch(override) ?? override)
             : findMatch(_fromToken)) ??
         tokens.first;
-    Token to = findMatch(_toToken) ?? _defaultCounterToken(from, tokens);
+    Token to = findMatch(_toToken) ?? defaultSwapCounterToken(from, tokens);
     if (_tokensAreIdentical(from, to)) {
       final alternative = tokens
           .where((t) => !_tokensAreIdentical(t, from))
@@ -850,52 +770,6 @@ class _SwapScreenState extends State<SwapScreen> {
     // One-shot override is now applied.
     _initialFromOverride = null;
     _applySuggestedLimitSide();
-  }
-
-  /// Picks a sensible default counter ("to") token instead of an arbitrary
-  /// list position: prefer the chain-native token, otherwise a major stablecoin,
-  /// and only then any other distinct token. Keeps swaps defaulting to
-  /// blockchain/stablecoin pairs rather than random tokens.
-  Token _defaultCounterToken(Token from, List<Token> tokens) {
-    bool isNative(Token t) => (t.contractAddress ?? '').isEmpty;
-    const stableSymbols = {
-      'USDT',
-      'USDC',
-      'USDC.E',
-      'DAI',
-      'BUSD',
-      'TUSD',
-      'FDUSD',
-      'USDD',
-      'USDP',
-    };
-    bool isStable(Token t) => stableSymbols.contains(t.symbol.toUpperCase());
-
-    final candidates = tokens
-        .where((t) => !_tokensAreIdentical(t, from))
-        .toList();
-    if (candidates.isEmpty) {
-      return from;
-    }
-
-    Token? firstWhere(bool Function(Token) test) {
-      for (final t in candidates) {
-        if (test(t)) return t;
-      }
-      return null;
-    }
-
-    // Selling a non-native asset → default the counter to the native coin.
-    if (!isNative(from)) {
-      final native = firstWhere(isNative);
-      if (native != null) return native;
-    }
-    // Otherwise (e.g. selling the native coin) prefer a stablecoin.
-    final stable = firstWhere(isStable);
-    if (stable != null) return stable;
-
-    // Fall back to the native coin, then any distinct token.
-    return firstWhere(isNative) ?? candidates.first;
   }
 
   List<Token> _visibleTokens(List<Token> tokens) {
@@ -990,7 +864,7 @@ class _SwapScreenState extends State<SwapScreen> {
             _fromInputMode = AmountInputMode.token;
           }
           _syncFromDisplayFromTokenAmount();
-          _selectedLimitPriceAdjustment = 0;
+          _limitDraft.resetPriceAdjustment();
           _limitPriceController.clear();
           _limitUsdController.clear();
           if (_isGasless && !_tokenRequiresApproval(selectedToken)) {
@@ -998,7 +872,7 @@ class _SwapScreenState extends State<SwapScreen> {
           }
         } else {
           _toToken = selectedToken;
-          _selectedLimitPriceAdjustment = 0;
+          _limitDraft.resetPriceAdjustment();
           _limitPriceController.clear();
           _limitUsdController.clear();
         }
@@ -1046,26 +920,6 @@ class _SwapScreenState extends State<SwapScreen> {
         );
       }
     });
-  }
-
-  /// Applies a slippage floor to a base-unit output amount, returning the
-  /// reduced raw amount and its formatted string. Used so the "minimum
-  /// received" shown for Solana/Tron reflects slippage instead of the
-  /// optimistic quote.
-  ({String raw, String formatted}) _applySlippageFloor(
-    String amountOutRaw,
-    int slippageBps,
-    int decimals,
-  ) {
-    final outRaw = BigInt.tryParse(amountOutRaw) ?? BigInt.zero;
-    final bps = slippageBps.clamp(0, 10000);
-    final minRaw = outRaw * BigInt.from(10000 - bps) ~/ BigInt.from(10000);
-    final formatted = AmountUtils.formatBaseUnits(
-      minRaw,
-      decimals,
-      maxFractionDigits: math.min(decimals, 8),
-    );
-    return (raw: minRaw.toString(), formatted: formatted);
   }
 
   /// Converts a token's `double` balance to a Decimal without losing tiny
@@ -1269,25 +1123,9 @@ class _SwapScreenState extends State<SwapScreen> {
     return 0.0;
   }
 
-  bool _tokensAreIdentical(Token? a, Token? b) {
-    if (a == null || b == null) return false;
-    if (!_tokensShareNetwork(a, b)) return false;
-    final addrA = (a.contractAddress ?? '').toLowerCase();
-    final addrB = (b.contractAddress ?? '').toLowerCase();
-    if (addrA.isNotEmpty && addrB.isNotEmpty) {
-      return addrA == addrB;
-    }
-    if (addrA.isEmpty && addrB.isEmpty) {
-      return a.symbol.toLowerCase() == b.symbol.toLowerCase();
-    }
-    return false;
-  }
+  bool _tokensAreIdentical(Token? a, Token? b) => swapTokensAreIdentical(a, b);
 
-  bool _tokensShareNetwork(Token a, Token b) {
-    final keyA = a.networkKey?.trim().toLowerCase() ?? '';
-    final keyB = b.networkKey?.trim().toLowerCase() ?? '';
-    return keyA.isEmpty || keyB.isEmpty || keyA == keyB;
-  }
+  bool _tokensShareNetwork(Token a, Token b) => swapTokensShareNetwork(a, b);
 
   bool _tokenRequiresApproval(Token token) {
     final contract = token.contractAddress ?? '';
@@ -1304,26 +1142,16 @@ class _SwapScreenState extends State<SwapScreen> {
     bool preserveRequestId = false,
     bool clearQuoteStatusMessage = true,
   }) {
-    if (!preserveRequestId) {
-      _quoteRequestId++;
-    }
-    _pricing = '';
-    if (clearQuoteStatusMessage) {
-      _quoteStatusMessage = null;
-    }
-    _currentQuote = null;
-    _currentRelayQuote = null;
-    _currentSolanaQuote = null;
-    _currentTronQuote = null;
-    _feeUsd = 0.0;
-    _feeNative = 0.0;
-    _platformFeeUsd = 0.0;
+    _quoteState.reset(
+      preserveRequestId: preserveRequestId,
+      clearStatusMessage: clearQuoteStatusMessage,
+    );
     _toController.clear();
     if (clearInputAmounts) {
       _fromController.clear();
       _syncFromDisplayFromTokenAmount();
       _selectedPercentage = -1;
-      _selectedLimitPriceAdjustment = 0;
+      _limitDraft.resetPriceAdjustment();
     }
   }
 
@@ -2207,234 +2035,73 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   // ── Cached Solana/Tron quote objects (used during execution) ─────────────
-  SolanaSwapQuote? _currentSolanaQuote;
-  TronSwapQuote? _currentTronQuote;
+  SolanaSwapQuote? get _currentSolanaQuote => _quoteState.solanaQuote;
+  set _currentSolanaQuote(SolanaSwapQuote? value) =>
+      _quoteState.solanaQuote = value;
+  TronSwapQuote? get _currentTronQuote => _quoteState.tronQuote;
+  set _currentTronQuote(TronSwapQuote? value) => _quoteState.tronQuote = value;
 
   Future<void> _getSolanaQuote({required int requestId}) async {
-    try {
-      final fromMint = _fromToken!.contractAddress?.isNotEmpty == true
-          ? _fromToken!.contractAddress!
-          : 'So11111111111111111111111111111111111111112';
-      final toMint = _toToken!.contractAddress?.isNotEmpty == true
-          ? _toToken!.contractAddress!
-          : 'So11111111111111111111111111111111111111112';
-      final amountLamports = toWeiAmount(
-        _fromController.text,
-        _fromToken!.decimals,
-      );
-      final inAmount = _parseAmount(_fromController);
-      final fromTokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
-      final sellAmountUsd = inAmount > 0 && fromTokenPriceUsd > 0
-          ? inAmount * fromTokenPriceUsd
-          : null;
-      if (amountLamports == null || amountLamports == '0') {
-        if (mounted && requestId == _quoteRequestId) {
-          setState(() {
-            _quoteStatusMessage = 'Enter a valid amount.';
-            _resetQuoteState(clearQuoteStatusMessage: false);
-            _isCalculating = false;
-          });
-        }
-        return;
-      }
-
-      final quote = await _solanaSwapService
-          .getQuote(
-            fromMint: fromMint,
-            toMint: toMint,
-            amountLamports: amountLamports,
-            walletAddress: _walletAddress ?? '',
-            sellAmountUsd: sellAmountUsd,
-            slippageBps: _slippageBps,
-          )
-          .timeout(_quoteUiTimeout);
-
-      if (!mounted || requestId != _quoteRequestId) return;
-
-      if (quote != null) {
-        final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
-        final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
-        // Display a real slippage-adjusted minimum rather than the optimistic
-        // quote, so "minimum received" doesn't understate slippage risk.
-        final solMinOut = _applySlippageFloor(
-          quote.amountOutRaw,
-          _slippageBps,
-          _toToken?.decimals ?? 0,
-        );
-        setState(() {
-          _currentSolanaQuote = quote;
-          _pricing = _formatRateText(unitRate);
-          _quoteStatusMessage = null;
-          _toController.text = quote.amountOutFormatted;
-          _currentQuote = SwapQuote(
-            amountOutWei: quote.amountOutRaw,
-            minAmountOutWei: solMinOut.raw,
-            amountOutFormatted: quote.amountOutFormatted,
-            minAmountOutFormatted: solMinOut.formatted,
-            networkFeeNative: 0.0,
-            networkFeeUsd: quote.networkFeeUsd,
-            platformFeeBps: quote.platformFeeBps,
-            platformFeeUsd: quote.platformFeeUsd,
-            allowanceTarget: '',
-            allowanceSpender: '',
-            needsAllowance: false,
-            hasBalanceIssue: false,
-            balanceNeeded: null,
-            balanceActual: null,
-          );
-          _feeNative = 0.0;
-          _feeUsd = quote.networkFeeUsd;
-          _platformFeeUsd = quote.platformFeeUsd;
-          _isCalculating = false;
-        });
-      } else {
-        final mapped = _mapErrorMessage(_solanaSwapService.lastError);
-        setState(() {
-          _currentSolanaQuote = null;
-          _quoteStatusMessage = mapped;
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-          _isCalculating = false;
-        });
-      }
-    } on TimeoutException {
-      if (mounted && requestId == _quoteRequestId) {
-        setState(() {
-          _currentSolanaQuote = null;
-          _quoteStatusMessage = 'Quote timed out. Please try again.';
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-          _isCalculating = false;
-        });
-      }
-    } catch (e) {
-      if (mounted && requestId == _quoteRequestId) {
-        setState(() {
-          _currentSolanaQuote = null;
-          _quoteStatusMessage = _mapErrorMessage(e.toString());
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-          _isCalculating = false;
-        });
-      }
-    }
+    final result = await _nonEvmQuoteCoordinator.fetchSolana(
+      fromToken: _fromToken!,
+      toToken: _toToken!,
+      amountText: _fromController.text,
+      walletAddress: _walletAddress ?? '',
+      fromTokenPriceUsd: _resolvedTokenUnitPriceUsd(_fromToken),
+      slippageBps: _slippageBps,
+      timeout: _quoteUiTimeout,
+    );
+    if (!mounted || requestId != _quoteRequestId) return;
+    _applyNonEvmQuoteResult(
+      result,
+      onProviderQuote: (quote) => _currentSolanaQuote = quote,
+    );
   }
 
   Future<void> _getTronQuote({required int requestId}) async {
-    try {
-      final fromToken = _fromToken!.contractAddress?.isNotEmpty == true
-          ? _fromToken!.contractAddress!
-          : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
-      final toToken = _toToken!.contractAddress?.isNotEmpty == true
-          ? _toToken!.contractAddress!
-          : 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
-      final amountSun = toWeiAmount(_fromController.text, _fromToken!.decimals);
-      final inAmount = _parseAmount(_fromController);
-      final fromTokenPriceUsd = _resolvedTokenUnitPriceUsd(_fromToken);
-      final sellAmountUsd = inAmount > 0 && fromTokenPriceUsd > 0
-          ? inAmount * fromTokenPriceUsd
-          : null;
-      if (amountSun == null || amountSun == '0') {
-        if (mounted && requestId == _quoteRequestId) {
-          setState(() {
-            _quoteStatusMessage = 'Enter a valid amount.';
-            _resetQuoteState(clearQuoteStatusMessage: false);
-            _isCalculating = false;
-          });
-        }
+    final result = await _nonEvmQuoteCoordinator.fetchTron(
+      fromToken: _fromToken!,
+      toToken: _toToken!,
+      amountText: _fromController.text,
+      walletAddress: _walletAddress ?? '',
+      fromTokenPriceUsd: _resolvedTokenUnitPriceUsd(_fromToken),
+      slippageBps: _slippageBps,
+      timeout: _quoteUiTimeout,
+    );
+    if (!mounted || requestId != _quoteRequestId) return;
+    _applyNonEvmQuoteResult(
+      result,
+      onProviderQuote: (quote) => _currentTronQuote = quote,
+    );
+  }
+
+  void _applyNonEvmQuoteResult<T>(
+    NonEvmQuoteResult<T> result, {
+    required void Function(T quote) onProviderQuote,
+  }) {
+    setState(() {
+      if (!result.isSuccess) {
+        _quoteStatusMessage = _mapErrorMessage(result.error);
+        _resetQuoteState(
+          preserveRequestId: true,
+          clearQuoteStatusMessage: false,
+        );
+        _isCalculating = false;
         return;
       }
-
-      final quote = await _tronSwapService
-          .getQuote(
-            fromToken: fromToken,
-            toToken: toToken,
-            amountSun: amountSun,
-            walletAddress: _walletAddress ?? '',
-            sellAmountUsd: sellAmountUsd,
-            slippageBps: _slippageBps,
-          )
-          .timeout(_quoteUiTimeout);
-
-      if (!mounted || requestId != _quoteRequestId) return;
-
-      if (quote != null) {
-        final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
-        final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
-        final tronMinOut = _applySlippageFloor(
-          quote.amountOutRaw,
-          _slippageBps,
-          _toToken?.decimals ?? 0,
-        );
-        setState(() {
-          _currentTronQuote = quote;
-          _pricing = _formatRateText(unitRate);
-          _quoteStatusMessage = null;
-          _toController.text = quote.amountOutFormatted;
-          _currentQuote = SwapQuote(
-            amountOutWei: quote.amountOutRaw,
-            minAmountOutWei: tronMinOut.raw,
-            amountOutFormatted: quote.amountOutFormatted,
-            minAmountOutFormatted: tronMinOut.formatted,
-            networkFeeNative: 0.0,
-            networkFeeUsd: quote.networkFeeUsd,
-            platformFeeBps: quote.platformFeeBps,
-            platformFeeUsd: quote.platformFeeUsd,
-            allowanceTarget: '',
-            allowanceSpender: '',
-            needsAllowance: false,
-            hasBalanceIssue: false,
-            balanceNeeded: null,
-            balanceActual: null,
-          );
-          _feeNative = 0.0;
-          _feeUsd = quote.networkFeeUsd;
-          _platformFeeUsd = quote.platformFeeUsd;
-          _isCalculating = false;
-        });
-      } else {
-        final mapped = _mapErrorMessage(_tronSwapService.lastError);
-        setState(() {
-          _currentTronQuote = null;
-          _quoteStatusMessage = mapped;
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-          _isCalculating = false;
-        });
-      }
-    } on TimeoutException {
-      if (mounted && requestId == _quoteRequestId) {
-        setState(() {
-          _currentTronQuote = null;
-          _quoteStatusMessage = 'Quote timed out. Please try again.';
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-          _isCalculating = false;
-        });
-      }
-    } catch (e) {
-      if (mounted && requestId == _quoteRequestId) {
-        setState(() {
-          _currentTronQuote = null;
-          _quoteStatusMessage = _mapErrorMessage(e.toString());
-          _resetQuoteState(
-            preserveRequestId: true,
-            clearQuoteStatusMessage: false,
-          );
-          _isCalculating = false;
-        });
-      }
-    }
+      final providerQuote = result.providerQuote;
+      final swapQuote = result.swapQuote;
+      if (providerQuote == null || swapQuote == null) return;
+      onProviderQuote(providerQuote);
+      _currentQuote = swapQuote;
+      _pricing = _formatRateText(result.unitRate);
+      _quoteStatusMessage = null;
+      _toController.text = result.amountOutFormatted;
+      _feeNative = swapQuote.networkFeeNative;
+      _feeUsd = swapQuote.networkFeeUsd;
+      _platformFeeUsd = swapQuote.platformFeeUsd;
+      _isCalculating = false;
+    });
   }
 
   void _swapTokens() {
@@ -2739,78 +2406,38 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   int _resolveLimitExpirySeconds() {
-    final now = DateTime.now();
-    switch (_limitExpiryOption) {
-      case _LimitExpiryOption.minutes15:
-        return now.add(const Duration(minutes: 15)).millisecondsSinceEpoch ~/
-            1000;
-      case _LimitExpiryOption.hour1:
-        return now.add(const Duration(hours: 1)).millisecondsSinceEpoch ~/ 1000;
-      case _LimitExpiryOption.hours4:
-        return now.add(const Duration(hours: 4)).millisecondsSinceEpoch ~/ 1000;
-      case _LimitExpiryOption.hours24:
-        return now.add(const Duration(hours: 24)).millisecondsSinceEpoch ~/
-            1000;
-      case _LimitExpiryOption.days7:
-        return now.add(const Duration(days: 7)).millisecondsSinceEpoch ~/ 1000;
-      case _LimitExpiryOption.never:
-        return resolveCowNeverValidTo(now: now);
-      case _LimitExpiryOption.custom:
-        final custom = _customExpiryDate ?? now.add(const Duration(days: 1));
-        final normalized = DateTime(
-          custom.year,
-          custom.month,
-          custom.day,
-          23,
-          59,
-        );
-        return normalized.millisecondsSinceEpoch ~/ 1000;
-    }
+    return resolveLimitExpirySeconds(
+      option: _limitDraft.expiryOption,
+      customDate: _limitDraft.customExpiryDate,
+    );
   }
 
   int _resolveOpenOceanLimitExpiryMs() {
-    final targetSeconds = _resolveLimitExpirySeconds();
-    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final rawSeconds = targetSeconds - nowSeconds;
-    final durationSeconds = rawSeconds
-        .clamp(10 * 60, 365 * 24 * 60 * 60)
-        .toInt();
-    return durationSeconds * 1000;
+    return resolveOpenOceanLimitExpiryMs(
+      option: _limitDraft.expiryOption,
+      customDate: _limitDraft.customExpiryDate,
+    );
   }
 
   String _limitExpiryLabel() {
-    switch (_limitExpiryOption) {
-      case _LimitExpiryOption.minutes15:
-        return '15M';
-      case _LimitExpiryOption.hour1:
-        return '1H';
-      case _LimitExpiryOption.hours4:
-        return '4H';
-      case _LimitExpiryOption.hours24:
-        return '24H';
-      case _LimitExpiryOption.days7:
-        return '7D';
-      case _LimitExpiryOption.never:
-        return 'Never';
-      case _LimitExpiryOption.custom:
-        final custom = _customExpiryDate;
-        if (custom == null) return 'Custom';
-        return '${custom.day}/${custom.month}/${custom.year}';
-    }
+    return limitExpiryLabel(
+      _limitDraft.expiryOption,
+      customDate: _limitDraft.customExpiryDate,
+    );
   }
 
   Future<void> _pickCustomExpiry() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: _customExpiryDate ?? now.add(const Duration(days: 1)),
+      initialDate:
+          _limitDraft.customExpiryDate ?? now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
     );
     if (picked == null) return;
     setState(() {
-      _customExpiryDate = picked;
-      _limitExpiryOption = _LimitExpiryOption.custom;
+      _limitDraft.selectExpiry(LimitExpiryOption.custom, customDate: picked);
     });
   }
 
@@ -3091,7 +2718,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final triggerCondition = _isBuyMode ? 'below' : 'above';
 
     // V2 requires an expiry; "never" maps to roughly one year out.
-    final expirySeconds = _limitExpiryOption == _LimitExpiryOption.never
+    final expirySeconds = _limitDraft.expiryOption == LimitExpiryOption.never
         ? DateTime.now()
                   .add(const Duration(days: 365))
                   .millisecondsSinceEpoch ~/
@@ -3509,104 +3136,6 @@ class _SwapScreenState extends State<SwapScreen> {
 
   void _showError(String message) {
     ToastUtils.showError(message);
-  }
-
-  Widget _buildNonEvmNetworkCard(BlockchainService blockchain) {
-    final networkName = blockchain.activeNetworkName;
-    final networkColor = switch (blockchain.activeFamily) {
-      ChainFamily.solana => AppColors.primaryAccent,
-      ChainFamily.tron => AppColors.primaryAccent,
-      ChainFamily.evm => AppColors.accentRed,
-    };
-    final logoUrl = blockchain.activeNetworkLogoUrl;
-    // Show 'Change' only when the wallet supports more than one chain family
-    // (i.e. a mnemonic wallet). Pure Solana / Tron PK wallets have a single
-    // family and have nothing to switch to.
-    final canSwitch = blockchain.enabledFamilies.length > 1;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Network',
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: const Color(0xFF8894A0),
-            letterSpacing: 0.3,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: canSwitch ? _showNetworkSelector : null,
-            borderRadius: BorderRadius.circular(8),
-            child: Ink(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: const Color(0xFF151C24),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF2A333D)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: networkColor.withAlpha(40),
-                      shape: BoxShape.circle,
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: logoUrl != null && logoUrl.isNotEmpty
-                        ? Image.network(
-                            logoUrl,
-                            width: 32,
-                            height: 32,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, err, stack) => Icon(
-                              Icons.language,
-                              color: networkColor,
-                              size: 16,
-                            ),
-                          )
-                        : Icon(Icons.language, color: networkColor, size: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      networkName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  if (canSwitch) ...[
-                    Text(
-                      'Change',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 20,
-                      color: AppColors.textSecondary,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   void _showNetworkSelector() {
@@ -4284,7 +3813,16 @@ class _SwapScreenState extends State<SwapScreen> {
                         )
                       else if (blockchain.activeFamily != ChainFamily.evm &&
                           _activeTab != SwapTab.bridge)
-                        _buildNonEvmNetworkCard(blockchain),
+                        SwapNetworkCard(
+                          networkName: blockchain.activeNetworkName,
+                          accentColor:
+                              blockchain.activeFamily == ChainFamily.evm
+                              ? AppColors.accentRed
+                              : AppColors.primaryAccent,
+                          logoUrl: blockchain.activeNetworkLogoUrl,
+                          canSwitch: blockchain.enabledFamilies.length > 1,
+                          onChangeNetwork: _showNetworkSelector,
+                        ),
                       const SizedBox(height: 16),
                       if (_activeTab == SwapTab.swap)
                         SwapTabContent(
@@ -4389,7 +3927,7 @@ class _SwapScreenState extends State<SwapScreen> {
                           limitPriceController: _limitPriceController,
                           onLimitPriceChanged: (_) {
                             setState(() {
-                              _selectedLimitPriceAdjustment = 0;
+                              _limitDraft.resetPriceAdjustment();
                             });
                             _updateLimitPreview();
                           },
@@ -4413,18 +3951,17 @@ class _SwapScreenState extends State<SwapScreen> {
                           priceDeviationLabel: _limitPriceDeviationLabel(),
                           onPriceAdjust: _adjustLimitPrice,
                           selectedPriceAdjustment:
-                              _selectedLimitPriceAdjustment,
-                          isPositiveAdjust: _isPositiveAdjust,
+                              _limitDraft.selectedPriceAdjustment,
+                          isPositiveAdjust: _limitDraft.isPositiveAdjustment,
                           onToggleAdjustDirection: () {
                             setState(() {
-                              _isPositiveAdjust = !_isPositiveAdjust;
-                              _selectedLimitPriceAdjustment = 0;
+                              _limitDraft.toggleAdjustmentDirection();
                             });
                           },
                           limitUsdController: _limitUsdController,
                           onLimitUsdChanged: (value) {
                             setState(() {
-                              _selectedLimitPriceAdjustment = 0;
+                              _limitDraft.resetPriceAdjustment();
                             });
                             _onLimitUsdChanged(value);
                           },
@@ -4461,40 +3998,54 @@ class _SwapScreenState extends State<SwapScreen> {
                           submitShowcaseKey: _limitSubmitShowcaseKey,
                           expiryLabel: _limitExpiryLabel(),
                           onSelect15m: () => setState(
-                            () => _limitExpiryOption =
-                                _LimitExpiryOption.minutes15,
+                            () => _limitDraft.selectExpiry(
+                              LimitExpiryOption.minutes15,
+                            ),
                           ),
                           onSelect1h: () => setState(
-                            () => _limitExpiryOption = _LimitExpiryOption.hour1,
+                            () => _limitDraft.selectExpiry(
+                              LimitExpiryOption.hour1,
+                            ),
                           ),
                           onSelect4h: () => setState(
-                            () =>
-                                _limitExpiryOption = _LimitExpiryOption.hours4,
+                            () => _limitDraft.selectExpiry(
+                              LimitExpiryOption.hours4,
+                            ),
                           ),
                           onSelect24h: () => setState(
-                            () =>
-                                _limitExpiryOption = _LimitExpiryOption.hours24,
+                            () => _limitDraft.selectExpiry(
+                              LimitExpiryOption.hours24,
+                            ),
                           ),
                           onSelect7d: () => setState(
-                            () => _limitExpiryOption = _LimitExpiryOption.days7,
+                            () => _limitDraft.selectExpiry(
+                              LimitExpiryOption.days7,
+                            ),
                           ),
                           onSelectNever: () => setState(
-                            () => _limitExpiryOption = _LimitExpiryOption.never,
+                            () => _limitDraft.selectExpiry(
+                              LimitExpiryOption.never,
+                            ),
                           ),
                           onPickCustomExpiry: _pickCustomExpiry,
                           is15mSelected:
-                              _limitExpiryOption ==
-                              _LimitExpiryOption.minutes15,
+                              _limitDraft.expiryOption ==
+                              LimitExpiryOption.minutes15,
                           is1hSelected:
-                              _limitExpiryOption == _LimitExpiryOption.hour1,
+                              _limitDraft.expiryOption ==
+                              LimitExpiryOption.hour1,
                           is4hSelected:
-                              _limitExpiryOption == _LimitExpiryOption.hours4,
+                              _limitDraft.expiryOption ==
+                              LimitExpiryOption.hours4,
                           is24hSelected:
-                              _limitExpiryOption == _LimitExpiryOption.hours24,
+                              _limitDraft.expiryOption ==
+                              LimitExpiryOption.hours24,
                           is7dSelected:
-                              _limitExpiryOption == _LimitExpiryOption.days7,
+                              _limitDraft.expiryOption ==
+                              LimitExpiryOption.days7,
                           isNeverSelected:
-                              _limitExpiryOption == _LimitExpiryOption.never,
+                              _limitDraft.expiryOption ==
+                              LimitExpiryOption.never,
                         ),
                       const SizedBox(height: 40),
                     ],
@@ -4599,7 +4150,7 @@ class _SwapScreenState extends State<SwapScreen> {
     _syncLimitUsdField(adjusted);
     _updateLimitPreview();
     setState(() {
-      _selectedLimitPriceAdjustment = percent;
+      _limitDraft.selectedPriceAdjustment = percent;
     });
   }
 

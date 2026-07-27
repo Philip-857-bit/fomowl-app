@@ -5,8 +5,14 @@ import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
 
 /// Shared Bottom Navigation Bar
-/// 3 tabs: Wallet, Swap, Me
+/// 4 destinations: Wallet, Swap, Discover, Settings.
+///
+/// Older standalone screens still use indices 0, 1, and 2 for Wallet, Swap,
+/// and Settings, so Discover uses a private navigation value until those
+/// screens have all migrated into the app shell.
 class BottomNavBar extends StatelessWidget {
+  static const int _discoverNavigationIndex = -1;
+
   final int currentIndex;
   final Function(int) onTap;
 
@@ -44,6 +50,11 @@ class BottomNavBar extends StatelessWidget {
                     0,
                   ),
                   _buildNavItem(Icons.swap_horiz_rounded, l.swap, 1),
+                  _buildNavItem(
+                    Icons.explore_outlined,
+                    l.discoverBrowserFallbackTitle,
+                    _discoverNavigationIndex,
+                  ),
                   _buildNavItem(Icons.settings_outlined, l.settings, 2),
                 ],
               ),
@@ -119,6 +130,14 @@ class BottomNavBar extends StatelessWidget {
           '/shell',
           (route) => false,
           arguments: 3,
+        );
+        break;
+      case _discoverNavigationIndex: // Discover
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/shell',
+          (route) => false,
+          arguments: 2,
         );
         break;
     }
