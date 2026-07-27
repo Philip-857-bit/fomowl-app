@@ -564,10 +564,16 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           continue;
         }
 
-        final chain = widget.blockchain.allChains.firstWhere(
-          (c) => c.chainId == step.chainId,
-          orElse: () => widget.blockchain.activeChain,
+        final matchingChains = widget.blockchain.allChains.where(
+          (chain) => chain.chainId == step.chainId,
         );
+        if (matchingChains.isEmpty) {
+          controller.setError(
+            'The bridge provider requested an unsupported transaction network (${step.chainId}). The transaction was not sent.',
+          );
+          return;
+        }
+        final chain = matchingChains.first;
         final rpcUrl = await _rpcService.resolveWorkingRpcUrl(
           chainId: step.chainId,
           primaryRpcUrl: chain.rpcUrl,
@@ -608,6 +614,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       // Relay fills the destination side once the origin deposit lands —
       // poll the intent status until it resolves.
       if (quote.requestId.isNotEmpty) {
+        var bridgeCompleted = false;
         for (var attempt = 0; attempt < 45; attempt++) {
           await Future<void>.delayed(const Duration(seconds: 4));
           final status = await _bridgeService.getStatus(
@@ -620,7 +627,16 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             );
             return;
           }
-          if (status.isSuccess) break;
+          if (status.isSuccess) {
+            bridgeCompleted = true;
+            break;
+          }
+        }
+        if (!bridgeCompleted) {
+          controller.setError(
+            'Your origin transaction was confirmed, but the bridge is still processing. Do not submit it again. Check the transaction later for destination-chain completion.',
+          );
+          return;
         }
       }
 

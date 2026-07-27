@@ -238,6 +238,13 @@ class BridgeService {
         return null;
       }
 
+      final steps = _parseSteps(data['steps']);
+      if (steps.isEmpty) {
+        _lastError =
+            'The bridge provider returned no executable transactions. Please refresh the quote.';
+        return null;
+      }
+
       return BridgeQuote(
         originChainId:
             (data['originChainId'] as num?)?.toInt() ?? originChainId,
@@ -252,7 +259,7 @@ class BridgeService {
         platformFeeUsd: (data['platformFeeUsd'] as num?)?.toDouble(),
         timeEstimateSeconds: (data['timeEstimateSeconds'] as num?)?.toInt(),
         requestId: data['requestId']?.toString() ?? '',
-        steps: _parseSteps(data['steps']),
+        steps: steps,
       );
     } catch (e) {
       _lastError ??= AppErrorUtils.userMessage(
