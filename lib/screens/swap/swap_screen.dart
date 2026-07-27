@@ -305,6 +305,21 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _isSwapFlowActive = false;
   bool _isGasless = false;
 
+  void _handleBackNavigation() {
+    if (_activeTab != SwapTab.swap) {
+      setState(() => _activeTab = SwapTab.swap);
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    context.read<AppShellController>().selectTab(AppShellTab.wallet);
+  }
+
   String _formatRateText(double outAmount) {
     final from = _fromToken?.symbol ?? '';
     final to = _toToken?.symbol ?? '';
@@ -4090,394 +4105,404 @@ class _SwapScreenState extends State<SwapScreen> {
       buttonLabel = l.insufficientBalance;
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      bottomNavigationBar: widget.showBottomNavigation
-          ? BottomNavBar(
-              currentIndex: 1,
-              onTap: (index) =>
-                  BottomNavBar.handleNavigation(context, index, 1),
-            )
-          : null,
-      floatingActionButton:
-          _activeTab == SwapTab.limit && !_limitTutorialControlHidden
-          ? Padding(
-              padding: EdgeInsets.only(
-                bottom: widget.showBottomNavigation ? 72 : 8,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FloatingActionButton.small(
-                    heroTag: 'limitTutorialReplay',
-                    tooltip: 'Replay limit tutorial',
-                    backgroundColor: const Color(0xFFEA2A33),
-                    foregroundColor: Colors.white,
-                    onPressed: () {
-                      unawaited(_startLimitShowcaseIfNeeded(force: true));
-                    },
-                    child: const Icon(Icons.play_circle_fill_rounded),
-                  ),
-                  const SizedBox(height: 10),
-                  FloatingActionButton.small(
-                    heroTag: 'limitTutorialHide',
-                    tooltip: 'Hide tutorial button',
-                    backgroundColor: const Color(0xFF1F1F1F),
-                    foregroundColor: const Color(0xFFC8C6C5),
-                    onPressed: () {
-                      unawaited(_hideLimitTutorialControl());
-                    },
-                    child: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(
-              height: _activeTab == SwapTab.limit ? 82 : 64,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Navigator.of(context).canPop()
-                        ? IconButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                            color: Colors.white,
-                            iconSize: 20,
-                            tooltip: MaterialLocalizations.of(
-                              context,
-                            ).backButtonTooltip,
-                          )
-                        : const SizedBox(width: 48),
-                  ),
-                  Center(
-                    child: _activeTab == SwapTab.limit
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Limit Order',
-                                style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                'Place a limit order to buy or sell tokens',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: const Color(0xFF8894A0),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Text(
-                            _activeTab == SwapTab.bridge ? 'BRIDGE' : 'SWAP',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 1.8,
-                            ),
-                          ),
-                  ),
-                  if (_activeTab == SwapTab.limit)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        onPressed: () {
-                          unawaited(_startLimitShowcaseIfNeeded(force: true));
-                        },
-                        icon: const Icon(Icons.help_outline_rounded),
-                        color: const Color(0xFF8894A0),
-                        tooltip: 'Limit order help',
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+    return PopScope(
+      canPop: _activeTab == SwapTab.swap,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _activeTab != SwapTab.swap) {
+          setState(() => _activeTab = SwapTab.swap);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        bottomNavigationBar: widget.showBottomNavigation
+            ? BottomNavBar(
+                currentIndex: 1,
+                onTap: (index) =>
+                    BottomNavBar.handleNavigation(context, index, 1),
+              )
+            : null,
+        floatingActionButton:
+            _activeTab == SwapTab.limit && !_limitTutorialControlHidden
+            ? Padding(
+                padding: EdgeInsets.only(
+                  bottom: widget.showBottomNavigation ? 72 : 8,
+                ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const SizedBox(height: 24),
-                    Showcase(
-                      key: _limitTabShowcaseKey,
-                      title: 'Limit orders',
-                      description:
-                          'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
-                      child: SwapTabSelector(
-                        activeTab: _activeTab,
-                        showLimitTab: _supportsLimitTab(blockchain),
-                        showBridgeTab:
-                            blockchain.activeFamily == ChainFamily.evm ||
-                            blockchain.activeFamily == ChainFamily.solana,
-                        onChanged: (tab) {
-                          if (_activeTab == tab) return;
-                          if (tab == SwapTab.limit &&
-                              !_supportsLimitTab(blockchain)) {
-                            return;
-                          }
-                          if (tab == SwapTab.bridge &&
-                              blockchain.activeFamily == ChainFamily.tron) {
-                            return;
-                          }
-                          setState(() {
-                            _activeTab = tab;
-                            if (tab == SwapTab.limit) {
-                              _ensureLimitEligiblePair();
-                            }
-                          });
-                          if (tab == SwapTab.swap) {
-                            _getQuote();
-                          } else if (tab == SwapTab.limit) {
-                            _updateLimitPreview();
-                            unawaited(
-                              _refreshLimitOrders(
-                                showLoading: _limitOrders.isEmpty,
-                              ),
-                            );
-                            unawaited(_startLimitShowcaseIfNeeded());
-                          }
-                        },
+                    FloatingActionButton.small(
+                      heroTag: 'limitTutorialReplay',
+                      tooltip: 'Replay limit tutorial',
+                      backgroundColor: const Color(0xFFEA2A33),
+                      foregroundColor: Colors.white,
+                      onPressed: () {
+                        unawaited(_startLimitShowcaseIfNeeded(force: true));
+                      },
+                      child: const Icon(Icons.play_circle_fill_rounded),
+                    ),
+                    const SizedBox(height: 10),
+                    FloatingActionButton.small(
+                      heroTag: 'limitTutorialHide',
+                      tooltip: 'Hide tutorial button',
+                      backgroundColor: const Color(0xFF1F1F1F),
+                      foregroundColor: const Color(0xFFC8C6C5),
+                      onPressed: () {
+                        unawaited(_hideLimitTutorialControl());
+                      },
+                      child: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        body: SafeArea(
+          child: Column(
+            children: [
+              SizedBox(
+                height: _activeTab == SwapTab.limit ? 82 : 64,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: IconButton(
+                        onPressed: _handleBackNavigation,
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                        color: Colors.white,
+                        iconSize: 20,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
                       ),
                     ),
-                    const SizedBox(height: 19),
-                    // The bridge tab embeds its own origin-chain selector in
-                    // the "BRIDGE FROM" card, so skip the network card there.
-                    if (blockchain.activeFamily == ChainFamily.evm &&
-                        _activeTab != SwapTab.bridge)
-                      NetworkCard(
-                        chain: blockchain.activeChain,
-                        onTap: _showNetworkSelector,
-                      )
-                    else if (blockchain.activeFamily != ChainFamily.evm &&
-                        _activeTab != SwapTab.bridge)
-                      _buildNonEvmNetworkCard(blockchain),
-                    const SizedBox(height: 16),
-                    if (_activeTab == SwapTab.swap)
-                      SwapTabContent(
-                        blockchain: blockchain,
-                        fromController: _fromDisplayController,
-                        fromToken: _fromToken,
-                        fromUsdValue: fromUsdValue,
-                        selectedPercentage: _selectedPercentage,
-                        onAmountChanged: (_) {},
-                        fromInputMode: _fromInputMode,
-                        onToggleFromInputMode:
-                            _resolvedTokenUnitPriceUsd(_fromToken) > 0
-                            ? _toggleFromInputMode
-                            : null,
-                        fromEquivalentText: _fromEquivalentText(),
-                        onSelectFromToken: () => _showTokenSelector(true),
-                        onPercentSelected: _setPercentage,
-                        onSwapTokens: _swapTokens,
-                        toToken: _toToken,
-                        toAmountText: _toController.text,
-                        toUsdValue: toUsdValue,
-                        toBalance: _toToken?.balance ?? 0,
-                        isCalculating: _isCalculating,
-                        onSelectToToken: () => _showTokenSelector(false),
-                        currentQuote: _currentQuote,
-                        platformFeeUsd: _platformFeeUsd,
-                        feeUsd: _feeUsd,
-                        feeNative: _feeNative,
-                        priceText: priceText,
-                        receiveText: receiveText,
-                        priceSeparator: _priceSeparator,
-                        nativePriceUsd:
-                            _cachedTokenPrice(
-                              blockchain.activeNetworkCoinGeckoId,
-                            ) ??
-                            0.0,
-                        gaslessFeeCovered: _isGasless,
-                        quoteStatusMessage: _quoteStatusMessage,
-                        swapEnabled: swapEnabled,
-                        swapBusy: swapBusy,
-                        onSwapPressed: _executeSwap,
-                        buttonLabel: buttonLabel,
-                        showGaslessToggle: _canOfferGaslessToggle,
-                        isGasless: _isGasless,
-                        onGaslessChanged: (val) {
-                          setState(() {
-                            _isGasless = val;
-                            _resetQuoteState();
-                          });
-                          _getQuote();
-                        },
-                        slippageBps: _slippageBps,
-                        onSlippageChanged: (bps) {
-                          setState(() => _slippageBps = bps);
-                          _resetQuoteState();
-                          _getQuote();
-                        },
-                      )
-                    else if (_activeTab == SwapTab.bridge)
-                      BridgeTabContent(
-                        blockchain: blockchain,
-                        walletService: _walletService,
-                        walletAddress: _walletAddress,
-                        tokens: _visibleTokens(blockchain.tokens),
-                        onSelectFromChain: _showNetworkSelector,
-                      )
-                    else if (blockchain.activeFamily == ChainFamily.evm ||
-                        blockchain.activeFamily == ChainFamily.solana)
-                      LimitTabContent(
-                        blockchain: blockchain,
-                        fromController: _fromDisplayController,
-                        fromToken: _fromToken,
-                        fromUsdValue: fromUsdValue,
-                        selectedPercentage: _selectedPercentage,
-                        onAmountChanged: (_) {},
-                        fromInputMode: _fromInputMode,
-                        onToggleFromInputMode:
-                            _resolvedTokenUnitPriceUsd(_fromToken) > 0
-                            ? _toggleFromInputMode
-                            : null,
-                        fromEquivalentText: _fromEquivalentText(),
-                        limitPriceInputMode: _limitPriceInputMode,
-                        onToggleLimitPriceInputMode:
-                            _resolvedTokenUnitPriceUsd(_limitQuoteToken) > 0
-                            ? _toggleLimitPriceInputMode
-                            : null,
-                        onSelectFromToken: () => _showTokenSelector(true),
-                        onPercentSelected: _setPercentage,
-                        onSwapTokens: _swapTokens,
-                        toToken: _toToken,
-                        toAmountText: _toController.text,
-                        toUsdValue: toUsdValue,
-                        toBalance: _toToken?.balance ?? 0,
-                        onSelectToToken: () => _showTokenSelector(false),
-                        isBuyMode: _isBuyMode,
-                        onSelectBuyMode: () => _setLimitOrderSide(true),
-                        onSelectSellMode: () => _setLimitOrderSide(false),
-                        limitBusy: _isSubmittingLimit,
-                        limitEnabled: _limitEnabled(),
-                        limitButtonLabel: limitButtonLabel,
-                        limitStatusMessage: limitStatusMessage,
-                        limitPriceController: _limitPriceController,
-                        onLimitPriceChanged: (_) {
-                          setState(() {
-                            _selectedLimitPriceAdjustment = 0;
-                          });
-                          _updateLimitPreview();
-                        },
-                        priceSeparator: _priceSeparator,
-                        executionPriceText: _limitExecutionPriceText(),
-                        executionPriceUsdLabel: _limitExecutionPriceUsdText(),
-                        receiveText: _toController.text.isNotEmpty
-                            ? '${_toController.text} ${_toToken?.symbol ?? ''}'
-                            : '--',
-                        nativePriceUsd:
-                            _cachedTokenPrice(
-                              blockchain.activeNetworkCoinGeckoId,
-                            ) ??
-                            0.0,
-                        platformFeePercent: 0.0,
-                        platformFeeUsd: _platformFeeUsd,
-                        feeUsd: _feeUsd,
-                        feeNative: _feeNative,
-                        targetTokenSymbol: _limitTargetToken?.symbol ?? '',
-                        quoteToken: _limitQuoteToken,
-                        priceDeviationLabel: _limitPriceDeviationLabel(),
-                        onPriceAdjust: _adjustLimitPrice,
-                        selectedPriceAdjustment: _selectedLimitPriceAdjustment,
-                        isPositiveAdjust: _isPositiveAdjust,
-                        onToggleAdjustDirection: () {
-                          setState(() {
-                            _isPositiveAdjust = !_isPositiveAdjust;
-                            _selectedLimitPriceAdjustment = 0;
-                          });
-                        },
-                        limitUsdController: _limitUsdController,
-                        onLimitUsdChanged: (value) {
-                          setState(() {
-                            _selectedLimitPriceAdjustment = 0;
-                          });
-                          _onLimitUsdChanged(value);
-                        },
-                        onSubmitLimit: _submitLimitOrder,
-                        activeOrders: _activeChainLimitOrders,
-                        isLoadingActiveOrders:
-                            blockchain.activeFamily == ChainFamily.solana
-                            ? _isLoadingSolanaLimitOrders
-                            : _isLoadingLimitOrders,
-                        onRefreshActiveOrders: () {
-                          unawaited(_refreshLimitOrders(surfaceErrors: true));
-                        },
-                        onCancelActiveOrder: (order) {
-                          if (blockchain.activeFamily == ChainFamily.solana) {
-                            final solanaOrder = _solanaLimitOrders
-                                .where((o) => o.orderAccount == order.id)
-                                .firstOrNull;
-                            if (solanaOrder != null) {
-                              unawaited(_cancelSolanaLimitOrder(solanaOrder));
-                            }
-                          } else {
-                            unawaited(_cancelLimitOrder(order));
-                          }
-                        },
-                        cancellingOrderIds:
-                            blockchain.activeFamily == ChainFamily.solana
-                            ? _cancellingSolanaOrderAccounts
-                            : _cancellingLimitOrderIds,
-                        amountShowcaseKey: _limitAmountsShowcaseKey,
-                        executionPriceShowcaseKey:
-                            _limitExecutionPriceShowcaseKey,
-                        expiryShowcaseKey: _limitExpiryShowcaseKey,
-                        summaryShowcaseKey: _limitSummaryShowcaseKey,
-                        submitShowcaseKey: _limitSubmitShowcaseKey,
-                        expiryLabel: _limitExpiryLabel(),
-                        onSelect15m: () => setState(
-                          () =>
-                              _limitExpiryOption = _LimitExpiryOption.minutes15,
+                    Center(
+                      child: _activeTab == SwapTab.limit
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Limit Order',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Place a limit order to buy or sell tokens',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF8894A0),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              _activeTab == SwapTab.bridge ? 'BRIDGE' : 'SWAP',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 1.8,
+                              ),
+                            ),
+                    ),
+                    if (_activeTab == SwapTab.limit)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: IconButton(
+                          onPressed: () {
+                            unawaited(_startLimitShowcaseIfNeeded(force: true));
+                          },
+                          icon: const Icon(Icons.help_outline_rounded),
+                          color: const Color(0xFF8894A0),
+                          tooltip: 'Limit order help',
                         ),
-                        onSelect1h: () => setState(
-                          () => _limitExpiryOption = _LimitExpiryOption.hour1,
-                        ),
-                        onSelect4h: () => setState(
-                          () => _limitExpiryOption = _LimitExpiryOption.hours4,
-                        ),
-                        onSelect24h: () => setState(
-                          () => _limitExpiryOption = _LimitExpiryOption.hours24,
-                        ),
-                        onSelect7d: () => setState(
-                          () => _limitExpiryOption = _LimitExpiryOption.days7,
-                        ),
-                        onSelectNever: () => setState(
-                          () => _limitExpiryOption = _LimitExpiryOption.never,
-                        ),
-                        onPickCustomExpiry: _pickCustomExpiry,
-                        is15mSelected:
-                            _limitExpiryOption == _LimitExpiryOption.minutes15,
-                        is1hSelected:
-                            _limitExpiryOption == _LimitExpiryOption.hour1,
-                        is4hSelected:
-                            _limitExpiryOption == _LimitExpiryOption.hours4,
-                        is24hSelected:
-                            _limitExpiryOption == _LimitExpiryOption.hours24,
-                        is7dSelected:
-                            _limitExpiryOption == _LimitExpiryOption.days7,
-                        isNeverSelected:
-                            _limitExpiryOption == _LimitExpiryOption.never,
                       ),
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
-            ),
-          ],
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      Showcase(
+                        key: _limitTabShowcaseKey,
+                        title: 'Limit orders',
+                        description:
+                            'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
+                        child: SwapTabSelector(
+                          activeTab: _activeTab,
+                          showLimitTab: _supportsLimitTab(blockchain),
+                          showBridgeTab:
+                              blockchain.activeFamily == ChainFamily.evm ||
+                              blockchain.activeFamily == ChainFamily.solana,
+                          onChanged: (tab) {
+                            if (_activeTab == tab) return;
+                            if (tab == SwapTab.limit &&
+                                !_supportsLimitTab(blockchain)) {
+                              return;
+                            }
+                            if (tab == SwapTab.bridge &&
+                                blockchain.activeFamily == ChainFamily.tron) {
+                              return;
+                            }
+                            setState(() {
+                              _activeTab = tab;
+                              if (tab == SwapTab.limit) {
+                                _ensureLimitEligiblePair();
+                              }
+                            });
+                            if (tab == SwapTab.swap) {
+                              _getQuote();
+                            } else if (tab == SwapTab.limit) {
+                              _updateLimitPreview();
+                              unawaited(
+                                _refreshLimitOrders(
+                                  showLoading: _limitOrders.isEmpty,
+                                ),
+                              );
+                              unawaited(_startLimitShowcaseIfNeeded());
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 19),
+                      // The bridge tab embeds its own origin-chain selector in
+                      // the "BRIDGE FROM" card, so skip the network card there.
+                      if (blockchain.activeFamily == ChainFamily.evm &&
+                          _activeTab != SwapTab.bridge)
+                        NetworkCard(
+                          chain: blockchain.activeChain,
+                          onTap: _showNetworkSelector,
+                        )
+                      else if (blockchain.activeFamily != ChainFamily.evm &&
+                          _activeTab != SwapTab.bridge)
+                        _buildNonEvmNetworkCard(blockchain),
+                      const SizedBox(height: 16),
+                      if (_activeTab == SwapTab.swap)
+                        SwapTabContent(
+                          blockchain: blockchain,
+                          fromController: _fromDisplayController,
+                          fromToken: _fromToken,
+                          fromUsdValue: fromUsdValue,
+                          selectedPercentage: _selectedPercentage,
+                          onAmountChanged: (_) {},
+                          fromInputMode: _fromInputMode,
+                          onToggleFromInputMode:
+                              _resolvedTokenUnitPriceUsd(_fromToken) > 0
+                              ? _toggleFromInputMode
+                              : null,
+                          fromEquivalentText: _fromEquivalentText(),
+                          onSelectFromToken: () => _showTokenSelector(true),
+                          onPercentSelected: _setPercentage,
+                          onSwapTokens: _swapTokens,
+                          toToken: _toToken,
+                          toAmountText: _toController.text,
+                          toUsdValue: toUsdValue,
+                          toBalance: _toToken?.balance ?? 0,
+                          isCalculating: _isCalculating,
+                          onSelectToToken: () => _showTokenSelector(false),
+                          currentQuote: _currentQuote,
+                          platformFeeUsd: _platformFeeUsd,
+                          feeUsd: _feeUsd,
+                          feeNative: _feeNative,
+                          priceText: priceText,
+                          receiveText: receiveText,
+                          priceSeparator: _priceSeparator,
+                          nativePriceUsd:
+                              _cachedTokenPrice(
+                                blockchain.activeNetworkCoinGeckoId,
+                              ) ??
+                              0.0,
+                          gaslessFeeCovered: _isGasless,
+                          quoteStatusMessage: _quoteStatusMessage,
+                          swapEnabled: swapEnabled,
+                          swapBusy: swapBusy,
+                          onSwapPressed: _executeSwap,
+                          buttonLabel: buttonLabel,
+                          showGaslessToggle: _canOfferGaslessToggle,
+                          isGasless: _isGasless,
+                          onGaslessChanged: (val) {
+                            setState(() {
+                              _isGasless = val;
+                              _resetQuoteState();
+                            });
+                            _getQuote();
+                          },
+                          slippageBps: _slippageBps,
+                          onSlippageChanged: (bps) {
+                            setState(() => _slippageBps = bps);
+                            _resetQuoteState();
+                            _getQuote();
+                          },
+                        )
+                      else if (_activeTab == SwapTab.bridge)
+                        BridgeTabContent(
+                          blockchain: blockchain,
+                          walletService: _walletService,
+                          walletAddress: _walletAddress,
+                          tokens: _visibleTokens(blockchain.tokens),
+                          onSelectFromChain: _showNetworkSelector,
+                        )
+                      else if (blockchain.activeFamily == ChainFamily.evm ||
+                          blockchain.activeFamily == ChainFamily.solana)
+                        LimitTabContent(
+                          blockchain: blockchain,
+                          fromController: _fromDisplayController,
+                          fromToken: _fromToken,
+                          fromUsdValue: fromUsdValue,
+                          selectedPercentage: _selectedPercentage,
+                          onAmountChanged: (_) {},
+                          fromInputMode: _fromInputMode,
+                          onToggleFromInputMode:
+                              _resolvedTokenUnitPriceUsd(_fromToken) > 0
+                              ? _toggleFromInputMode
+                              : null,
+                          fromEquivalentText: _fromEquivalentText(),
+                          limitPriceInputMode: _limitPriceInputMode,
+                          onToggleLimitPriceInputMode:
+                              _resolvedTokenUnitPriceUsd(_limitQuoteToken) > 0
+                              ? _toggleLimitPriceInputMode
+                              : null,
+                          onSelectFromToken: () => _showTokenSelector(true),
+                          onPercentSelected: _setPercentage,
+                          onSwapTokens: _swapTokens,
+                          toToken: _toToken,
+                          toAmountText: _toController.text,
+                          toUsdValue: toUsdValue,
+                          toBalance: _toToken?.balance ?? 0,
+                          onSelectToToken: () => _showTokenSelector(false),
+                          isBuyMode: _isBuyMode,
+                          onSelectBuyMode: () => _setLimitOrderSide(true),
+                          onSelectSellMode: () => _setLimitOrderSide(false),
+                          limitBusy: _isSubmittingLimit,
+                          limitEnabled: _limitEnabled(),
+                          limitButtonLabel: limitButtonLabel,
+                          limitStatusMessage: limitStatusMessage,
+                          limitPriceController: _limitPriceController,
+                          onLimitPriceChanged: (_) {
+                            setState(() {
+                              _selectedLimitPriceAdjustment = 0;
+                            });
+                            _updateLimitPreview();
+                          },
+                          priceSeparator: _priceSeparator,
+                          executionPriceText: _limitExecutionPriceText(),
+                          executionPriceUsdLabel: _limitExecutionPriceUsdText(),
+                          receiveText: _toController.text.isNotEmpty
+                              ? '${_toController.text} ${_toToken?.symbol ?? ''}'
+                              : '--',
+                          nativePriceUsd:
+                              _cachedTokenPrice(
+                                blockchain.activeNetworkCoinGeckoId,
+                              ) ??
+                              0.0,
+                          platformFeePercent: 0.0,
+                          platformFeeUsd: _platformFeeUsd,
+                          feeUsd: _feeUsd,
+                          feeNative: _feeNative,
+                          targetTokenSymbol: _limitTargetToken?.symbol ?? '',
+                          quoteToken: _limitQuoteToken,
+                          priceDeviationLabel: _limitPriceDeviationLabel(),
+                          onPriceAdjust: _adjustLimitPrice,
+                          selectedPriceAdjustment:
+                              _selectedLimitPriceAdjustment,
+                          isPositiveAdjust: _isPositiveAdjust,
+                          onToggleAdjustDirection: () {
+                            setState(() {
+                              _isPositiveAdjust = !_isPositiveAdjust;
+                              _selectedLimitPriceAdjustment = 0;
+                            });
+                          },
+                          limitUsdController: _limitUsdController,
+                          onLimitUsdChanged: (value) {
+                            setState(() {
+                              _selectedLimitPriceAdjustment = 0;
+                            });
+                            _onLimitUsdChanged(value);
+                          },
+                          onSubmitLimit: _submitLimitOrder,
+                          activeOrders: _activeChainLimitOrders,
+                          isLoadingActiveOrders:
+                              blockchain.activeFamily == ChainFamily.solana
+                              ? _isLoadingSolanaLimitOrders
+                              : _isLoadingLimitOrders,
+                          onRefreshActiveOrders: () {
+                            unawaited(_refreshLimitOrders(surfaceErrors: true));
+                          },
+                          onCancelActiveOrder: (order) {
+                            if (blockchain.activeFamily == ChainFamily.solana) {
+                              final solanaOrder = _solanaLimitOrders
+                                  .where((o) => o.orderAccount == order.id)
+                                  .firstOrNull;
+                              if (solanaOrder != null) {
+                                unawaited(_cancelSolanaLimitOrder(solanaOrder));
+                              }
+                            } else {
+                              unawaited(_cancelLimitOrder(order));
+                            }
+                          },
+                          cancellingOrderIds:
+                              blockchain.activeFamily == ChainFamily.solana
+                              ? _cancellingSolanaOrderAccounts
+                              : _cancellingLimitOrderIds,
+                          amountShowcaseKey: _limitAmountsShowcaseKey,
+                          executionPriceShowcaseKey:
+                              _limitExecutionPriceShowcaseKey,
+                          expiryShowcaseKey: _limitExpiryShowcaseKey,
+                          summaryShowcaseKey: _limitSummaryShowcaseKey,
+                          submitShowcaseKey: _limitSubmitShowcaseKey,
+                          expiryLabel: _limitExpiryLabel(),
+                          onSelect15m: () => setState(
+                            () => _limitExpiryOption =
+                                _LimitExpiryOption.minutes15,
+                          ),
+                          onSelect1h: () => setState(
+                            () => _limitExpiryOption = _LimitExpiryOption.hour1,
+                          ),
+                          onSelect4h: () => setState(
+                            () =>
+                                _limitExpiryOption = _LimitExpiryOption.hours4,
+                          ),
+                          onSelect24h: () => setState(
+                            () =>
+                                _limitExpiryOption = _LimitExpiryOption.hours24,
+                          ),
+                          onSelect7d: () => setState(
+                            () => _limitExpiryOption = _LimitExpiryOption.days7,
+                          ),
+                          onSelectNever: () => setState(
+                            () => _limitExpiryOption = _LimitExpiryOption.never,
+                          ),
+                          onPickCustomExpiry: _pickCustomExpiry,
+                          is15mSelected:
+                              _limitExpiryOption ==
+                              _LimitExpiryOption.minutes15,
+                          is1hSelected:
+                              _limitExpiryOption == _LimitExpiryOption.hour1,
+                          is4hSelected:
+                              _limitExpiryOption == _LimitExpiryOption.hours4,
+                          is24hSelected:
+                              _limitExpiryOption == _LimitExpiryOption.hours24,
+                          is7dSelected:
+                              _limitExpiryOption == _LimitExpiryOption.days7,
+                          isNeverSelected:
+                              _limitExpiryOption == _LimitExpiryOption.never,
+                        ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

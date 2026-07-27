@@ -508,7 +508,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute<void>(
                                     builder: (_) => const SwapScreen(
-                                      showBottomNavigation: false,
+                                      showBottomNavigation: true,
                                     ),
                                   ),
                                 );
