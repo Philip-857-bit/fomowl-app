@@ -32,7 +32,6 @@ import '../../services/wallet_history_service.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
-import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/value_formatter.dart';
@@ -3010,18 +3009,6 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.enterValidAmount);
       return;
     }
-
-    // Require an authentication factor before signing/broadcasting in-app, the
-    // same checkpoint the dApp bridge enforces. Without it, an attacker with an
-    // unlocked session could drain funds; it's also a human confirmation step.
-    final authorized = await SensitiveAccessGuard.verify(
-      context,
-      reason: 'Authenticate to authorize this swap',
-    );
-    if (!authorized) {
-      return;
-    }
-    if (!mounted) return;
 
     TransactionProgressController? progressController;
     if (mounted) {
