@@ -1465,7 +1465,19 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     if (!dataUrl.startsWith('data:image/png;base64,')) {
       return const <String, dynamic>{
         'ok': false,
+        'code': 'RECEIPT_INVALID_IMAGE',
         'error': 'Receipt image must be a PNG data URL.',
+      };
+    }
+    // A 640px receipt is normally well below 1 MB. Bound the untrusted
+    // WebView payload before it crosses the platform channel or is decoded by
+    // Android, where an oversized Base64 string could otherwise exhaust memory.
+    const maxReceiptDataUrlCharacters = 6 * 1024 * 1024;
+    if (dataUrl.length > maxReceiptDataUrlCharacters) {
+      return const <String, dynamic>{
+        'ok': false,
+        'code': 'RECEIPT_IMAGE_TOO_LARGE',
+        'error': 'The receipt image is too large to save or share.',
       };
     }
     try {

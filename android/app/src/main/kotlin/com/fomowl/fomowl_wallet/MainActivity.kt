@@ -26,6 +26,8 @@ import java.io.File
 
 class MainActivity : FlutterFragmentActivity() {
 	private val logTag = "OwlletReceipt"
+	private val maxReceiptImageBytes = 4 * 1024 * 1024
+	private val maxReceiptBase64Characters = 6 * 1024 * 1024
 	private val cameraPermissionChannelName = "owllet/camera_permission"
 	private val receiptFilesChannelName = "owllet/receipt_files"
 	private val cameraPermissionRequestCode = 0xCA11
@@ -134,8 +136,26 @@ class MainActivity : FlutterFragmentActivity() {
 			return null
 		}
 		val encoded = dataUrl.substring(markerIndex + marker.length)
-		val bytes = Base64.decode(encoded, Base64.DEFAULT)
+		if (encoded.isEmpty() || encoded.length > maxReceiptBase64Characters) {
+			return null
+		}
+		val bytes = try {
+			Base64.decode(encoded, Base64.DEFAULT)
+		} catch (_: IllegalArgumentException) {
+			return null
+		}
+		if (bytes.isEmpty() || bytes.size > maxReceiptImageBytes || !hasPngSignature(bytes)) {
+			return null
+		}
 		return Pair(safeName, bytes)
+	}
+
+	private fun hasPngSignature(bytes: ByteArray): Boolean {
+		val signature = byteArrayOf(
+			0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+		)
+		return bytes.size >= signature.size &&
+			signature.indices.all { index -> bytes[index] == signature[index] }
 	}
 
 	private fun saveReceiptImage(arguments: Any?, result: MethodChannel.Result) {
