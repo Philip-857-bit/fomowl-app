@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues
+import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -157,7 +158,13 @@ class MainActivity : FlutterFragmentActivity() {
 					result.success(mapOf("ok" to false, "error" to "Unable to create receipt file."))
 					return
 				}
-				resolver.openOutputStream(uri)?.use { it.write(bytes) }
+				val stream = resolver.openOutputStream(uri)
+				if (stream == null) {
+					resolver.delete(uri, null, null)
+					result.success(mapOf("ok" to false, "error" to "Unable to open the receipt file."))
+					return
+				}
+				stream.use { it.write(bytes) }
 				values.clear()
 				values.put(MediaStore.Images.Media.IS_PENDING, 0)
 				resolver.update(uri, values, null, null)
@@ -197,12 +204,18 @@ class MainActivity : FlutterFragmentActivity() {
 			val intent = Intent(Intent.ACTION_SEND).apply {
 				type = "image/png"
 				putExtra(Intent.EXTRA_STREAM, uri)
+				// Some Android share targets only inherit temporary URI access
+				// from ClipData, even when EXTRA_STREAM and the grant flag exist.
+				clipData = ClipData.newRawUri("Owllet receipt", uri)
 				if (text.isNotBlank()) {
 					putExtra(Intent.EXTRA_TEXT, text)
 				}
 				addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
 			}
-			startActivity(Intent.createChooser(intent, "Share receipt"))
+			val chooser = Intent.createChooser(intent, "Share receipt").apply {
+				addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+			}
+			startActivity(chooser)
 			result.success(mapOf("ok" to true))
 		} catch (error: Exception) {
 			result.success(mapOf("ok" to false, "error" to (error.message ?: "Unable to share receipt.")))
