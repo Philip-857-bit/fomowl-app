@@ -182,6 +182,16 @@ void main() {
       );
     });
 
+    test('does not describe a generic EVM swap balance error as SOL', () {
+      expect(
+        AppErrorUtils.userMessage(
+          'Swap failed: insufficient funds for gas * price + value',
+          fallback: fallback,
+        ),
+        isNot(contains('SOL')),
+      );
+    });
+
     test(
       'maps Jupiter empty transaction insufficient funds before route message',
       () {

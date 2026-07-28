@@ -40,6 +40,7 @@ class BridgeTabContent extends StatefulWidget {
 
   /// Opens the app's network selector (switches the active chain).
   final VoidCallback onSelectFromChain;
+  final Future<void> Function()? onBridgeCompleted;
 
   const BridgeTabContent({
     super.key,
@@ -48,6 +49,7 @@ class BridgeTabContent extends StatefulWidget {
     required this.walletAddress,
     required this.tokens,
     required this.onSelectFromChain,
+    this.onBridgeCompleted,
   });
 
   @override
@@ -643,6 +645,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       controller.setSuccess(
         reference: firstTxHash != null ? shortHash(firstTxHash) : null,
       );
+
+      // The bridge changes the origin balance immediately. Notify the owning
+      // swap screen so it can bypass token caches now and perform its existing
+      // delayed follow-up refresh while the destination settlement propagates.
+      try {
+        await widget.onBridgeCompleted?.call();
+      } catch (error) {
+        debugPrint('Post-bridge wallet refresh failed: $error');
+      }
 
       // Best-effort: log the platform fee on this completed bridge for the admin
       // Bridge Fees analytics. Fire-and-forget — never affects the user.

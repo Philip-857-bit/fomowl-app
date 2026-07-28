@@ -2262,6 +2262,8 @@ class BlockchainService extends ChangeNotifier {
         final contractAddress = _asTrimmedString(e['contractAddress']);
         final entryNetworkKey =
             _asTrimmedString(e['networkKey']) ?? payloadNetworkKey;
+        final isActiveNativeToken =
+            contractAddress == null && entryNetworkKey == activeNetworkKey;
         final defaultStandard = switch (NetworkKey.familyOf(entryNetworkKey)) {
           ChainFamily.solana => contractAddress == null ? 'native' : 'spl',
           ChainFamily.tron => contractAddress == null ? 'native' : 'trc20',
@@ -2271,16 +2273,26 @@ class BlockchainService extends ChangeNotifier {
           _asTrimmedString(e['tokenStandard']) ?? defaultStandard,
         );
         return Token(
-          symbol: e['symbol']?.toString() ?? '',
-          name: e['name']?.toString() ?? '',
+          // The backend only receives a chain ID, so the locally stored chain
+          // definition is authoritative for user-added network metadata.
+          symbol: isActiveNativeToken
+              ? activeNetworkSymbol
+              : e['symbol']?.toString() ?? '',
+          name: isActiveNativeToken
+              ? activeNetworkName
+              : e['name']?.toString() ?? '',
           contractAddress: contractAddress,
           balance: _toDouble(e['balance']),
           valueUsd: _toDouble(e['valueUsd']),
           priceUsd: _toDouble(e['priceUsd']),
           changePercent24h: _toDouble(e['changePercent24h']),
           decimals: _toInt(e['decimals']) ?? 18,
-          imageUrl: _asTrimmedString(e['imageUrl']),
-          coinGeckoId: _asTrimmedString(e['coinGeckoId']),
+          imageUrl: isActiveNativeToken
+              ? activeNetworkLogoUrl
+              : _asTrimmedString(e['imageUrl']),
+          coinGeckoId: isActiveNativeToken
+              ? activeNetworkCoinGeckoId
+              : _asTrimmedString(e['coinGeckoId']),
           isCertified: e['isCertified'] == true,
           // PATCH: Preserve backend price source for DEX badges.
           priceSource:

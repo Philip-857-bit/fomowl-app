@@ -120,6 +120,13 @@ void main() {
           isSolanaSwapBalanceError('not enough sol to cover quote'),
           isTrue,
         );
+        // A generic EVM swap failure must not be relabelled as SOL.
+        expect(
+          isSolanaSwapBalanceError(
+            'swap failed: insufficient funds for gas * price + value',
+          ),
+          isFalse,
+        );
         // Balance signal without swap context.
         expect(isSolanaSwapBalanceError('insufficient funds'), isFalse);
         // No balance signal at all.

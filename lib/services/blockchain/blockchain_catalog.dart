@@ -3,6 +3,26 @@ import '../../models/chain.dart';
 
 /// Canonical EVM chain metadata and symbol/logo mapping helpers.
 class BlockchainCatalog {
+  /// Ethereum Layer-2 networks whose native-token icon should carry a compact
+  /// chain badge. L1s and sidechains (Ethereum, BNB, Polygon PoS, Avalanche)
+  /// are intentionally excluded.
+  static const Set<int> ethereumLayer2BadgeChainIds = {
+    10, // OP Mainnet
+    130, // Unichain
+    324, // zkSync Era
+    480, // World Chain
+    2741, // Abstract
+    4663, // Robinhood Chain
+    5000, // Mantle
+    8453, // Base
+    34443, // Mode
+    42161, // Arbitrum One
+    57073, // Ink
+    59144, // Linea
+    81457, // Blast
+    534352, // Scroll
+  };
+
   static List<EvmChain> get builtInChains => [
     EvmChain(
       name: 'Ethereum',

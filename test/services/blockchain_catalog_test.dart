@@ -13,4 +13,11 @@ void main() {
     );
     expect(robinhood.logoUrl, contains('cdn.robinhood.com'));
   });
+
+  test('identifies Ethereum L2 badges without marking L1 chains', () {
+    expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, contains(4663));
+    expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, contains(8453));
+    expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, isNot(contains(56)));
+    expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, isNot(contains(1)));
+  });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:fomowl_wallet/widgets/token_icon.dart';
 
 void main() {
@@ -27,5 +28,24 @@ void main() {
         'https://cdn.example.com/logo.png',
       );
     });
+  });
+
+  testWidgets('native ETH on Robinhood shows a chain badge', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: TokenIcon(tokenSymbol: 'ETH', chainId: 4663)),
+    );
+
+    expect(
+      find.byKey(const ValueKey('token-chain-badge-4663')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('native BNB on its L1 has no parent-chain badge', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: TokenIcon(tokenSymbol: 'BNB', chainId: 56)),
+    );
+
+    expect(find.byKey(const ValueKey('token-chain-badge-56')), findsNothing);
   });
 }

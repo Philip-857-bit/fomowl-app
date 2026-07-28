@@ -177,6 +177,42 @@ void main() {
     expect(tokens[1].tokenStandard, TokenStandard.erc20);
   });
 
+  test('uses active custom-chain metadata for its native token', () async {
+    final service = BlockchainService();
+    await service.addCustomChain(
+      const EvmChain(
+        name: 'My Custom Chain',
+        symbol: 'MCC',
+        chainId: 987654,
+        rpcUrl: 'https://rpc.example.test',
+        logoUrl: 'https://example.test/mcc.png',
+        isCustom: true,
+      ),
+    );
+    service.setActiveChainByChainId(987654);
+
+    final tokens = service.parseBackendDiscoveredTokensForTest(
+      jsonEncode({
+        'chainId': 987654,
+        'networkKey': 'evm:987654',
+        'tokens': [
+          {
+            'symbol': 'NATIVE',
+            'name': 'Network',
+            'contractAddress': null,
+            'balance': 1,
+            'decimals': 18,
+            'imageUrl': 'https://example.test/wrong.png',
+          },
+        ],
+      }),
+    )!;
+
+    expect(tokens.single.name, 'My Custom Chain');
+    expect(tokens.single.symbol, 'MCC');
+    expect(tokens.single.imageUrl, 'https://example.test/mcc.png');
+  });
+
   test('parses Solana backend tokens as SPL scoped to Solana network', () {
     final service = BlockchainService();
     service.setActiveNetworkKey('solana:mainnet');

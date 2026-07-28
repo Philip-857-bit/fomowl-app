@@ -117,12 +117,18 @@ class AppErrorUtils {
 
     if (_containsAny(lowered, const [
       'insufficient lamports',
-      'insufficient funds for fee',
-      'insufficient funds',
       'attempt to debit an account',
       'custom program error: 0x1',
+      'solana transaction',
     ])) {
       return 'Insufficient SOL to cover the transfer amount and network fee.';
+    }
+
+    if (_containsAny(lowered, const [
+      'insufficient funds for fee',
+      'insufficient funds',
+    ])) {
+      return 'Insufficient balance to cover the transfer amount and network fee.';
     }
 
     if (_containsAny(lowered, const [
@@ -311,11 +317,14 @@ class AppErrorUtils {
         lowered.contains('dont have enough sol');
     if (!hasBalanceSignal) return false;
     return _containsAny(lowered, const [
-      'swap',
       'jupiter',
       '/order',
       '/execute',
-      'quote',
+      'solana',
+      'lamports',
+      'not enough sol',
+      'don\'t have enough sol',
+      'dont have enough sol',
       'unsigned transaction',
       'transaction":""',
     ]);

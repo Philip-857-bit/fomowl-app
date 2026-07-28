@@ -30,7 +30,7 @@ class TokenIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget icon = Container(
+    final icon = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -40,26 +40,66 @@ class TokenIcon extends StatelessWidget {
       child: ClipOval(child: _buildIcon()),
     );
 
-    if (!isCertified) return icon;
+    final showChainBadge =
+        (tokenAddress == null || tokenAddress!.trim().isEmpty) &&
+        chainId != null &&
+        BlockchainCatalog.ethereumLayer2BadgeChainIds.contains(chainId);
+    if (!isCertified && !showChainBadge) return icon;
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         icon,
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.all(1),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
+        if (showChainBadge)
+          Positioned(
+            right: -1,
+            bottom: -1,
+            child: Container(
+              key: ValueKey('token-chain-badge-$chainId'),
+              width: size * 0.38,
+              height: size * 0.38,
+              padding: EdgeInsets.all(size * 0.035),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: backgroundColor ?? const Color(0xFF111113),
+                  width: size * 0.045,
+                ),
+              ),
+              child: ClipOval(child: _buildChainBadge(chainId!)),
             ),
-            child: Icon(Icons.verified, size: size * 0.35, color: Colors.red),
           ),
-        ),
+        if (isCertified)
+          Positioned(
+            right: showChainBadge ? size * 0.28 : 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(1),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.verified, size: size * 0.35, color: Colors.red),
+            ),
+          ),
       ],
     );
+  }
+
+  Widget _buildChainBadge(int badgeChainId) {
+    final localAsset = BlockchainCatalog.localChainLogoAsset(badgeChainId);
+    if (localAsset != null) {
+      return Image.asset(localAsset, fit: BoxFit.cover);
+    }
+    final url = BlockchainCatalog.defaultChainLogoUrl(badgeChainId);
+    if (url != null && url.isNotEmpty) {
+      return _buildNetworkImage(
+        url,
+        fallback: const ColoredBox(color: Color(0xFF627EEA)),
+      );
+    }
+    return const ColoredBox(color: Color(0xFF627EEA));
   }
 
   Widget _buildIcon() {

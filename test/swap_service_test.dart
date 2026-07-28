@@ -107,6 +107,12 @@ void main() {
       // Chain 56 (BSC) supports normal and gasless
       expect(service.isChainSupported(56, isGasless: false), isTrue);
       expect(service.isChainSupported(56, isGasless: true), isTrue);
+
+      // Robinhood supports both APIs, while Linea is standard-swap only.
+      expect(service.isChainSupported(4663, isGasless: false), isTrue);
+      expect(service.isChainSupported(4663, isGasless: true), isTrue);
+      expect(service.isChainSupported(59144, isGasless: false), isTrue);
+      expect(service.isChainSupported(59144, isGasless: true), isFalse);
     });
 
     test(

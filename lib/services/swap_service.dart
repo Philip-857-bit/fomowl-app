@@ -139,39 +139,51 @@ class SwapService {
   final HttpClientService _httpClientService;
 
   static const Set<int> supportedQuoteChainIds = {
+    1, // Ethereum
+    130, // Unichain
+    137, // Polygon
+    143, // Monad
+    146, // Sonic
+    480, // World Chain
+    999, // HyperEVM
+    2741, // Abstract
+    4217, // Tempo
+    4663, // Robinhood Chain
+    5000, // Mantle
+    8453, // Base
+    9745, // Plasma
+    10, // OP Mainnet
+    56, // BNB Smart Chain
+    42161, // Arbitrum One
+    43114, // Avalanche C-Chain
+    57073, // Ink
+    59144, // Linea (Swap API only)
+    80094, // Berachain
+    534352, // Scroll
+  };
+  // Keep this separate from the Swap API set: Linea supports standard 0x
+  // quotes but not Gasless API v2.
+  static const Set<int> supportedGaslessChainIds = {
     1,
-    10,
-    56,
-    137,
-    8453,
-    42161,
-    43114,
-    59144,
-    534352,
-    5000,
-    81457,
-    34443,
-    480,
-    10143,
     130,
-    80094,
-    57073,
-    9745,
+    137,
     143,
     146,
+    480,
+    999,
     2741,
-  };
-  // 0x Gasless v2 chains. Fantom, Celo, and Polygon zkEVM were v1-only and
-  // the v2 API rejects them.
-  static const Set<int> supportedGaslessChainIds = {
-    1, // Ethereum
-    10, // Optimism
-    56, // BSC
-    137, // Polygon
-    8453, // Base
-    42161, // Arbitrum
-    43114, // Avalanche
-    59144, // Linea
+    4217,
+    4663,
+    5000,
+    8453,
+    9745,
+    10,
+    56,
+    42161,
+    43114,
+    57073,
+    80094,
+    534352,
   };
   static const Set<int> supportedLimitChainIds =
       openOceanSupportedLimitChainIds;

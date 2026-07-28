@@ -30,13 +30,24 @@ class DappProviderBridge {
     SensitiveAuthVerifier? authVerifier,
   }) : _walletService = walletService ?? WalletService(),
        _approvalHandler = approvalHandler,
-       _authVerifier = authVerifier ?? SensitiveAccessGuard.verify;
+       _authVerifier = authVerifier ?? _verifyDappAction;
 
   final BrowserSessionController sessionController;
   final DappPermissionService permissionService;
   final WalletService _walletService;
   final DiscoverProviderApprovalHandler? _approvalHandler;
   final SensitiveAuthVerifier _authVerifier;
+
+  static Future<bool> _verifyDappAction(
+    BuildContext context, {
+    String? reason,
+  }) {
+    return SensitiveAccessGuard.verify(
+      context,
+      reason: reason,
+      requireTwoFactor: false,
+    );
+  }
 
   static const String handlerName = 'owlletProvider';
   static const String detectorHandlerName = 'owlletDappDetector';

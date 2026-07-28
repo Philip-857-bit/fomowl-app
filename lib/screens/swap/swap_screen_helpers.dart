@@ -102,10 +102,16 @@ bool isSolanaSwapBalanceError(String lower) {
       lower.contains('don\'t have enough sol') ||
       lower.contains('dont have enough sol');
   if (!hasBalanceSignal) return false;
+  // "swap" and "quote" also occur in EVM provider errors. Require an
+  // unmistakably Solana/Jupiter-specific signal before mentioning SOL.
   return lower.contains('jupiter') ||
       lower.contains('/order') ||
-      lower.contains('swap') ||
-      lower.contains('quote') ||
+      lower.contains('/execute') ||
+      lower.contains('solana') ||
+      lower.contains('lamports') ||
+      lower.contains('not enough sol') ||
+      lower.contains('don\'t have enough sol') ||
+      lower.contains('dont have enough sol') ||
       lower.contains('unsigned transaction') ||
       lower.contains('transaction":""');
 }

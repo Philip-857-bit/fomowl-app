@@ -31,7 +31,11 @@ class SensitiveAccessGuard {
   /// phrase, private key) without an authentication factor. If neither
   /// biometrics nor a passcode is configured, the user is required to create a
   /// passcode here before access is granted — it is never auto-allowed.
-  static Future<bool> verify(BuildContext context, {String? reason}) async {
+  static Future<bool> verify(
+    BuildContext context, {
+    String? reason,
+    bool requireTwoFactor = true,
+  }) async {
     final l = AppLocalizations.of(context);
     var primaryAuthenticated = false;
 
@@ -66,6 +70,10 @@ class SensitiveAccessGuard {
 
     if (!primaryAuthenticated) {
       return false;
+    }
+
+    if (!requireTwoFactor) {
+      return true;
     }
 
     // The persisted app-wide 2FA authority is authoritative. Refreshing here

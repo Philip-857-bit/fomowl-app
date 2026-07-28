@@ -3875,6 +3875,8 @@ class _SwapScreenState extends State<SwapScreen> {
                           walletAddress: _walletAddress,
                           tokens: _visibleTokens(blockchain.tokens),
                           onSelectFromChain: _showNetworkSelector,
+                          onBridgeCompleted: () =>
+                              _refreshWalletState(blockchain: blockchain),
                         )
                       else if (blockchain.activeFamily == ChainFamily.evm ||
                           blockchain.activeFamily == ChainFamily.solana)

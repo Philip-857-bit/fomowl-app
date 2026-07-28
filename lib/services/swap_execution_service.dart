@@ -285,8 +285,9 @@ class SwapExecutionService {
               ),
             )
             .timeout(const Duration(seconds: 12));
-        if (response.statusCode >= 200 && response.statusCode < 300)
+        if (response.statusCode >= 200 && response.statusCode < 300) {
           return true;
+        }
         if (response.statusCode != 409 && response.statusCode != 503) {
           debugPrint(
             'Confirmed swap analytics was not recorded: ${response.statusCode}',
@@ -431,6 +432,10 @@ class SwapExecutionService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode(submitPayload),
             ),
+            // Submission creates a relayer order. A timed-out successful POST
+            // must not be replayed and create a second in-flight order.
+            maxRetries: 1,
+            retryOnException: false,
           )
           .timeout(const Duration(seconds: 15));
 
