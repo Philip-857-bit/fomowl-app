@@ -1823,14 +1823,19 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get discoverTabsTitle => 'Shafuka';
+
   @override
   String get discoverNewTab => 'Sabuwar shafi';
+
   @override
   String get discoverMaxTabsReached => 'An kai iyakar shafuka 5';
+
   @override
   String get discoverCloseTab => 'Rufe shafi';
+
   @override
   String get discoverHome => 'Shafin Discover';
+
   @override
   String get doneLabel => 'An gama';
 }

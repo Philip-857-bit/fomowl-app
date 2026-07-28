@@ -1821,15 +1821,20 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get discoverTabsTitle => 'علامات التبويب';
+
   @override
   String get discoverNewTab => 'علامة تبويب جديدة';
+
   @override
   String get discoverMaxTabsReached =>
       'تم الوصول إلى الحد الأقصى (5 علامات تبويب)';
+
   @override
   String get discoverCloseTab => 'إغلاق علامة التبويب';
+
   @override
   String get discoverHome => 'الرئيسية للاستكشاف';
+
   @override
   String get doneLabel => 'تم';
 }

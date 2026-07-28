@@ -1,35 +1,21 @@
-# Flutter-specific rules
--keep class io.flutter.** { *; }
--keep class io.flutter.plugins.** { *; }
+# Flutter and modern plugins publish their own consumer keep rules. Keeping
+# every engine/plugin class here prevents R8 from shrinking or obfuscating
+# unused code and is the reason Play reports a low optimization rate.
 -dontwarn io.flutter.**
 
-# Keep JNI entry points for Rust FFI (flutter_rust_bridge)
--keep class com.fomowl.owllet.** { *; }
--keepclasseswithmembernames class * {
+# Keep only methods whose names are resolved dynamically by JNI.
+-keepclasseswithmembernames,includedescriptorclasses class * {
     native <methods>;
 }
 
-# flutter_secure_storage
--keep class com.it_nomads.fluttersecurestorage.** { *; }
-
-# local_auth / biometrics
--keep class androidx.biometric.** { *; }
-
-# Firebase
--keep class com.google.firebase.** { *; }
+# These libraries ship consumer rules; warnings for optional platform classes
+# do not require retaining their entire dependency graphs.
 -dontwarn com.google.firebase.**
-
-# Kotlin coroutines / serialization
--keepnames class kotlinx.coroutines.** { *; }
 -dontwarn kotlinx.coroutines.**
-
-# OkHttp (used under the hood by http/dio)
 -dontwarn okhttp3.**
 -dontwarn okio.**
--keep class okhttp3.** { *; }
--keep interface okhttp3.** { *; }
 
-# Prevent stripping of crypto JNI symbols
+# JavaScript interface methods are invoked by Android WebView via reflection.
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }

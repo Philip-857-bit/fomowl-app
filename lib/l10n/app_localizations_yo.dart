@@ -1815,14 +1815,19 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get discoverTabsTitle => 'Àwọn taabu';
+
   @override
   String get discoverNewTab => 'Taabu tuntun';
+
   @override
   String get discoverMaxTabsReached => 'A ti dé iye taabu 5 ti o pọ julọ';
+
   @override
   String get discoverCloseTab => 'Pa taabu';
+
   @override
   String get discoverHome => 'Ojú-ìwé Discover';
+
   @override
   String get doneLabel => 'Ti parí';
 }

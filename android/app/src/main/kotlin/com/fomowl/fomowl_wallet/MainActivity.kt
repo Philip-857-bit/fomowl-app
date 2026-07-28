@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
+import android.util.Log
 import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,16 +25,17 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
 class MainActivity : FlutterFragmentActivity() {
+	private val logTag = "OwlletReceipt"
 	private val cameraPermissionChannelName = "owllet/camera_permission"
 	private val receiptFilesChannelName = "owllet/receipt_files"
 	private val cameraPermissionRequestCode = 0xCA11
 	private var pendingCameraPermissionResult: MethodChannel.Result? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
 		// Android 15+ enforces edge-to-edge for modern targets. Enable it on
 		// earlier versions too, so the Flutter SafeAreas behave consistently.
 		enableEdgeToEdge()
-		super.onCreate(savedInstanceState)
 		ensureDefaultNotificationChannel()
 	}
 
@@ -139,7 +141,11 @@ class MainActivity : FlutterFragmentActivity() {
 	private fun saveReceiptImage(arguments: Any?, result: MethodChannel.Result) {
 		val parsed = receiptBytes(arguments)
 		if (parsed == null) {
-			result.success(mapOf("ok" to false, "error" to "Invalid receipt image."))
+			result.success(mapOf(
+				"ok" to false,
+				"code" to "RECEIPT_INVALID_IMAGE",
+				"error" to "The receipt image could not be prepared.",
+			))
 			return
 		}
 		val (safeName, bytes) = parsed
@@ -155,13 +161,21 @@ class MainActivity : FlutterFragmentActivity() {
 				}
 				val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
 				if (uri == null) {
-					result.success(mapOf("ok" to false, "error" to "Unable to create receipt file."))
+					result.success(mapOf(
+						"ok" to false,
+						"code" to "RECEIPT_SAVE_FAILED",
+						"error" to "Could not save the receipt. Check storage access and try again.",
+					))
 					return
 				}
 				val stream = resolver.openOutputStream(uri)
 				if (stream == null) {
 					resolver.delete(uri, null, null)
-					result.success(mapOf("ok" to false, "error" to "Unable to open the receipt file."))
+					result.success(mapOf(
+						"ok" to false,
+						"code" to "RECEIPT_SAVE_FAILED",
+						"error" to "Could not save the receipt. Check storage access and try again.",
+					))
 					return
 				}
 				stream.use { it.write(bytes) }
@@ -178,14 +192,23 @@ class MainActivity : FlutterFragmentActivity() {
 			file.outputStream().use { it.write(bytes) }
 			result.success(mapOf("ok" to true, "path" to file.absolutePath))
 		} catch (error: Exception) {
-			result.success(mapOf("ok" to false, "error" to (error.message ?: "Unable to save receipt.")))
+			Log.e(logTag, "Receipt save failed", error)
+			result.success(mapOf(
+				"ok" to false,
+				"code" to "RECEIPT_SAVE_FAILED",
+				"error" to "Could not save the receipt. Check storage access and try again.",
+			))
 		}
 	}
 
 	private fun shareReceiptImage(arguments: Any?, result: MethodChannel.Result) {
 		val parsed = receiptBytes(arguments)
 		if (parsed == null) {
-			result.success(mapOf("ok" to false, "error" to "Invalid receipt image."))
+			result.success(mapOf(
+				"ok" to false,
+				"code" to "RECEIPT_INVALID_IMAGE",
+				"error" to "The receipt image could not be prepared.",
+			))
 			return
 		}
 		val args = arguments as? Map<*, *>
@@ -218,7 +241,12 @@ class MainActivity : FlutterFragmentActivity() {
 			startActivity(chooser)
 			result.success(mapOf("ok" to true))
 		} catch (error: Exception) {
-			result.success(mapOf("ok" to false, "error" to (error.message ?: "Unable to share receipt.")))
+			Log.e(logTag, "Receipt share failed", error)
+			result.success(mapOf(
+				"ok" to false,
+				"code" to "RECEIPT_SHARE_FAILED",
+				"error" to "Could not open sharing. Try again or save the receipt first.",
+			))
 		}
 	}
 }

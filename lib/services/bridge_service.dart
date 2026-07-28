@@ -218,10 +218,7 @@ class BridgeService {
           .timeout(const Duration(seconds: 20));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _lastError = AppErrorUtils.backendMessage(
-          response.body,
-          fallback: 'Unable to fetch a bridge quote right now.',
-        );
+        _lastError = quoteErrorMessage(response.body);
         return null;
       }
 
@@ -269,6 +266,25 @@ class BridgeService {
       debugPrint('BridgeService.getQuote error: $e');
       return null;
     }
+  }
+
+  /// Converts the backend's stable quote error contract into bridge-specific
+  /// guidance without exposing Relay/provider diagnostics to the user.
+  static String quoteErrorMessage(String? body) {
+    if (body != null && body.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is Map && decoded['code'] == 'AMOUNT_TOO_LOW') {
+          return 'Amount is too low for this bridge. Increase the amount and try again.';
+        }
+      } catch (_) {
+        // Fall through to the shared sanitizer for malformed responses.
+      }
+    }
+    return AppErrorUtils.backendMessage(
+      body,
+      fallback: 'Unable to fetch a bridge quote right now.',
+    );
   }
 
   /// GET /cross-chain/currencies?chainId=&term= — destination tokens Relay

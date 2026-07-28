@@ -3404,16 +3404,40 @@ abstract class AppLocalizations {
   /// **'x.com/fomowlhq'**
   String get socialhqHandle;
 
+  /// No description provided for @discoverTabsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tabs'**
   String get discoverTabsTitle;
 
+  /// No description provided for @discoverNewTab.
+  ///
+  /// In en, this message translates to:
+  /// **'New tab'**
   String get discoverNewTab;
 
+  /// No description provided for @discoverMaxTabsReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 5 tabs reached'**
   String get discoverMaxTabsReached;
 
+  /// No description provided for @discoverCloseTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Close tab'**
   String get discoverCloseTab;
 
+  /// No description provided for @discoverHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover home'**
   String get discoverHome;
 
+  /// No description provided for @doneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
   String get doneLabel;
 }
 

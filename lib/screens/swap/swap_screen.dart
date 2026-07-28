@@ -1828,7 +1828,9 @@ class _SwapScreenState extends State<SwapScreen> {
       }
       if (mounted && requestId == _quoteRequestId) {
         setState(() {
-          _quoteStatusMessage = l.networkError;
+          _quoteStatusMessage = _mapErrorMessage(
+            _relaySwapService.lastError ?? l.networkError,
+          );
           _resetQuoteState(clearQuoteStatusMessage: false);
           _isCalculating = false;
         });
@@ -1912,7 +1914,9 @@ class _SwapScreenState extends State<SwapScreen> {
               amountWei: amountWei,
             );
         if (!usedRelay && mounted && requestId == _quoteRequestId) {
-          final mapped = _mapErrorMessage(_swapService.lastError);
+          final mapped = _mapErrorMessage(
+            _relaySwapService.lastError ?? _swapService.lastError,
+          );
           setState(() {
             _quoteStatusMessage = mapped;
             _resetQuoteState(
@@ -1933,7 +1937,9 @@ class _SwapScreenState extends State<SwapScreen> {
           );
       if (!usedRelay && mounted && requestId == _quoteRequestId) {
         setState(() {
-          _quoteStatusMessage = l.tryAgain;
+          _quoteStatusMessage = _mapErrorMessage(
+            _relaySwapService.lastError ?? l.tryAgain,
+          );
           _resetQuoteState(
             preserveRequestId: true,
             clearQuoteStatusMessage: false,

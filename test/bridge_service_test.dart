@@ -3,6 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/services/bridge_service.dart';
 
 void main() {
+  test('maps an amount-too-low quote error to actionable bridge guidance', () {
+    const body =
+        '{"code":"AMOUNT_TOO_LOW","message":"Amount is too low for this route."}';
+
+    expect(
+      BridgeService.quoteErrorMessage(body),
+      'Amount is too low for this bridge. Increase the amount and try again.',
+    );
+  });
+
+  test('does not expose malformed provider responses', () {
+    expect(
+      BridgeService.quoteErrorMessage('<html>provider failure</html>'),
+      'Unable to fetch a bridge quote right now.',
+    );
+  });
+
   test('parseSteps preserves an EVM approval and deposit in order', () {
     final steps = BridgeService.parseSteps([
       {

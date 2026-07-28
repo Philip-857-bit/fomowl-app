@@ -1483,14 +1483,21 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       }
       return result.map((key, value) => MapEntry(key.toString(), value));
     } on PlatformException catch (error) {
+      debugPrint(
+        'Receipt host action failed: method=$method code=${error.code} '
+        'message=${error.message}',
+      );
       return <String, dynamic>{
         'ok': false,
-        'error': error.message ?? 'Receipt action failed.',
+        'code': 'RECEIPT_HOST_UNAVAILABLE',
+        'error': 'The receipt action is unavailable. Please try again.',
       };
     } catch (error) {
+      debugPrint('Receipt host action failed: method=$method error=$error');
       return <String, dynamic>{
         'ok': false,
-        'error': 'Receipt action failed: $error',
+        'code': 'RECEIPT_ACTION_FAILED',
+        'error': 'The receipt action failed. Please try again.',
       };
     }
   }

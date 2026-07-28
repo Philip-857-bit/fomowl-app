@@ -1817,14 +1817,19 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get discoverTabsTitle => 'Taabụ';
+
   @override
   String get discoverNewTab => 'Taabụ ọhụrụ';
+
   @override
   String get discoverMaxTabsReached => 'E ruru oke taabụ 5';
+
   @override
   String get discoverCloseTab => 'Mechie taabụ';
+
   @override
   String get discoverHome => 'Ụlọ Discover';
+
   @override
   String get doneLabel => 'Emela';
 }
