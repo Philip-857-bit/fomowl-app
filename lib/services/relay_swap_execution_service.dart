@@ -19,6 +19,19 @@ class RelaySwapExecutionResult {
   });
 }
 
+const _relayDiffErrorSelector = '0dd10eb1';
+
+/// Converts Relay execution failures into stable, actionable guidance without
+/// exposing raw RPC or calldata details to the user.
+String relaySwapExecutionErrorMessage(Object error) {
+  final lower = error.toString().toLowerCase();
+  if (lower.contains('differror') || lower.contains(_relayDiffErrorSelector)) {
+    return 'This token may charge a transfer fee that exceeds the current '
+        'slippage tolerance. Increase slippage and try again.';
+  }
+  return 'Relay swap failed. Please try again.';
+}
+
 /// Executes a Relay quote whose origin and destination are the active EVM
 /// chain. Keys never leave [WalletService]; every Relay transaction is signed
 /// locally and must match the quoted chain and native-value bounds.
@@ -138,7 +151,7 @@ class RelaySwapExecutionService {
     } catch (error) {
       return RelaySwapExecutionResult(
         success: false,
-        error: 'Relay swap failed: $error',
+        error: relaySwapExecutionErrorMessage(error),
       );
     }
   }

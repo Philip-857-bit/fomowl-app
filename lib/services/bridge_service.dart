@@ -191,6 +191,7 @@ class BridgeService {
     required String walletAddress,
     String? recipientAddress,
     double? amountUsd,
+    int? slippageBps,
   }) async {
     _lastError = null;
     try {
@@ -207,6 +208,7 @@ class BridgeService {
         'user': walletAddress,
         'recipient': recipientAddress ?? walletAddress,
         if (amountUsd != null && amountUsd > 0) 'amountUsd': '$amountUsd',
+        if (slippageBps != null) 'slippageBps': '${slippageBps.clamp(1, 5000)}',
       };
       final url = AppEnvironment.swap('/cross-chain/quote', params);
 

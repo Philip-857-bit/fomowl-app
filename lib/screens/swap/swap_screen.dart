@@ -1996,6 +1996,7 @@ class _SwapScreenState extends State<SwapScreen> {
           amountUsd: from.priceUsd > 0
               ? _parseAmount(_fromController) * from.priceUsd
               : null,
+          slippageBps: _slippageBps,
         )
         .timeout(_quoteUiTimeout);
     if (quote == null || !mounted || requestId != _quoteRequestId) return false;
