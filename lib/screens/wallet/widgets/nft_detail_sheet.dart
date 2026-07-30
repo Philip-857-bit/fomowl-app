@@ -88,6 +88,8 @@ class NftDetailSheet extends StatelessWidget {
                         children: [
                           _NftMetaChip(label: nft.chainName),
                           _NftMetaChip(label: '${nft.count}x'),
+                          if (nft.isCompressed)
+                            const _NftMetaChip(label: 'Compressed NFT'),
                           if (nft.tokenId.isNotEmpty)
                             _NftMetaChip(label: '#${nft.tokenId}'),
                           if (nft.hasRarity)
@@ -129,7 +131,8 @@ class NftDetailSheet extends StatelessWidget {
                         ),
                       ],
                       if (nft.contractAddress.trim().isNotEmpty &&
-                          nft.tokenId.trim().isNotEmpty) ...[
+                          nft.tokenId.trim().isNotEmpty &&
+                          nft.canUseStandardSendFlow) ...[
                         const SizedBox(height: 22),
                         _SendNftButton(nft: nft),
                       ],

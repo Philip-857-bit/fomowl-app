@@ -331,6 +331,48 @@ void main() {
       expect(response['error']['message'], contains('active wallet'));
     });
 
+    testWidgets(
+      'personal_sign preserves OpenSea hex payload for the native signer',
+      (tester) async {
+        final entry = entryForTestDapp(
+          origin: 'https://opensea.io',
+          supportedChainIds: [1],
+        );
+        final controller = await controllerForEntry(entry);
+        final walletService = FakeWalletService();
+        final context = await pumpBridgeHarness(
+          tester,
+          blockchainService: FakeBlockchainService(),
+          rpcService: FakeRpcService(),
+        );
+        final bridge = DappProviderBridge(
+          sessionController: controller,
+          permissionService: FakeDappPermissionService(),
+          walletService: walletService,
+          approvalHandler:
+              (
+                BuildContext context,
+                DiscoverProviderApprovalRequest request,
+              ) async => true,
+          authVerifier: (context, {reason}) async => true,
+        );
+        const payload = '0x5369676e20696e20746f204f70656e536561';
+
+        final response = await bridge.handleRequest(
+          context: context,
+          origin: entry.origin,
+          payload: {
+            'method': 'personal_sign',
+            'params': [payload, walletService.walletAddress],
+          },
+          evaluateJavaScript: (_) async {},
+        );
+
+        expect(response['result'], walletService.messageSignature);
+        expect(walletService.lastSignedMessage, payload);
+      },
+    );
+
     testWidgets('eth_signTypedData_v4 accepts structured map payloads', (
       tester,
     ) async {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:decimal/decimal.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
@@ -9,15 +9,15 @@ import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/blockchain/blockchain_catalog.dart';
 import '../../services/currency_controller.dart';
+import '../../services/recipient_book_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
-import 'widgets/send/address_input_field.dart';
-import 'widgets/send/amount_input_field.dart';
 import 'widgets/send/send_primary_button.dart';
+import 'widgets/send/send_receiver_step.dart';
 
 /// Send Token Screen
 /// Select token, enter recipient address and amount, then proceed to confirmation
@@ -48,6 +48,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   ChainFamily? _lastFamily;
   bool _didApplyRouteToken = false;
+  bool _receiverSelected = false;
+  String _recipientLabel = '';
 
   @override
   void initState() {
@@ -173,22 +175,6 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       }
     }
     _syncingDisplay = false;
-  }
-
-  void _toggleInputMode() {
-    final tokenUsdPrice = _currentTokenUsdPrice();
-    if (tokenUsdPrice <= 0 && _inputMode == AmountInputMode.token) {
-      ToastUtils.showError(
-        'Price unavailable for ${_selectedToken?.symbol ?? 'this token'}',
-      );
-      return;
-    }
-    setState(() {
-      _inputMode = _inputMode == AmountInputMode.token
-          ? AmountInputMode.fiat
-          : AmountInputMode.token;
-    });
-    _setDisplayFromTokenAmount(_amountController.text);
   }
 
   Future<void> _loadDefaultToken() async {
@@ -326,8 +312,38 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     if (mounted) setState(() {});
   }
 
-  void _openQrScanner() {
-    Navigator.pushNamed(context, '/qr-scanner');
+  Future<String?> _openQrScanner() async {
+    final value = await Navigator.pushNamed(context, '/qr-scanner');
+    return value?.toString();
+  }
+
+  void _selectReceiver(WalletRecipient recipient) {
+    _addressController.text = recipient.address;
+    setState(() {
+      _recipientLabel = recipient.label;
+      _receiverSelected = true;
+      _inputMode = AmountInputMode.token;
+    });
+    _setDisplayFromTokenAmount(_amountController.text);
+  }
+
+  void _setPercentage(int percentage) {
+    if (percentage == 100) {
+      _setMax();
+      return;
+    }
+    final baseUnits =
+        (_availableBalanceBaseUnits * BigInt.from(percentage)) ~/
+        BigInt.from(100);
+    final decimals = _selectedToken?.decimals ?? 18;
+    final amount = AmountUtils.formatBaseUnits(
+      baseUnits,
+      decimals,
+      maxFractionDigits: decimals > 8 ? 8 : decimals,
+    );
+    _amountController.text = amount;
+    _setDisplayFromTokenAmount(amount);
+    setState(() {});
   }
 
   void _onSend() {
@@ -397,6 +413,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       arguments: {
         'token': _selectedToken,
         'toAddress': destination,
+        'recipientLabel': _recipientLabel,
+        'recipientBookWalletScope': blockchain.activeWalletAddress,
         'amount': amountText,
         'amountBaseUnits': amountInBaseUnits,
         'network': activeNetworkDisplayName,
@@ -459,7 +477,6 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     context.select<CurrencyController, String>(
       (controller) => controller.currencyCode,
     );
-    final l = AppLocalizations.of(context);
     final blockchain = Provider.of<BlockchainService>(context);
     final tokenAmount = double.tryParse(
       _amountController.text.replaceAll(',', ''),
@@ -481,13 +498,22 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       }
     }
 
-    final tokenRateText = tokenUsdPrice > 0 && tokenSymbol.isNotEmpty
-        ? '1 ${ValueFormatter.currencyCode} -> ${ValueFormatter.formatTokenRateAmount(ValueFormatter.doubleFromDecimal(ValueFormatter.convertToUsdDecimal(Decimal.one)) / tokenUsdPrice)} $tokenSymbol'
-        : '';
+    if (!_receiverSelected) {
+      return SendReceiverStep(
+        networkKey: blockchain.activeNetworkKey,
+        walletScope: blockchain.activeWalletAddress,
+        controller: _addressController,
+        isValidAddress: (address) =>
+            _isValidAddressForFamily(address, blockchain.activeFamily),
+        onSelected: _selectReceiver,
+        onBack: () => Navigator.pop(context),
+        onQrTap: _openQrScanner,
+      );
+    }
 
-    final inputSuffix = _inputMode == AmountInputMode.token
-        ? tokenSymbol
-        : ValueFormatter.currencyCode;
+    final receiverName = _recipientLabel.trim().isEmpty
+        ? '${_addressController.text.substring(0, 6)}...${_addressController.text.substring(_addressController.text.length - 5)}'
+        : _recipientLabel;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -495,18 +521,16 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         child: Column(
           children: [
             SendHeader(
-              title: l.sendToken,
-              onBack: () => Navigator.pop(context),
+              title: 'Send',
+              onBack: () => setState(() => _receiverSelected = false),
             ),
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.fromLTRB(24, 18, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 18),
-
                     if (_nonEvmAddressMissing)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -543,32 +567,180 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                           ],
                         ),
                       ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF13161B),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF2A333D)),
+                      ),
+                      child: Row(
+                        children: [
+                          const CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Color(0xFF1E293B),
+                            child: Icon(
+                              Icons.person_outline,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'SENDING TO',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF94A3B8),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.6,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  receiverName,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                setState(() => _receiverSelected = false),
+                            child: const Text('Change'),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+                    Text(
+                      'ASSET',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF94A3B8),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.7,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     TokenSelectorCard(
                       token: _selectedToken,
                       onTap: _openTokenSelector,
                       blockchain: blockchain,
                     ),
-                    const SizedBox(height: 26),
-
-                    AddressInputField(
-                      controller: _addressController,
-                      isInterTransfer: false,
-                      onQrTap: _openQrScanner,
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'Balance  ${ValueFormatter.formatTokenRateAmount(_availableBalance)} $tokenSymbol',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF94A3B8),
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 26),
-
-                    AmountInputField(
-                      controller: _displayController,
-                      availableBalance: _availableBalance,
-                      tokenSymbol: tokenSymbol,
-                      onMaxTap: _setMax,
-                      inputMode: _inputMode,
-                      onToggleInputMode: tokenUsdPrice > 0
-                          ? _toggleInputMode
-                          : null,
-                      inputSuffixLabel: inputSuffix,
-                      equivalentText: equivalentText,
-                      rateText: tokenRateText,
+                    const SizedBox(height: 28),
+                    Text(
+                      'AMOUNT',
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF94A3B8),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.7,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      height: 64,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF13161B),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF2A333D)),
+                      ),
+                      child: TextField(
+                        controller: _displayController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          hintText: '0',
+                          hintStyle: GoogleFonts.inter(
+                            color: const Color(0xFF64748B),
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          suffixText: tokenSymbol,
+                          suffixStyle: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (equivalentText.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        equivalentText,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF94A3B8),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [25, 50, 75, 100]
+                          .map(
+                            (percentage) => Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  right: percentage == 100 ? 0 : 8,
+                                ),
+                                child: OutlinedButton(
+                                  onPressed: () => _setPercentage(percentage),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size(0, 40),
+                                    foregroundColor: percentage == 50
+                                        ? Colors.white
+                                        : const Color(0xFF94A3B8),
+                                    backgroundColor: percentage == 50
+                                        ? const Color(0xFFEA2A33)
+                                        : const Color(0xFF13161B),
+                                    side: BorderSide(
+                                      color: percentage == 50
+                                          ? const Color(0xFFEA2A33)
+                                          : const Color(0xFF2A333D),
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: Text('$percentage%'),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
                 ),

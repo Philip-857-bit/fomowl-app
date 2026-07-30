@@ -68,4 +68,29 @@ void main() {
     expect(find.text('Contract Address'), findsNothing);
     expect(find.textContaining('#'), findsNothing);
   });
+
+  testWidgets('shows the Bubblegum send action for a compressed NFT', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const NftAsset(
+          name: 'Compressed Owl',
+          collection: 'OWL',
+          description: '',
+          count: 1,
+          chainName: 'Solana',
+          chainId: -501,
+          imageUrl: '',
+          contractAddress: 'Collection11111111111111111111111111111111',
+          tokenId: 'Asset111111111111111111111111111111111111111',
+          tokenType: 'CompressedNFT',
+          isProjectNft: false,
+        ),
+      ),
+    );
+
+    expect(find.text('Compressed NFT'), findsOneWidget);
+    expect(find.text('Send NFT'), findsOneWidget);
+  });
 }

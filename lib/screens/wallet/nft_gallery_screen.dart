@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/nft_service.dart';
 import '../../services/wallet_service.dart';
@@ -51,8 +52,17 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final address = await _walletService.getCurrentWalletAddress();
+      final solanaAddress = await _walletService.getWalletAddressForFamily(
+        ChainFamily.solana,
+      );
+      final evmAddress =
+          address != null &&
+              RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address.trim())
+          ? address.trim()
+          : '';
 
-      if (address == null) {
+      if (evmAddress.isEmpty &&
+          (solanaAddress == null || solanaAddress.isEmpty)) {
         setState(() {
           _isLoading = false;
           _errorMessage = l.noActiveWalletFound;
@@ -69,7 +79,8 @@ class _NftGalleryScreenState extends State<NftGalleryScreen> {
       ];
       final owned = await _nftService.fetchOwnedNftsAcrossChains(
         chains: orderedChains,
-        walletAddress: address,
+        walletAddress: evmAddress,
+        solanaWalletAddress: solanaAddress ?? '',
       );
 
       if (!mounted) return;

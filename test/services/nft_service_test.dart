@@ -95,4 +95,45 @@ void main() {
     expect(groups, hasLength(1));
     expect(groups.single.totalCount, 2);
   });
+
+  test('parses a normalized Solana compressed NFT without changing its id', () {
+    final service = NftService();
+    const assetId = '9zCompressedAsset111111111111111111111111111';
+    const response =
+        '''
+      {
+        "ownedNfts": [{
+          "name": "Owllet cNFT #42",
+          "description": "Compressed on Solana",
+          "balance": "1",
+          "tokenType": "CompressedNFT",
+          "tokenId": "$assetId",
+          "contract": {
+            "address": "Collection11111111111111111111111111111111",
+            "name": "OWL"
+          },
+          "image": {
+            "cachedUrl": "ipfs://owllet/42.png"
+          },
+          "id": {
+            "tokenId": "$assetId"
+          }
+        }]
+      }
+    ''';
+
+    final assets = service.parseOwnedNftsResponse(
+      response,
+      chainId: -501,
+      chainName: 'Solana',
+    );
+
+    expect(assets, hasLength(1));
+    expect(assets.single.tokenId, assetId);
+    expect(assets.single.tokenType, 'CompressedNFT');
+    expect(assets.single.isCompressed, isTrue);
+    expect(assets.single.isSolana, isTrue);
+    expect(assets.single.canUseStandardSendFlow, isTrue);
+    expect(assets.single.imageUrl, 'https://ipfs.io/ipfs/owllet/42.png');
+  });
 }

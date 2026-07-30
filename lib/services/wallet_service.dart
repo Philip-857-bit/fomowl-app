@@ -1252,6 +1252,47 @@ class WalletService {
     return txHash;
   }
 
+  /// Fetches the current Bubblegum Merkle proof, signs the prepared Solana
+  /// message locally, and broadcasts the compressed NFT transfer.
+  Future<String> sendCompressedNft({
+    required String assetId,
+    required String fromAddress,
+    required String toAddress,
+  }) async {
+    final prepareUri = AppEnvironment.blockchain(
+      '/networks/solana:mainnet/prepare-cnft-transfer',
+    );
+    final response = await _httpClientService.client
+        .post(
+          prepareUri,
+          headers: const {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'assetId': assetId,
+            'fromAddress': fromAddress,
+            'toAddress': toAddress,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        AppErrorUtils.backendMessage(
+          response.body,
+          fallback:
+              'The compressed NFT transfer proof could not be prepared. Please try again.',
+        ),
+      );
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final unsignedMessage = data['unsignedMessage']?.toString();
+    if (unsignedMessage == null || unsignedMessage.isEmpty) {
+      throw Exception('The compressed NFT transfer message is missing.');
+    }
+    return signAndBroadcastSolanaTransactionRaw(
+      fromAddress,
+      Uint8List.fromList(base64Decode(unsignedMessage)),
+    );
+  }
+
   // ── Tron DApp signing helpers ─────────────────────────────────────────────
 
   /// Sign a Tron transaction JSON object with the key for [address].

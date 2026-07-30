@@ -13,6 +13,7 @@ import '../../services/currency_controller.dart';
 import '../../services/wallet_history_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_notification_service.dart';
+import '../../services/recipient_book_service.dart';
 import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
@@ -45,6 +46,7 @@ class _TransferConfirmationScreenState
   final WalletNotificationService _walletNotificationService =
       WalletNotificationService();
   final WalletHistoryService _walletHistoryService = WalletHistoryService();
+  final RecipientBookService _recipientBookService = RecipientBookService();
   Map<String, dynamic>? _args;
   String? _fromAddress;
   bool _isConfirming = false;
@@ -613,6 +615,17 @@ class _TransferConfirmationScreenState
             blockchain: blockchain,
             family: activeFamily,
             chainId: evmChain?.chainId,
+          ),
+        );
+        unawaited(
+          _recipientBookService.recordRecent(
+            networkKey: transferNetworkKey,
+            walletScope:
+                _args?['recipientBookWalletScope']?.toString() ??
+                _fromAddress ??
+                '',
+            address: toAddress,
+            label: _args?['recipientLabel']?.toString(),
           ),
         );
         if (_fromAddress != null && token != null) {

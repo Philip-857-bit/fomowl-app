@@ -42,18 +42,31 @@ fn sign_digest_inner(
 }
 
 pub fn sign_personal_message(private_key_hex: String, message: String) -> Result<String, String> {
-    // Create Ethereum Signed Message prefix
-    let prefix = format!("\x19Ethereum Signed Message:\n{}", message.len());
+    let message_bytes = decode_personal_sign_payload(&message);
+    let prefix = format!("\x19Ethereum Signed Message:\n{}", message_bytes.len());
     let mut prefixed_message = prefix.into_bytes();
-    prefixed_message.extend_from_slice(message.as_bytes());
+    prefixed_message.extend_from_slice(&message_bytes);
 
-    // Hash the message with Keccak256
     let hash = Keccak256::digest(&prefixed_message);
 
-    // Create Message from exact 32-byte array
     let mut hash_arr = [0u8; 32];
     hash_arr.copy_from_slice(&hash);
     sign_digest(&private_key_hex, hash_arr)
+}
+
+fn decode_personal_sign_payload(message: &str) -> Vec<u8> {
+    let Some(hex_payload) = message
+        .strip_prefix("0x")
+        .or_else(|| message.strip_prefix("0X"))
+    else {
+        return message.as_bytes().to_vec();
+    };
+
+    if hex_payload.len() % 2 != 0 {
+        return message.as_bytes().to_vec();
+    }
+
+    hex::decode(hex_payload).unwrap_or_else(|_| message.as_bytes().to_vec())
 }
 
 pub fn sign_typed_data(private_key_hex: String, json_data: String) -> Result<String, String> {
@@ -67,8 +80,26 @@ pub fn sign_typed_data(private_key_hex: String, json_data: String) -> Result<Str
 
 #[cfg(test)]
 mod tests {
-    use super::sign_typed_data;
+    use super::{sign_personal_message, sign_typed_data};
     use ethers_core::types::{transaction::eip712::TypedData, Signature};
+
+    #[test]
+    fn personal_sign_decodes_eip_1193_hex_data_before_signing() {
+        let private_key = "4c0883a69102937d6231471b5dbb6204fe5129617082794a7a4da5f6d7d28e17";
+
+        let utf8_signature =
+            sign_personal_message(private_key.to_string(), "hello".to_string())
+                .expect("UTF-8 personal signature");
+        let hex_signature = sign_personal_message(
+            private_key.to_string(),
+            "0x68656c6c6f".to_string(),
+        )
+        .expect("hex personal signature");
+
+        assert_eq!(hex_signature, utf8_signature);
+        assert!(hex_signature.starts_with("0x"));
+        assert_eq!(hex_signature.len(), 132);
+    }
 
     #[test]
     fn signs_typed_data_and_recovers_expected_address() {

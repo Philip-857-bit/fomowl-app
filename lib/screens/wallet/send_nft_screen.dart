@@ -71,11 +71,21 @@ class _SendNftScreenState extends State<SendNftScreen> {
   }
 
   Future<void> _loadFromAddressAndFee() async {
-    final address = await _walletService.getWalletAddressForFamily(
-      ChainFamily.evm,
-    );
+    final family = _nft?.isSolana == true
+        ? ChainFamily.solana
+        : ChainFamily.evm;
+    final address = await _walletService.getWalletAddressForFamily(family);
     if (!mounted) return;
-    setState(() => _fromAddress = address);
+    setState(() {
+      _fromAddress = address;
+      if (_nft?.isCompressed == true) {
+        _gasFeeNative = 0.000005;
+        _gasPriceGwei = 0;
+        _isLoadingFee = false;
+        _feeFailed = false;
+      }
+    });
+    if (_nft?.isCompressed == true) return;
     await _estimateFee();
   }
 
@@ -206,25 +216,40 @@ class _SendNftScreenState extends State<SendNftScreen> {
       return;
     }
     final toAddress = _addressController.text.trim();
-    if (!_isValidEvmAddress(toAddress)) {
-      ToastUtils.showError('Enter a valid Ethereum address.');
+    final isCompressedSolana = nft.isSolana && nft.isCompressed;
+    final validRecipient = isCompressedSolana
+        ? RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$').hasMatch(toAddress)
+        : _isValidEvmAddress(toAddress);
+    if (!validRecipient) {
+      ToastUtils.showError(
+        isCompressedSolana
+            ? 'Enter a valid Solana address.'
+            : 'Enter a valid Ethereum address.',
+      );
       return;
     }
-    if (nft.contractAddress.trim().isEmpty || nft.tokenId.trim().isEmpty) {
+    if ((!isCompressedSolana && nft.contractAddress.trim().isEmpty) ||
+        nft.tokenId.trim().isEmpty) {
       ToastUtils.showError('This NFT is missing transfer metadata.');
       return;
     }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final chain = _chainForNft(blockchain, nft);
-    if (chain == null) {
+    final chain = isCompressedSolana ? null : _chainForNft(blockchain, nft);
+    if (!isCompressedSolana && chain == null) {
       ToastUtils.showError('This NFT network is not available in the wallet.');
       return;
     }
     final fromAddress =
         _fromAddress ??
-        await _walletService.getWalletAddressForFamily(ChainFamily.evm);
+        await _walletService.getWalletAddressForFamily(
+          isCompressedSolana ? ChainFamily.solana : ChainFamily.evm,
+        );
     if (fromAddress == null || fromAddress.isEmpty) {
-      ToastUtils.showError('No EVM wallet address found.');
+      ToastUtils.showError(
+        isCompressedSolana
+            ? 'No Solana wallet address found.'
+            : 'No EVM wallet address found.',
+      );
       return;
     }
 
@@ -234,17 +259,25 @@ class _SendNftScreenState extends State<SendNftScreen> {
 
     try {
       progressController.setSwapSubmitting();
-      final txHash = await _walletService.sendNftTransaction(
-        contractAddress: nft.contractAddress,
-        fromAddress: fromAddress,
-        toAddress: toAddress,
-        tokenId: BigInt.parse(nft.tokenId),
-        tokenType: nft.tokenType,
-        amount: BigInt.from(_amount),
-        rpcUrl: chain.rpcUrl,
-        chainId: chain.chainId,
-      );
-      final detailsUrl = _transactionDetailsUrl(txHash, chain);
+      final txHash = isCompressedSolana
+          ? await _walletService.sendCompressedNft(
+              assetId: nft.tokenId,
+              fromAddress: fromAddress,
+              toAddress: toAddress,
+            )
+          : await _walletService.sendNftTransaction(
+              contractAddress: nft.contractAddress,
+              fromAddress: fromAddress,
+              toAddress: toAddress,
+              tokenId: BigInt.parse(nft.tokenId),
+              tokenType: nft.tokenType,
+              amount: BigInt.from(_amount),
+              rpcUrl: chain!.rpcUrl,
+              chainId: chain.chainId,
+            );
+      final detailsUrl = isCompressedSolana
+          ? 'https://explorer.solana.com/tx/$txHash'
+          : _transactionDetailsUrl(txHash, chain!);
       progressController.setSwapPending(
         reference: _shortHash(txHash),
         detailsUrl: detailsUrl,
@@ -252,7 +285,9 @@ class _SendNftScreenState extends State<SendNftScreen> {
       final confirmed = await _transactionMonitor.waitForConfirmation(
         txHash: txHash,
         blockchain: blockchain,
-        networkKey: NetworkKey.evm(chain.chainId),
+        networkKey: isCompressedSolana
+            ? NetworkKey.solana('mainnet')
+            : NetworkKey.evm(chain!.chainId),
         evmChain: chain,
       );
       if (!mounted) return;
@@ -262,7 +297,10 @@ class _SendNftScreenState extends State<SendNftScreen> {
           detailsUrl: detailsUrl,
         );
         unawaited(
-          blockchain.refreshWalletTokens(fromAddress, chainId: chain.chainId),
+          blockchain.refreshWalletTokens(
+            fromAddress,
+            chainId: isCompressedSolana ? null : chain!.chainId,
+          ),
         );
       } else {
         progressController.setError(
@@ -292,6 +330,8 @@ class _SendNftScreenState extends State<SendNftScreen> {
         ? 'Estimating...'
         : _feeFailed
         ? 'Estimation failed'
+        : nft?.isCompressed == true
+        ? '≈ ${_formatNative(_gasFeeNative, 'SOL')}'
         : _gasFeeNative > 0 && chain != null
         ? '${_formatNative(_gasFeeNative, chain.symbol)} (${_formatGwei(_gasPriceGwei)} Gwei)'
         : 'Enter recipient to estimate';

@@ -37,6 +37,9 @@ class NftAsset {
   });
 
   bool get isErc1155 => tokenType.toUpperCase().contains('1155');
+  bool get isCompressed => tokenType.toUpperCase().contains('COMPRESSED');
+  bool get isSolana => chainId == -501;
+  bool get canUseStandardSendFlow => !isSolana || isCompressed;
   bool get hasRarity => rarity.trim().isNotEmpty;
 }
 
@@ -99,8 +102,9 @@ class NftService {
   Future<List<NftAsset>> fetchOwnedNftsAcrossChains({
     required Iterable<EvmChain> chains,
     required String walletAddress,
+    String solanaWalletAddress = '',
   }) async {
-    if (walletAddress.isEmpty) {
+    if (walletAddress.isEmpty && solanaWalletAddress.isEmpty) {
       return const [];
     }
 
@@ -111,24 +115,37 @@ class NftService {
               seenChainIds.add(chain.chainId);
         })
         .toList(growable: false);
-    if (supportedChains.isEmpty) {
+    if (supportedChains.isEmpty && solanaWalletAddress.isEmpty) {
       return const [];
     }
 
-    final results = await Future.wait(
-      supportedChains.map((chain) async {
-        try {
-          final nfts = await fetchOwnedNfts(
-            chainId: chain.chainId,
-            chainName: chain.name,
-            walletAddress: walletAddress,
-          );
-          return (nfts: nfts, failed: false);
-        } catch (_) {
-          return (nfts: const <NftAsset>[], failed: true);
-        }
-      }),
-    );
+    final requests = <Future<({List<NftAsset> nfts, bool failed})>>[
+      if (walletAddress.isNotEmpty)
+        ...supportedChains.map((chain) async {
+          try {
+            final nfts = await fetchOwnedNfts(
+              chainId: chain.chainId,
+              chainName: chain.name,
+              walletAddress: walletAddress,
+            );
+            return (nfts: nfts, failed: false);
+          } catch (_) {
+            return (nfts: const <NftAsset>[], failed: true);
+          }
+        }),
+      if (solanaWalletAddress.isNotEmpty)
+        (() async {
+          try {
+            final nfts = await fetchOwnedSolanaNfts(
+              walletAddress: solanaWalletAddress,
+            );
+            return (nfts: nfts, failed: false);
+          } catch (_) {
+            return (nfts: const <NftAsset>[], failed: true);
+          }
+        })(),
+    ];
+    final results = await Future.wait(requests);
 
     final aggregated = <NftAsset>[];
     final seenAssetKeys = <String>{};
@@ -156,22 +173,34 @@ class NftService {
     return aggregated;
   }
 
-  Future<List<NftAsset>> fetchOwnedNfts({
-    required int chainId,
-    required String chainName,
+  Future<List<NftAsset>> fetchOwnedSolanaNfts({
     required String walletAddress,
   }) async {
-    if (!isSupportedChain(chainId) || walletAddress.isEmpty) {
+    if (walletAddress.isEmpty) {
       return const [];
     }
 
-    final url = AppEnvironment.blockchain('/$chainId/nfts/$walletAddress');
+    final url = AppEnvironment.blockchain(
+      '/networks/solana:mainnet/nfts/$walletAddress',
+    );
     final response = await http.get(url).timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) {
-      throw Exception('NFT API error: ${response.statusCode}');
+      throw Exception('Solana NFT API error: ${response.statusCode}');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return parseOwnedNftsResponse(
+      response.body,
+      chainId: -501,
+      chainName: 'Solana',
+    );
+  }
+
+  List<NftAsset> parseOwnedNftsResponse(
+    String responseBody, {
+    required int chainId,
+    required String chainName,
+  }) {
+    final data = jsonDecode(responseBody) as Map<String, dynamic>;
     final ownedNfts = data['ownedNfts'] as List<dynamic>? ?? const [];
     return ownedNfts
         .whereType<Map<String, dynamic>>()
@@ -211,6 +240,28 @@ class NftService {
           );
         })
         .toList();
+  }
+
+  Future<List<NftAsset>> fetchOwnedNfts({
+    required int chainId,
+    required String chainName,
+    required String walletAddress,
+  }) async {
+    if (!isSupportedChain(chainId) || walletAddress.isEmpty) {
+      return const [];
+    }
+
+    final url = AppEnvironment.blockchain('/$chainId/nfts/$walletAddress');
+    final response = await http.get(url).timeout(const Duration(seconds: 60));
+    if (response.statusCode != 200) {
+      throw Exception('NFT API error: ${response.statusCode}');
+    }
+
+    return parseOwnedNftsResponse(
+      response.body,
+      chainId: chainId,
+      chainName: chainName,
+    );
   }
 
   bool _isLikelySpamNft(Map<String, dynamic> nft) {
@@ -303,6 +354,12 @@ class NftService {
 
   String normalizeTokenType(String? value, {int balance = 1}) {
     final normalized = value?.trim().toUpperCase() ?? '';
+    if (normalized.contains('COMPRESSED')) {
+      return 'CompressedNFT';
+    }
+    if (normalized.contains('SPL')) {
+      return 'SPL_NFT';
+    }
     if (normalized.contains('1155')) {
       return 'ERC1155';
     }

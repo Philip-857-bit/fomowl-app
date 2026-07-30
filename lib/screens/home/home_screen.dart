@@ -47,6 +47,7 @@ import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
 import '../../services/home_snapshot_service.dart';
 import '../../services/app_release_checker.dart';
+import '../../services/connectivity_recovery.dart';
 import 'widgets/whats_new_sheet.dart';
 
 /// Home Screen - Main Wallet Dashboard
@@ -112,6 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _whatsNewChecked = false;
   int _walletLoadGeneration = 0;
   final AppReleaseChecker _releaseChecker = AppReleaseChecker();
+  final ConnectivityRecovery _connectivityRecovery = ConnectivityRecovery();
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
@@ -157,7 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
       unawaited(_loadHomeBanners());
     });
     _connectivityTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted && _hasInternet == false) {
+      if (mounted &&
+          (_hasInternet == false || _connectivityRecovery.hasPendingRetry)) {
         unawaited(_checkConnectivity());
       }
     });
@@ -780,15 +783,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkConnectivity() async {
+    var online = false;
     try {
       final response = await http
           .get(Uri.parse(AppEnvironment.connectivityCheckUrl))
           .timeout(const Duration(seconds: 5));
+      online = response.statusCode == 200 || response.statusCode == 429;
       if (mounted) {
         final l = AppLocalizations.of(context);
         setState(() {
-          _hasInternet =
-              response.statusCode == 200 || response.statusCode == 429;
+          _hasInternet = online;
           _connectivityStatus = _hasInternet! ? l.connected : l.noConnection;
         });
       }
@@ -800,6 +804,23 @@ class _HomeScreenState extends State<HomeScreen> {
           _connectivityStatus = l.noInternetConnection;
         });
       }
+    }
+    if (!mounted || !_connectivityRecovery.shouldRefresh(online)) return;
+    var balanceRefreshSucceeded = false;
+    try {
+      await _loadWalletData(forcePortfolioSync: true);
+      if (!mounted) return;
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      final address = await _walletService.getActiveAddressForFamily(
+        blockchain.activeFamily,
+      );
+      if (!mounted) return;
+      balanceRefreshSucceeded =
+          address == null ||
+          address.isEmpty ||
+          await _fetchRealBalances(address, forceRefresh: true);
+    } finally {
+      _connectivityRecovery.finishRefresh(succeeded: balanceRefreshSucceeded);
     }
   }
 
@@ -1148,18 +1169,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _fetchRealBalances(String address) async {
+  Future<bool> _fetchRealBalances(
+    String address, {
+    bool forceRefresh = false,
+  }) async {
     setState(() => _isLoadingBalances = true);
 
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final requestNetworkKey = blockchain.activeNetworkKey;
       final realTokens = await blockchain
-          .fetchWalletTokens(address)
+          .fetchWalletTokens(address, forceRefresh: forceRefresh)
           .timeout(const Duration(seconds: 45));
 
       if (!await _isStillActiveWalletRequest(address, requestNetworkKey)) {
-        return;
+        return false;
       }
 
       if (mounted) {
@@ -1178,9 +1202,9 @@ class _HomeScreenState extends State<HomeScreen> {
         // Save fresh snapshot
         final name = await _storage.getWalletName();
         if (!await _isStillActiveWalletRequest(address, requestNetworkKey)) {
-          return;
+          return false;
         }
-        if (!mounted) return;
+        if (!mounted) return false;
         final l = AppLocalizations.of(context);
         _snapshotService.saveSnapshot(
           HomePortfolioSnapshot(
@@ -1199,13 +1223,14 @@ class _HomeScreenState extends State<HomeScreen> {
           unawaited(_reloadPortfolioFromCachedTokens());
         }
       }
+      return true;
     } catch (e) {
       debugPrint('Error fetching balances: $e');
       final blockchain = _blockchain;
       final requestNetworkKey = blockchain?.activeNetworkKey;
       if (requestNetworkKey == null ||
           !await _isStillActiveWalletRequest(address, requestNetworkKey)) {
-        return;
+        return false;
       }
       if (mounted) {
         setState(() {
@@ -1232,6 +1257,7 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         });
       }
+      return false;
     }
   }
 
@@ -1392,20 +1418,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchNftPreview(String address) async {
-    if (address.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _nftPreview = [];
-          _hasMoreNfts = false;
-          _isLoadingNfts = false;
-        });
-      }
-      return;
-    }
-
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    if (blockchain.activeFamily != ChainFamily.evm ||
-        !RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address.trim())) {
+    final solanaAddress = await _walletService.getWalletAddressForFamily(
+      ChainFamily.solana,
+    );
+    final evmAddress = RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address.trim())
+        ? address.trim()
+        : '';
+    if (evmAddress.isEmpty &&
+        (solanaAddress == null || solanaAddress.isEmpty)) {
       if (mounted) {
         setState(() {
           _nftPreview = [];
@@ -1430,7 +1451,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ];
       final nfts = await _nftService.fetchOwnedNftsAcrossChains(
         chains: orderedChains,
-        walletAddress: address,
+        walletAddress: evmAddress,
+        solanaWalletAddress: solanaAddress ?? '',
       );
       if (!mounted) return;
       setState(() {

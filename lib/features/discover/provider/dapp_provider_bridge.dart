@@ -1957,10 +1957,33 @@ class DappProviderBridge {
       );
     }
     final payload = isFirstAddress ? second : first;
-    final preview = payload.length > 240
-        ? '${payload.substring(0, 240)}...'
-        : payload;
+    final displayPayload = _personalSignPreview(payload);
+    final preview = displayPayload.length > 240
+        ? '${displayPayload.substring(0, 240)}...'
+        : displayPayload;
     return _ResolvedSignPayload(payload: payload, preview: preview);
+  }
+
+  String _personalSignPreview(String payload) {
+    final normalized = payload.startsWith('0x') || payload.startsWith('0X')
+        ? payload.substring(2)
+        : null;
+    if (normalized == null ||
+        normalized.length.isOdd ||
+        !RegExp(r'^[0-9a-fA-F]*$').hasMatch(normalized)) {
+      return payload;
+    }
+
+    try {
+      final bytes = <int>[
+        for (var index = 0; index < normalized.length; index += 2)
+          int.parse(normalized.substring(index, index + 2), radix: 16),
+      ];
+      final decoded = utf8.decode(bytes);
+      return decoded.trim().isEmpty ? payload : decoded;
+    } on FormatException {
+      return payload;
+    }
   }
 
   String _normalizeTypedDataPayload(Object? value) {
