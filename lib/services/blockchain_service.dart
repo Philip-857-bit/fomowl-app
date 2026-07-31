@@ -1176,6 +1176,14 @@ class BlockchainService extends ChangeNotifier {
     String tokenAddress,
     int decimals,
   ) async {
+    final balance = await getTokenBalanceBaseUnits(walletAddress, tokenAddress);
+    return _scaledBigIntToDouble(balance, decimals);
+  }
+
+  Future<BigInt> getTokenBalanceBaseUnits(
+    String walletAddress,
+    String tokenAddress,
+  ) async {
     final data = '0x70a08231${_padAddress(walletAddress)}';
     final result = await _rpcCall('eth_call', [
       {'to': tokenAddress, 'data': data},
@@ -1183,11 +1191,10 @@ class BlockchainService extends ChangeNotifier {
     ]);
     if (result != null) {
       final hexStr = (result as String).substring(2);
-      if (hexStr.isEmpty) return 0.0;
-      final balance = BigInt.parse(hexStr, radix: 16);
-      return _scaledBigIntToDouble(balance, decimals);
+      if (hexStr.isEmpty) return BigInt.zero;
+      return BigInt.parse(hexStr, radix: 16);
     }
-    return 0.0;
+    return BigInt.zero;
   }
 
   Future<CustomTokenDefinition?> detectTokenByContract(

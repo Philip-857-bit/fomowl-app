@@ -12,6 +12,7 @@ import '../../services/currency_controller.dart';
 import '../../services/recipient_book_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
+import '../../utils/send_amount_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'widgets/send/send_header.dart';
@@ -41,6 +42,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   Token? _selectedToken;
   AmountInputMode _inputMode = AmountInputMode.token;
   bool _syncingDisplay = false;
+  bool _isCalculatingMax = false;
+  int? _selectedPercentage;
 
   double _availableBalance = 0.0;
   BigInt _availableBalanceBaseUnits = BigInt.zero;
@@ -92,6 +95,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     if (!mounted) return;
     setState(() {
       _selectedToken = token;
+      _selectedPercentage = null;
       _availableBalance = token.balance;
       _availableBalanceBaseUnits = AmountUtils.parseDecimalToBaseUnits(
         token.balance.toString(),
@@ -137,7 +141,9 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       tokenAmountText = '';
     }
     _amountController.text = tokenAmountText;
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() => _selectedPercentage = null);
+    }
   }
 
   String _trimTrailingZeros(String value) {
@@ -290,17 +296,104 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     }
   }
 
-  void _setMax() {
+  Future<BigInt> _evmNativeFeeReserve(BlockchainService blockchain) async {
+    try {
+      final fromAddress = await _walletService.getActiveAddressForFamily(
+        ChainFamily.evm,
+      );
+      final toAddress = _addressController.text.trim();
+      if (fromAddress != null &&
+          fromAddress.isNotEmpty &&
+          _isValidAddressForFamily(toAddress, ChainFamily.evm)) {
+        final gasData = await _walletService.estimateTransferFee(
+          fromAddress: fromAddress,
+          toAddress: toAddress,
+          amountInBaseUnits: BigInt.one,
+          rpcUrl: blockchain.activeChain.rpcUrl,
+        );
+        final fee = gasData['totalFeeWei'];
+        if (fee is BigInt && fee > BigInt.zero) {
+          return fee;
+        }
+      }
+    } catch (_) {
+      // Fall back to the chain-level estimate below.
+    }
+
+    final gasData = await blockchain.estimateGasFee();
+    final fee = gasData['totalFeeWei'];
+    if (fee is! BigInt || fee <= BigInt.zero) {
+      throw StateError('The network returned an invalid fee estimate.');
+    }
+    // The generic estimate uses 21,000 gas without a buffer. Keep a margin
+    // for a small gas-price movement between this screen and confirmation.
+    return (fee * BigInt.from(12)) ~/ BigInt.from(10);
+  }
+
+  Future<void> _setMax() async {
+    if (_isCalculatingMax) return;
     final decimals = _selectedToken?.decimals ?? 18;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final selectedToken = _selectedToken;
     final isNative =
-        _selectedToken?.contractAddress == null ||
-        (_selectedToken?.contractAddress?.isEmpty ?? true);
+        selectedToken?.contractAddress == null ||
+        (selectedToken?.contractAddress?.isEmpty ?? true);
     var maxBaseUnits = _availableBalanceBaseUnits;
-    if (blockchain.activeFamily == ChainFamily.solana && isNative) {
-      maxBaseUnits = maxBaseUnits > _solanaTransferFeeLamports
-          ? maxBaseUnits - _solanaTransferFeeLamports
-          : BigInt.zero;
+    if (isNative) {
+      if (blockchain.activeFamily == ChainFamily.solana) {
+        maxBaseUnits = SendAmountUtils.maxAfterFeeReserve(
+          maxBaseUnits,
+          _solanaTransferFeeLamports,
+        );
+      } else if (blockchain.activeFamily == ChainFamily.evm) {
+        setState(() => _isCalculatingMax = true);
+        try {
+          final feeReserve = await _evmNativeFeeReserve(blockchain);
+          maxBaseUnits = SendAmountUtils.maxAfterFeeReserve(
+            maxBaseUnits,
+            feeReserve,
+          );
+        } catch (_) {
+          ToastUtils.showError('Unable to estimate the network fee.');
+          return;
+        } finally {
+          if (mounted) {
+            setState(() => _isCalculatingMax = false);
+          }
+        }
+      }
+    } else if (blockchain.activeFamily == ChainFamily.evm) {
+      final tokenAddress = selectedToken?.contractAddress?.trim() ?? '';
+      setState(() => _isCalculatingMax = true);
+      try {
+        final walletAddress = await _walletService.getActiveAddressForFamily(
+          ChainFamily.evm,
+        );
+        if (walletAddress == null ||
+            walletAddress.isEmpty ||
+            tokenAddress.isEmpty) {
+          throw StateError('The token balance cannot be refreshed.');
+        }
+        maxBaseUnits = await blockchain.getTokenBalanceBaseUnits(
+          walletAddress,
+          tokenAddress,
+        );
+        if (maxBaseUnits <= BigInt.zero &&
+            _availableBalanceBaseUnits > BigInt.zero) {
+          throw StateError('The token balance cannot be refreshed.');
+        }
+      } catch (_) {
+        ToastUtils.showError('Unable to refresh the token balance.');
+        return;
+      } finally {
+        if (mounted) {
+          setState(() => _isCalculatingMax = false);
+        }
+      }
+    }
+    if (!mounted || !identical(_selectedToken, selectedToken)) return;
+    if (!isNative && blockchain.activeFamily == ChainFamily.evm) {
+      _availableBalanceBaseUnits = maxBaseUnits;
     }
     final tokenText = AmountUtils.formatBaseUnits(
       maxBaseUnits,
@@ -309,7 +402,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     );
     _amountController.text = tokenText;
     _setDisplayFromTokenAmount(tokenText);
-    if (mounted) setState(() {});
+    setState(() => _selectedPercentage = 100);
   }
 
   Future<String?> _openQrScanner() async {
@@ -327,14 +420,15 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     _setDisplayFromTokenAmount(_amountController.text);
   }
 
-  void _setPercentage(int percentage) {
+  Future<void> _setPercentage(int percentage) async {
     if (percentage == 100) {
-      _setMax();
+      await _setMax();
       return;
     }
-    final baseUnits =
-        (_availableBalanceBaseUnits * BigInt.from(percentage)) ~/
-        BigInt.from(100);
+    final baseUnits = SendAmountUtils.percentageOf(
+      _availableBalanceBaseUnits,
+      percentage,
+    );
     final decimals = _selectedToken?.decimals ?? 18;
     final amount = AmountUtils.formatBaseUnits(
       baseUnits,
@@ -343,7 +437,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     );
     _amountController.text = amount;
     _setDisplayFromTokenAmount(amount);
-    setState(() {});
+    setState(() => _selectedPercentage = percentage);
   }
 
   void _onSend() {
@@ -717,17 +811,23 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                                   right: percentage == 100 ? 0 : 8,
                                 ),
                                 child: OutlinedButton(
-                                  onPressed: () => _setPercentage(percentage),
+                                  key: ValueKey('send-percentage-$percentage'),
+                                  onPressed:
+                                      percentage == 100 && _isCalculatingMax
+                                      ? null
+                                      : () => _setPercentage(percentage),
                                   style: OutlinedButton.styleFrom(
                                     minimumSize: const Size(0, 40),
-                                    foregroundColor: percentage == 50
+                                    foregroundColor:
+                                        _selectedPercentage == percentage
                                         ? Colors.white
                                         : const Color(0xFF94A3B8),
-                                    backgroundColor: percentage == 50
+                                    backgroundColor:
+                                        _selectedPercentage == percentage
                                         ? const Color(0xFFEA2A33)
                                         : const Color(0xFF13161B),
                                     side: BorderSide(
-                                      color: percentage == 50
+                                      color: _selectedPercentage == percentage
                                           ? const Color(0xFFEA2A33)
                                           : const Color(0xFF2A333D),
                                     ),

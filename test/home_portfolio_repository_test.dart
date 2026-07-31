@@ -248,5 +248,58 @@ void main() {
         expect(ethereum.tokens.single.symbol, 'ETH');
       },
     );
+
+    test('uses the same spam filtering for token-selection candidates', () {
+      const hiddenAddress = '0x2222222222222222222222222222222222222222';
+      const customAddress = '0x3333333333333333333333333333333333333333';
+      final visible = repository.prepareVisibleTokens(
+        const [
+          Token(
+            symbol: 'BNB',
+            name: 'BNB',
+            balance: 1,
+            valueUsd: 600,
+            changePercent24h: 0,
+          ),
+          Token(
+            symbol: 'SPAM',
+            name: 'Spam token',
+            contractAddress: '0x1111111111111111111111111111111111111111',
+            balance: 1,
+            valueUsd: 0,
+            priceUsd: 0,
+            changePercent24h: 0,
+          ),
+          Token(
+            symbol: 'HIDDEN',
+            name: 'Hidden token',
+            contractAddress: hiddenAddress,
+            balance: 10,
+            valueUsd: 10,
+            priceUsd: 1,
+            changePercent24h: 0,
+            isCertified: true,
+          ),
+          Token(
+            symbol: 'CUSTOM',
+            name: 'Custom token',
+            contractAddress: customAddress,
+            balance: 0,
+            valueUsd: 0,
+            priceUsd: 0,
+            changePercent24h: 0,
+          ),
+        ],
+        {hiddenAddress},
+        userAddedAddresses: {customAddress},
+      );
+
+      expect(
+        visible.map((token) => token.symbol),
+        containsAll(['BNB', 'CUSTOM']),
+      );
+      expect(visible.map((token) => token.symbol), isNot(contains('SPAM')));
+      expect(visible.map((token) => token.symbol), isNot(contains('HIDDEN')));
+    });
   });
 }

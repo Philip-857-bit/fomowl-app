@@ -15,6 +15,7 @@ import '../../services/home_snapshot_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/token_visibility_utils.dart';
+import '../home/home_portfolio_repository.dart';
 
 /// Select Token Screen
 /// Search and filter tokens by network, tap to select
@@ -32,13 +33,18 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   final TokenVisibilityService _tokenVisibilityService =
       TokenVisibilityService();
   final HomeSnapshotService _snapshotService = HomeSnapshotService();
+  final HomePortfolioRepository _portfolioRepository =
+      const HomePortfolioRepository();
 
   List<Token> _allTokens = [];
   List<Token> _filteredTokens = [];
+  Set<String> _hiddenTokens = <String>{};
   bool _isLoading = true;
   BlockchainService? _blockchain;
   int? _observedChainId;
   String _observedWalletTokenSignature = '';
+  Timer? _searchDebounce;
+  int _searchRequestId = 0;
 
   @override
   void initState() {
@@ -51,6 +57,8 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchRequestId++;
     _blockchain?.removeListener(_handleBlockchainChanged);
     _searchController.dispose();
     super.dispose();
@@ -97,6 +105,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
         chainId,
       );
+      _hiddenTokens = hiddenTokens;
       final address = await _walletService.getActiveAddressForFamily(
         blockchain.activeFamily,
       );
@@ -139,19 +148,6 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
         }
       }
 
-      final suggestedTokens = await _loadSuggestedTokens(
-        blockchain: blockchain,
-        hiddenTokens: hiddenTokens,
-      );
-      mergedTokens = _mergeSelectableTokens(
-        blockchain: blockchain,
-        hiddenTokens: hiddenTokens,
-        tokenGroups: [
-          mergedTokens,
-          suggestedTokens,
-          _customTokensForActiveNetwork(blockchain),
-        ],
-      );
       if (mounted) {
         _applyLoadedTokens(
           mergedTokens.isNotEmpty ? mergedTokens : _getDefaultTokens(),
@@ -162,6 +158,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       final hiddenTokens = await _tokenVisibilityService.loadHiddenTokens(
         chainId,
       );
+      _hiddenTokens = hiddenTokens;
       final defaultTokens = _mergeSelectableTokens(
         blockchain: blockchain,
         hiddenTokens: hiddenTokens,
@@ -235,23 +232,6 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     return [blockchain.activeNativeToken];
   }
 
-  Future<List<Token>> _loadSuggestedTokens({
-    required BlockchainService blockchain,
-    required Set<String> hiddenTokens,
-  }) async {
-    try {
-      final tokens = await blockchain.searchTokensFromBackend('', limit: 60);
-      return _applyVisibility(
-        tokens
-            .where((token) => _tokenMatchesActiveNetwork(token, blockchain))
-            .toList(),
-        hiddenTokens,
-      );
-    } catch (_) {
-      return const [];
-    }
-  }
-
   List<Token> _customTokensForActiveNetwork(BlockchainService blockchain) {
     return blockchain.customTokensForActiveChain.map((token) {
       return Token(
@@ -276,14 +256,20 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     required Set<String> hiddenTokens,
     required List<List<Token>> tokenGroups,
   }) {
+    final customAddresses = blockchain.customTokensForActiveChain
+        .map((token) => token.address.trim().toLowerCase())
+        .where((address) => address.isNotEmpty)
+        .toSet();
+    final visibleTokens = _portfolioRepository.prepareVisibleTokens(
+      tokenGroups
+          .expand((tokens) => tokens)
+          .where((token) => _tokenMatchesActiveNetwork(token, blockchain))
+          .toList(),
+      hiddenTokens,
+      userAddedAddresses: customAddresses,
+    );
     final byKey = <String, Token>{};
-    for (final token in tokenGroups.expand((tokens) => tokens)) {
-      if (!_tokenMatchesActiveNetwork(token, blockchain)) {
-        continue;
-      }
-      if (_applyVisibility([token], hiddenTokens).isEmpty) {
-        continue;
-      }
+    for (final token in visibleTokens) {
       final scopedKey = _tokenScopedKey(token, blockchain.activeNetworkKey);
       final existing = byKey[scopedKey];
       if (existing == null || _shouldReplaceToken(existing, token)) {
@@ -357,19 +343,91 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
   }
 
   void _filterTokens(String query) {
+    _searchDebounce?.cancel();
+    final normalizedQuery = query.trim().toLowerCase();
+    final localResults = _localSearchResults(normalizedQuery);
     setState(() {
-      _filteredTokens = _allTokens.where((token) {
-        final matchesSearch =
-            query.isEmpty ||
-            token.name.toLowerCase().contains(query.toLowerCase()) ||
-            token.symbol.toLowerCase().contains(query.toLowerCase()) ||
-            token.contractAddress?.toLowerCase().contains(
-                  query.toLowerCase(),
-                ) ==
-                true;
-        return matchesSearch;
-      }).toList();
+      _filteredTokens = localResults;
     });
+    if (normalizedQuery.length < 2) {
+      _searchRequestId++;
+      return;
+    }
+    final requestId = ++_searchRequestId;
+    _searchDebounce = Timer(
+      const Duration(milliseconds: 350),
+      () => unawaited(
+        _runRemoteSearch(
+          normalizedQuery,
+          requestId: requestId,
+          localResults: localResults,
+        ),
+      ),
+    );
+  }
+
+  List<Token> _localSearchResults(String normalizedQuery) {
+    if (normalizedQuery.isEmpty) {
+      return List<Token>.from(_allTokens);
+    }
+    return _allTokens.where((token) {
+      return token.name.toLowerCase().contains(normalizedQuery) ||
+          token.symbol.toLowerCase().contains(normalizedQuery) ||
+          token.contractAddress?.toLowerCase().contains(normalizedQuery) ==
+              true;
+    }).toList();
+  }
+
+  Future<void> _runRemoteSearch(
+    String query, {
+    required int requestId,
+    required List<Token> localResults,
+  }) async {
+    final blockchain = _blockchain;
+    if (blockchain == null) return;
+    try {
+      final remoteResults = await blockchain.searchTokensFromBackend(
+        query,
+        limit: 30,
+      );
+      if (!mounted ||
+          requestId != _searchRequestId ||
+          _searchController.text.trim().toLowerCase() != query) {
+        return;
+      }
+      setState(() {
+        _filteredTokens = _mergeExplicitSearchResults(
+          blockchain: blockchain,
+          localResults: localResults,
+          remoteResults: remoteResults,
+        );
+      });
+    } catch (_) {
+      // Keep the local matches visible if remote discovery is unavailable.
+    }
+  }
+
+  List<Token> _mergeExplicitSearchResults({
+    required BlockchainService blockchain,
+    required List<Token> localResults,
+    required List<Token> remoteResults,
+  }) {
+    final byKey = <String, Token>{};
+    for (final token in [...localResults, ...remoteResults]) {
+      if (!_tokenMatchesActiveNetwork(token, blockchain) ||
+          _applyVisibility([token], _hiddenTokens).isEmpty) {
+        continue;
+      }
+      final key = _tokenScopedKey(token, blockchain.activeNetworkKey);
+      final existing = byKey[key];
+      if (existing == null || _shouldReplaceToken(existing, token)) {
+        byKey[key] = token.networkKey == null
+            ? token.copyWith(networkKey: blockchain.activeNetworkKey)
+            : token;
+      }
+    }
+    return byKey.values.toList()
+      ..sort((left, right) => left.symbol.compareTo(right.symbol));
   }
 
   @override

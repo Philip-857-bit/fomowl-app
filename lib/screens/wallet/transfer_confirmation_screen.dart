@@ -17,6 +17,7 @@ import '../../services/recipient_book_service.dart';
 import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
+import '../../utils/evm_fee_estimation_utils.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/entrance_motion.dart';
@@ -235,6 +236,9 @@ class _TransferConfirmationScreenState
       final evmChain = _evmChainForTransfer(blockchain, networkKey);
       final effectiveCoinId = evmChain.coinGeckoId;
       final token = _args?['token'] as Token?;
+      final isNativeToken =
+          token?.contractAddress == null ||
+          (token?.contractAddress?.isEmpty ?? true);
       final toAddress = _args?['toAddress'] as String? ?? '';
       final amountInBaseUnits =
           _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
@@ -250,15 +254,19 @@ class _TransferConfirmationScreenState
               _fromAddress!.isNotEmpty &&
               toAddress.isNotEmpty &&
               amountInBaseUnits > BigInt.zero
-          ? await _walletService.estimateTransferFee(
-              fromAddress: _fromAddress!,
-              toAddress: toAddress,
-              amountInBaseUnits: amountInBaseUnits,
-              rpcUrl: evmChain.rpcUrl,
-              tokenAddress: token?.contractAddress?.isNotEmpty == true
-                  ? token!.contractAddress
-                  : null,
-              nativePriceUsd: nativePrice,
+          ? await EvmFeeEstimationUtils.estimateTransfer(
+              requestedAmount: amountInBaseUnits,
+              isNative: isNativeToken,
+              estimate: (amount) => _walletService.estimateTransferFee(
+                fromAddress: _fromAddress!,
+                toAddress: toAddress,
+                amountInBaseUnits: amount,
+                rpcUrl: evmChain.rpcUrl,
+                tokenAddress: token?.contractAddress?.isNotEmpty == true
+                    ? token!.contractAddress
+                    : null,
+                nativePriceUsd: nativePrice,
+              ),
             )
           : await blockchain.estimateGasFee(nativePriceUsd: nativePrice);
       if (mounted) {

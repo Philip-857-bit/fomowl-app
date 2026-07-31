@@ -43,18 +43,35 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
   @override
   void initState() {
     super.initState();
+    widget.controller.addListener(_handleAddressChanged);
     _reload();
   }
 
   @override
   void didUpdateWidget(covariant SendReceiverStep oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.removeListener(_handleAddressChanged);
+      widget.controller.addListener(_handleAddressChanged);
+    }
     if (oldWidget.networkKey != widget.networkKey ||
         oldWidget.walletScope != widget.walletScope) {
       _recent = const [];
       _saved = const [];
       _showAll = false;
       _reload();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleAddressChanged);
+    super.dispose();
+  }
+
+  void _handleAddressChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -92,14 +109,40 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
     if (value == null || value.isEmpty) return;
     widget.controller.text = value;
     widget.controller.selection = TextSelection.collapsed(offset: value.length);
-    if (widget.isValidAddress(value)) _submitAddress(value);
   }
 
   Future<void> _scan() async {
     final value = await widget.onQrTap();
     if (value == null || value.trim().isEmpty) return;
     widget.controller.text = value.trim();
-    if (widget.isValidAddress(value.trim())) _submitAddress(value.trim());
+    widget.controller.selection = TextSelection.collapsed(
+      offset: widget.controller.text.length,
+    );
+  }
+
+  Future<void> _saveCurrentAddress() async {
+    final address = widget.controller.text.trim();
+    if (!widget.isValidAddress(address)) {
+      ToastUtils.showError('Enter a valid address before saving.');
+      return;
+    }
+    final label = await _askLabel('');
+    if (label == null || label.isEmpty) {
+      return;
+    }
+    await _book.save(
+      networkKey: widget.networkKey,
+      walletScope: widget.walletScope,
+      address: address,
+      label: label,
+    );
+    await _reload();
+    if (!mounted) return;
+    setState(() {
+      _savedTab = true;
+      _showAll = false;
+    });
+    ToastUtils.showSuccess('Receiver saved.');
   }
 
   String _short(String address) {
@@ -114,7 +157,7 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF13161B),
         title: Text(
-          initial.isEmpty ? 'Save address' : 'Edit address',
+          initial.isEmpty ? 'Save receiver' : 'Edit receiver name',
           style: GoogleFonts.inter(color: Colors.white),
         ),
         content: TextField(
@@ -138,7 +181,8 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
         ],
       ),
     );
-    controller.dispose();
+    // The dialog route still builds during its closing animation.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     return value;
   }
 
@@ -175,7 +219,7 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
                     onTap: () => Navigator.pop(context, 'share'),
                   ),
                   _ActionRow(
-                    label: 'Edit',
+                    label: 'Edit name',
                     asset: '$_assetRoot/figma_icon_9.svg',
                     onTap: () => Navigator.pop(context, 'edit'),
                   ),
@@ -231,39 +275,47 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
           children: [
             SizedBox(
               height: 68,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned(
-                    left: 20,
-                    child: InkWell(
-                      onTap: widget.onBack,
-                      borderRadius: BorderRadius.circular(24),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        alignment: Alignment.center,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Color(0xFF13161B),
-                        ),
-                        child: SvgPicture.asset(
-                          '$_assetRoot/figma_icon_3.svg',
-                          width: 8,
-                          height: 14,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      key: const ValueKey('send-receiver-back'),
+                      width: 40,
+                      height: 40,
+                      child: Semantics(
+                        button: true,
+                        label: 'Back',
+                        child: Material(
+                          color: const Color(0xFF13161B),
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            onTap: widget.onBack,
+                            customBorder: const CircleBorder(),
+                            child: Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Text(
-                    'Select Receiver',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          'Select Receiver',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 40),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -319,10 +371,33 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
                                 asset: '$_assetRoot/figma_icon_4.svg',
                                 onTap: widget.controller.clear,
                               ),
+                              Tooltip(
+                                message: 'Scan QR code',
+                                child: Semantics(
+                                  button: true,
+                                  label: 'Scan QR code',
+                                  child: InkWell(
+                                    key: const ValueKey(
+                                      'send-receiver-qr-scan',
+                                    ),
+                                    onTap: _scan,
+                                    child: const SizedBox(
+                                      width: 38,
+                                      height: 42,
+                                      child: Icon(
+                                        Icons.qr_code_scanner_rounded,
+                                        color: Colors.white,
+                                        size: 21,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                               InkWell(
+                                key: const ValueKey('send-receiver-paste'),
                                 onTap: _paste,
                                 child: SizedBox(
-                                  width: 45,
+                                  width: 52,
                                   child: Center(
                                     child: Text(
                                       'Paste',
@@ -334,15 +409,57 @@ class _SendReceiverStepState extends State<SendReceiverStep> {
                                   ),
                                 ),
                               ),
-                              _FieldIcon(
-                                asset: '$_assetRoot/figma_icon_6.svg',
-                                width: 18,
-                                onTap: _scan,
-                              ),
                             ],
                           ),
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            key: const ValueKey('send-receiver-save'),
+                            onPressed:
+                                widget.isValidAddress(
+                                  widget.controller.text.trim(),
+                                )
+                                ? _saveCurrentAddress
+                                : null,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(44),
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: Color(0xFF2A333D)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                            ),
+                            child: const Text('Save receiver'),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton(
+                            key: const ValueKey('send-receiver-continue'),
+                            onPressed:
+                                widget.isValidAddress(
+                                  widget.controller.text.trim(),
+                                )
+                                ? () => _submitAddress(widget.controller.text)
+                                : null,
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(44),
+                              backgroundColor: const Color(0xFFEA2A33),
+                              disabledBackgroundColor: const Color(0xFF3A2023),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                            ),
+                            child: const Text('Continue'),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 28),
                     Row(
@@ -555,10 +672,9 @@ class _ReceiverRow extends StatelessWidget {
 }
 
 class _FieldIcon extends StatelessWidget {
-  const _FieldIcon({required this.asset, required this.onTap, this.width = 17});
+  const _FieldIcon({required this.asset, required this.onTap});
   final String asset;
   final VoidCallback onTap;
-  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -567,7 +683,7 @@ class _FieldIcon extends StatelessWidget {
       child: SizedBox(
         width: 30,
         height: 42,
-        child: Center(child: SvgPicture.asset(asset, width: width, height: 18)),
+        child: Center(child: SvgPicture.asset(asset, width: 17, height: 18)),
       ),
     );
   }
