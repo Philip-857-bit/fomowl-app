@@ -282,7 +282,7 @@ class _SendNftScreenState extends State<SendNftScreen> {
         reference: _shortHash(txHash),
         detailsUrl: detailsUrl,
       );
-      final confirmed = await _transactionMonitor.waitForConfirmation(
+      final confirmation = await _transactionMonitor.waitForConfirmation(
         txHash: txHash,
         blockchain: blockchain,
         networkKey: isCompressedSolana
@@ -291,7 +291,7 @@ class _SendNftScreenState extends State<SendNftScreen> {
         evmChain: chain,
       );
       if (!mounted) return;
-      if (confirmed) {
+      if (confirmation == TransactionConfirmationStatus.confirmed) {
         progressController.setSuccess(
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
@@ -302,9 +302,9 @@ class _SendNftScreenState extends State<SendNftScreen> {
             chainId: isCompressedSolana ? null : chain!.chainId,
           ),
         );
-      } else {
+      } else if (confirmation == TransactionConfirmationStatus.failed) {
         progressController.setError(
-          'The transfer was submitted but is still waiting for confirmation.',
+          'The NFT transfer was confirmed as failed by the network.',
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
         );

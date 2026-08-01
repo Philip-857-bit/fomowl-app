@@ -10,11 +10,13 @@ import 'blockchain_service.dart';
 import 'http_client_service.dart';
 import 'rpc_service.dart';
 
+enum TransactionConfirmationStatus { confirmed, failed, pending }
+
 class TransactionMonitor {
   final HttpClientService _httpClientService = HttpClientService();
   final RpcService _rpcService = RpcService();
 
-  Future<bool> waitForConfirmation({
+  Future<TransactionConfirmationStatus> waitForConfirmation({
     required String txHash,
     required BlockchainService blockchain,
     String? networkKey,
@@ -53,7 +55,7 @@ class TransactionMonitor {
 
   // ── EVM ────────────────────────────────────────────────────────────────────
 
-  Future<bool> _waitForEvmConfirmation({
+  Future<TransactionConfirmationStatus> _waitForEvmConfirmation({
     required String txHash,
     required BlockchainService blockchain,
     EvmChain? evmChain,
@@ -63,12 +65,18 @@ class TransactionMonitor {
     void Function(int attempts)? onPoll,
   }) async {
     final chain = evmChain ?? blockchain.activeChain;
-    final rpcUrl = await _rpcService.resolveWorkingRpcUrl(
-      chainId: chain.chainId,
-      primaryRpcUrl: chain.rpcUrl,
-    );
+    late final String rpcUrl;
+    try {
+      rpcUrl = await _rpcService.resolveWorkingRpcUrl(
+        chainId: chain.chainId,
+        primaryRpcUrl: chain.rpcUrl,
+      );
+    } catch (error) {
+      debugPrint('EVM tx monitor could not resolve an RPC: $error');
+      return TransactionConfirmationStatus.pending;
+    }
     final client = Web3Client(rpcUrl, _httpClientService.client);
-    final completer = Completer<bool>();
+    final completer = Completer<TransactionConfirmationStatus>();
     final stopwatch = Stopwatch()..start();
     int attempts = 0;
     var pollInFlight = false;
@@ -80,7 +88,9 @@ class TransactionMonitor {
       onPoll?.call(attempts);
       if (stopwatch.elapsed >= timeout) {
         timer?.cancel();
-        if (!completer.isCompleted) completer.complete(false);
+        if (!completer.isCompleted) {
+          completer.complete(TransactionConfirmationStatus.pending);
+        }
         return;
       }
       pollInFlight = true;
@@ -91,7 +101,9 @@ class TransactionMonitor {
         if (receipt != null) {
           timer?.cancel();
           if (!completer.isCompleted) {
-            completer.complete(receipt.status ?? false);
+            completer.complete(
+              confirmationStatusFromEvmReceipt(receipt.status),
+            );
           }
         }
       } catch (e) {
@@ -104,7 +116,9 @@ class TransactionMonitor {
     timer = Timer.periodic(pollInterval, (_) {
       if (stopwatch.elapsed >= timeout) {
         timer?.cancel();
-        if (!completer.isCompleted) completer.complete(false);
+        if (!completer.isCompleted) {
+          completer.complete(TransactionConfirmationStatus.pending);
+        }
         return;
       }
       unawaited(pollReceipt());
@@ -122,7 +136,7 @@ class TransactionMonitor {
   ///   - `{ "pending": true }` while the tx is not yet finalised
   ///   - Solana: `{ "status": 1 }` for success, `{ "status": 0 }` for failure
   ///   - Tron:   `{ "result": "SUCCESS" }` for success, anything else for failure
-  Future<bool> _waitForNonEvmConfirmation({
+  Future<TransactionConfirmationStatus> _waitForNonEvmConfirmation({
     required String txHash,
     required String networkKey,
     required Duration pollInterval,
@@ -136,7 +150,7 @@ class TransactionMonitor {
       '/networks/$encodedKey/transaction/$encodedHash',
     );
 
-    final completer = Completer<bool>();
+    final completer = Completer<TransactionConfirmationStatus>();
     final stopwatch = Stopwatch()..start();
     int attempts = 0;
     var pollInFlight = false;
@@ -148,7 +162,9 @@ class TransactionMonitor {
       onPoll?.call(attempts);
       if (stopwatch.elapsed >= timeout) {
         timer?.cancel();
-        if (!completer.isCompleted) completer.complete(false);
+        if (!completer.isCompleted) {
+          completer.complete(TransactionConfirmationStatus.pending);
+        }
         return;
       }
       pollInFlight = true;
@@ -158,9 +174,8 @@ class TransactionMonitor {
             .timeout(receiptTimeout);
 
         if (response.statusCode != 200 && response.statusCode != 202) {
-          // Non-retryable error from backend — stop polling.
-          timer?.cancel();
-          if (!completer.isCompleted) completer.complete(false);
+          // An unavailable status endpoint does not prove that a broadcast
+          // transaction failed. Keep polling until the bounded timeout.
           return;
         }
 
@@ -171,8 +186,7 @@ class TransactionMonitor {
 
         timer?.cancel();
         if (!completer.isCompleted) {
-          final confirmed = _isNonEvmSuccess(data, networkKey);
-          completer.complete(confirmed);
+          completer.complete(_nonEvmStatus(data, networkKey));
         }
       } catch (e) {
         debugPrint('Non-EVM tx monitor error: $e');
@@ -184,7 +198,9 @@ class TransactionMonitor {
     timer = Timer.periodic(pollInterval, (_) {
       if (stopwatch.elapsed >= timeout) {
         timer?.cancel();
-        if (!completer.isCompleted) completer.complete(false);
+        if (!completer.isCompleted) {
+          completer.complete(TransactionConfirmationStatus.pending);
+        }
         return;
       }
       unawaited(pollStatus());
@@ -194,19 +210,52 @@ class TransactionMonitor {
     return completer.future;
   }
 
-  bool _isNonEvmSuccess(Map<String, dynamic> data, String networkKey) {
+  @visibleForTesting
+  TransactionConfirmationStatus confirmationStatusFromEvmReceipt(
+    bool? receiptStatus,
+  ) {
+    if (receiptStatus == true) return TransactionConfirmationStatus.confirmed;
+    if (receiptStatus == false) return TransactionConfirmationStatus.failed;
+    return TransactionConfirmationStatus.pending;
+  }
+
+  @visibleForTesting
+  TransactionConfirmationStatus nonEvmStatusForTest(
+    Map<String, dynamic> data,
+    String networkKey,
+  ) => _nonEvmStatus(data, networkKey);
+
+  TransactionConfirmationStatus _nonEvmStatus(
+    Map<String, dynamic> data,
+    String networkKey,
+  ) {
+    if (data['pending'] == true) {
+      return TransactionConfirmationStatus.pending;
+    }
     if (networkKey.startsWith('solana:')) {
       // Solana: status=1 means success, status=0 means on-chain failure.
       final status = data['status'];
-      if (status is int) return status == 1;
-      if (status is num) return status.toInt() == 1;
-      // err field being null also indicates success.
-      return data['err'] == null;
+      if (status is num) {
+        return status.toInt() == 1
+            ? TransactionConfirmationStatus.confirmed
+            : TransactionConfirmationStatus.failed;
+      }
+      if (data.containsKey('err')) {
+        return data['err'] == null
+            ? TransactionConfirmationStatus.confirmed
+            : TransactionConfirmationStatus.failed;
+      }
+      return TransactionConfirmationStatus.pending;
     }
     if (networkKey.startsWith('tron:')) {
-      // Tron: result="SUCCESS" means success.
-      return data['result']?.toString().toUpperCase() == 'SUCCESS';
+      final result = data['result']?.toString().trim().toUpperCase();
+      if (result == null || result.isEmpty) {
+        return TransactionConfirmationStatus.pending;
+      }
+      return result == 'SUCCESS'
+          ? TransactionConfirmationStatus.confirmed
+          : TransactionConfirmationStatus.failed;
     }
-    return false;
+    return TransactionConfirmationStatus.pending;
   }
 }

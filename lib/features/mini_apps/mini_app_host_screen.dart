@@ -917,7 +917,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       );
 
       final blockchain = context.read<BlockchainService>();
-      final confirmed = await _transactionMonitor.waitForConfirmation(
+      final confirmation = await _transactionMonitor.waitForConfirmation(
         txHash: txHash,
         blockchain: blockchain,
         networkKey: networkKey,
@@ -925,14 +925,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             ? _evmChainForNetwork(blockchain, networkKey)
             : null,
       );
-      if (confirmed) {
+      if (confirmation == TransactionConfirmationStatus.confirmed) {
         controller.setSuccess(
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
         );
-      } else {
+      } else if (confirmation == TransactionConfirmationStatus.failed) {
         controller.setError(
-          'Transfer submitted and awaiting network confirmation.',
+          'The transaction was confirmed as failed by the network.',
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
         );
@@ -941,7 +941,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       return <String, dynamic>{
         'ok': true,
         'transactionHash': txHash,
-        'confirmed': confirmed,
+        'confirmed': confirmation == TransactionConfirmationStatus.confirmed,
+        'pending': confirmation == TransactionConfirmationStatus.pending,
       };
     } catch (error) {
       final message = _bridgeTransferErrorMessage(

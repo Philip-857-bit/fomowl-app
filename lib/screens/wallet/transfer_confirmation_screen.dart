@@ -603,7 +603,7 @@ class _TransferConfirmationScreenState
         detailsUrl: detailsUrl,
       );
 
-      final confirmed = await _transactionMonitor.waitForConfirmation(
+      final confirmation = await _transactionMonitor.waitForConfirmation(
         txHash: txHash,
         blockchain: blockchain,
         networkKey: transferNetworkKey,
@@ -613,7 +613,7 @@ class _TransferConfirmationScreenState
         return;
       }
 
-      if (confirmed) {
+      if (confirmation == TransactionConfirmationStatus.confirmed) {
         progressController.setSuccess(
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
@@ -667,9 +667,9 @@ class _TransferConfirmationScreenState
             ),
           );
         }
-      } else {
+      } else if (confirmation == TransactionConfirmationStatus.failed) {
         progressController.setError(
-          AppLocalizations.of(context).transactionPendingConfirmation,
+          AppLocalizations.of(context).transactionFailed,
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
         );

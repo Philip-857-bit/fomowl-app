@@ -600,17 +600,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         // Relay may return an approval followed by a deposit. Waiting for each
         // transaction prevents the next step's gas estimation from running
         // against stale allowance state and also stops on an on-chain revert.
-        final confirmed = await _transactionMonitor.waitForConfirmation(
+        final confirmation = await _transactionMonitor.waitForConfirmation(
           txHash: txHash,
           blockchain: widget.blockchain,
           evmChain: chain,
         );
-        if (!confirmed) {
+        if (confirmation == TransactionConfirmationStatus.failed) {
           controller.setError(
-            'A bridge transaction was not confirmed successfully. If it is still pending in your wallet, do not submit the bridge again.',
+            'A bridge transaction was confirmed as failed by the network.',
           );
           return;
         }
+        if (confirmation == TransactionConfirmationStatus.pending) return;
       }
 
       // Relay fills the destination side once the origin deposit lands —

@@ -1535,13 +1535,13 @@ class _SwapScreenState extends State<SwapScreen> {
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
-        final confirmed = await _waitForTxConfirmation(
+        final confirmation = await _waitForTxConfirmation(
           txHash,
           rewardReferralOnSwap: rewardReferralOnSwap,
           swapAmountUsd: swapAmountUsd,
         );
         if (!mounted) return;
-        if (confirmed) {
+        if (confirmation == TransactionConfirmationStatus.confirmed) {
           final recorded =
               analyticsEventId != null &&
               analyticsEventId.isNotEmpty &&
@@ -1595,9 +1595,9 @@ class _SwapScreenState extends State<SwapScreen> {
             reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
-        } else {
+        } else if (confirmation == TransactionConfirmationStatus.failed) {
           progressController.setError(
-            l.transactionPendingConfirmation,
+            l.transactionFailed,
             reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
@@ -1754,17 +1754,17 @@ class _SwapScreenState extends State<SwapScreen> {
     );
   }
 
-  Future<bool> _waitForTxConfirmation(
+  Future<TransactionConfirmationStatus> _waitForTxConfirmation(
     String txHash, {
     bool rewardReferralOnSwap = false,
     double swapAmountUsd = 0.0,
   }) async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final confirmed = await _transactionMonitor.waitForConfirmation(
+    final confirmation = await _transactionMonitor.waitForConfirmation(
       txHash: txHash,
       blockchain: blockchain,
     );
-    if (confirmed) {
+    if (confirmation == TransactionConfirmationStatus.confirmed) {
       unawaited(
         _runPostConfirmSwapSideEffects(
           blockchain: blockchain,
@@ -1773,9 +1773,8 @@ class _SwapScreenState extends State<SwapScreen> {
           swapAmountUsd: swapAmountUsd,
         ),
       );
-      return true;
     }
-    return false;
+    return confirmation;
   }
 
   Future<void> _getQuote() async {
@@ -2569,10 +2568,11 @@ class _SwapScreenState extends State<SwapScreen> {
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
-        final confirmed = await _waitForTxConfirmation(txHash);
-        if (!confirmed) {
+        final confirmation = await _waitForTxConfirmation(txHash);
+        if (confirmation != TransactionConfirmationStatus.confirmed) {
+          if (confirmation == TransactionConfirmationStatus.pending) return;
           progressController!.setError(
-            l.approvalPendingConfirmation,
+            l.transactionFailed,
             reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
@@ -3222,10 +3222,13 @@ class _SwapScreenState extends State<SwapScreen> {
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
-        final confirmed = await _waitForTxConfirmation(txHash);
-        if (!confirmed) {
+        final confirmation = await _waitForTxConfirmation(txHash);
+        if (confirmation != TransactionConfirmationStatus.confirmed) {
+          if (confirmation == TransactionConfirmationStatus.pending) {
+            return false;
+          }
           progressController.setError(
-            l.approvalPendingConfirmation,
+            l.transactionFailed,
             reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
@@ -3489,13 +3492,13 @@ class _SwapScreenState extends State<SwapScreen> {
         reference: shortHash(txHash),
         detailsUrl: _transactionDetailsUrl(txHash),
       );
-      final confirmed = await _waitForTxConfirmation(
+      final confirmation = await _waitForTxConfirmation(
         txHash,
         rewardReferralOnSwap: false,
         swapAmountUsd: referralSwapAmountUsd,
       );
       if (!mounted) return;
-      if (confirmed) {
+      if (confirmation == TransactionConfirmationStatus.confirmed) {
         final analyticsEventId = result.analyticsEventId;
         if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
           final recorded = await _swapExecutionService.recordConfirmedSwap(
@@ -3547,9 +3550,9 @@ class _SwapScreenState extends State<SwapScreen> {
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
-      } else {
+      } else if (confirmation == TransactionConfirmationStatus.failed) {
         progressController.setError(
-          l.transactionPendingConfirmation,
+          l.transactionFailed,
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
