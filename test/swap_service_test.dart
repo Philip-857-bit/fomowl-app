@@ -97,6 +97,74 @@ void main() {
       expect(quote.platformFeeUsd, 1.0);
     });
 
+    test('preserves detected buy and sell tax metadata', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'liquidityAvailable': true,
+            'buyAmount': '1000',
+            'tokenMetadata': {
+              'buyToken': {
+                'decimals': 18,
+                'buyTaxBps': '125',
+                'sellTaxBps': '0',
+              },
+              'sellToken': {'buyTaxBps': '0', 'sellTaxBps': '399'},
+            },
+          }),
+          200,
+        );
+      });
+      final service = SwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final quote = await service.get0xQuote(
+        chainId: 56,
+        fromTokenAddress: '0x72928a49c4e88f382b0b6ff3e561f56dd75485f9',
+        toTokenAddress: '',
+        amountWei: '10000000000000',
+        buyTokenDecimals: 18,
+        isGasless: true,
+        walletAddress: '0x1111111111111111111111111111111111111111',
+      );
+
+      expect(quote, isNotNull);
+      expect(quote!.sellTaxBps, 399);
+      expect(quote.buyTaxBps, 125);
+      expect(quote.taxMetadataAvailable, isTrue);
+      expect(quote.hasTransferTax, isTrue);
+    });
+
+    test(
+      'rejects a 200 response when gasless liquidity is unavailable',
+      () async {
+        final mockClient = MockClient((request) async {
+          return http.Response(
+            jsonEncode({'liquidityAvailable': false, 'zid': '0xroute'}),
+            200,
+          );
+        });
+        final service = SwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
+
+        final quote = await service.get0xQuote(
+          chainId: 56,
+          fromTokenAddress: '0x72928a49c4e88f382b0b6ff3e561f56dd75485f9',
+          toTokenAddress: '',
+          amountWei: '6862706314430',
+          buyTokenDecimals: 18,
+          isGasless: true,
+          walletAddress: '0x1111111111111111111111111111111111111111',
+        );
+
+        expect(quote, isNull);
+        expect(service.lastError, contains('too low for a gasless route'));
+        expect(service.lastError, contains('turn off Gasless'));
+      },
+    );
+
     test('isChainSupported returns correct results for gasless vs normal', () {
       final service = SwapService();
 

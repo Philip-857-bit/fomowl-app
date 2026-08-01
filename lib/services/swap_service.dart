@@ -30,6 +30,9 @@ class SwapQuote {
   final String? txValue;
   final String? txGas;
   final String? txGasPrice;
+  final int? sellTaxBps;
+  final int? buyTaxBps;
+  final bool taxMetadataAvailable;
 
   SwapQuote({
     required this.amountOutWei,
@@ -52,10 +55,15 @@ class SwapQuote {
     this.txValue,
     this.txGas,
     this.txGasPrice,
+    this.sellTaxBps,
+    this.buyTaxBps,
+    this.taxMetadataAvailable = false,
   });
 
   /// Platform fee as a percentage (e.g. 100 BPS = 1.0%)
   double get platformFeePercent => platformFeeBps / 100.0;
+
+  bool get hasTransferTax => (sellTaxBps ?? 0) > 0 || (buyTaxBps ?? 0) > 0;
 }
 
 class LimitOrderResult {
@@ -473,6 +481,12 @@ class SwapService {
               'Swap quote response was incomplete. Please try again.';
           return null;
         }
+        if (data['liquidityAvailable'] == false) {
+          _lastError = isGasless
+              ? 'This amount is too low for a gasless route. Increase the amount or turn off Gasless to use a regular swap.'
+              : 'No swap route is available for this amount. Try a larger amount or a different pair.';
+          return null;
+        }
         final dstAmountWei = data['buyAmount']?.toString() ?? '0';
         final minAmountWei = data['minBuyAmount']?.toString() ?? dstAmountWei;
         final dstAmount = BigInt.tryParse(dstAmountWei) ?? BigInt.zero;
@@ -507,6 +521,12 @@ class SwapService {
         // Extract decimal precision safely (fallback to swap input decimals if missing)
         final tokenMetadata = _asMap(data['tokenMetadata']);
         final buyTokenMeta = _asMap(tokenMetadata?['buyToken']);
+        final sellTokenMeta = _asMap(tokenMetadata?['sellToken']);
+        final taxMetadataAvailable =
+            buyTokenMeta?.containsKey('buyTaxBps') == true &&
+            sellTokenMeta?.containsKey('sellTaxBps') == true;
+        final buyTaxBps = _asNullableInt(buyTokenMeta?['buyTaxBps']);
+        final sellTaxBps = _asNullableInt(sellTokenMeta?['sellTaxBps']);
         final rawDecimals = buyTokenMeta?['decimals'];
         final decimals = rawDecimals is int
             ? rawDecimals
@@ -550,6 +570,9 @@ class SwapService {
           txValue: transaction?['value']?.toString(),
           txGas: transaction?['gas']?.toString(),
           txGasPrice: transaction?['gasPrice']?.toString(),
+          sellTaxBps: sellTaxBps,
+          buyTaxBps: buyTaxBps,
+          taxMetadataAvailable: taxMetadataAvailable,
         );
       } else {
         _lastError = _extractBackendMessage(
@@ -621,6 +644,12 @@ class SwapService {
       );
     }
     return null;
+  }
+
+  int? _asNullableInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 
   Map<String, dynamic>? _decodeMapBody(

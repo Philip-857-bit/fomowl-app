@@ -9,6 +9,7 @@ import '../utils/app_error_utils.dart';
 import 'blockchain_service.dart';
 import 'rpc_service.dart';
 import 'swap_service.dart'; // Still needed for SwapQuote
+import 'swap_quote_safety.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
 
@@ -352,6 +353,10 @@ class SwapExecutionService {
         quoteResponse.body,
         fallback: 'Gasless quote response was incomplete. Please try again.',
       );
+      final blockingMessage = gaslessQuoteBlockingMessage(quoteData);
+      if (blockingMessage != null) {
+        throw Exception(blockingMessage);
+      }
 
       // SECURITY: enforce the slippage floor before signing the gasless order, so
       // the user can't be made to sign an order that yields far less than the
