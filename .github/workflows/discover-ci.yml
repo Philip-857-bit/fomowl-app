@@ -49,7 +49,7 @@ jobs:
 
   android-discover-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
 
@@ -66,6 +66,14 @@ jobs:
           flutter-version: 3.44.6
           cache: true
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+
       - name: Install Flutter dependencies
         run: flutter pub get
 
@@ -76,6 +84,12 @@ jobs:
           sudo rm -rf /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
           sudo docker image prune --all --force || true
           df -h
+
+      # Compile the Rust bridge and Android application before QEMU starts.
+      # Keeping the emulator alive during the cold native build starves QEMU on
+      # hosted runners and caused repeated hanging-thread/runner-eviction errors.
+      - name: Prebuild Android debug application
+        run: flutter build apk --debug
 
       - name: Enable KVM
         run: |
@@ -91,7 +105,7 @@ jobs:
           target: google_apis
           emulator-boot-timeout: 900
           disable-animations: true
-          cores: 2
-          ram-size: 2048M
+          cores: 4
+          ram-size: 3072M
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: flutter test integration_test/discover_browser_flow_test.dart integration_test/discover_smoke_test.dart -d emulator-5554
