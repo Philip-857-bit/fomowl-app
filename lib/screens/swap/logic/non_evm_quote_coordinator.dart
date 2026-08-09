@@ -103,7 +103,13 @@ class NonEvmQuoteCoordinator {
     required double fromTokenPriceUsd,
     required int slippageBps,
     required Duration timeout,
+    String networkKey = 'tron:mainnet',
   }) async {
+    if (networkKey != 'tron:mainnet') {
+      return const NonEvmQuoteResult.failure(
+        'SunSwap is available on TRON Mainnet only. Switch from Nile to Mainnet to swap.',
+      );
+    }
     final amountRaw = toWeiAmount(amountText, fromToken.decimals);
     if (amountRaw == null || amountRaw == '0') {
       return const NonEvmQuoteResult.failure('Enter a valid amount.');
@@ -117,6 +123,7 @@ class NonEvmQuoteCoordinator {
             toToken: _assetAddress(toToken, tronNativeAddress),
             amountSun: amountRaw,
             walletAddress: walletAddress,
+            toTokenDecimals: toToken.decimals,
             sellAmountUsd: _sellAmountUsd(inputAmount, fromTokenPriceUsd),
             slippageBps: slippageBps,
           )

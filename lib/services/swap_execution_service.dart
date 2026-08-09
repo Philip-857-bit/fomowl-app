@@ -12,6 +12,7 @@ import 'swap_service.dart'; // Still needed for SwapQuote
 import 'swap_quote_safety.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
+import 'zerox_gasless_executor.dart';
 
 class SwapExecutionResult {
   final bool success;
@@ -33,12 +34,14 @@ class SwapExecutionService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
   final RpcService _rpcService = RpcService();
-  static const int _eip712SignatureType = 2;
+  late final ZeroXGaslessExecutor _gaslessExecutor;
 
   SwapExecutionService({
     WalletService? walletService,
     SwapService? swapService, // Kept constructor sig for compatibility
-  }) : _walletService = walletService ?? WalletService();
+  }) : _walletService = walletService ?? WalletService() {
+    _gaslessExecutor = ZeroXGaslessExecutor(walletService: _walletService);
+  }
 
   Future<String> _resolveRpcUrl(BlockchainService blockchain) {
     return _rpcService.resolveWorkingRpcUrl(
@@ -382,52 +385,13 @@ class SwapExecutionService {
         }
       }
 
-      // 0x Gasless Payload Extraction
-      final trade = _asMap(quoteData['trade']);
-      final approval = _asMap(quoteData['approval']);
-      final permit2 = _asMap(quoteData['permit2']);
-      Map<String, dynamic>? eip712Data =
-          _asMap(trade?['eip712']) ??
-          _asMap(permit2?['eip712']) ??
-          _asMap(quoteData['eip712']);
-
-      if (eip712Data == null) {
-        throw Exception(
-          'Backend quote did not contain an EIP-712 signature payload. Check 0x Permit2 response schemas.',
-        );
-      }
-
-      // 2. Sign EIP-712 Payloads
-      String? approvalSignature;
-      final approvalEip712 = _asMap(approval?['eip712']);
-      if (approvalEip712 != null) {
-        try {
-          approvalSignature = await _walletService.signTypedData(
-            jsonEncode(approvalEip712),
-          );
-        } catch (e) {
-          throw Exception('Failed to sign gasless approval payload: $e');
-        }
-      }
-
-      String tradeSignature;
-      try {
-        final eip712JsonString = jsonEncode(eip712Data);
-        tradeSignature = await _walletService.signTypedData(eip712JsonString);
-      } catch (e) {
-        throw Exception('Failed to sign gasless trade payload: $e');
-      }
-
-      // 3. Submit Signed Order
-      final submitUrl = AppEnvironment.swap(
-        '/fusion/order/submit/${blockchain.activeChain.chainId}',
+      final submitPayload = await _gaslessExecutor.signAndBuildSubmitPayload(
+        quoteData: quoteData,
+        chainId: blockchain.activeChain.chainId,
       );
 
-      final submitPayload = _buildFusionSubmitPayload(
-        quoteData: quoteData,
-        tradeSignature: tradeSignature,
-        approvalSignature: approvalSignature,
-        chainId: blockchain.activeChain.chainId,
+      final submitUrl = AppEnvironment.swap(
+        '/fusion/order/submit/${blockchain.activeChain.chainId}',
       );
 
       final submitResponse = await _httpClientService
@@ -520,70 +484,6 @@ class SwapExecutionService {
     } on FormatException {
       throw Exception(fallback);
     }
-  }
-
-  Map<String, dynamic> _buildFusionSubmitPayload({
-    required Map<String, dynamic> quoteData,
-    required String tradeSignature,
-    String? approvalSignature,
-    required int chainId,
-  }) {
-    final payload = <String, dynamic>{'chainId': '$chainId'};
-    final trade = _asMap(quoteData['trade']);
-    if (trade != null) {
-      payload['trade'] = _buildFusionSignedPayloadObject(
-        source: trade,
-        signature: tradeSignature,
-      );
-    }
-
-    final approval = _asMap(quoteData['approval']);
-    if (approval != null && approvalSignature != null) {
-      payload['approval'] = _buildFusionSignedPayloadObject(
-        source: approval,
-        signature: approvalSignature,
-      );
-    }
-
-    return payload;
-  }
-
-  Map<String, dynamic> _buildFusionSignedPayloadObject({
-    required Map<String, dynamic> source,
-    required String signature,
-  }) {
-    final payload = <String, dynamic>{};
-    final type = source['type']?.toString();
-    if (type != null && type.isNotEmpty) {
-      payload['type'] = type;
-    }
-    final eip712 = _asMap(source['eip712']);
-    if (eip712 != null) {
-      payload['eip712'] = eip712;
-    }
-    payload['signature'] = _splitSignature(signature);
-    return payload;
-  }
-
-  Map<String, dynamic> _splitSignature(String signature) {
-    final normalized = signature.startsWith('0x') ? signature : '0x$signature';
-    final hex = normalized.substring(2);
-    if (hex.length != 130) {
-      throw FormatException(
-        'Expected 65-byte signature, received ${hex.length ~/ 2} bytes.',
-      );
-    }
-
-    final r = hex.substring(0, 64).padLeft(64, '0');
-    final s = hex.substring(64, 128).padLeft(64, '0');
-    final v = int.parse(hex.substring(128, 130), radix: 16);
-
-    return <String, dynamic>{
-      'r': '0x$r',
-      's': '0x$s',
-      'v': v,
-      'signatureType': _eip712SignatureType,
-    };
   }
 
   /// Sentinel address aggregators use for a chain's native gas token.

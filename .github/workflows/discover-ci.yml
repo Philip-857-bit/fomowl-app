@@ -2,15 +2,16 @@ name: Discover CI
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main, master, develop]
   push:
-    branches: [main, master]
+    branches: [main, master, develop]
+  workflow_dispatch:
 
 jobs:
   flutter-discover:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -48,13 +49,16 @@ jobs:
           test/dapp_provider_bridge_test.dart
 
   android-discover-integration:
+    # The emulator suite is intentionally opt-in. The focused Discover tests
+    # above remain the required, fast signal on every pull request and push.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -66,17 +70,30 @@ jobs:
           flutter-version: 3.44.6
           cache: true
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+
       - name: Install Flutter dependencies
         run: flutter pub get
 
       - name: Free disk space
         run: |
           df -h
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android/sdk/ndk || true
-          sudo rm -rf /usr/local/lib/android/sdk/cmake /usr/local/lib/android/sdk/extras || true
-          sudo rm -rf /home/runner/.gradle/caches /home/runner/.pub-cache || true
-          sudo rm -rf /home/runner/actions-runner/cached || true
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
           df -h
+
+      # Compile the Rust bridge and Android application before QEMU starts.
+      # Keeping the emulator alive during the cold native build starves QEMU on
+      # hosted runners and caused repeated hanging-thread/runner-eviction errors.
+      - name: Prebuild Android debug application
+        run: flutter build apk --debug --target-platform android-x64
 
       - name: Enable KVM
         run: |
@@ -92,7 +109,7 @@ jobs:
           target: google_apis
           emulator-boot-timeout: 900
           disable-animations: true
-          cores: 2
-          ram-size: 2048M
+          cores: 4
+          ram-size: 3072M
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: flutter test integration_test/discover_browser_flow_test.dart integration_test/discover_smoke_test.dart -d emulator-5554

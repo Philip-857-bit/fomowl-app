@@ -579,6 +579,7 @@ class _TransferConfirmationScreenState
           toAddress: toAddress,
           amount: amountInBaseUnits,
           tokenContract: isNative ? null : token?.contractAddress,
+          networkKey: blockchain.activeNetworkKey,
         );
       } else {
         txHash = isNative

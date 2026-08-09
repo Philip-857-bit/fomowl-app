@@ -17,6 +17,7 @@ import '../../widgets/mobile_scaffold.dart';
 typedef SensitiveAuthVerifier =
     Future<bool> Function(BuildContext context, {String? reason});
 typedef VerificationRandomFactory = Random Function();
+typedef SensitiveAccessErrorNotifier = void Function(String message);
 
 class BackupSeedPhraseScreen extends StatefulWidget {
   const BackupSeedPhraseScreen({
@@ -26,6 +27,7 @@ class BackupSeedPhraseScreen extends StatefulWidget {
     this.screenCaptureGuard,
     this.randomFactory,
     this.lifecycleListenable,
+    this.errorNotifier,
     this.revealDuration = const Duration(seconds: 60),
   });
 
@@ -34,6 +36,7 @@ class BackupSeedPhraseScreen extends StatefulWidget {
   final ScreenCaptureGuard? screenCaptureGuard;
   final VerificationRandomFactory? randomFactory;
   final ValueListenable<AppLifecycleState>? lifecycleListenable;
+  final SensitiveAccessErrorNotifier? errorNotifier;
   final Duration revealDuration;
 
   @override
@@ -50,6 +53,8 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
       widget.screenCaptureGuard ?? ScreenCaptureGuard();
   late final VerificationRandomFactory _randomFactory =
       widget.randomFactory ?? Random.secure;
+  late final SensitiveAccessErrorNotifier _errorNotifier =
+      widget.errorNotifier ?? ToastUtils.showError;
 
   Timer? _autoHideTimer;
   int _revealSession = 0;
@@ -143,7 +148,7 @@ class _BackupSeedPhraseScreenState extends State<BackupSeedPhraseScreen>
 
     if (!authenticated) {
       setState(() => _isLoading = false);
-      ToastUtils.showError(l.authenticationRequiredSeedPhrase);
+      _errorNotifier(l.authenticationRequiredSeedPhrase);
       return;
     }
 

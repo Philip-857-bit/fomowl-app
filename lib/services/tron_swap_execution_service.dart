@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 
 import '../utils/app_error_utils.dart';
 import 'tron_swap_service.dart';
+import 'transaction_monitor.dart';
 import 'wallet_service.dart';
+import 'blockchain_service.dart';
 
 /// Result of a Tron swap execution attempt.
 class TronSwapExecutionResult {
@@ -10,12 +12,14 @@ class TronSwapExecutionResult {
   final String? transactionHash;
   final String? error;
   final String? analyticsEventId;
+  final bool feeCollectionFailed;
 
   const TronSwapExecutionResult({
     required this.success,
     this.transactionHash,
     this.error,
     this.analyticsEventId,
+    this.feeCollectionFailed = false,
   });
 }
 
@@ -30,17 +34,37 @@ class TronSwapExecutionService {
   TronSwapExecutionService({
     WalletService? walletService,
     TronSwapService? swapService,
+    TransactionMonitor? transactionMonitor,
   }) : _walletService = walletService ?? WalletService(),
-       _swapService = swapService ?? TronSwapService();
+       _swapService = swapService ?? TronSwapService(),
+       _transactionMonitor = transactionMonitor ?? TransactionMonitor();
 
   final WalletService _walletService;
   final TronSwapService _swapService;
+  final TransactionMonitor _transactionMonitor;
 
   Future<TronSwapExecutionResult> execute({
     required TronSwapQuote quote,
     required String walletAddress,
+    required BlockchainService blockchain,
   }) async {
     try {
+      final approval = quote.approvalTx;
+      if (approval != null) {
+        final approvalHash = await _signBroadcastAndConfirm(
+          transaction: approval,
+          walletAddress: walletAddress,
+          blockchain: blockchain,
+          label: 'Token approval',
+        );
+        if (approvalHash.error != null) {
+          return TronSwapExecutionResult(
+            success: false,
+            error: approvalHash.error,
+          );
+        }
+      }
+
       // Sign the unsigned transaction. WalletService.signTronTransactionRaw
       // handles SHA-256 hashing of raw_data_hex and secp256k1 signing,
       // returning the tx map with `signature` list appended.
@@ -50,13 +74,37 @@ class TronSwapExecutionService {
       );
 
       // Broadcast the signed transaction.
-      final txid = await _swapService.broadcastSignedTx(signedTx);
+      final txid = await _swapService.broadcastSignedTx(
+        signedTx,
+        networkKey: blockchain.activeNetworkKey,
+      );
 
       if (txid != null && txid.isNotEmpty) {
+        final swapStatus = await _transactionMonitor.waitForConfirmation(
+          txHash: txid,
+          blockchain: blockchain,
+          networkKey: blockchain.activeNetworkKey,
+        );
+        if (swapStatus == TransactionConfirmationStatus.failed) {
+          return const TronSwapExecutionResult(
+            success: false,
+            error: 'The TRON swap reverted on-chain.',
+          );
+        }
+        if (swapStatus == TransactionConfirmationStatus.pending) {
+          return TronSwapExecutionResult(
+            success: false,
+            transactionHash: txid,
+            error:
+                'The swap was submitted but is still pending. Do not submit it again.',
+          );
+        }
+
         return TronSwapExecutionResult(
           success: true,
           transactionHash: txid,
           analyticsEventId: quote.analyticsEventId,
+          feeCollectionFailed: false,
         );
       }
 
@@ -74,5 +122,43 @@ class TronSwapExecutionService {
         ),
       );
     }
+  }
+
+  Future<({String? hash, String? error})> _signBroadcastAndConfirm({
+    required Map<String, dynamic> transaction,
+    required String walletAddress,
+    required BlockchainService blockchain,
+    required String label,
+  }) async {
+    final signed = await _walletService.signTronTransactionRaw(
+      walletAddress,
+      transaction,
+    );
+    final hash = await _swapService.broadcastSignedTx(
+      signed,
+      networkKey: blockchain.activeNetworkKey,
+    );
+    if (hash == null || hash.isEmpty) {
+      return (
+        hash: null,
+        error: _swapService.lastError ?? '$label broadcast failed.',
+      );
+    }
+    final status = await _transactionMonitor.waitForConfirmation(
+      txHash: hash,
+      blockchain: blockchain,
+      networkKey: blockchain.activeNetworkKey,
+    );
+    return switch (status) {
+      TransactionConfirmationStatus.confirmed => (hash: hash, error: null),
+      TransactionConfirmationStatus.failed => (
+        hash: hash,
+        error: '$label failed on-chain.',
+      ),
+      TransactionConfirmationStatus.pending => (
+        hash: hash,
+        error: '$label is still pending. Do not submit the swap again.',
+      ),
+    };
   }
 }

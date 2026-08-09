@@ -824,7 +824,9 @@ class BlockchainService extends ChangeNotifier {
       return;
     }
     if (family == ChainFamily.solana || family == ChainFamily.tron) {
-      _activeNetworkKeyOverride = networkKey;
+      _activeNetworkKeyOverride = family == ChainFamily.tron
+          ? NetworkKey.tron('mainnet')
+          : networkKey;
       refresh();
       _saveActiveChain();
       return;

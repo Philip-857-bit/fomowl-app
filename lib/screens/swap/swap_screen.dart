@@ -202,11 +202,6 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_activeTab == SwapTab.limit && !_supportsLimitTab(blockchain)) {
       _activeTab = SwapTab.swap;
     }
-    // Bridge supports EVM and Solana origins; Tron isn't on Relay.
-    if (_activeTab == SwapTab.bridge &&
-        blockchain.activeFamily == ChainFamily.tron) {
-      _activeTab = SwapTab.swap;
-    }
     if (_lastNetworkKey != networkKey || walletChanged) {
       _lastNetworkKey = networkKey;
       _lastWalletKey = walletKey;
@@ -2072,6 +2067,7 @@ class _SwapScreenState extends State<SwapScreen> {
       fromTokenPriceUsd: _resolvedTokenUnitPriceUsd(_fromToken),
       slippageBps: _slippageBps,
       timeout: _quoteUiTimeout,
+      networkKey: context.read<BlockchainService>().activeNetworkKey,
     );
     if (!mounted || requestId != _quoteRequestId) return;
     _applyNonEvmQuoteResult(
@@ -3367,6 +3363,7 @@ class _SwapScreenState extends State<SwapScreen> {
         final execResult = await _tronSwapExecutionService.execute(
           quote: tronQuote,
           walletAddress: _walletAddress!,
+          blockchain: blockchain,
         );
         if (!mounted) return;
         if (!execResult.success || execResult.transactionHash == null) {
@@ -3766,17 +3763,11 @@ class _SwapScreenState extends State<SwapScreen> {
                         child: SwapTabSelector(
                           activeTab: _activeTab,
                           showLimitTab: _supportsLimitTab(blockchain),
-                          showBridgeTab:
-                              blockchain.activeFamily == ChainFamily.evm ||
-                              blockchain.activeFamily == ChainFamily.solana,
+                          showBridgeTab: true,
                           onChanged: (tab) {
                             if (_activeTab == tab) return;
                             if (tab == SwapTab.limit &&
                                 !_supportsLimitTab(blockchain)) {
-                              return;
-                            }
-                            if (tab == SwapTab.bridge &&
-                                blockchain.activeFamily == ChainFamily.tron) {
                               return;
                             }
                             setState(() {

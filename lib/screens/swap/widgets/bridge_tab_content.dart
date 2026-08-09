@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,9 +10,11 @@ import '../../../models/chain.dart';
 import '../../../models/token.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../services/bridge_service.dart';
+import '../../../services/bridge_operation_store.dart';
 import '../../../services/http_client_service.dart';
 import '../../../services/rpc_service.dart';
 import '../../../services/transaction_monitor.dart';
+import '../../../services/tron_swap_service.dart';
 import '../../../services/wallet_service.dart';
 import '../../../utils/amount_utils.dart';
 import '../../../utils/app_error_utils.dart';
@@ -62,6 +65,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   final HttpClientService _httpClientService = HttpClientService();
   final RpcService _rpcService = RpcService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
+  final TronSwapService _tronSwapService = TronSwapService();
+  final BridgeOperationStore _bridgeOperationStore = BridgeOperationStore();
 
   Token? _fromToken;
   EvmChain? _toChain;
@@ -78,7 +83,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   int _quoteSeq = 0;
   String? _solanaAddress;
   String? _evmAddress;
+  String? _tronAddress;
   String? _lastNetworkKey;
+  PendingBridgeOperation? _pendingOperation;
+  bool _isCheckingPending = false;
 
   /// Relay-supported chain ids; null until loaded (or when unavailable, in
   /// which case filtering is skipped).
@@ -95,8 +103,17 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     family: ChainFamily.solana,
   );
 
+  static const EvmChain _tronChain = EvmChain(
+    name: 'TRON',
+    symbol: 'TRX',
+    chainId: BridgeService.tronBridgeChainId,
+    rpcUrl: '',
+    family: ChainFamily.tron,
+  );
+
   bool get _isSolanaOrigin =>
       widget.blockchain.activeFamily == ChainFamily.solana;
+  bool get _isTronOrigin => widget.blockchain.activeFamily == ChainFamily.tron;
 
   @override
   void initState() {
@@ -115,11 +132,72 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final evm = await widget.walletService.getWalletAddressForFamily(
       ChainFamily.evm,
     );
+    final tron = await widget.walletService.getWalletAddressForFamily(
+      ChainFamily.tron,
+    );
     if (!mounted) return;
     setState(() {
       if (solana != null && solana.isNotEmpty) _solanaAddress = solana;
       if (evm != null && evm.isNotEmpty) _evmAddress = evm;
+      if (tron != null && tron.isNotEmpty) _tronAddress = tron;
     });
+    await _loadPendingBridge();
+  }
+
+  Future<void> _loadPendingBridge() async {
+    final wallet = widget.walletAddress;
+    if (wallet == null || wallet.isEmpty) return;
+    final pending = await _bridgeOperationStore.load(wallet);
+    if (!mounted) return;
+    setState(() => _pendingOperation = pending);
+    if (pending != null) unawaited(_checkPendingBridge());
+  }
+
+  Future<void> _checkPendingBridge() async {
+    final pending = _pendingOperation;
+    if (pending == null || _isCheckingPending) return;
+    setState(() => _isCheckingPending = true);
+    if (pending.requestId.startsWith('near:')) {
+      await _bridgeService.submitNearDeposit(
+        requestId: pending.requestId,
+        txHash: pending.originTxHash,
+      );
+    }
+    final status = await _bridgeService.getStatus(requestId: pending.requestId);
+    if (!mounted) return;
+    if (status?.isSuccess == true || status?.isFailure == true) {
+      await _bridgeOperationStore.clear(pending.walletAddress);
+      if (!mounted) return;
+      setState(() {
+        _pendingOperation = null;
+        _isCheckingPending = false;
+      });
+      if (status!.isSuccess) {
+        ToastUtils.showSuccess('Your pending bridge completed.');
+      } else {
+        ToastUtils.showInfo(
+          'Your pending bridge reached a terminal status. Check the origin transaction for refund details.',
+        );
+      }
+      return;
+    }
+    setState(() => _isCheckingPending = false);
+  }
+
+  Future<void> _persistPendingBridge(BridgeQuote quote, String txHash) async {
+    final wallet = widget.walletAddress;
+    if (wallet == null || wallet.isEmpty || quote.requestId.isEmpty) return;
+    final operation = PendingBridgeOperation(
+      walletAddress: wallet,
+      requestId: quote.requestId,
+      originTxHash: txHash,
+      originChainId: quote.originChainId,
+      destinationChainId: quote.destinationChainId,
+      createdAt: DateTime.now().toUtc(),
+      deadline: quote.deadline,
+    );
+    await _bridgeOperationStore.save(operation);
+    if (mounted) setState(() => _pendingOperation = operation);
   }
 
   Future<void> _loadRelayChains() async {
@@ -211,6 +289,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       ...evmChains,
       // Solana destination requires the wallet to have a Solana address.
       if (!_isSolanaOrigin && _solanaAddress != null) _solanaChain,
+      if (!_isTronOrigin && _tronAddress != null) _tronChain,
     ];
   }
 
@@ -242,6 +321,14 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (from == null || toChain == null || wallet == null || wallet.isEmpty) {
       return;
     }
+    if (_isTronOrigin && widget.blockchain.activeNetworkKey != 'tron:mainnet') {
+      setState(() {
+        _resetQuote();
+        _quoteError =
+            'TRON bridges use Mainnet assets. Switch from Nile to TRON Mainnet to bridge.';
+      });
+      return;
+    }
     if (_amountValue <= 0) {
       if (mounted) setState(_resetQuote);
       return;
@@ -268,14 +355,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (amountWei == '0') return;
 
     final isSolanaOrigin = _isSolanaOrigin;
+    final isTronOrigin = _isTronOrigin;
     final originChainId = isSolanaOrigin
         ? BridgeService.relaySolanaChainId
+        : isTronOrigin
+        ? BridgeService.tronBridgeChainId
         : widget.blockchain.activeChain.chainId;
 
     // User-added custom networks aren't necessarily on Relay — fail with a
     // clear message before the upstream request can produce a cryptic error.
     final relayIds = _relayChainIds;
     if (!isSolanaOrigin &&
+        !isTronOrigin &&
         relayIds != null &&
         !relayIds.contains(originChainId)) {
       setState(() {
@@ -287,14 +378,19 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
 
     final isSolanaDestination = toChain.family == ChainFamily.solana;
+    final isTronDestination = toChain.family == ChainFamily.tron;
     final recipient = isSolanaDestination
         ? _solanaAddress
-        : (isSolanaOrigin ? _evmAddress : wallet);
+        : isTronDestination
+        ? _tronAddress
+        : (isSolanaOrigin || isTronOrigin ? _evmAddress : wallet);
     if (recipient == null || recipient.isEmpty) {
       setState(() {
         _resetQuote();
         _quoteError = isSolanaDestination
             ? 'This wallet has no Solana address to receive the bridged funds.'
+            : isTronDestination
+            ? 'This wallet has no TRON address to receive the bridged funds.'
             : 'This wallet has no EVM address to receive the bridged funds.';
       });
       return;
@@ -304,6 +400,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ? (from.contractAddress?.isNotEmpty == true
               ? from.contractAddress!
               : BridgeService.solanaNativeCurrency)
+        : isTronOrigin
+        ? (from.contractAddress?.isNotEmpty == true
+              ? from.contractAddress!
+              : BridgeService.tronNativeCurrency)
         : (from.contractAddress ?? '');
 
     final seq = ++_quoteSeq;
@@ -318,6 +418,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _toCurrency?.address ??
         (isSolanaDestination
             ? BridgeService.solanaNativeCurrency
+            : isTronDestination
+            ? BridgeService.tronNativeCurrency
             : BridgeService.nativeCurrency);
 
     final quote = await _bridgeService.getQuote(
@@ -432,10 +534,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final toChain = _toChain;
     if (toChain == null) return;
 
-    if (_isSolanaOrigin) {
+    if (_isSolanaOrigin && toChain.family == ChainFamily.evm) {
       // Solana → EVM becomes EVM → Solana.
       widget.blockchain.setActiveChainByChainId(toChain.chainId);
       _afterFlip(_solanaChain);
+      return;
+    }
+    if (_isTronOrigin && toChain.family == ChainFamily.evm) {
+      widget.blockchain.setActiveChainByChainId(toChain.chainId);
+      _afterFlip(_tronChain);
       return;
     }
     if (toChain.family == ChainFamily.solana) {
@@ -446,6 +553,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       // EVM → Solana becomes Solana → EVM.
       final oldOrigin = widget.blockchain.activeChain;
       widget.blockchain.setActiveNetworkKey(NetworkKey.solana('mainnet'));
+      _afterFlip(oldOrigin);
+      return;
+    }
+    if (toChain.family == ChainFamily.tron) {
+      if (_tronAddress == null) {
+        ToastUtils.showInfo('This wallet has no TRON address.');
+        return;
+      }
+      final oldOrigin = _isSolanaOrigin
+          ? _solanaChain
+          : widget.blockchain.activeChain;
+      widget.blockchain.setActiveNetworkKey(NetworkKey.tron('mainnet'));
       _afterFlip(oldOrigin);
       return;
     }
@@ -483,15 +602,93 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   bool get _canBridge =>
       !_isBridging &&
       !_isQuoting &&
+      _pendingOperation == null &&
       _quote != null &&
       _hasSufficientBalance &&
       widget.walletAddress != null &&
-      _quote!.steps.isNotEmpty;
+      _quote!.canBeginExecution;
 
   Future<void> _executeBridge() async {
-    final quote = _quote;
+    var quote = _quote;
     final from = _fromToken;
-    if (quote == null || from == null || _isBridging) return;
+    if (quote == null ||
+        from == null ||
+        _isBridging ||
+        _pendingOperation != null) {
+      return;
+    }
+
+    // A NEAR Intents preview is deliberately dry. Commit immediately before
+    // signing so the one-time deposit address and deadline are fresh.
+    if (!quote.committed) {
+      final toChain = _toChain;
+      final wallet = widget.walletAddress;
+      if (toChain == null || wallet == null || wallet.isEmpty) return;
+      final isSolanaDestination = toChain.family == ChainFamily.solana;
+      final isTronDestination = toChain.family == ChainFamily.tron;
+      final recipient = isSolanaDestination
+          ? _solanaAddress
+          : isTronDestination
+          ? _tronAddress
+          : (_isSolanaOrigin || _isTronOrigin ? _evmAddress : wallet);
+      if (recipient == null || recipient.isEmpty) return;
+      final originCurrency = _isSolanaOrigin
+          ? (from.contractAddress?.isNotEmpty == true
+                ? from.contractAddress!
+                : BridgeService.solanaNativeCurrency)
+          : _isTronOrigin
+          ? (from.contractAddress?.isNotEmpty == true
+                ? from.contractAddress!
+                : BridgeService.tronNativeCurrency)
+          : (from.contractAddress ?? '');
+      final destinationCurrency =
+          _toCurrency?.address ??
+          (isSolanaDestination
+              ? BridgeService.solanaNativeCurrency
+              : isTronDestination
+              ? BridgeService.tronNativeCurrency
+              : BridgeService.nativeCurrency);
+      setState(() => _isBridging = true);
+      final committed = await _bridgeService.commitQuote(
+        originChainId: quote.originChainId,
+        destinationChainId: quote.destinationChainId,
+        originCurrency: originCurrency,
+        destinationCurrency: destinationCurrency,
+        amountWei: quote.amountIn,
+        walletAddress: wallet,
+        recipientAddress: recipient,
+        amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
+      );
+      if (!mounted) return;
+      if (committed == null ||
+          !committed.committed ||
+          committed.steps.isEmpty) {
+        setState(() {
+          _isBridging = false;
+          _quoteError =
+              _bridgeService.lastError ??
+              'Unable to prepare this bridge safely. Refresh and try again.';
+        });
+        return;
+      }
+      final deadline = committed.deadline;
+      if (deadline == null ||
+          deadline.toUtc().isBefore(
+            DateTime.now().toUtc().add(const Duration(seconds: 30)),
+          )) {
+        setState(() {
+          _isBridging = false;
+          _quoteError =
+              'The bridge quote expired before signing. Refresh and try again.';
+        });
+        return;
+      }
+      quote = committed;
+      setState(() {
+        _quote = committed;
+        _isBridging = false;
+      });
+    }
 
     // SECURITY: bound what the relay-crafted EVM transactions can move. When
     // bridging the native token the total native value across steps must not
@@ -503,7 +700,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         from.contractAddress == null || from.contractAddress!.isEmpty;
     final amountIn = BigInt.tryParse(quote.amountIn) ?? BigInt.zero;
     final totalValue = quote.steps
-        .where((step) => !step.isSolana)
+        .where((step) => !step.isSolana && !step.isTron)
         .fold<BigInt>(BigInt.zero, (sum, step) => sum + step.value);
     if (isNative ? totalValue > amountIn : totalValue > BigInt.zero) {
       setState(() {
@@ -529,8 +726,85 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
     try {
       String? firstTxHash;
+      String? latestTxHash;
 
-      for (final step in quote.steps) {
+      for (var stepIndex = 0; stepIndex < quote.steps.length; stepIndex++) {
+        final step = quote.steps[stepIndex];
+        final isFinalStep = stepIndex == quote.steps.length - 1;
+        if (step.isSolanaTransfer) {
+          final signature = await widget.walletService.sendSolanaTransaction(
+            fromAddress: widget.walletAddress!,
+            toAddress: step.solanaTransferTo!,
+            amountLamports: step.solanaTransferAmount!,
+            tokenMint: step.solanaTokenMint,
+          );
+          firstTxHash ??= signature;
+          latestTxHash = signature;
+          if (isFinalStep && quote.requestId.isNotEmpty) {
+            await _persistPendingBridge(quote, signature);
+          }
+          controller.setSwapPending(reference: shortHash(signature));
+          continue;
+        }
+        if (step.isTron) {
+          final raw = jsonDecode(step.tronTransactionJson!);
+          if (raw is! Map) {
+            controller.setError(
+              'The bridge provider returned an invalid TRON transaction.',
+            );
+            return;
+          }
+          final transaction = Map<String, dynamic>.from(raw);
+          if (transaction['raw_data_hex'] == null &&
+              transaction['rawDataHex'] == null) {
+            controller.setError(
+              'The bridge provider returned an unsigned TRON transaction without signing data.',
+            );
+            return;
+          }
+          final signed = await widget.walletService.signTronTransactionRaw(
+            widget.walletAddress!,
+            transaction,
+          );
+          final hash = await _tronSwapService.broadcastSignedTx(
+            signed,
+            networkKey: widget.blockchain.activeNetworkKey,
+          );
+          if (hash == null || hash.isEmpty) {
+            controller.setError(
+              _tronSwapService.lastError ??
+                  'Unable to broadcast the TRON bridge deposit.',
+            );
+            return;
+          }
+          firstTxHash ??= hash;
+          latestTxHash = hash;
+          if (isFinalStep && quote.requestId.isNotEmpty) {
+            await _persistPendingBridge(quote, hash);
+          }
+          controller.setSwapPending(reference: shortHash(hash));
+          final confirmation = await _transactionMonitor.waitForConfirmation(
+            txHash: hash,
+            blockchain: widget.blockchain,
+            networkKey: widget.blockchain.activeNetworkKey,
+          );
+          if (confirmation == TransactionConfirmationStatus.failed) {
+            if (isFinalStep) {
+              await _bridgeOperationStore.clear(widget.walletAddress!);
+              if (mounted) setState(() => _pendingOperation = null);
+            }
+            controller.setError('The TRON bridge deposit failed on-chain.');
+            return;
+          }
+          if (confirmation == TransactionConfirmationStatus.pending) {
+            controller.setError(
+              'The TRON deposit is still pending. Do not submit it again.',
+            );
+            return;
+          }
+          continue;
+        }
+
         if (step.isSolana) {
           // Solana origin: compile the Relay instructions into a signed v0
           // transaction via the native Rust builder and broadcast it.
@@ -562,6 +836,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             return;
           }
           firstTxHash ??= signature;
+          latestTxHash = signature;
+          if (isFinalStep && quote.requestId.isNotEmpty) {
+            await _persistPendingBridge(quote, signature);
+          }
           controller.setSwapPending(reference: shortHash(signature));
           continue;
         }
@@ -595,6 +873,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           fetchChainIdFromNetworkId: false,
         );
         firstTxHash ??= txHash;
+        latestTxHash = txHash;
+        if (isFinalStep && quote.requestId.isNotEmpty) {
+          await _persistPendingBridge(quote, txHash);
+        }
         controller.setSwapPending(reference: shortHash(txHash));
 
         // Relay may return an approval followed by a deposit. Waiting for each
@@ -606,12 +888,38 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           evmChain: chain,
         );
         if (confirmation == TransactionConfirmationStatus.failed) {
+          if (isFinalStep) {
+            await _bridgeOperationStore.clear(widget.walletAddress!);
+            if (mounted) setState(() => _pendingOperation = null);
+          }
           controller.setError(
             'A bridge transaction was confirmed as failed by the network.',
           );
           return;
         }
-        if (confirmation == TransactionConfirmationStatus.pending) return;
+        if (confirmation == TransactionConfirmationStatus.pending) {
+          controller.setError(
+            'The bridge deposit is still pending. Do not submit it again; check this transfer later.',
+          );
+          return;
+        }
+      }
+
+      if (latestTxHash != null && quote.requestId.isNotEmpty) {
+        await _persistPendingBridge(quote, latestTxHash);
+      }
+
+      if (quote.requestId.startsWith('near:') && latestTxHash != null) {
+        final submitted = await _bridgeService.submitNearDeposit(
+          requestId: quote.requestId,
+          txHash: latestTxHash,
+        );
+        if (!submitted) {
+          controller.setError(
+            'Your origin deposit was confirmed, but the bridge provider could not be notified. Do not submit it again; check this transfer later.',
+          );
+          return;
+        }
       }
 
       // Relay fills the destination side once the origin deposit lands —
@@ -625,12 +933,16 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           );
           if (status == null) continue;
           if (status.isFailure) {
+            await _bridgeOperationStore.clear(widget.walletAddress!);
+            if (mounted) setState(() => _pendingOperation = null);
             controller.setError(
               'The bridge could not complete and the relayer reported a failure. Any deducted funds are refunded by the relayer.',
             );
             return;
           }
           if (status.isSuccess) {
+            await _bridgeOperationStore.clear(widget.walletAddress!);
+            if (mounted) setState(() => _pendingOperation = null);
             bridgeCompleted = true;
             break;
           }
@@ -780,7 +1092,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     // active network is Solana, the active EVM chain otherwise.
     final fromChainName = widget.blockchain.activeNetworkName;
     final fromChainLogo = widget.blockchain.activeNetworkLogoUrl;
-    final fromTokenIconChainId = _isSolanaOrigin
+    final fromTokenIconChainId = _isSolanaOrigin || _isTronOrigin
         ? null
         : widget.blockchain.activeChain.chainId;
 
@@ -795,7 +1107,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       // decimals (SOL uses 9, EVM gas tokens 18).
       final outDecimals =
           _toCurrency?.decimals ??
-          (toChain?.family == ChainFamily.solana ? 9 : 18);
+          (toChain?.family == ChainFamily.solana
+              ? 9
+              : toChain?.family == ChainFamily.tron
+              ? 6
+              : 18);
       toAmountText = AmountUtils.formatBaseUnits(
         outWei,
         outDecimals,
@@ -806,6 +1122,31 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_pendingOperation != null) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF171717),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF333333)),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'A bridge is still processing. You can safely leave this screen and check it later.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _isCheckingPending ? null : _checkPendingBridge,
+                  child: Text(_isCheckingPending ? 'Checking…' : 'Check'),
+                ),
+              ],
+            ),
+          ),
+        ],
         _BridgeCard(
           label: 'BRIDGE FROM',
           chainName: fromChainName,

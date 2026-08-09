@@ -69,6 +69,54 @@ void main() {
     expect(requestedUri?.queryParameters['slippageBps'], '550');
   });
 
+  test(
+    'accepts a dry TRON preview and commits only on explicit request',
+    () async {
+      final requestedUris = <Uri>[];
+      final client = MockClient((request) async {
+        requestedUris.add(request.url);
+        final committed = request.url.queryParameters['commit'] == 'true';
+        return http.Response(
+          '''{"originChainId":728126428,"destinationChainId":1399811149,"amountIn":"1000000","amountOut":"900000","feeUsd":0,"gasFeeUsd":0,"requestId":"${committed ? 'near:TDeposit' : ''}","steps":${committed ? '[{"id":"deposit","description":"Deposit","items":[{"data":{"chainType":"tvm","chainId":728126428,"depositAddress":"TDeposit","transaction":{"raw_data_hex":"deadbeef"}}}]}]' : '[]'},"extra":{"committed":$committed,"deadline":"2099-01-01T00:00:00Z"}}''',
+          200,
+        );
+      });
+      final service = BridgeService(
+        httpClientService: _HttpClientServiceMock(client),
+      );
+
+      final preview = await service.getQuote(
+        originChainId: BridgeService.tronBridgeChainId,
+        destinationChainId: BridgeService.relaySolanaChainId,
+        originCurrency: BridgeService.tronNativeCurrency,
+        destinationCurrency: BridgeService.solanaNativeCurrency,
+        amountWei: '1000000',
+        walletAddress: 'TWallet',
+      );
+      final committed = await service.commitQuote(
+        originChainId: BridgeService.tronBridgeChainId,
+        destinationChainId: BridgeService.relaySolanaChainId,
+        originCurrency: BridgeService.tronNativeCurrency,
+        destinationCurrency: BridgeService.solanaNativeCurrency,
+        amountWei: '1000000',
+        walletAddress: 'TWallet',
+      );
+
+      expect(preview, isNotNull);
+      expect(preview!.committed, isFalse);
+      expect(preview.steps, isEmpty);
+      expect(preview.canBeginExecution, isTrue);
+      expect(committed, isNotNull);
+      expect(committed!.committed, isTrue);
+      expect(committed.steps.single.isTron, isTrue);
+      expect(
+        requestedUris.first.queryParameters.containsKey('commit'),
+        isFalse,
+      );
+      expect(requestedUris.last.queryParameters['commit'], 'true');
+    },
+  );
+
   test('parseSteps preserves an EVM approval and deposit in order', () {
     final steps = BridgeService.parseSteps([
       {
@@ -109,5 +157,82 @@ void main() {
     expect(steps.first.maxFeePerGas, BigInt.from(100));
     expect(steps.first.maxPriorityFeePerGas, BigInt.from(10));
     expect(steps.every((step) => !step.isSolana), isTrue);
+  });
+
+  test('parseSteps recognizes a signable TRON deposit transaction', () {
+    final steps = BridgeService.parseSteps([
+      {
+        'id': 'near_intents_deposit',
+        'description': 'Deposit to NEAR Intents',
+        'items': [
+          {
+            'data': {
+              'chainType': 'tvm',
+              'chainId': BridgeService.tronBridgeChainId,
+              'depositAddress': 'TDepositAddress',
+              'transaction': {
+                'txID': 'abc123',
+                'raw_data_hex': 'deadbeef',
+                'raw_data': {'contract': []},
+              },
+            },
+          },
+        ],
+      },
+    ]);
+
+    expect(steps, hasLength(1));
+    expect(steps.single.isTron, isTrue);
+    expect(steps.single.isSolana, isFalse);
+    expect(steps.single.chainId, BridgeService.tronBridgeChainId);
+    expect(steps.single.to, 'TDepositAddress');
+    expect(steps.single.tronTransactionJson, contains('raw_data_hex'));
+  });
+
+  test('parseSteps recognizes a wallet-native Solana deposit transfer', () {
+    final steps = BridgeService.parseSteps([
+      {
+        'id': 'near_intents_deposit',
+        'description': 'Deposit to NEAR Intents',
+        'items': [
+          {
+            'data': {
+              'chainType': 'solana-transfer',
+              'chainId': BridgeService.relaySolanaChainId,
+              'to': 'Deposit111111111111111111111111111111111',
+              'amount': '1234567',
+              'tokenMint': 'Mint111111111111111111111111111111111111',
+            },
+          },
+        ],
+      },
+    ]);
+
+    expect(steps, hasLength(1));
+    expect(steps.single.isSolanaTransfer, isTrue);
+    expect(steps.single.solanaTransferAmount, BigInt.from(1234567));
+    expect(steps.single.solanaTokenMint, startsWith('Mint'));
+  });
+
+  test('submits a confirmed NEAR Intents origin transaction', () async {
+    late http.Request captured;
+    final client = MockClient((request) async {
+      captured = request;
+      return http.Response('{"submitted":true}', 202);
+    });
+    final service = BridgeService(
+      httpClientService: _HttpClientServiceMock(client),
+    );
+
+    final submitted = await service.submitNearDeposit(
+      requestId: 'near:TDepositAddress',
+      txHash: 'abc123',
+    );
+
+    expect(submitted, isTrue);
+    expect(captured.method, 'POST');
+    expect(captured.url.path, contains('/cross-chain/near-deposit'));
+    expect(captured.body, contains('TDepositAddress'));
+    expect(captured.body, contains('abc123'));
   });
 }

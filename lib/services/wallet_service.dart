@@ -1536,19 +1536,16 @@ class WalletService {
     required String toAddress,
     required BigInt amount,
     String? tokenContract,
+    String networkKey = 'tron:mainnet',
   }) async {
     if (amount <= BigInt.zero) {
       throw Exception('amount must be greater than zero');
-    }
-    final maxU64 = BigInt.parse('18446744073709551615');
-    if (amount > maxU64) {
-      throw Exception('amount exceeds maximum u64 value');
     }
     final privateKeyHex = await _getTronPrivateKey(fromAddress);
 
     // 1. Prepare the unsigned transaction via the backend.
     final prepareUri = AppEnvironment.blockchain(
-      '/networks/tron:mainnet/prepare-transfer',
+      '/networks/${Uri.encodeComponent(networkKey)}/prepare-transfer',
     );
     final prepareResp = await _httpClientService.client
         .post(
@@ -1603,7 +1600,7 @@ class WalletService {
     signedTx['signature'] = [signatureHex];
 
     final broadcastUri = AppEnvironment.blockchain(
-      '/networks/tron:mainnet/broadcast',
+      '/networks/${Uri.encodeComponent(networkKey)}/broadcast',
     );
     final broadcastResp = await _httpClientService.client
         .post(

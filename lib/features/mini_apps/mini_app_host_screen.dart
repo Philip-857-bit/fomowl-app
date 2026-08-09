@@ -24,6 +24,7 @@ import '../../services/http_client_service.dart';
 import '../../services/system_picker_guard.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
+import '../../services/zerox_gasless_executor.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
 import '../../utils/token_visibility_utils.dart';
@@ -33,6 +34,26 @@ import '../../screens/home/home_portfolio_api_service.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
+
+@visibleForTesting
+bool cashinExecutionPlanIsUsable(
+  Map<String, dynamic> plan, {
+  required DateTime now,
+  bool allowExpiredForSubmittedSteps = false,
+}) {
+  final expiresAt = DateTime.tryParse(plan['expiresAt']?.toString() ?? '');
+  if (expiresAt == null) return false;
+  if (expiresAt.isAfter(now.toUtc())) return true;
+  if (!allowExpiredForSubmittedSteps) return false;
+  return (plan['steps'] as List?)?.any(
+        (step) => step is Map && step['status'] == 'submitted',
+      ) ==
+      true;
+}
+
+class _CashinExecutionPlanExpired implements Exception {
+  const _CashinExecutionPlanExpired();
+}
 
 class MiniAppHostArguments {
   const MiniAppHostArguments({
@@ -1213,18 +1234,23 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     return const <String, dynamic>{'ok': true};
   }
 
-  /// Execute a cross-chain swap/bridge requested by a mini app (e.g. cash-in's
-  /// sell-any-token saga). The mini app supplies the provider (Relay) steps it
-  /// got from its backend; we sign+broadcast them via the same path the wallet's
-  /// own Bridge tab uses.
-  ///
-  /// SECURITY NOTE: like `requestWalletTransfer`, this signs transactions the
-  /// mini app supplies, gated only by the user confirmation below — there is no
-  /// per-step native-value bound here (the host has no quote to check against),
-  /// so only first-party mini apps should advertise/use this capability.
+  /// Execute a cash-in route. New EVM sagas pass only an opaque execution
+  /// reference; the native wallet fetches the authenticated plan itself. Legacy
+  /// Relay steps remain available for existing and non-EVM sagas.
   Future<Map<String, dynamic>> _handleCrossChainSwapRequest(
     Map<String, dynamic> payload,
   ) async {
+    final reference = payload['reference']?.toString().trim() ?? '';
+    final executionReference =
+        payload['executionReference']?.toString().trim() ?? '';
+    if (reference.isNotEmpty && executionReference.isNotEmpty) {
+      return _executeCashinExecutionPlan(
+        payload: payload,
+        reference: reference,
+        executionReference: executionReference,
+      );
+    }
+
     final steps = BridgeService.parseSteps(payload['relaySteps']);
     if (steps.isEmpty) {
       return const <String, dynamic>{
@@ -1237,7 +1263,6 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final toSymbol = payload['toAssetSymbol']?.toString() ?? 'USDC';
     final fromAmount = payload['fromAmountDisplay']?.toString() ?? '';
     final toAmount = payload['toAmountDisplay']?.toString() ?? '';
-    final reference = payload['reference']?.toString() ?? '';
 
     final confirmed = await _confirmCrossChainSwap(
       fromLabel: fromAmount.isEmpty ? fromSymbol : '$fromAmount $fromSymbol',
@@ -1344,6 +1369,587 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       controller.setError(msg);
       return <String, dynamic>{'ok': false, 'error': msg};
     }
+  }
+
+  Future<Map<String, dynamic>> _executeCashinExecutionPlan({
+    required Map<String, dynamic> payload,
+    required String reference,
+    required String executionReference,
+  }) async {
+    final walletAddress = await _walletService.getWalletAddressForFamily(
+      ChainFamily.evm,
+    );
+    if (walletAddress == null || walletAddress.trim().isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'This wallet does not support EVM transactions.',
+      };
+    }
+
+    TransactionProgressController? progressController;
+    try {
+      var activeExecutionReference = executionReference;
+      final previewPlan = await _fetchCashinExecutionPlan(
+        reference: reference,
+        executionReference: executionReference,
+        walletAddress: walletAddress,
+      );
+      final rawSteps = previewPlan['steps'];
+      if (rawSteps is! List || rawSteps.isEmpty) {
+        throw const FormatException('The execution plan has no wallet steps.');
+      }
+      final previewSteps = rawSteps.map(_stringKeyedMap).toList(growable: false)
+        ..sort(
+          (a, b) => _requiredInt(
+            a,
+            'sequence',
+          ).compareTo(_requiredInt(b, 'sequence')),
+        );
+      final actionablePreviewSteps = previewSteps
+          .where(
+            (step) =>
+                step['status'] != 'confirmed' && step['status'] != 'skipped',
+          )
+          .toList(growable: false);
+      if (actionablePreviewSteps.isEmpty) {
+        return <String, dynamic>{
+          'ok': true,
+          'transactionHash': executionReference,
+          'confirmed': true,
+        };
+      }
+
+      final confirmed = await _confirmCrossChainSwap(
+        fromLabel: _swapLabel(payload, 'from'),
+        toLabel: _swapLabel(payload, 'to'),
+        reference: reference,
+        stepCount: actionablePreviewSteps
+            .where((step) => step['kind'] != 'providerSubmit')
+            .length,
+      );
+      if (confirmed != true) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Swap was cancelled.',
+        };
+      }
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Mini-app was closed before the swap could start.',
+        };
+      }
+
+      // The confirmation dialog is user-controlled and may remain open beyond
+      // the short route TTL. Fetch a new authoritative plan after confirmation
+      // and before any signing or broadcast.
+      late final Map<String, dynamic> plan;
+      try {
+        plan = await _fetchCashinExecutionPlan(
+          reference: reference,
+          executionReference: activeExecutionReference,
+          walletAddress: walletAddress,
+        );
+      } on _CashinExecutionPlanExpired {
+        final refreshed = await _refreshCashinExecutionPlan(
+          reference: reference,
+          walletAddress: walletAddress,
+        );
+        activeExecutionReference = refreshed.$1;
+        plan = refreshed.$2;
+      }
+      final refreshedRawSteps = plan['steps'];
+      if (refreshedRawSteps is! List || refreshedRawSteps.isEmpty) {
+        throw const FormatException('The execution plan has no wallet steps.');
+      }
+      final allSteps =
+          refreshedRawSteps.map(_stringKeyedMap).toList(growable: false)..sort(
+            (a, b) => _requiredInt(
+              a,
+              'sequence',
+            ).compareTo(_requiredInt(b, 'sequence')),
+          );
+      final steps = allSteps
+          .where(
+            (step) =>
+                step['status'] != 'confirmed' && step['status'] != 'skipped',
+          )
+          .toList(growable: false);
+      if (steps.isEmpty) {
+        return <String, dynamic>{
+          'ok': true,
+          'transactionHash': activeExecutionReference,
+          'confirmed': true,
+        };
+      }
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Mini-app was closed before the swap could start.',
+        };
+      }
+
+      final controller = TransactionProgressController(
+        flow: TransactionProgressFlow.generic,
+      );
+      progressController = controller;
+      unawaited(
+        Navigator.of(context).pushNamed(
+          '/transaction-processing',
+          arguments: TransactionProcessingArguments(controller: controller),
+        ),
+      );
+      controller.setPreparing();
+      controller.setSwapSubmitting();
+
+      final blockchain = context.read<BlockchainService>();
+      ZeroXGaslessSignedOrder? gaslessOrder;
+      // Re-sign the typed data after an app restart when the provider-submit
+      // step is still pending. Signatures are deliberately never persisted.
+      final typedSteps = allSteps
+          .where((step) => step['kind'] == 'typedData')
+          .toList(growable: false);
+      if (typedSteps.isNotEmpty) {
+        final approvalStep = typedSteps
+            .cast<Map<String, dynamic>?>()
+            .firstWhere(
+              (step) => _stepPayload(step!)['purpose'] == 'approval',
+              orElse: () => null,
+            );
+        final tradeStep = typedSteps.cast<Map<String, dynamic>?>().firstWhere(
+          (step) => _stepPayload(step!)['purpose'] == 'trade',
+          orElse: () => null,
+        );
+        if (tradeStep == null) {
+          throw const FormatException('The gasless trade step is missing.');
+        }
+        final quoteData = <String, dynamic>{
+          'trade': _gaslessSource(_stepPayload(tradeStep)),
+        };
+        if (approvalStep != null) {
+          quoteData['approval'] = _gaslessSource(_stepPayload(approvalStep));
+        }
+        gaslessOrder = await ZeroXGaslessExecutor(walletService: _walletService)
+            .signOrder(
+              quoteData: quoteData,
+              chainId: _requiredInt(tradeStep, 'chainId'),
+            );
+      }
+
+      String? firstTxHash;
+      for (final plannedStep in steps) {
+        final stepId = plannedStep['stepId']?.toString() ?? '';
+        var persistedStatus = plannedStep['status']?.toString();
+        if (persistedStatus == 'failed') {
+          throw const FormatException(
+            'A previous wallet transaction failed. Refresh the execution plan before trying again.',
+          );
+        }
+        if (persistedStatus == 'submitted') {
+          await _waitForCashinExecutionStepConfirmation(
+            reference: reference,
+            executionReference: activeExecutionReference,
+            walletAddress: walletAddress,
+            stepId: stepId,
+          );
+          continue;
+        }
+        // Previous steps may take long enough to consume the plan TTL. Reload
+        // immediately before every new wallet action so stale calldata is
+        // never signed or broadcast.
+        final currentPlan = await _fetchCashinExecutionPlan(
+          reference: reference,
+          executionReference: activeExecutionReference,
+          walletAddress: walletAddress,
+        );
+        final currentSteps = currentPlan['steps'];
+        if (currentSteps is! List) {
+          throw const FormatException(
+            'The execution plan has no wallet steps.',
+          );
+        }
+        final step = currentSteps
+            .map(_stringKeyedMap)
+            .where((candidate) => candidate['stepId']?.toString() == stepId)
+            .firstOrNull;
+        if (step == null) {
+          throw const FormatException(
+            'The execution step is no longer available. Refresh the plan.',
+          );
+        }
+        persistedStatus = step['status']?.toString();
+        if (persistedStatus == 'confirmed' || persistedStatus == 'skipped') {
+          continue;
+        }
+        if (persistedStatus == 'submitted') {
+          await _waitForCashinExecutionStepConfirmation(
+            reference: reference,
+            executionReference: activeExecutionReference,
+            walletAddress: walletAddress,
+            stepId: stepId,
+          );
+          continue;
+        }
+        if (persistedStatus == 'failed') {
+          throw const FormatException(
+            'A previous wallet transaction failed. Refresh the execution plan before trying again.',
+          );
+        }
+        final kind = step['kind']?.toString();
+        final chainId = _requiredInt(step, 'chainId');
+        String? transactionHash;
+        String? signedPayload;
+        if (kind == 'approval' || kind == 'transaction') {
+          final chain = blockchain.allChains
+              .where((candidate) => candidate.chainId == chainId)
+              .firstOrNull;
+          if (chain == null || chain.family != ChainFamily.evm) {
+            throw FormatException(
+              'Required EVM network $chainId is not configured.',
+            );
+          }
+          final tx = _transactionForExecutionStep(step);
+          transactionHash = await _walletService.sendRawTransactionRequest(
+            rpcUrl: chain.rpcUrl,
+            chainId: chainId,
+            toAddress: tx.$1,
+            valueInWei: tx.$2,
+            dataHex: tx.$3,
+          );
+          firstTxHash ??= transactionHash;
+          controller.setSwapPending(reference: _shortHash(transactionHash));
+        } else if (kind == 'typedData') {
+          final purpose = _stepPayload(step)['purpose']?.toString();
+          final signature = purpose == 'approval'
+              ? gaslessOrder?.approvalSignature
+              : gaslessOrder?.tradeSignature;
+          if (signature == null) {
+            throw FormatException(
+              'Missing signature for gasless $purpose step.',
+            );
+          }
+          signedPayload = jsonEncode(<String, dynamic>{'signature': signature});
+        } else if (kind == 'providerSubmit') {
+          if (gaslessOrder == null) {
+            throw const FormatException('The gasless order was not signed.');
+          }
+          signedPayload = jsonEncode(gaslessOrder.payload);
+        } else if (kind == 'waitForConfirmation') {
+          continue;
+        } else {
+          throw FormatException('Unsupported execution step: $kind.');
+        }
+        await _submitCashinExecutionStep(
+          reference: reference,
+          walletAddress: walletAddress,
+          step: step,
+          transactionHash: transactionHash,
+          signedPayload: signedPayload,
+        );
+        if (kind == 'approval' || kind == 'transaction') {
+          await _waitForCashinExecutionStepConfirmation(
+            reference: reference,
+            executionReference: activeExecutionReference,
+            walletAddress: walletAddress,
+            stepId: stepId,
+          );
+        }
+      }
+
+      controller.setSuccess(
+        reference: firstTxHash == null ? reference : _shortHash(firstTxHash),
+      );
+      return <String, dynamic>{
+        'ok': true,
+        'transactionHash': firstTxHash ?? activeExecutionReference,
+        'confirmed': true,
+      };
+    } catch (error) {
+      final message = 'Swap failed: ${AppErrorUtils.userMessage(error)}';
+      progressController?.setError(message);
+      return <String, dynamic>{'ok': false, 'error': message};
+    }
+  }
+
+  Future<Map<String, dynamic>> _fetchCashinExecutionPlan({
+    required String reference,
+    required String executionReference,
+    required String walletAddress,
+    bool allowExpiredForSubmittedSteps = false,
+  }) async {
+    final auth = WalletBackendAuthService(walletService: _walletService);
+    final response = await auth
+        .sendAuthorized(
+          walletAddress,
+          (headers) => HttpClientService().client.get(
+            AppEnvironment.api(
+              '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}',
+            ),
+            headers: headers,
+          ),
+          const <String, String>{'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 15));
+    final body = _decodeBackendBody(response.body);
+    if (response.statusCode != 200) {
+      throw FormatException(
+        body['message']?.toString() ?? 'Execution plan unavailable.',
+      );
+    }
+    final data = _stringKeyedMap(body['data']);
+    final execution = _stringKeyedMap(data['execution']);
+    final plan = _stringKeyedMap(execution['plan']);
+    if (plan['routeId']?.toString() != executionReference ||
+        execution['reference']?.toString() != executionReference) {
+      throw const FormatException(
+        'The execution reference does not match the saga.',
+      );
+    }
+    if (!cashinExecutionPlanIsUsable(
+      plan,
+      now: DateTime.now().toUtc(),
+      allowExpiredForSubmittedSteps: allowExpiredForSubmittedSteps,
+    )) {
+      throw const _CashinExecutionPlanExpired();
+    }
+    return plan;
+  }
+
+  Future<(String, Map<String, dynamic>)> _refreshCashinExecutionPlan({
+    required String reference,
+    required String walletAddress,
+  }) async {
+    final auth = WalletBackendAuthService(walletService: _walletService);
+    final response = await auth
+        .sendAuthorized(
+          walletAddress,
+          (headers) => HttpClientService().client.post(
+            AppEnvironment.api(
+              '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/refresh',
+            ),
+            headers: headers,
+          ),
+          const <String, String>{'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 20));
+    final body = _decodeBackendBody(response.body);
+    if (response.statusCode != 200) {
+      throw FormatException(
+        body['message']?.toString() ?? 'Unable to refresh the execution plan.',
+      );
+    }
+    final data = _stringKeyedMap(body['data']);
+    final execution = _stringKeyedMap(data['execution']);
+    final plan = _stringKeyedMap(execution['plan']);
+    final executionReference = execution['reference']?.toString() ?? '';
+    if (executionReference.isEmpty ||
+        plan['routeId']?.toString() != executionReference ||
+        !cashinExecutionPlanIsUsable(plan, now: DateTime.now().toUtc())) {
+      throw const FormatException(
+        'The refreshed execution plan is invalid or already expired.',
+      );
+    }
+    debugPrint('[MiniAppHost] refreshed expired cash-in execution plan');
+    return (executionReference, plan);
+  }
+
+  Future<void> _waitForCashinExecutionStepConfirmation({
+    required String reference,
+    required String executionReference,
+    required String walletAddress,
+    required String stepId,
+  }) async {
+    if (stepId.isEmpty) {
+      throw const FormatException('The execution step reference is missing.');
+    }
+    for (var attempt = 0; attempt < 60; attempt++) {
+      final plan = await _fetchCashinExecutionPlan(
+        reference: reference,
+        executionReference: executionReference,
+        walletAddress: walletAddress,
+        allowExpiredForSubmittedSteps: true,
+      );
+      final rawSteps = plan['steps'];
+      if (rawSteps is! List) {
+        throw const FormatException('The execution plan has no wallet steps.');
+      }
+      final current = rawSteps
+          .map(_stringKeyedMap)
+          .where((step) => step['stepId']?.toString() == stepId)
+          .firstOrNull;
+      final status = current?['status']?.toString();
+      if (status == 'confirmed' || status == 'skipped') return;
+      if (status == 'failed') {
+        throw const FormatException(
+          'The wallet transaction failed. Refresh the execution plan and try again.',
+        );
+      }
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    throw const FormatException(
+      'The wallet transaction is still confirming. You can safely reopen this request later.',
+    );
+  }
+
+  Future<void> _submitCashinExecutionStep({
+    required String reference,
+    required String walletAddress,
+    required Map<String, dynamic> step,
+    String? transactionHash,
+    String? signedPayload,
+  }) async {
+    final payload = <String, dynamic>{
+      'stepId': step['stepId'],
+      'walletAddress': walletAddress,
+      'chainId': _requiredInt(step, 'chainId'),
+      if (step['expectedTransactionTo'] != null)
+        'transactionTo': step['expectedTransactionTo'],
+      if (step['expectedRecipient'] != null)
+        'recipient': step['expectedRecipient'],
+      if (step['expectedToken'] != null) 'token': step['expectedToken'],
+      if (step['amountCeiling'] != null) 'amount': step['amountCeiling'],
+      if (step['approvalSpender'] != null)
+        'approvalSpender': step['approvalSpender'],
+      if (step['maxTransactionValue'] != null)
+        'transactionValue': step['maxTransactionValue'],
+    };
+    if (transactionHash != null) {
+      payload['transactionHash'] = transactionHash;
+    }
+    if (signedPayload != null) {
+      payload['signedPayload'] = signedPayload;
+    }
+    final auth = WalletBackendAuthService(walletService: _walletService);
+    final response = await auth
+        .sendAuthorized(
+          walletAddress,
+          (headers) => HttpClientService().client.post(
+            AppEnvironment.api(
+              '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/submit',
+            ),
+            headers: headers,
+            body: jsonEncode(payload),
+          ),
+          const <String, String>{
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = _decodeBackendBody(response.body);
+      throw FormatException(
+        body['message']?.toString() ?? 'Step submission failed.',
+      );
+    }
+  }
+
+  (String, BigInt, String) _transactionForExecutionStep(
+    Map<String, dynamic> step,
+  ) {
+    final payload = _stepPayload(step);
+    final expectedTo = step['expectedTransactionTo']?.toString() ?? '';
+    if (payload['type'] == 'erc20Transfer') {
+      final recipient = payload['recipient']?.toString() ?? '';
+      final amount = BigInt.tryParse(payload['amount']?.toString() ?? '');
+      if (!_isEvmAddress(expectedTo) ||
+          !_isEvmAddress(recipient) ||
+          amount == null) {
+        throw const FormatException('Invalid token transfer plan.');
+      }
+      return (
+        expectedTo,
+        BigInt.zero,
+        _erc20Call('a9059cbb', recipient, amount),
+      );
+    }
+    if (payload['type'] == 'erc20Approval') {
+      final spender = payload['spender']?.toString() ?? '';
+      final amount = BigInt.tryParse(payload['amount']?.toString() ?? '');
+      if (!_isEvmAddress(expectedTo) ||
+          !_isEvmAddress(spender) ||
+          amount == null) {
+        throw const FormatException('Invalid token approval plan.');
+      }
+      return (expectedTo, BigInt.zero, _erc20Call('095ea7b3', spender, amount));
+    }
+    final tx = _stringKeyedMap(payload['transaction']);
+    final to = tx['to']?.toString() ?? '';
+    final data = tx['data']?.toString() ?? '';
+    final value = _parseBaseUnitValue(tx['value']);
+    if (!_isEvmAddress(to) ||
+        !_isEvmAddress(expectedTo) ||
+        to.toLowerCase() != expectedTo.toLowerCase() ||
+        !RegExp(r'^0x[0-9a-fA-F]*$').hasMatch(data)) {
+      throw const FormatException('Invalid provider transaction plan.');
+    }
+    final ceiling = _parseBaseUnitValue(step['maxTransactionValue']);
+    if (value > ceiling) {
+      throw const FormatException(
+        'Provider transaction value exceeds the route limit.',
+      );
+    }
+    return (to, value, data);
+  }
+
+  static String _erc20Call(String selector, String address, BigInt amount) {
+    if (amount.isNegative || amount.bitLength > 256) {
+      throw const FormatException(
+        'Token amount exceeds the EVM uint256 limit.',
+      );
+    }
+    final addressWord = address.substring(2).toLowerCase().padLeft(64, '0');
+    final amountWord = amount.toRadixString(16).padLeft(64, '0');
+    return '0x$selector$addressWord$amountWord';
+  }
+
+  static BigInt _parseBaseUnitValue(dynamic value) {
+    final text = value?.toString() ?? '0';
+    final parsed = text.startsWith('0x')
+        ? BigInt.tryParse(text.substring(2), radix: 16)
+        : BigInt.tryParse(text);
+    if (parsed == null || parsed.isNegative) {
+      throw const FormatException(
+        'Invalid transaction value in execution plan.',
+      );
+    }
+    return parsed;
+  }
+
+  static Map<String, dynamic> _gaslessSource(Map<String, dynamic> payload) => {
+    if (payload['type'] != null) 'type': payload['type'],
+    'eip712': _stringKeyedMap(payload['typedData']),
+  };
+
+  static Map<String, dynamic> _stepPayload(Map<String, dynamic> step) =>
+      _stringKeyedMap(step['payload']);
+
+  static Map<String, dynamic> _decodeBackendBody(String body) {
+    final decoded = jsonDecode(body);
+    return _stringKeyedMap(decoded);
+  }
+
+  static Map<String, dynamic> _stringKeyedMap(dynamic value) {
+    if (value is! Map) throw const FormatException('Malformed execution plan.');
+    return value.map((key, entry) => MapEntry(key.toString(), entry));
+  }
+
+  static int _requiredInt(Map<String, dynamic> value, String key) {
+    final parsed =
+        (value[key] as num?)?.toInt() ?? int.tryParse('${value[key]}');
+    if (parsed == null) {
+      throw FormatException('Missing $key in execution plan.');
+    }
+    return parsed;
+  }
+
+  static bool _isEvmAddress(String value) =>
+      RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(value);
+
+  static String _swapLabel(Map<String, dynamic> payload, String prefix) {
+    final amount = payload['${prefix}AmountDisplay']?.toString() ?? '';
+    final symbol = payload['${prefix}AssetSymbol']?.toString() ?? '';
+    return amount.isEmpty ? symbol : '$amount $symbol';
   }
 
   Future<bool?> _confirmCrossChainSwap({
@@ -1539,6 +2145,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           toAddress: toAddress,
           amount: amountBaseUnits,
           tokenContract: isNative ? null : token.contractAddress,
+          networkKey: networkKey,
         );
       case ChainFamily.evm:
         final blockchain = context.read<BlockchainService>();
