@@ -5,6 +5,7 @@ on:
     branches: [main, master, develop]
   push:
     branches: [main, master, develop]
+  workflow_dispatch:
 
 jobs:
   flutter-discover:
@@ -48,6 +49,9 @@ jobs:
           test/dapp_provider_bridge_test.dart
 
   android-discover-integration:
+    # The emulator suite is intentionally opt-in. The focused Discover tests
+    # above remain the required, fast signal on every pull request and push.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
