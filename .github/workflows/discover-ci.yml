@@ -89,7 +89,7 @@ jobs:
       # Keeping the emulator alive during the cold native build starves QEMU on
       # hosted runners and caused repeated hanging-thread/runner-eviction errors.
       - name: Prebuild Android debug application
-        run: flutter build apk --debug
+        run: flutter build apk --debug --target-platform android-x64
 
       - name: Enable KVM
         run: |
