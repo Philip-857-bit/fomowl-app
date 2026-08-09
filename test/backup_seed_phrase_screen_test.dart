@@ -67,6 +67,7 @@ void main() {
               return false;
             },
             screenCaptureGuard: _FakeScreenCaptureGuard(),
+            errorNotifier: (_) {},
           ),
         ),
       );

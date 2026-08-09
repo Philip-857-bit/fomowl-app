@@ -10,7 +10,7 @@ jobs:
   flutter-discover:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -51,10 +51,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -72,10 +72,9 @@ jobs:
       - name: Free disk space
         run: |
           df -h
-          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android/sdk/ndk || true
-          sudo rm -rf /usr/local/lib/android/sdk/cmake /usr/local/lib/android/sdk/extras || true
-          sudo rm -rf /home/runner/.gradle/caches /home/runner/.pub-cache || true
-          sudo rm -rf /home/runner/actions-runner/cached || true
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
+          sudo rm -rf /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
           df -h
 
       - name: Enable KVM
