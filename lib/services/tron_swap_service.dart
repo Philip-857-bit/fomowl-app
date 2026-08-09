@@ -13,11 +13,15 @@ class TronSwapQuote {
   final double networkFeeUsd;
   final double platformFeeUsd;
   final int platformFeeBps;
+  final String platformFeeAmountRaw;
+  final String? platformFeeRecipient;
   final String? analyticsEventId;
 
   /// Unsigned Tron transaction JSON returned by SunSwap / the backend.
   /// Contains a `raw_data_hex` field that must be signed.
   final Map<String, dynamic> unsignedTx;
+  final Map<String, dynamic>? approvalTx;
+  final Map<String, dynamic>? feeTx;
 
   const TronSwapQuote({
     required this.amountOutFormatted,
@@ -25,7 +29,11 @@ class TronSwapQuote {
     required this.networkFeeUsd,
     required this.platformFeeUsd,
     required this.platformFeeBps,
+    required this.platformFeeAmountRaw,
     required this.unsignedTx,
+    this.platformFeeRecipient,
+    this.approvalTx,
+    this.feeTx,
     this.analyticsEventId,
   });
 
@@ -57,6 +65,7 @@ class TronSwapService {
     required String toToken,
     required String amountSun,
     required String walletAddress,
+    int toTokenDecimals = 6,
     double? sellAmountUsd,
     int slippageBps = 50,
   }) async {
@@ -88,7 +97,7 @@ class TronSwapService {
           return null;
         }
         final data = Map<String, dynamic>.from(raw);
-        return _parseQuote(data);
+        return _parseQuote(data, toTokenDecimals: toTokenDecimals);
       }
 
       _lastError = AppErrorUtils.backendMessage(
@@ -111,10 +120,15 @@ class TronSwapService {
   /// [signedTx] must be the original unsigned tx JSON map with the
   /// `signature` list appended (as returned by [WalletService.signTronTransactionRaw]).
   /// Returns the Tron txid on success.
-  Future<String?> broadcastSignedTx(Map<String, dynamic> signedTx) async {
+  Future<String?> broadcastSignedTx(
+    Map<String, dynamic> signedTx, {
+    String networkKey = 'tron:mainnet',
+  }) async {
     _lastError = null;
     try {
-      final url = AppEnvironment.blockchain('/networks/tron:mainnet/broadcast');
+      final url = AppEnvironment.blockchain(
+        '/networks/${Uri.encodeComponent(networkKey)}/broadcast',
+      );
       final response = await _http
           .sendWithRetry(
             () => _http.client.post(
@@ -122,6 +136,7 @@ class TronSwapService {
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({'transaction': signedTx}),
             ),
+            maxRetries: 1,
           )
           .timeout(const Duration(seconds: 30));
 
@@ -157,7 +172,10 @@ class TronSwapService {
     }
   }
 
-  TronSwapQuote? _parseQuote(Map<String, dynamic> data) {
+  TronSwapQuote? _parseQuote(
+    Map<String, dynamic> data, {
+    required int toTokenDecimals,
+  }) {
     final tx = data['transaction'];
     if (tx == null) {
       _lastError =
@@ -183,7 +201,7 @@ class TronSwapService {
         data['toAmount']?.toString() ??
         '0';
 
-    final outDecimals = (data['toDecimals'] as num?)?.toInt() ?? 6;
+    final outDecimals = toTokenDecimals.clamp(0, 36);
     final outAmountNum = double.tryParse(outAmount) ?? 0.0;
     final outAmountFormatted = _formatTokenAmount(outAmountNum, outDecimals);
 
@@ -193,6 +211,18 @@ class TronSwapService {
         0.0;
     final platformFeeUsd = (data['platformFeeUsd'] as num?)?.toDouble() ?? 0.0;
     final platformFeeBps = (data['platformFeeBps'] as num?)?.toInt() ?? 100;
+    final approvalTx = _optionalTransaction(data['approvalTransaction']);
+    final feeTx = _optionalTransaction(data['feeTransaction']);
+    if (data['approvalTransaction'] != null && approvalTx == null) {
+      _lastError =
+          'Swap approval response was not signable. Please refresh the quote.';
+      return null;
+    }
+    if (data['feeTransaction'] != null && feeTx == null) {
+      _lastError =
+          'Swap fee response was not signable. Please refresh the quote.';
+      return null;
+    }
 
     return TronSwapQuote(
       amountOutFormatted: outAmountFormatted,
@@ -200,11 +230,26 @@ class TronSwapService {
       networkFeeUsd: feeUsd,
       platformFeeUsd: platformFeeUsd,
       platformFeeBps: platformFeeBps,
+      platformFeeAmountRaw: data['feeAmount']?.toString() ?? '0',
+      platformFeeRecipient: data['feeRecipient']?.toString(),
       unsignedTx: unsignedTx,
+      approvalTx: approvalTx,
+      feeTx: feeTx,
       analyticsEventId:
           data['analyticsEventId']?.toString() ??
           data['analytics_event_id']?.toString(),
     );
+  }
+
+  Map<String, dynamic>? _optionalTransaction(Object? value) {
+    if (value == null) return null;
+    if (value is! Map) return null;
+    final transaction = Map<String, dynamic>.from(value);
+    if (transaction['raw_data_hex'] == null &&
+        transaction['rawDataHex'] == null) {
+      return null;
+    }
+    return transaction;
   }
 
   String _formatTokenAmount(double rawBaseUnits, int decimals) {

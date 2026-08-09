@@ -239,6 +239,25 @@ void main() {
   });
 
   group('TronSwapService.broadcastSignedTx', () {
+    test('routes broadcasts through TRON mainnet', () async {
+      late Uri requestedUri;
+      final mockClient = MockClient((request) async {
+        requestedUri = request.url;
+        return http.Response(jsonEncode({'txid': 'mainnet123'}), 200);
+      });
+      final service = TronSwapService(
+        httpClientService: HttpClientServiceMock(mockClient),
+      );
+
+      final txid = await service.broadcastSignedTx({
+        'raw_data_hex': 'aabbcc',
+        'signature': ['sighere'],
+      }, networkKey: 'tron:mainnet');
+
+      expect(txid, 'mainnet123');
+      expect(requestedUri.pathSegments, contains('tron:mainnet'));
+    });
+
     test('returns txid from "txid" field', () async {
       final mockClient = MockClient((request) async {
         return http.Response(jsonEncode({'txid': 'abc123txid'}), 200);

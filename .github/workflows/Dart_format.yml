@@ -1,8 +1,10 @@
 name: Dart Format
 
 on:
+  push:
+    branches: [develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 # Read-only: this workflow verifies formatting and fails the check if code is

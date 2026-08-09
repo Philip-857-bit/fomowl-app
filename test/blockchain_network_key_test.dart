@@ -62,6 +62,11 @@ void main() {
       expect(service.activeNetworkSymbol, 'TRX');
       expect(service.activeTokenStorageChainId, -195);
       expect(service.tokens.single.symbol, 'TRX');
+
+      service.setActiveNetworkKey('tron:nile');
+      expect(service.activeNetworkKey, 'tron:mainnet');
+      expect(service.activeNetworkName, 'TRON');
+      expect(service.activeNetworkSymbol, 'TRX');
     },
   );
 

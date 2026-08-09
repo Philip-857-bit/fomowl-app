@@ -27,6 +27,12 @@ class BridgeStepTx {
   /// Address lookup tables referenced by the Solana instructions.
   final List<String> lookupTableAddresses;
 
+  /// JSON-encoded unsigned FullNode transaction for a TRON-origin deposit.
+  final String? tronTransactionJson;
+  final String? solanaTransferTo;
+  final BigInt? solanaTransferAmount;
+  final String? solanaTokenMint;
+
   const BridgeStepTx({
     required this.stepId,
     required this.description,
@@ -38,9 +44,15 @@ class BridgeStepTx {
     this.maxPriorityFeePerGas,
     this.instructionsJson,
     this.lookupTableAddresses = const [],
+    this.tronTransactionJson,
+    this.solanaTransferTo,
+    this.solanaTransferAmount,
+    this.solanaTokenMint,
   });
 
   bool get isSolana => instructionsJson != null;
+  bool get isTron => tronTransactionJson != null;
+  bool get isSolanaTransfer => solanaTransferTo != null;
 }
 
 /// Blockhash + resolved lookup tables needed to compile a Solana-origin step.
@@ -81,6 +93,8 @@ class BridgeQuote {
 
   final String requestId;
   final List<BridgeStepTx> steps;
+  final bool committed;
+  final DateTime? deadline;
 
   const BridgeQuote({
     required this.originChainId,
@@ -95,7 +109,14 @@ class BridgeQuote {
     required this.timeEstimateSeconds,
     required this.requestId,
     required this.steps,
+    required this.committed,
+    required this.deadline,
   });
+
+  /// Dry previews can begin execution because the wallet commits them after
+  /// the user taps Bridge. Committed quotes must already contain signable
+  /// steps.
+  bool get canBeginExecution => !committed || steps.isNotEmpty;
 
   String get arrivalLabel {
     final seconds = timeEstimateSeconds;
@@ -115,7 +136,11 @@ class BridgeStatus {
   bool get isSuccess => status.toLowerCase() == 'success';
   bool get isFailure {
     final lower = status.toLowerCase();
-    return lower == 'failure' || lower == 'failed' || lower == 'refund';
+    return lower == 'failure' ||
+        lower == 'failed' ||
+        lower == 'refund' ||
+        lower == 'refunded' ||
+        lower == 'incomplete_deposit';
   }
 }
 
@@ -176,8 +201,14 @@ class BridgeService {
   /// Relay's chain id for Solana mainnet.
   static const int relaySolanaChainId = 792703809;
 
+  /// Internal bridge identifier for TRON mainnet. Kept separate from the
+  /// 0x Cross Chain provider-specific id (999999999993).
+  static const int tronBridgeChainId = 728126428;
+
   /// Relay represents native SOL with the system program address.
   static const String solanaNativeCurrency = '11111111111111111111111111111111';
+
+  static const String tronNativeCurrency = 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb';
 
   /// [walletAddress] is the origin-chain signer. [recipientAddress] defaults
   /// to it, but differs when bridging across chain families (e.g. EVM → the
@@ -192,6 +223,7 @@ class BridgeService {
     String? recipientAddress,
     double? amountUsd,
     int? slippageBps,
+    bool commit = false,
   }) async {
     _lastError = null;
     try {
@@ -209,6 +241,7 @@ class BridgeService {
         'recipient': recipientAddress ?? walletAddress,
         if (amountUsd != null && amountUsd > 0) 'amountUsd': '$amountUsd',
         if (slippageBps != null) 'slippageBps': '${slippageBps.clamp(1, 5000)}',
+        if (commit) 'commit': 'true',
       };
       final url = AppEnvironment.swap('/cross-chain/quote', params);
 
@@ -237,8 +270,12 @@ class BridgeService {
         return null;
       }
 
+      final extra = data['extra'] is Map
+          ? Map<String, dynamic>.from(data['extra'] as Map)
+          : const <String, dynamic>{};
+      final committed = extra['committed'] != false;
       final steps = _parseSteps(data['steps']);
-      if (steps.isEmpty) {
+      if (committed && steps.isEmpty) {
         _lastError =
             'The bridge provider returned no executable transactions. Please refresh the quote.';
         return null;
@@ -259,6 +296,8 @@ class BridgeService {
         timeEstimateSeconds: (data['timeEstimateSeconds'] as num?)?.toInt(),
         requestId: data['requestId']?.toString() ?? '',
         steps: steps,
+        committed: committed,
+        deadline: DateTime.tryParse(extra['deadline']?.toString() ?? ''),
       );
     } catch (e) {
       _lastError ??= AppErrorUtils.userMessage(
@@ -269,6 +308,29 @@ class BridgeService {
       return null;
     }
   }
+
+  Future<BridgeQuote?> commitQuote({
+    required int originChainId,
+    required int destinationChainId,
+    required String originCurrency,
+    required String destinationCurrency,
+    required String amountWei,
+    required String walletAddress,
+    String? recipientAddress,
+    double? amountUsd,
+    int? slippageBps,
+  }) => getQuote(
+    originChainId: originChainId,
+    destinationChainId: destinationChainId,
+    originCurrency: originCurrency,
+    destinationCurrency: destinationCurrency,
+    amountWei: amountWei,
+    walletAddress: walletAddress,
+    recipientAddress: recipientAddress,
+    amountUsd: amountUsd,
+    slippageBps: slippageBps,
+    commit: true,
+  );
 
   /// Converts the backend's stable quote error contract into bridge-specific
   /// guidance without exposing Relay/provider diagnostics to the user.
@@ -392,6 +454,42 @@ class BridgeService {
       );
       debugPrint('BridgeService.getStatus error: $e');
       return null;
+    }
+  }
+
+  /// Tells NEAR Intents about the origin transaction after this wallet has
+  /// signed, broadcast, and confirmed it. Relay routes do not use this call.
+  Future<bool> submitNearDeposit({
+    required String requestId,
+    required String txHash,
+  }) async {
+    if (!requestId.startsWith('near:')) return true;
+    _lastError = null;
+    try {
+      final url = AppEnvironment.swap('/cross-chain/near-deposit');
+      final response = await _http
+          .sendWithRetry(
+            () => _http.client.post(
+              url,
+              headers: const {'content-type': 'application/json'},
+              body: jsonEncode({'requestId': requestId, 'txHash': txHash}),
+            ),
+            retryIf: (response) => response.statusCode >= 500,
+            maxRetries: 1,
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode >= 200 && response.statusCode < 300) return true;
+      _lastError = AppErrorUtils.backendMessage(
+        response.body,
+        fallback: 'Unable to notify the bridge provider about the deposit.',
+      );
+      return false;
+    } catch (error) {
+      _lastError = AppErrorUtils.userMessage(
+        error,
+        fallback: 'Unable to notify the bridge provider about the deposit.',
+      );
+      return false;
     }
   }
 
@@ -582,6 +680,42 @@ class BridgeService {
       for (final item in items.whereType<Map>()) {
         final data = item['data'];
         if (data is! Map) continue;
+
+        if (data['chainType']?.toString() == 'tvm' &&
+            data['transaction'] is Map) {
+          parsed.add(
+            BridgeStepTx(
+              stepId: stepId,
+              description: description,
+              to: data['depositAddress']?.toString() ?? '',
+              data: '0x',
+              value: BigInt.zero,
+              chainId: (data['chainId'] as num?)?.toInt() ?? tronBridgeChainId,
+              tronTransactionJson: jsonEncode(data['transaction']),
+            ),
+          );
+          continue;
+        }
+
+        if (data['chainType']?.toString() == 'solana-transfer') {
+          final to = data['to']?.toString() ?? '';
+          final amount = _parseBigInt(data['amount']);
+          if (to.isEmpty || amount == null || amount <= BigInt.zero) continue;
+          parsed.add(
+            BridgeStepTx(
+              stepId: stepId,
+              description: description,
+              to: to,
+              data: '0x',
+              value: BigInt.zero,
+              chainId: (data['chainId'] as num?)?.toInt() ?? relaySolanaChainId,
+              solanaTransferTo: to,
+              solanaTransferAmount: amount,
+              solanaTokenMint: data['tokenMint']?.toString(),
+            ),
+          );
+          continue;
+        }
 
         // Solana-origin steps carry instructions instead of calldata.
         final instructions = data['instructions'];
