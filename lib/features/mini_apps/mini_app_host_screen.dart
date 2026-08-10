@@ -199,6 +199,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     } catch (_) {
       solanaWalletAddress = null;
     }
+    String? tronWalletAddress;
+    try {
+      tronWalletAddress = await _walletService.getWalletAddressForFamily(
+        ChainFamily.tron,
+      );
+    } catch (_) {
+      tronWalletAddress = null;
+    }
 
     // Surface the wallet-auth (ws_) session token to the mini-app so it can call
     // wallet-scoped backend endpoints (e.g. the affiliate dashboard) as the user.
@@ -290,6 +298,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'walletAddress': walletAddress,
         'evmWalletAddress': walletAddress,
         'solanaWalletAddress': solanaWalletAddress,
+        'tronWalletAddress': tronWalletAddress,
         'walletAccess': 'gated',
         'permissions': <String, dynamic>{'walletAccess': 'gated'},
         'hasSession': isLoggedIn,
