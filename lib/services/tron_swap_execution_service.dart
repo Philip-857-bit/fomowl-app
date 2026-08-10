@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../utils/app_error_utils.dart';
@@ -65,12 +66,40 @@ class TronSwapExecutionService {
         }
       }
 
+      var unsignedTransaction = quote.unsignedTx;
+      if (unsignedTransaction == null) {
+        final typedData = quote.permitTypedData;
+        final finalizePayload = quote.finalizePayload;
+        if (typedData == null || finalizePayload == null) {
+          return const TronSwapExecutionResult(
+            success: false,
+            error:
+                'This TRON swap authorization is incomplete. Refresh the quote.',
+          );
+        }
+        final permitSignature = await _walletService.signTypedDataForAddress(
+          walletAddress,
+          jsonEncode(typedData),
+        );
+        unsignedTransaction = await _swapService.finalizePermitSwap(
+          payload: finalizePayload,
+          signature: permitSignature,
+        );
+        if (unsignedTransaction == null) {
+          return TronSwapExecutionResult(
+            success: false,
+            error:
+                _swapService.lastError ?? 'Unable to authorize this TRON swap.',
+          );
+        }
+      }
+
       // Sign the unsigned transaction. WalletService.signTronTransactionRaw
       // handles SHA-256 hashing of raw_data_hex and secp256k1 signing,
       // returning the tx map with `signature` list appended.
       final signedTx = await _walletService.signTronTransactionRaw(
         walletAddress,
-        quote.unsignedTx,
+        unsignedTransaction,
       );
 
       // Broadcast the signed transaction.

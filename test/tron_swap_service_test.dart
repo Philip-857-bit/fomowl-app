@@ -60,7 +60,7 @@ void main() {
       expect(quote.networkFeeUsd, 0.5);
       expect(quote.networkFeeNative, 1.5);
       expect(quote.platformFeeUsd, 0.2);
-      expect(quote.unsignedTx['raw_data_hex'], 'aabbcc');
+      expect(quote.unsignedTx!['raw_data_hex'], 'aabbcc');
     });
 
     test('sends sellAmountUsd hint when available', () async {
@@ -91,6 +91,47 @@ void main() {
       expect(quote!.amountOutRaw, '1000000');
     });
 
+    test(
+      'accepts a Permit2 quote before the final transaction is built',
+      () async {
+        final mockClient = MockClient(
+          (request) async => http.Response(
+            jsonEncode({
+              'outAmount': '990000',
+              'networkFeeNative': 500,
+              'permit2': {
+                'typedData': {
+                  'primaryType': 'PermitSingle',
+                  'domain': {'name': 'Permit2'},
+                },
+              },
+              'finalizePayload': {
+                'src': 'TToken',
+                'dst': 'TOther',
+                'amount': '1000000',
+              },
+            }),
+            200,
+          ),
+        );
+        final service = TronSwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
+
+        final quote = await service.getQuote(
+          fromToken: 'TToken',
+          toToken: 'TOther',
+          amountSun: '1000000',
+          walletAddress: 'TXyz',
+        );
+
+        expect(quote, isNotNull);
+        expect(quote!.unsignedTx, isNull);
+        expect(quote.permitTypedData?['primaryType'], 'PermitSingle');
+        expect(quote.finalizePayload?['amount'], '1000000');
+      },
+    );
+
     test('parses valid quote with rawDataHex (camelCase field)', () async {
       final mockClient = MockClient((request) async {
         return http.Response(
@@ -115,7 +156,7 @@ void main() {
 
       expect(quote, isNotNull);
       expect(quote!.amountOutRaw, '500000');
-      expect(quote.unsignedTx['rawDataHex'], 'ddeeff');
+      expect(quote.unsignedTx!['rawDataHex'], 'ddeeff');
     });
 
     test('falls back to toAmount field for outAmount', () async {
@@ -163,7 +204,7 @@ void main() {
       );
 
       expect(quote, isNull);
-      expect(service.lastError, contains('missing the unsigned transaction'));
+      expect(service.lastError, contains('missing its authorization data'));
     });
 
     test(

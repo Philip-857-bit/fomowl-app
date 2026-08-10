@@ -20,9 +20,11 @@ class TronSwapQuote {
 
   /// Unsigned Tron transaction JSON returned by SunSwap / the backend.
   /// Contains a `raw_data_hex` field that must be signed.
-  final Map<String, dynamic> unsignedTx;
+  final Map<String, dynamic>? unsignedTx;
   final Map<String, dynamic>? approvalTx;
   final Map<String, dynamic>? feeTx;
+  final Map<String, dynamic>? permitTypedData;
+  final Map<String, dynamic>? finalizePayload;
 
   const TronSwapQuote({
     required this.amountOutFormatted,
@@ -36,6 +38,8 @@ class TronSwapQuote {
     this.platformFeeRecipient,
     this.approvalTx,
     this.feeTx,
+    this.permitTypedData,
+    this.finalizePayload,
     this.analyticsEventId,
   });
 
@@ -174,22 +178,60 @@ class TronSwapService {
     }
   }
 
+  Future<Map<String, dynamic>?> finalizePermitSwap({
+    required Map<String, dynamic> payload,
+    required String signature,
+  }) async {
+    _lastError = null;
+    try {
+      final response = await _http
+          .sendWithRetry(
+            () => _http.client.post(
+              AppEnvironment.swap('/tron/finalize'),
+              headers: const {'content-type': 'application/json'},
+              body: jsonEncode({...payload, 'signature': signature}),
+            ),
+            maxRetries: 1,
+          )
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        _lastError = AppErrorUtils.backendMessage(
+          response.body,
+          fallback: 'Unable to authorize this TRON swap.',
+        );
+        return null;
+      }
+      final raw = jsonDecode(response.body);
+      if (raw is! Map || raw['transaction'] is! Map) {
+        _lastError = 'The authorized TRON transaction was incomplete.';
+        return null;
+      }
+      return Map<String, dynamic>.from(raw['transaction'] as Map);
+    } catch (error) {
+      _lastError = AppErrorUtils.userMessage(
+        error,
+        fallback: 'Unable to authorize this TRON swap.',
+      );
+      return null;
+    }
+  }
+
   TronSwapQuote? _parseQuote(
     Map<String, dynamic> data, {
     required int toTokenDecimals,
   }) {
     final tx = data['transaction'];
-    if (tx == null) {
+    final permit2 = data['permit2'];
+    final finalizePayload = data['finalizePayload'];
+    if (tx == null && (permit2 is! Map || finalizePayload is! Map)) {
       _lastError =
-          'Swap quote response was missing the unsigned transaction. Please try again.';
+          'Swap quote response was missing its authorization data. Please try again.';
       return null;
     }
 
-    final unsignedTx = tx is Map
-        ? Map<String, dynamic>.from(tx)
-        : <String, dynamic>{};
+    final unsignedTx = tx is Map ? Map<String, dynamic>.from(tx) : null;
 
-    if (unsignedTx.isEmpty ||
+    if (unsignedTx != null &&
         (unsignedTx['raw_data_hex'] == null &&
             unsignedTx['rawDataHex'] == null)) {
       _lastError =
@@ -239,6 +281,12 @@ class TronSwapService {
       unsignedTx: unsignedTx,
       approvalTx: approvalTx,
       feeTx: feeTx,
+      permitTypedData: permit2 is Map && permit2['typedData'] is Map
+          ? Map<String, dynamic>.from(permit2['typedData'] as Map)
+          : null,
+      finalizePayload: finalizePayload is Map
+          ? Map<String, dynamic>.from(finalizePayload)
+          : null,
       analyticsEventId:
           data['analyticsEventId']?.toString() ??
           data['analytics_event_id']?.toString(),

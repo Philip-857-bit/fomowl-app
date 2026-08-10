@@ -1306,11 +1306,29 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
 
     final bridgeService = BridgeService();
     final blockchain = context.read<BlockchainService>();
+    final requestId = payload['requestId']?.toString().trim() ?? '';
     String? firstTxHash;
 
     try {
       for (final step in steps) {
-        if (step.isSolana) {
+        if (step.isSolanaTransfer) {
+          final solanaAddress = await _walletService.getWalletAddressForFamily(
+            ChainFamily.solana,
+          );
+          if (solanaAddress == null || solanaAddress.trim().isEmpty) {
+            const msg = 'This wallet does not support Solana.';
+            controller.setError(msg);
+            return const <String, dynamic>{'ok': false, 'error': msg};
+          }
+          final signature = await _walletService.sendSolanaTransaction(
+            fromAddress: solanaAddress,
+            toAddress: step.solanaTransferTo!,
+            amountLamports: step.solanaTransferAmount!,
+            tokenMint: step.solanaTokenMint,
+          );
+          firstTxHash ??= signature;
+          controller.setSwapPending(reference: _shortHash(signature));
+        } else if (step.isSolana) {
           final solanaContext = await bridgeService.getSolanaContext(
             lookupTableAddresses: step.lookupTableAddresses,
           );
@@ -1362,6 +1380,24 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           );
           firstTxHash ??= txHash;
           controller.setSwapPending(reference: _shortHash(txHash));
+        }
+      }
+
+      if (requestId.startsWith('near:') && firstTxHash != null) {
+        final notified = await bridgeService.submitNearDeposit(
+          requestId: requestId,
+          txHash: firstTxHash,
+        );
+        if (!notified) {
+          final msg =
+              bridgeService.lastError ??
+              'Your deposit was sent, but Owllet could not continue delivery yet.';
+          controller.setError(msg);
+          return <String, dynamic>{
+            'ok': false,
+            'error': msg,
+            'transactionHash': firstTxHash,
+          };
         }
       }
 
