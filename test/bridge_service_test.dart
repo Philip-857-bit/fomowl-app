@@ -120,7 +120,7 @@ void main() {
   test('accepts flattened NEAR Intents preview metadata', () async {
     final client = MockClient(
       (_) async => http.Response(
-        '{"originChainId":728126428,"destinationChainId":1,"amountIn":"1000000000","amountOut":"170192993473152434","feeUsd":0,"gasFeeUsd":0,"requestId":"","steps":[],"provider":"near_intents","committed":false,"deadline":"2099-01-01T00:00:00Z"}',
+        '{"originChainId":728126428,"destinationChainId":1,"amountIn":"1000000000","amountOut":"170192993473152434","amountOutUsd":32.91,"feeUsd":0,"requestId":"","steps":[],"provider":"near_intents","committed":false,"deadline":"2099-01-01T00:00:00Z"}',
         200,
       ),
     );
@@ -140,6 +140,59 @@ void main() {
     expect(preview, isNotNull);
     expect(preview!.committed, isFalse);
     expect(preview.canBeginExecution, isTrue);
+    expect(preview.routeProviderLabel, 'NEAR Intents');
+    expect(preview.amountOutUsd, 32.91);
+    expect(preview.bridgeFeeUsd, 0);
+    expect(preview.gasFeeUsd, isNull);
+  });
+
+  test('prefers protocolUsed and reads a nested provider safely', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"amountOut":"900000","protocolUsed":"relay","provider":{"name":"ignored"},"details":{"currencyOut":{"amountUsd":"0.89"}},"feeUsd":0.15,"gasFeeUsd":0.02,"steps":[],"committed":false}',
+        200,
+      ),
+    );
+    final service = BridgeService(
+      httpClientService: _HttpClientServiceMock(client),
+    );
+
+    final preview = await service.getQuote(
+      originChainId: 1,
+      destinationChainId: 8453,
+      originCurrency: BridgeService.nativeCurrency,
+      destinationCurrency: BridgeService.nativeCurrency,
+      amountWei: '1000000',
+      walletAddress: '0x2222222222222222222222222222222222222222',
+    );
+
+    expect(preview?.routeProviderLabel, 'Relay');
+    expect(preview?.amountOutUsd, 0.89);
+    expect(preview?.bridgeFeeUsd, 0.15);
+    expect(preview?.gasFeeUsd, 0.02);
+  });
+
+  test('preserves an omitted bridge fee as null', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"amountOut":"900000","provider":"relay","steps":[],"committed":false}',
+        200,
+      ),
+    );
+    final service = BridgeService(
+      httpClientService: _HttpClientServiceMock(client),
+    );
+
+    final preview = await service.getQuote(
+      originChainId: 1,
+      destinationChainId: 8453,
+      originCurrency: BridgeService.nativeCurrency,
+      destinationCurrency: BridgeService.nativeCurrency,
+      amountWei: '1000000',
+      walletAddress: '0x2222222222222222222222222222222222222222',
+    );
+
+    expect(preview?.bridgeFeeUsd, isNull);
   });
 
   test('parseSteps preserves an EVM approval and deposit in order', () {

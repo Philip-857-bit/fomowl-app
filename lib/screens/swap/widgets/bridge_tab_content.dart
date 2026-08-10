@@ -1134,6 +1134,23 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         maxFractionDigits: 6,
       );
     }
+    double? destinationPrice;
+    if (_toCurrency != null) {
+      for (final token in widget.tokens) {
+        if (token.symbol.toUpperCase() == _toCurrency!.symbol.toUpperCase() &&
+            token.priceUsd > 0) {
+          destinationPrice = token.priceUsd;
+          break;
+        }
+      }
+    }
+    final destinationUsd = quote == null
+        ? null
+        : quote.amountOutUsd > 0
+        ? quote.amountOutUsd
+        : destinationPrice != null
+        ? (double.tryParse(toAmountText) ?? 0) * destinationPrice
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1165,6 +1182,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ],
         _BridgeCard(
           label: 'BRIDGE FROM',
+          badge: 'OWLLET ROUTES',
           chainName: fromChainName,
           chainLogoUrl: fromChainLogo,
           onSelectChain: widget.onSelectFromChain,
@@ -1324,9 +1342,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
               ),
               const SizedBox(height: 8),
               Text(
-                ValueFormatter.formatCurrencyWithGrouping(
-                  ValueFormatter.decimalFromNum(quote?.amountOutUsd ?? 0),
-                ),
+                destinationUsd == null || destinationUsd <= 0
+                    ? 'USD value unavailable'
+                    : ValueFormatter.formatCurrencyWithGrouping(
+                        ValueFormatter.decimalFromNum(destinationUsd),
+                      ),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: const Color(0xFF848E9C),
@@ -1366,7 +1386,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Bridging moves tokens between networks via Owllet routing. You receive the destination network\'s native token.',
+          'You receive ${_toCurrency?.symbol ?? toChain?.symbol ?? 'the selected token'} on ${toChain?.name ?? 'the destination network'}. Owllet selects the route.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 11,
@@ -1384,6 +1404,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 /// per the Figma bridge design.
 class _BridgeCard extends StatelessWidget {
   final String label;
+  final String? badge;
   final String chainName;
   final String? chainLogoUrl;
   final VoidCallback? onSelectChain;
@@ -1391,6 +1412,7 @@ class _BridgeCard extends StatelessWidget {
 
   const _BridgeCard({
     required this.label,
+    this.badge,
     required this.chainName,
     required this.chainLogoUrl,
     required this.onSelectChain,
@@ -1412,15 +1434,46 @@ class _BridgeCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFFB2B5BD),
-                  letterSpacing: 1.0,
+              Expanded(
+                child: Wrap(
+                  spacing: 7,
+                  runSpacing: 5,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFFB2B5BD),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    if (badge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1AEA2A33),
+                          borderRadius: BorderRadius.circular(5),
+                          border: Border.all(color: const Color(0x3DEA2A33)),
+                        ),
+                        child: Text(
+                          badge!,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFEA747A),
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 8),
               _ChainPill(
                 name: chainName,
                 logoUrl: chainLogoUrl,
@@ -1831,18 +1884,22 @@ class _BridgeDetailsCard extends StatelessWidget {
             )
           : Column(
               children: [
-                if (q?.platformFeeBps != null)
+                _DetailRow(
+                  label: 'Route',
+                  value: q?.routeProviderLabel ?? 'Owllet routing',
+                ),
+                if (q?.platformFeeBps != null || q?.platformFeeUsd != null)
                   _DetailRow(
                     label: 'Platform Fee',
-                    value: _usdLabel(q!.platformFeeUsd),
+                    value: _platformFeeLabel(q!),
                   ),
                 _DetailRow(
-                  label: 'Bridge Fee',
-                  value: _usdLabel(q?.bridgeFeeUsd),
+                  label: 'Bridge / Route Fee',
+                  value: _bridgeFeeLabel(q?.bridgeFeeUsd),
                 ),
                 _DetailRow(
-                  label: 'Estimated Gas',
-                  value: '~${_usdLabel(q?.gasFeeUsd)}',
+                  label: 'Origin Network Fee',
+                  value: _networkFeeLabel(q),
                 ),
                 _DetailRow(
                   label: 'Estimated Arrival',
@@ -1858,6 +1915,28 @@ class _BridgeDetailsCard extends StatelessWidget {
     if (value == null || value <= 0) return r'$0.00';
     if (value < 0.01) return r'<$0.01';
     return '\$${value.toStringAsFixed(2)}';
+  }
+
+  static String _platformFeeLabel(BridgeQuote quote) {
+    final usd = quote.platformFeeUsd;
+    final bps = quote.platformFeeBps;
+    final percent = bps == null ? null : '${(bps / 100).toStringAsFixed(2)}%';
+    if (usd != null && percent != null) return '${_usdLabel(usd)} ($percent)';
+    if (usd != null) return _usdLabel(usd);
+    if (percent != null) return percent;
+    return 'Unavailable';
+  }
+
+  static String _bridgeFeeLabel(double? value) {
+    if (value == null) return 'Included in quote';
+    if (value <= 0) return r'Included / $0.00';
+    return _usdLabel(value);
+  }
+
+  static String _networkFeeLabel(BridgeQuote? quote) {
+    final value = quote?.gasFeeUsd;
+    if (value == null || value <= 0) return 'Calculated when signing';
+    return '~${_usdLabel(value)}';
   }
 }
 
@@ -1879,22 +1958,32 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF9CA3AF),
-              letterSpacing: 0.24,
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF9CA3AF),
+                letterSpacing: 0.24,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFFE5E2E1),
-              letterSpacing: 0.24,
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFE5E2E1),
+                letterSpacing: 0.24,
+              ),
             ),
           ),
         ],

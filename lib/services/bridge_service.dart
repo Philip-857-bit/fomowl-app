@@ -79,10 +79,13 @@ class BridgeQuote {
   final double amountOutUsd;
 
   /// Relayer (bridge) service fee in USD.
-  final double bridgeFeeUsd;
+  final double? bridgeFeeUsd;
 
-  /// Estimated origin-chain gas in USD.
-  final double gasFeeUsd;
+  /// Estimated origin-chain gas in USD. Null means the provider did not quote it.
+  final double? gasFeeUsd;
+
+  /// Provider selected by Owllet's route engine.
+  final String routeProvider;
 
   /// Owllet platform fee.
   final int? platformFeeBps;
@@ -104,6 +107,7 @@ class BridgeQuote {
     required this.amountOutUsd,
     required this.bridgeFeeUsd,
     required this.gasFeeUsd,
+    required this.routeProvider,
     required this.platformFeeBps,
     required this.platformFeeUsd,
     required this.timeEstimateSeconds,
@@ -124,6 +128,13 @@ class BridgeQuote {
     if (seconds < 60) return '~$seconds sec';
     final minutes = (seconds / 60).ceil();
     return '~$minutes min';
+  }
+
+  String get routeProviderLabel {
+    final normalized = routeProvider.toLowerCase().replaceAll('-', '_');
+    if (normalized.contains('near')) return 'NEAR Intents';
+    if (normalized.contains('relay')) return 'Relay';
+    return routeProvider.trim().isEmpty ? 'Owllet routing' : routeProvider;
   }
 }
 
@@ -289,8 +300,9 @@ class BridgeService {
         amountIn: data['amountIn']?.toString() ?? amountWei,
         amountOut: amountOut,
         amountOutUsd: _readAmountOutUsd(data),
-        bridgeFeeUsd: (data['feeUsd'] as num?)?.toDouble() ?? 0.0,
-        gasFeeUsd: (data['gasFeeUsd'] as num?)?.toDouble() ?? 0.0,
+        bridgeFeeUsd: (data['feeUsd'] as num?)?.toDouble(),
+        gasFeeUsd: (data['gasFeeUsd'] as num?)?.toDouble(),
+        routeProvider: _readProvider(data),
         platformFeeBps: (data['platformFeeBps'] as num?)?.toInt(),
         platformFeeUsd: (data['platformFeeUsd'] as num?)?.toDouble(),
         timeEstimateSeconds: (data['timeEstimateSeconds'] as num?)?.toInt(),
@@ -658,11 +670,27 @@ class BridgeService {
 
   /// Relay reports the USD value of the output under details.currencyOut.
   static double _readAmountOutUsd(Map<String, dynamic> data) {
+    final topLevel = double.tryParse(data['amountOutUsd']?.toString() ?? '');
+    if (topLevel != null && topLevel > 0) return topLevel;
     final details = data['details'];
     if (details is! Map) return 0.0;
     final currencyOut = details['currencyOut'];
     if (currencyOut is! Map) return 0.0;
     return double.tryParse(currencyOut['amountUsd']?.toString() ?? '') ?? 0.0;
+  }
+
+  static String _readProvider(Map<String, dynamic> data) {
+    final protocol = data['protocolUsed']?.toString().trim() ?? '';
+    if (protocol.isNotEmpty) return protocol;
+    final provider = data['provider'];
+    if (provider is Map) {
+      for (final key in const ['name', 'id', 'provider', 'protocol']) {
+        final value = provider[key]?.toString().trim() ?? '';
+        if (value.isNotEmpty) return value;
+      }
+    }
+    final value = provider?.toString().trim() ?? '';
+    return value.isEmpty ? 'Owllet routing' : value;
   }
 
   /// Parse raw Relay `steps` (as returned by the backend, e.g. the cash-in

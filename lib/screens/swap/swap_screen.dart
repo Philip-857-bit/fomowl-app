@@ -2009,7 +2009,7 @@ class _SwapScreenState extends State<SwapScreen> {
       minAmountOutWei: quote.amountOut,
       amountOutFormatted: formatted,
       minAmountOutFormatted: formatted,
-      networkFeeUsd: quote.gasFeeUsd + quote.bridgeFeeUsd,
+      networkFeeUsd: (quote.gasFeeUsd ?? 0) + (quote.bridgeFeeUsd ?? 0),
       networkFeeNative: 0,
       allowanceTarget: '',
       allowanceSpender: null,
