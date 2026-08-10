@@ -273,7 +273,7 @@ class BridgeService {
       final extra = data['extra'] is Map
           ? Map<String, dynamic>.from(data['extra'] as Map)
           : const <String, dynamic>{};
-      final committed = extra['committed'] != false;
+      final committed = (extra['committed'] ?? data['committed']) != false;
       final steps = _parseSteps(data['steps']);
       if (committed && steps.isEmpty) {
         _lastError =
@@ -297,7 +297,9 @@ class BridgeService {
         requestId: data['requestId']?.toString() ?? '',
         steps: steps,
         committed: committed,
-        deadline: DateTime.tryParse(extra['deadline']?.toString() ?? ''),
+        deadline: DateTime.tryParse(
+          (extra['deadline'] ?? data['deadline'])?.toString() ?? '',
+        ),
       );
     } catch (e) {
       _lastError ??= AppErrorUtils.userMessage(

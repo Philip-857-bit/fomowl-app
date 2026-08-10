@@ -117,6 +117,31 @@ void main() {
     },
   );
 
+  test('accepts flattened NEAR Intents preview metadata', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"originChainId":728126428,"destinationChainId":1,"amountIn":"1000000000","amountOut":"170192993473152434","feeUsd":0,"gasFeeUsd":0,"requestId":"","steps":[],"provider":"near_intents","committed":false,"deadline":"2099-01-01T00:00:00Z"}',
+        200,
+      ),
+    );
+    final service = BridgeService(
+      httpClientService: _HttpClientServiceMock(client),
+    );
+
+    final preview = await service.getQuote(
+      originChainId: BridgeService.tronBridgeChainId,
+      destinationChainId: 1,
+      originCurrency: BridgeService.tronNativeCurrency,
+      destinationCurrency: BridgeService.nativeCurrency,
+      amountWei: '1000000000',
+      walletAddress: 'TWallet',
+    );
+
+    expect(preview, isNotNull);
+    expect(preview!.committed, isFalse);
+    expect(preview.canBeginExecution, isTrue);
+  });
+
   test('parseSteps preserves an EVM approval and deposit in order', () {
     final steps = BridgeService.parseSteps([
       {

@@ -461,14 +461,30 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   Future<void> _selectFromToken() async {
-    final selected = await showDialog<Token>(
+    final selected = await showDialog<Object?>(
       context: context,
       builder: (ctx) => SwapTokenSelectorDialog(
         tokens: widget.tokens,
         chainId: widget.blockchain.activeTokenStorageChainId,
+        networkFamilies: widget.blockchain.enabledFamilies.intersection(
+          widget.blockchain.activeWalletSupportedFamilies,
+        ),
+        activeNetworkFamily: widget.blockchain.activeFamily,
       ),
     );
-    if (selected != null && mounted) {
+    if (!mounted || selected == null) return;
+    if (selected is ChainFamily) {
+      final networkKey = switch (selected) {
+        ChainFamily.evm => NetworkKey.evm(
+          widget.blockchain.activeChain.chainId,
+        ),
+        ChainFamily.solana => NetworkKey.solana('mainnet-beta'),
+        ChainFamily.tron => NetworkKey.tron('mainnet'),
+      };
+      widget.blockchain.setActiveNetworkKey(networkKey);
+      return;
+    }
+    if (selected is Token) {
       setState(() {
         _fromToken = selected;
         _selectedPercentage = -1;

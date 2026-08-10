@@ -21,10 +21,18 @@ class SwapTokenSelectorDialog extends StatefulWidget {
     super.key,
     required this.tokens,
     required this.chainId,
+    this.networkFamilies,
+    this.activeNetworkFamily,
   });
 
   final List<Token> tokens;
   final int chainId;
+
+  /// Optional bridge-only family picker. Token balances are scoped to the
+  /// active network, so selecting another family returns it to the caller,
+  /// which switches the wallet network before showing that family's tokens.
+  final Set<ChainFamily>? networkFamilies;
+  final ChainFamily? activeNetworkFamily;
 
   @override
   State<SwapTokenSelectorDialog> createState() =>
@@ -254,6 +262,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final networkFamilies = widget.networkFamilies;
     return Dialog(
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -273,6 +282,47 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
                 ),
               ],
             ),
+            if (networkFamilies != null && networkFamilies.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final family in const [
+                    ChainFamily.evm,
+                    ChainFamily.solana,
+                    ChainFamily.tron,
+                  ])
+                    if (networkFamilies.contains(family))
+                      ChoiceChip(
+                        key: ValueKey('bridge-family-${family.wireValue}'),
+                        label: Text(switch (family) {
+                          ChainFamily.evm => 'EVM',
+                          ChainFamily.solana => 'Solana',
+                          ChainFamily.tron => 'TRON',
+                        }),
+                        selected: widget.activeNetworkFamily == family,
+                        onSelected: (selected) {
+                          if (selected &&
+                              widget.activeNetworkFamily != family) {
+                            Navigator.pop(context, family);
+                          }
+                        },
+                        selectedColor: AppColors.accentRed,
+                        backgroundColor: AppColors.cardDark,
+                        labelStyle: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        side: BorderSide(
+                          color: widget.activeNetworkFamily == family
+                              ? AppColors.accentRed
+                              : Colors.white12,
+                        ),
+                      ),
+                ],
+              ),
+            ],
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(

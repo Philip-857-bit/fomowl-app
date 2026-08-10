@@ -162,6 +162,87 @@ void main() {
 
     expect(find.text('Add Token'), findsNothing);
   });
+
+  testWidgets('bridge selector exposes Solana and TRON source families', (
+    tester,
+  ) async {
+    final blockchain = _FakeBlockchainService(
+      active: baseChain,
+      initialTokens: const [usdc],
+    );
+
+    await tester.pumpWidget(
+      _wrapWithApp(
+        blockchain: blockchain,
+        child: const _BridgeFamilySelectorHarness(),
+      ),
+    );
+
+    await tester.tap(find.text('Open bridge selector'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('EVM'), findsOneWidget);
+    expect(find.text('Solana'), findsOneWidget);
+    expect(find.text('TRON'), findsOneWidget);
+
+    await tester.tap(find.text('Solana'));
+    await tester.pumpAndSettle();
+    expect(find.text('family:solana'), findsOneWidget);
+  });
+}
+
+class _BridgeFamilySelectorHarness extends StatefulWidget {
+  const _BridgeFamilySelectorHarness();
+
+  @override
+  State<_BridgeFamilySelectorHarness> createState() =>
+      _BridgeFamilySelectorHarnessState();
+}
+
+class _BridgeFamilySelectorHarnessState
+    extends State<_BridgeFamilySelectorHarness> {
+  ChainFamily? _family;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextButton(
+          onPressed: () async {
+            final selected = await showDialog<Object?>(
+              context: context,
+              builder: (_) => const SwapTokenSelectorDialog(
+                tokens: [
+                  Token(
+                    symbol: 'USDC',
+                    name: 'USD Coin',
+                    contractAddress:
+                        '0x1111111111111111111111111111111111111111',
+                    balance: 10,
+                    valueUsd: 10,
+                    changePercent24h: 0,
+                    decimals: 6,
+                  ),
+                ],
+                chainId: 8453,
+                networkFamilies: {
+                  ChainFamily.evm,
+                  ChainFamily.solana,
+                  ChainFamily.tron,
+                },
+                activeNetworkFamily: ChainFamily.evm,
+              ),
+            );
+            if (mounted && selected is ChainFamily) {
+              setState(() => _family = selected);
+            }
+          },
+          child: const Text('Open bridge selector'),
+        ),
+        if (_family != null) Text('family:${_family!.wireValue}'),
+      ],
+    );
+  }
 }
 
 Widget _wrapWithApp({
