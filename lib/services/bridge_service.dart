@@ -164,6 +164,7 @@ class BridgeCurrency {
   final int decimals;
   final bool isNative;
   final String? logoUri;
+  final double? priceUsd;
 
   const BridgeCurrency({
     required this.chainId,
@@ -173,6 +174,7 @@ class BridgeCurrency {
     required this.decimals,
     required this.isNative,
     this.logoUri,
+    this.priceUsd,
   });
 
   factory BridgeCurrency.fromJson(Map<String, dynamic> json) {
@@ -186,7 +188,21 @@ class BridgeCurrency {
       decimals: (json['decimals'] as num?)?.toInt() ?? 18,
       isNative: isNative,
       logoUri: metadata is Map ? metadata['logoURI']?.toString() : null,
+      priceUsd: _readPositiveDouble(
+        json['priceUsd'] ??
+            json['usdPrice'] ??
+            (metadata is Map
+                ? metadata['priceUsd'] ?? metadata['usdPrice']
+                : null),
+      ),
     );
+  }
+
+  static double? _readPositiveDouble(Object? value) {
+    final parsed = value is num
+        ? value.toDouble()
+        : double.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
   }
 }
 
@@ -277,7 +293,7 @@ class BridgeService {
       final amountOut = data['amountOut']?.toString() ?? '';
       if (amountOut.isEmpty || amountOut == '0') {
         _lastError =
-            'No bridge route is available for this pair right now. Try a different amount or token.';
+            'This bridge is not available right now. Try a different amount or token.';
         return null;
       }
 
@@ -288,7 +304,7 @@ class BridgeService {
       final steps = _parseSteps(data['steps']);
       if (committed && steps.isEmpty) {
         _lastError =
-            'The bridge provider returned no executable transactions. Please refresh the quote.';
+            'The bridge transaction could not be prepared. Please refresh the quote.';
         return null;
       }
 
@@ -359,10 +375,17 @@ class BridgeService {
         // Fall through to the shared sanitizer for malformed responses.
       }
     }
-    return AppErrorUtils.backendMessage(
+    final message = AppErrorUtils.backendMessage(
       body,
       fallback: 'Unable to fetch a bridge quote right now.',
     );
+    final internalLanguage = RegExp(
+      r'\b(provider|relayer|relay|route)\b',
+      caseSensitive: false,
+    );
+    return internalLanguage.hasMatch(message)
+        ? 'Unable to fetch a bridge quote right now.'
+        : message;
   }
 
   /// GET /cross-chain/currencies?chainId=&term= — destination tokens Relay
@@ -495,13 +518,13 @@ class BridgeService {
       if (response.statusCode >= 200 && response.statusCode < 300) return true;
       _lastError = AppErrorUtils.backendMessage(
         response.body,
-        fallback: 'Unable to notify the bridge provider about the deposit.',
+        fallback: 'Owllet could not continue delivery for this deposit.',
       );
       return false;
     } catch (error) {
       _lastError = AppErrorUtils.userMessage(
         error,
-        fallback: 'Unable to notify the bridge provider about the deposit.',
+        fallback: 'Owllet could not continue delivery for this deposit.',
       );
       return false;
     }

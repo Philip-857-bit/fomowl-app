@@ -43,6 +43,28 @@ void main() {
     );
   });
 
+  test('does not expose internal routing language in quote errors', () {
+    expect(
+      BridgeService.quoteErrorMessage(
+        '{"message":"Relay provider route failed"}',
+      ),
+      'Unable to fetch a bridge quote right now.',
+    );
+  });
+
+  test('reads destination currency USD metadata', () {
+    final currency = BridgeCurrency.fromJson({
+      'chainId': 1,
+      'address': '0xbtc',
+      'symbol': 'WBTC',
+      'name': 'Wrapped Bitcoin',
+      'decimals': 8,
+      'metadata': {'priceUsd': '65000.25'},
+    });
+
+    expect(currency.priceUsd, 65000.25);
+  });
+
   test('passes selected slippage to the Relay quote endpoint', () async {
     Uri? requestedUri;
     final client = MockClient((request) async {

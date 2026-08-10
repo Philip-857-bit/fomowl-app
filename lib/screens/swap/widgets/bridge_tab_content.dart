@@ -8,6 +8,8 @@ import 'package:web3dart/web3dart.dart';
 
 import '../../../models/chain.dart';
 import '../../../models/token.dart';
+import '../../../services/blockchain/solana_catalog.dart';
+import '../../../services/blockchain/tron_catalog.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/bridge_operation_store.dart';
@@ -26,6 +28,87 @@ import 'swap_figma_icons.dart';
 import 'swap_primary_button.dart';
 import 'swap_token_chip.dart';
 import 'swap_token_selector_dialog.dart';
+
+List<Token> filterBridgeOriginTokens({
+  required List<Token> tokens,
+  required String activeNetworkKey,
+  required ChainFamily activeFamily,
+  required String nativeSymbol,
+}) {
+  final expectedKey = activeNetworkKey.trim().toLowerCase();
+  return tokens
+      .where((token) {
+        final tokenKey = token.networkKey?.trim().toLowerCase();
+        if (tokenKey != null && tokenKey.isNotEmpty) {
+          return tokenKey == expectedKey;
+        }
+        if (activeFamily == ChainFamily.evm) return true;
+        final contract = token.contractAddress?.trim();
+        return (contract == null || contract.isEmpty) &&
+            token.symbol.trim().toUpperCase() ==
+                nativeSymbol.trim().toUpperCase();
+      })
+      .toList(growable: false);
+}
+
+Widget buildBridgeOriginTokenDialog({
+  required List<Token> tokens,
+  required int chainId,
+  required String activeNetworkKey,
+  required ChainFamily activeFamily,
+  required String nativeSymbol,
+}) {
+  return SwapTokenSelectorDialog(
+    tokens: filterBridgeOriginTokens(
+      tokens: tokens,
+      activeNetworkKey: activeNetworkKey,
+      activeFamily: activeFamily,
+      nativeSymbol: nativeSymbol,
+    ),
+    chainId: chainId,
+  );
+}
+
+String? bridgeFamilyLogoUrl(ChainFamily family) => switch (family) {
+  ChainFamily.solana => SolanaCatalog.mainnet.logoUrl,
+  ChainFamily.tron => TronCatalog.mainnet.logoUrl,
+  ChainFamily.evm => null,
+};
+
+double? destinationAmountUsd({
+  required double quoteAmountUsd,
+  required String amountText,
+  required String destinationSymbol,
+  double? destinationPriceUsd,
+}) {
+  if (quoteAmountUsd > 0) return quoteAmountUsd;
+  final normalizedSymbol = destinationSymbol.trim().toUpperCase();
+  final stablePrice =
+      const {
+        'USDC',
+        'USDT',
+        'DAI',
+        'USDE',
+        'USDS',
+        'PYUSD',
+      }.contains(normalizedSymbol)
+      ? 1.0
+      : null;
+  final price = destinationPriceUsd != null && destinationPriceUsd > 0
+      ? destinationPriceUsd
+      : stablePrice;
+  final amount = double.tryParse(amountText.replaceAll(',', ''));
+  if (price == null || amount == null || amount <= 0) return null;
+  return amount * price;
+}
+
+String formatBridgeFeeUsd(double? value) {
+  if (value == null || value <= 0) return r'$0.00';
+  if (value < 0.01) return r'<$0.01';
+  return '\$${value.toStringAsFixed(2)}';
+}
+
+bool hasQuotedOriginNetworkFee(double? value) => value != null && value > 0;
 
 /// Bridge tab — Relay-powered cross-chain transfers.
 ///
@@ -95,25 +178,37 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   /// Solana entry for the chain pickers. Solana works as both origin
   /// (instructions compiled + signed via the native Rust builder) and
   /// destination.
-  static const EvmChain _solanaChain = EvmChain(
+  static final EvmChain _solanaChain = EvmChain(
     name: 'Solana',
     symbol: 'SOL',
     chainId: BridgeService.relaySolanaChainId,
     rpcUrl: '',
     family: ChainFamily.solana,
+    logoUrl: bridgeFamilyLogoUrl(ChainFamily.solana),
   );
 
-  static const EvmChain _tronChain = EvmChain(
+  static final EvmChain _tronChain = EvmChain(
     name: 'TRON',
     symbol: 'TRX',
     chainId: BridgeService.tronBridgeChainId,
     rpcUrl: '',
     family: ChainFamily.tron,
+    logoUrl: bridgeFamilyLogoUrl(ChainFamily.tron),
   );
 
   bool get _isSolanaOrigin =>
       widget.blockchain.activeFamily == ChainFamily.solana;
   bool get _isTronOrigin => widget.blockchain.activeFamily == ChainFamily.tron;
+
+  List<Token> get _originTokens {
+    final scoped = filterBridgeOriginTokens(
+      tokens: widget.tokens,
+      activeNetworkKey: widget.blockchain.activeNetworkKey,
+      activeFamily: widget.blockchain.activeFamily,
+      nativeSymbol: widget.blockchain.activeNetworkSymbol,
+    );
+    return scoped.isNotEmpty ? scoped : widget.blockchain.tokens;
+  }
 
   @override
   void initState() {
@@ -238,7 +333,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   bool _tokenStillVisible() {
     final current = _fromToken;
     if (current == null) return false;
-    return widget.tokens.any(
+    return _originTokens.any(
       (t) =>
           (t.contractAddress ?? '').toLowerCase() ==
           (current.contractAddress ?? '').toLowerCase(),
@@ -249,18 +344,19 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (!reset && _tokenStillVisible()) {
       // Refresh balance/price from the latest token list.
       final address = (_fromToken?.contractAddress ?? '').toLowerCase();
-      _fromToken = widget.tokens.firstWhere(
+      _fromToken = _originTokens.firstWhere(
         (t) => (t.contractAddress ?? '').toLowerCase() == address,
         orElse: () => _fromToken!,
       );
       return;
     }
     // Default to the native token of the origin chain.
-    _fromToken = widget.tokens.isEmpty
+    final originTokens = _originTokens;
+    _fromToken = originTokens.isEmpty
         ? null
-        : widget.tokens.firstWhere(
+        : originTokens.firstWhere(
             (t) => t.contractAddress == null || t.contractAddress!.isEmpty,
-            orElse: () => widget.tokens.first,
+            orElse: () => originTokens.first,
           );
   }
 
@@ -463,27 +559,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   Future<void> _selectFromToken() async {
     final selected = await showDialog<Object?>(
       context: context,
-      builder: (ctx) => SwapTokenSelectorDialog(
+      builder: (ctx) => buildBridgeOriginTokenDialog(
         tokens: widget.tokens,
         chainId: widget.blockchain.activeTokenStorageChainId,
-        networkFamilies: widget.blockchain.enabledFamilies.intersection(
-          widget.blockchain.activeWalletSupportedFamilies,
-        ),
-        activeNetworkFamily: widget.blockchain.activeFamily,
+        activeNetworkKey: widget.blockchain.activeNetworkKey,
+        activeFamily: widget.blockchain.activeFamily,
+        nativeSymbol: widget.blockchain.activeNetworkSymbol,
       ),
     );
     if (!mounted || selected == null) return;
-    if (selected is ChainFamily) {
-      final networkKey = switch (selected) {
-        ChainFamily.evm => NetworkKey.evm(
-          widget.blockchain.activeChain.chainId,
-        ),
-        ChainFamily.solana => NetworkKey.solana('mainnet-beta'),
-        ChainFamily.tron => NetworkKey.tron('mainnet'),
-      };
-      widget.blockchain.setActiveNetworkKey(networkKey);
-      return;
-    }
     if (selected is Token) {
       setState(() {
         _fromToken = selected;
@@ -766,7 +850,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           final raw = jsonDecode(step.tronTransactionJson!);
           if (raw is! Map) {
             controller.setError(
-              'The bridge provider returned an invalid TRON transaction.',
+              'The TRON bridge transaction could not be prepared.',
             );
             return;
           }
@@ -774,7 +858,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           if (transaction['raw_data_hex'] == null &&
               transaction['rawDataHex'] == null) {
             controller.setError(
-              'The bridge provider returned an unsigned TRON transaction without signing data.',
+              'The TRON bridge transaction could not be prepared.',
             );
             return;
           }
@@ -865,7 +949,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         );
         if (matchingChains.isEmpty) {
           controller.setError(
-            'The bridge provider requested an unsupported transaction network (${step.chainId}). The transaction was not sent.',
+            'This transaction network is not supported (${step.chainId}). The transaction was not sent.',
           );
           return;
         }
@@ -932,7 +1016,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         );
         if (!submitted) {
           controller.setError(
-            'Your origin deposit was confirmed, but the bridge provider could not be notified. Do not submit it again; check this transfer later.',
+            'Your origin deposit was confirmed, but Owllet could not continue delivery. Do not submit it again; check this transfer later.',
           );
           return;
         }
@@ -952,7 +1036,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             await _bridgeOperationStore.clear(widget.walletAddress!);
             if (mounted) setState(() => _pendingOperation = null);
             controller.setError(
-              'The bridge could not complete and the relayer reported a failure. Any deducted funds are refunded by the relayer.',
+              'The bridge could not complete. Do not submit it again; check Activity or contact support.',
             );
             return;
           }
@@ -1134,23 +1218,14 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         maxFractionDigits: 6,
       );
     }
-    double? destinationPrice;
-    if (_toCurrency != null) {
-      for (final token in widget.tokens) {
-        if (token.symbol.toUpperCase() == _toCurrency!.symbol.toUpperCase() &&
-            token.priceUsd > 0) {
-          destinationPrice = token.priceUsd;
-          break;
-        }
-      }
-    }
     final destinationUsd = quote == null
         ? null
-        : quote.amountOutUsd > 0
-        ? quote.amountOutUsd
-        : destinationPrice != null
-        ? (double.tryParse(toAmountText) ?? 0) * destinationPrice
-        : null;
+        : destinationAmountUsd(
+            quoteAmountUsd: quote.amountOutUsd,
+            amountText: toAmountText,
+            destinationSymbol: _toCurrency?.symbol ?? toChain?.symbol ?? '',
+            destinationPriceUsd: _toCurrency?.priceUsd,
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1182,7 +1257,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ],
         _BridgeCard(
           label: 'BRIDGE FROM',
-          badge: 'OWLLET ROUTES',
           chainName: fromChainName,
           chainLogoUrl: fromChainLogo,
           onSelectChain: widget.onSelectFromChain,
@@ -1386,7 +1460,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ),
         const SizedBox(height: 12),
         Text(
-          'You receive ${_toCurrency?.symbol ?? toChain?.symbol ?? 'the selected token'} on ${toChain?.name ?? 'the destination network'}. Owllet selects the route.',
+          'You receive ${_toCurrency?.symbol ?? toChain?.symbol ?? 'the selected token'} on ${toChain?.name ?? 'the destination network'}.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 11,
@@ -1404,7 +1478,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 /// per the Figma bridge design.
 class _BridgeCard extends StatelessWidget {
   final String label;
-  final String? badge;
   final String chainName;
   final String? chainLogoUrl;
   final VoidCallback? onSelectChain;
@@ -1412,7 +1485,6 @@ class _BridgeCard extends StatelessWidget {
 
   const _BridgeCard({
     required this.label,
-    this.badge,
     required this.chainName,
     required this.chainLogoUrl,
     required this.onSelectChain,
@@ -1435,42 +1507,14 @@ class _BridgeCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Wrap(
-                  spacing: 7,
-                  runSpacing: 5,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFB2B5BD),
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    if (badge != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0x1AEA2A33),
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: const Color(0x3DEA2A33)),
-                        ),
-                        child: Text(
-                          badge!,
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFEA747A),
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFB2B5BD),
+                    letterSpacing: 0.8,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1875,7 +1919,7 @@ class _BridgeDetailsCard extends StatelessWidget {
       child: isLoading && q == null
           ? Center(
               child: Text(
-                'Fetching bridge route…',
+                'Fetching quote…',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: const Color(0xFF9CA3AF),
@@ -1884,23 +1928,20 @@ class _BridgeDetailsCard extends StatelessWidget {
             )
           : Column(
               children: [
-                _DetailRow(
-                  label: 'Route',
-                  value: q?.routeProviderLabel ?? 'Owllet routing',
-                ),
                 if (q?.platformFeeBps != null || q?.platformFeeUsd != null)
                   _DetailRow(
                     label: 'Platform Fee',
                     value: _platformFeeLabel(q!),
                   ),
                 _DetailRow(
-                  label: 'Bridge / Route Fee',
-                  value: _bridgeFeeLabel(q?.bridgeFeeUsd),
+                  label: 'Bridge Fee',
+                  value: formatBridgeFeeUsd(q?.bridgeFeeUsd),
                 ),
-                _DetailRow(
-                  label: 'Origin Network Fee',
-                  value: _networkFeeLabel(q),
-                ),
+                if (hasQuotedOriginNetworkFee(q?.gasFeeUsd))
+                  _DetailRow(
+                    label: 'Origin Network Fee',
+                    value: '~${_usdLabel(q?.gasFeeUsd)}',
+                  ),
                 _DetailRow(
                   label: 'Estimated Arrival',
                   value: q?.arrivalLabel ?? '~minutes',
@@ -1925,18 +1966,6 @@ class _BridgeDetailsCard extends StatelessWidget {
     if (usd != null) return _usdLabel(usd);
     if (percent != null) return percent;
     return 'Unavailable';
-  }
-
-  static String _bridgeFeeLabel(double? value) {
-    if (value == null) return 'Included in quote';
-    if (value <= 0) return r'Included / $0.00';
-    return _usdLabel(value);
-  }
-
-  static String _networkFeeLabel(BridgeQuote? quote) {
-    final value = quote?.gasFeeUsd;
-    if (value == null || value <= 0) return 'Calculated when signing';
-    return '~${_usdLabel(value)}';
   }
 }
 

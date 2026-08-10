@@ -10,6 +10,7 @@ import 'http_client_service.dart';
 class TronSwapQuote {
   final String amountOutFormatted;
   final String amountOutRaw;
+  final double networkFeeNative;
   final double networkFeeUsd;
   final double platformFeeUsd;
   final int platformFeeBps;
@@ -26,6 +27,7 @@ class TronSwapQuote {
   const TronSwapQuote({
     required this.amountOutFormatted,
     required this.amountOutRaw,
+    required this.networkFeeNative,
     required this.networkFeeUsd,
     required this.platformFeeUsd,
     required this.platformFeeBps,
@@ -209,6 +211,7 @@ class TronSwapService {
         (data['networkFeeUsd'] as num?)?.toDouble() ??
         (data['networkFee'] as num?)?.toDouble() ??
         0.0;
+    final feeNative = (data['networkFeeNative'] as num?)?.toDouble() ?? 0.0;
     final platformFeeUsd = (data['platformFeeUsd'] as num?)?.toDouble() ?? 0.0;
     final platformFeeBps = (data['platformFeeBps'] as num?)?.toInt() ?? 100;
     final approvalTx = _optionalTransaction(data['approvalTransaction']);
@@ -227,6 +230,7 @@ class TronSwapService {
     return TronSwapQuote(
       amountOutFormatted: outAmountFormatted,
       amountOutRaw: outAmount,
+      networkFeeNative: feeNative,
       networkFeeUsd: feeUsd,
       platformFeeUsd: platformFeeUsd,
       platformFeeBps: platformFeeBps,

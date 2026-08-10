@@ -34,6 +34,7 @@ void main() {
             'outAmount': '1000000',
             'toDecimals': 6,
             'networkFeeUsd': 0.5,
+            'networkFeeNative': 1.5,
             'platformFeeUsd': 0.2,
             'platformFeeBps': 100,
             'transaction': {'raw_data_hex': 'aabbcc', 'visible': true},
@@ -57,6 +58,7 @@ void main() {
       expect(quote.platformFeeBps, 100);
       expect(quote.platformFeePercent, 1.0);
       expect(quote.networkFeeUsd, 0.5);
+      expect(quote.networkFeeNative, 1.5);
       expect(quote.platformFeeUsd, 0.2);
       expect(quote.unsignedTx['raw_data_hex'], 'aabbcc');
     });
