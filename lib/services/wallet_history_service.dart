@@ -142,6 +142,7 @@ class WalletHistoryService {
     required String tokenSymbol,
     required String amountText,
     required String toAddress,
+    String? tokenAddress,
     String? networkKey,
   }) {
     return _recordHistory({
@@ -150,6 +151,8 @@ class WalletHistoryService {
       'txType': 'send',
       'tokenName': tokenName,
       'tokenSymbol': tokenSymbol,
+      if (tokenAddress?.trim().isNotEmpty == true)
+        'tokenAddress': tokenAddress!.trim(),
       'amount': _parseAmount(amountText),
       'isIncoming': false,
       'chainId': chainId,

@@ -664,6 +664,7 @@ class _TransferConfirmationScreenState
               tokenSymbol: token.symbol,
               amountText: amountText,
               toAddress: toAddress,
+              tokenAddress: token.contractAddress,
               networkKey: transferNetworkKey,
             ),
           );
