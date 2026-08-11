@@ -56,6 +56,21 @@ void main() {
     expect(hasQuotedOriginNetworkFee(0.01), isTrue);
   });
 
+  test('platform fee uses USD through 100 dollars and percent above it', () {
+    expect(
+      formatBridgePlatformFee(swapAmountUsd: 100, feeUsd: 1, feeBps: 100),
+      r'$1.00',
+    );
+    expect(
+      formatBridgePlatformFee(
+        swapAmountUsd: 100.01,
+        feeUsd: 1.0001,
+        feeBps: 100,
+      ),
+      '1.00%',
+    );
+  });
+
   test(
     'destination USD uses quote or destination metadata, not origin tokens',
     () {

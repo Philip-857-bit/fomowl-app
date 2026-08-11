@@ -45,15 +45,16 @@ class SwapTabSelector extends StatelessWidget {
                 onTap: () => onChanged(SwapTab.swap),
               ),
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _SwapTabChip(
-                label: 'LIMIT',
-                isActive: activeTab == SwapTab.limit,
-                isEnabled: showLimitTab,
-                onTap: showLimitTab ? () => onChanged(SwapTab.limit) : null,
+            if (showLimitTab) ...[
+              const SizedBox(width: 6),
+              Expanded(
+                child: _SwapTabChip(
+                  label: 'LIMIT',
+                  isActive: activeTab == SwapTab.limit,
+                  onTap: () => onChanged(SwapTab.limit),
+                ),
               ),
-            ),
+            ],
             if (showBridgeTab) ...[
               const SizedBox(width: 6),
               Expanded(
@@ -74,23 +75,17 @@ class SwapTabSelector extends StatelessWidget {
 class _SwapTabChip extends StatelessWidget {
   final String label;
   final bool isActive;
-  final bool isEnabled;
   final VoidCallback? onTap;
 
   const _SwapTabChip({
     required this.label,
     required this.isActive,
-    this.isEnabled = true,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = isActive
-        ? Colors.white
-        : isEnabled
-        ? const Color(0xFFA1A1A1)
-        : const Color(0xFF777F8B);
+    final effectiveColor = isActive ? Colors.white : const Color(0xFFA1A1A1);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,

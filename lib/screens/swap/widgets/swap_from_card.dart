@@ -71,18 +71,30 @@ class SwapFromCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (headerLabel != null || showInternalChips) ...[
-                _ResponsiveHeader(
-                  headerLabel: headerLabel,
-                  leadingControl: showInternalChips && onToggleInputMode != null
-                      ? AmountInputModeToggle(
-                          mode: inputMode,
-                          tokenSymbol: token?.symbol ?? '',
-                          onToggle: onToggleInputMode!,
-                        )
-                      : null,
-                  trailingControls: [
-                    if (showInternalChips) ...[
+              if (headerLabel != null || onToggleInputMode != null) ...[
+                Row(
+                  children: [
+                    if (headerLabel != null) _HeaderLabel(headerLabel!),
+                    if (headerLabel != null && onToggleInputMode != null)
+                      const Spacer(),
+                    if (onToggleInputMode != null)
+                      AmountInputModeToggle(
+                        mode: inputMode,
+                        tokenSymbol: token?.symbol ?? '',
+                        onToggle: onToggleInputMode!,
+                      ),
+                  ],
+                ),
+              ],
+              if (showInternalChips) ...[
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.end,
+                    children: [
                       _PercentChip(
                         percent: 25,
                         isSelected: selectedPercentage == 25,
@@ -103,10 +115,13 @@ class SwapFromCard extends StatelessWidget {
                         onTap: () => onPercentSelected(100),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 14),
               ],
+              if (headerLabel != null ||
+                  onToggleInputMode != null ||
+                  showInternalChips)
+                const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -194,91 +209,6 @@ class SwapFromCard extends StatelessWidget {
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-}
-
-class _ResponsiveHeader extends StatelessWidget {
-  const _ResponsiveHeader({
-    required this.headerLabel,
-    required this.leadingControl,
-    required this.trailingControls,
-  });
-
-  final String? headerLabel;
-  final Widget? leadingControl;
-  final List<Widget> trailingControls;
-
-  @override
-  Widget build(BuildContext context) {
-    final trailing = Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: trailingControls,
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 370) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (headerLabel != null || leadingControl != null)
-                Row(
-                  children: [
-                    if (headerLabel != null) _HeaderLabel(headerLabel!),
-                    if (headerLabel != null && leadingControl != null)
-                      const SizedBox(width: 8),
-                    if (leadingControl != null)
-                      Flexible(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: leadingControl!,
-                        ),
-                      ),
-                  ],
-                ),
-              if (trailingControls.isNotEmpty) ...[
-                if (headerLabel != null || leadingControl != null)
-                  const SizedBox(height: 8),
-                // Spread the chips edge-to-edge across the full width so they
-                // don't cluster on the right with empty space on the left.
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: trailingControls,
-                ),
-              ],
-            ],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (headerLabel != null) _HeaderLabel(headerLabel!),
-            if (headerLabel != null && leadingControl != null)
-              const SizedBox(width: 10),
-            if (leadingControl != null)
-              Align(alignment: Alignment.centerLeft, child: leadingControl!),
-            if (trailingControls.isNotEmpty) ...[
-              const Spacer(),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: leadingControl == null
-                      ? constraints.maxWidth
-                      : constraints.maxWidth * 0.48,
-                ),
-                child: trailing,
-              ),
-            ],
-          ],
         );
       },
     );

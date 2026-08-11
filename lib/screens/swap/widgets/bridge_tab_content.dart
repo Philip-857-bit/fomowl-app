@@ -108,6 +108,19 @@ String formatBridgeFeeUsd(double? value) {
   return '\$${value.toStringAsFixed(2)}';
 }
 
+String formatBridgePlatformFee({
+  required double swapAmountUsd,
+  required double? feeUsd,
+  required int? feeBps,
+}) {
+  if (swapAmountUsd > 100 && feeBps != null) {
+    return '${(feeBps / 100).toStringAsFixed(2)}%';
+  }
+  if (feeUsd != null) return '\$${feeUsd.toStringAsFixed(2)}';
+  if (feeBps != null) return '${(feeBps / 100).toStringAsFixed(2)}%';
+  return r'$0.00';
+}
+
 bool hasQuotedOriginNetworkFee(double? value) => value != null && value > 0;
 
 /// Bridge tab — Relay-powered cross-chain transfers.
@@ -1416,11 +1429,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
               ),
               const SizedBox(height: 8),
               Text(
-                destinationUsd == null || destinationUsd <= 0
-                    ? 'USD value unavailable'
-                    : ValueFormatter.formatCurrencyWithGrouping(
-                        ValueFormatter.decimalFromNum(destinationUsd),
-                      ),
+                ValueFormatter.formatCurrencyWithGrouping(
+                  ValueFormatter.decimalFromNum(destinationUsd ?? 0),
+                ),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: const Color(0xFF848E9C),
@@ -1431,7 +1442,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ),
         if (quote != null || _isQuoting) ...[
           const SizedBox(height: 16),
-          _BridgeDetailsCard(quote: quote, isLoading: _isQuoting),
+          _BridgeDetailsCard(
+            quote: quote,
+            isLoading: _isQuoting,
+            swapAmountUsd: fromUsd,
+          ),
         ],
         if (_quoteError != null) ...[
           const SizedBox(height: 12),
@@ -1903,8 +1918,13 @@ class _BridgePercentChip extends StatelessWidget {
 class _BridgeDetailsCard extends StatelessWidget {
   final BridgeQuote? quote;
   final bool isLoading;
+  final double swapAmountUsd;
 
-  const _BridgeDetailsCard({required this.quote, required this.isLoading});
+  const _BridgeDetailsCard({
+    required this.quote,
+    required this.isLoading,
+    required this.swapAmountUsd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1931,7 +1951,11 @@ class _BridgeDetailsCard extends StatelessWidget {
                 if (q?.platformFeeBps != null || q?.platformFeeUsd != null)
                   _DetailRow(
                     label: 'Platform Fee',
-                    value: _platformFeeLabel(q!),
+                    value: formatBridgePlatformFee(
+                      swapAmountUsd: swapAmountUsd,
+                      feeUsd: q!.platformFeeUsd,
+                      feeBps: q.platformFeeBps,
+                    ),
                   ),
                 _DetailRow(
                   label: 'Bridge Fee',
@@ -1956,16 +1980,6 @@ class _BridgeDetailsCard extends StatelessWidget {
     if (value == null || value <= 0) return r'$0.00';
     if (value < 0.01) return r'<$0.01';
     return '\$${value.toStringAsFixed(2)}';
-  }
-
-  static String _platformFeeLabel(BridgeQuote quote) {
-    final usd = quote.platformFeeUsd;
-    final bps = quote.platformFeeBps;
-    final percent = bps == null ? null : '${(bps / 100).toStringAsFixed(2)}%';
-    if (usd != null && percent != null) return '${_usdLabel(usd)} ($percent)';
-    if (usd != null) return _usdLabel(usd);
-    if (percent != null) return percent;
-    return 'Unavailable';
   }
 }
 
