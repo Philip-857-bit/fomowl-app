@@ -140,7 +140,7 @@ class TronSwapService {
             () => _http.client.post(
               url,
               headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({'transaction': signedTx}),
+              body: jsonEncode({'signedTransactionJson': signedTx}),
             ),
             maxRetries: 1,
           )

@@ -284,8 +284,12 @@ void main() {
   group('TronSwapService.broadcastSignedTx', () {
     test('routes broadcasts through TRON mainnet', () async {
       late Uri requestedUri;
+      late Map<String, dynamic> requestedBody;
       final mockClient = MockClient((request) async {
         requestedUri = request.url;
+        requestedBody = Map<String, dynamic>.from(
+          jsonDecode(request.body) as Map,
+        );
         return http.Response(jsonEncode({'txid': 'mainnet123'}), 200);
       });
       final service = TronSwapService(
@@ -299,6 +303,11 @@ void main() {
 
       expect(txid, 'mainnet123');
       expect(requestedUri.pathSegments, contains('tron:mainnet'));
+      expect(requestedBody.containsKey('transaction'), isFalse);
+      expect(
+        (requestedBody['signedTransactionJson'] as Map)['raw_data_hex'],
+        'aabbcc',
+      );
     });
 
     test('returns txid from "txid" field', () async {
