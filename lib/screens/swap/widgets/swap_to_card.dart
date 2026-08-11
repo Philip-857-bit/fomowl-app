@@ -123,7 +123,7 @@ class SwapToCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Flexible(
+                  Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       mainAxisSize: MainAxisSize.min,
