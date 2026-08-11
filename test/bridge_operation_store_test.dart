@@ -16,6 +16,10 @@ void main() {
       originTxHash: 'abc123',
       originChainId: 728126428,
       destinationChainId: 1399811149,
+      sellToken: 'TRX',
+      buyToken: 'SOL',
+      amount: 25,
+      amountUsd: 8.5,
       createdAt: DateTime.utc(2026, 8, 8),
       deadline: DateTime.utc(2026, 8, 8, 0, 10),
     );
@@ -26,6 +30,10 @@ void main() {
     expect(restored, isNotNull);
     expect(restored!.requestId, operation.requestId);
     expect(restored.originTxHash, operation.originTxHash);
+    expect(restored.sellToken, 'TRX');
+    expect(restored.buyToken, 'SOL');
+    expect(restored.amount, 25);
+    expect(restored.amountUsd, 8.5);
     expect(restored.deadline, operation.deadline);
 
     await store.clear('TWallet');

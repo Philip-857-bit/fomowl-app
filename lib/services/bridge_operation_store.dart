@@ -8,6 +8,10 @@ class PendingBridgeOperation {
   final String originTxHash;
   final int originChainId;
   final int destinationChainId;
+  final String? sellToken;
+  final String? buyToken;
+  final double? amount;
+  final double? amountUsd;
   final DateTime createdAt;
   final DateTime? deadline;
 
@@ -17,6 +21,10 @@ class PendingBridgeOperation {
     required this.originTxHash,
     required this.originChainId,
     required this.destinationChainId,
+    this.sellToken,
+    this.buyToken,
+    this.amount,
+    this.amountUsd,
     required this.createdAt,
     this.deadline,
   });
@@ -27,6 +35,10 @@ class PendingBridgeOperation {
     'originTxHash': originTxHash,
     'originChainId': originChainId,
     'destinationChainId': destinationChainId,
+    'sellToken': sellToken,
+    'buyToken': buyToken,
+    'amount': amount,
+    'amountUsd': amountUsd,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'deadline': deadline?.toUtc().toIso8601String(),
   };
@@ -38,6 +50,10 @@ class PendingBridgeOperation {
       originTxHash: json['originTxHash']?.toString() ?? '',
       originChainId: (json['originChainId'] as num?)?.toInt() ?? 0,
       destinationChainId: (json['destinationChainId'] as num?)?.toInt() ?? 0,
+      sellToken: json['sellToken']?.toString(),
+      buyToken: json['buyToken']?.toString(),
+      amount: (json['amount'] as num?)?.toDouble(),
+      amountUsd: (json['amountUsd'] as num?)?.toDouble(),
       createdAt:
           DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
           DateTime.now().toUtc(),

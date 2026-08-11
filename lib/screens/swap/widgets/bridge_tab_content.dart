@@ -18,6 +18,8 @@ import '../../../services/rpc_service.dart';
 import '../../../services/transaction_monitor.dart';
 import '../../../services/tron_swap_service.dart';
 import '../../../services/wallet_service.dart';
+import '../../../services/wallet_history_service.dart';
+import '../../../services/wallet_notification_service.dart';
 import '../../../utils/amount_utils.dart';
 import '../../../utils/app_error_utils.dart';
 import '../../../utils/toast_utils.dart';
@@ -163,6 +165,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   final TronSwapService _tronSwapService = TronSwapService();
   final BridgeOperationStore _bridgeOperationStore = BridgeOperationStore();
+  final WalletHistoryService _walletHistoryService = WalletHistoryService();
+  final WalletNotificationService _walletNotificationService =
+      WalletNotificationService();
 
   Token? _fromToken;
   EvmChain? _toChain;
@@ -281,6 +286,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _isCheckingPending = false;
       });
       if (status!.isSuccess) {
+        await _recordCompletedBridge(pending);
         ToastUtils.showSuccess('Your pending bridge completed.');
       } else {
         ToastUtils.showInfo(
@@ -295,17 +301,78 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   Future<void> _persistPendingBridge(BridgeQuote quote, String txHash) async {
     final wallet = widget.walletAddress;
     if (wallet == null || wallet.isEmpty || quote.requestId.isEmpty) return;
+    final alreadyTracked =
+        _pendingOperation?.requestId == quote.requestId &&
+        _pendingOperation?.originTxHash == txHash;
     final operation = PendingBridgeOperation(
       walletAddress: wallet,
       requestId: quote.requestId,
       originTxHash: txHash,
       originChainId: quote.originChainId,
       destinationChainId: quote.destinationChainId,
+      sellToken: _fromToken?.symbol,
+      buyToken: _toCurrency?.symbol ?? _toChain?.symbol,
+      amount: _amountValue > 0 ? _amountValue : null,
+      amountUsd: _fromToken != null && _fromToken!.priceUsd > 0
+          ? _amountValue * _fromToken!.priceUsd
+          : null,
       createdAt: DateTime.now().toUtc(),
       deadline: quote.deadline,
     );
     await _bridgeOperationStore.save(operation);
     if (mounted) setState(() => _pendingOperation = operation);
+    if (!alreadyTracked) await _recordBridgeSubmission(operation);
+  }
+
+  String _bridgeChainName(int chainId) {
+    if (chainId == BridgeService.relaySolanaChainId) return 'Solana';
+    if (chainId == BridgeService.tronBridgeChainId) return 'TRON';
+    for (final chain in widget.blockchain.allChains) {
+      if (chain.chainId == chainId) return chain.name;
+    }
+    return 'Chain $chainId';
+  }
+
+  String _bridgeNetworkKey(int chainId) {
+    if (chainId == BridgeService.relaySolanaChainId) return 'solana:mainnet';
+    if (chainId == BridgeService.tronBridgeChainId) return 'tron:mainnet';
+    return 'evm:$chainId';
+  }
+
+  Future<void> _recordBridgeSubmission(PendingBridgeOperation operation) {
+    return _walletHistoryService.recordBridgeSubmitted(
+      walletAddress: operation.walletAddress,
+      txHash: operation.originTxHash,
+      chainId: operation.originChainId,
+      networkName: _bridgeChainName(operation.originChainId),
+      networkKey: _bridgeNetworkKey(operation.originChainId),
+      fromTokenSymbol: operation.sellToken ?? 'Token',
+      fromAmount: operation.amount?.toString() ?? '0',
+      toTokenSymbol: operation.buyToken ?? 'token',
+      destinationNetworkName: _bridgeChainName(operation.destinationChainId),
+    );
+  }
+
+  Future<void> _recordCompletedBridge(PendingBridgeOperation operation) async {
+    await Future.wait([
+      _walletNotificationService.notifyBridgeCompleted(
+        walletAddress: operation.walletAddress,
+        originChainId: operation.originChainId,
+        txHash: operation.originTxHash,
+        fromSymbol: operation.sellToken ?? 'Tokens',
+        toSymbol: operation.buyToken ?? 'tokens',
+        destinationNetworkName: _bridgeChainName(operation.destinationChainId),
+      ),
+      _bridgeService.recordExecutedBridge(
+        originChainId: operation.originChainId,
+        destinationChainId: operation.destinationChainId,
+        walletAddress: operation.walletAddress,
+        sellToken: operation.sellToken,
+        buyToken: operation.buyToken,
+        amountUsd: operation.amountUsd,
+        txHash: operation.originTxHash,
+      ),
+    ]);
   }
 
   Future<void> _loadRelayChains() async {
@@ -910,8 +977,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             return;
           }
           if (confirmation == TransactionConfirmationStatus.pending) {
-            controller.setError(
-              'The TRON deposit is still pending. Do not submit it again.',
+            controller.setSwapPending(reference: shortHash(hash));
+            ToastUtils.showInfo(
+              'Your TRON bridge is still processing. You can close this screen and track it in Activity.',
             );
             return;
           }
@@ -1011,8 +1079,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           return;
         }
         if (confirmation == TransactionConfirmationStatus.pending) {
-          controller.setError(
-            'The bridge deposit is still pending. Do not submit it again; check this transfer later.',
+          controller.setSwapPending(reference: shortHash(txHash));
+          ToastUtils.showInfo(
+            'Your bridge is still processing. You can close this screen and track it in Activity.',
           );
           return;
         }
@@ -1054,6 +1123,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             return;
           }
           if (status.isSuccess) {
+            final completedOperation = _pendingOperation;
+            if (completedOperation != null) {
+              await _recordCompletedBridge(completedOperation);
+            }
             await _bridgeOperationStore.clear(widget.walletAddress!);
             if (mounted) setState(() => _pendingOperation = null);
             bridgeCompleted = true;
@@ -1061,8 +1134,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           }
         }
         if (!bridgeCompleted) {
-          controller.setError(
-            'Your origin transaction was confirmed, but the bridge is still processing. Do not submit it again. Check the transaction later for destination-chain completion.',
+          controller.setSwapPending(
+            reference: latestTxHash == null ? null : shortHash(latestTxHash),
+          );
+          ToastUtils.showInfo(
+            'Your bridge is still processing. You can close this screen and track it in Activity.',
           );
           return;
         }
@@ -1080,22 +1156,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       } catch (error) {
         debugPrint('Post-bridge wallet refresh failed: $error');
       }
-
-      // Best-effort: log the platform fee on this completed bridge for the admin
-      // Bridge Fees analytics. Fire-and-forget — never affects the user.
-      unawaited(
-        _bridgeService.recordExecutedBridge(
-          originChainId: _isSolanaOrigin
-              ? BridgeService.relaySolanaChainId
-              : widget.blockchain.activeChain.chainId,
-          destinationChainId: _toChain?.chainId ?? 0,
-          walletAddress: widget.walletAddress,
-          sellToken: from.symbol,
-          buyToken: _toCurrency?.symbol,
-          amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
-          txHash: firstTxHash,
-        ),
-      );
 
       if (mounted) {
         setState(() {

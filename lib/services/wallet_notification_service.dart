@@ -50,6 +50,23 @@ class WalletNotificationService {
     );
   }
 
+  Future<void> notifyBridgeCompleted({
+    required String walletAddress,
+    required int originChainId,
+    required String txHash,
+    required String fromSymbol,
+    required String toSymbol,
+    required String destinationNetworkName,
+  }) {
+    return _createNotification(
+      walletAddress: walletAddress,
+      title: 'Bridge completed',
+      message:
+          '$fromSymbol was bridged successfully to $toSymbol on $destinationNetworkName.',
+      dedupeKey: _buildTxDedupeKey(chainId: originChainId, txHash: txHash),
+    );
+  }
+
   Future<void> _createNotification({
     required String walletAddress,
     required String title,

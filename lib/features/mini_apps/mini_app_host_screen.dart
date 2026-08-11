@@ -24,6 +24,7 @@ import '../../services/http_client_service.dart';
 import '../../services/system_picker_guard.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
+import '../../services/wallet_history_service.dart';
 import '../../services/zerox_gasless_executor.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
@@ -129,6 +130,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   final WalletBackendAuthService _walletBackendAuthService =
       WalletBackendAuthService();
   final WalletService _walletService = WalletService();
+  final WalletHistoryService _walletHistoryService = WalletHistoryService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   InAppWebViewController? _controller;
   int _progress = 0;
@@ -956,6 +958,36 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             : null,
       );
       if (confirmation == TransactionConfirmationStatus.confirmed) {
+        if (widget.definition.id != 'cash_in') {
+          final historyChainId = switch (family) {
+            ChainFamily.solana => BridgeService.relaySolanaChainId,
+            ChainFamily.tron => BridgeService.tronBridgeChainId,
+            ChainFamily.evm => NetworkKey.evmChainIdOf(networkKey) ?? 0,
+          };
+          final historyNetworkName = switch (family) {
+            ChainFamily.solana => 'Solana',
+            ChainFamily.tron => 'TRON',
+            ChainFamily.evm =>
+              blockchain.allChains
+                  .firstWhere(
+                    (chain) => chain.chainId == historyChainId,
+                    orElse: () => blockchain.activeChain,
+                  )
+                  .name,
+          };
+          await _walletHistoryService.recordDappConfirmed(
+            walletAddress: fromAddress,
+            txHash: txHash,
+            chainId: historyChainId,
+            networkName: historyNetworkName,
+            networkKey: networkKey,
+            miniAppName: widget.definition.title,
+            tokenName: assetName,
+            tokenSymbol: symbol,
+            amountText: amountDisplay,
+            toAddress: toAddress,
+          );
+        }
         controller.setSuccess(
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,

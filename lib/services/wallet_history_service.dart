@@ -190,6 +190,63 @@ class WalletHistoryService {
     });
   }
 
+  Future<void> recordBridgeSubmitted({
+    required String walletAddress,
+    required String txHash,
+    required int chainId,
+    required String networkName,
+    required String fromTokenSymbol,
+    required String fromAmount,
+    required String toTokenSymbol,
+    required String destinationNetworkName,
+    String? networkKey,
+  }) {
+    return _recordHistory({
+      'walletAddress': walletAddress,
+      'txHash': txHash,
+      'txType': 'bridge',
+      'tokenName': fromTokenSymbol,
+      'tokenSymbol': fromTokenSymbol,
+      'amount': _parseAmount(fromAmount),
+      'isIncoming': false,
+      'chainId': chainId,
+      'networkName': networkName,
+      'networkKey': networkKey,
+      'title': 'Bridge submitted',
+      'message':
+          'Bridging $fromAmount $fromTokenSymbol from $networkName to $toTokenSymbol on $destinationNetworkName.',
+    });
+  }
+
+  Future<void> recordDappConfirmed({
+    required String walletAddress,
+    required String txHash,
+    required int chainId,
+    required String networkName,
+    required String miniAppName,
+    required String tokenName,
+    required String tokenSymbol,
+    required String amountText,
+    required String toAddress,
+    String? networkKey,
+  }) {
+    return _recordHistory({
+      'walletAddress': walletAddress,
+      'txHash': txHash,
+      'txType': 'dapp',
+      'tokenName': tokenName,
+      'tokenSymbol': tokenSymbol,
+      'amount': _parseAmount(amountText),
+      'isIncoming': false,
+      'chainId': chainId,
+      'networkName': networkName,
+      'networkKey': networkKey,
+      'title': '$miniAppName transaction',
+      'message':
+          '$miniAppName sent $amountText $tokenSymbol to ${_shortAddress(toAddress)} on $networkName.',
+    });
+  }
+
   Future<void> _recordHistory(Map<String, dynamic> payload) async {
     try {
       final response = await _httpClientService
