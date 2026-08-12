@@ -14,7 +14,6 @@ import '../../../services/blockchain_service.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/bridge_operation_store.dart';
 import '../../../services/http_client_service.dart';
-import '../../../services/rpc_service.dart';
 import '../../../services/transaction_monitor.dart';
 import '../../../services/tron_swap_service.dart';
 import '../../../services/wallet_service.dart';
@@ -161,7 +160,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   final TextEditingController _amountController = TextEditingController();
   final BridgeService _bridgeService = BridgeService();
   final HttpClientService _httpClientService = HttpClientService();
-  final RpcService _rpcService = RpcService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   final TronSwapService _tronSwapService = TronSwapService();
   final BridgeOperationStore _bridgeOperationStore = BridgeOperationStore();
@@ -286,7 +284,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _isCheckingPending = false;
       });
       if (status!.isSuccess) {
-        await _recordCompletedBridge(pending);
+        _scheduleCompletedBridgeRecording(pending);
         ToastUtils.showSuccess('Your pending bridge completed.');
       } else {
         ToastUtils.showInfo(
@@ -321,7 +319,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     );
     await _bridgeOperationStore.save(operation);
     if (mounted) setState(() => _pendingOperation = operation);
-    if (!alreadyTracked) await _recordBridgeSubmission(operation);
+    if (!alreadyTracked) {
+      unawaited(_recordBridgeSubmission(operation));
+    }
   }
 
   String _bridgeChainName(int chainId) {
@@ -353,26 +353,33 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     );
   }
 
-  Future<void> _recordCompletedBridge(PendingBridgeOperation operation) async {
-    await Future.wait([
-      _walletNotificationService.notifyBridgeCompleted(
-        walletAddress: operation.walletAddress,
-        originChainId: operation.originChainId,
-        txHash: operation.originTxHash,
-        fromSymbol: operation.sellToken ?? 'Tokens',
-        toSymbol: operation.buyToken ?? 'tokens',
-        destinationNetworkName: _bridgeChainName(operation.destinationChainId),
-      ),
-      _bridgeService.recordExecutedBridge(
-        originChainId: operation.originChainId,
-        destinationChainId: operation.destinationChainId,
-        walletAddress: operation.walletAddress,
-        sellToken: operation.sellToken,
-        buyToken: operation.buyToken,
-        amountUsd: operation.amountUsd,
-        txHash: operation.originTxHash,
-      ),
-    ]);
+  void _scheduleCompletedBridgeRecording(PendingBridgeOperation operation) {
+    unawaited(
+      Future.wait([
+        _walletNotificationService.notifyBridgeCompleted(
+          walletAddress: operation.walletAddress,
+          originChainId: operation.originChainId,
+          txHash: operation.originTxHash,
+          fromSymbol: operation.sellToken ?? 'Tokens',
+          toSymbol: operation.buyToken ?? 'tokens',
+          destinationNetworkName: _bridgeChainName(
+            operation.destinationChainId,
+          ),
+        ),
+        _bridgeService.recordExecutedBridge(
+          originChainId: operation.originChainId,
+          destinationChainId: operation.destinationChainId,
+          walletAddress: operation.walletAddress,
+          sellToken: operation.sellToken,
+          buyToken: operation.buyToken,
+          amountUsd: operation.amountUsd,
+          txHash: operation.originTxHash,
+        ),
+      ]).catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Bridge completion bookkeeping failed: $error\n$stackTrace');
+        return <void>[];
+      }),
+    );
   }
 
   Future<void> _loadRelayChains() async {
@@ -1035,12 +1042,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           return;
         }
         final chain = matchingChains.first;
-        final rpcUrl = await _rpcService.resolveWorkingRpcUrl(
-          chainId: step.chainId,
-          primaryRpcUrl: chain.rpcUrl,
-        );
         final credentials = await widget.walletService.getCredentials();
-        final client = Web3Client(rpcUrl, _httpClientService.client);
+        final client = Web3Client(chain.rpcUrl, _httpClientService.client);
         final tx = await _prepareEvmBridgeTransaction(
           client: client,
           credentials: credentials,
@@ -1125,7 +1128,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           if (status.isSuccess) {
             final completedOperation = _pendingOperation;
             if (completedOperation != null) {
-              await _recordCompletedBridge(completedOperation);
+              _scheduleCompletedBridgeRecording(completedOperation);
             }
             await _bridgeOperationStore.clear(widget.walletAddress!);
             if (mounted) setState(() => _pendingOperation = null);

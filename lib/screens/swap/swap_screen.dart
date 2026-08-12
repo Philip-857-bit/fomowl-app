@@ -3047,12 +3047,32 @@ class _SwapScreenState extends State<SwapScreen> {
       }
 
       if (_tokenRequiresApproval(fromToken)) {
+        final quoteRequiredAllowance = executionQuote.needsAllowance;
         final approvalOk = await _handleTokenApproval(
           fromToken,
           fromAmountWei,
           progressController: progressController,
         );
         if (!approvalOk) return;
+
+        // A firm 0x quote can expire while the approval transaction confirms.
+        // Refresh it after approval so the executable calldata and allowance
+        // target reflect current chain and provider state.
+        if (quoteRequiredAllowance) {
+          progressController.setPreparing();
+          final refreshedQuote = await _refreshExecutionQuote(
+            fromToken: fromToken,
+            toToken: toToken,
+            fromAmountWei: fromAmountWei,
+          );
+          if (!mounted) return;
+          if (refreshedQuote == null) {
+            progressController.setError(
+              _mapErrorMessage(_swapService.lastError ?? l.noQuoteAvailable),
+            );
+            return;
+          }
+        }
       }
 
       await _performSwap(

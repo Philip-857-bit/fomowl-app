@@ -8,13 +8,11 @@ import '../config/app_environment.dart';
 import '../models/chain.dart';
 import 'blockchain_service.dart';
 import 'http_client_service.dart';
-import 'rpc_service.dart';
 
 enum TransactionConfirmationStatus { confirmed, failed, pending }
 
 class TransactionMonitor {
   final HttpClientService _httpClientService = HttpClientService();
-  final RpcService _rpcService = RpcService();
 
   Future<TransactionConfirmationStatus> waitForConfirmation({
     required String txHash,
@@ -65,17 +63,11 @@ class TransactionMonitor {
     void Function(int attempts)? onPoll,
   }) async {
     final chain = evmChain ?? blockchain.activeChain;
-    late final String rpcUrl;
-    try {
-      rpcUrl = await _rpcService.resolveWorkingRpcUrl(
-        chainId: chain.chainId,
-        primaryRpcUrl: chain.rpcUrl,
-      );
-    } catch (error) {
-      debugPrint('EVM tx monitor could not resolve an RPC: $error');
-      return TransactionConfirmationStatus.pending;
-    }
-    final client = Web3Client(rpcUrl, _httpClientService.client);
+    // The configured URL is Owllet's RPC proxy in production. Sending the
+    // receipt request directly lets the backend's shared cache select an
+    // upstream once per chain instead of running a separate eth_chainId probe
+    // in every screen before confirmation polling begins.
+    final client = Web3Client(chain.rpcUrl, _httpClientService.client);
     final completer = Completer<TransactionConfirmationStatus>();
     final stopwatch = Stopwatch()..start();
     int attempts = 0;
