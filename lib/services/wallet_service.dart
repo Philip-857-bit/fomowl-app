@@ -809,17 +809,31 @@ class WalletService {
     required BigInt amountInBaseUnits,
     required String rpcUrl,
     required int chainId,
+    BigInt? gasPriceWei,
+    int? gasLimit,
   }) async {
+    if ((gasPriceWei == null) != (gasLimit == null)) {
+      throw ArgumentError(
+        'gasPriceWei and gasLimit must either both be supplied or both omitted',
+      );
+    }
     final credentials = await getCredentials();
     final client = _clientForRpc(rpcUrl);
     final recipient = EthereumAddress.fromHex(toAddress);
-    final gasPrice = await client.getGasPrice();
-    final estimatedGas = await client.estimateGas(
-      sender: credentials.address,
-      to: recipient,
-      value: EtherAmount.inWei(amountInBaseUnits),
-    );
-    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
+    final gasPrice = gasPriceWei == null
+        ? await client.getGasPrice()
+        : EtherAmount.inWei(gasPriceWei);
+    final resolvedGasLimit =
+        gasLimit ??
+        BigInt.from(
+          ((await client.estimateGas(
+                    sender: credentials.address,
+                    to: recipient,
+                    value: EtherAmount.inWei(amountInBaseUnits),
+                  )).toInt() *
+                  1.1)
+              .ceil(),
+        ).toInt();
 
     return client.sendTransaction(
       credentials,
@@ -827,9 +841,10 @@ class WalletService {
         to: recipient,
         value: EtherAmount.inWei(amountInBaseUnits),
         gasPrice: gasPrice,
-        maxGas: bufferedGas.toInt(),
+        maxGas: resolvedGasLimit,
       ),
       chainId: chainId,
+      fetchChainIdFromNetworkId: false,
     );
   }
 
@@ -839,7 +854,14 @@ class WalletService {
     required BigInt amountInBaseUnits,
     required String rpcUrl,
     required int chainId,
+    BigInt? gasPriceWei,
+    int? gasLimit,
   }) async {
+    if ((gasPriceWei == null) != (gasLimit == null)) {
+      throw ArgumentError(
+        'gasPriceWei and gasLimit must either both be supplied or both omitted',
+      );
+    }
     final credentials = await getCredentials();
     final client = _clientForRpc(rpcUrl);
     final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
@@ -847,13 +869,20 @@ class WalletService {
     final contract = DeployedContract(_erc20Abi, tokenContractAddress);
     final transferFunction = contract.function('transfer');
     final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
-    final gasPrice = await client.getGasPrice();
-    final estimatedGas = await client.estimateGas(
-      sender: credentials.address,
-      to: tokenContractAddress,
-      data: data,
-    );
-    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
+    final gasPrice = gasPriceWei == null
+        ? await client.getGasPrice()
+        : EtherAmount.inWei(gasPriceWei);
+    final resolvedGasLimit =
+        gasLimit ??
+        BigInt.from(
+          ((await client.estimateGas(
+                    sender: credentials.address,
+                    to: tokenContractAddress,
+                    data: data,
+                  )).toInt() *
+                  1.1)
+              .ceil(),
+        ).toInt();
 
     return client.sendTransaction(
       credentials,
@@ -862,7 +891,7 @@ class WalletService {
         function: transferFunction,
         parameters: [recipient, amountInBaseUnits],
         gasPrice: gasPrice,
-        maxGas: bufferedGas.toInt(),
+        maxGas: resolvedGasLimit,
       ),
       chainId: chainId,
       fetchChainIdFromNetworkId: false,
@@ -968,11 +997,9 @@ class WalletService {
     final client = _clientForRpc(rpcUrl);
     final sender = EthereumAddress.fromHex(fromAddress);
     final recipient = EthereumAddress.fromHex(toAddress);
-    final gasPrice = await client.getGasPrice();
-
-    BigInt estimatedGas;
+    late final Future<BigInt> estimatedGasFuture;
     if (tokenAddress == null || tokenAddress.isEmpty) {
-      estimatedGas = await client.estimateGas(
+      estimatedGasFuture = client.estimateGas(
         sender: sender,
         to: recipient,
         value: EtherAmount.inWei(amountInBaseUnits),
@@ -982,13 +1009,19 @@ class WalletService {
       final contract = DeployedContract(_erc20Abi, tokenContractAddress);
       final transferFunction = contract.function('transfer');
       final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
-      estimatedGas = await client.estimateGas(
+      estimatedGasFuture = client.estimateGas(
         sender: sender,
         to: tokenContractAddress,
         data: data,
       );
     }
 
+    final estimates = await Future.wait<Object>([
+      client.getGasPrice(),
+      estimatedGasFuture,
+    ]);
+    final gasPrice = estimates[0] as EtherAmount;
+    final estimatedGas = estimates[1] as BigInt;
     final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
     final totalFeeWei = gasPrice.getInWei * bufferedGas;
     final totalFeeNativeDouble = EtherAmount.inWei(
@@ -997,6 +1030,7 @@ class WalletService {
 
     return {
       'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
+      'gasPriceWei': gasPrice.getInWei,
       'gasLimitUnits': bufferedGas.toDouble(),
       'totalFeeEth': totalFeeNativeDouble,
       'totalFeeUsd': totalFeeNativeDouble * nativePriceUsd,

@@ -7,8 +7,7 @@ import '../config/app_environment.dart';
 import '../models/token.dart';
 import '../utils/app_error_utils.dart';
 import 'blockchain_service.dart';
-import 'rpc_service.dart';
-import 'swap_service.dart'; // Still needed for SwapQuote
+import 'swap_service.dart';
 import 'swap_quote_safety.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
@@ -33,7 +32,6 @@ class SwapExecutionResult {
 class SwapExecutionService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
-  final RpcService _rpcService = RpcService();
   late final ZeroXGaslessExecutor _gaslessExecutor;
 
   SwapExecutionService({
@@ -43,16 +41,9 @@ class SwapExecutionService {
     _gaslessExecutor = ZeroXGaslessExecutor(walletService: _walletService);
   }
 
-  Future<String> _resolveRpcUrl(BlockchainService blockchain) {
-    return _rpcService.resolveWorkingRpcUrl(
-      chainId: blockchain.activeChain.chainId,
-      primaryRpcUrl: blockchain.activeChain.rpcUrl,
-    );
-  }
-
-  /// Builds calldata via backend and broadcasts the swap transaction.
+  /// Broadcasts a freshly committed quote prepared by the backend.
   Future<SwapExecutionResult> execute({
-    required SwapQuote quote, // Kept for API compatibility with callers.
+    required SwapQuote quote,
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
@@ -75,13 +66,13 @@ class SwapExecutionService {
         );
       } else {
         return await _executeStandard(
+          quote: quote,
           fromToken: fromToken,
           toToken: toToken,
           fromAmountWei: fromAmountWei,
           expectedToAmount: expectedToAmount,
           slippageBps: slippageBps,
           blockchain: blockchain,
-          walletAddress: recipientAddress,
         );
       }
     } catch (e) {
@@ -97,64 +88,31 @@ class SwapExecutionService {
   }
 
   Future<SwapExecutionResult> _executeStandard({
+    required SwapQuote quote,
     required Token fromToken,
     required Token toToken,
     required String fromAmountWei,
     required double expectedToAmount,
     required int slippageBps,
     required BlockchainService blockchain,
-    required String walletAddress,
   }) async {
-    final rpcUrl = await _resolveRpcUrl(blockchain);
-    final client = Web3Client(rpcUrl, _httpClientService.client);
+    // The swap screen refreshes this firm quote immediately before execution
+    // (and once more after an approval transaction). Reusing that exact quote
+    // avoids a second backend request and an RPC health probe on the critical
+    // path while keeping the approved calldata and displayed output aligned.
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
-      // Always fetch a fresh firm quote close to broadcast to avoid stale RFQ data.
-      final src = fromToken.contractAddress?.isNotEmpty == true
-          ? fromToken.contractAddress!
-          : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-      final dst = toToken.contractAddress?.isNotEmpty == true
-          ? toToken.contractAddress!
-          : '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
-
-      final rawAmountStr = fromAmountWei;
-
-      final url = AppEnvironment.swap('/quote', {
-        'chainId': '${blockchain.activeChain.chainId}',
-        'src': src,
-        'dst': dst,
-        'amount': rawAmountStr,
-        'taker': walletAddress,
-        'slippageBps': '$slippageBps',
-      });
-
-      final response = await _httpClientService
-          .sendWithRetry(() => _httpClientService.client.get(url))
-          .timeout(const Duration(seconds: 15));
-      if (response.statusCode != 200) {
-        throw Exception(
-          _extractBackendMessage(
-            response.body,
-            'Swap execution could not be prepared.',
-          ),
-        );
-      }
-
-      final data = _decodeJsonMap(
-        response.body,
-        fallback: 'Swap execution response was incomplete. Please try again.',
-      );
-      final txData = _asMap(data['transaction']) ?? data;
-      final analyticsEventId = data['analyticsEventId']?.toString();
-
-      // 2. Prepare Web3 Transaction
-      if (txData['to'] == null) {
+      if (quote.txTo == null || quote.txTo!.isEmpty) {
         throw Exception(
           'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
         );
       }
-      final toAddress = EthereumAddress.fromHex(txData['to'].toString());
+      final toAddress = EthereumAddress.fromHex(quote.txTo!);
 
-      final gasPriceStr = txData['gasPrice']?.toString();
+      final gasPriceStr = quote.txGasPrice;
       final gasPrice = gasPriceStr != null ? _parseBigInt(gasPriceStr) : null;
       if (gasPrice == null) {
         throw Exception(
@@ -162,7 +120,7 @@ class SwapExecutionService {
         );
       }
 
-      final dataStr = txData['data']?.toString();
+      final dataStr = quote.txData;
       if (dataStr == null) {
         throw Exception(
           'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
@@ -170,7 +128,7 @@ class SwapExecutionService {
       }
       final dataBytes = hexToBytes(dataStr.replaceFirst('0x', ''));
 
-      final valueStr = txData['value']?.toString();
+      final valueStr = quote.txValue;
       final valueWei = valueStr != null ? _parseBigInt(valueStr) : null;
       if (valueWei == null) {
         throw Exception(
@@ -203,13 +161,7 @@ class SwapExecutionService {
         );
       }
 
-      final quotedOut = _parseBigInt(
-        (txData['minBuyAmount'] ??
-                txData['buyAmount'] ??
-                data['minBuyAmount'] ??
-                data['buyAmount'])
-            ?.toString(),
-      );
+      final quotedOut = _parseBigInt(quote.minAmountOutWei);
       // Fail CLOSED: if the response carries no parseable output amount we
       // cannot enforce the slippage floor, so refuse rather than sign a trade
       // at an unknown rate. (Previously this check was skipped when the field
@@ -237,7 +189,7 @@ class SwapExecutionService {
         data: dataBytes,
         value: EtherAmount.inWei(valueWei),
         gasPrice: EtherAmount.inWei(gasPrice),
-        maxGas: _parseInt(txData['gas']?.toString()),
+        maxGas: _parseInt(quote.txGas),
       );
 
       final credentials = await _walletService.getCredentials();
@@ -253,7 +205,7 @@ class SwapExecutionService {
       return SwapExecutionResult(
         success: true,
         transactionHash: txHash,
-        analyticsEventId: analyticsEventId,
+        analyticsEventId: quote.analyticsEventId,
       );
     } finally {
       // client.dispose() intentionally removed — HttpClient is a shared singleton.

@@ -30,6 +30,7 @@ class SwapQuote {
   final String? txValue;
   final String? txGas;
   final String? txGasPrice;
+  final String? analyticsEventId;
   final int? sellTaxBps;
   final int? buyTaxBps;
   final bool taxMetadataAvailable;
@@ -55,6 +56,7 @@ class SwapQuote {
     this.txValue,
     this.txGas,
     this.txGasPrice,
+    this.analyticsEventId,
     this.sellTaxBps,
     this.buyTaxBps,
     this.taxMetadataAvailable = false,
@@ -570,6 +572,7 @@ class SwapService {
           txValue: transaction?['value']?.toString(),
           txGas: transaction?['gas']?.toString(),
           txGasPrice: transaction?['gasPrice']?.toString(),
+          analyticsEventId: data['analyticsEventId']?.toString(),
           sellTaxBps: sellTaxBps,
           buyTaxBps: buyTaxBps,
           taxMetadataAvailable: taxMetadataAvailable,

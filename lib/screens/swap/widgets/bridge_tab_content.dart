@@ -287,9 +287,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _scheduleCompletedBridgeRecording(pending);
         ToastUtils.showSuccess('Your pending bridge completed.');
       } else {
-        ToastUtils.showInfo(
-          'Your pending bridge reached a terminal status. Check the origin transaction for refund details.',
-        );
+        ToastUtils.showInfo(status.userFacingFailureMessage);
       }
       return;
     }
@@ -914,6 +912,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     try {
       String? firstTxHash;
       String? latestTxHash;
+      EthPrivateKey? evmCredentials;
 
       for (var stepIndex = 0; stepIndex < quote.steps.length; stepIndex++) {
         final step = quote.steps[stepIndex];
@@ -1042,7 +1041,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           return;
         }
         final chain = matchingChains.first;
-        final credentials = await widget.walletService.getCredentials();
+        final credentials = evmCredentials ??= await widget.walletService
+            .getCredentials();
         final client = Web3Client(chain.rpcUrl, _httpClientService.client);
         final tx = await _prepareEvmBridgeTransaction(
           client: client,
@@ -1112,7 +1112,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       if (quote.requestId.isNotEmpty) {
         var bridgeCompleted = false;
         for (var attempt = 0; attempt < 45; attempt++) {
-          await Future<void>.delayed(const Duration(seconds: 4));
+          if (attempt > 0) {
+            await Future<void>.delayed(const Duration(seconds: 4));
+          }
           final status = await _bridgeService.getStatus(
             requestId: quote.requestId,
           );
@@ -1120,9 +1122,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           if (status.isFailure) {
             await _bridgeOperationStore.clear(widget.walletAddress!);
             if (mounted) setState(() => _pendingOperation = null);
-            controller.setError(
-              'The bridge could not complete. Do not submit it again; check Activity or contact support.',
-            );
+            controller.setError(status.userFacingFailureMessage);
             return;
           }
           if (status.isSuccess) {
@@ -1195,24 +1195,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final symbol = nativeSymbol.trim().isEmpty
         ? 'the native gas token'
         : nativeSymbol.trim();
-    final nativeBalanceWei = (await client.getBalance(
-      credentials.address,
-    )).getInWei;
-    if (nativeBalanceWei <= step.value) {
-      throw Exception(
-        'Not enough $symbol to pay the bridge amount and network fee. Add more $symbol, then try again.',
-      );
-    }
-
-    final gasPrice = await client.getGasPrice();
-    late final BigInt estimatedGas;
+    late final List<Object> preflight;
     try {
-      estimatedGas = await client.estimateGas(
-        sender: credentials.address,
-        to: to,
-        value: value,
-        data: data,
-      );
+      preflight = await Future.wait<Object>([
+        client.getBalance(credentials.address),
+        client.getGasPrice(),
+        client.estimateGas(
+          sender: credentials.address,
+          to: to,
+          value: value,
+          data: data,
+        ),
+      ]);
     } catch (error) {
       if (_isGasAllowanceError(error)) {
         throw Exception(
@@ -1221,6 +1215,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       }
       rethrow;
     }
+    final nativeBalanceWei = (preflight[0] as EtherAmount).getInWei;
+    if (nativeBalanceWei <= step.value) {
+      throw Exception(
+        'Not enough $symbol to pay the bridge amount and network fee. Add more $symbol, then try again.',
+      );
+    }
+
+    final gasPrice = preflight[1] as EtherAmount;
+    final estimatedGas = preflight[2] as BigInt;
     final bufferedGas = _bufferGasLimit(estimatedGas);
     final gasCostWei = gasPrice.getInWei * bufferedGas;
     final requiredNativeWei = step.value + gasCostWei;

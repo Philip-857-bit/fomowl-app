@@ -97,6 +97,56 @@ void main() {
       expect(quote.platformFeeUsd, 1.0);
     });
 
+    test(
+      'keeps the committed transaction and analytics id on the firm quote',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, endsWith('/api/swap/quote'));
+          return http.Response(
+            jsonEncode({
+              'buyAmount': '2500000',
+              'minBuyAmount': '2475000',
+              'analyticsEventId': 'evt-firm-quote-1',
+              'transaction': {
+                'to': '0x1111111111111111111111111111111111111111',
+                'data': '0x1234',
+                'value': '0',
+                'gas': '210000',
+                'gasPrice': '3000000000',
+              },
+              'tokenMetadata': {
+                'buyToken': {'decimals': 6},
+              },
+            }),
+            200,
+          );
+        });
+        final service = SwapService(
+          httpClientService: HttpClientServiceMock(mockClient),
+        );
+
+        final quote = await service.get0xQuote(
+          chainId: 56,
+          fromTokenAddress: '0x55d398326f99059ff775485246999027b3197955',
+          toTokenAddress: '0x0000000000000000000000000000000000000000',
+          amountWei: '1000000',
+          buyTokenDecimals: 6,
+          isGasless: false,
+          walletAddress: '0x2222222222222222222222222222222222222222',
+          useFirmQuote: true,
+        );
+
+        expect(quote, isNotNull);
+        expect(quote!.analyticsEventId, 'evt-firm-quote-1');
+        expect(quote.minAmountOutWei, '2475000');
+        expect(quote.txTo, '0x1111111111111111111111111111111111111111');
+        expect(quote.txData, '0x1234');
+        expect(quote.txValue, '0');
+        expect(quote.txGas, '210000');
+        expect(quote.txGasPrice, '3000000000');
+      },
+    );
+
     test('preserves detected buy and sell tax metadata', () async {
       final mockClient = MockClient((request) async {
         return http.Response(

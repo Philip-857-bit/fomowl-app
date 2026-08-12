@@ -3,7 +3,6 @@ import 'package:web3dart/web3dart.dart';
 
 import '../models/token.dart';
 import 'blockchain_service.dart';
-import 'rpc_service.dart';
 import 'swap_service.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
@@ -28,7 +27,6 @@ class TokenApprovalResult {
 class TokenApprovalService {
   final WalletService _walletService;
   final HttpClientService _httpClientService = HttpClientService();
-  final RpcService _rpcService = RpcService();
   static final ContractAbi _erc20ApprovalAbi = ContractAbi.fromJson('''[
         {
           "constant": true,
@@ -57,21 +55,6 @@ class TokenApprovalService {
     SwapService? swapService, // signature compat
   }) : _walletService = walletService ?? WalletService();
 
-  Future<String> _resolveRpcUrl(BlockchainService blockchain) {
-    return _rpcService
-        .resolveWorkingRpcUrl(
-          chainId: blockchain.activeChain.chainId,
-          primaryRpcUrl: blockchain.activeChain.rpcUrl,
-        )
-        .timeout(
-          const Duration(seconds: 10),
-          onTimeout: () {
-            // Fallback to primary URL if resolution times out.
-            return blockchain.activeChain.rpcUrl;
-          },
-        );
-  }
-
   /// Live estimate of the native gas cost of a swap on the active EVM chain,
   /// in wei, used to size the MAX-swap gas buffer so it reflects ACTUAL current
   /// gas (cheap when the network is quiet) instead of a flat over-reservation.
@@ -81,8 +64,10 @@ class TokenApprovalService {
     required BlockchainService blockchain,
     int swapGasUnits = 250000,
   }) async {
-    final rpcUrl = await _resolveRpcUrl(blockchain);
-    final client = Web3Client(rpcUrl, _httpClientService.client);
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
       final gasPrice = await client.getGasPrice().timeout(
         const Duration(seconds: 8),
@@ -107,8 +92,10 @@ class TokenApprovalService {
       return BigInt.zero;
     }
 
-    final rpcUrl = await _resolveRpcUrl(blockchain);
-    final client = Web3Client(rpcUrl, _httpClientService.client);
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
@@ -164,8 +151,10 @@ class TokenApprovalService {
       );
     }
 
-    final rpcUrl = await _resolveRpcUrl(blockchain);
-    final client = Web3Client(rpcUrl, _httpClientService.client);
+    final client = Web3Client(
+      blockchain.activeChain.rpcUrl,
+      _httpClientService.client,
+    );
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);

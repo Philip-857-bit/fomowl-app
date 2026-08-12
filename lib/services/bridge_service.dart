@@ -141,10 +141,24 @@ class BridgeQuote {
 class BridgeStatus {
   final String status;
   final List<String> txHashes;
+  final String? failureCode;
+  final String? failureMessage;
+  final String? suggestedAction;
 
-  const BridgeStatus({required this.status, required this.txHashes});
+  const BridgeStatus({
+    required this.status,
+    required this.txHashes,
+    this.failureCode,
+    this.failureMessage,
+    this.suggestedAction,
+  });
 
   bool get isSuccess => status.toLowerCase() == 'success';
+  bool get isRefunded {
+    final lower = status.toLowerCase();
+    return lower == 'refund' || lower == 'refunded';
+  }
+
   bool get isFailure {
     final lower = status.toLowerCase();
     return lower == 'failure' ||
@@ -152,6 +166,24 @@ class BridgeStatus {
         lower == 'refund' ||
         lower == 'refunded' ||
         lower == 'incomplete_deposit';
+  }
+
+  String get userFacingFailureMessage {
+    final message = failureMessage?.trim();
+    final action = suggestedAction?.trim();
+    if (message != null && message.isNotEmpty) {
+      if (action != null && action.isNotEmpty) {
+        return '$message\n\nWhat you can do: $action';
+      }
+      return message;
+    }
+    if (isRefunded) {
+      return 'This bridge could not complete and your funds were returned on the origin network.\n\nWhat you can do: Refresh your balance, then request a new quote. If the refund is not visible, contact support with the bridge reference.';
+    }
+    if (status.toLowerCase() == 'incomplete_deposit') {
+      return 'The received amount was below the minimum needed to complete this bridge.\n\nWhat you can do: Check Activity for a refund before trying again, then request a new quote with a larger amount.';
+    }
+    return 'This bridge could not complete.\n\nWhat you can do: Check Activity for a refund before trying again. If no refund appears, contact support with the bridge reference.';
   }
 }
 
@@ -483,6 +515,9 @@ class BridgeService {
       return BridgeStatus(
         status: raw['status']?.toString() ?? 'pending',
         txHashes: hashes,
+        failureCode: raw['failureCode']?.toString(),
+        failureMessage: raw['failureMessage']?.toString(),
+        suggestedAction: raw['suggestedAction']?.toString(),
       );
     } catch (e) {
       _lastError ??= AppErrorUtils.userMessage(

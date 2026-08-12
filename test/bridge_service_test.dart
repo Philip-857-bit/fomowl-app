@@ -91,6 +91,41 @@ void main() {
     expect(requestedUri?.queryParameters['slippageBps'], '550');
   });
 
+  test('parses actionable slippage refund guidance', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '{"status":"refund","inTxHashes":["0xorigin"],"txHashes":["0xrefund"],"failureCode":"SLIPPAGE_EXCEEDED","failureMessage":"The destination price moved beyond the allowed slippage, so this bridge could not complete.","suggestedAction":"Your funds were returned on the origin network. Refresh your balances, then request a new quote and try again."}',
+        200,
+      ),
+    );
+    final service = BridgeService(
+      httpClientService: _HttpClientServiceMock(client),
+    );
+
+    final status = await service.getStatus(requestId: '0xrequest');
+
+    expect(status, isNotNull);
+    expect(status!.isFailure, isTrue);
+    expect(status.isRefunded, isTrue);
+    expect(status.failureCode, 'SLIPPAGE_EXCEEDED');
+    expect(status.txHashes, ['0xrefund', '0xorigin']);
+    expect(status.userFacingFailureMessage, contains('allowed slippage'));
+    expect(status.userFacingFailureMessage, contains('What you can do:'));
+    expect(status.userFacingFailureMessage, contains('request a new quote'));
+    expect(
+      status.userFacingFailureMessage.toLowerCase(),
+      isNot(contains('relay')),
+    );
+  });
+
+  test('refund without details still gives a safe recovery action', () {
+    const status = BridgeStatus(status: 'refund', txHashes: []);
+
+    expect(status.userFacingFailureMessage, contains('funds were returned'));
+    expect(status.userFacingFailureMessage, contains('Refresh your balance'));
+    expect(status.userFacingFailureMessage, isNot(contains('Do not submit')));
+  });
+
   test(
     'accepts a dry TRON preview and commits only on explicit request',
     () async {

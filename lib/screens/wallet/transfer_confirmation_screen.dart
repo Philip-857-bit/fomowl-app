@@ -56,6 +56,9 @@ class _TransferConfirmationScreenState
   double _gasFeeEth = 0;
   double _gasFeeUsd = 0;
   BigInt _gasFeeWei = BigInt.zero;
+  BigInt? _estimatedGasPriceWei;
+  int? _estimatedGasLimit;
+  DateTime? _gasEstimateAt;
   bool _isLoadingGas = true;
   bool _gasEstimationFailed = false;
 
@@ -226,6 +229,9 @@ class _TransferConfirmationScreenState
             _gasFeeEth = estimatedFeeNative;
             _gasFeeUsd = estimatedFeeUsd;
             _gasFeeWei = estimatedFeeBaseUnits;
+            _estimatedGasPriceWei = null;
+            _estimatedGasLimit = null;
+            _gasEstimateAt = null;
             _isLoadingGas = false;
             _gasEstimationFailed = false;
           });
@@ -275,6 +281,9 @@ class _TransferConfirmationScreenState
           _gasFeeEth = gasData['totalFeeEth'] ?? 0;
           _gasFeeUsd = gasData['totalFeeUsd'] ?? 0;
           _gasFeeWei = gasData['totalFeeWei'] as BigInt? ?? BigInt.zero;
+          _estimatedGasPriceWei = gasData['gasPriceWei'] as BigInt?;
+          _estimatedGasLimit = (gasData['gasLimitUnits'] as num?)?.ceil();
+          _gasEstimateAt = DateTime.now();
           _isLoadingGas = false;
           _gasEstimationFailed = false;
         });
@@ -285,6 +294,9 @@ class _TransferConfirmationScreenState
         setState(() {
           _isLoadingGas = false;
           _gasEstimationFailed = true;
+          _estimatedGasPriceWei = null;
+          _estimatedGasLimit = null;
+          _gasEstimateAt = null;
         });
       }
     }
@@ -527,16 +539,33 @@ class _TransferConfirmationScreenState
 
       // EVM balance/gas checks only apply to EVM families.
       if (activeFamily == ChainFamily.evm && _fromAddress != null) {
-        final availableBalance = await blockchain.getNativeBalanceBaseUnits(
-          _fromAddress!,
-        );
-        if (isNative && amountInBaseUnits + _gasFeeWei > availableBalance) {
+        final requiredNative = isNative
+            ? amountInBaseUnits + _gasFeeWei
+            : _gasFeeWei;
+        var availableBalance = transferNetworkKey == blockchain.activeNetworkKey
+            ? _nativeBalanceBaseUnits(
+                blockchain,
+                activeFamily,
+                nativeToken: isNative ? token : null,
+              )
+            : null;
+        // Prefer the already-displayed balance. Only perform another RPC read
+        // when it is absent or appears insufficient, which avoids delaying the
+        // normal funded transfer path without trusting stale data to reject it.
+        if (availableBalance == null || availableBalance < requiredNative) {
+          availableBalance = await blockchain.getNativeBalanceBaseUnits(
+            _fromAddress!,
+          );
+        }
+        final confirmedAvailableBalance = availableBalance;
+        if (isNative &&
+            amountInBaseUnits + _gasFeeWei > confirmedAvailableBalance) {
           progressController.setError(
             'Insufficient $nativeSymbol to cover the transfer amount and network fee.',
           );
           return;
         }
-        if (!isNative && _gasFeeWei > availableBalance) {
+        if (!isNative && _gasFeeWei > confirmedAvailableBalance) {
           progressController.setError(
             'Insufficient $nativeSymbol to cover the network fee for this token transfer.',
           );
@@ -582,12 +611,25 @@ class _TransferConfirmationScreenState
           networkKey: blockchain.activeNetworkKey,
         );
       } else {
+        final estimateIsFresh =
+            !_gasEstimationFailed &&
+            _gasEstimateAt != null &&
+            DateTime.now().difference(_gasEstimateAt!) <
+                const Duration(seconds: 30);
+        final hasCompleteEstimate =
+            estimateIsFresh &&
+            _estimatedGasPriceWei != null &&
+            _estimatedGasLimit != null;
+        final gasPriceWei = hasCompleteEstimate ? _estimatedGasPriceWei : null;
+        final gasLimit = hasCompleteEstimate ? _estimatedGasLimit : null;
         txHash = isNative
             ? await _walletService.sendNativeTransaction(
                 toAddress: toAddress,
                 amountInBaseUnits: amountInBaseUnits,
                 rpcUrl: evmChain!.rpcUrl,
                 chainId: evmChain.chainId,
+                gasPriceWei: gasPriceWei,
+                gasLimit: gasLimit,
               )
             : await _walletService.sendTokenTransaction(
                 tokenAddress: token!.contractAddress!,
@@ -595,6 +637,8 @@ class _TransferConfirmationScreenState
                 amountInBaseUnits: amountInBaseUnits,
                 rpcUrl: evmChain!.rpcUrl,
                 chainId: evmChain.chainId,
+                gasPriceWei: gasPriceWei,
+                gasLimit: gasLimit,
               );
       }
 

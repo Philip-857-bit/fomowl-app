@@ -1530,30 +1530,15 @@ class _SwapScreenState extends State<SwapScreen> {
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
-        final confirmation = await _waitForTxConfirmation(
-          txHash,
-          rewardReferralOnSwap: rewardReferralOnSwap,
-          swapAmountUsd: swapAmountUsd,
-        );
+        final confirmation = await _waitForTxConfirmation(txHash);
         if (!mounted) return;
         if (confirmation == TransactionConfirmationStatus.confirmed) {
-          final recorded =
-              analyticsEventId != null &&
-              analyticsEventId.isNotEmpty &&
-              await _swapExecutionService.recordConfirmedSwap(
-                eventId: analyticsEventId,
-                chainId: chainId,
-                transactionHash: txHash,
-                walletAddress: _walletAddress!,
-              );
-          if (recorded) {
-            await _runPostConfirmSwapSideEffects(
-              blockchain: blockchain,
-              txHash: txHash,
-              rewardReferralOnSwap: rewardReferralOnSwap,
-              swapAmountUsd: swapAmountUsd,
-            );
-          }
+          _scheduleConfirmedSwapBookkeeping(
+            analyticsEventId: analyticsEventId,
+            chainId: chainId,
+            txHash: txHash,
+            rewardReferralOnSwap: rewardReferralOnSwap,
+          );
           _applyOptimisticSwapResult(
             blockchain: blockchain,
             fromToken: fromToken,
@@ -1590,6 +1575,7 @@ class _SwapScreenState extends State<SwapScreen> {
             reference: shortHash(txHash),
             detailsUrl: _transactionDetailsUrl(txHash),
           );
+          unawaited(_refreshWalletState(blockchain: blockchain));
         } else if (confirmation == TransactionConfirmationStatus.failed) {
           progressController.setError(
             l.transactionFailed,
@@ -1733,6 +1719,38 @@ class _SwapScreenState extends State<SwapScreen> {
     await _refreshWalletState(blockchain: blockchain);
   }
 
+  void _scheduleConfirmedSwapBookkeeping({
+    required String? analyticsEventId,
+    required int chainId,
+    required String txHash,
+    required bool rewardReferralOnSwap,
+  }) {
+    final walletAddress = _walletAddress;
+    if (analyticsEventId == null ||
+        analyticsEventId.isEmpty ||
+        walletAddress == null ||
+        walletAddress.isEmpty) {
+      return;
+    }
+
+    // Analytics verification can retry while backend RPC nodes converge. It
+    // must never hold the confirmed-success UI or the user's next action.
+    unawaited(() async {
+      final recorded = await _swapExecutionService.recordConfirmedSwap(
+        eventId: analyticsEventId,
+        chainId: chainId,
+        transactionHash: txHash,
+        walletAddress: walletAddress,
+      );
+      if (!recorded || !rewardReferralOnSwap) return;
+      try {
+        await _rewardReferralForSwap(walletAddress, txHash);
+      } catch (error) {
+        debugPrint('Referral reward-on-swap failed: $error');
+      }
+    }());
+  }
+
   Future<void> _rewardReferralForSwap(
     String swapWalletAddress,
     String txHash,
@@ -1749,27 +1767,12 @@ class _SwapScreenState extends State<SwapScreen> {
     );
   }
 
-  Future<TransactionConfirmationStatus> _waitForTxConfirmation(
-    String txHash, {
-    bool rewardReferralOnSwap = false,
-    double swapAmountUsd = 0.0,
-  }) async {
+  Future<TransactionConfirmationStatus> _waitForTxConfirmation(String txHash) {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    final confirmation = await _transactionMonitor.waitForConfirmation(
+    return _transactionMonitor.waitForConfirmation(
       txHash: txHash,
       blockchain: blockchain,
     );
-    if (confirmation == TransactionConfirmationStatus.confirmed) {
-      unawaited(
-        _runPostConfirmSwapSideEffects(
-          blockchain: blockchain,
-          txHash: txHash,
-          rewardReferralOnSwap: rewardReferralOnSwap,
-          swapAmountUsd: swapAmountUsd,
-        ),
-      );
-    }
-    return confirmation;
   }
 
   Future<void> _getQuote() async {
@@ -2936,16 +2939,10 @@ class _SwapScreenState extends State<SwapScreen> {
         : quote.networkFeeNative * _nativeTokenPriceUsd;
 
     if (feeNative <= 0 && feeUsd <= 0) {
-      var nativePrice = _nativeTokenPriceUsd;
-      if (nativePrice <= 0) {
-        await _refreshTokenPrices();
-        nativePrice = _nativeTokenPriceUsd;
-      }
-      final estimate = await blockchain.estimateGasFee(
-        nativePriceUsd: nativePrice,
-      );
-      feeNative = estimate['totalFeeEth'] ?? 0.0;
-      feeUsd = estimate['totalFeeUsd'] ?? 0.0;
+      // Fee presentation must not delay signing. The preview already obtained
+      // a fee estimate; retain it if the committed response omits fee fields.
+      feeNative = _feeNative;
+      feeUsd = _feeUsd;
     }
 
     if (!mounted) {
@@ -3326,22 +3323,37 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         final txHash = execResult.transactionHash!;
         _clearSubmittedSwapState();
-        final analyticsEventId = execResult.analyticsEventId;
-        if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
-          final recorded = await _swapExecutionService.recordConfirmedSwap(
-            eventId: analyticsEventId,
-            chainId: 792703809,
-            transactionHash: txHash,
-            walletAddress: _walletAddress!,
+        progressController.setSwapPending(
+          reference: shortHash(txHash),
+          detailsUrl: _transactionDetailsUrl(txHash),
+        );
+        final confirmation = await _transactionMonitor.waitForConfirmation(
+          txHash: txHash,
+          blockchain: blockchain,
+          networkKey: blockchain.activeNetworkKey,
+        );
+        if (!mounted) return;
+        if (confirmation == TransactionConfirmationStatus.failed) {
+          progressController.setError(
+            l.transactionFailed,
+            reference: shortHash(txHash),
+            detailsUrl: _transactionDetailsUrl(txHash),
           );
-          if (recorded) {
-            try {
-              await _rewardReferralForSwap(_walletAddress!, txHash);
-            } catch (error) {
-              debugPrint('Solana referral reward failed: $error');
-            }
-          }
+          return;
         }
+        if (confirmation == TransactionConfirmationStatus.pending) {
+          progressController.setSwapPending(
+            reference: shortHash(txHash),
+            detailsUrl: _transactionDetailsUrl(txHash),
+          );
+          return;
+        }
+        _scheduleConfirmedSwapBookkeeping(
+          analyticsEventId: execResult.analyticsEventId,
+          chainId: 792703809,
+          txHash: txHash,
+          rewardReferralOnSwap: true,
+        );
         _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
@@ -3394,22 +3406,12 @@ class _SwapScreenState extends State<SwapScreen> {
         }
         final txHash = execResult.transactionHash!;
         _clearSubmittedSwapState();
-        final analyticsEventId = execResult.analyticsEventId;
-        if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
-          final recorded = await _swapExecutionService.recordConfirmedSwap(
-            eventId: analyticsEventId,
-            chainId: -195,
-            transactionHash: txHash,
-            walletAddress: _walletAddress!,
-          );
-          if (recorded) {
-            try {
-              await _rewardReferralForSwap(_walletAddress!, txHash);
-            } catch (error) {
-              debugPrint('Tron referral reward failed: $error');
-            }
-          }
-        }
+        _scheduleConfirmedSwapBookkeeping(
+          analyticsEventId: execResult.analyticsEventId,
+          chainId: -195,
+          txHash: txHash,
+          rewardReferralOnSwap: true,
+        );
         _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
@@ -3509,30 +3511,15 @@ class _SwapScreenState extends State<SwapScreen> {
         reference: shortHash(txHash),
         detailsUrl: _transactionDetailsUrl(txHash),
       );
-      final confirmation = await _waitForTxConfirmation(
-        txHash,
-        rewardReferralOnSwap: false,
-        swapAmountUsd: referralSwapAmountUsd,
-      );
+      final confirmation = await _waitForTxConfirmation(txHash);
       if (!mounted) return;
       if (confirmation == TransactionConfirmationStatus.confirmed) {
-        final analyticsEventId = result.analyticsEventId;
-        if (analyticsEventId != null && analyticsEventId.isNotEmpty) {
-          final recorded = await _swapExecutionService.recordConfirmedSwap(
-            eventId: analyticsEventId,
-            chainId: blockchain.activeChain.chainId,
-            transactionHash: txHash,
-            walletAddress: _walletAddress!,
-          );
-          if (recorded) {
-            await _runPostConfirmSwapSideEffects(
-              blockchain: blockchain,
-              txHash: txHash,
-              rewardReferralOnSwap: true,
-              swapAmountUsd: referralSwapAmountUsd,
-            );
-          }
-        }
+        _scheduleConfirmedSwapBookkeeping(
+          analyticsEventId: result.analyticsEventId,
+          chainId: blockchain.activeChain.chainId,
+          txHash: txHash,
+          rewardReferralOnSwap: true,
+        );
         _applyOptimisticSwapResult(
           blockchain: blockchain,
           fromToken: fromToken,
@@ -3567,6 +3554,7 @@ class _SwapScreenState extends State<SwapScreen> {
           reference: shortHash(txHash),
           detailsUrl: _transactionDetailsUrl(txHash),
         );
+        unawaited(_refreshWalletState(blockchain: blockchain));
       } else if (confirmation == TransactionConfirmationStatus.failed) {
         progressController.setError(
           l.transactionFailed,

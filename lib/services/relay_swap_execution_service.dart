@@ -41,11 +41,9 @@ class RelaySwapExecutionService {
     RpcService? rpcService,
     HttpClientService? httpClientService,
   }) : _bridgeService = bridgeService ?? BridgeService(),
-       _rpcService = rpcService ?? RpcService(),
        _http = httpClientService ?? HttpClientService();
 
   final BridgeService _bridgeService;
-  final RpcService _rpcService;
   final HttpClientService _http;
 
   Future<RelaySwapExecutionResult> execute({
@@ -82,29 +80,30 @@ class RelaySwapExecutionService {
     }
 
     try {
-      final rpcUrl = await _rpcService.resolveWorkingRpcUrl(
-        chainId: chainId,
-        primaryRpcUrl: blockchain.activeChain.rpcUrl,
-      );
       final credentials = await walletService.getCredentials();
-      final client = Web3Client(rpcUrl, _http.client);
+      final client = Web3Client(blockchain.activeChain.rpcUrl, _http.client);
       String? firstHash;
 
       for (final step in quote.steps) {
         final to = EthereumAddress.fromHex(step.to);
         final data = hexToBytes(step.data.replaceFirst('0x', ''));
         final value = EtherAmount.inWei(step.value);
-        final gasPrice = await client.getGasPrice();
-        final estimated = await client.estimateGas(
-          sender: credentials.address,
-          to: to,
-          value: value,
-          data: data,
-        );
+        final preflight = await Future.wait<Object>([
+          client.getGasPrice(),
+          client.estimateGas(
+            sender: credentials.address,
+            to: to,
+            value: value,
+            data: data,
+          ),
+          client.getBalance(credentials.address),
+        ]);
+        final gasPrice = preflight[0] as EtherAmount;
+        final estimated = preflight[1] as BigInt;
         final bufferedGas =
             (estimated * BigInt.from(125) + BigInt.from(99)) ~/
             BigInt.from(100);
-        final balance = (await client.getBalance(credentials.address)).getInWei;
+        final balance = (preflight[2] as EtherAmount).getInWei;
         if (balance < step.value + gasPrice.getInWei * bufferedGas) {
           return RelaySwapExecutionResult(
             success: false,
@@ -129,7 +128,9 @@ class RelaySwapExecutionService {
 
       if (quote.requestId.isNotEmpty) {
         for (var attempt = 0; attempt < 45; attempt++) {
-          await Future<void>.delayed(const Duration(seconds: 4));
+          if (attempt > 0) {
+            await Future<void>.delayed(const Duration(seconds: 4));
+          }
           final status = await _bridgeService.getStatus(
             requestId: quote.requestId,
           );
