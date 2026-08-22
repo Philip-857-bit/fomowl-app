@@ -17,6 +17,8 @@ import '../services/wallet_service.dart';
 import '../utils/language_utils.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/forced_update_dialog.dart';
+import '../services/deep_link_service.dart';
+import '../services/walletconnect/wallet_connect_service.dart';
 import 'app_bootstrapper.dart';
 import 'app_navigator.dart';
 import 'app_routes.dart';
@@ -48,6 +50,8 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     AppPatchService.instance.addListener(_showVisiblePatchStatus);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_enforceRequiredUpdate());
+      unawaited(WalletConnectService.instance.initialize());
+      unawaited(DeepLinkService.instance.initialize());
     });
     ShowcaseView.register(enableAutoScroll: true, blurValue: 1);
     _foregroundLockTimer = Timer.periodic(
@@ -58,6 +62,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    DeepLinkService.instance.dispose();
     _foregroundLockTimer?.cancel();
     AppPatchService.instance.removeListener(_showVisiblePatchStatus);
     ShowcaseView.get().unregister();

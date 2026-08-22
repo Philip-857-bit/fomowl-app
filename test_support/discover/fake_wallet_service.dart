@@ -46,6 +46,8 @@ class FakeWalletService extends WalletService {
     BigInt? valueInWei,
     String? dataHex,
     BigInt? gasPriceWei,
+    BigInt? maxFeePerGasWei,
+    BigInt? maxPriorityFeePerGasWei,
     int? gasLimit,
     int? nonce,
   }) async {

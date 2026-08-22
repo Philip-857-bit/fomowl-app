@@ -7,6 +7,7 @@ import 'package:showcaseview/showcaseview.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_chain_theme.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
@@ -3811,14 +3812,12 @@ class _SwapScreenState extends State<SwapScreen> {
                           _activeTab != SwapTab.bridge)
                         SwapNetworkCard(
                           networkName: blockchain.activeNetworkName,
-                          accentColor:
-                              blockchain.activeFamily == ChainFamily.evm
-                              ? AppColors.accentRed
-                              : AppColors.primaryAccent,
+                          accentColor: context.chainTheme.accentColor,
                           logoUrl: blockchain.activeNetworkLogoUrl,
                           canSwitch: blockchain.enabledFamilies.length > 1,
                           onChangeNetwork: _showNetworkSelector,
                         ),
+
                       const SizedBox(height: 16),
                       if (_activeTab == SwapTab.swap)
                         SwapTabContent(

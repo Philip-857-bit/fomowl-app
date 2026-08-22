@@ -1,8 +1,10 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_chain_theme.dart';
 
 class QuickActionsRow extends StatelessWidget {
   final VoidCallback onReceive;
@@ -20,12 +22,12 @@ class QuickActionsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
-    final horizontalPadding = screenWidth < 360 ? 28.0 : 56.0;
+    final horizontalPadding = screenWidth < 360 ? 28.0 : 40.0;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _QuickActionButton(
             icon: Icons.arrow_downward_rounded,
@@ -62,42 +64,47 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF424242).withValues(alpha: 0.34),
-                  const Color(0xFF111111),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(11),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.6, sigmaY: 10.6),
+              child: Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: const Color(0x33424242),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.28),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
+                child: Icon(icon, color: theme.accentColor, size: 24),
+              ),
             ),
-            child: Icon(icon, color: AppColors.accentRed, size: 23),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 8),
           Text(
             label.toUpperCase(),
             style: GoogleFonts.inter(
               fontSize: 9,
               fontWeight: FontWeight.w600,
-              color: Colors.white.withValues(alpha: 0.62),
+              letterSpacing: 0.5,
+              color: const Color(0xFFA5A5A5),
             ),
           ),
         ],
@@ -105,3 +112,4 @@ class _QuickActionButton extends StatelessWidget {
     );
   }
 }
+

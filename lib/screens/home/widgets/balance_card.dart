@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../../../utils/value_formatter.dart';
 import '../home_portfolio_metrics.dart';
 
-/// Displays the wallet balance, eye-toggle, and history access.
+/// Displays the wallet balance, eye-toggle, dynamic chain gradient, and Add Funds action.
 class BalanceCard extends StatelessWidget {
   final String titleText;
   final String formattedBalance;
@@ -16,6 +17,7 @@ class BalanceCard extends StatelessWidget {
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
   final VoidCallback onHistoryTap;
+  final VoidCallback? onAddFunds;
 
   const BalanceCard({
     super.key,
@@ -27,6 +29,7 @@ class BalanceCard extends StatelessWidget {
     required this.isLoadingBalances,
     required this.onToggleVisibility,
     required this.onHistoryTap,
+    this.onAddFunds,
   });
 
   Color _changeColor() {
@@ -41,10 +44,10 @@ class BalanceCard extends StatelessWidget {
 
   IconData _changeIcon() {
     if (portfolioMetrics.hasPositiveChange) {
-      return Icons.trending_up;
+      return Icons.arrow_upward_rounded;
     }
     if (portfolioMetrics.hasNegativeChange) {
-      return Icons.trending_down;
+      return Icons.arrow_downward_rounded;
     }
     return Icons.remove;
   }
@@ -71,17 +74,29 @@ class BalanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
     final changeColor = _changeColor();
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      constraints: const BoxConstraints(minHeight: 135),
+      constraints: const BoxConstraints(minHeight: 140),
       decoration: BoxDecoration(
-        color: const Color(0xFF161616),
+        gradient: theme.balanceCardGradient,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(
+          color: theme.accentColor.withValues(alpha: 0.35),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.accentColor.withValues(alpha: 0.12),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -120,22 +135,65 @@ class BalanceCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                GestureDetector(
-                  onTap: onHistoryTap,
-                  child: Text(
-                    'History',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.8),
-                      height: 1.6,
-                      letterSpacing: 0.6,
+                if (onAddFunds != null)
+                  GestureDetector(
+                    onTap: onAddFunds,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(12, 5, 6, 5),
+                      decoration: BoxDecoration(
+                        color: theme.accentColor.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(9999),
+                        border: Border.all(
+                          color: theme.accentColor.withValues(alpha: 0.25),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Add Funds',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: theme.accentColor,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            width: 18,
+                            height: 18,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: theme.accentColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              size: 12,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  GestureDetector(
+                    onTap: onHistoryTap,
+                    child: Text(
+                      'History',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.8),
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 10),
             if (statusText != null && statusText!.trim().isNotEmpty) ...[
               Text(
                 statusText!,
@@ -156,26 +214,26 @@ class BalanceCard extends StatelessWidget {
                   formattedBalance,
                   maxLines: 1,
                   style: GoogleFonts.inter(
-                    fontSize: 25,
+                    fontSize: 30,
                     fontWeight: FontWeight.w700,
-                    height: 1.44,
+                    height: 1.2,
                     color: Colors.white,
                     letterSpacing: -0.75,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Row(
               children: [
-                Icon(_changeIcon(), size: 12, color: changeColor),
+                Icon(_changeIcon(), size: 13, color: changeColor),
                 const SizedBox(width: 4),
                 Text(
                   _formatChangeText(),
                   style: GoogleFonts.inter(
-                    fontSize: 8,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    height: 2.0,
+                    height: 1.3,
                     color: changeColor,
                   ),
                 ),
@@ -187,3 +245,4 @@ class BalanceCard extends StatelessWidget {
     );
   }
 }
+

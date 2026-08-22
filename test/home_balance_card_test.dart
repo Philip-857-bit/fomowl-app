@@ -48,7 +48,7 @@ void main() {
     );
 
     expect(find.text('+\$12.34 (+5.67%)'), findsOneWidget);
-    expect(find.byIcon(Icons.trending_up), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
 
     final textWidget = tester.widget<Text>(find.text('+\$12.34 (+5.67%)'));
     expect(textWidget.style?.color, AppColors.success);
@@ -71,7 +71,7 @@ void main() {
     );
 
     expect(find.text('-\$3.20 (-1.25%)'), findsOneWidget);
-    expect(find.byIcon(Icons.trending_down), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
 
     final textWidget = tester.widget<Text>(find.text('-\$3.20 (-1.25%)'));
     expect(textWidget.style?.color, AppColors.accentRed);
@@ -91,8 +91,9 @@ void main() {
     );
 
     expect(find.text('****'), findsOneWidget);
-    expect(find.byIcon(Icons.trending_up), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
   });
+
 
   testWidgets('renders neutral portfolio change without profit styling', (
     tester,

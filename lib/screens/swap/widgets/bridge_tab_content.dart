@@ -19,6 +19,7 @@ import '../../../services/tron_swap_service.dart';
 import '../../../services/wallet_service.dart';
 import '../../../services/wallet_history_service.dart';
 import '../../../services/wallet_notification_service.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../../../utils/amount_utils.dart';
 import '../../../utils/app_error_utils.dart';
 import '../../../utils/toast_utils.dart';
@@ -1451,12 +1452,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFF121212), width: 4),
                 ),
-                child: const Center(
+                child: Center(
                   child: FigmaSwapDirectionIcon(
-                    color: Color(0xFFEA2A33),
+                    color: context.chainTheme.accentColor,
                     width: 16,
                   ),
                 ),
+
               ),
             ),
           ),
@@ -1955,30 +1957,37 @@ class _BridgePercentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
     final accent = isSelected || alwaysAccent;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0x1AEA2A33) : const Color(0xFF131313),
-          borderRadius: BorderRadius.circular(5),
+          color: isSelected
+              ? theme.accentColor.withValues(alpha: 0.18)
+              : const Color(0xFF131313),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: accent ? const Color(0x4DEA2A33) : const Color(0x0DFFFFFF),
+            color: accent
+                ? theme.accentColor.withValues(alpha: 0.5)
+                : const Color(0x0DFFFFFF),
           ),
         ),
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            color: accent ? const Color(0xFFEA2A33) : const Color(0xFFA1A1A1),
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: accent ? theme.accentColor : const Color(0xFFA1A1A1),
           ),
         ),
       ),
     );
   }
 }
+
 
 /// Fee/details box: platform fee, bridge fee, estimated gas, arrival.
 class _BridgeDetailsCard extends StatelessWidget {

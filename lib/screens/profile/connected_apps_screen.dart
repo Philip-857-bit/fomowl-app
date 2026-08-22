@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../constants/app_colors.dart';
 import '../../features/discover/permissions/dapp_permission_record.dart';
 import '../../features/discover/permissions/dapp_permission_service.dart';
 import '../../services/wallet_service.dart';
+import '../../services/walletconnect/wallet_connect_models.dart';
+import '../../services/walletconnect/wallet_connect_service.dart';
 import '../../utils/toast_utils.dart';
 
 class ConnectedAppsScreen extends StatefulWidget {
@@ -22,7 +25,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
   bool _busy = false;
   String? _walletAddress;
   String? _error;
-  List<DappPermissionRecord> _connections = const <DappPermissionRecord>[];
+  List<DappPermissionRecord> _inAppConnections = const <DappPermissionRecord>[];
 
   @override
   void initState() {
@@ -42,21 +45,21 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
         if (!mounted) return;
         setState(() {
           _walletAddress = null;
-          _connections = const <DappPermissionRecord>[];
+          _inAppConnections = const <DappPermissionRecord>[];
           _loading = false;
           _error = 'No active wallet found.';
         });
         return;
       }
 
-      final records = await _permissionService.loadPermissionsForWallet(
+      final inAppRecords = await _permissionService.loadPermissionsForWallet(
         walletAddress,
       );
 
       if (!mounted) return;
       setState(() {
         _walletAddress = walletAddress;
-        _connections = records;
+        _inAppConnections = inAppRecords;
         _loading = false;
       });
     } catch (error) {
@@ -69,7 +72,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
     }
   }
 
-  Future<void> _disconnect(DappPermissionRecord record) async {
+  Future<void> _disconnectInApp(DappPermissionRecord record) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -83,7 +86,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
           ),
         ),
         content: Text(
-          'This removes wallet access for ${_displayOrigin(record.origin)}.',
+          'This removes in-app wallet access for ${_displayOrigin(record.origin)}.',
           style: GoogleFonts.outfit(color: AppColors.textSecondary),
         ),
         actions: [
@@ -103,9 +106,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
       ),
     );
 
-    if (confirm != true || _busy) {
-      return;
-    }
+    if (confirm != true || _busy) return;
 
     setState(() => _busy = true);
     try {
@@ -118,6 +119,55 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
     } catch (error) {
       ToastUtils.showError('Unable to disconnect app right now.');
       debugPrint('Failed to disconnect app: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _disconnectWcSession(WcActiveSessionModel session) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Disconnect WalletConnect Session?',
+          style: GoogleFonts.outfit(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          'This ends the active session with ${session.dappName}.',
+          style: GoogleFonts.outfit(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.outfit(color: AppColors.textSecondary),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.accentRed),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Disconnect', style: GoogleFonts.outfit()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || _busy) return;
+
+    setState(() => _busy = true);
+    try {
+      await WalletConnectService.instance.disconnectSession(session.topic);
+      await _loadConnections();
+    } catch (error) {
+      debugPrint('Failed to disconnect WC session: $error');
     } finally {
       if (mounted) {
         setState(() => _busy = false);
@@ -144,7 +194,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
           ),
         ),
         content: Text(
-          'This removes wallet access for every connected dapp.',
+          'This removes all in-app and WalletConnect external sessions.',
           style: GoogleFonts.outfit(color: AppColors.textSecondary),
         ),
         actions: [
@@ -164,13 +214,12 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
       ),
     );
 
-    if (confirm != true) {
-      return;
-    }
+    if (confirm != true) return;
 
     setState(() => _busy = true);
     try {
       await _permissionService.revokeAllForWallet(walletAddress);
+      await WalletConnectService.instance.disconnectAll();
       await _loadConnections();
       ToastUtils.showSuccess('All connected apps removed.');
     } catch (error) {
@@ -192,9 +241,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
   }
 
   String _shortAddress(String address) {
-    if (address.length < 10) {
-      return address;
-    }
+    if (address.length < 10) return address;
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
@@ -206,6 +253,11 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to WalletConnectService updates in real time
+    final wcService = context.watch<WalletConnectService>();
+    final currentWcSessions = wcService.getActiveSessions();
+    final totalCount = _inAppConnections.length + currentWcSessions.length;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -257,13 +309,13 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            '${_connections.length} connected app${_connections.length == 1 ? '' : 's'}',
+                            '$totalCount connected session${totalCount == 1 ? '' : 's'}',
                             style: GoogleFonts.outfit(
                               color: AppColors.textSecondary,
                               fontSize: 13,
                             ),
                           ),
-                          if (_connections.isNotEmpty) ...[
+                          if (totalCount > 0) ...[
                             const SizedBox(height: 12),
                             OutlinedButton.icon(
                               onPressed: _busy ? null : _disconnectAll,
@@ -294,8 +346,61 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
                       style: GoogleFonts.outfit(color: AppColors.accentRed),
                     ),
                   ],
-                  const SizedBox(height: 14),
-                  if (_connections.isEmpty)
+                  const SizedBox(height: 20),
+
+                  // 1. WalletConnect External Sessions Section
+                  if (currentWcSessions.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.qr_code_2_rounded,
+                          size: 16,
+                          color: AppColors.accentRed,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'WalletConnect (External Apps)',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    for (final session in currentWcSessions)
+                      _buildWcSessionCard(session),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // 2. In-App Browser Connections Section
+                  if (_inAppConnections.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.explore_outlined,
+                          size: 16,
+                          color: Color(0xFF60A5FA),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'In-App Browser Connections',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    for (final record in _inAppConnections)
+                      _buildInAppRecordCard(record),
+                  ],
+
+                  // Empty State
+                  if (totalCount == 0)
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -306,81 +411,187 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
                         ),
                       ),
                       child: Text(
-                        'No dapp is currently connected to this wallet.',
+                        'No dapp or external session is currently connected to this wallet.',
                         style: GoogleFonts.outfit(
                           color: AppColors.textSecondary,
                           height: 1.4,
                         ),
                       ),
-                    )
-                  else
-                    for (final record in _connections)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.cardDark,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.06),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    _displayOrigin(record.origin),
-                                    style: GoogleFonts.outfit(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                TextButton.icon(
-                                  onPressed: _busy
-                                      ? null
-                                      : () => _disconnect(record),
-                                  icon: const Icon(
-                                    Icons.link_off_rounded,
-                                    size: 16,
-                                    color: AppColors.accentRed,
-                                  ),
-                                  label: Text(
-                                    'Disconnect',
-                                    style: GoogleFonts.outfit(
-                                      color: AppColors.accentRed,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              record.origin,
-                              style: GoogleFonts.outfit(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Connected ${_formatDate(record.connectedAt)}',
-                              style: GoogleFonts.outfit(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    ),
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildWcSessionCard(WcActiveSessionModel session) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (session.dappIcon != null && session.dappIcon!.isNotEmpty)
+                Container(
+                  width: 32,
+                  height: 32,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: const BoxDecoration(shape: BoxShape.circle),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.network(
+                    session.dappIcon!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => _fallbackDappIcon(session.dappName),
+                  ),
+                )
+              else
+                _fallbackDappIcon(session.dappName),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      session.dappName,
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (session.dappUrl.isNotEmpty)
+                      Text(
+                        _displayOrigin(session.dappUrl),
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _busy ? null : () => _disconnectWcSession(session),
+                icon: const Icon(
+                  Icons.link_off_rounded,
+                  size: 16,
+                  color: AppColors.accentRed,
+                ),
+                label: Text(
+                  'Disconnect',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.accentRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Session expires: ${_formatDate(session.expiry)}',
+            style: GoogleFonts.outfit(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInAppRecordCard(DappPermissionRecord record) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _displayOrigin(record.origin),
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _busy ? null : () => _disconnectInApp(record),
+                icon: const Icon(
+                  Icons.link_off_rounded,
+                  size: 16,
+                  color: AppColors.accentRed,
+                ),
+                label: Text(
+                  'Disconnect',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.accentRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            record.origin,
+            style: GoogleFonts.outfit(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Connected ${_formatDate(record.connectedAt)}',
+            style: GoogleFonts.outfit(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallbackDappIcon(String name) {
+    final first = name.isNotEmpty ? name[0].toUpperCase() : 'W';
+    return Container(
+      width: 32,
+      height: 32,
+      margin: const EdgeInsets.only(right: 10),
+      decoration: BoxDecoration(
+        color: AppColors.canvasDark,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        first,
+        style: GoogleFonts.outfit(
+          color: AppColors.accentRed,
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+        ),
+      ),
     );
   }
 }

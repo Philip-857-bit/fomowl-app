@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
+import '../../theme/app_chain_theme.dart';
 import 'app_shell_controller.dart';
 
 class AppShellBottomNavigation extends StatelessWidget {
@@ -90,8 +91,9 @@ class _ShellNavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
     final iconColor = selected
-        ? AppColors.accentRed
+        ? theme.accentColor
         : Colors.white.withValues(alpha: 0.58);
     final labelColor = selected
         ? Colors.white
@@ -113,7 +115,7 @@ class _ShellNavItem extends StatelessWidget {
               const SizedBox(height: 5),
               Text(
                 label,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   color: labelColor,
                   fontSize: 11,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
@@ -126,3 +128,4 @@ class _ShellNavItem extends StatelessWidget {
     );
   }
 }
+

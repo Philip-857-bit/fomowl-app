@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../../../utils/toast_utils.dart';
 
 class SettingsWalletHeaderCard extends StatelessWidget {
@@ -24,22 +24,28 @@ class SettingsWalletHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderRadius = BorderRadius.circular(22);
+    final theme = context.chainTheme;
+    final borderRadius = BorderRadius.circular(20);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
         color: Colors.transparent,
         borderRadius: borderRadius,
         child: Ink(
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
+            gradient: theme.balanceCardGradient,
             borderRadius: borderRadius,
+            border: Border.all(
+              color: theme.accentColor.withValues(alpha: 0.35),
+              width: 1,
+            ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.accentRed.withValues(alpha: 0.35),
-                blurRadius: 14,
+                color: theme.accentColor.withValues(alpha: 0.15),
+                blurRadius: 20,
                 spreadRadius: 0,
-                offset: const Offset(0, 6),
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -47,50 +53,48 @@ class SettingsWalletHeaderCard extends StatelessWidget {
             onTap: onTap,
             borderRadius: borderRadius,
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(14),
+                      color: theme.accentColor.withValues(alpha: 0.15),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
+                        color: theme.accentColor.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.account_balance_wallet_rounded,
-                      color: Colors.white,
-                      size: 20,
+                      color: theme.accentColor,
+                      size: 22,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           walletName,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             color: Colors.white,
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            height: 1.1,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 5),
                         Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                _shorten(walletAddress),
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w400,
-                                ),
+                            Text(
+                              _shorten(walletAddress),
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -114,11 +118,11 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                                   }
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.all(6),
+                                  padding: const EdgeInsets.all(4),
                                   child: Icon(
                                     Icons.copy_rounded,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    size: 15,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    size: 14,
                                   ),
                                 ),
                               ),
@@ -131,8 +135,8 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   const Icon(
                     Icons.arrow_forward_ios_rounded,
-                    color: Colors.white,
-                    size: 16,
+                    color: Colors.white70,
+                    size: 15,
                   ),
                 ],
               ),
@@ -143,3 +147,4 @@ class SettingsWalletHeaderCard extends StatelessWidget {
     );
   }
 }
+

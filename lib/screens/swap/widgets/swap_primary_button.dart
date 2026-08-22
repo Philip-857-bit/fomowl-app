@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_chain_theme.dart';
 
 class SwapPrimaryButton extends StatelessWidget {
   final bool enabled;
@@ -20,22 +21,24 @@ class SwapPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final theme = context.chainTheme;
+    final isActive = enabled && !isBusy;
+
     return GestureDetector(
-      onTap: (enabled && !isBusy) ? onPressed : null,
+      onTap: isActive ? onPressed : null,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: (enabled && !isBusy)
-              ? const Color(0xFFEA2A33)
-              : const Color(0xFF1F1F1F),
+          gradient: isActive ? theme.buttonGradient : null,
+          color: isActive ? null : const Color(0xFF1F1F1F),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: (enabled && !isBusy)
+          boxShadow: isActive
               ? [
-                  const BoxShadow(
-                    color: Color(0x4CEA2A33),
+                  BoxShadow(
+                    color: theme.accentColor.withValues(alpha: 0.35),
                     blurRadius: 24,
-                    offset: Offset(0, 8),
+                    offset: const Offset(0, 8),
                   ),
                 ]
               : null,
@@ -44,12 +47,12 @@ class SwapPrimaryButton extends StatelessWidget {
           child: Text(
             isBusy ? l.loading : (label ?? l.swap),
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: (enabled && !isBusy)
+              color: isActive
                   ? Colors.white
                   : const Color(0x66E2E2E2),
-              height: 1.56,
+              height: 1.4,
             ),
           ),
         ),
@@ -57,3 +60,4 @@ class SwapPrimaryButton extends StatelessWidget {
     );
   }
 }
+

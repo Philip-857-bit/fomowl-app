@@ -10,10 +10,13 @@ import '../services/rpc_service.dart';
 import '../services/token_price_service.dart';
 import '../services/http_client_service.dart';
 
+import '../services/walletconnect/wallet_connect_service.dart';
+
 List<SingleChildWidget> buildAppProviders() {
   return [
     Provider(create: (_) => HttpClientService()),
     ChangeNotifierProvider.value(value: AppPatchService.instance),
+    ChangeNotifierProvider.value(value: WalletConnectService.instance),
     ChangeNotifierProvider(create: (_) => AppShellController()),
     ChangeNotifierProvider(create: (_) => RpcService()),
     ChangeNotifierProvider(create: (_) => TokenPriceService()),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../theme/app_chain_theme.dart';
 import 'swap_figma_icons.dart';
 
 class SwapDirectionButton extends StatelessWidget {
@@ -9,6 +10,8 @@ class SwapDirectionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return Center(
       child: GestureDetector(
         onTap: onPressed,
@@ -20,11 +23,12 @@ class SwapDirectionButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFF121212), width: 4),
           ),
-          child: const Center(
-            child: FigmaSwapDirectionIcon(color: Color(0xFFEA2A33), width: 16),
+          child: Center(
+            child: FigmaSwapDirectionIcon(color: theme.accentColor, width: 16),
           ),
         ),
       ),
     );
   }
 }
+

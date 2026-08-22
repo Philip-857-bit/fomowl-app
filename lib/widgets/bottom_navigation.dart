@@ -3,13 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/app_chain_theme.dart';
 
 /// Shared Bottom Navigation Bar
 /// 4 destinations: Wallet, Swap, Discover, Settings.
-///
-/// Older standalone screens still use indices 0, 1, and 2 for Wallet, Swap,
-/// and Settings, so Discover uses a private navigation value until those
-/// screens have all migrated into the app shell.
 class BottomNavBar extends StatelessWidget {
   static const int _discoverNavigationIndex = -1;
 
@@ -25,6 +22,8 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final theme = context.chainTheme;
+
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
@@ -48,14 +47,26 @@ class BottomNavBar extends StatelessWidget {
                     Icons.account_balance_wallet_rounded,
                     l.wallet,
                     0,
+                    theme.accentColor,
                   ),
-                  _buildNavItem(Icons.swap_horiz_rounded, l.swap, 1),
+                  _buildNavItem(
+                    Icons.swap_horiz_rounded,
+                    l.swap,
+                    1,
+                    theme.accentColor,
+                  ),
                   _buildNavItem(
                     Icons.explore_outlined,
                     l.discoverBrowserFallbackTitle,
                     _discoverNavigationIndex,
+                    theme.accentColor,
                   ),
-                  _buildNavItem(Icons.settings_outlined, l.settings, 2),
+                  _buildNavItem(
+                    Icons.settings_outlined,
+                    l.settings,
+                    2,
+                    theme.accentColor,
+                  ),
                 ],
               ),
             ),
@@ -65,7 +76,12 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
+  Widget _buildNavItem(
+    IconData icon,
+    String label,
+    int index,
+    Color activeColor,
+  ) {
     final isSelected = currentIndex == index;
     return InkWell(
       onTap: () => onTap(index),
@@ -78,18 +94,18 @@ class BottomNavBar extends StatelessWidget {
             Icon(
               icon,
               color: isSelected
-                  ? AppColors.accentRed
+                  ? activeColor
                   : Colors.white.withValues(alpha: 0.5),
               size: 24,
             ),
             const SizedBox(height: 4),
             Text(
               label,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 color: isSelected
-                    ? AppColors.accentRed
+                    ? activeColor
                     : Colors.white.withValues(alpha: 0.5),
               ),
             ),
@@ -98,6 +114,7 @@ class BottomNavBar extends StatelessWidget {
       ),
     );
   }
+
 
   /// Standard navigation handler
   static void handleNavigation(

@@ -66,6 +66,9 @@ class AppEnvironment {
     'BACKEND_CERT_PINNING_ENABLED',
     defaultValue: false,
   );
+  static const String _walletConnectProjectIdEnv = String.fromEnvironment(
+    'WALLETCONNECT_PROJECT_ID',
+  );
 
   static final String backendBaseUrl = _resolveBackendBaseUrl();
   static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(
@@ -77,9 +80,9 @@ class AppEnvironment {
     fallback: 'https://www.google.com',
   );
   static final bool pushNotificationsEnabled =
-      _resolvePushNotificationsEnabled();
+    _resolvePushNotificationsEnabled();
   static final FirebaseOptions? firebaseOptions =
-      _resolveFirebaseOptionsForCurrentPlatform();
+    _resolveFirebaseOptionsForCurrentPlatform();
   static final String? cashInMiniAppUrl = _optionalEnv(_cashInMiniAppUrlEnv);
   static final List<String> cashInMiniAppAllowedOrigins = _csvEnv(
     _cashInMiniAppAllowedOriginsEnv,
@@ -90,6 +93,16 @@ class AppEnvironment {
   static final List<String> affiliateMiniAppAllowedOrigins = _csvEnv(
     _affiliateMiniAppAllowedOriginsEnv,
   );
+  static final String walletConnectProjectId = _resolveWalletConnectProjectId();
+
+  static String _resolveWalletConnectProjectId() {
+    final raw = _walletConnectProjectIdEnv.trim();
+    if (raw.isNotEmpty) {
+      return raw;
+    }
+    // Default fallback project id for development / testing
+    return 'affc1a08513be5b8ff6c03bfab91158b';
+  }
 
   /// Optional SPKI (public-key) pinning for the backend host.
   ///

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
-import '../../widgets/bottom_navigation.dart';
 import '../../services/storage_service.dart';
 import '../../services/auth_service.dart';
+import '../../theme/app_chain_theme.dart';
 import '../../utils/toast_utils.dart';
+import '../../widgets/bottom_navigation.dart';
 import 'coming_soon_overlay.dart';
+
+
 
 /// My Profile Screen — "Me" tab
 /// Avatar, KYC badge, Account/Preferences/Support sections
@@ -153,6 +156,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildUnauthenticatedView() {
+    final theme = context.chainTheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Container(
@@ -164,17 +169,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.shield_outlined,
               size: 56,
-              color: AppColors.accentRed,
+              color: theme.accentColor,
             ),
             const SizedBox(height: 16),
             Text(
               'Sync Identity',
-              style: GoogleFonts.outfit(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
                 color: Colors.white,
               ),
             ),
@@ -182,7 +187,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Text(
               'Log in or register to secure your account and unlock KYC limits without exposing keys.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.7),
                 height: 1.4,
@@ -214,8 +219,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                     child: Text(
                       'Log In',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -225,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: AppColors.primaryGradient,
+                      gradient: theme.buttonGradient,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ElevatedButton(
@@ -246,9 +251,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       child: Text(
                         'Register',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
                       ),
@@ -263,7 +268,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+
   Widget _buildAvatarHeader() {
+    final theme = context.chainTheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -272,17 +280,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: AppColors.cardDark,
+              color: theme.accentColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: theme.accentColor.withValues(alpha: 0.35),
                 width: 2,
               ),
             ),
             child: Icon(
               Icons.person,
-              color: Colors.white.withValues(alpha: 0.6),
-              size: 36,
+              color: theme.accentColor,
+              size: 34,
             ),
           ),
           const SizedBox(width: 16),
@@ -291,28 +299,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Text(
                 _walletName,
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 6),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 5,
+                  horizontal: 12,
+                  vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.4),
+                  color: AppColors.success.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
                   'KYC Verified',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.success,
                   ),
                 ),
               ),
@@ -322,6 +333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+
 
   Widget _buildSectionHeader(String title) {
     return Padding(

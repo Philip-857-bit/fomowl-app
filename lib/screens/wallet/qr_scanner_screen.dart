@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../constants/app_colors.dart';
+import '../../services/walletconnect/wallet_connect_service.dart';
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -27,10 +28,24 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     if (barcodes.isEmpty) return;
 
     final code = barcodes.first.rawValue;
-    if (code == null || code.isEmpty) return;
+    if (code == null || code.trim().isEmpty) return;
 
+    final trimmed = code.trim();
     setState(() => _hasScanned = true);
-    Navigator.pop(context, code);
+
+    // Check if it is a WalletConnect URI
+    if (trimmed.startsWith('wc:') || trimmed.contains('wc?uri=')) {
+      String pairingUri = trimmed;
+      final uri = Uri.tryParse(trimmed);
+      if (uri != null && uri.queryParameters.containsKey('uri')) {
+        pairingUri = uri.queryParameters['uri']!;
+      }
+      Navigator.pop(context, null);
+      WalletConnectService.instance.pair(pairingUri);
+      return;
+    }
+
+    Navigator.pop(context, trimmed);
   }
 
   Widget _buildErrorWidget(BuildContext context, MobileScannerException error) {

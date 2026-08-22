@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-07-27)
+# Graph Report - .  (2026-08-22)
 
 ## Corpus Check
-- 47 files · ~429,765 words
+- 47 files · ~431,399 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 236 nodes · 320 edges · 50 communities detected
+- 239 nodes · 325 edges · 50 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -63,8 +63,8 @@
 
 ## God Nodes (most connected - your core abstractions)
 1. `pde_ffi_dispatcher_primary_impl()` - 22 edges
-2. `derive_solana_private_key_from_seed()` - 10 edges
-3. `MainActivity` - 9 edges
+2. `MainActivity` - 10 edges
+3. `derive_solana_private_key_from_seed()` - 10 edges
 4. `fixture_seed()` - 6 edges
 5. `Create()` - 6 edges
 6. `Destroy()` - 6 edges
@@ -95,12 +95,12 @@ Cohesion: 0.17
 Nodes (4): crate::api::bip32::SolanaPrivateKeyImport, i32, String, Vec<u8>
 
 ### Community 4 - "Community 4"
-Cohesion: 0.2
+Cohesion: 0.18
 Nodes (1): MainActivity
 
 ### Community 5 - "Community 5"
-Cohesion: 0.52
-Nodes (6): sign_digest(), sign_digest_inner(), sign_digest_with_recovery_id(), sign_personal_message(), sign_typed_data(), signs_typed_data_and_recovers_expected_address()
+Cohesion: 0.42
+Nodes (8): decode_personal_sign_payload(), personal_sign_decodes_eip_1193_hex_data_before_signing(), sign_digest(), sign_digest_inner(), sign_digest_with_recovery_id(), sign_personal_message(), sign_typed_data(), signs_typed_data_and_recovers_expected_address()
 
 ### Community 6 - "Community 6"
 Cohesion: 0.33

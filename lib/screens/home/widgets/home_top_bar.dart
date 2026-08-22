@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../../../widgets/chain_logo_image.dart';
 
 /// Wallet selector + actions row displayed at the top of the home screen.
@@ -31,6 +32,8 @@ class HomeTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
       child: Row(
@@ -55,7 +58,7 @@ class HomeTopBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          _HelpButton(onTap: onHelpTap),
+          _HelpButton(onTap: onHelpTap, badgeColor: theme.accentColor),
           const SizedBox(width: 14),
           Stack(
             clipBehavior: Clip.none,
@@ -85,7 +88,7 @@ class HomeTopBar extends StatelessWidget {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: AppColors.dangerBadge,
+                      color: theme.accentColor,
                       shape: BoxShape.circle,
                       border: Border.all(width: 2, color: AppColors.canvasDark),
                     ),
@@ -107,6 +110,8 @@ class _WalletSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -127,10 +132,10 @@ class _WalletSelector extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.account_balance_wallet,
                 size: 14,
-                color: AppColors.accentRed,
+                color: theme.accentColor,
               ),
             ),
             const SizedBox(width: 8),
@@ -173,6 +178,8 @@ class _NetworkChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return Semantics(
       label: 'Switch blockchain network',
       button: true,
@@ -197,7 +204,7 @@ class _NetworkChip extends StatelessWidget {
                   color: AppColors.canvasDark,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.accentRed.withValues(alpha: 0.28),
+                    color: theme.accentColor.withValues(alpha: 0.35),
                   ),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -207,7 +214,7 @@ class _NetworkChip extends StatelessWidget {
                   width: 18,
                   height: 18,
                   fit: BoxFit.contain,
-                  fallback: _symbolFallback(),
+                  fallback: _symbolFallback(theme.accentColor),
                 ),
               ),
               const SizedBox(width: 3),
@@ -223,7 +230,7 @@ class _NetworkChip extends StatelessWidget {
     );
   }
 
-  Widget _symbolFallback() {
+  Widget _symbolFallback(Color accentColor) {
     final symbol = chainSymbol.trim();
     return Center(
       child: Text(
@@ -231,7 +238,7 @@ class _NetworkChip extends StatelessWidget {
         style: GoogleFonts.inter(
           fontSize: 10,
           fontWeight: FontWeight.w700,
-          color: AppColors.accentRed,
+          color: accentColor,
         ),
       ),
     );
@@ -239,7 +246,8 @@ class _NetworkChip extends StatelessWidget {
 }
 
 class _HelpButton extends StatelessWidget {
-  const _HelpButton({required this.onTap});
+  final Color badgeColor;
+  const _HelpButton({required this.onTap, required this.badgeColor});
 
   final VoidCallback onTap;
 
@@ -268,17 +276,17 @@ class _HelpButton extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.dangerBadge,
+                  color: badgeColor,
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(width: 2, color: AppColors.canvasDark),
                 ),
                 child: Text(
                   'HELP',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 8,
                     height: 1.5,
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
@@ -289,3 +297,4 @@ class _HelpButton extends StatelessWidget {
     );
   }
 }
+

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/chain.dart';
 import '../../../models/token.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../../../utils/value_formatter.dart';
 import '../../../widgets/amount_input_mode_toggle.dart';
 import '../../../widgets/chain_logo_image.dart';
@@ -85,7 +86,9 @@ class _SwapTabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
     final effectiveColor = isActive ? Colors.white : const Color(0xFFA1A1A1);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -94,14 +97,14 @@ class _SwapTabChip extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFEA2A33) : Colors.transparent,
+          color: isActive ? theme.accentColor : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           boxShadow: isActive
-              ? const [
+              ? [
                   BoxShadow(
-                    color: Color(0x1A000000),
+                    color: theme.accentColor.withValues(alpha: 0.35),
                     blurRadius: 15,
-                    offset: Offset(0, 10),
+                    offset: const Offset(0, 4),
                   ),
                 ]
               : null,
@@ -114,7 +117,7 @@ class _SwapTabChip extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: effectiveColor,
+            color: isActive ? Colors.black : effectiveColor,
             letterSpacing: 0.6,
           ),
         ),
@@ -122,6 +125,7 @@ class _SwapTabChip extends StatelessWidget {
     );
   }
 }
+
 
 class NetworkCard extends StatelessWidget {
   final EvmChain chain;
@@ -434,13 +438,17 @@ class LimitPriceAdjustChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7.82, vertical: 2.61),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: selected ? const Color(0x1AEA2A33) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14.98),
+          color: selected
+              ? theme.accentColor.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
           boxShadow: const [
             BoxShadow(
               color: Color(0x0C000000),
@@ -453,9 +461,9 @@ class LimitPriceAdjustChip extends StatelessWidget {
           label,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
-            fontSize: 7.82,
+            fontSize: 9,
             fontWeight: FontWeight.w700,
-            color: selected ? const Color(0xFFEA2A33) : const Color(0xFF909090),
+            color: selected ? theme.accentColor : const Color(0xFF909090),
             height: 1.33,
           ),
         ),
@@ -478,16 +486,22 @@ class LimitExpiryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? const Color(0x19EA2A33) : const Color(0xFF151C24),
+          color: selected
+              ? theme.accentColor.withValues(alpha: 0.18)
+              : const Color(0xFF151C24),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: selected ? const Color(0xFFEA2A33) : const Color(0xFF2A333D),
+            color: selected
+                ? theme.accentColor
+                : const Color(0xFF2A333D),
           ),
         ),
         child: Text(
@@ -496,10 +510,11 @@ class LimitExpiryChip extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: selected ? const Color(0xFFEA2A33) : const Color(0xFF848E9C),
+            color: selected ? theme.accentColor : const Color(0xFF848E9C),
           ),
         ),
       ),
     );
   }
 }
+

@@ -5,6 +5,7 @@ import '../../../constants/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../models/token.dart';
 import '../../../services/nft_service.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../home_portfolio_data.dart';
 import 'home_token_list_item.dart';
 import 'portfolio_tab_content.dart';
@@ -331,6 +332,8 @@ class _AssetTabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -340,18 +343,18 @@ class _AssetTabChip extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: selected ? AppColors.accentRed : const Color(0xFF94A3B8),
+              color: selected ? theme.accentColor : const Color(0xFF94A3B8),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: selected ? 54 : 0,
-            height: 5,
+            width: selected ? 50 : 0,
+            height: 4,
             decoration: BoxDecoration(
-              color: selected ? AppColors.accentRed : Colors.transparent,
+              color: selected ? theme.accentColor : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -360,6 +363,7 @@ class _AssetTabChip extends StatelessWidget {
     );
   }
 }
+
 
 class _AssetToolbarButton extends StatelessWidget {
   const _AssetToolbarButton({required this.icon, required this.onTap});

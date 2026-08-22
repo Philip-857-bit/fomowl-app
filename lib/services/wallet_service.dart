@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart' as pkg_crypto;
 import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
+import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:hex/hex.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 import 'http_client_service.dart';
@@ -962,6 +963,8 @@ class WalletService {
     BigInt? valueInWei,
     String? dataHex,
     BigInt? gasPriceWei,
+    BigInt? maxFeePerGasWei,
+    BigInt? maxPriorityFeePerGasWei,
     int? gasLimit,
     int? nonce,
   }) async {
@@ -978,6 +981,12 @@ class WalletService {
         value: valueInWei == null ? null : EtherAmount.inWei(valueInWei),
         data: data,
         gasPrice: gasPriceWei == null ? null : EtherAmount.inWei(gasPriceWei),
+        maxFeePerGas: maxFeePerGasWei == null
+            ? null
+            : EtherAmount.inWei(maxFeePerGasWei),
+        maxPriorityFeePerGas: maxPriorityFeePerGasWei == null
+            ? null
+            : EtherAmount.inWei(maxPriorityFeePerGasWei),
         maxGas: gasLimit,
         nonce: nonce,
       ),
@@ -1258,6 +1267,20 @@ class WalletService {
     Uint8List messageBytes,
   ) async {
     final signedBase64 = await signSolanaTransactionRaw(address, messageBytes);
+    return broadcastSignedSolanaTransactionRaw(signedBase64);
+  }
+
+  /// Broadcast a fully serialized and signed Solana transaction.
+  Future<String> broadcastSignedSolanaTransactionRaw(
+    String signedBase64,
+  ) async {
+    if (signedBase64.trim().isEmpty) {
+      throw ArgumentError.value(
+        signedBase64,
+        'signedBase64',
+        'Signed transaction must not be empty',
+      );
+    }
     final broadcastUri = AppEnvironment.blockchain(
       '/networks/solana:mainnet/broadcast',
     );
@@ -1358,18 +1381,28 @@ class WalletService {
     };
   }
 
-  /// Sign a raw Tron message hash [messageHex] with the key for [address].
-  /// Returns a 0x-prefixed hex signature.
-  Future<String> signTronMessageRaw(String address, String messageHex) async {
+  /// Sign a UTF-8 message using TRON's personal-message prefix.
+  /// Returns a 0x-prefixed recoverable signature.
+  Future<String> signTronMessageRaw(String address, String message) async {
     final privateKeyHex = await _getTronPrivateKey(address);
-    final normalized = messageHex.startsWith('0x')
-        ? messageHex.substring(2)
-        : messageHex;
+    final digest = tronPersonalMessageDigest(message);
+    final digestHex = HEX.encode(digest);
     final signature = await NativeCrypto.signTronRawHash(
       privateKeyHex: privateKeyHex,
-      rawHashHex: normalized,
+      rawHashHex: digestHex,
     );
     return signature.startsWith('0x') ? signature : '0x$signature';
+  }
+
+  @visibleForTesting
+  static Uint8List tronPersonalMessageDigest(String message) {
+    final messageBytes = utf8.encode(message);
+    final prefix = utf8.encode(
+      '\x19TRON Signed Message:\n${messageBytes.length}',
+    );
+    return web3_crypto.keccak256(
+      Uint8List.fromList(<int>[...prefix, ...messageBytes]),
+    );
   }
 
   /// Encode raw bytes as a base58 string.

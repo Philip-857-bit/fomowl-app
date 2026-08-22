@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../models/token.dart';
+import '../../../theme/app_chain_theme.dart';
 import '../../../utils/value_formatter.dart';
 import '../../../widgets/amount_input_mode_toggle.dart';
 import 'swap_token_chip.dart';
@@ -249,26 +250,30 @@ class _PercentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0x1AEA2A33) : const Color(0xFF131313),
-          borderRadius: BorderRadius.circular(5),
+          color: isSelected
+              ? theme.accentColor.withValues(alpha: 0.18)
+              : const Color(0xFF131313),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: isSelected
-                ? const Color(0x4DEA2A33)
+                ? theme.accentColor.withValues(alpha: 0.5)
                 : const Color(0x0DFFFFFF),
           ),
         ),
         child: Text(
           '$percent%',
           style: GoogleFonts.inter(
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
             color: isSelected
-                ? const Color(0xFFEA2A33)
+                ? theme.accentColor
                 : const Color(0xFFA1A1A1),
           ),
         ),
@@ -285,24 +290,31 @@ class _MaxChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0x1AEA2A33) : const Color(0xFF131313),
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: const Color(0x4DEA2A33)),
+          color: isSelected
+              ? theme.accentColor.withValues(alpha: 0.18)
+              : const Color(0xFF131313),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: theme.accentColor.withValues(alpha: 0.45),
+          ),
         ),
         child: Text(
           'MAX',
           style: GoogleFonts.inter(
-            fontSize: 8,
-            fontWeight: FontWeight.w900,
-            color: const Color(0xFFEA2A33),
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            color: theme.accentColor,
           ),
         ),
       ),
     );
   }
 }
+
