@@ -30,6 +30,7 @@ class MainActivity : FlutterFragmentActivity() {
 	private val maxReceiptBase64Characters = 6 * 1024 * 1024
 	private val cameraPermissionChannelName = "owllet/camera_permission"
 	private val receiptFilesChannelName = "owllet/receipt_files"
+	private val screenSecurityChannelName = "owllet/screen_security"
 	private val cameraPermissionRequestCode = 0xCA11
 	private var pendingCameraPermissionResult: MethodChannel.Result? = null
 
@@ -62,7 +63,24 @@ class MainActivity : FlutterFragmentActivity() {
 				else -> result.notImplemented()
 			}
 		}
+		MethodChannel(
+			flutterEngine.dartExecutor.binaryMessenger,
+			screenSecurityChannelName,
+		).setMethodCallHandler { call, result ->
+			when (call.method) {
+				"enable" -> {
+					window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+					result.success(true)
+				}
+				"disable" -> {
+					window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+					result.success(true)
+				}
+				else -> result.notImplemented()
+			}
+		}
 	}
+
 
 	// Grant the in-app WebView's getUserMedia camera request only after the app
 	// process actually holds the OS CAMERA permission. flutter_inappwebview's

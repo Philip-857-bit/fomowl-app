@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:screen_security/screen_security.dart';
 
 class ScreenCaptureGuard {
-  ScreenCaptureGuard({ScreenSecurity? screenSecurity})
-    : _screenSecurity = screenSecurity ?? ScreenSecurity();
+  ScreenCaptureGuard({MethodChannel? channel})
+      : _channel = channel ?? const MethodChannel('owllet/screen_security');
 
-  final ScreenSecurity _screenSecurity;
+  final MethodChannel _channel;
 
   /// Master switch for screenshot/screen-recording protection (FLAG_SECURE on
   /// Android, secure overlay on iOS).
@@ -20,7 +19,7 @@ class ScreenCaptureGuard {
     if (!protectionEnabled) return;
     if (!_supportsProtection) return;
     try {
-      await _screenSecurity.enable();
+      await _channel.invokeMethod('enable');
     } on MissingPluginException {
       // Best effort only on unsupported shells.
     } on PlatformException {
@@ -31,7 +30,7 @@ class ScreenCaptureGuard {
   Future<void> disableProtection() async {
     if (!_supportsProtection) return;
     try {
-      await _screenSecurity.disable();
+      await _channel.invokeMethod('disable');
     } on MissingPluginException {
       // Best effort only on unsupported shells.
     } on PlatformException {
@@ -40,7 +39,7 @@ class ScreenCaptureGuard {
   }
 
   bool get _supportsProtection {
-    // The plugin only provides meaningful protection on mobile platforms.
+    // Meaningful protection only on mobile platforms.
     if (kIsWeb) return false;
     return defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;

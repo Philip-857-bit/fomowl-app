@@ -828,19 +828,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final selection = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const <String>['png', 'jpg', 'jpeg', 'webp'],
-        allowMultiple: false,
-        withData: true,
       );
-      if (selection == null || selection.files.isEmpty) {
+      if (selection.isEmpty) {
         return;
       }
 
-      final file = selection.files.single;
-      final bytes = file.bytes;
-      if (bytes == null || bytes.isEmpty) {
+      final file = selection.single;
+      final bytes = await file.readAsBytes();
+
+      if (bytes.isEmpty) {
         _showSnackBar('Unable to read the selected image.');
         return;
       }
+
 
       setState(() => _homeBannerImageUploadInFlight = true);
       final response = await _apiService.uploadHomeBannerImage(
