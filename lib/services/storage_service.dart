@@ -52,8 +52,10 @@ class StorageService {
   static const String _keyNotificationDevicePrefix = 'notification_device_';
   static const String _keyPushPreferencePrefix = 'push_pref_';
   static const String _keyEnabledChainFamilies = 'enabled_chain_families';
+  static const String _keyThemeMode = 'wallet_theme_mode';
 
   static const int maxFailedAttempts = 5;
+
   // 60-second lockout after maxFailedAttempts consecutive wrong passcode
   // attempts. This limits brute-force to ≤300 guesses/hour while remaining
   // tolerable for legitimate users who forget their PIN.
@@ -767,6 +769,16 @@ class StorageService {
   Future<String> getCurrency() async {
     final prefs = await _prefs;
     return prefs.getString(_keyCurrency) ?? 'USD';
+  }
+
+  Future<void> setThemeMode(String themeMode) async {
+    final prefs = await _prefs;
+    await prefs.setString(_keyThemeMode, themeMode);
+  }
+
+  Future<String?> getThemeMode() async {
+    final prefs = await _prefs;
+    return prefs.getString(_keyThemeMode);
   }
 
   Future<bool> isFirstLaunch() async {

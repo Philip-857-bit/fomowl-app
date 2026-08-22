@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../theme/app_chain_theme.dart';
 
 class SettingsItemTile extends StatelessWidget {
@@ -30,29 +29,29 @@ class SettingsItemTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                   color: attention
                       ? theme.accentColor.withValues(alpha: 0.18)
-                      : Colors.white.withValues(alpha: 0.05),
+                      : Colors.white.withValues(alpha: 0.03),
                 ),
                 child: Icon(
                   icon,
                   color: attention
                       ? theme.accentColor
-                      : Colors.white.withValues(alpha: 0.75),
-                  size: 18,
+                      : const Color(0xFF94A3B8),
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,9 +59,10 @@ class SettingsItemTile extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.inter(
-                        color: AppColors.textPrimary,
+                        color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
+                        height: 1.3,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -73,10 +73,12 @@ class SettingsItemTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
                           color: attention
-                              ? theme.accentColor
-                              : AppColors.textSecondary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
+                              ? const Color(0xFFEF4444)
+                              : const Color(0xFF94A3B8),
+                          fontSize: 11,
+                          fontWeight: attention
+                              ? FontWeight.w500
+                              : FontWeight.w400,
                         ),
                       ),
                     ],
@@ -84,10 +86,10 @@ class SettingsItemTile extends StatelessWidget {
                 ),
               ),
               trailing ??
-                  Icon(
+                  const Icon(
                     Icons.arrow_forward_ios_rounded,
-                    color: AppColors.textSecondary.withValues(alpha: 0.8),
-                    size: 14,
+                    color: Color(0xFF94A3B8),
+                    size: 13,
                   ),
             ],
           ),

@@ -7,6 +7,10 @@ import 'package:fomowl_wallet/screens/profile/widgets/settings_item_tile.dart';
 import 'package:fomowl_wallet/screens/profile/widgets/settings_wallet_header_card.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 
+import 'package:fomowl_wallet/screens/profile/widgets/wallet_theme_selector_sheet.dart';
+import 'package:fomowl_wallet/theme/app_chain_theme.dart';
+import 'package:fomowl_wallet/theme/theme_controller.dart';
+
 class _FakeBlockchainService extends ChangeNotifier
     implements BlockchainService {
   String _activeNetworkKey = 'evm:1';
@@ -27,10 +31,18 @@ class _FakeBlockchainService extends ChangeNotifier
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Widget wrapWithTheme({required Widget child, String networkKey = 'evm:1'}) {
+  Widget wrapWithTheme({
+    required Widget child,
+    String networkKey = 'evm:1',
+    ThemeController? themeController,
+  }) {
     final service = _FakeBlockchainService()..setActiveNetworkKey(networkKey);
-    return ChangeNotifierProvider<BlockchainService>.value(
-      value: service,
+    final controller = themeController ?? ThemeController();
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<BlockchainService>.value(value: service),
+        ChangeNotifierProvider<ThemeController>.value(value: controller),
+      ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -94,6 +106,76 @@ void main() {
 
         await tester.tap(find.byType(SettingsItemTile));
         expect(tapped, isTrue);
+      },
+    );
+
+    testWidgets(
+      'WalletThemeSelectorSheet renders Classic and Adaptive options and toggles state',
+      (tester) async {
+        final themeController = ThemeController();
+        await themeController.setThemeMode(AppThemeMode.adaptive);
+
+        await tester.pumpWidget(
+          wrapWithTheme(
+            themeController: themeController,
+            child: const WalletThemeSelectorSheet(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Wallet Theme'), findsOneWidget);
+        expect(find.text('Classic'), findsOneWidget);
+        expect(find.text('(Owllet Default Mode)'), findsOneWidget);
+        expect(find.text('Adaptive Theme'), findsOneWidget);
+
+        // Tap Classic
+        await tester.tap(find.text('Classic'));
+        await tester.pumpAndSettle();
+
+        expect(themeController.isClassic, isTrue);
+
+        // Tap Adaptive Theme
+        await tester.tap(find.text('Adaptive Theme'));
+        await tester.pumpAndSettle();
+
+        expect(themeController.isAdaptive, isTrue);
+      },
+    );
+
+    testWidgets(
+      'AppChainTheme respects ThemeController classic vs adaptive modes',
+      (tester) async {
+        final themeController = ThemeController();
+        await themeController.setThemeMode(AppThemeMode.classic);
+
+        late AppChainTheme resolvedTheme;
+
+        await tester.pumpWidget(
+          wrapWithTheme(
+            networkKey: 'evm:56', // BSC Gold
+            themeController: themeController,
+            child: Builder(
+              builder: (ctx) {
+                resolvedTheme = ctx.chainTheme;
+                return Container();
+              },
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // In Classic mode, even with BSC active, theme is FOMOwl Signature Red
+        expect(
+          resolvedTheme.accentColor,
+          AppChainTheme.fomowlSignature.accentColor,
+        );
+
+        // Switch to Adaptive mode
+        await themeController.setThemeMode(AppThemeMode.adaptive);
+        await tester.pump();
+
+        // In Adaptive mode, theme is BSC Gold
+        expect(resolvedTheme.accentColor, AppChainTheme.bsc.accentColor);
       },
     );
   });

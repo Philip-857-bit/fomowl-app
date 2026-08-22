@@ -21,6 +21,7 @@ import '../../utils/app_error_utils.dart';
 import '../../utils/language_utils.dart';
 import '../../utils/sensitive_access_guard.dart';
 
+import '../../theme/theme_controller.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
@@ -29,6 +30,7 @@ import 'widgets/settings_group_card.dart';
 import 'widgets/settings_item_tile.dart';
 import 'widgets/settings_section_header.dart';
 import 'widgets/settings_wallet_header_card.dart';
+import 'widgets/wallet_theme_selector_sheet.dart';
 
 class DecentralizedProfileScreen extends StatefulWidget {
   const DecentralizedProfileScreen({
@@ -751,6 +753,20 @@ class _DecentralizedProfileScreenState
                               Navigator.pushNamed(context, '/feedback'),
                         ),
                         SettingsItemTile(
+                          icon: Icons.palette_outlined,
+                          title: 'Wallet Theme',
+                          trailing: _valueTrailing(() {
+                            try {
+                              return context.watch<ThemeController>().isClassic
+                                  ? 'Classic'
+                                  : 'Adaptive';
+                            } catch (_) {
+                              return 'Adaptive';
+                            }
+                          }()),
+                          onTap: () => WalletThemeSelectorSheet.show(context),
+                        ),
+                        SettingsItemTile(
                           icon: Icons.people_alt_outlined,
                           title: l.referrals,
                           onTap: () =>
@@ -773,9 +789,10 @@ class _DecentralizedProfileScreenState
                           children: [
                             Text(
                               patchService.supportVersionLabel,
-                              style: GoogleFonts.outfit(
-                                color: AppColors.textSecondary,
-                                fontSize: 15,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF64748B),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
                               ),
                             ),
                             if (_shouldShowPatchStatus(
@@ -785,10 +802,8 @@ class _DecentralizedProfileScreenState
                               Text(
                                 _patchStatusText(patchService),
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.outfit(
-                                  color: AppColors.textSecondary.withValues(
-                                    alpha: 0.82,
-                                  ),
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF64748B),
                                   fontSize: 12,
                                 ),
                               ),
@@ -797,25 +812,37 @@ class _DecentralizedProfileScreenState
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     Center(
                       child: OutlinedButton.icon(
                         onPressed: _confirmReset,
-                        icon: const Icon(Icons.refresh_rounded),
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 16,
+                        ),
                         label: Text(
                           l.resetApp,
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFFEF4444),
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accentRed,
+                          foregroundColor: const Color(0xFFEF4444),
                           side: BorderSide(
-                            color: AppColors.accentRed.withValues(alpha: 0.7),
+                            color: const Color(
+                              0xFFEF4444,
+                            ).withValues(alpha: 0.25),
+                            width: 1,
                           ),
-                          minimumSize: const Size(168, 44),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 10,
+                          ),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(9999),
                           ),
                         ),
                       ),

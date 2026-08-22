@@ -6,6 +6,7 @@ import '../models/chain.dart';
 import '../models/network_entry.dart';
 import '../services/blockchain/blockchain_catalog.dart';
 import '../services/blockchain_service.dart';
+import 'theme_controller.dart';
 
 /// Dynamic theme definition corresponding to the 35 Figma designs
 /// supporting Ethereum, BSC, Solana, Base, Tron, and curated ecosystem presets.
@@ -475,8 +476,18 @@ class AppChainTheme {
     return fomowlSignature;
   }
 
-  /// Helper to get current chain theme from BuildContext
+  /// Helper to get current chain theme from BuildContext, respecting ThemeController (Classic vs. Adaptive).
   static AppChainTheme of(BuildContext context) {
+    try {
+      final themeController = Provider.of<ThemeController>(
+        context,
+        listen: true,
+      );
+      if (themeController.isClassic) {
+        return fomowlSignature;
+      }
+    } catch (_) {}
+
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: true);
       return forNetworkKey(blockchain.activeNetworkKey);

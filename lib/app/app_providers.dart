@@ -9,6 +9,7 @@ import '../services/language_controller.dart';
 import '../services/rpc_service.dart';
 import '../services/token_price_service.dart';
 import '../services/http_client_service.dart';
+import '../theme/theme_controller.dart';
 
 import '../services/walletconnect/wallet_connect_service.dart';
 
@@ -18,10 +19,12 @@ List<SingleChildWidget> buildAppProviders() {
     ChangeNotifierProvider.value(value: AppPatchService.instance),
     ChangeNotifierProvider.value(value: WalletConnectService.instance),
     ChangeNotifierProvider(create: (_) => AppShellController()),
+    ChangeNotifierProvider(create: (_) => ThemeController()..init()),
     ChangeNotifierProvider(create: (_) => RpcService()),
     ChangeNotifierProvider(create: (_) => TokenPriceService()),
     ChangeNotifierProvider(create: (_) => CurrencyController()..init()),
     ChangeNotifierProvider(create: (_) => LanguageController()..init()),
+
     ChangeNotifierProxyProvider2<
       RpcService,
       TokenPriceService,

@@ -25,10 +25,10 @@ class SettingsWalletHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.chainTheme;
-    final borderRadius = BorderRadius.circular(20);
+    final borderRadius = BorderRadius.circular(24);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Material(
         color: Colors.transparent,
         borderRadius: borderRadius,
@@ -37,12 +37,12 @@ class SettingsWalletHeaderCard extends StatelessWidget {
             gradient: theme.balanceCardGradient,
             borderRadius: borderRadius,
             border: Border.all(
-              color: theme.accentColor.withValues(alpha: 0.35),
+              color: Colors.white.withValues(alpha: 0.15),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: theme.accentColor.withValues(alpha: 0.15),
+                color: theme.accentColor.withValues(alpha: 0.18),
                 blurRadius: 20,
                 spreadRadius: 0,
                 offset: const Offset(0, 8),
@@ -53,26 +53,29 @@ class SettingsWalletHeaderCard extends StatelessWidget {
             onTap: onTap,
             borderRadius: borderRadius,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 58,
+                    height: 58,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      color: theme.accentColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white.withValues(alpha: 0.18),
                       border: Border.all(
-                        color: theme.accentColor.withValues(alpha: 0.3),
+                        color: Colors.white.withValues(alpha: 0.28),
+                        width: 1,
                       ),
                     ),
-                    child: Icon(
-                      Icons.account_balance_wallet_rounded,
-                      color: theme.accentColor,
-                      size: 22,
+                    child: const Center(
+                      child: Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,23 +84,23 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                           walletName,
                           style: GoogleFonts.inter(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.w700,
                             height: 1.2,
                           ),
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             Text(
                               _shorten(walletAddress),
-                              style: GoogleFonts.inter(
-                                color: Colors.white.withValues(alpha: 0.7),
-                                fontSize: 12,
+                              style: GoogleFonts.robotoMono(
+                                color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Semantics(
                               button: true,
                               label: 'Copy wallet address',
@@ -117,12 +120,16 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                                     );
                                   }
                                 },
-                                child: Padding(
+                                child: Container(
                                   padding: const EdgeInsets.all(4),
-                                  child: Icon(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
                                     Icons.copy_rounded,
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    size: 14,
+                                    color: Colors.white,
+                                    size: 13,
                                   ),
                                 ),
                               ),
@@ -133,10 +140,10 @@ class SettingsWalletHeaderCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Icon(
+                  Icon(
                     Icons.arrow_forward_ios_rounded,
-                    color: Colors.white70,
-                    size: 15,
+                    color: Colors.white.withValues(alpha: 0.5),
+                    size: 16,
                   ),
                 ],
               ),
