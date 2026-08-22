@@ -326,6 +326,14 @@ class BrowserSessionController extends ChangeNotifier {
       _history.removeRange(20, _history.length);
     }
     unawaited(_historyStorage.save(history: _history, scopeKey: _scopeKey));
+    unawaited(
+      _historyStorage.recordRemoteVisit(
+        url: uri.toString(),
+        origin: normalizeOriginFromUri(uri),
+        title: title,
+        walletAddress: _scopeKey,
+      ),
+    );
   }
 
   void _beginBrowsing(

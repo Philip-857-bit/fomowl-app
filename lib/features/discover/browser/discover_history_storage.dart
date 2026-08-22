@@ -1,15 +1,60 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
+import '../../../config/app_environment.dart';
+import '../../../services/http_client_service.dart';
 import '../../../services/secure_store.dart';
 import 'browser_history_entry.dart';
 
 class DiscoverHistoryStorage {
-  DiscoverHistoryStorage({SecureStore? secureStore})
-    : _secureStore = secureStore ?? const FlutterSecureStoreAdapter();
+  DiscoverHistoryStorage({
+    SecureStore? secureStore,
+    HttpClientService? httpClientService,
+  }) : _secureStore = secureStore ?? const FlutterSecureStoreAdapter(),
+       _httpClientService = httpClientService ?? HttpClientService();
 
   static const String _storageKey = 'discover_browser_history_v1';
   static const int maxStoredEntries = 50;
   final SecureStore _secureStore;
+  final HttpClientService _httpClientService;
+
+  Future<void> recordRemoteVisit({
+    required String url,
+    required String origin,
+    String? title,
+    String? walletAddress,
+  }) async {
+    try {
+      final payload = <String, dynamic>{
+        'url': url,
+        'origin': origin,
+        if (title != null && title.trim().isNotEmpty) 'title': title.trim(),
+        if (walletAddress != null && walletAddress.trim().isNotEmpty)
+          'walletAddress': walletAddress.trim(),
+        'source': 'discover_browser',
+        'platform': defaultTargetPlatform.name,
+      };
+
+      final response = await _httpClientService
+          .sendWithRetry(
+            () => _httpClientService.client.post(
+              AppEnvironment.discover('/visit'),
+              headers: const {'Content-Type': 'application/json'},
+              body: jsonEncode(payload),
+            ),
+          )
+          .timeout(const Duration(seconds: 6));
+
+      if (kDebugMode && response.statusCode >= 500) {
+        debugPrint(
+          'Discover remote visit recording failed: ${response.statusCode}',
+        );
+      }
+    } catch (_) {
+      // Non-blocking telemetry
+    }
+  }
 
   Future<List<BrowserHistoryEntry>> load({required String? scopeKey}) async {
     final key = _storageKeyFor(scopeKey);
