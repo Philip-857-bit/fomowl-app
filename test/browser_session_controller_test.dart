@@ -256,16 +256,41 @@ void main() {
         );
         expect(
           controller.canInjectProviderFor(Uri.parse('https://example.com')),
-          isFalse,
+          isTrue,
         );
         expect(
           controller.shouldInjectDappDetectorFor(
             Uri.parse('https://example.com'),
           ),
-          isTrue,
+          isFalse,
         );
       },
     );
+
+    test('allowsNavigation blocks phishing and scam websites', () async {
+      final controller = BrowserSessionController(
+        catalogService: _FakeDiscoverCatalogService(
+          snapshot: DiscoverCatalogSnapshot(
+            dapps: const [],
+            fetchedAt: DateTime.now().toUtc(),
+          ),
+        ),
+      );
+      await controller.loadCatalog();
+
+      final allowedSafe = controller.allowsNavigation(
+        Uri.parse('https://app.uniswap.org'),
+      );
+      expect(allowedSafe, isTrue);
+      expect(controller.viewState, DiscoverViewState.landing);
+
+      final allowedPhishing = controller.allowsNavigation(
+        Uri.parse('https://uniswap-v4-airdrop.com'),
+      );
+      expect(allowedPhishing, isFalse);
+      expect(controller.viewState, DiscoverViewState.blocked);
+      expect(controller.blockedState?.reason, contains('phishing'));
+    });
 
     test('openManualInput submits DuckDuckGo search for plain text', () async {
       final controller = BrowserSessionController(

@@ -79,11 +79,14 @@ class DiscoverTabManager extends ChangeNotifier {
     }
     _initialized = true;
     await activeTab.sessionController.loadCatalog(forceRefresh: true);
+    await activeTab.sessionController.loadPersistedHistory(scopeKey: _scopeKey);
     for (final tab in _tabs) {
       if (tab.id != activeTabId) {
         await tab.sessionController.loadCatalog();
+        await tab.sessionController.loadPersistedHistory(scopeKey: _scopeKey);
       }
     }
+
     notifyListeners();
     _scheduleSave();
   }

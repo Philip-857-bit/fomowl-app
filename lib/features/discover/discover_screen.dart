@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../features/mini_apps/mini_app_registry.dart';
@@ -16,7 +15,6 @@ import '../../services/wallet_service.dart';
 import '../../services/walletconnect/wallet_connect_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
-
 
 import 'browser/browser_session_controller.dart';
 import 'browser/discover_tab_manager.dart';
@@ -455,7 +453,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     if (trimmed.isEmpty) return;
 
     // 1. Check if user pasted a WalletConnect URI / link
-    final wcPairingUri = DeepLinkService.extractWalletConnectPairingUri(trimmed);
+    final wcPairingUri = DeepLinkService.extractWalletConnectPairingUri(
+      trimmed,
+    );
     if (wcPairingUri != null && wcPairingUri.isNotEmpty) {
       _searchController.clear();
       _sessionController.updateQuery('');
@@ -494,7 +494,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     );
   }
 
-
   Future<void> _openExternal(String rawUrl) async {
     final uri = Uri.tryParse(rawUrl.trim());
     if (uri == null) return;
@@ -512,7 +511,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       } catch (_) {}
     }
   }
-
 
   Future<void> _openRequestSupport(dynamic state) async {
     if (!mounted) {

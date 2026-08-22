@@ -45,7 +45,8 @@ class DeepLinkService {
     }
 
     // 3. Custom scheme owllet://wc?uri=...
-    if (trimmed.startsWith('owllet://wc') || trimmed.startsWith('owllet://app/wc')) {
+    if (trimmed.startsWith('owllet://wc') ||
+        trimmed.startsWith('owllet://app/wc')) {
       final uri = Uri.tryParse(trimmed);
       if (uri != null && uri.queryParameters.containsKey('uri')) {
         final param = uri.queryParameters['uri'];

@@ -459,7 +459,6 @@ class AppChainTheme {
       return fomowlSignature; // Original FOMOwl app theme fallback
     }
 
-
     final trimmed = networkKey.trim().toLowerCase();
     if (trimmed.startsWith('solana')) return solana;
     if (trimmed.startsWith('tron')) return tron;

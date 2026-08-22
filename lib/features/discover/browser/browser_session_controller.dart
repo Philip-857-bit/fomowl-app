@@ -1,21 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../../services/security/phishing_protection_service.dart';
 import '../catalog/discover_catalog_service.dart';
 import '../catalog/discover_catalog_snapshot.dart';
 import '../catalog/discover_dapp_entry.dart';
 import '../discover_url_utils.dart';
 import 'blocked_navigation_state.dart';
 import 'browser_history_entry.dart';
+import 'discover_history_storage.dart';
 
 enum DiscoverViewState { landing, browser, blocked }
 
 enum DiscoverBrowserAccessMode { generalWeb, allowlistedDapp }
 
 class BrowserSessionController extends ChangeNotifier {
-  BrowserSessionController({required DiscoverCatalogService catalogService})
-    : _catalogService = catalogService;
+  BrowserSessionController({
+    required DiscoverCatalogService catalogService,
+    DiscoverHistoryStorage? historyStorage,
+  }) : _catalogService = catalogService,
+       _historyStorage = historyStorage ?? DiscoverHistoryStorage();
 
   final DiscoverCatalogService _catalogService;
+  final DiscoverHistoryStorage _historyStorage;
 
   DiscoverCatalogSnapshot? _snapshot;
   DiscoverViewState _viewState = DiscoverViewState.landing;
@@ -26,6 +34,7 @@ class BrowserSessionController extends ChangeNotifier {
   String _query = '';
   bool _loadingCatalog = false;
   String? _catalogError;
+  String? _scopeKey;
   final List<BrowserHistoryEntry> _history = <BrowserHistoryEntry>[];
 
   DiscoverCatalogSnapshot? get snapshot => _snapshot;
@@ -110,6 +119,18 @@ class BrowserSessionController extends ChangeNotifier {
       _loadingCatalog = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadPersistedHistory({String? scopeKey}) async {
+    _scopeKey = scopeKey;
+    try {
+      final loaded = await _historyStorage.load(scopeKey: scopeKey);
+      if (loaded.isNotEmpty) {
+        _history.clear();
+        _history.addAll(loaded);
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   void updateQuery(String value) {
@@ -221,32 +242,32 @@ class BrowserSessionController extends ChangeNotifier {
       return false;
     }
 
+    // Phishing and Malicious Domain Protection
+    final phishingCheck = PhishingProtectionService.instance.checkUri(uri);
+    if (phishingCheck.isBlocked) {
+      showBlocked(
+        BlockedNavigationState(
+          url: uri.toString(),
+          origin: uri.host.isEmpty ? '' : normalizeOriginFromUri(uri),
+          reason:
+              phishingCheck.reason ??
+              'Security Alert: Access to this website is blocked to protect your funds.',
+        ),
+      );
+      return false;
+    }
+
     return true;
   }
 
+  /// Allows provider injection for all secure HTTPS and local web addresses.
+  /// Signing and account exposure are strictly gated by explicit user approval and biometrics.
   bool canInjectProviderFor(Uri uri) {
-    if (!isDiscoverInjectableUri(uri)) {
-      return false;
-    }
-
-    // Restrict signing-provider injection to allowlisted dApp origins (known
-    // catalog entries) plus the origin the user explicitly launched/connected
-    // (the active dApp). Arbitrary websites visited via general browsing must
-    // NOT receive the full provider, even while in browser view state.
-    // Account exposure and signing remain additionally gated per-origin by
-    // explicit connection approval and the sensitive-access guard.
-    final origin = normalizeOriginFromUri(uri);
-    if (findDappByOrigin(origin) != null) {
-      return true;
-    }
-    return _activeDapp?.origin == origin;
+    return isDiscoverInjectableUri(uri);
   }
 
   bool shouldInjectDappDetectorFor(Uri uri) {
-    if (!isSupportedDiscoverWebUri(uri) || uri.toString() == 'about:blank') {
-      return false;
-    }
-    return !canInjectProviderFor(uri);
+    return false;
   }
 
   DiscoverDappEntry? findDappByOrigin(String origin) {
@@ -290,6 +311,8 @@ class BrowserSessionController extends ChangeNotifier {
   }
 
   void _recordHistory(Uri uri, {String? title}) {
+    if (uri.toString() == 'about:blank' || uri.scheme.isEmpty) return;
+    _history.removeWhere((item) => item.url == uri.toString());
     _history.insert(
       0,
       BrowserHistoryEntry(
@@ -302,6 +325,7 @@ class BrowserSessionController extends ChangeNotifier {
     if (_history.length > 20) {
       _history.removeRange(20, _history.length);
     }
+    unawaited(_historyStorage.save(history: _history, scopeKey: _scopeKey));
   }
 
   void _beginBrowsing(
