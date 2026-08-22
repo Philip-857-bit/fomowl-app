@@ -6,6 +6,7 @@ import '../catalog/discover_catalog_service.dart';
 import '../permissions/dapp_permission_service.dart';
 import '../provider/dapp_provider_bridge.dart';
 import 'browser_session_controller.dart';
+import 'discover_history_storage.dart';
 import 'discover_tab_storage.dart';
 
 class DiscoverBrowserTab {
@@ -31,10 +32,14 @@ class DiscoverTabManager extends ChangeNotifier {
     required DiscoverCatalogService catalogService,
     required DappPermissionService permissionService,
     DiscoverTabStorage? storage,
+    DiscoverHistoryStorage? historyStorage,
     this.maxTabs = 5,
   }) : _catalogService = catalogService,
        _permissionService = permissionService,
-       _storage = storage ?? DiscoverTabStorage() {
+       _storage = storage ?? DiscoverTabStorage(),
+       _historyStorage =
+           historyStorage ??
+           DiscoverHistoryStorage(secureStore: storage?.secureStore) {
     final initial = _createTab();
     _tabs.add(initial);
     _activeTabId = initial.id;
@@ -43,6 +48,8 @@ class DiscoverTabManager extends ChangeNotifier {
   final DiscoverCatalogService _catalogService;
   final DappPermissionService _permissionService;
   final DiscoverTabStorage _storage;
+  final DiscoverHistoryStorage _historyStorage;
+
   final int maxTabs;
   final List<DiscoverBrowserTab> _tabs = <DiscoverBrowserTab>[];
   final Map<String, VoidCallback> _sessionListeners = <String, VoidCallback>{};
@@ -137,10 +144,14 @@ class DiscoverTabManager extends ChangeNotifier {
     String? initialUrl,
     String? initialTitle,
   }) {
-    final session = BrowserSessionController(catalogService: _catalogService);
+    final session = BrowserSessionController(
+      catalogService: _catalogService,
+      historyStorage: _historyStorage,
+    );
     if (initialUrl != null) {
       session.restoreBrowsing(initialUrl, title: initialTitle);
     }
+
     final tab = DiscoverBrowserTab(
       id: id ?? _newId(),
       sessionController: session,

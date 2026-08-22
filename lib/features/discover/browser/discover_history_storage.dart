@@ -80,17 +80,21 @@ class DiscoverHistoryStorage {
   }) async {
     final key = _storageKeyFor(scopeKey);
     if (key == null) return;
-    final payload = history
-        .take(maxStoredEntries)
-        .map((entry) => entry.toJson())
-        .toList(growable: false);
-    await _secureStore.write(key: key, value: jsonEncode(payload));
+    try {
+      final payload = history
+          .take(maxStoredEntries)
+          .map((entry) => entry.toJson())
+          .toList(growable: false);
+      await _secureStore.write(key: key, value: jsonEncode(payload));
+    } catch (_) {}
   }
 
   Future<void> clear({required String? scopeKey}) async {
     final key = _storageKeyFor(scopeKey);
     if (key == null) return;
-    await _secureStore.delete(key: key);
+    try {
+      await _secureStore.delete(key: key);
+    } catch (_) {}
   }
 
   String? _storageKeyFor(String? scopeKey) {

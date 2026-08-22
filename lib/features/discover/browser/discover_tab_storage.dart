@@ -80,6 +80,8 @@ class DiscoverTabStorage {
   static const String _storageKey = 'discover_tabs_v1';
   final SecureStore _secureStore;
 
+  SecureStore get secureStore => _secureStore;
+
   Future<DiscoverTabsSnapshot?> load({
     required int maxTabs,
     required String? scopeKey,
