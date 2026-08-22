@@ -58,6 +58,15 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="wc" />
             </intent-filter>
+            <!-- WalletConnect Universal Links (App Links) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="owlletapp.com" android:pathPrefix="/wc" />
+                <data android:scheme="https" android:host="fomowl.com" android:pathPrefix="/wc" />
+            </intent-filter>
+
         </activity>
         <!-- flutter_inappwebview ships InAppWebViewFileProvider + provider_paths
              but does NOT declare the <provider> in its own manifest, so the host

@@ -44,30 +44,36 @@ class DeepLinkService {
     debugPrint(
       uri.scheme.toLowerCase() == 'wc'
           ? '[DeepLink] Incoming WalletConnect URI: <redacted>'
-          : '[DeepLink] Incoming URI scheme: ${uri.scheme}',
+          : '[DeepLink] Incoming URI: ${uri.scheme}://${uri.host}${uri.path}',
     );
     final rawString = uri.toString();
 
-    // 1. Direct wc: scheme or WalletConnect link
-    if (rawString.startsWith('wc:') || rawString.contains('wc?uri=')) {
-      String pairingUri = rawString;
-      if (uri.queryParameters.containsKey('uri')) {
-        pairingUri = uri.queryParameters['uri']!;
-      }
-      await WalletConnectService.instance.pair(pairingUri);
+    // 1. Direct wc: scheme
+    if (rawString.startsWith('wc:')) {
+      await WalletConnectService.instance.pair(rawString);
       return;
     }
 
-    // 2. Custom owllet:// scheme
-    if (uri.scheme == 'owllet') {
-      if (uri.host == 'wc' || uri.path.contains('wc')) {
-        final wcParam = uri.queryParameters['uri'];
-        if (wcParam != null && wcParam.isNotEmpty) {
-          await WalletConnectService.instance.pair(wcParam);
-          return;
+    // 2. Universal Link (e.g. https://owlletapp.com/wc?uri=wc:...) or custom scheme (owllet://wc?uri=wc:...)
+    final isWcUniversalLink = (uri.host == 'owlletapp.com' || uri.host == 'fomowl.com') &&
+        (uri.path == '/wc' || uri.path.startsWith('/wc/'));
+    final isWcCustomScheme = uri.scheme == 'owllet' && (uri.host == 'wc' || uri.path.contains('wc'));
+    final containsWcParam = uri.queryParameters.containsKey('uri') || rawString.contains('wc?uri=');
+
+    if (isWcUniversalLink || isWcCustomScheme || containsWcParam) {
+      String? pairingUri = uri.queryParameters['uri'];
+      if (pairingUri == null && rawString.contains('uri=')) {
+        final uriIndex = rawString.indexOf('uri=');
+        if (uriIndex != -1) {
+          pairingUri = Uri.decodeComponent(rawString.substring(uriIndex + 4));
         }
       }
+      if (pairingUri != null && pairingUri.isNotEmpty) {
+        await WalletConnectService.instance.pair(pairingUri);
+        return;
+      }
     }
+
 
     // 3. Fallback to In-App router (Discover / Web)
     final context = appNavigatorKey.currentContext;
