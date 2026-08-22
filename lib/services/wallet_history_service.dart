@@ -250,6 +250,42 @@ class WalletHistoryService {
     });
   }
 
+  Future<void> recordDappInteraction({
+    required String walletAddress,
+    required String txHash,
+    required String origin,
+    int? chainId,
+    required String networkName,
+    String? toAddress,
+    String? valueEth,
+    String? networkKey,
+  }) {
+    final host = Uri.tryParse(origin)?.host ?? origin;
+    final cleanHost = host.isEmpty ? origin : host;
+    final isContract = toAddress != null && toAddress.trim().isNotEmpty;
+    final title = '$cleanHost interaction';
+    final message = isContract
+        ? 'Contract interaction with ${_shortAddress(toAddress)} via $cleanHost on $networkName.'
+        : 'Transaction executed via $cleanHost on $networkName.';
+
+    return _recordHistory({
+      'walletAddress': walletAddress,
+      'txHash': txHash,
+      'txType': 'dapp_interaction',
+      'tokenName': 'Smart Contract',
+      'tokenSymbol': 'DAPP',
+      if (toAddress != null && toAddress.trim().isNotEmpty)
+        'tokenAddress': toAddress.trim(),
+      'amount': _parseAmount(valueEth ?? '0'),
+      'isIncoming': false,
+      '?chainId': chainId,
+      'networkName': networkName,
+      'networkKey': networkKey,
+      'title': title,
+      'message': message,
+    });
+  }
+
   Future<void> _recordHistory(Map<String, dynamic> payload) async {
     try {
       final response = await _httpClientService

@@ -15,19 +15,25 @@ import '../../widgets/walletconnect/wallet_connect_request_modal.dart';
 import '../blockchain/blockchain_catalog.dart';
 import '../rpc_service.dart';
 import '../wallet_service.dart';
+import '../wallet_history_service.dart';
 import 'wallet_connect_models.dart';
 import 'wallet_connect_policy.dart';
 import 'wallet_connect_solana_codec.dart';
 
 class WalletConnectService extends ChangeNotifier {
-  WalletConnectService({WalletService? walletService, RpcService? rpcService})
-    : _walletService = walletService ?? WalletService(),
-      _rpcService = rpcService ?? RpcService();
+  WalletConnectService({
+    WalletService? walletService,
+    RpcService? rpcService,
+    WalletHistoryService? walletHistoryService,
+  }) : _walletService = walletService ?? WalletService(),
+       _rpcService = rpcService ?? RpcService(),
+       _walletHistoryService = walletHistoryService ?? WalletHistoryService();
 
   static final WalletConnectService instance = WalletConnectService();
 
   final WalletService _walletService;
   final RpcService _rpcService;
+  final WalletHistoryService _walletHistoryService;
 
   ReownWalletKit? _walletKit;
   bool _isInitialized = false;
@@ -645,6 +651,15 @@ class WalletConnectService extends ChangeNotifier {
         final txHash = await _walletService.broadcastSignedSolanaTransactionRaw(
           signedTransaction,
         );
+        unawaited(
+          _walletHistoryService.recordDappInteraction(
+            walletAddress: approvedAddress,
+            txHash: txHash,
+            origin: 'WalletConnect',
+            networkName: 'Solana',
+            networkKey: 'solana:mainnet',
+          ),
+        );
         return {'signature': txHash};
 
       case 'solana_signAllTransactions':
@@ -764,7 +779,25 @@ class WalletConnectService extends ChangeNotifier {
       gasLimit: _parseBigIntQuantity(txMap['gas'])?.toInt(),
       nonce: _parseBigIntQuantity(txMap['nonce'])?.toInt(),
     );
-    return txHash.startsWith('0x') ? txHash : '0x$txHash';
+    final formattedHash = txHash.startsWith('0x') ? txHash : '0x$txHash';
+    final valueWei = _parseBigIntQuantity(txMap['value']);
+    final valueEth = valueWei != null
+        ? (valueWei / BigInt.from(10).pow(18)).toStringAsFixed(6)
+        : '0';
+
+    unawaited(
+      _walletHistoryService.recordDappInteraction(
+        walletAddress: approvedAddress,
+        txHash: formattedHash,
+        origin: 'WalletConnect',
+        chainId: targetChain.chainId,
+        networkName: targetChain.name,
+        toAddress: txMap['to']?.toString().trim(),
+        valueEth: valueEth,
+        networkKey: targetChain.networkKey,
+      ),
+    );
+    return formattedHash;
   }
 
   int _parseEip155ChainId(String chainId) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../../constants/app_colors.dart';
 import '../../../models/chain.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../services/rpc_service.dart';
+import '../../../services/wallet_history_service.dart';
 import '../../../services/wallet_service.dart';
 import '../../../utils/sensitive_access_guard.dart';
 import '../browser/browser_session_controller.dart';
@@ -26,15 +28,18 @@ class DappProviderBridge {
     required this.sessionController,
     required this.permissionService,
     WalletService? walletService,
+    WalletHistoryService? walletHistoryService,
     DiscoverProviderApprovalHandler? approvalHandler,
     SensitiveAuthVerifier? authVerifier,
   }) : _walletService = walletService ?? WalletService(),
+       _walletHistoryService = walletHistoryService ?? WalletHistoryService(),
        _approvalHandler = approvalHandler,
        _authVerifier = authVerifier ?? _verifyDappAction;
 
   final BrowserSessionController sessionController;
   final DappPermissionService permissionService;
   final WalletService _walletService;
+  final WalletHistoryService _walletHistoryService;
   final DiscoverProviderApprovalHandler? _approvalHandler;
   final SensitiveAuthVerifier _authVerifier;
 
@@ -1300,6 +1305,24 @@ class DappProviderBridge {
         gasLimit: gasLimit,
         nonce: nonce,
       );
+      final formattedHash = txHash.startsWith('0x') ? txHash : '0x$txHash';
+      final valueEth = valueWei != null
+          ? (valueWei / BigInt.from(10).pow(18)).toStringAsFixed(6)
+          : '0';
+
+      unawaited(
+        _walletHistoryService.recordDappInteraction(
+          walletAddress: walletAddress,
+          txHash: formattedHash,
+          origin: origin,
+          chainId: activeChain.chainId,
+          networkName: activeChain.name,
+          toAddress: to,
+          valueEth: valueEth,
+          networkKey: activeChain.networkKey,
+        ),
+      );
+      return formattedHash;
     } on FormatException catch (error) {
       final message = error.message.toString();
       throw _ProviderBridgeException(
@@ -1307,7 +1330,6 @@ class DappProviderBridge {
         message.isNotEmpty ? message : 'Invalid transaction data.',
       );
     }
-    return txHash.startsWith('0x') ? txHash : '0x$txHash';
   }
 
   // ── Solana handler methods ────────────────────────────────────────────────
@@ -1518,6 +1540,17 @@ class DappProviderBridge {
       address,
       base64Decode(txB64),
     );
+
+    unawaited(
+      _walletHistoryService.recordDappInteraction(
+        walletAddress: address,
+        txHash: txHash,
+        origin: origin,
+        networkName: 'Solana',
+        networkKey: 'solana:mainnet',
+      ),
+    );
+
     return {'txHash': txHash};
   }
 
