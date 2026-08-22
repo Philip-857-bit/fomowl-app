@@ -427,10 +427,10 @@ class AppChainTheme {
   };
 
   /// Resolves the active theme for any [NetworkEntry]
-  /// Resolves the active theme for any [NetworkEntry]
   static AppChainTheme forNetwork(NetworkEntry? entry) {
-    if (entry == null)
+    if (entry == null) {
       return fomowlSignature; // Original FOMOwl app theme fallback
+    }
 
     if (entry is SolanaNetworkEntry) return solana;
     if (entry is TronNetworkEntry) return tron;
@@ -455,8 +455,10 @@ class AppChainTheme {
 
   /// Resolves the active theme for any network key string (e.g., 'evm:56', 'solana:mainnet')
   static AppChainTheme forNetworkKey(String? networkKey) {
-    if (networkKey == null || networkKey.isEmpty)
+    if (networkKey == null || networkKey.isEmpty) {
       return fomowlSignature; // Original FOMOwl app theme fallback
+    }
+
 
     final trimmed = networkKey.trim().toLowerCase();
     if (trimmed.startsWith('solana')) return solana;

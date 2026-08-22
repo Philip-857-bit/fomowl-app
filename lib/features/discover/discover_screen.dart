@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
@@ -461,8 +463,23 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 
   Future<void> _openExternal(String rawUrl) async {
-    await InAppLinkRouter.open(context, rawUrl);
+    final uri = Uri.tryParse(rawUrl.trim());
+    if (uri == null) return;
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        await launchUrl(uri);
+      }
+    } catch (_) {
+      try {
+        await launchUrl(uri);
+      } catch (_) {}
+    }
   }
+
 
   Future<void> _openRequestSupport(dynamic state) async {
     if (!mounted) {
