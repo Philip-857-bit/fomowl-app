@@ -100,9 +100,10 @@ class AppEnvironment {
     if (raw.isNotEmpty) {
       return raw;
     }
-    // Default fallback project id for development / testing
-    return 'affc1a08513be5b8ff6c03bfab91158b';
+    // Production WalletConnect / Reown Cloud Project ID
+    return '45932c507126fc35338b2f1b5c342504';
   }
+
 
   /// Optional SPKI (public-key) pinning for the backend host.
   ///
