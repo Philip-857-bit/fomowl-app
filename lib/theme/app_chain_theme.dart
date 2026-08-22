@@ -50,21 +50,13 @@ class AppChainTheme {
     accentColor: Color(0xFF627EEA),
     secondaryAccent: Color(0xFF8C9FF5),
     balanceCardGradient: LinearGradient(
-      colors: [
-        Color(0xFF1E284A),
-        Color(0xFF111728),
-        Color(0xFF0A0A0A),
-      ],
+      colors: [Color(0xFF1E284A), Color(0xFF111728), Color(0xFF0A0A0A)],
       stops: [0.0, 0.55, 1.0],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     balanceCardBorderGradient: LinearGradient(
-      colors: [
-        Color(0xFF627EEA),
-        Color(0x00000000),
-        Color(0xFF627EEA),
-      ],
+      colors: [Color(0xFF627EEA), Color(0x00000000), Color(0xFF627EEA)],
       stops: [0.0, 0.67, 1.0],
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
@@ -88,21 +80,13 @@ class AppChainTheme {
     accentColor: Color(0xFFF3BA2F),
     secondaryAccent: Color(0xFFF7B617),
     balanceCardGradient: LinearGradient(
-      colors: [
-        Color(0x66F7B617),
-        Color(0x66000000),
-        Color(0x66FFBD1B),
-      ],
+      colors: [Color(0x66F7B617), Color(0x66000000), Color(0x66FFBD1B)],
       stops: [0.0, 0.77, 1.0],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     balanceCardBorderGradient: LinearGradient(
-      colors: [
-        Color(0xFFF3BA2F),
-        Color(0x00000000),
-        Color(0xFFF3BA2F),
-      ],
+      colors: [Color(0xFFF3BA2F), Color(0x00000000), Color(0xFFF3BA2F)],
       stops: [0.0, 0.67, 1.0],
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
@@ -126,21 +110,13 @@ class AppChainTheme {
     accentColor: Color(0xFF14F195),
     secondaryAccent: Color(0xFF9945FF),
     balanceCardGradient: LinearGradient(
-      colors: [
-        Color(0x739945FF),
-        Color(0x4014F195),
-        Color(0xFF0A0A0A),
-      ],
+      colors: [Color(0x739945FF), Color(0x4014F195), Color(0xFF0A0A0A)],
       stops: [0.0, 0.6, 1.0],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     balanceCardBorderGradient: LinearGradient(
-      colors: [
-        Color(0xFF9945FF),
-        Color(0x00000000),
-        Color(0xFF14F195),
-      ],
+      colors: [Color(0xFF9945FF), Color(0x00000000), Color(0xFF14F195)],
       stops: [0.0, 0.5, 1.0],
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
@@ -164,21 +140,13 @@ class AppChainTheme {
     accentColor: Color(0xFF0052FF),
     secondaryAccent: Color(0xFF2563EB),
     balanceCardGradient: LinearGradient(
-      colors: [
-        Color(0xFF0D2566),
-        Color(0xFF09163D),
-        Color(0xFF0A0A0A),
-      ],
+      colors: [Color(0xFF0D2566), Color(0xFF09163D), Color(0xFF0A0A0A)],
       stops: [0.0, 0.55, 1.0],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     balanceCardBorderGradient: LinearGradient(
-      colors: [
-        Color(0xFF0052FF),
-        Color(0x00000000),
-        Color(0xFF0052FF),
-      ],
+      colors: [Color(0xFF0052FF), Color(0x00000000), Color(0xFF0052FF)],
       stops: [0.0, 0.67, 1.0],
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
@@ -202,21 +170,13 @@ class AppChainTheme {
     accentColor: Color(0xFFFF060A),
     secondaryAccent: Color(0xFFEF0027),
     balanceCardGradient: LinearGradient(
-      colors: [
-        Color(0xFF3B080A),
-        Color(0xFF1F0607),
-        Color(0xFF0A0A0A),
-      ],
+      colors: [Color(0xFF3B080A), Color(0xFF1F0607), Color(0xFF0A0A0A)],
       stops: [0.0, 0.55, 1.0],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     balanceCardBorderGradient: LinearGradient(
-      colors: [
-        Color(0xFFFF060A),
-        Color(0x00000000),
-        Color(0xFFFF060A),
-      ],
+      colors: [Color(0xFFFF060A), Color(0x00000000), Color(0xFFFF060A)],
       stops: [0.0, 0.67, 1.0],
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
@@ -520,7 +480,6 @@ class AppChainTheme {
       return bsc;
     }
   }
-
 }
 
 /// Convenient extension on BuildContext

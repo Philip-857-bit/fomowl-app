@@ -1860,7 +1860,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   '/deposit-funds',
                                 ),
                               ),
-
                             ),
                             const SizedBox(height: 38),
                             Showcase(

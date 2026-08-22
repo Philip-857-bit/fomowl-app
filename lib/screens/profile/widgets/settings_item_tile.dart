@@ -96,4 +96,3 @@ class SettingsItemTile extends StatelessWidget {
     );
   }
 }
-

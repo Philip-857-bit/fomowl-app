@@ -177,7 +177,11 @@ class NetworkSelectorSheet extends StatelessWidget {
                               ],
                             ),
                           ),
-                          _buildTrailing(entry, isActive, entryTheme.accentColor),
+                          _buildTrailing(
+                            entry,
+                            isActive,
+                            entryTheme.accentColor,
+                          ),
                         ],
                       ),
                     ),
@@ -226,11 +230,7 @@ class NetworkSelectorSheet extends StatelessWidget {
 
   /// Trailing widget: an active check, plus an edit/delete menu for custom
   /// (user-added) EVM networks when the relevant callbacks are provided.
-  Widget _buildTrailing(
-    NetworkEntry entry,
-    bool isActive,
-    Color accentColor,
-  ) {
+  Widget _buildTrailing(NetworkEntry entry, bool isActive, Color accentColor) {
     final isCustomEvm =
         entry is EvmNetworkEntry &&
         entry.chain.isCustom &&
@@ -283,4 +283,3 @@ class NetworkSelectorSheet extends StatelessWidget {
     );
   }
 }
-

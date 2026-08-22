@@ -126,7 +126,6 @@ class _SwapTabChip extends StatelessWidget {
   }
 }
 
-
 class NetworkCard extends StatelessWidget {
   final EvmChain chain;
   final VoidCallback? onTap;
@@ -499,9 +498,7 @@ class LimitExpiryChip extends StatelessWidget {
               : const Color(0xFF151C24),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: selected
-                ? theme.accentColor
-                : const Color(0xFF2A333D),
+            color: selected ? theme.accentColor : const Color(0xFF2A333D),
           ),
         ),
         child: Text(
@@ -517,4 +514,3 @@ class LimitExpiryChip extends StatelessWidget {
     );
   }
 }
-

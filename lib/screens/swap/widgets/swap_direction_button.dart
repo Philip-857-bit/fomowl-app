@@ -31,4 +31,3 @@ class SwapDirectionButton extends StatelessWidget {
     );
   }
 }
-

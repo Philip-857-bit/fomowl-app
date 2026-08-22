@@ -431,9 +431,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,7 +448,8 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
                   child: Image.network(
                     session.dappIcon!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _fallbackDappIcon(session.dappName),
+                    errorBuilder: (_, _, _) =>
+                        _fallbackDappIcon(session.dappName),
                   ),
                 )
               else
@@ -515,9 +514,7 @@ class _ConnectedAppsScreenState extends State<ConnectedAppsScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardDark,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

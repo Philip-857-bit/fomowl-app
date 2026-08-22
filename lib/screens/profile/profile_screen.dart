@@ -8,8 +8,6 @@ import '../../utils/toast_utils.dart';
 import '../../widgets/bottom_navigation.dart';
 import 'coming_soon_overlay.dart';
 
-
-
 /// My Profile Screen — "Me" tab
 /// Avatar, KYC badge, Account/Preferences/Support sections
 class ProfileScreen extends StatefulWidget {
@@ -169,11 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.shield_outlined,
-              size: 56,
-              color: theme.accentColor,
-            ),
+            Icon(Icons.shield_outlined, size: 56, color: theme.accentColor),
             const SizedBox(height: 16),
             Text(
               'Sync Identity',
@@ -268,7 +262,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-
   Widget _buildAvatarHeader() {
     final theme = context.chainTheme;
 
@@ -287,11 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 width: 2,
               ),
             ),
-            child: Icon(
-              Icons.person,
-              color: theme.accentColor,
-              size: 34,
-            ),
+            child: Icon(Icons.person, color: theme.accentColor, size: 34),
           ),
           const SizedBox(width: 16),
           Column(
@@ -333,7 +322,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
 
   Widget _buildSectionHeader(String title) {
     return Padding(

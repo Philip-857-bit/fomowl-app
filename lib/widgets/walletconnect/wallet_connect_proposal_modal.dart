@@ -94,7 +94,8 @@ class WalletConnectProposalModal extends StatelessWidget {
                         ),
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: proposal.dappIcon != null &&
+                      child:
+                          proposal.dappIcon != null &&
                               proposal.dappIcon!.isNotEmpty
                           ? Image.network(
                               proposal.dappIcon!,
@@ -172,7 +173,9 @@ class WalletConnectProposalModal extends StatelessWidget {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              color: AppColors.accentRed.withValues(alpha: 0.15),
+                              color: AppColors.accentRed.withValues(
+                                alpha: 0.15,
+                              ),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -278,12 +281,14 @@ class WalletConnectProposalModal extends StatelessWidget {
                           const SizedBox(height: 8),
                           _buildPermissionItem(
                             icon: Icons.visibility_outlined,
-                            text: 'View your wallet address and account activity',
+                            text:
+                                'View your wallet address and account activity',
                           ),
                           const SizedBox(height: 6),
                           _buildPermissionItem(
                             icon: Icons.touch_app_outlined,
-                            text: 'Request approval for transactions and signatures',
+                            text:
+                                'Request approval for transactions and signatures',
                           ),
                         ],
                       ),
@@ -352,8 +357,9 @@ class WalletConnectProposalModal extends StatelessWidget {
   }
 
   Widget _buildFallbackIcon() {
-    final firstChar =
-        proposal.dappName.isNotEmpty ? proposal.dappName[0].toUpperCase() : 'W';
+    final firstChar = proposal.dappName.isNotEmpty
+        ? proposal.dappName[0].toUpperCase()
+        : 'W';
     return Center(
       child: Text(
         firstChar,

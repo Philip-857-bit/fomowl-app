@@ -49,9 +49,7 @@ class SwapPrimaryButton extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: isActive
-                  ? Colors.white
-                  : const Color(0x66E2E2E2),
+              color: isActive ? Colors.white : const Color(0x66E2E2E2),
               height: 1.4,
             ),
           ),
@@ -60,4 +58,3 @@ class SwapPrimaryButton extends StatelessWidget {
     );
   }
 }
-

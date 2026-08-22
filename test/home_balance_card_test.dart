@@ -94,7 +94,6 @@ void main() {
     expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
   });
 
-
   testWidgets('renders neutral portfolio change without profit styling', (
     tester,
   ) async {

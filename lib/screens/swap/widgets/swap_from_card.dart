@@ -272,9 +272,7 @@ class _PercentChip extends StatelessWidget {
           style: GoogleFonts.inter(
             fontSize: 9,
             fontWeight: FontWeight.w800,
-            color: isSelected
-                ? theme.accentColor
-                : const Color(0xFFA1A1A1),
+            color: isSelected ? theme.accentColor : const Color(0xFFA1A1A1),
           ),
         ),
       ),
@@ -301,9 +299,7 @@ class _MaxChip extends StatelessWidget {
               ? theme.accentColor.withValues(alpha: 0.18)
               : const Color(0xFF131313),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: theme.accentColor.withValues(alpha: 0.45),
-          ),
+          border: Border.all(color: theme.accentColor.withValues(alpha: 0.45)),
         ),
         child: Text(
           'MAX',
@@ -317,4 +313,3 @@ class _MaxChip extends StatelessWidget {
     );
   }
 }
-

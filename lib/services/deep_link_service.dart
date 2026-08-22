@@ -55,10 +55,13 @@ class DeepLinkService {
     }
 
     // 2. Universal Link (e.g. https://owlletapp.com/wc?uri=wc:...) or custom scheme (owllet://wc?uri=wc:...)
-    final isWcUniversalLink = (uri.host == 'owlletapp.com' || uri.host == 'fomowl.com') &&
+    final isWcUniversalLink =
+        (uri.host == 'owlletapp.com' || uri.host == 'fomowl.com') &&
         (uri.path == '/wc' || uri.path.startsWith('/wc/'));
-    final isWcCustomScheme = uri.scheme == 'owllet' && (uri.host == 'wc' || uri.path.contains('wc'));
-    final containsWcParam = uri.queryParameters.containsKey('uri') || rawString.contains('wc?uri=');
+    final isWcCustomScheme =
+        uri.scheme == 'owllet' && (uri.host == 'wc' || uri.path.contains('wc'));
+    final containsWcParam =
+        uri.queryParameters.containsKey('uri') || rawString.contains('wc?uri=');
 
     if (isWcUniversalLink || isWcCustomScheme || containsWcParam) {
       String? pairingUri = uri.queryParameters['uri'];
@@ -73,7 +76,6 @@ class DeepLinkService {
         return;
       }
     }
-
 
     // 3. Fallback to In-App router (Discover / Web)
     final context = appNavigatorKey.currentContext;

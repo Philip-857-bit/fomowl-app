@@ -147,4 +147,3 @@ class SettingsWalletHeaderCard extends StatelessWidget {
     );
   }
 }
-

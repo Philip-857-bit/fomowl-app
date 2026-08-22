@@ -1458,7 +1458,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                     width: 16,
                   ),
                 ),
-
               ),
             ),
           ),
@@ -1987,7 +1986,6 @@ class _BridgePercentChip extends StatelessWidget {
     );
   }
 }
-
 
 /// Fee/details box: platform fee, bridge fee, estimated gas, arrival.
 class _BridgeDetailsCard extends StatelessWidget {

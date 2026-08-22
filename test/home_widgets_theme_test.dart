@@ -11,7 +11,8 @@ import 'package:fomowl_wallet/screens/home/widgets/quick_actions_row.dart';
 import 'package:fomowl_wallet/screens/home/widgets/social_banner_card.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 
-class _FakeBlockchainService extends ChangeNotifier implements BlockchainService {
+class _FakeBlockchainService extends ChangeNotifier
+    implements BlockchainService {
   String _activeNetworkKey = 'evm:56';
 
   @override
@@ -27,7 +28,6 @@ class _FakeBlockchainService extends ChangeNotifier implements BlockchainService
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -36,55 +36,62 @@ void main() {
     String networkKey = 'evm:56',
     BlockchainService? mockBlockchain,
   }) {
-    final service = mockBlockchain ?? (_FakeBlockchainService()..setActiveNetworkKey(networkKey));
+    final service =
+        mockBlockchain ??
+        (_FakeBlockchainService()..setActiveNetworkKey(networkKey));
     return ChangeNotifierProvider<BlockchainService>.value(
       value: service,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: child,
-        ),
+        home: Scaffold(body: child),
       ),
     );
   }
 
   group('Home Widgets Theme Verification', () {
-    testWidgets('QuickActionsRow renders action buttons with chain accent icons', (tester) async {
-      bool receiveTapped = false;
-      bool sendTapped = false;
-      bool withdrawTapped = false;
+    testWidgets(
+      'QuickActionsRow renders action buttons with chain accent icons',
+      (tester) async {
+        bool receiveTapped = false;
+        bool sendTapped = false;
+        bool withdrawTapped = false;
 
-      await tester.pumpWidget(
-        wrapWithTheme(
-          networkKey: 'evm:56', // BSC Gold #F3BA2F
-          child: QuickActionsRow(
-            onReceive: () => receiveTapped = true,
-            onSend: () => sendTapped = true,
-            onWithdraw: () => withdrawTapped = true,
+        await tester.pumpWidget(
+          wrapWithTheme(
+            networkKey: 'evm:56', // BSC Gold #F3BA2F
+            child: QuickActionsRow(
+              onReceive: () => receiveTapped = true,
+              onSend: () => sendTapped = true,
+              onWithdraw: () => withdrawTapped = true,
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_downward_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_upward_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.account_balance_rounded), findsOneWidget);
 
-      final iconWidget = tester.widget<Icon>(find.byIcon(Icons.arrow_downward_rounded));
-      expect(iconWidget.color, const Color(0xFFF3BA2F));
+        final iconWidget = tester.widget<Icon>(
+          find.byIcon(Icons.arrow_downward_rounded),
+        );
+        expect(iconWidget.color, const Color(0xFFF3BA2F));
 
-      await tester.tap(find.byIcon(Icons.arrow_downward_rounded));
-      expect(receiveTapped, isTrue);
+        await tester.tap(find.byIcon(Icons.arrow_downward_rounded));
+        expect(receiveTapped, isTrue);
 
-      await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
-      expect(sendTapped, isTrue);
+        await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+        expect(sendTapped, isTrue);
 
-      await tester.tap(find.byIcon(Icons.account_balance_rounded));
-      expect(withdrawTapped, isTrue);
-    });
+        await tester.tap(find.byIcon(Icons.account_balance_rounded));
+        expect(withdrawTapped, isTrue);
+      },
+    );
 
-    testWidgets('HomeTopBar renders wallet selector and themed HELP badge', (tester) async {
+    testWidgets('HomeTopBar renders wallet selector and themed HELP badge', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrapWithTheme(
           networkKey: 'evm:1', // Ethereum Blue #627EEA
@@ -106,57 +113,77 @@ void main() {
       expect(find.text('HELP'), findsOneWidget);
       expect(find.byIcon(Icons.account_balance_wallet), findsOneWidget);
 
-      final walletIcon = tester.widget<Icon>(find.byIcon(Icons.account_balance_wallet));
+      final walletIcon = tester.widget<Icon>(
+        find.byIcon(Icons.account_balance_wallet),
+      );
       expect(walletIcon.color, const Color(0xFF627EEA));
     });
 
-    testWidgets('SocialBannerCard renders banner text and themed action', (tester) async {
+    testWidgets('SocialBannerCard renders banner text and themed action', (
+      tester,
+    ) async {
       bool tapped = false;
 
       await tester.pumpWidget(
         wrapWithTheme(
           networkKey: 'evm:8453', // Base Blue #0052FF
-          child: SocialBannerCard(
-            onTap: () => tapped = true,
-          ),
+          child: SocialBannerCard(onTap: () => tapped = true),
         ),
       );
       await tester.pump();
 
       expect(find.byIcon(Icons.campaign_rounded), findsOneWidget);
-      final campaignIcon = tester.widget<Icon>(find.byIcon(Icons.campaign_rounded));
+      final campaignIcon = tester.widget<Icon>(
+        find.byIcon(Icons.campaign_rounded),
+      );
       expect(campaignIcon.color, const Color(0xFF0052FF));
 
       await tester.tap(find.byType(SocialBannerCard));
       expect(tapped, isTrue);
     });
 
-    testWidgets('NetworkSelectorSheet renders network items and triggers selection', (tester) async {
-      NetworkEntry? selectedEntry;
-      final entries = [
-        EvmNetworkEntry(const EvmChain(chainId: 1, name: 'Ethereum', symbol: 'ETH', rpcUrl: '')),
-        EvmNetworkEntry(const EvmChain(chainId: 56, name: 'BNB Smart Chain', symbol: 'BNB', rpcUrl: '')),
-      ];
-
-      await tester.pumpWidget(
-        wrapWithTheme(
-          networkKey: 'evm:56',
-          child: NetworkSelectorSheet(
-            entries: entries,
-            activeNetworkKey: 'evm:56',
-            onSelect: (entry) => selectedEntry = entry,
+    testWidgets(
+      'NetworkSelectorSheet renders network items and triggers selection',
+      (tester) async {
+        NetworkEntry? selectedEntry;
+        final entries = [
+          EvmNetworkEntry(
+            const EvmChain(
+              chainId: 1,
+              name: 'Ethereum',
+              symbol: 'ETH',
+              rpcUrl: '',
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+          EvmNetworkEntry(
+            const EvmChain(
+              chainId: 56,
+              name: 'BNB Smart Chain',
+              symbol: 'BNB',
+              rpcUrl: '',
+            ),
+          ),
+        ];
 
-      expect(find.text('Ethereum Chain'), findsOneWidget);
-      expect(find.text('BNB Smart Chain'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+        await tester.pumpWidget(
+          wrapWithTheme(
+            networkKey: 'evm:56',
+            child: NetworkSelectorSheet(
+              entries: entries,
+              activeNetworkKey: 'evm:56',
+              onSelect: (entry) => selectedEntry = entry,
+            ),
+          ),
+        );
+        await tester.pump();
 
+        expect(find.text('Ethereum Chain'), findsOneWidget);
+        expect(find.text('BNB Smart Chain'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
 
-      await tester.tap(find.text('Ethereum Chain'));
-      expect(selectedEntry?.name, 'Ethereum');
-    });
+        await tester.tap(find.text('Ethereum Chain'));
+        expect(selectedEntry?.name, 'Ethereum');
+      },
+    );
   });
 }

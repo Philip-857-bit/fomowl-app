@@ -115,7 +115,6 @@ class BottomNavBar extends StatelessWidget {
     );
   }
 
-
   /// Standard navigation handler
   static void handleNavigation(
     BuildContext context,

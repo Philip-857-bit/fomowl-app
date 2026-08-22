@@ -11,7 +11,8 @@ import 'package:fomowl_wallet/screens/swap/widgets/swap_primary_button.dart';
 import 'package:fomowl_wallet/screens/swap/widgets/swap_tab_pill_bar.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 
-class _FakeBlockchainService extends ChangeNotifier implements BlockchainService {
+class _FakeBlockchainService extends ChangeNotifier
+    implements BlockchainService {
   String _activeNetworkKey = 'evm:1';
 
   @override
@@ -23,7 +24,6 @@ class _FakeBlockchainService extends ChangeNotifier implements BlockchainService
     notifyListeners();
   }
 
-
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -31,56 +31,56 @@ class _FakeBlockchainService extends ChangeNotifier implements BlockchainService
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Widget wrapWithTheme({
-    required Widget child,
-    String networkKey = 'evm:1',
-  }) {
+  Widget wrapWithTheme({required Widget child, String networkKey = 'evm:1'}) {
     final service = _FakeBlockchainService()..setActiveNetworkKey(networkKey);
     return ChangeNotifierProvider<BlockchainService>.value(
       value: service,
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: SingleChildScrollView(child: child),
-        ),
+        home: Scaffold(body: SingleChildScrollView(child: child)),
       ),
     );
   }
 
   group('Swap Suite Widgets Theme Verification', () {
-    testWidgets('SwapTabPillBar switches tabs and applies active pill styling', (tester) async {
-      SwapTab activeTab = SwapTab.swap;
+    testWidgets(
+      'SwapTabPillBar switches tabs and applies active pill styling',
+      (tester) async {
+        SwapTab activeTab = SwapTab.swap;
 
-      await tester.pumpWidget(
-        wrapWithTheme(
-          networkKey: 'evm:1',
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              return SwapTabPillBar(
-                activeTab: activeTab,
-                onTabSelected: (tab) => setState(() => activeTab = tab),
-              );
-            },
+        await tester.pumpWidget(
+          wrapWithTheme(
+            networkKey: 'evm:1',
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return SwapTabPillBar(
+                  activeTab: activeTab,
+                  onTabSelected: (tab) => setState(() => activeTab = tab),
+                );
+              },
+            ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      expect(find.text('SWAP'), findsOneWidget);
-      expect(find.text('LIMIT'), findsOneWidget);
-      expect(find.text('BRIDGE'), findsOneWidget);
+        expect(find.text('SWAP'), findsOneWidget);
+        expect(find.text('LIMIT'), findsOneWidget);
+        expect(find.text('BRIDGE'), findsOneWidget);
 
-      await tester.tap(find.text('LIMIT'));
-      await tester.pumpAndSettle();
-      expect(activeTab, SwapTab.limit);
+        await tester.tap(find.text('LIMIT'));
+        await tester.pumpAndSettle();
+        expect(activeTab, SwapTab.limit);
 
-      await tester.tap(find.text('BRIDGE'));
-      await tester.pumpAndSettle();
-      expect(activeTab, SwapTab.bridge);
-    });
+        await tester.tap(find.text('BRIDGE'));
+        await tester.pumpAndSettle();
+        expect(activeTab, SwapTab.bridge);
+      },
+    );
 
-    testWidgets('SwapPrimaryButton renders enabled state with theme gradient', (tester) async {
+    testWidgets('SwapPrimaryButton renders enabled state with theme gradient', (
+      tester,
+    ) async {
       bool pressed = false;
 
       await tester.pumpWidget(
@@ -102,29 +102,33 @@ void main() {
       expect(pressed, isTrue);
     });
 
-    testWidgets('SwapDirectionButton renders with chain accent color', (tester) async {
+    testWidgets('SwapDirectionButton renders with chain accent color', (
+      tester,
+    ) async {
       bool pressed = false;
 
       await tester.pumpWidget(
         wrapWithTheme(
           networkKey: 'evm:8453',
-          child: SwapDirectionButton(
-            onPressed: () => pressed = true,
-          ),
+          child: SwapDirectionButton(onPressed: () => pressed = true),
         ),
       );
       await tester.pump();
 
       expect(find.byType(FigmaSwapDirectionIcon), findsOneWidget);
 
-      final icon = tester.widget<FigmaSwapDirectionIcon>(find.byType(FigmaSwapDirectionIcon));
+      final icon = tester.widget<FigmaSwapDirectionIcon>(
+        find.byType(FigmaSwapDirectionIcon),
+      );
       expect(icon.color, const Color(0xFF0052FF));
 
       await tester.tap(find.byType(SwapDirectionButton));
       expect(pressed, isTrue);
     });
 
-    testWidgets('SwapFromCard renders percentage pills and selects values', (tester) async {
+    testWidgets('SwapFromCard renders percentage pills and selects values', (
+      tester,
+    ) async {
       int selectedPercent = 0;
       final controller = TextEditingController(text: '100');
       final token = Token(
@@ -136,8 +140,6 @@ void main() {
         valueUsd: 7500.0,
         changePercent24h: 1.5,
       );
-
-
 
       await tester.pumpWidget(
         wrapWithTheme(

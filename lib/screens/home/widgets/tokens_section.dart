@@ -364,7 +364,6 @@ class _AssetTabChip extends StatelessWidget {
   }
 }
 
-
 class _AssetToolbarButton extends StatelessWidget {
   const _AssetToolbarButton({required this.icon, required this.onTap});
 

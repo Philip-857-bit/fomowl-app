@@ -10,26 +10,29 @@ void main() {
       expect(projectId.length, greaterThanOrEqualTo(8));
     });
 
-    test('WcSessionProposalModel holds valid metadata and requested namespaces', () {
-      const proposal = WcSessionProposalModel(
-        id: 12345,
-        dappName: 'Uniswap',
-        dappUrl: 'https://app.uniswap.org',
-        dappDescription: 'Swap tokens on Ethereum',
-        dappIcon: 'https://app.uniswap.org/favicon.png',
-        requestedChains: ['eip155:1', 'eip155:137', 'solana:mainnet'],
-        requestedMethods: ['personal_sign', 'eth_sendTransaction'],
-        requestedEvents: ['chainChanged', 'accountsChanged'],
-        isVerified: true,
-      );
+    test(
+      'WcSessionProposalModel holds valid metadata and requested namespaces',
+      () {
+        const proposal = WcSessionProposalModel(
+          id: 12345,
+          dappName: 'Uniswap',
+          dappUrl: 'https://app.uniswap.org',
+          dappDescription: 'Swap tokens on Ethereum',
+          dappIcon: 'https://app.uniswap.org/favicon.png',
+          requestedChains: ['eip155:1', 'eip155:137', 'solana:mainnet'],
+          requestedMethods: ['personal_sign', 'eth_sendTransaction'],
+          requestedEvents: ['chainChanged', 'accountsChanged'],
+          isVerified: true,
+        );
 
-      expect(proposal.id, 12345);
-      expect(proposal.dappName, 'Uniswap');
-      expect(proposal.dappUrl, 'https://app.uniswap.org');
-      expect(proposal.requestedChains, contains('eip155:1'));
-      expect(proposal.requestedMethods, contains('personal_sign'));
-      expect(proposal.isVerified, isTrue);
-    });
+        expect(proposal.id, 12345);
+        expect(proposal.dappName, 'Uniswap');
+        expect(proposal.dappUrl, 'https://app.uniswap.org');
+        expect(proposal.requestedChains, contains('eip155:1'));
+        expect(proposal.requestedMethods, contains('personal_sign'));
+        expect(proposal.isVerified, isTrue);
+      },
+    );
 
     test('WcSessionRequestModel formats and exposes request attributes', () {
       const request = WcSessionRequestModel(
@@ -40,7 +43,10 @@ void main() {
         dappName: 'OpenSea',
         dappUrl: 'https://opensea.io',
         dappIcon: 'https://opensea.io/icon.png',
-        params: ['0x48656c6c6f204f776c6c6574', '0x1234567890abcdef1234567890abcdef12345678'],
+        params: [
+          '0x48656c6c6f204f776c6c6574',
+          '0x1234567890abcdef1234567890abcdef12345678',
+        ],
         formattedPreview: 'Hello Owllet',
       );
 

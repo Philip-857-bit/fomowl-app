@@ -80,9 +80,9 @@ class AppEnvironment {
     fallback: 'https://www.google.com',
   );
   static final bool pushNotificationsEnabled =
-    _resolvePushNotificationsEnabled();
+      _resolvePushNotificationsEnabled();
   static final FirebaseOptions? firebaseOptions =
-    _resolveFirebaseOptionsForCurrentPlatform();
+      _resolveFirebaseOptionsForCurrentPlatform();
   static final String? cashInMiniAppUrl = _optionalEnv(_cashInMiniAppUrlEnv);
   static final List<String> cashInMiniAppAllowedOrigins = _csvEnv(
     _cashInMiniAppAllowedOriginsEnv,

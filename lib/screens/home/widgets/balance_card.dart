@@ -245,4 +245,3 @@ class BalanceCard extends StatelessWidget {
     );
   }
 }
-

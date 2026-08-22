@@ -5,10 +5,7 @@ import '../../constants/app_colors.dart';
 import '../../services/walletconnect/wallet_connect_models.dart';
 
 class WalletConnectRequestModal extends StatelessWidget {
-  const WalletConnectRequestModal({
-    super.key,
-    required this.request,
-  });
+  const WalletConnectRequestModal({super.key, required this.request});
 
   final WcSessionRequestModel request;
 
@@ -117,7 +114,8 @@ class WalletConnectRequestModal extends StatelessWidget {
                             ),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: request.dappIcon != null &&
+                          child:
+                              request.dappIcon != null &&
                                   request.dappIcon!.isNotEmpty
                               ? Image.network(
                                   request.dappIcon!,
@@ -159,8 +157,9 @@ class WalletConnectRequestModal extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: _isTransactionRequest
                                 ? AppColors.accentRed.withValues(alpha: 0.15)
-                                : const Color(0xFF3B82F6)
-                                    .withValues(alpha: 0.15),
+                                : const Color(
+                                    0xFF3B82F6,
+                                  ).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -344,8 +343,9 @@ class WalletConnectRequestModal extends StatelessWidget {
   }
 
   Widget _buildFallbackIcon() {
-    final firstChar =
-        request.dappName.isNotEmpty ? request.dappName[0].toUpperCase() : 'W';
+    final firstChar = request.dappName.isNotEmpty
+        ? request.dappName[0].toUpperCase()
+        : 'W';
     return Center(
       child: Text(
         firstChar,

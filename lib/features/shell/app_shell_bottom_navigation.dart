@@ -128,4 +128,3 @@ class _ShellNavItem extends StatelessWidget {
     );
   }
 }
-
