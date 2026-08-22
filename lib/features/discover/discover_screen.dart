@@ -10,9 +10,14 @@ import '../../features/mini_apps/mini_app_registry.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
+import '../../services/deep_link_service.dart';
+
+import '../../services/wallet_service.dart';
+import '../../services/walletconnect/wallet_connect_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/in_app_link_router.dart';
-import '../../services/wallet_service.dart';
+
+
 import 'browser/browser_session_controller.dart';
 import 'browser/discover_tab_manager.dart';
 import 'discover_url_utils.dart';
@@ -250,8 +255,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           const SizedBox(height: 14),
           TextField(
             controller: _searchController,
-            onChanged: _sessionController.updateQuery,
+            onChanged: (value) {
+              _sessionController.updateQuery(value);
+              if (value.trim().startsWith('wc:')) {
+                _handleBrowserInput(value);
+              }
+            },
             onSubmitted: _handleBrowserInput,
+
             style: GoogleFonts.outfit(color: Colors.white),
             decoration: InputDecoration(
               hintText: l.discoverSearchHint,
@@ -440,7 +451,27 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   /// context just by being entered in the address bar, with no Discover tile.
   void _handleBrowserInput(String value) {
     final l = AppLocalizations.of(context);
-    final target = resolveDiscoverInput(value);
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return;
+
+    // 1. Check if user pasted a WalletConnect URI / link
+    final wcPairingUri = DeepLinkService.extractWalletConnectPairingUri(trimmed);
+    if (wcPairingUri != null && wcPairingUri.isNotEmpty) {
+      _searchController.clear();
+      _sessionController.updateQuery('');
+      FocusScope.of(context).unfocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connecting to DApp via WalletConnect...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      WalletConnectService.instance.pair(wcPairingUri);
+      return;
+    }
+
+    // 2. Check if mini-app
+    final target = resolveDiscoverInput(trimmed);
     if (target != null && target.type == DiscoverInputType.url) {
       final miniApp = OwlletMiniApps.findByUri(target.uri);
       if (miniApp != null) {
@@ -455,12 +486,14 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         return;
       }
     }
+
     _sessionController.openManualInput(
-      value,
+      trimmed,
       invalidInputReason: l.discoverManualInputInvalid,
       webSearchTitle: l.discoverWebSearchTitle,
     );
   }
+
 
   Future<void> _openExternal(String rawUrl) async {
     final uri = Uri.tryParse(rawUrl.trim());

@@ -15,6 +15,49 @@ class DeepLinkService {
   StreamSubscription<Uri>? _sub;
   bool _initialized = false;
 
+  /// Helper to detect and extract a WalletConnect pairing URI from any raw input string,
+  /// including raw `wc:...`, universal links `https://owlletapp.com/wc?uri=...`, or deep links `owllet://wc?uri=...`.
+  static String? extractWalletConnectPairingUri(String rawString) {
+    final trimmed = rawString.trim();
+    if (trimmed.isEmpty) return null;
+
+    // 1. Direct wc: scheme
+    if (trimmed.startsWith('wc:')) {
+      return trimmed;
+    }
+
+    // 2. Query parameter or substring containing uri=wc:
+    if (trimmed.contains('uri=')) {
+      final uri = Uri.tryParse(trimmed);
+      if (uri != null && uri.queryParameters.containsKey('uri')) {
+        final param = uri.queryParameters['uri'];
+        if (param != null && param.trim().startsWith('wc:')) {
+          return param.trim();
+        }
+      }
+      final uriIndex = trimmed.indexOf('uri=');
+      if (uriIndex != -1) {
+        final extracted = Uri.decodeComponent(trimmed.substring(uriIndex + 4));
+        if (extracted.trim().startsWith('wc:')) {
+          return extracted.trim();
+        }
+      }
+    }
+
+    // 3. Custom scheme owllet://wc?uri=...
+    if (trimmed.startsWith('owllet://wc') || trimmed.startsWith('owllet://app/wc')) {
+      final uri = Uri.tryParse(trimmed);
+      if (uri != null && uri.queryParameters.containsKey('uri')) {
+        final param = uri.queryParameters['uri'];
+        if (param != null && param.trim().isNotEmpty) {
+          return param.trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
@@ -48,36 +91,13 @@ class DeepLinkService {
     );
     final rawString = uri.toString();
 
-    // 1. Direct wc: scheme
-    if (rawString.startsWith('wc:')) {
-      await WalletConnectService.instance.pair(rawString);
+    final pairingUri = extractWalletConnectPairingUri(rawString);
+    if (pairingUri != null && pairingUri.isNotEmpty) {
+      await WalletConnectService.instance.pair(pairingUri);
       return;
     }
 
-    // 2. Universal Link (e.g. https://owlletapp.com/wc?uri=wc:...) or custom scheme (owllet://wc?uri=wc:...)
-    final isWcUniversalLink =
-        (uri.host == 'owlletapp.com' || uri.host == 'fomowl.com') &&
-        (uri.path == '/wc' || uri.path.startsWith('/wc/'));
-    final isWcCustomScheme =
-        uri.scheme == 'owllet' && (uri.host == 'wc' || uri.path.contains('wc'));
-    final containsWcParam =
-        uri.queryParameters.containsKey('uri') || rawString.contains('wc?uri=');
-
-    if (isWcUniversalLink || isWcCustomScheme || containsWcParam) {
-      String? pairingUri = uri.queryParameters['uri'];
-      if (pairingUri == null && rawString.contains('uri=')) {
-        final uriIndex = rawString.indexOf('uri=');
-        if (uriIndex != -1) {
-          pairingUri = Uri.decodeComponent(rawString.substring(uriIndex + 4));
-        }
-      }
-      if (pairingUri != null && pairingUri.isNotEmpty) {
-        await WalletConnectService.instance.pair(pairingUri);
-        return;
-      }
-    }
-
-    // 3. Fallback to In-App router (Discover / Web)
+    // Fallback to In-App router (Discover / Web)
     final context = appNavigatorKey.currentContext;
     if (context != null && context.mounted) {
       await InAppLinkRouter.open(context, rawString);

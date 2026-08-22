@@ -8,7 +8,10 @@ import 'package:provider/provider.dart';
 import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../services/blockchain_service.dart';
+import '../../../../services/deep_link_service.dart';
+import '../../../../services/walletconnect/wallet_connect_service.dart';
 import '../../discover_url_utils.dart';
+
 import '../../permissions/dapp_permission_service.dart';
 import '../../provider/dapp_provider_bridge.dart';
 import '../browser_session_controller.dart';
@@ -201,6 +204,13 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   if (next == null) {
                     return NavigationActionPolicy.ALLOW;
                   }
+                  final rawString = next.toString();
+                  final wcPairingUri =
+                      DeepLinkService.extractWalletConnectPairingUri(rawString);
+                  if (wcPairingUri != null && wcPairingUri.isNotEmpty) {
+                    unawaited(WalletConnectService.instance.pair(wcPairingUri));
+                    return NavigationActionPolicy.CANCEL;
+                  }
                   if (!widget.sessionController.allowsNavigation(
                     next,
                     unsupportedSchemeReason: l.discoverUnsupportedScheme,
@@ -210,6 +220,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   await _applyUserScriptsFor(next);
                   return NavigationActionPolicy.ALLOW;
                 },
+
                 onLoadStart: (controller, url) {
                   final next = url?.uriValue;
                   if (mounted) {
