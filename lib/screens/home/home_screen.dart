@@ -1855,12 +1855,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                   context,
                                   '/transactions',
                                 ),
-                                onAddFunds: () => Navigator.pushNamed(
-                                  context,
-                                  '/deposit-funds',
-                                ),
                               ),
                             ),
+
                             const SizedBox(height: 38),
                             Showcase(
                               key: _quickActionsShowcaseKey,

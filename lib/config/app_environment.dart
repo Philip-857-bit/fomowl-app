@@ -104,7 +104,6 @@ class AppEnvironment {
     return '45932c507126fc35338b2f1b5c342504';
   }
 
-
   /// Optional SPKI (public-key) pinning for the backend host.
   ///
   /// Pinning is deliberately disabled by default. The production endpoint uses

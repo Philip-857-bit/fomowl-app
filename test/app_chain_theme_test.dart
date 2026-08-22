@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:fomowl_wallet/constants/app_colors.dart';
 import 'package:fomowl_wallet/models/chain.dart';
+
 import 'package:fomowl_wallet/models/network_entry.dart';
 import 'package:fomowl_wallet/services/blockchain/solana_catalog.dart';
 import 'package:fomowl_wallet/services/blockchain/tron_catalog.dart';
@@ -102,7 +104,7 @@ void main() {
 
     test('Unresolvable/null key defaults to FOMOwl fallback signature', () {
       final fallbackTheme = AppChainTheme.forNetworkKey(null);
-      expect(fallbackTheme.accentColor, const Color(0xFFF3BA2F));
+      expect(fallbackTheme.accentColor, AppColors.accentRed);
     });
   });
 }

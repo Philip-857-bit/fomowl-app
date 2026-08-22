@@ -7,7 +7,7 @@ import '../../../theme/app_chain_theme.dart';
 import '../../../utils/value_formatter.dart';
 import '../home_portfolio_metrics.dart';
 
-/// Displays the wallet balance, eye-toggle, dynamic chain gradient, and Add Funds action.
+/// Displays the wallet balance, eye-toggle, dynamic chain gradient, and History access.
 class BalanceCard extends StatelessWidget {
   final String titleText;
   final String formattedBalance;
@@ -17,7 +17,6 @@ class BalanceCard extends StatelessWidget {
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
   final VoidCallback onHistoryTap;
-  final VoidCallback? onAddFunds;
 
   const BalanceCard({
     super.key,
@@ -29,7 +28,6 @@ class BalanceCard extends StatelessWidget {
     required this.isLoadingBalances,
     required this.onToggleVisibility,
     required this.onHistoryTap,
-    this.onAddFunds,
   });
 
   Color _changeColor() {
@@ -135,62 +133,19 @@ class BalanceCard extends StatelessWidget {
                   ),
                 ],
                 const Spacer(),
-                if (onAddFunds != null)
-                  GestureDetector(
-                    onTap: onAddFunds,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(12, 5, 6, 5),
-                      decoration: BoxDecoration(
-                        color: theme.accentColor.withValues(alpha: 0.22),
-                        borderRadius: BorderRadius.circular(9999),
-                        border: Border.all(
-                          color: theme.accentColor.withValues(alpha: 0.25),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Add Funds',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: theme.accentColor,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 18,
-                            height: 18,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: theme.accentColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.add,
-                              size: 12,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  GestureDetector(
-                    onTap: onHistoryTap,
-                    child: Text(
-                      'History',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.8),
-                        letterSpacing: 0.4,
-                      ),
+                GestureDetector(
+                  onTap: onHistoryTap,
+                  child: Text(
+                    'History',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withValues(alpha: 0.8),
+                      height: 1.6,
+                      letterSpacing: 0.6,
                     ),
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 10),

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 class ScreenCaptureGuard {
   ScreenCaptureGuard({MethodChannel? channel})
-      : _channel = channel ?? const MethodChannel('owllet/screen_security');
+    : _channel = channel ?? const MethodChannel('owllet/screen_security');
 
   final MethodChannel _channel;
 

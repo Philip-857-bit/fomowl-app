@@ -427,8 +427,10 @@ class AppChainTheme {
   };
 
   /// Resolves the active theme for any [NetworkEntry]
+  /// Resolves the active theme for any [NetworkEntry]
   static AppChainTheme forNetwork(NetworkEntry? entry) {
-    if (entry == null) return bsc; // Default to BSC per Figma primary showcase
+    if (entry == null)
+      return fomowlSignature; // Original FOMOwl app theme fallback
 
     if (entry is SolanaNetworkEntry) return solana;
     if (entry is TronNetworkEntry) return tron;
@@ -444,7 +446,7 @@ class AppChainTheme {
       }
 
       if (chain.isCustom) {
-        return fromCustomChain(chain);
+        return fomowlSignature;
       }
     }
 
@@ -453,7 +455,8 @@ class AppChainTheme {
 
   /// Resolves the active theme for any network key string (e.g., 'evm:56', 'solana:mainnet')
   static AppChainTheme forNetworkKey(String? networkKey) {
-    if (networkKey == null || networkKey.isEmpty) return bsc;
+    if (networkKey == null || networkKey.isEmpty)
+      return fomowlSignature; // Original FOMOwl app theme fallback
 
     final trimmed = networkKey.trim().toLowerCase();
     if (trimmed.startsWith('solana')) return solana;
@@ -477,7 +480,7 @@ class AppChainTheme {
       final blockchain = Provider.of<BlockchainService>(context, listen: true);
       return forNetworkKey(blockchain.activeNetworkKey);
     } catch (_) {
-      return bsc;
+      return fomowlSignature;
     }
   }
 }

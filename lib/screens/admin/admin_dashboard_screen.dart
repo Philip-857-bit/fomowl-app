@@ -841,7 +841,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return;
       }
 
-
       setState(() => _homeBannerImageUploadInFlight = true);
       final response = await _apiService.uploadHomeBannerImage(
         bytes: bytes,
