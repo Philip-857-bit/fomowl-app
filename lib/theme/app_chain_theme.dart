@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../constants/app_colors.dart';
 import '../models/chain.dart';
+
 import '../models/network_entry.dart';
 import '../services/blockchain/blockchain_catalog.dart';
 import '../services/blockchain_service.dart';
@@ -347,30 +347,34 @@ class AppChainTheme {
     activeIndicatorColor: Color(0xFF4C7FFF),
   );
 
-  /// FOMOwl Signature Brand Fallback Theme
+  /// FOMOwl Signature Brand Default Theme — Figma #321:2990
   static const AppChainTheme fomowlSignature = AppChainTheme(
     id: 'fomowl_signature',
-    displayName: 'FOMOwl Wallet',
-    primaryColor: AppColors.primaryAccent,
-    accentColor: AppColors.accentRed,
-    secondaryAccent: AppColors.accentGradientStart,
+    displayName: 'FOMOwl Classic',
+    primaryColor: Color(0xFFEA2A33),
+    accentColor: Color(0xFFEA2A33),
+    secondaryAccent: Color(0xFFD31C31),
     balanceCardGradient: LinearGradient(
-      colors: [Color(0xFF2A0808), Color(0xFF1A0505), Color(0xFF0A0A0B)],
-      stops: [0.0, 0.5, 1.0],
+      colors: [Color(0xFF1C1C1C), Color(0xFF161616), Color(0xFF0F0F0F)],
+      stops: [0.0, 0.6, 1.0],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     balanceCardBorderGradient: LinearGradient(
-      colors: [AppColors.accentRed, Color(0x00000000), AppColors.accentRed],
+      colors: [Color(0xFFEA2A33), Color(0x00000000), Color(0xFFD31C31)],
       stops: [0.0, 0.67, 1.0],
       begin: Alignment.topRight,
       end: Alignment.bottomLeft,
     ),
-    buttonGradient: AppColors.primaryGradient,
-    glassTint: AppColors.accentRed,
-    badgeColor: AppColors.accentRed,
-    surfaceOverlay: Color(0x22FF3344),
-    activeIndicatorColor: AppColors.accentRed,
+    buttonGradient: LinearGradient(
+      colors: [Color(0xFFEA2A33), Color(0xFFD31C31)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    glassTint: Color(0xFFEA2A33),
+    badgeColor: Color(0xFFD31C31),
+    surfaceOverlay: Color(0x22EA2A33),
+    activeIndicatorColor: Color(0xFFD31C31),
   );
 
   // --------------------------------------------------------------------------

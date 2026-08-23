@@ -788,13 +788,14 @@ class _DecentralizedProfileScreenState
                         child: Column(
                           children: [
                             Text(
-                              patchService.supportVersionLabel,
+                              'Owllet v${patchService.supportVersionLabel}',
                               style: GoogleFonts.inter(
                                 color: const Color(0xFF64748B),
                                 fontSize: 14,
                                 fontWeight: FontWeight.w400,
                               ),
                             ),
+
                             if (_shouldShowPatchStatus(
                               patchService.snapshot.status,
                             )) ...[

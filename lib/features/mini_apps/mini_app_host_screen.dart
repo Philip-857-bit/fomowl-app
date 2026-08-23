@@ -16,6 +16,7 @@ import '../../models/wallet_account.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
+import '../../services/cashin_profile_auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/bridge_service.dart';
@@ -1305,11 +1306,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final fromAmount = payload['fromAmountDisplay']?.toString() ?? '';
     final toAmount = payload['toAmountDisplay']?.toString() ?? '';
 
+    final sameAsset =
+        fromSymbol.trim().toUpperCase() == toSymbol.trim().toUpperCase();
     final confirmed = await _confirmCrossChainSwap(
       fromLabel: fromAmount.isEmpty ? fromSymbol : '$fromAmount $fromSymbol',
       toLabel: toAmount.isEmpty ? toSymbol : '$toAmount $toSymbol',
       reference: reference,
       stepCount: steps.length,
+      isTransfer: sameAsset,
     );
     if (confirmed != true) {
       return const <String, dynamic>{
@@ -1496,6 +1500,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
 
+      final fromSymbol = payload['fromAssetSymbol']?.toString() ?? '';
+      final toSymbol = payload['toAssetSymbol']?.toString() ?? '';
+      // Selling the settlement asset itself (USDC/USDT → USDC/USDT) is a plain
+      // transfer on-chain, so present it as a send rather than a swap.
+      final sameAsset =
+          fromSymbol.trim().toUpperCase() == toSymbol.trim().toUpperCase();
       final confirmed = await _confirmCrossChainSwap(
         fromLabel: _swapLabel(payload, 'from'),
         toLabel: _swapLabel(payload, 'to'),
@@ -1503,6 +1513,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         stepCount: actionablePreviewSteps
             .where((step) => step['kind'] != 'providerSubmit')
             .length,
+        isTransfer: sameAsset,
       );
       if (confirmed != true) {
         return const <String, dynamic>{
@@ -1754,7 +1765,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     required String walletAddress,
     bool allowExpiredForSubmittedSteps = false,
   }) async {
-    final auth = WalletBackendAuthService(walletService: _walletService);
+    // Cash-in endpoints require the profile JWT (not the ws_ settings token).
+    final auth = CashinProfileAuthService(walletService: _walletService);
     final response = await auth
         .sendAuthorized(
           walletAddress,
@@ -1796,7 +1808,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     required String reference,
     required String walletAddress,
   }) async {
-    final auth = WalletBackendAuthService(walletService: _walletService);
+    // Cash-in endpoints require the profile JWT (not the ws_ settings token).
+    final auth = CashinProfileAuthService(walletService: _walletService);
     final response = await auth
         .sendAuthorized(
           walletAddress,
@@ -1896,7 +1909,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     if (signedPayload != null) {
       payload['signedPayload'] = signedPayload;
     }
-    final auth = WalletBackendAuthService(walletService: _walletService);
+    // Cash-in endpoints require the profile JWT (not the ws_ settings token).
+    final auth = CashinProfileAuthService(walletService: _walletService);
     final response = await auth
         .sendAuthorized(
           walletAddress,
@@ -2034,9 +2048,19 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     required String toLabel,
     required String reference,
     required int stepCount,
+    bool isTransfer = false,
   }) {
     final txLabel = stepCount == 1 ? 'transaction' : 'transactions';
     final refText = reference.trim().isEmpty ? '' : '\n\nReference: $reference';
+    // When the sold asset already settles as-is (e.g. USDC → USDC), nothing is
+    // swapped on-chain — it is a plain transfer to the settlement address.
+    final title = isTransfer ? 'Confirm transfer' : 'Sign swap transaction';
+    final body = isTransfer
+        ? 'Send $fromLabel to OwlletPay.\n\nOwllet will sign and submit '
+              '$stepCount $txLabel from this wallet.$refText'
+        : 'Swap $fromLabel to $toLabel.\n\nOwllet will sign and submit '
+              '$stepCount $txLabel from this wallet.$refText';
+    final actionLabel = isTransfer ? 'Confirm & send' : 'Sign and swap';
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -2047,14 +2071,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             borderRadius: BorderRadius.circular(18),
           ),
           title: Text(
-            'Sign swap transaction',
+            title,
             style: GoogleFonts.outfit(
               color: Colors.white,
               fontWeight: FontWeight.w700,
             ),
           ),
           content: Text(
-            'Swap $fromLabel to $toLabel.\n\nOwllet will sign and submit $stepCount $txLabel from this wallet.$refText',
+            body,
             style: GoogleFonts.outfit(
               color: Colors.white.withValues(alpha: 0.72),
               height: 1.4,
@@ -2075,7 +2099,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                 foregroundColor: Colors.white,
               ),
               child: Text(
-                'Sign and swap',
+                actionLabel,
                 style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
               ),
             ),

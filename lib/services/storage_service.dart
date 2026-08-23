@@ -49,6 +49,8 @@ class StorageService {
   static const String _keyAutoLockMinutes = 'auto_lock_minutes';
   static const String _keyLockOnBackground = 'lock_on_background';
   static const String _keyBackendSessionPrefix = 'backend_session_';
+  static const String _keyCashinProfileSessionPrefix =
+      'cashin_profile_session_';
   static const String _keyNotificationDevicePrefix = 'notification_device_';
   static const String _keyPushPreferencePrefix = 'push_pref_';
   static const String _keyEnabledChainFamilies = 'enabled_chain_families';
@@ -245,6 +247,48 @@ class StorageService {
 
   Future<void> clearBackendSession(String walletAddress) {
     return _secureStore.delete(key: _backendSessionKey(walletAddress));
+  }
+
+  String _cashinProfileSessionKey(String address) =>
+      '$_keyCashinProfileSessionPrefix${address.toLowerCase()}';
+
+  Future<void> saveCashinProfileSession({
+    required String walletAddress,
+    required String token,
+    required String expiresAt,
+  }) {
+    return _secureStore.write(
+      key: _cashinProfileSessionKey(walletAddress),
+      value: jsonEncode({'token': token, 'expiresAt': expiresAt}),
+    );
+  }
+
+  Future<Map<String, String>?> getCashinProfileSession(
+    String walletAddress,
+  ) async {
+    final raw = await _secureStore.read(
+      key: _cashinProfileSessionKey(walletAddress),
+    );
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final token = decoded['token']?.toString();
+      final expiresAt = decoded['expiresAt']?.toString();
+      if (token == null ||
+          token.isEmpty ||
+          expiresAt == null ||
+          expiresAt.isEmpty) {
+        return null;
+      }
+      return {'token': token, 'expiresAt': expiresAt};
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearCashinProfileSession(String walletAddress) {
+    return _secureStore.delete(key: _cashinProfileSessionKey(walletAddress));
   }
 
   Future<void> saveNotificationDeviceRegistration({

@@ -8,8 +8,33 @@ import 'package:fomowl_wallet/screens/profile/widgets/settings_wallet_header_car
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 
 import 'package:fomowl_wallet/screens/profile/widgets/wallet_theme_selector_sheet.dart';
+import 'package:fomowl_wallet/services/secure_store.dart';
+import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/theme/app_chain_theme.dart';
 import 'package:fomowl_wallet/theme/theme_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class _InMemorySecureStore implements SecureStore {
+  final Map<String, String> _data = {};
+
+  @override
+  Future<String?> read({required String key}) async => _data[key];
+
+  @override
+  Future<void> write({required String key, required String value}) async {
+    _data[key] = value;
+  }
+
+  @override
+  Future<void> delete({required String key}) async {
+    _data.remove(key);
+  }
+
+  @override
+  Future<void> deleteAll() async {
+    _data.clear();
+  }
+}
 
 class _FakeBlockchainService extends ChangeNotifier
     implements BlockchainService {
@@ -31,13 +56,22 @@ class _FakeBlockchainService extends ChangeNotifier
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  ThemeController createTestThemeController() {
+    final storage = StorageService(secureStore: _InMemorySecureStore());
+    return ThemeController(storage: storage);
+  }
+
   Widget wrapWithTheme({
     required Widget child,
     String networkKey = 'evm:1',
     ThemeController? themeController,
   }) {
     final service = _FakeBlockchainService()..setActiveNetworkKey(networkKey);
-    final controller = themeController ?? ThemeController();
+    final controller = themeController ?? createTestThemeController();
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<BlockchainService>.value(value: service),
@@ -112,7 +146,7 @@ void main() {
     testWidgets(
       'WalletThemeSelectorSheet renders Classic and Adaptive options and toggles state',
       (tester) async {
-        final themeController = ThemeController();
+        final themeController = createTestThemeController();
         await themeController.setThemeMode(AppThemeMode.adaptive);
 
         await tester.pumpWidget(
@@ -145,7 +179,7 @@ void main() {
     testWidgets(
       'AppChainTheme respects ThemeController classic vs adaptive modes',
       (tester) async {
-        final themeController = ThemeController();
+        final themeController = createTestThemeController();
         await themeController.setThemeMode(AppThemeMode.classic);
 
         late AppChainTheme resolvedTheme;

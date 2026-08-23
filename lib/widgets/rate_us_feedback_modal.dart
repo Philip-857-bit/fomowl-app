@@ -30,6 +30,7 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
   bool _showFeedback = false;
   bool _isSubmitting = false;
   bool _submitted = false;
+  bool _handled = false;
   String? _error;
 
   @override
@@ -39,7 +40,11 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
   }
 
   Future<void> _closeWith(Future<void> Function() action) async {
-    Navigator.of(context).pop();
+    if (_handled) return;
+    _handled = true;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
     await action();
   }
 
@@ -56,10 +61,13 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
     try {
       await widget.onSubmitFeedback(message);
       if (!mounted) return;
+      _handled = true;
       setState(() => _submitted = true);
       unawaited(
         Future<void>.delayed(const Duration(milliseconds: 850), () {
-          if (mounted) Navigator.of(context).pop();
+          if (mounted && Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         }),
       );
     } catch (_) {
@@ -75,17 +83,20 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final cardWidth = width < 380 ? width - 48 : 342.0;
-    final cardHeight = _showFeedback ? 604.0 : 468.0;
 
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) unawaited(widget.onClose());
+        if (didPop && !_handled) {
+          _handled = true;
+          unawaited(widget.onClose());
+        }
       },
+
       child: Dialog(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.topCenter,
@@ -94,86 +105,110 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
               duration: const Duration(milliseconds: 260),
               curve: Curves.easeOutCubic,
               width: cardWidth,
-              height: cardHeight,
-              margin: const EdgeInsets.only(top: 86),
-              padding: const EdgeInsets.fromLTRB(32, 112, 32, 28),
+              margin: const EdgeInsets.only(top: 60),
+              padding: const EdgeInsets.fromLTRB(24, 68, 24, 18),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: _neoShadows,
               ),
-              child: Column(
-                children: [
-                  Image.asset(
-                    'assets/images/splash_logo.png',
-                    height: 20,
-                    fit: BoxFit.contain,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Enjoying Owllet?',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 22,
-                      height: 28 / 22,
-                      fontWeight: FontWeight.w800,
-                      color: _text,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "We'd love to hear your feedback. If you're enjoying Owllet, please take a moment to rate your experience on the Play Store. Your support helps us improve and reach more users.",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      height: 20 / 14,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: _submitted
-                        ? const _SubmittedState(key: ValueKey('submitted'))
-                        : _showFeedback
-                        ? _FeedbackState(
-                            key: const ValueKey('feedback'),
-                            controller: _feedbackController,
-                            error: _error,
-                            isSubmitting: _isSubmitting,
-                            onSubmit: _submitFeedback,
-                          )
-                        : _RateState(
-                            key: const ValueKey('rate'),
-                            onRateNow: () => _closeWith(widget.onRateNow),
-                            onMaybeLater: () => _closeWith(widget.onMaybeLater),
-                            onSendFeedback: () =>
-                                setState(() => _showFeedback = true),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Semantics(
+                      label: '5 Star Rating',
+                      child: GestureDetector(
+                        onTap: () => _closeWith(widget.onRateNow),
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(
+                            5,
+                            (index) => const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 2.5),
+                              child: Icon(
+                                Icons.star_rounded,
+                                color: Color(0xFFFFB800),
+                                size: 24,
+                              ),
+                            ),
                           ),
-                  ),
-                ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Enjoying Owllet?',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        height: 28 / 22,
+                        fontWeight: FontWeight.w800,
+                        color: _text,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "We'd love to hear your feedback. If you're enjoying Owllet, please take a moment to rate your experience on the Play Store. Your support helps us improve and reach more users.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        height: 20 / 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: _submitted
+                          ? const _SubmittedState(key: ValueKey('submitted'))
+                          : _showFeedback
+                          ? _FeedbackState(
+                              key: const ValueKey('feedback'),
+                              controller: _feedbackController,
+                              error: _error,
+                              isSubmitting: _isSubmitting,
+                              onSubmit: _submitFeedback,
+                            )
+                          : _RateState(
+                              key: const ValueKey('rate'),
+                              onRateNow: () => _closeWith(widget.onRateNow),
+                              onMaybeLater: () =>
+                                  _closeWith(widget.onMaybeLater),
+                              onSendFeedback: () =>
+                                  setState(() => _showFeedback = true),
+                            ),
+                    ),
+                  ],
+                ),
               ),
             ),
+
             Positioned(
-              top: -6,
-              child: Image.asset(
-                'assets/images/rate_us_mascot.png',
-                width: 186,
-                height: 186,
-                fit: BoxFit.contain,
+              top: -8,
+              child: IgnorePointer(
+                child: Image.asset(
+                  'assets/images/rate_us_mascot.png',
+                  width: 146,
+                  height: 146,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
+
             Positioned(
-              right: 12,
-              top: 104,
+              right: 10,
+              top: 72,
               child: GestureDetector(
                 onTap: () => _closeWith(widget.onClose),
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5FBF6),
                     shape: BoxShape.circle,
@@ -182,7 +217,7 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
                   child: const Icon(
                     Icons.close_rounded,
                     color: Color(0xFF404943),
-                    size: 20,
+                    size: 18,
                   ),
                 ),
               ),
