@@ -27,7 +27,12 @@ void main() {
     changePercent24h: 4.2,
   );
 
-  Future<void> pumpSection(WidgetTester tester) async {
+  Future<void> pumpSection(
+    WidgetTester tester, {
+    VoidCallback? onScan,
+    VoidCallback? onOpenSettings,
+    VoidCallback? onManageTokens,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -45,7 +50,9 @@ void main() {
               nftPreview: const <NftAsset>[],
               hasMoreNfts: false,
               localization: AppLocalizations.of(context),
-              onManageTokens: () {},
+              onScan: onScan ?? () {},
+              onOpenSettings: onOpenSettings ?? () {},
+              onManageTokens: onManageTokens ?? () {},
               onOpenNfts: () {},
               isTokenHidden: (_) => false,
               onSelectToken: (_) {},
@@ -66,7 +73,9 @@ void main() {
     expect(find.text('Tokens'), findsOneWidget);
     expect(find.text('Portfolio'), findsOneWidget);
     expect(find.text('NFTs'), findsOneWidget);
-    expect(find.byIcon(Icons.tune), findsOneWidget);
+    expect(find.byIcon(Icons.qr_code_scanner_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
     expect(find.text('Ethereum'), findsOneWidget);
   });
 
@@ -78,12 +87,34 @@ void main() {
     await tester.tap(find.text('Tokens'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.tune), findsOneWidget);
+    expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
     expect(find.text('Ethereum'), findsOneWidget);
 
     await tester.tap(find.text('NFTs'));
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.collections_outlined), findsOneWidget);
+  });
+
+  testWidgets('maps scan, settings, and token manager toolbar controls', (
+    tester,
+  ) async {
+    var scanTapped = false;
+    var settingsTapped = false;
+    var manageTapped = false;
+    await pumpSection(
+      tester,
+      onScan: () => scanTapped = true,
+      onOpenSettings: () => settingsTapped = true,
+      onManageTokens: () => manageTapped = true,
+    );
+
+    await tester.tap(find.byIcon(Icons.qr_code_scanner_rounded));
+    await tester.tap(find.byIcon(Icons.settings_outlined));
+    await tester.tap(find.byIcon(Icons.tune_rounded));
+
+    expect(scanTapped, isTrue);
+    expect(settingsTapped, isTrue);
+    expect(manageTapped, isTrue);
   });
 }

@@ -1,5 +1,5 @@
 /// Briefly suppresses the app's lock-on-background while a system camera or
-/// file picker launched from inside an in-app WebView (e.g. the Cash In KYC
+/// file picker launched from inside an in-app WebView (e.g. the OwlletPay KYC
 /// selfie/document capture) is in flight.
 ///
 /// Without this, the camera/permission flow backgrounds the Flutter activity,

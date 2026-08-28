@@ -137,6 +137,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get withdraw => 'Retirer';
 
   @override
+  String get addFunds => 'Ajouter des fonds';
+
+  @override
   String get buy => 'Acheter';
 
   @override
@@ -224,6 +227,26 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverTitle => 'Découvrir les DApps';
 
   @override
+  String get discoverProductsTitle => 'Produits FOMOWL';
+
+  @override
+  String get discoverExploreTitle => 'Explorer';
+
+  @override
+  String get discoverSearchResultsTitle => 'Résultats de recherche';
+
+  @override
+  String get discoverOpenOwlletPay => 'Ouvrir OwlletPay';
+
+  @override
+  String get discoverProductsEmpty =>
+      'Les nouveaux produits FOMOWL apparaîtront ici.';
+
+  @override
+  String get discoverOwlletPayPromoDescription =>
+      'Ajoutez des fonds, faites vos achats, payez vos factures et retirez de l’argent au même endroit.';
+
+  @override
   String get discoverSearchHint => 'Rechercher des DApps ou sur le web';
 
   @override
@@ -296,7 +319,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get discoverCashInBadge => 'KYC UNIQUE';
 
   @override
-  String get discoverCashInTitle => 'Ajouter des fonds';
+  String get discoverCashInTitle => 'OwlletPay';
 
   @override
   String get discoverCashInDescription =>
@@ -1486,6 +1509,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get confirmSecretPhraseTitle => 'Confirmez votre phrase secrète';
+
+  @override
+  String get confirmSecretPhraseSubtitle =>
+      'Veuillez accepter les mesures de sécurité suivantes pour assurer la sécurité de votre coffre-fort numérique.';
 
   @override
   String get confirmSecretPhraseCheckOne =>

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_chain_theme.dart';
 import '../../../utils/value_formatter.dart';
 import '../home_portfolio_metrics.dart';
@@ -17,6 +18,7 @@ class BalanceCard extends StatelessWidget {
   final bool isLoadingBalances;
   final VoidCallback onToggleVisibility;
   final VoidCallback onHistoryTap;
+  final VoidCallback onAddFunds;
 
   const BalanceCard({
     super.key,
@@ -28,6 +30,7 @@ class BalanceCard extends StatelessWidget {
     required this.isLoadingBalances,
     required this.onToggleVisibility,
     required this.onHistoryTap,
+    required this.onAddFunds,
   });
 
   Color _changeColor() {
@@ -73,28 +76,29 @@ class BalanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.chainTheme;
+    final addFundsLabel = AppLocalizations.of(context).addFunds;
     final changeColor = _changeColor();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      constraints: const BoxConstraints(minHeight: 140),
+      constraints: const BoxConstraints(minHeight: 176),
       decoration: BoxDecoration(
         gradient: theme.balanceCardGradient,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: theme.accentColor.withValues(alpha: 0.35),
+          color: theme.accentColor.withValues(alpha: 0.42),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
             color: theme.accentColor.withValues(alpha: 0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            blurRadius: 30,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+        padding: const EdgeInsets.fromLTRB(20, 18, 18, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -178,18 +182,78 @@ class BalanceCard extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Icon(_changeIcon(), size: 13, color: changeColor),
-                const SizedBox(width: 4),
-                Text(
-                  _formatChangeText(),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.3,
-                    color: changeColor,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(_changeIcon(), size: 13, color: changeColor),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          _formatChangeText(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            height: 1.3,
+                            color: changeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Semantics(
+                  button: true,
+                  label: addFundsLabel,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      key: const ValueKey('balance-add-funds'),
+                      onTap: onAddFunds,
+                      borderRadius: BorderRadius.circular(999),
+                      child: Ink(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add_rounded,
+                              size: 15,
+                              color: theme.primaryColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              addFundsLabel,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF111111),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],

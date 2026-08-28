@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/mini_apps/mini_app_definition.dart';
+import 'package:fomowl_wallet/features/mini_apps/mini_app_registry.dart';
 
 void main() {
   group('MiniAppDefinition', () {
@@ -42,5 +43,36 @@ void main() {
         ]),
       );
     });
+  });
+
+  group('OwlletPay registry compatibility', () {
+    test('publishes the canonical OwlletPay definition once', () {
+      expect(OwlletMiniApps.owlletPay.id, 'owllet_pay');
+      expect(OwlletMiniApps.owlletPay.title, 'OwlletPay');
+      expect(
+        OwlletMiniApps.all.where((app) => app.id == 'owllet_pay'),
+        hasLength(1),
+      );
+    });
+
+    test('resolves canonical and legacy IDs to OwlletPay', () {
+      for (final id in const [
+        'owllet_pay',
+        'owllet-pay',
+        'cash_in',
+        'cash-in',
+      ]) {
+        expect(OwlletMiniApps.byId(id)?.id, 'owllet_pay');
+        expect(OwlletMiniApps.isOwlletPayId(id), isTrue);
+      }
+      expect(OwlletMiniApps.cashIn.id, 'owllet_pay');
+    });
+  });
+
+  test('registers Burst as a distinct Owllet mini app', () {
+    expect(OwlletMiniApps.burst.id, 'burst');
+    expect(OwlletMiniApps.byId('BURST')?.id, 'burst');
+    expect(OwlletMiniApps.all.where((app) => app.id == 'burst'), hasLength(1));
+    expect(OwlletMiniApps.burst.requiresWalletSession, isFalse);
   });
 }

@@ -698,19 +698,17 @@ class _TransferConfirmationScreenState
               networkName: networkName,
             ),
           );
-          unawaited(
-            _walletHistoryService.recordSendConfirmed(
-              walletAddress: _fromAddress!,
-              txHash: txHash,
-              chainId: effectiveChainId,
-              networkName: networkName,
-              tokenName: token.name,
-              tokenSymbol: token.symbol,
-              amountText: amountText,
-              toAddress: toAddress,
-              tokenAddress: token.contractAddress,
-              networkKey: transferNetworkKey,
-            ),
+          await _walletHistoryService.recordSendConfirmed(
+            walletAddress: _fromAddress!,
+            txHash: txHash,
+            chainId: effectiveChainId,
+            networkName: networkName,
+            tokenName: token.name,
+            tokenSymbol: token.symbol,
+            amountText: amountText,
+            toAddress: toAddress,
+            tokenAddress: token.contractAddress,
+            networkKey: transferNetworkKey,
           );
         }
       } else if (confirmation == TransactionConfirmationStatus.failed) {

@@ -36,6 +36,7 @@ import '../../screens/home/home_portfolio_api_service.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
+import 'widgets/mini_app_identity_title.dart';
 
 @visibleForTesting
 bool cashinExecutionPlanIsUsable(
@@ -89,7 +90,7 @@ class MiniAppHostScreen extends StatefulWidget {
     final parsed = switch (args) {
       MiniAppHostArguments value => value,
       String value => MiniAppHostArguments(miniAppId: value),
-      _ => const MiniAppHostArguments(miniAppId: 'cash_in'),
+      _ => const MiniAppHostArguments(miniAppId: 'owllet_pay'),
     };
     final definition = OwlletMiniApps.byId(parsed.miniAppId);
     if (definition == null) {
@@ -297,7 +298,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'activeChainId': activeChainId,
         // Keep the wallet available at the context root as well as inside
         // profile/session. Older mini-app SDKs do not reliably expose nested
-        // profile fields, while Cash In needs the EVM recipient for quotes.
+        // profile fields, while OwlletPay needs the EVM recipient for quotes.
         'walletAddress': walletAddress,
         'evmWalletAddress': walletAddress,
         'solanaWalletAddress': solanaWalletAddress,
@@ -312,7 +313,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'token': walletSessionToken,
         },
         'profile': profilePayload,
-        'capabilities': const <String, dynamic>{
+        'capabilities': <String, dynamic>{
           'ready': true,
           'close': true,
           'openExternal': true,
@@ -320,6 +321,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'requestWalletTransfer': true,
           'requestSwapThenTransfer': false,
           'requestCrossChainSwap': true,
+          'requestContractTransaction': widget.definition.id == 'burst',
           'requestSignMessage': true,
           'notify': true,
           'getBalances': true,
@@ -354,7 +356,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildChrome(launchUri),
+            _buildChrome(),
             Expanded(
               child: InAppWebView(
                 initialSettings: InAppWebViewSettings(
@@ -380,7 +382,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                 ),
                 onPermissionRequest: (controller, request) async {
                   // Only a trusted mini-app origin may use the device camera
-                  // (e.g. Cash In KYC selfie). Some Android WebView builds report
+                  // (e.g. OwlletPay KYC selfie). Some Android WebView builds report
                   // an empty/null permission-request origin, which previously
                   // tripped the trust check and silently denied getUserMedia
                   // (NotAllowedError) even with the OS camera permission granted.
@@ -456,7 +458,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     );
   }
 
-  Widget _buildChrome(Uri launchUri) {
+  Widget _buildChrome() {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(
@@ -477,30 +479,13 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                 ),
               ),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.definition.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      launchUri.host,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
+                child: MiniAppIdentityTitle(
+                  definition: widget.definition,
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               IconButton(
@@ -578,6 +563,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     requestCrossChainSwap: function(payload) {
       return callHost({ type: 'request_cross_chain_swap', payload: payload || {} });
     },
+    requestContractTransaction: function(payload) {
+      return callHost({ type: 'request_contract_transaction', payload: payload || {} });
+    },
     requestSignMessage: function(payload) {
       return callHost({ type: 'request_sign_message', payload: payload || {} });
     },
@@ -645,6 +633,17 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         }
         return _handleCrossChainSwapRequest(
           swapPayload.cast<String, dynamic>(),
+        );
+      case 'request_contract_transaction':
+        final transactionPayload = raw['payload'];
+        if (transactionPayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid contract transaction request.',
+          };
+        }
+        return _handleContractTransactionRequest(
+          transactionPayload.cast<String, dynamic>(),
         );
       case 'request_sign_message':
         final signPayload = raw['payload'];
@@ -824,6 +823,386 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
   }
 
+  Future<Map<String, dynamic>> _handleContractTransactionRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    if (widget.definition.id != 'burst') {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Contract transactions are not enabled for this mini app.',
+      };
+    }
+    final executionReference =
+        payload['executionReference']?.toString().trim() ?? '';
+    if (!RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+    ).hasMatch(executionReference)) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Invalid Burst execution reference.',
+      };
+    }
+    final walletAddress = await _walletService.getWalletAddressForFamily(
+      ChainFamily.evm,
+    );
+    if (walletAddress == null || walletAddress.trim().isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'This wallet does not support EVM transactions.',
+      };
+    }
+
+    String? transactionHash;
+    try {
+      final preview = await _fetchBurstExecutionPlan(
+        executionReference: executionReference,
+        walletAddress: walletAddress,
+      );
+      final persistedStatus = preview['status']?.toString();
+      final persistedHash = preview['transactionHash']?.toString() ?? '';
+      if (persistedStatus == 'submitted' || persistedStatus == 'confirmed') {
+        if (!RegExp(r'^0x[0-9a-fA-F]{64}$').hasMatch(persistedHash)) {
+          throw const FormatException(
+            'The submitted Burst transaction hash is invalid.',
+          );
+        }
+        if (persistedStatus == 'confirmed') {
+          return <String, dynamic>{
+            'ok': true,
+            'transactionHash': persistedHash,
+            'confirmed': true,
+            'pending': false,
+          };
+        }
+        final transaction = _stringKeyedMap(preview['transaction']);
+        final backendConfirmed = await _confirmBurstTransactionWithBackend(
+          campaignId: preview['campaignId']!.toString(),
+          operation: transaction['operation']!.toString(),
+          transactionHash: persistedHash,
+          walletAddress: walletAddress,
+        );
+        return <String, dynamic>{
+          'ok': true,
+          'transactionHash': persistedHash,
+          'confirmed': backendConfirmed,
+          'pending': !backendConfirmed,
+        };
+      }
+      final previewTransaction = _validateBurstExecutionPlan(
+        preview,
+        executionReference: executionReference,
+        walletAddress: walletAddress,
+      );
+      final approved = await _confirmBurstContractTransaction(
+        campaignTitle: preview['campaignTitle']?.toString() ?? 'Burst campaign',
+        assetSymbol: preview['assetSymbol']?.toString() ?? '',
+        operation: previewTransaction['operation']!.toString(),
+        valueBaseUnits: previewTransaction['valueBaseUnits']!.toString(),
+        chainId: _requiredInt(previewTransaction, 'chainId'),
+      );
+      if (approved != true) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Burst transaction was cancelled.',
+        };
+      }
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Mini-app was closed before the transaction could start.',
+        };
+      }
+
+      // The user may leave the confirmation sheet open until the short-lived
+      // plan expires. Reload it immediately before signing.
+      final plan = await _fetchBurstExecutionPlan(
+        executionReference: executionReference,
+        walletAddress: walletAddress,
+      );
+      final transaction = _validateBurstExecutionPlan(
+        plan,
+        executionReference: executionReference,
+        walletAddress: walletAddress,
+      );
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Mini-app was closed before the transaction could start.',
+        };
+      }
+      final chainId = _requiredInt(transaction, 'chainId');
+      final blockchain = context.read<BlockchainService>();
+      final chain = blockchain.allChains
+          .where(
+            (candidate) =>
+                candidate.chainId == chainId &&
+                candidate.family == ChainFamily.evm,
+          )
+          .firstOrNull;
+      if (chain == null) {
+        throw FormatException(
+          'Required EVM network $chainId is not configured.',
+        );
+      }
+      transactionHash = await _walletService.sendRawTransactionRequest(
+        rpcUrl: chain.rpcUrl,
+        chainId: chainId,
+        toAddress: transaction['toAddress']!.toString(),
+        valueInWei: _parseBaseUnitValue(transaction['valueBaseUnits']),
+        dataHex: transaction['calldata']!.toString(),
+      );
+      await _recordBurstTransaction(
+        campaignId: plan['campaignId']!.toString(),
+        operation: transaction['operation']!.toString(),
+        transactionHash: transactionHash,
+        walletAddress: walletAddress,
+        confirm: false,
+      );
+
+      final confirmation = await _transactionMonitor.waitForConfirmation(
+        txHash: transactionHash,
+        blockchain: blockchain,
+        networkKey: NetworkKey.evm(chainId),
+        evmChain: chain,
+      );
+      if (confirmation == TransactionConfirmationStatus.failed) {
+        return <String, dynamic>{
+          'ok': false,
+          'transactionHash': transactionHash,
+          'error': 'The Burst transaction failed on-chain.',
+        };
+      }
+      if (confirmation == TransactionConfirmationStatus.pending) {
+        return <String, dynamic>{
+          'ok': true,
+          'transactionHash': transactionHash,
+          'confirmed': false,
+          'pending': true,
+        };
+      }
+
+      var backendConfirmed = true;
+      final operation = transaction['operation']!.toString();
+      if (operation == 'create' || operation == 'set_root') {
+        backendConfirmed = await _confirmBurstTransactionWithBackend(
+          campaignId: plan['campaignId']!.toString(),
+          operation: operation,
+          transactionHash: transactionHash,
+          walletAddress: walletAddress,
+        );
+      }
+      return <String, dynamic>{
+        'ok': true,
+        'transactionHash': transactionHash,
+        'confirmed': backendConfirmed,
+        'pending': !backendConfirmed,
+      };
+    } catch (error) {
+      final message = AppErrorUtils.userMessage(error);
+      if (transactionHash != null) {
+        return <String, dynamic>{
+          'ok': true,
+          'transactionHash': transactionHash,
+          'confirmed': false,
+          'pending': true,
+          'error': message,
+        };
+      }
+      return <String, dynamic>{'ok': false, 'error': message};
+    }
+  }
+
+  Future<Map<String, dynamic>> _fetchBurstExecutionPlan({
+    required String executionReference,
+    required String walletAddress,
+  }) async {
+    final auth = CashinProfileAuthService(walletService: _walletService);
+    final response = await auth
+        .sendAuthorized(
+          walletAddress,
+          (headers) => HttpClientService().client.get(
+            AppEnvironment.api(
+              '/burst/transactions/${Uri.encodeComponent(executionReference)}/execution',
+            ),
+            headers: headers,
+          ),
+          const <String, String>{'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 15));
+    final body = _decodeBackendBody(response.body);
+    if (response.statusCode != 200) {
+      throw FormatException(
+        body['message']?.toString() ?? 'Burst transaction plan unavailable.',
+      );
+    }
+    final data = body['data'];
+    return data is Map ? _stringKeyedMap(data) : body;
+  }
+
+  Map<String, dynamic> _validateBurstExecutionPlan(
+    Map<String, dynamic> plan, {
+    required String executionReference,
+    required String walletAddress,
+  }) {
+    if (plan['walletAddress']?.toString().toLowerCase() !=
+        walletAddress.toLowerCase()) {
+      throw const FormatException(
+        'The Burst plan belongs to a different wallet.',
+      );
+    }
+    final transaction = _stringKeyedMap(plan['transaction']);
+    if (transaction['reference']?.toString() != executionReference) {
+      throw const FormatException('The Burst execution reference changed.');
+    }
+    final expiresAt = DateTime.tryParse(
+      transaction['expiresAt']?.toString() ?? '',
+    );
+    if (expiresAt == null ||
+        !expiresAt.toUtc().isAfter(DateTime.now().toUtc())) {
+      throw const FormatException('The Burst transaction plan has expired.');
+    }
+    final chainId = _requiredInt(transaction, 'chainId');
+    if (chainId <= 0) {
+      throw const FormatException('Burst requires a valid EVM chain ID.');
+    }
+    final operation = transaction['operation']?.toString() ?? '';
+    final selector = switch (operation) {
+      'approve' => '095ea7b3',
+      'create' => 'a4be8afd',
+      'set_root' => '7cb64759',
+      _ => throw const FormatException('Unsupported Burst transaction.'),
+    };
+    final toAddress = transaction['toAddress']?.toString() ?? '';
+    final calldata = transaction['calldata']?.toString() ?? '';
+    if (!_isEvmAddress(toAddress) ||
+        !RegExp(r'^0x[0-9a-fA-F]+$').hasMatch(calldata) ||
+        calldata.length.isOdd ||
+        calldata.length < 10 ||
+        calldata.substring(2, 10).toLowerCase() != selector) {
+      throw const FormatException('The Burst transaction plan is malformed.');
+    }
+    final value = _parseBaseUnitValue(transaction['valueBaseUnits']);
+    if (value.bitLength > 256) {
+      throw const FormatException('The Burst transaction value is too large.');
+    }
+    return transaction;
+  }
+
+  Future<void> _recordBurstTransaction({
+    required String campaignId,
+    required String operation,
+    required String transactionHash,
+    required String walletAddress,
+    required bool confirm,
+  }) async {
+    final auth = CashinProfileAuthService(walletService: _walletService);
+    final response = await auth
+        .sendAuthorized(
+          walletAddress,
+          (headers) => HttpClientService().client.post(
+            AppEnvironment.api(
+              '/burst/campaigns/${Uri.encodeComponent(campaignId)}/transactions/${Uri.encodeComponent(operation)}/${confirm ? 'confirm' : 'submit'}',
+            ),
+            headers: {...headers, 'Content-Type': 'application/json'},
+            body: jsonEncode(<String, dynamic>{
+              'transactionHash': transactionHash,
+            }),
+          ),
+          const <String, String>{'Accept': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = _decodeBackendBody(response.body);
+      throw FormatException(
+        body['message']?.toString() ?? 'Unable to update Burst transaction.',
+      );
+    }
+  }
+
+  Future<bool> _confirmBurstTransactionWithBackend({
+    required String campaignId,
+    required String operation,
+    required String transactionHash,
+    required String walletAddress,
+  }) async {
+    for (var attempt = 0; attempt < 20; attempt++) {
+      final auth = CashinProfileAuthService(walletService: _walletService);
+      final response = await auth
+          .sendAuthorized(
+            walletAddress,
+            (headers) => HttpClientService().client.post(
+              AppEnvironment.api(
+                '/burst/campaigns/${Uri.encodeComponent(campaignId)}/transactions/${Uri.encodeComponent(operation)}/confirm',
+              ),
+              headers: {...headers, 'Content-Type': 'application/json'},
+              body: jsonEncode(<String, dynamic>{
+                'transactionHash': transactionHash,
+              }),
+            ),
+            const <String, String>{'Accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 200) return true;
+      if (response.statusCode != 202) {
+        final body = _decodeBackendBody(response.body);
+        throw FormatException(
+          body['message']?.toString() ?? 'Unable to confirm Burst transaction.',
+        );
+      }
+      await Future<void>.delayed(const Duration(seconds: 3));
+    }
+    return false;
+  }
+
+  Future<bool?> _confirmBurstContractTransaction({
+    required String campaignTitle,
+    required String assetSymbol,
+    required String operation,
+    required String valueBaseUnits,
+    required int chainId,
+  }) {
+    final action = switch (operation) {
+      'approve' => 'Approve token spending',
+      'create' => 'Create Burst campaign',
+      'set_root' => 'Publish participant allocation',
+      _ => 'Submit Burst transaction',
+    };
+    final valueLine = valueBaseUnits == '0'
+        ? ''
+        : '\n\nContract value: $valueBaseUnits wei';
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.cardDark,
+        title: Text(
+          action,
+          style: GoogleFonts.outfit(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          '$campaignTitle${assetSymbol.isEmpty ? '' : ' · $assetSymbol'}\nEVM network: $chainId$valueLine\n\nOwllet verified this transaction with the Burst backend. Review it before signing.',
+          style: GoogleFonts.outfit(
+            color: Colors.white.withValues(alpha: 0.72),
+            height: 1.4,
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Review & sign'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<Map<String, dynamic>> _handleWalletTransferRequest(
     Map<String, dynamic> payload,
   ) async {
@@ -959,7 +1338,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             : null,
       );
       if (confirmation == TransactionConfirmationStatus.confirmed) {
-        if (widget.definition.id != 'cash_in') {
+        if (!OwlletMiniApps.isOwlletPayId(widget.definition.id)) {
           final historyChainId = switch (family) {
             ChainFamily.solana => BridgeService.relaySolanaChainId,
             ChainFamily.tron => BridgeService.tronBridgeChainId,
@@ -1500,6 +1879,32 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
 
+      for (final step in actionablePreviewSteps) {
+        final kind = step['kind']?.toString();
+        if (kind == 'approval' || kind == 'transaction') {
+          _transactionForExecutionStep(step);
+        }
+      }
+
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Mini-app was closed before the balance check could start.',
+        };
+      }
+      final blockchain = context.read<BlockchainService>();
+      await _preflightCashinExecutionBalance(
+        blockchain: blockchain,
+        walletAddress: walletAddress,
+        steps: actionablePreviewSteps,
+      );
+      if (!mounted) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'Mini-app was closed before the swap could start.',
+        };
+      }
+
       final fromSymbol = payload['fromAssetSymbol']?.toString() ?? '';
       final toSymbol = payload['toAssetSymbol']?.toString() ?? '';
       // Selling the settlement asset itself (USDC/USDT → USDC/USDT) is a plain
@@ -1590,7 +1995,6 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       controller.setPreparing();
       controller.setSwapSubmitting();
 
-      final blockchain = context.read<BlockchainService>();
       ZeroXGaslessSignedOrder? gaslessOrder;
       // Re-sign the typed data after an app restart when the provider-submit
       // step is still pending. Signatures are deliberately never persisted.
@@ -1932,6 +2336,53 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       throw FormatException(
         body['message']?.toString() ?? 'Step submission failed.',
       );
+    }
+  }
+
+  Future<void> _preflightCashinExecutionBalance({
+    required BlockchainService blockchain,
+    required String walletAddress,
+    required List<Map<String, dynamic>> steps,
+  }) async {
+    final onActiveChain = steps.where(
+      (step) => _requiredInt(step, 'chainId') == blockchain.activeChain.chainId,
+    );
+    final tokenRequirements = <String, BigInt>{};
+    var nativeRequired = BigInt.zero;
+    for (final step in onActiveChain) {
+      final token = step['expectedToken']?.toString().trim() ?? '';
+      final amount = BigInt.tryParse(step['amountCeiling']?.toString() ?? '');
+      if (_isEvmAddress(token) && amount != null && amount > BigInt.zero) {
+        final key = token.toLowerCase();
+        final current = tokenRequirements[key] ?? BigInt.zero;
+        if (amount > current) tokenRequirements[key] = amount;
+      }
+      final value = BigInt.tryParse(
+        step['maxTransactionValue']?.toString() ?? '',
+      );
+      if (value != null && value > nativeRequired) nativeRequired = value;
+    }
+
+    for (final requirement in tokenRequirements.entries) {
+      final available = await blockchain.getTokenBalanceBaseUnits(
+        walletAddress,
+        requirement.key,
+      );
+      if (available < requirement.value) {
+        throw const FormatException(
+          'Insufficient token balance for this OwlletPay withdrawal. Lower the amount or top up before continuing.',
+        );
+      }
+    }
+    if (nativeRequired > BigInt.zero) {
+      final available = await blockchain.getNativeBalanceBaseUnits(
+        walletAddress,
+      );
+      if (available < nativeRequired) {
+        throw FormatException(
+          'Insufficient ${blockchain.activeNetworkSymbol} balance for this OwlletPay withdrawal and network fees.',
+        );
+      }
     }
   }
 

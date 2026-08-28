@@ -1172,7 +1172,7 @@ class _SwapScreenState extends State<SwapScreen> {
     return '$normalized/tx/$hash';
   }
 
-  void _recordSwapHistory({
+  Future<void> _recordSwapHistory({
     required String fromAmount,
     required String fromTokenName,
     required String fromTokenSymbol,
@@ -1184,21 +1184,19 @@ class _SwapScreenState extends State<SwapScreen> {
     String? networkKey,
   }) {
     if (_walletAddress == null) {
-      return;
+      return Future.value();
     }
-    unawaited(
-      _walletHistoryService.recordSwapConfirmed(
-        walletAddress: _walletAddress!,
-        txHash: txHash,
-        chainId: chainId,
-        networkName: networkName,
-        fromTokenName: fromTokenName,
-        fromTokenSymbol: fromTokenSymbol,
-        fromAmount: fromAmount,
-        toAmount: toAmount,
-        toTokenSymbol: toTokenSymbol,
-        networkKey: networkKey,
-      ),
+    return _walletHistoryService.recordSwapConfirmed(
+      walletAddress: _walletAddress!,
+      txHash: txHash,
+      chainId: chainId,
+      networkName: networkName,
+      fromTokenName: fromTokenName,
+      fromTokenSymbol: fromTokenSymbol,
+      fromAmount: fromAmount,
+      toAmount: toAmount,
+      toTokenSymbol: toTokenSymbol,
+      networkKey: networkKey,
     );
   }
 
@@ -1325,6 +1323,9 @@ class _SwapScreenState extends State<SwapScreen> {
       return 'Selected Solana wallet address is invalid. Switch to a Solana wallet and try again.';
     }
     if (isSwapPriceMovementError(lower)) {
+      if (lower.contains('needs at least') && lower.contains('slippage')) {
+        return raw;
+      }
       return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
     }
 
@@ -1560,7 +1561,7 @@ class _SwapScreenState extends State<SwapScreen> {
                 networkName: networkName,
               ),
             );
-            _recordSwapHistory(
+            await _recordSwapHistory(
               txHash: txHash,
               fromAmount: fromAmountText,
               fromTokenName: fromSymbol,
@@ -1614,7 +1615,7 @@ class _SwapScreenState extends State<SwapScreen> {
               ),
             );
           }
-          _recordSwapHistory(
+          await _recordSwapHistory(
             txHash: looksLikeTxHash(tradeHash) ? tradeHash : null,
             fromAmount: fromAmountText,
             fromTokenName: fromSymbol,
@@ -2008,6 +2009,7 @@ class _SwapScreenState extends State<SwapScreen> {
     );
     final inAmount = _parseAmount(_fromController);
     final outAmount = double.tryParse(formatted) ?? 0;
+    final effectiveSlippageBps = quote.effectiveSlippageBps ?? _slippageBps;
     final synthetic = SwapQuote(
       amountOutWei: quote.amountOut,
       minAmountOutWei: quote.amountOut,
@@ -2032,6 +2034,7 @@ class _SwapScreenState extends State<SwapScreen> {
       _feeUsd = synthetic.networkFeeUsd;
       _feeNative = 0;
       _platformFeeUsd = synthetic.platformFeeUsd;
+      _slippageBps = effectiveSlippageBps;
       _quoteStatusMessage = null;
       _isCalculating = false;
     });
@@ -3123,7 +3126,7 @@ class _SwapScreenState extends State<SwapScreen> {
     final hash = result.transactionHash!;
     final fromAmountText = _fromController.text.trim();
     final toAmountText = _toController.text.trim();
-    _recordSwapHistory(
+    await _recordSwapHistory(
       txHash: hash,
       fromAmount: fromAmountText,
       fromTokenName: fromToken.name,
@@ -3355,7 +3358,7 @@ class _SwapScreenState extends State<SwapScreen> {
           txHash: txHash,
           rewardReferralOnSwap: true,
         );
-        _recordSwapHistory(
+        await _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
           fromTokenName: fromToken.name,
@@ -3413,7 +3416,7 @@ class _SwapScreenState extends State<SwapScreen> {
           txHash: txHash,
           rewardReferralOnSwap: true,
         );
-        _recordSwapHistory(
+        await _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
           fromTokenName: fromToken.name,
@@ -3540,7 +3543,7 @@ class _SwapScreenState extends State<SwapScreen> {
             networkName: blockchain.activeNetworkName,
           ),
         );
-        _recordSwapHistory(
+        await _recordSwapHistory(
           txHash: txHash,
           fromAmount: fromAmountText,
           fromTokenName: fromToken.name,

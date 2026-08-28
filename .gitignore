@@ -64,3 +64,6 @@ keystore/
 *.p12
 
 *shorebird_keys/
+*.dll
+*.so
+*.dylib

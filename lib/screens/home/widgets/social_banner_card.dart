@@ -53,7 +53,7 @@ class SocialBannerCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    l.followSocialhq,
+                    l.joinOurCommunity,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
@@ -64,9 +64,7 @@ class SocialBannerCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    l.socialhqHandle == 'x.com/fomowlhq'
-                        ? 'Follow now'
-                        : l.socialhqHandle,
+                    'Telegram  •  @FOMOWL',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

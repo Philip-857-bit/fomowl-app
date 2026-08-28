@@ -137,6 +137,9 @@ class AppLocalizationsYo extends AppLocalizations {
   String get withdraw => 'Yọ owó';
 
   @override
+  String get addFunds => 'Fi owó kún';
+
+  @override
   String get buy => 'Ra';
 
   @override
@@ -224,6 +227,25 @@ class AppLocalizationsYo extends AppLocalizations {
   String get discoverTitle => 'Ṣàwárí DApps';
 
   @override
+  String get discoverProductsTitle => 'Àwọn ọjà FOMOWL';
+
+  @override
+  String get discoverExploreTitle => 'Ṣàwárí';
+
+  @override
+  String get discoverSearchResultsTitle => 'Àbájáde ìṣàwárí';
+
+  @override
+  String get discoverOpenOwlletPay => 'Ṣí OwlletPay';
+
+  @override
+  String get discoverProductsEmpty => 'Àwọn ọjà FOMOWL tuntun yóò hàn níbí.';
+
+  @override
+  String get discoverOwlletPayPromoDescription =>
+      'Fi owó kún, ra ọjà, san owó ìdíyelé, kí o sì yọ owó ní ibi kan.';
+
+  @override
   String get discoverSearchHint => 'Wa DApps tàbí wẹẹbu';
 
   @override
@@ -295,7 +317,7 @@ class AppLocalizationsYo extends AppLocalizations {
   String get discoverCashInBadge => 'KYC LẸ́Ẹ̀KAN';
 
   @override
-  String get discoverCashInTitle => 'Fi owó wọlé';
+  String get discoverCashInTitle => 'OwlletPay';
 
   @override
   String get discoverCashInDescription =>
@@ -1445,6 +1467,10 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get confirmSecretPhraseTitle => 'Jẹrisi ọrọ asiri rẹ';
+
+  @override
+  String get confirmSecretPhraseSubtitle =>
+      'Jọwọ gba awọn igbese aabo wọnyi lati rii daju aabo ti pẹpẹ oni-nọmba rẹ.';
 
   @override
   String get confirmSecretPhraseCheckOne => 'Emi nikan ni mo mọ ọ.';

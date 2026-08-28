@@ -1310,17 +1310,15 @@ class DappProviderBridge {
           ? (valueWei / BigInt.from(10).pow(18)).toStringAsFixed(6)
           : '0';
 
-      unawaited(
-        _walletHistoryService.recordDappInteraction(
-          walletAddress: walletAddress,
-          txHash: formattedHash,
-          origin: origin,
-          chainId: activeChain.chainId,
-          networkName: activeChain.name,
-          toAddress: to,
-          valueEth: valueEth,
-          networkKey: activeChain.networkKey,
-        ),
+      await _walletHistoryService.recordDappInteraction(
+        walletAddress: walletAddress,
+        txHash: formattedHash,
+        origin: origin,
+        chainId: activeChain.chainId,
+        networkName: activeChain.name,
+        toAddress: to,
+        valueEth: valueEth,
+        networkKey: activeChain.networkKey,
       );
       return formattedHash;
     } on FormatException catch (error) {
@@ -1541,14 +1539,12 @@ class DappProviderBridge {
       base64Decode(txB64),
     );
 
-    unawaited(
-      _walletHistoryService.recordDappInteraction(
-        walletAddress: address,
-        txHash: txHash,
-        origin: origin,
-        networkName: 'Solana',
-        networkKey: 'solana:mainnet',
-      ),
+    await _walletHistoryService.recordDappInteraction(
+      walletAddress: address,
+      txHash: txHash,
+      origin: origin,
+      networkName: 'Solana',
+      networkKey: 'solana:mainnet',
     );
 
     return {'txHash': txHash};

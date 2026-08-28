@@ -28,6 +28,7 @@ import '../../transaction/transaction_processing_screen.dart';
 import '../swap_screen_helpers.dart';
 import 'swap_figma_icons.dart';
 import 'swap_primary_button.dart';
+import 'swap_slippage_section.dart';
 import 'swap_token_chip.dart';
 import 'swap_token_selector_dialog.dart';
 
@@ -179,6 +180,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   bool _isQuoting = false;
   bool _isBridging = false;
   String? _quoteError;
+  int _slippageBps = 50;
   Timer? _debounce;
   int _quoteSeq = 0;
   String? _solanaAddress;
@@ -319,7 +321,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     await _bridgeOperationStore.save(operation);
     if (mounted) setState(() => _pendingOperation = operation);
     if (!alreadyTracked) {
-      unawaited(_recordBridgeSubmission(operation));
+      await _recordBridgeSubmission(operation);
     }
   }
 
@@ -613,6 +615,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       walletAddress: wallet,
       recipientAddress: recipient,
       amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
+      slippageBps: _slippageBps,
     );
 
     if (!mounted || seq != _quoteSeq) return;
@@ -844,6 +847,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         walletAddress: wallet,
         recipientAddress: recipient,
         amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
+        slippageBps: _slippageBps,
       );
       if (!mounted) return;
       if (committed == null ||
@@ -1533,6 +1537,17 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             ),
           ),
         ],
+        const SizedBox(height: 16),
+        SwapSlippageSection(
+          slippageBps: _slippageBps,
+          onChanged: (bps) {
+            setState(() {
+              _slippageBps = bps;
+              _resetQuote();
+            });
+            _requestQuote();
+          },
+        ),
         const SizedBox(height: 20),
         SwapPrimaryButton(
           enabled: _canBridge,

@@ -135,6 +135,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get withdraw => '提现';
 
   @override
+  String get addFunds => '添加资金';
+
+  @override
   String get buy => '购买';
 
   @override
@@ -222,6 +225,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverTitle => '发现 DApp';
 
   @override
+  String get discoverProductsTitle => 'FOMOWL 产品';
+
+  @override
+  String get discoverExploreTitle => '探索';
+
+  @override
+  String get discoverSearchResultsTitle => '搜索结果';
+
+  @override
+  String get discoverOpenOwlletPay => '打开 OwlletPay';
+
+  @override
+  String get discoverProductsEmpty => '新的 FOMOWL 产品将在此显示。';
+
+  @override
+  String get discoverOwlletPayPromoDescription => '在一个地方充值、购物、支付账单和提现。';
+
+  @override
   String get discoverSearchHint => '搜索 DApp 或网页';
 
   @override
@@ -287,7 +308,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get discoverCashInBadge => '一次性 KYC';
 
   @override
-  String get discoverCashInTitle => '入金';
+  String get discoverCashInTitle => 'OwlletPay';
 
   @override
   String get discoverCashInDescription => '当充值流程就绪后即可购买加密货币或转入资金。';
@@ -1384,6 +1405,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get confirmSecretPhraseTitle => '确认你的秘密短语';
+
+  @override
+  String get confirmSecretPhraseSubtitle => '请确认以下安全措施以确保您的数字资产保险库安全。';
 
   @override
   String get confirmSecretPhraseCheckOne => '只有我自己知道它。';

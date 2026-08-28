@@ -16,6 +16,7 @@ void main() {
     bool isBalanceVisible = true,
     String formattedBalance = '\$222.62',
     String? statusText,
+    VoidCallback? onAddFunds,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -31,6 +32,7 @@ void main() {
             isLoadingBalances: false,
             onToggleVisibility: () {},
             onHistoryTap: () {},
+            onAddFunds: onAddFunds ?? () {},
           ),
         ),
       ),
@@ -138,5 +140,20 @@ void main() {
     );
 
     expect(find.text('Updated 10:30'), findsOneWidget);
+  });
+
+  testWidgets('Add funds action invokes the OwlletPay entry callback', (
+    tester,
+  ) async {
+    var tapped = false;
+    await pumpCard(
+      tester,
+      metrics: HomePortfolioMetrics.zero(),
+      onAddFunds: () => tapped = true,
+    );
+
+    expect(find.text('Add funds'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('balance-add-funds')));
+    expect(tapped, isTrue);
   });
 }

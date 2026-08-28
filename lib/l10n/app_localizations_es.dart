@@ -137,6 +137,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get withdraw => 'Retirar';
 
   @override
+  String get addFunds => 'Añadir fondos';
+
+  @override
   String get buy => 'Comprar';
 
   @override
@@ -224,6 +227,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverTitle => 'Descubre DApps';
 
   @override
+  String get discoverProductsTitle => 'Productos FOMOWL';
+
+  @override
+  String get discoverExploreTitle => 'Explorar';
+
+  @override
+  String get discoverSearchResultsTitle => 'Resultados de búsqueda';
+
+  @override
+  String get discoverOpenOwlletPay => 'Abrir OwlletPay';
+
+  @override
+  String get discoverProductsEmpty =>
+      'Los nuevos productos FOMOWL aparecerán aquí.';
+
+  @override
+  String get discoverOwlletPayPromoDescription =>
+      'Añade fondos, compra, paga facturas y retira dinero en un solo lugar.';
+
+  @override
   String get discoverSearchHint => 'Buscar DApps o en la web';
 
   @override
@@ -295,7 +318,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get discoverCashInBadge => 'KYC ÚNICO';
 
   @override
-  String get discoverCashInTitle => 'Ingresar fondos';
+  String get discoverCashInTitle => 'OwlletPay';
 
   @override
   String get discoverCashInDescription =>
@@ -1481,6 +1504,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get confirmSecretPhraseTitle => 'Confirma tu frase secreta';
+
+  @override
+  String get confirmSecretPhraseSubtitle =>
+      'Por favor, reconoce las siguientes medidas de seguridad para garantizar la protección de tu bóveda digital.';
 
   @override
   String get confirmSecretPhraseCheckOne =>

@@ -5,14 +5,17 @@ import 'mini_app_definition.dart';
 class OwlletMiniApps {
   OwlletMiniApps._();
 
-  static MiniAppDefinition get cashIn => MiniAppDefinition(
-    id: 'cash_in',
-    title: 'Cash in',
+  static MiniAppDefinition get owlletPay => MiniAppDefinition(
+    id: 'owllet_pay',
+    title: 'OwlletPay',
     description:
-        'Hosted Owllet mini app for on-ramp, off-ramp, bills, and future fiat services.',
-    launchUrl: AppEnvironment.cashInMiniAppUrl,
-    allowedOrigins: AppEnvironment.cashInMiniAppAllowedOrigins,
+        'Shop with crypto, fund your wallet, pay bills, and withdraw through OwlletPay.',
+    launchUrl: AppEnvironment.owlletPayMiniAppUrl,
+    allowedOrigins: AppEnvironment.owlletPayMiniAppAllowedOrigins,
   );
+
+  /// Compatibility alias for integrations that still reference the former name.
+  static MiniAppDefinition get cashIn => owlletPay;
 
   static MiniAppDefinition get affiliate => MiniAppDefinition(
     id: 'affiliate',
@@ -25,22 +28,44 @@ class OwlletMiniApps {
     requiresWalletSession: true,
   );
 
+  static MiniAppDefinition get burst => MiniAppDefinition(
+    id: 'burst',
+    title: 'Burst',
+    description:
+        'Create and join on-chain token distributions with your Owllet wallet.',
+    launchUrl: AppEnvironment.burstMiniAppUrl,
+    allowedOrigins: AppEnvironment.burstMiniAppAllowedOrigins,
+  );
+
   /// All registered mini apps. Order matters only for deterministic lookups.
   static List<MiniAppDefinition> get all => <MiniAppDefinition>[
-    cashIn,
+    owlletPay,
     affiliate,
+    burst,
   ];
 
   static MiniAppDefinition? byId(String id) {
     switch (id.trim().toLowerCase()) {
       case 'cash_in':
       case 'cash-in':
-        return cashIn;
+      case 'owllet_pay':
+      case 'owllet-pay':
+        return owlletPay;
       case 'affiliate':
         return affiliate;
+      case 'burst':
+        return burst;
       default:
         return null;
     }
+  }
+
+  static bool isOwlletPayId(String id) {
+    final normalized = id.trim().toLowerCase();
+    return normalized == 'owllet_pay' ||
+        normalized == 'owllet-pay' ||
+        normalized == 'cash_in' ||
+        normalized == 'cash-in';
   }
 
   /// Returns the registered mini app whose trusted origin matches [uri], or

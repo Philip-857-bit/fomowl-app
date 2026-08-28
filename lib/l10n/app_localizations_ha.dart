@@ -137,6 +137,9 @@ class AppLocalizationsHa extends AppLocalizations {
   String get withdraw => 'Cire kuɗi';
 
   @override
+  String get addFunds => 'Ƙara kuɗi';
+
+  @override
   String get buy => 'Saya';
 
   @override
@@ -224,6 +227,26 @@ class AppLocalizationsHa extends AppLocalizations {
   String get discoverTitle => 'Gano DApps';
 
   @override
+  String get discoverProductsTitle => 'Kayayyakin FOMOWL';
+
+  @override
+  String get discoverExploreTitle => 'Bincika';
+
+  @override
+  String get discoverSearchResultsTitle => 'Sakamakon bincike';
+
+  @override
+  String get discoverOpenOwlletPay => 'Buɗe OwlletPay';
+
+  @override
+  String get discoverProductsEmpty =>
+      'Sabbin kayayyakin FOMOWL za su bayyana a nan.';
+
+  @override
+  String get discoverOwlletPayPromoDescription =>
+      'Saka kuɗi, yi sayayya, biya kuɗaɗe kuma cire kuɗi a wuri guda.';
+
+  @override
   String get discoverSearchHint => 'Nemi DApps ko yanar gizo';
 
   @override
@@ -296,7 +319,7 @@ class AppLocalizationsHa extends AppLocalizations {
   String get discoverCashInBadge => 'KYC SAU ƊAYA';
 
   @override
-  String get discoverCashInTitle => 'Saka kuɗi';
+  String get discoverCashInTitle => 'OwlletPay';
 
   @override
   String get discoverCashInDescription =>
@@ -1452,6 +1475,10 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get confirmSecretPhraseTitle => 'Tabbatar da kalmar sirrinku';
+
+  @override
+  String get confirmSecretPhraseSubtitle =>
+      'Da fatan za a amince da matakan tsaro masu zuwa don tabbatar da lafiyar rumbun dijital ɗinku.';
 
   @override
   String get confirmSecretPhraseCheckOne => 'Ni kadai na san shi.';

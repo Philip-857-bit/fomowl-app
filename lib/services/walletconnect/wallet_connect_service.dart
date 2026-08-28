@@ -651,14 +651,12 @@ class WalletConnectService extends ChangeNotifier {
         final txHash = await _walletService.broadcastSignedSolanaTransactionRaw(
           signedTransaction,
         );
-        unawaited(
-          _walletHistoryService.recordDappInteraction(
-            walletAddress: approvedAddress,
-            txHash: txHash,
-            origin: 'WalletConnect',
-            networkName: 'Solana',
-            networkKey: 'solana:mainnet',
-          ),
+        await _walletHistoryService.recordDappInteraction(
+          walletAddress: approvedAddress,
+          txHash: txHash,
+          origin: 'WalletConnect',
+          networkName: 'Solana',
+          networkKey: 'solana:mainnet',
         );
         return {'signature': txHash};
 
@@ -785,17 +783,15 @@ class WalletConnectService extends ChangeNotifier {
         ? (valueWei / BigInt.from(10).pow(18)).toStringAsFixed(6)
         : '0';
 
-    unawaited(
-      _walletHistoryService.recordDappInteraction(
-        walletAddress: approvedAddress,
-        txHash: formattedHash,
-        origin: 'WalletConnect',
-        chainId: targetChain.chainId,
-        networkName: targetChain.name,
-        toAddress: txMap['to']?.toString().trim(),
-        valueEth: valueEth,
-        networkKey: targetChain.networkKey,
-      ),
+    await _walletHistoryService.recordDappInteraction(
+      walletAddress: approvedAddress,
+      txHash: formattedHash,
+      origin: 'WalletConnect',
+      chainId: targetChain.chainId,
+      networkName: targetChain.name,
+      toAddress: txMap['to']?.toString().trim(),
+      valueEth: valueEth,
+      networkKey: targetChain.networkKey,
     );
     return formattedHash;
   }

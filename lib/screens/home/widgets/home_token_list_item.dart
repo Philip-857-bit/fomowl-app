@@ -32,18 +32,18 @@ class HomeTokenListItem extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-        constraints: const BoxConstraints(minHeight: 82),
-        padding: const EdgeInsets.all(16),
+        constraints: const BoxConstraints(minHeight: 74),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.topBarSurface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
                 color: AppColors.canvasDark,
@@ -53,13 +53,13 @@ class HomeTokenListItem extends StatelessWidget {
                 tokenSymbol: token.symbol,
                 tokenAddress: token.contractAddress,
                 tokenImageUrl: token.imageUrl,
-                size: 40,
+                size: 36,
                 backgroundColor: AppColors.canvasDark,
                 chainId: chainId,
                 isCertified: token.isCertified,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

@@ -278,7 +278,7 @@ class WalletHistoryService {
         'tokenAddress': toAddress.trim(),
       'amount': _parseAmount(valueEth ?? '0'),
       'isIncoming': false,
-      '?chainId': chainId,
+      'chainId': ?chainId,
       'networkName': networkName,
       'networkKey': networkKey,
       'title': title,

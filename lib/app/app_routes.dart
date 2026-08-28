@@ -105,6 +105,7 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/backup-seed-phrase': (_) => const BackupSeedPhraseScreen(),
     '/password-security': (_) => const PasswordSecurityScreen(),
     '/two-factor-setup': (_) => const TwoFactorSetupScreen(),
+    '/owllet-pay': (context) => MiniAppHostScreen.fromRoute(context),
     '/cash-in': (context) => MiniAppHostScreen.fromRoute(context),
     '/mini-app-host': (context) => MiniAppHostScreen.fromRoute(context),
     '/referrals': (_) => const ReferralsScreen(),

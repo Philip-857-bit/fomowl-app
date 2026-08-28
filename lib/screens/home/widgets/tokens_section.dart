@@ -21,6 +21,8 @@ class TokensSection extends StatefulWidget {
   final List<NftAsset> nftPreview;
   final bool hasMoreNfts;
   final AppLocalizations localization;
+  final VoidCallback onScan;
+  final VoidCallback onOpenSettings;
   final VoidCallback onManageTokens;
   final VoidCallback onOpenNfts;
   final bool Function(Token token) isTokenHidden;
@@ -40,6 +42,8 @@ class TokensSection extends StatefulWidget {
     required this.nftPreview,
     required this.hasMoreNfts,
     required this.localization,
+    required this.onScan,
+    required this.onOpenSettings,
     required this.onManageTokens,
     required this.onOpenNfts,
     required this.isTokenHidden,
@@ -111,9 +115,27 @@ class _TokensSectionState extends State<TokensSection> {
               ),
               const Spacer(),
               if (_selectedTab == HomeAssetTab.tokens)
-                _AssetToolbarButton(
-                  icon: Icons.tune,
-                  onTap: widget.onManageTokens,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _AssetToolbarButton(
+                      semanticLabel: 'Scan QR code',
+                      icon: Icons.qr_code_scanner_rounded,
+                      onTap: widget.onScan,
+                    ),
+                    const SizedBox(width: 7),
+                    _AssetToolbarButton(
+                      semanticLabel: 'Open settings',
+                      icon: Icons.settings_outlined,
+                      onTap: widget.onOpenSettings,
+                    ),
+                    const SizedBox(width: 7),
+                    _AssetToolbarButton(
+                      semanticLabel: 'Manage tokens',
+                      icon: Icons.tune_rounded,
+                      onTap: widget.onManageTokens,
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -365,27 +387,36 @@ class _AssetTabChip extends StatelessWidget {
 }
 
 class _AssetToolbarButton extends StatelessWidget {
-  const _AssetToolbarButton({required this.icon, required this.onTap});
+  const _AssetToolbarButton({
+    required this.semanticLabel,
+    required this.icon,
+    required this.onTap,
+  });
 
+  final String semanticLabel;
   final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-        child: Icon(
-          icon,
-          color: Colors.white.withValues(alpha: 0.72),
-          size: 20,
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+          ),
+          child: Icon(
+            icon,
+            color: Colors.white.withValues(alpha: 0.72),
+            size: 17,
+          ),
         ),
       ),
     );

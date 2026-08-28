@@ -1,9 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
-import '../theme/app_chain_theme.dart';
+import 'floating_navigation_pill.dart';
 
 /// Shared Bottom Navigation Bar
 /// 4 destinations: Wallet, Swap, Discover, Settings.
@@ -22,96 +19,37 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final theme = context.chainTheme;
-
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.navBackground.withValues(alpha: 0.75),
-            border: Border(
-              top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.05),
-                width: 1,
-              ),
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(
-                    Icons.account_balance_wallet_rounded,
-                    l.wallet,
-                    0,
-                    theme.accentColor,
-                  ),
-                  _buildNavItem(
-                    Icons.swap_horiz_rounded,
-                    l.swap,
-                    1,
-                    theme.accentColor,
-                  ),
-                  _buildNavItem(
-                    Icons.explore_outlined,
-                    l.discoverBrowserFallbackTitle,
-                    _discoverNavigationIndex,
-                    theme.accentColor,
-                  ),
-                  _buildNavItem(
-                    Icons.settings_outlined,
-                    l.settings,
-                    2,
-                    theme.accentColor,
-                  ),
-                ],
-              ),
-            ),
-          ),
+    return FloatingNavigationPill(
+      destinations: [
+        FloatingNavigationDestinationData(
+          icon: Icons.account_balance_wallet_outlined,
+          selectedIcon: Icons.account_balance_wallet_rounded,
+          label: l.wallet,
+          selected: currentIndex == 0,
+          onTap: () => onTap(0),
         ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    IconData icon,
-    String label,
-    int index,
-    Color activeColor,
-  ) {
-    final isSelected = currentIndex == index;
-    return InkWell(
-      onTap: () => onTap(index),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected
-                  ? activeColor
-                  : Colors.white.withValues(alpha: 0.5),
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isSelected
-                    ? activeColor
-                    : Colors.white.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
+        FloatingNavigationDestinationData(
+          icon: Icons.swap_horiz_outlined,
+          selectedIcon: Icons.swap_horiz_rounded,
+          label: l.swap,
+          selected: currentIndex == 1,
+          onTap: () => onTap(1),
         ),
-      ),
+        FloatingNavigationDestinationData(
+          icon: Icons.explore_outlined,
+          selectedIcon: Icons.explore_rounded,
+          label: l.discoverBrowserFallbackTitle,
+          selected: currentIndex == _discoverNavigationIndex,
+          onTap: () => onTap(_discoverNavigationIndex),
+        ),
+        FloatingNavigationDestinationData(
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings_rounded,
+          label: l.settings,
+          selected: currentIndex == 2,
+          onTap: () => onTap(2),
+        ),
+      ],
     );
   }
 

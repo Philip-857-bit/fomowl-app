@@ -91,6 +91,9 @@ class BridgeQuote {
   final int? platformFeeBps;
   final double? platformFeeUsd;
 
+  /// Slippage encoded by the backend after any bounded simulation retry.
+  final int? effectiveSlippageBps;
+
   /// Estimated completion time in seconds.
   final int? timeEstimateSeconds;
 
@@ -110,6 +113,7 @@ class BridgeQuote {
     required this.routeProvider,
     required this.platformFeeBps,
     required this.platformFeeUsd,
+    required this.effectiveSlippageBps,
     required this.timeEstimateSeconds,
     required this.requestId,
     required this.steps,
@@ -285,6 +289,8 @@ class BridgeService {
     bool commit = false,
   }) async {
     _lastError = null;
+    final isSameChain = originChainId == destinationChainId;
+    final routeKind = isSameChain ? 'swap' : 'bridge';
     try {
       final params = <String, String>{
         'originChainId': '$originChainId',
@@ -312,13 +318,14 @@ class BridgeService {
           .timeout(const Duration(seconds: 20));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _lastError = quoteErrorMessage(response.body);
+        _lastError = quoteErrorMessage(response.body, isSameChain: isSameChain);
         return null;
       }
 
       final raw = jsonDecode(response.body);
       if (raw is! Map) {
-        _lastError = 'Bridge quote response was incomplete.';
+        _lastError =
+            '${routeKind[0].toUpperCase()}${routeKind.substring(1)} quote response was incomplete.';
         return null;
       }
       final data = Map<String, dynamic>.from(raw);
@@ -336,7 +343,7 @@ class BridgeService {
       final steps = _parseSteps(data['steps']);
       if (committed && steps.isEmpty) {
         _lastError =
-            'The bridge transaction could not be prepared. Please refresh the quote.';
+            'The $routeKind transaction could not be prepared. Please refresh the quote.';
         return null;
       }
 
@@ -353,6 +360,7 @@ class BridgeService {
         routeProvider: _readProvider(data),
         platformFeeBps: (data['platformFeeBps'] as num?)?.toInt(),
         platformFeeUsd: (data['platformFeeUsd'] as num?)?.toDouble(),
+        effectiveSlippageBps: (data['effectiveSlippageBps'] as num?)?.toInt(),
         timeEstimateSeconds: (data['timeEstimateSeconds'] as num?)?.toInt(),
         requestId: data['requestId']?.toString() ?? '',
         steps: steps,
@@ -364,7 +372,7 @@ class BridgeService {
     } catch (e) {
       _lastError ??= AppErrorUtils.userMessage(
         e,
-        fallback: 'Unable to fetch a bridge quote right now.',
+        fallback: 'Unable to fetch a $routeKind route right now.',
       );
       debugPrint('BridgeService.getQuote error: $e');
       return null;
@@ -394,30 +402,34 @@ class BridgeService {
     commit: true,
   );
 
-  /// Converts the backend's stable quote error contract into bridge-specific
-  /// guidance without exposing Relay/provider diagnostics to the user.
-  static String quoteErrorMessage(String? body) {
+  /// Converts the backend's stable quote error contract into user-facing
+  /// guidance without exposing Relay/provider diagnostics.
+  static String quoteErrorMessage(String? body, {bool isSameChain = false}) {
+    final routeKind = isSameChain ? 'swap' : 'bridge';
+    final fallback = 'Unable to fetch a $routeKind route right now.';
     if (body != null && body.trim().isNotEmpty) {
       try {
         final decoded = jsonDecode(body);
         if (decoded is Map && decoded['code'] == 'AMOUNT_TOO_LOW') {
-          return 'Amount is too low for this bridge. Increase the amount and try again.';
+          return 'Amount is too low for this $routeKind. Increase the amount and try again.';
+        }
+        if (decoded is Map && decoded['code'] == 'SLIPPAGE_TOO_LOW') {
+          final suggested = (decoded['suggestedSlippageBps'] as num?)?.toInt();
+          if (suggested != null && suggested > 0) {
+            return 'This token needs at least ${(suggested / 100).toStringAsFixed(2)}% slippage to account for its transfer fee. Increase slippage and request a new quote.';
+          }
+          return 'This token needs higher slippage to account for its transfer fee. Increase slippage and request a new quote.';
         }
       } catch (_) {
         // Fall through to the shared sanitizer for malformed responses.
       }
     }
-    final message = AppErrorUtils.backendMessage(
-      body,
-      fallback: 'Unable to fetch a bridge quote right now.',
-    );
+    final message = AppErrorUtils.backendMessage(body, fallback: fallback);
     final internalLanguage = RegExp(
       r'\b(provider|relayer|relay|route)\b',
       caseSensitive: false,
     );
-    return internalLanguage.hasMatch(message)
-        ? 'Unable to fetch a bridge quote right now.'
-        : message;
+    return internalLanguage.hasMatch(message) ? fallback : message;
   }
 
   /// GET /cross-chain/currencies?chainId=&term= — destination tokens Relay

@@ -11,6 +11,7 @@ import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../features/mini_apps/mini_app_registry.dart';
+import '../../features/shell/app_shell_controller.dart';
 import '../../models/chain.dart';
 import '../profile/add_network_screen.dart';
 import '../../models/token.dart';
@@ -1615,26 +1616,53 @@ class _HomeScreenState extends State<HomeScreen> {
       _showFallbackSocialBanner;
 
   Future<void> _openFallbackSocialBanner() async {
-    await InAppLinkRouter.open(context, 'https://x.com/fomowlhq');
+    await InAppLinkRouter.open(context, 'https://t.me/FOMOWL');
   }
 
-  /// Open the Cash-In mini app straight on its withdraw (off-ramp) page. The
+  void _openOwlletPayDeposit() {
+    final base = OwlletMiniApps.owlletPay.configuredLaunchUri;
+    final depositUrl = base?.replace(path: '/deposit').toString();
+    Navigator.pushNamed(
+      context,
+      '/owllet-pay',
+      arguments: MiniAppHostArguments(
+        miniAppId: 'owllet_pay',
+        launchSource: 'home',
+        initialUrl: depositUrl,
+      ),
+    );
+  }
+
+  /// Open OwlletPay straight on its withdraw (off-ramp) page. The
   /// hosted app's own middleware redirects unauthenticated users to its login
   /// screen and returns them to `/withdraw` after signing in, so we only need to
   /// point the host at the withdraw URL here. Falls back to the mini app's base
   /// launch URL when the deep link can't be built.
   void _openCashInWithdraw() {
-    final base = OwlletMiniApps.cashIn.configuredLaunchUri;
+    final base = OwlletMiniApps.owlletPay.configuredLaunchUri;
     final withdrawUrl = base?.replace(path: '/withdraw').toString();
     Navigator.pushNamed(
       context,
-      '/cash-in',
+      '/owllet-pay',
       arguments: MiniAppHostArguments(
-        miniAppId: 'cash_in',
+        miniAppId: 'owllet_pay',
         launchSource: 'home',
         initialUrl: withdrawUrl,
       ),
     );
+  }
+
+  void _openSettingsTab() {
+    try {
+      context.read<AppShellController>().selectTab(AppShellTab.settings);
+    } on ProviderNotFoundException {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/shell',
+        (route) => false,
+        arguments: AppShellTab.settings.index,
+      );
+    }
   }
 
   Future<void> _openTokenManager() async {
@@ -1750,7 +1778,7 @@ class _HomeScreenState extends State<HomeScreen> {
           : SafeArea(
               child: Column(
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
                   Showcase(
                     key: _walletSwitcherShowcaseKey,
                     title: 'Wallet and support',
@@ -1831,7 +1859,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
-                            const SizedBox(height: 30),
+                            const SizedBox(height: 24),
                             Showcase(
                               key: _balanceShowcaseKey,
                               title: 'Portfolio status',
@@ -1855,10 +1883,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   context,
                                   '/transactions',
                                 ),
+                                onAddFunds: _openOwlletPayDeposit,
                               ),
                             ),
 
-                            const SizedBox(height: 38),
+                            const SizedBox(height: 24),
                             Showcase(
                               key: _quickActionsShowcaseKey,
                               title: 'Core wallet actions',
@@ -1874,7 +1903,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onWithdraw: _openCashInWithdraw,
                               ),
                             ),
-                            const SizedBox(height: 38),
+                            const SizedBox(height: 26),
                             if (_shouldShowHomePromoSection) ...[
                               Showcase(
                                 key: _promoCarouselShowcaseKey,
@@ -1901,7 +1930,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       _openFallbackSocialBanner,
                                 ),
                               ),
-                              const SizedBox(height: 40),
+                              const SizedBox(height: 30),
                             ],
                             Showcase(
                               key: _assetTabsShowcaseKey,
@@ -1919,6 +1948,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 hasMoreNfts: _hasMoreNfts,
                                 localization: l,
                                 initialTab: _selectedAssetTab,
+                                onScan: () =>
+                                    Navigator.pushNamed(context, '/qr-scanner'),
+                                onOpenSettings: _openSettingsTab,
                                 onManageTokens: _openTokenManager,
                                 onOpenNfts: () {
                                   if (_hasMoreNfts) {

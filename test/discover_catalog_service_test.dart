@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_catalog_service.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_catalog_snapshot.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_dapp_entry.dart';
+import 'package:fomowl_wallet/features/discover/discover_url_utils.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -123,20 +124,72 @@ void main() {
       expect(callCount, 0);
     });
 
-    test('bundled fallback snapshot is cached as stale', () async {
-      final service = DiscoverCatalogService(
-        client: MockClient((request) async {
-          return http.Response('{}', 500);
-        }),
-      );
+    test(
+      'bundled fallback is stale and complements native Owllet features',
+      () async {
+        final service = DiscoverCatalogService(
+          client: MockClient((request) async {
+            return http.Response('{}', 500);
+          }),
+        );
 
-      final snapshot = await service.getSnapshot();
-      expect(snapshot.dapps, isNotEmpty);
-      expect(snapshot.isFresh, isFalse);
+        final snapshot = await service.getSnapshot();
+        expect(snapshot.dapps.map((dapp) => dapp.slug), <String>[
+          'aave',
+          'lido',
+          'snapshot',
+          'galxe',
+        ]);
+        expect(snapshot.isFresh, isFalse);
 
-      final cached = await service.loadCachedSnapshot();
-      expect(cached?.dapps, isNotEmpty);
-      expect(cached?.isFresh, isFalse);
-    });
+        const nativeFeatureCategories = <String>{
+          'swap',
+          'dex',
+          'exchange',
+          'bridge',
+          'nft',
+          'nfts',
+          'collectibles',
+          'marketplace',
+          'onramp',
+          'offramp',
+          'payments',
+        };
+        final fallbackCategories = snapshot.dapps
+            .expand((dapp) => dapp.categories)
+            .map((category) => category.toLowerCase())
+            .toSet();
+        expect(
+          fallbackCategories.intersection(nativeFeatureCategories),
+          isEmpty,
+        );
+
+        expect(
+          {for (final dapp in snapshot.dapps) dapp.slug: dapp.origin},
+          <String, String>{
+            'aave': 'https://app.aave.com',
+            'lido': 'https://stake.lido.fi',
+            'snapshot': 'https://snapshot.box',
+            'galxe': 'https://app.galxe.com',
+          },
+        );
+        for (final dapp in snapshot.dapps) {
+          expect(
+            normalizeOriginFromUri(Uri.parse(dapp.launchUrl)),
+            dapp.origin,
+            reason: '${dapp.slug} must launch from its allowlisted origin',
+          );
+        }
+
+        final cached = await service.loadCachedSnapshot();
+        expect(cached?.dapps.map((dapp) => dapp.slug), <String>[
+          'aave',
+          'lido',
+          'snapshot',
+          'galxe',
+        ]);
+        expect(cached?.isFresh, isFalse);
+      },
+    );
   });
 }

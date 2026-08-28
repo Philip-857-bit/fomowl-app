@@ -141,7 +141,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     if (!_wasBackgrounded || _unlockInFlight) return;
     _wasBackgrounded = false;
 
-    // A system camera/file picker launched from within the app (e.g. Cash In
+    // A system camera/file picker launched from within the app (e.g. OwlletPay
     // KYC capture) briefly backgrounds us. Don't treat that as the user leaving
     // the app, or the unlock screen would cover and wipe the capture in flight.
     if (SystemPickerGuard.isActive) {

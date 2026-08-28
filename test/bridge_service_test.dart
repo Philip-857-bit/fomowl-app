@@ -39,7 +39,7 @@ void main() {
   test('does not expose malformed provider responses', () {
     expect(
       BridgeService.quoteErrorMessage('<html>provider failure</html>'),
-      'Unable to fetch a bridge quote right now.',
+      'Unable to fetch a bridge route right now.',
     );
   });
 
@@ -48,7 +48,27 @@ void main() {
       BridgeService.quoteErrorMessage(
         '{"message":"Relay provider route failed"}',
       ),
-      'Unable to fetch a bridge quote right now.',
+      'Unable to fetch a bridge route right now.',
+    );
+  });
+
+  test('uses swap wording for a same-chain route failure', () {
+    expect(
+      BridgeService.quoteErrorMessage(
+        '{"code":"ROUTE_UNAVAILABLE","message":"No bridge route is available."}',
+        isSameChain: true,
+      ),
+      'Unable to fetch a swap route right now.',
+    );
+  });
+
+  test('shows the user the slippage needed for a taxed token', () {
+    expect(
+      BridgeService.quoteErrorMessage(
+        '{"code":"SLIPPAGE_TOO_LOW","suggestedSlippageBps":800}',
+        isSameChain: true,
+      ),
+      'This token needs at least 8.00% slippage to account for its transfer fee. Increase slippage and request a new quote.',
     );
   });
 
@@ -206,7 +226,7 @@ void main() {
   test('prefers protocolUsed and reads a nested provider safely', () async {
     final client = MockClient(
       (_) async => http.Response(
-        '{"amountOut":"900000","protocolUsed":"relay","provider":{"name":"ignored"},"details":{"currencyOut":{"amountUsd":"0.89"}},"feeUsd":0.15,"gasFeeUsd":0.02,"steps":[],"committed":false}',
+        '{"amountOut":"900000","protocolUsed":"relay","provider":{"name":"ignored"},"details":{"currencyOut":{"amountUsd":"0.89"}},"feeUsd":0.15,"gasFeeUsd":0.02,"effectiveSlippageBps":800,"steps":[],"committed":false}',
         200,
       ),
     );
@@ -227,6 +247,7 @@ void main() {
     expect(preview?.amountOutUsd, 0.89);
     expect(preview?.bridgeFeeUsd, 0.15);
     expect(preview?.gasFeeUsd, 0.02);
+    expect(preview?.effectiveSlippageBps, 800);
   });
 
   test('preserves an omitted bridge fee as null', () async {

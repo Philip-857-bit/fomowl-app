@@ -1,60 +1,120 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../constants/app_colors.dart';
 import '../../../../l10n/app_localizations.dart';
-import '../../market/discover_trending_token.dart';
 import '../discover_dapp_entry.dart';
+import '../discover_product_entry.dart';
 
-class DiscoverLandingView extends StatelessWidget {
+class DiscoverLandingView extends StatefulWidget {
   const DiscoverLandingView({
     super.key,
     required this.query,
-    required this.featuredDapps,
-    required this.trendingDapps,
+    required this.products,
+    required this.dapps,
     required this.filteredDapps,
     required this.categories,
-    required this.trendingTokens,
-    required this.loadingTrendingTokens,
-    required this.trendingTokensError,
     required this.loading,
     required this.error,
     required this.onRefresh,
+    required this.onOpenProduct,
     required this.onOpenDapp,
-    required this.onOpenTrendingToken,
-    this.onOpenCashIn,
+    required this.onOpenOwlletPay,
   });
 
   final String query;
-  final List<DiscoverDappEntry> featuredDapps;
-  final List<DiscoverDappEntry> trendingDapps;
+  final List<DiscoverProductEntry> products;
+  final List<DiscoverDappEntry> dapps;
   final List<DiscoverDappEntry> filteredDapps;
   final List<String> categories;
-  final List<DiscoverTrendingToken> trendingTokens;
-  final bool loadingTrendingTokens;
-  final String? trendingTokensError;
   final bool loading;
   final String? error;
   final Future<void> Function() onRefresh;
+  final ValueChanged<DiscoverProductEntry> onOpenProduct;
   final ValueChanged<DiscoverDappEntry> onOpenDapp;
-  final ValueChanged<DiscoverTrendingToken> onOpenTrendingToken;
-  final VoidCallback? onOpenCashIn;
+  final VoidCallback onOpenOwlletPay;
+
+  @override
+  State<DiscoverLandingView> createState() => _DiscoverLandingViewState();
+}
+
+class _DiscoverLandingViewState extends State<DiscoverLandingView> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _exploreKey = GlobalKey();
+  String _selectedCategory = 'Featured';
+  bool _showAllDapps = false;
+
+  bool get _isSearching => widget.query.trim().isNotEmpty;
+
+  @override
+  void didUpdateWidget(covariant DiscoverLandingView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.categories.contains(_selectedCategory)) {
+      _selectedCategory = 'Featured';
+    }
+    if (oldWidget.query != widget.query && _isSearching) {
+      _showAllDapps = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  List<DiscoverDappEntry> get _categoryDapps {
+    if (_isSearching) {
+      return widget.filteredDapps;
+    }
+    final matches = widget.dapps
+        .where(
+          (dapp) =>
+              DiscoverProductEntry.matchesCategory(dapp, _selectedCategory),
+        )
+        .toList(growable: false);
+    if (_selectedCategory == 'Featured' && matches.isEmpty) {
+      return widget.dapps;
+    }
+    return matches;
+  }
+
+  List<DiscoverDappEntry> get _visibleDapps {
+    final dapps = _categoryDapps;
+    if (_isSearching || _showAllDapps) {
+      return dapps;
+    }
+    return dapps.take(4).toList(growable: false);
+  }
+
+  void _showFeaturedExplore() {
+    setState(() {
+      _selectedCategory = 'Featured';
+      _showAllDapps = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final exploreContext = _exploreKey.currentContext;
+      if (exploreContext == null) {
+        return;
+      }
+      Scrollable.ensureVisible(
+        exploreContext,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final trimmedQuery = query.trim();
-    final isSearching = trimmedQuery.isNotEmpty;
-    final visibleFeaturedDapps = featuredDapps.isNotEmpty
-        ? featuredDapps
-        : filteredDapps.take(6).toList(growable: false);
-    final shouldShowCatalogError =
-        !isSearching &&
-        error != null &&
-        error!.trim().isNotEmpty &&
-        visibleFeaturedDapps.isEmpty;
-    if (loading && featuredDapps.isEmpty && filteredDapps.isEmpty) {
+    if (widget.loading &&
+        widget.products.isEmpty &&
+        widget.dapps.isEmpty &&
+        widget.filteredDapps.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.accentRed),
       );
@@ -62,433 +122,542 @@ class DiscoverLandingView extends StatelessWidget {
 
     return RefreshIndicator(
       color: AppColors.accentRed,
-      onRefresh: onRefresh,
+      onRefresh: widget.onRefresh,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        key: const ValueKey('discover-landing-list'),
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          if (!isSearching) ...[
-            _CashInCard(onTap: onOpenCashIn),
+          if (_isSearching)
+            _buildSearchResults(context)
+          else ...[
+            _OwlletPayBanner(onTap: widget.onOpenOwlletPay),
             const SizedBox(height: 24),
-          ],
-          if (shouldShowCatalogError) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.35),
-                ),
-              ),
-              child: Text(
-                error!,
-                style: GoogleFonts.outfit(color: Colors.white70),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (isSearching) ...[
-            _SectionHeader(
-              title: l.discoverAllApprovedDappsTitle,
-              subtitle: filteredDapps.isEmpty
-                  ? l.discoverAllApprovedDappsNoMatches
-                  : l.discoverAllApprovedDappsCount(filteredDapps.length),
+            _SectionTitle(
+              title: l.discoverProductsTitle,
+              actionLabel: l.viewAll,
+              onAction: _showFeaturedExplore,
             ),
             const SizedBox(height: 12),
-            ...filteredDapps.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _CompactDappCard(
-                  key: ValueKey('discover-all-${entry.id}'),
-                  entry: entry,
-                  onTap: () => onOpenDapp(entry),
-                ),
+            _ProductsCarousel(
+              products: widget.products,
+              onOpenProduct: widget.onOpenProduct,
+            ),
+            const SizedBox(height: 28),
+            _buildExplore(context),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final matches = widget.filteredDapps;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(
+          title: l.discoverSearchResultsTitle,
+          subtitle: matches.isEmpty
+              ? l.discoverAllApprovedDappsNoMatches
+              : l.discoverAllApprovedDappsCount(matches.length),
+        ),
+        const SizedBox(height: 14),
+        if (matches.isEmpty)
+          _EmptyCatalogCard(message: l.discoverAllApprovedDappsNoMatches)
+        else
+          ...matches.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _CompactDappCard(
+                key: ValueKey('discover-search-${entry.id}'),
+                entry: entry,
+                onTap: () => widget.onOpenDapp(entry),
               ),
             ),
-          ] else ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  l.discoverFeaturedDappsTitle,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildExplore(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final visibleDapps = _visibleDapps;
+    final hasMore =
+        !_showAllDapps && _categoryDapps.length > visibleDapps.length;
+    final hasError = widget.error?.trim().isNotEmpty == true;
+
+    return Column(
+      key: _exploreKey,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionTitle(
+          title: l.discoverExploreTitle,
+          actionLabel: hasMore ? l.viewAll : null,
+          onAction: hasMore ? () => setState(() => _showAllDapps = true) : null,
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            key: const ValueKey('discover-category-chips'),
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.categories.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final category = widget.categories[index];
+              return _CategoryChip(
+                label: category,
+                selected: category == _selectedCategory,
+                onTap: () {
+                  setState(() {
+                    _selectedCategory = category;
+                    _showAllDapps = false;
+                  });
+                },
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 14),
+        if (hasError) ...[
+          _CatalogNotice(message: widget.error!),
+          const SizedBox(height: 12),
+        ],
+        if (widget.loading && widget.dapps.isEmpty)
+          const _CatalogLoadingCard()
+        else if (visibleDapps.isEmpty)
+          _EmptyCatalogCard(message: l.discoverAllApprovedDappsNoMatches)
+        else
+          ...visibleDapps.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _CompactDappCard(
+                key: ValueKey('discover-dapp-${entry.id}'),
+                entry: entry,
+                onTap: () => widget.onOpenDapp(entry),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({
+    required this.title,
+    this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String title;
+  final String? subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.35,
                 ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
                 Text(
-                  'View all',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.accentRed,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  subtitle!,
+                  style: GoogleFonts.inter(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
                   ),
                 ),
               ],
+            ],
+          ),
+        ),
+        if (actionLabel != null && onAction != null)
+          TextButton(
+            key: ValueKey('view-all-${title.toLowerCase()}'),
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accentRed,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            const SizedBox(height: 14),
-            SizedBox(
-              height: 230,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: visibleFeaturedDapps.length.clamp(0, 10),
-                separatorBuilder: (_, _) => const SizedBox(width: 14),
-                itemBuilder: (context, index) {
-                  final entry = visibleFeaturedDapps[index];
-                  return SizedBox(
-                    width: 280,
-                    child: _FeaturedDappCard(
-                      key: ValueKey('discover-featured-${entry.id}'),
-                      entry: entry,
-                      onTap: () => onOpenDapp(entry),
-                    ),
-                  );
-                },
+            child: Text(
+              actionLabel!,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 24),
-            _SectionHeader(
-              title: l.discoverTrendingTokensTitle,
-              subtitle: l.discoverTrendingTokensSubtitle,
+          ),
+      ],
+    );
+  }
+}
+
+class _OwlletPayBanner extends StatelessWidget {
+  const _OwlletPayBanner({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: const ValueKey('discover-owllet-pay-banner'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          height: 142,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFB2161D), Color(0xFF4A080B), Color(0xFF171313)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(height: 12),
-            _TrendingTokenSection(
-              tokens: trendingTokens,
-              loading: loadingTrendingTokens,
-              error: trendingTokensError,
-              onOpenToken: onOpenTrendingToken,
+            border: Border.all(color: const Color(0x55FF5961)),
+          ),
+          child: Stack(
+            clipBehavior: Clip.antiAlias,
+            children: [
+              Positioned(
+                right: -6,
+                bottom: -42,
+                child: Image.asset(
+                  'assets/images/owl_wallet.png',
+                  width: 166,
+                  height: 166,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 145, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'OwlletPay',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.topLeft,
+                          child: Text(
+                            l.discoverOwlletPayPromoDescription,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              fontSize: 11,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          l.discoverOpenOwlletPay,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF151111),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductsCarousel extends StatelessWidget {
+  const _ProductsCarousel({
+    required this.products,
+    required this.onOpenProduct,
+  });
+
+  final List<DiscoverProductEntry> products;
+  final ValueChanged<DiscoverProductEntry> onOpenProduct;
+
+  @override
+  Widget build(BuildContext context) {
+    if (products.isEmpty) {
+      return const _EmptyProductsCard();
+    }
+    final cardWidth = math.min(MediaQuery.sizeOf(context).width * 0.68, 252.0);
+    return SizedBox(
+      height: 150,
+      child: ListView.separated(
+        key: const ValueKey('discover-products-carousel'),
+        scrollDirection: Axis.horizontal,
+        itemCount: products.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final product = products[index];
+          return SizedBox(
+            width: cardWidth,
+            child: _ProductCard(
+              key: ValueKey('discover-product-${product.id}'),
+              product: product,
+              index: index,
+              onTap: () => onOpenProduct(product),
             ),
-          ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ProductCard extends StatelessWidget {
+  const _ProductCard({
+    super.key,
+    required this.product,
+    required this.index,
+    required this.onTap,
+  });
+
+  final DiscoverProductEntry product;
+  final int index;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final gradients = <List<Color>>[
+      const [Color(0xFF7B1217), Color(0xFF211213)],
+      const [Color(0xFF251B45), Color(0xFF111017)],
+      const [Color(0xFF163F36), Color(0xFF101514)],
+      const [Color(0xFF18334D), Color(0xFF101318)],
+    ];
+    final colors = gradients[index % gradients.length];
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(22),
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: colors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -8,
+                bottom: -12,
+                child: _ProductArtwork(product: product),
+              ),
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 15, 86, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          product.isMiniApp ? 'MINI APP' : 'FEATURED',
+                          style: GoogleFonts.inter(
+                            color: Colors.white.withValues(alpha: 0.78),
+                            fontSize: 8,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        product.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        product.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 9,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductArtwork extends StatelessWidget {
+  const _ProductArtwork({required this.product});
+
+  final DiscoverProductEntry product;
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = product.artworkAssetPath;
+    final network = product.networkArtworkUrl;
+    if (asset != null) {
+      return Image.asset(asset, width: 112, height: 112, fit: BoxFit.contain);
+    }
+    if (network != null && network.trim().isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Image.network(
+          network,
+          width: 106,
+          height: 106,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _BrandedArtwork(title: product.title),
+        ),
+      );
+    }
+    return _BrandedArtwork(title: product.title);
+  }
+}
+
+class _BrandedArtwork extends StatelessWidget {
+  const _BrandedArtwork({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 104,
+      height: 104,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.black.withValues(alpha: 0.24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Opacity(
+            opacity: 0.35,
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: 66,
+              height: 66,
+              fit: BoxFit.contain,
+            ),
+          ),
+          Text(
+            title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase(),
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.outfit(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: GoogleFonts.outfit(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CashInCard extends StatelessWidget {
-  const _CashInCard({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(28),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0E5C46), Color(0xFF1A7C66), Color(0xFF275E4B)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0E5C46).withValues(alpha: 0.22),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 11,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  l.discoverCashInBadge,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                l.discoverCashInTitle,
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                l.discoverCashInDescription,
-                style: GoogleFonts.outfit(
-                  color: Colors.white.withValues(alpha: 0.82),
-                  fontSize: 13,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  l.discoverGoLabel,
-                  style: GoogleFonts.outfit(
-                    color: const Color(0xFF0E5C46),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TrendingTokenSection extends StatelessWidget {
-  const _TrendingTokenSection({
-    required this.tokens,
-    required this.loading,
-    required this.error,
-    required this.onOpenToken,
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
   });
 
-  final List<DiscoverTrendingToken> tokens;
-  final bool loading;
-  final String? error;
-  final ValueChanged<DiscoverTrendingToken> onOpenToken;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    if (loading && tokens.isEmpty) {
-      return Container(
-        height: 150,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: const CircularProgressIndicator(color: AppColors.accentRed),
-      );
-    }
-
-    if (error != null && error!.trim().isNotEmpty && tokens.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Text(error!, style: GoogleFonts.outfit(color: Colors.white70)),
-      );
-    }
-
-    if (tokens.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Text(
-          l.discoverNoTrendingTokens,
-          style: GoogleFonts.outfit(color: Colors.white70),
-        ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.cardDark,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        children: tokens
-            .map(
-              (token) => Padding(
-                padding: EdgeInsets.only(bottom: token == tokens.last ? 0 : 14),
-                child: _TrendingTokenRow(
-                  token: token,
-                  onTap: () => onOpenToken(token),
-                ),
-              ),
-            )
-            .toList(growable: false),
-      ),
-    );
-  }
-}
-
-class _TrendingTokenRow extends StatelessWidget {
-  const _TrendingTokenRow({required this.token, required this.onTap});
-
-  final DiscoverTrendingToken token;
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isPositiveChange = token.changePercent24h > 0;
-    final isNegativeChange = token.changePercent24h < 0;
-    final currencyFormatter = NumberFormat.currency(
-      symbol: '\$',
-      decimalDigits: token.priceUsd >= 100
-          ? 2
-          : token.priceUsd >= 1
-          ? 2
-          : 4,
-    );
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: Image.network(
-                  token.imageUrl,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    width: 44,
-                    height: 44,
-                    decoration: const BoxDecoration(
-                      color: AppColors.inputBackground,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      token.symbol.substring(0, 1),
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      token.name,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      token.symbol,
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textSecondary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    currencyFormatter.format(token.priceUsd),
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${isPositiveChange ? '+' : ''}${token.changePercent24h.toStringAsFixed(2)}%',
-                    style: GoogleFonts.outfit(
-                      color: isPositiveChange
-                          ? AppColors.success
-                          : isNegativeChange
-                          ? AppColors.error
-                          : AppColors.textSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.open_in_new_rounded,
-                size: 16,
-                color: Colors.white.withValues(alpha: 0.38),
-              ),
-            ],
-          ),
-        ),
+    return ChoiceChip(
+      key: ValueKey('discover-category-$label'),
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => onTap(),
+      showCheckmark: false,
+      selectedColor: AppColors.accentRed,
+      backgroundColor: AppColors.cardDark,
+      side: BorderSide(
+        color: selected
+            ? AppColors.accentRed
+            : Colors.white.withValues(alpha: 0.07),
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      labelStyle: GoogleFonts.inter(
+        color: selected ? Colors.white : AppColors.textSecondary,
+        fontSize: 11,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
       ),
     );
   }
@@ -502,272 +671,225 @@ class _CompactDappCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _DappArtwork(entry: entry, size: 48),
-                const Spacer(),
-                if ((entry.badgeText ?? '').trim().isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      entry.badgeText!,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white70,
-                        fontSize: 10,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Ink(
+          height: 74,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          ),
+          child: Row(
+            children: [
+              _DappLogo(entry: entry),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      entry.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.3,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      entry.subtitle ?? entry.origin,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              if (entry.badgeText?.trim().isNotEmpty == true)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              entry.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRed.withValues(alpha: 0.11),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    entry.badgeText!,
+                    style: GoogleFonts.inter(
+                      color: AppColors.accentRed,
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white.withValues(alpha: 0.3),
+                size: 13,
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              entry.subtitle?.trim().isNotEmpty == true
-                  ? entry.subtitle!
-                  : entry.origin,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.outfit(
-                color: Colors.white70,
-                fontSize: 13,
-                height: 1.4,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FeaturedDappCard extends StatelessWidget {
-  const _FeaturedDappCard({
-    super.key,
-    required this.entry,
-    required this.onTap,
-  });
+class _DappLogo extends StatelessWidget {
+  const _DappLogo({required this.entry});
 
   final DiscoverDappEntry entry;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.divider),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(21),
-                  topRight: Radius.circular(21),
-                ),
-                child: _buildBanner(),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  _DappArtwork(entry: entry, size: 40),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          entry.subtitle?.trim().isNotEmpty == true
-                              ? entry.subtitle!
-                              : entry.origin,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.outfit(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    final logoUrl = entry.logoUrl?.trim();
+    final fallback = Container(
+      width: 48,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Text(
+        entry.title.trim().isEmpty ? '?' : entry.title.trim()[0].toUpperCase(),
+        style: GoogleFonts.inter(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
+    if (logoUrl == null || logoUrl.isEmpty) {
+      return fallback;
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(15),
+      child: Image.network(
+        logoUrl,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => fallback,
+      ),
+    );
   }
+}
 
-  Widget _buildBanner() {
-    final heroUrl = entry.heroImageUrl?.trim();
-    final hasBadge = (entry.badgeText ?? '').trim().isNotEmpty;
+class _CatalogNotice extends StatelessWidget {
+  const _CatalogNotice({required this.message});
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (heroUrl != null && heroUrl.isNotEmpty)
-          Image.network(
-            heroUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => _buildFallbackBanner(),
-          )
-        else
-          _buildFallbackBanner(),
+  final String message;
 
-        if (hasBadge)
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-              ),
-              child: Text(
-                entry.badgeText!,
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.26)),
+      ),
+      child: Text(
+        message,
+        style: GoogleFonts.inter(color: Colors.white70, fontSize: 11),
+      ),
+    );
+  }
+}
+
+class _CatalogLoadingCard extends StatelessWidget {
+  const _CatalogLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 92,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: const CircularProgressIndicator(color: AppColors.accentRed),
+    );
+  }
+}
+
+class _EmptyCatalogCard extends StatelessWidget {
+  const _EmptyCatalogCard({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 12),
+      ),
+    );
+  }
+}
+
+class _EmptyProductsCard extends StatelessWidget {
+  const _EmptyProductsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      height: 112,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardDark,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
+        children: [
+          Image.asset(
+            'assets/images/logo.png',
+            width: 48,
+            height: 48,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              l.discoverProductsEmpty,
+              style: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                height: 1.35,
               ),
             ),
           ),
-      ],
-    );
-  }
-
-  Widget _buildFallbackBanner() {
-    return Container(
-      color: Colors.white.withValues(alpha: 0.03),
-      child: const Center(
-        child: Icon(Icons.image_not_supported_outlined, color: Colors.white12),
+        ],
       ),
-    );
-  }
-}
-
-class _DappArtwork extends StatelessWidget {
-  const _DappArtwork({required this.entry, required this.size});
-
-  final DiscoverDappEntry entry;
-  final double size;
-
-  String? _resolveImageUrl() {
-    if (entry.slug.toLowerCase() == 'opensea') {
-      return 'https://storage.googleapis.com/opensea-static/Logomark/Logomark-Blue.png';
-    }
-    final logoUrl = entry.logoUrl?.trim();
-    if (logoUrl != null && logoUrl.isNotEmpty) {
-      return logoUrl;
-    }
-    final heroImageUrl = entry.heroImageUrl?.trim();
-    if (heroImageUrl != null && heroImageUrl.isNotEmpty) {
-      return heroImageUrl;
-    }
-    final fallbackSource = entry.launchUrl.trim().isNotEmpty
-        ? entry.launchUrl.trim()
-        : entry.origin.trim();
-    if (fallbackSource.isNotEmpty) {
-      return 'https://www.google.com/s2/favicons?sz=128&domain_url=${Uri.encodeComponent(fallbackSource)}';
-    }
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = _resolveImageUrl();
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(size * 0.32),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: imageUrl == null
-          ? Center(
-              child: Text(
-                entry.title.isEmpty
-                    ? '?'
-                    : entry.title.characters.first.toUpperCase(),
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: size * 0.34,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            )
-          : Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => Center(
-                child: Text(
-                  entry.title.isEmpty
-                      ? '?'
-                      : entry.title.characters.first.toUpperCase(),
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontSize: size * 0.34,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
     );
   }
 }

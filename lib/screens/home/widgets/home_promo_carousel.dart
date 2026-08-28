@@ -30,15 +30,17 @@ class HomePromoCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shouldShowPager = banners.isNotEmpty;
-    final shouldShowFallback = banners.isEmpty && showFallbackSocialBanner;
+    // The Figma fallback is always present once the backend has no active
+    // banner, even when an older cached feed disabled the legacy social card.
+    final shouldShowFallback = banners.isEmpty;
 
     return Column(
       children: [
         if (isLoading)
-          const SizedBox(height: 99, child: _PromoSkeletonCard())
+          const SizedBox(height: 108, child: _PromoSkeletonCard())
         else if (shouldShowPager)
           SizedBox(
-            height: 99,
+            height: 108,
             child: PageView.builder(
               controller: pageController,
               itemCount: banners.length,
@@ -120,7 +122,7 @@ class _PromoBannerCard extends StatelessWidget {
                   child: Image.network(
                     imageUrl,
                     width: double.infinity,
-                    height: 99,
+                    height: 108,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
                         _buildFallbackContent(hasCta, ctaLabel),

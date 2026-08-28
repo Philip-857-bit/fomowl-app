@@ -362,6 +362,12 @@ abstract class AppLocalizations {
   /// **'Withdraw'**
   String get withdraw;
 
+  /// No description provided for @addFunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Add funds'**
+  String get addFunds;
+
   /// No description provided for @buy.
   ///
   /// In en, this message translates to:
@@ -536,6 +542,42 @@ abstract class AppLocalizations {
   /// **'Discover DApps'**
   String get discoverTitle;
 
+  /// No description provided for @discoverProductsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FOMOWL Products'**
+  String get discoverProductsTitle;
+
+  /// No description provided for @discoverExploreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get discoverExploreTitle;
+
+  /// No description provided for @discoverSearchResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search results'**
+  String get discoverSearchResultsTitle;
+
+  /// No description provided for @discoverOpenOwlletPay.
+  ///
+  /// In en, this message translates to:
+  /// **'Open OwlletPay'**
+  String get discoverOpenOwlletPay;
+
+  /// No description provided for @discoverProductsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'New FOMOWL products will appear here.'**
+  String get discoverProductsEmpty;
+
+  /// No description provided for @discoverOwlletPayPromoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fund, shop, pay bills and withdraw in one place.'**
+  String get discoverOwlletPayPromoDescription;
+
   /// No description provided for @discoverSearchHint.
   ///
   /// In en, this message translates to:
@@ -665,7 +707,7 @@ abstract class AppLocalizations {
   /// No description provided for @discoverCashInTitle.
   ///
   /// In en, this message translates to:
-  /// **'Cash In'**
+  /// **'OwlletPay'**
   String get discoverCashInTitle;
 
   /// No description provided for @discoverCashInDescription.
@@ -2725,6 +2767,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Confirm your secret phrase'**
   String get confirmSecretPhraseTitle;
+
+  /// No description provided for @confirmSecretPhraseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Please acknowledge the following security measures to ensure the safety of your digital vault.'**
+  String get confirmSecretPhraseSubtitle;
 
   /// No description provided for @confirmSecretPhraseCheckOne.
   ///

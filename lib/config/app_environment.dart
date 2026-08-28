@@ -54,11 +54,22 @@ class AppEnvironment {
   static const String _cashInMiniAppAllowedOriginsEnv = String.fromEnvironment(
     'CASH_IN_MINI_APP_ALLOWED_ORIGINS',
   );
+  static const String _owlletPayMiniAppUrlEnv = String.fromEnvironment(
+    'OWLLET_PAY_MINI_APP_URL',
+  );
+  static const String _owlletPayMiniAppAllowedOriginsEnv =
+      String.fromEnvironment('OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS');
   static const String _affiliateMiniAppUrlEnv = String.fromEnvironment(
     'AFFILIATE_MINI_APP_URL',
   );
   static const String _affiliateMiniAppAllowedOriginsEnv =
       String.fromEnvironment('AFFILIATE_MINI_APP_ALLOWED_ORIGINS');
+  static const String _burstMiniAppUrlEnv = String.fromEnvironment(
+    'BURST_MINI_APP_URL',
+  );
+  static const String _burstMiniAppAllowedOriginsEnv = String.fromEnvironment(
+    'BURST_MINI_APP_ALLOWED_ORIGINS',
+  );
   static const String _backendCertSha256PinsEnv = String.fromEnvironment(
     'BACKEND_CERT_SHA256_PINS',
   );
@@ -83,15 +94,27 @@ class AppEnvironment {
       _resolvePushNotificationsEnabled();
   static final FirebaseOptions? firebaseOptions =
       _resolveFirebaseOptionsForCurrentPlatform();
-  static final String? cashInMiniAppUrl = _optionalEnv(_cashInMiniAppUrlEnv);
-  static final List<String> cashInMiniAppAllowedOrigins = _csvEnv(
-    _cashInMiniAppAllowedOriginsEnv,
-  );
+  static final String? owlletPayMiniAppUrl =
+      _optionalEnv(_owlletPayMiniAppUrlEnv) ??
+      _optionalEnv(_cashInMiniAppUrlEnv);
+  static final List<String> owlletPayMiniAppAllowedOrigins =
+      _csvEnv(_owlletPayMiniAppAllowedOriginsEnv).isNotEmpty
+      ? _csvEnv(_owlletPayMiniAppAllowedOriginsEnv)
+      : _csvEnv(_cashInMiniAppAllowedOriginsEnv);
+
+  /// Legacy names retained for existing build pipelines during the rebrand.
+  static String? get cashInMiniAppUrl => owlletPayMiniAppUrl;
+  static List<String> get cashInMiniAppAllowedOrigins =>
+      owlletPayMiniAppAllowedOrigins;
   static final String? affiliateMiniAppUrl = _optionalEnv(
     _affiliateMiniAppUrlEnv,
   );
   static final List<String> affiliateMiniAppAllowedOrigins = _csvEnv(
     _affiliateMiniAppAllowedOriginsEnv,
+  );
+  static final String? burstMiniAppUrl = _optionalEnv(_burstMiniAppUrlEnv);
+  static final List<String> burstMiniAppAllowedOrigins = _csvEnv(
+    _burstMiniAppAllowedOriginsEnv,
   );
   static final String walletConnectProjectId = _resolveWalletConnectProjectId();
 

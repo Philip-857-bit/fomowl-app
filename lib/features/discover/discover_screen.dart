@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
+import '../../features/mini_apps/mini_app_definition.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../features/mini_apps/mini_app_registry.dart';
 import '../../features/shell/app_shell_controller.dart';
@@ -13,19 +14,16 @@ import '../../services/deep_link_service.dart';
 
 import '../../services/wallet_service.dart';
 import '../../services/walletconnect/wallet_connect_service.dart';
-import '../../utils/app_error_utils.dart';
-import '../../utils/in_app_link_router.dart';
-
 import 'browser/browser_session_controller.dart';
 import 'browser/discover_tab_manager.dart';
 import 'discover_url_utils.dart';
 import 'browser/widgets/discover_blocked_view.dart';
 import 'browser/widgets/discover_browser_view.dart';
 import 'browser/widgets/discover_tab_overview.dart';
+import 'catalog/discover_dapp_entry.dart';
+import 'catalog/discover_product_entry.dart';
 import 'catalog/discover_catalog_service.dart';
 import 'catalog/widgets/discover_landing_view.dart';
-import 'market/discover_trending_token.dart';
-import 'market/discover_trending_token_service.dart';
 import 'permissions/dapp_permission_service.dart';
 
 class DiscoverScreen extends StatefulWidget {
@@ -37,15 +35,11 @@ class DiscoverScreen extends StatefulWidget {
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
   late final DiscoverCatalogService _catalogService;
-  late final DiscoverTrendingTokenService _trendingTokenService;
   late final DiscoverTabManager _tabManager;
   late final DappPermissionService _permissionService;
   final WalletService _walletService = WalletService();
   AppShellController? _shellController;
   final TextEditingController _searchController = TextEditingController();
-  List<DiscoverTrendingToken> _trendingTokens = const <DiscoverTrendingToken>[];
-  bool _loadingTrendingTokens = false;
-  String? _trendingTokensError;
   bool _showTabOverview = false;
 
   BrowserSessionController get _sessionController =>
@@ -55,7 +49,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   void initState() {
     super.initState();
     _catalogService = DiscoverCatalogService();
-    _trendingTokenService = DiscoverTrendingTokenService();
     _permissionService = DappPermissionService();
     _tabManager = DiscoverTabManager(
       catalogService: _catalogService,
@@ -115,7 +108,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     if (pending != null && pending.trim().isNotEmpty) {
       _handleBrowserInput(pending);
     }
-    _loadTrendingTokens();
   }
 
   @override
@@ -194,64 +186,44 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildLandingHeader() {
     final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Stack(
+            alignment: Alignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0B1018),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.05),
-                  ),
-                ),
+              Center(
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF120708),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.all(5),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.contain,
-                      ),
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 25,
+                      height: 25,
+                      fit: BoxFit.contain,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Text(
-                      l.discoverTitle,
-                      style: GoogleFonts.outfit(
-                        color: const Color(0xFF69A9FF),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                      l.discoverBrowserFallbackTitle,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Spacer(),
-              _buildTabCountButton(),
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.notifications_none_rounded,
-                  color: Colors.white,
-                ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: _buildTabCountButton(),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 13),
           TextField(
+            key: const ValueKey('discover-search-field'),
             controller: _searchController,
             onChanged: (value) {
               _sessionController.updateQuery(value);
@@ -261,12 +233,12 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             },
             onSubmitted: _handleBrowserInput,
 
-            style: GoogleFonts.outfit(color: Colors.white),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
             decoration: InputDecoration(
               hintText: l.discoverSearchHint,
-              hintStyle: GoogleFonts.outfit(
-                color: Colors.white38,
-                fontSize: 15,
+              hintStyle: GoogleFonts.inter(
+                color: AppColors.textSecondary,
+                fontSize: 13,
               ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
@@ -279,20 +251,21 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       icon: const Icon(Icons.close_rounded),
                     ),
               filled: true,
-              fillColor: const Color(0xFF152234),
+              fillColor: AppColors.cardDark,
+              contentPadding: const EdgeInsets.symmetric(vertical: 13),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
                 borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.06),
+                  color: Colors.white.withValues(alpha: 0.07),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFF284A73)),
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: AppColors.accentRed),
               ),
             ),
           ),
@@ -307,22 +280,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       label: AppLocalizations.of(context).discoverTabsTitle,
       child: InkWell(
         onTap: () => setState(() => _showTabOverview = true),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          width: 48,
-          height: 48,
+          width: 40,
+          height: 40,
           alignment: Alignment.center,
           child: Container(
-            width: 26,
-            height: 26,
+            width: 25,
+            height: 25,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.white70, width: 1.8),
-              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: Colors.white70, width: 1.5),
+              borderRadius: BorderRadius.circular(7),
             ),
             child: Text(
               '${_tabManager.tabCount}',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 color: Colors.white,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -358,42 +331,78 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         );
       case DiscoverViewState.landing:
         final l = AppLocalizations.of(context);
+        final dapps = session.snapshot?.dapps ?? const <DiscoverDappEntry>[];
+        final products = DiscoverProductEntry.merge(
+          miniApps: OwlletMiniApps.all,
+          catalogDapps: dapps,
+        );
         return DiscoverLandingView(
           query: session.query,
-          featuredDapps: session.featuredDapps,
-          trendingDapps: session.trendingDapps,
+          products: products,
+          dapps: dapps,
           filteredDapps: session.filteredDapps,
-          categories: session.categories,
-          trendingTokens: _trendingTokens,
-          loadingTrendingTokens: _loadingTrendingTokens,
-          trendingTokensError: _trendingTokensError,
+          categories: DiscoverProductEntry.orderedCategories(dapps),
           loading: session.loadingCatalog,
           error: session.catalogError == null
               ? null
               : l.discoverCatalogLoadError,
-          onRefresh: _refreshLandingData,
-          onOpenDapp: (dapp) => session.openDapp(
-            dapp,
-            invalidLaunchUrlReason: l.discoverInvalidLaunchUrl,
-          ),
-          onOpenTrendingToken: (token) =>
-              InAppLinkRouter.open(context, token.resolvedMarketUrl),
-          onOpenCashIn: () => Navigator.of(context).pushNamed(
-            '/cash-in',
-            arguments: const MiniAppHostArguments(
-              miniAppId: 'cash_in',
-              launchSource: 'discover',
-            ),
+          onRefresh: () => session.loadCatalog(forceRefresh: true),
+          onOpenProduct: (product) => _openProduct(session, product),
+          onOpenDapp: (dapp) => _openDapp(session, dapp),
+          onOpenOwlletPay: () => _openMiniApp(
+            OwlletMiniApps.owlletPay,
+            launchSource: 'discover_banner',
           ),
         );
     }
   }
 
-  Future<void> _refreshLandingData() async {
-    await Future.wait<void>([
-      _sessionController.loadCatalog(forceRefresh: true),
-      _loadTrendingTokens(),
-    ]);
+  void _openProduct(
+    BrowserSessionController session,
+    DiscoverProductEntry product,
+  ) {
+    final miniApp = product.miniApp;
+    if (miniApp != null) {
+      _openMiniApp(miniApp, launchSource: 'discover_products');
+      return;
+    }
+    _openDapp(session, product.dapp!);
+  }
+
+  void _openDapp(BrowserSessionController session, DiscoverDappEntry dapp) {
+    final miniApp = DiscoverProductEntry.trustedMiniAppForDapp(
+      dapp,
+      OwlletMiniApps.all,
+    );
+    if (miniApp != null) {
+      _openMiniApp(
+        miniApp,
+        launchSource: 'discover_catalog',
+        initialUrl: dapp.launchUrl,
+      );
+      return;
+    }
+    session.openDapp(
+      dapp,
+      invalidLaunchUrlReason: AppLocalizations.of(
+        context,
+      ).discoverInvalidLaunchUrl,
+    );
+  }
+
+  void _openMiniApp(
+    MiniAppDefinition miniApp, {
+    required String launchSource,
+    String? initialUrl,
+  }) {
+    Navigator.of(context).pushNamed(
+      '/mini-app-host',
+      arguments: MiniAppHostArguments(
+        miniAppId: miniApp.id,
+        launchSource: launchSource,
+        initialUrl: initialUrl,
+      ),
+    );
   }
 
   void _showTabLimitMessage() {
@@ -402,43 +411,6 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         content: Text(AppLocalizations.of(context).discoverMaxTabsReached),
       ),
     );
-  }
-
-  Future<void> _loadTrendingTokens() async {
-    if (_loadingTrendingTokens) {
-      return;
-    }
-    setState(() {
-      _loadingTrendingTokens = true;
-      _trendingTokensError = null;
-    });
-    try {
-      final tokens = await _trendingTokenService.fetchTrendingTokens();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _trendingTokens = tokens;
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _trendingTokensError = AppErrorUtils.userMessage(
-          error,
-          fallback: AppLocalizations.of(
-            context,
-          ).discoverTrendingTokensLoadError,
-        );
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loadingTrendingTokens = false;
-        });
-      }
-    }
   }
 
   /// Routes browser input. When the entered/opened URL belongs to a registered

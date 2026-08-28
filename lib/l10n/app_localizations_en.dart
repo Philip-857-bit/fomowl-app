@@ -137,6 +137,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get withdraw => 'Withdraw';
 
   @override
+  String get addFunds => 'Add funds';
+
+  @override
   String get buy => 'Buy';
 
   @override
@@ -224,6 +227,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverTitle => 'Discover DApps';
 
   @override
+  String get discoverProductsTitle => 'FOMOWL Products';
+
+  @override
+  String get discoverExploreTitle => 'Explore';
+
+  @override
+  String get discoverSearchResultsTitle => 'Search results';
+
+  @override
+  String get discoverOpenOwlletPay => 'Open OwlletPay';
+
+  @override
+  String get discoverProductsEmpty => 'New FOMOWL products will appear here.';
+
+  @override
+  String get discoverOwlletPayPromoDescription =>
+      'Fund, shop, pay bills and withdraw in one place.';
+
+  @override
   String get discoverSearchHint => 'Search DApps or the web';
 
   @override
@@ -294,7 +316,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverCashInBadge => 'ONE-TIME KYC';
 
   @override
-  String get discoverCashInTitle => 'Cash In';
+  String get discoverCashInTitle => 'OwlletPay';
 
   @override
   String get discoverCashInDescription =>
@@ -1457,6 +1479,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get confirmSecretPhraseTitle => 'Confirm your secret phrase';
+
+  @override
+  String get confirmSecretPhraseSubtitle =>
+      'Please acknowledge the following security measures to ensure the safety of your digital vault.';
 
   @override
   String get confirmSecretPhraseCheckOne => 'I am the only one that knows it.';
