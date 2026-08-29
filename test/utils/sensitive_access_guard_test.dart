@@ -26,7 +26,8 @@ class _FakeStorageService extends StorageService {
   bool isTwoFactorEnabledMock = false;
   int failedAttempts = 0;
   String? savedPasscode;
-  bool promptPasscodeResult = false; // We can't easily mock this as it uses text field in dialog
+  bool promptPasscodeResult =
+      false; // We can't easily mock this as it uses text field in dialog
 
   @override
   Future<bool> hasPasscode() async => hasPasscodeMock;
@@ -115,9 +116,7 @@ void main() {
   }
 
   group('verify without 2FA', () {
-    testWidgets('uses biometric and returns true on success', (
-      tester,
-    ) async {
+    testWidgets('uses biometric and returns true on success', (tester) async {
       biometricService.isBiometricEnabledMock = true;
       biometricService.authenticateResult = true;
 
@@ -219,8 +218,14 @@ void main() {
       expect(find.byType(TextField), findsNWidgets(2));
 
       // Enter passcode
-      await tester.enterText(find.widgetWithText(TextField, 'Enter a passcode (6-12 digits)'), '123456');
-      await tester.enterText(find.widgetWithText(TextField, 'Confirm passcode'), '123456');
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Enter a passcode (6-12 digits)'),
+        '123456',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Confirm passcode'),
+        '123456',
+      );
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
@@ -228,51 +233,54 @@ void main() {
       expect(storageService.savedPasscode, '123456');
     });
 
-    testWidgets('returns false when passcode verification fails and is cancelled', (tester) async {
-      biometricService.isBiometricEnabledMock = false;
-      storageService.hasPasscodeMock = true;
-      storageService.verifyPasscodeResult = false;
+    testWidgets(
+      'returns false when passcode verification fails and is cancelled',
+      (tester) async {
+        biometricService.isBiometricEnabledMock = false;
+        storageService.hasPasscodeMock = true;
+        storageService.verifyPasscodeResult = false;
 
-      bool? result;
+        bool? result;
 
-      await tester.pumpWidget(
-        buildTestApp(
-          Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () async {
-                  result = await SensitiveAccessGuard.verify(
-                    context,
-                    requireTwoFactor: false,
-                  );
-                },
-                child: const Text('Verify'),
-              );
-            },
+        await tester.pumpWidget(
+          buildTestApp(
+            Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () async {
+                    result = await SensitiveAccessGuard.verify(
+                      context,
+                      requireTwoFactor: false,
+                    );
+                  },
+                  child: const Text('Verify'),
+                );
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Verify'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Verify'));
+        await tester.pumpAndSettle();
 
-      // Show passcode dialog
-      expect(find.byType(AlertDialog), findsOneWidget);
+        // Show passcode dialog
+        expect(find.byType(AlertDialog), findsOneWidget);
 
-      // Enter wrong passcode
-      await tester.enterText(find.byType(TextField), '111111');
-      await tester.tap(find.text('Confirm'));
-      await tester.pumpAndSettle();
+        // Enter wrong passcode
+        await tester.enterText(find.byType(TextField), '111111');
+        await tester.tap(find.text('Confirm'));
+        await tester.pumpAndSettle();
 
-      // Still showing dialog because wrong passcode
-      expect(find.byType(AlertDialog), findsOneWidget);
+        // Still showing dialog because wrong passcode
+        expect(find.byType(AlertDialog), findsOneWidget);
 
-      // Cancel dialog
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
+        // Cancel dialog
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
 
-      expect(result, isFalse);
-    });
+        expect(result, isFalse);
+      },
+    );
   });
 
   group('verify with 2FA', () {
@@ -308,7 +316,9 @@ void main() {
       expect(result, isTrue);
     });
 
-    testWidgets('shows 2FA prompt and returns true on valid code', (tester) async {
+    testWidgets('shows 2FA prompt and returns true on valid code', (
+      tester,
+    ) async {
       biometricService.isBiometricEnabledMock = true;
       biometricService.authenticateResult = true;
       storageService.isTwoFactorEnabledMock = true;
