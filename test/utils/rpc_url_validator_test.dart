@@ -79,12 +79,18 @@ void main() {
 
       test('blocks ULA', () {
         expect(isBlockedRpcHost('fc00::'), isTrue);
-        expect(isBlockedRpcHost('fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'), isTrue);
+        expect(
+          isBlockedRpcHost('fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'),
+          isTrue,
+        );
       });
 
       test('blocks link-local', () {
         expect(isBlockedRpcHost('fe80::'), isTrue);
-        expect(isBlockedRpcHost('febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff'), isTrue);
+        expect(
+          isBlockedRpcHost('febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff'),
+          isTrue,
+        );
       });
 
       test('blocks IPv4-mapped blocked addresses', () {
@@ -118,20 +124,44 @@ void main() {
 
     test('returns error for invalid URIs', () {
       expect(validateCustomRpcUrl('not a url'), 'Enter a valid RPC URL.');
-      expect(validateCustomRpcUrl('https:///no-host'), 'Enter a valid RPC URL.');
+      expect(
+        validateCustomRpcUrl('https:///no-host'),
+        'Enter a valid RPC URL.',
+      );
     });
 
     test('returns error for non-HTTPS schemes', () {
-      expect(validateCustomRpcUrl('http://example.com'), 'RPC URL must use https://.');
-      expect(validateCustomRpcUrl('wss://example.com'), 'RPC URL must use https://.');
-      expect(validateCustomRpcUrl('ftp://example.com'), 'RPC URL must use https://.');
+      expect(
+        validateCustomRpcUrl('http://example.com'),
+        'RPC URL must use https://.',
+      );
+      expect(
+        validateCustomRpcUrl('wss://example.com'),
+        'RPC URL must use https://.',
+      );
+      expect(
+        validateCustomRpcUrl('ftp://example.com'),
+        'RPC URL must use https://.',
+      );
     });
 
     test('returns error for blocked hosts', () {
-      expect(validateCustomRpcUrl('https://localhost'), 'RPC host is not allowed (private or local address).');
-      expect(validateCustomRpcUrl('https://127.0.0.1'), 'RPC host is not allowed (private or local address).');
-      expect(validateCustomRpcUrl('https://[::1]'), 'RPC host is not allowed (private or local address).');
-      expect(validateCustomRpcUrl('https://192.168.1.100'), 'RPC host is not allowed (private or local address).');
+      expect(
+        validateCustomRpcUrl('https://localhost'),
+        'RPC host is not allowed (private or local address).',
+      );
+      expect(
+        validateCustomRpcUrl('https://127.0.0.1'),
+        'RPC host is not allowed (private or local address).',
+      );
+      expect(
+        validateCustomRpcUrl('https://[::1]'),
+        'RPC host is not allowed (private or local address).',
+      );
+      expect(
+        validateCustomRpcUrl('https://192.168.1.100'),
+        'RPC host is not allowed (private or local address).',
+      );
     });
 
     test('returns null for valid public URLs', () {
