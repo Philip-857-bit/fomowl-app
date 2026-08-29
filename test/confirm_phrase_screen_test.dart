@@ -96,56 +96,60 @@ void main() {
     expect(find.byKey(const Key('confirm_phrase_check_3')), findsOneWidget);
 
     // Verify Continue Button exists and tapping it when uncompleted does nothing
-    final continueButton = find.byKey(const Key('confirm_phrase_continue_button'));
+    final continueButton = find.byKey(
+      const Key('confirm_phrase_continue_button'),
+    );
     expect(continueButton, findsOneWidget);
     await tester.tap(continueButton, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.text('Verify Phrase Mock'), findsNothing);
   });
 
-  testWidgets('toggles checklist items and activates Continue CTA only when all checked',
-      (tester) async {
-    tester.view.physicalSize = const Size(440, 1100);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'toggles checklist items and activates Continue CTA only when all checked',
+    (tester) async {
+      tester.view.physicalSize = const Size(440, 1100);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(
-      createScreen(
-        mnemonicWords: ['word1', 'word2', 'word3'],
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        createScreen(mnemonicWords: ['word1', 'word2', 'word3']),
+      );
+      await tester.pumpAndSettle();
 
-    final check1 = find.byKey(const Key('confirm_phrase_check_1'));
-    final check2 = find.byKey(const Key('confirm_phrase_check_2'));
-    final check3 = find.byKey(const Key('confirm_phrase_check_3'));
-    final continueButton = find.byKey(const Key('confirm_phrase_continue_button'));
+      final check1 = find.byKey(const Key('confirm_phrase_check_1'));
+      final check2 = find.byKey(const Key('confirm_phrase_check_2'));
+      final check3 = find.byKey(const Key('confirm_phrase_check_3'));
+      final continueButton = find.byKey(
+        const Key('confirm_phrase_continue_button'),
+      );
 
-    // Check 1
-    await tester.tap(check1);
-    await tester.pumpAndSettle();
-    await tester.tap(continueButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(find.text('Verify Phrase Mock'), findsNothing);
+      // Check 1
+      await tester.tap(check1);
+      await tester.pumpAndSettle();
+      await tester.tap(continueButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text('Verify Phrase Mock'), findsNothing);
 
-    // Check 2
-    await tester.tap(check2);
-    await tester.pumpAndSettle();
-    await tester.tap(continueButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(find.text('Verify Phrase Mock'), findsNothing);
+      // Check 2
+      await tester.tap(check2);
+      await tester.pumpAndSettle();
+      await tester.tap(continueButton, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.text('Verify Phrase Mock'), findsNothing);
 
-    // Check 3 -> all checked
-    await tester.tap(check3);
-    await tester.pumpAndSettle();
+      // Check 3 -> all checked
+      await tester.tap(check3);
+      await tester.pumpAndSettle();
 
-    // Now tap Continue -> should navigate to /verify-phrase with arguments forwarded
-    await tester.tap(continueButton);
-    await tester.pumpAndSettle();
-    expect(find.text('Verify Phrase Mock'), findsOneWidget);
-    expect(find.text('Args: word1,word2,word3'), findsOneWidget);
-  });
+      // Now tap Continue -> should navigate to /verify-phrase with arguments forwarded
+      await tester.tap(continueButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Verify Phrase Mock'), findsOneWidget);
+      expect(find.text('Args: word1,word2,word3'), findsOneWidget);
+    },
+  );
 
   testWidgets('unchecking any item disables Continue button', (tester) async {
     tester.view.physicalSize = const Size(440, 1100);
@@ -154,16 +158,16 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
-      createScreen(
-        mnemonicWords: ['word1', 'word2', 'word3'],
-      ),
+      createScreen(mnemonicWords: ['word1', 'word2', 'word3']),
     );
     await tester.pumpAndSettle();
 
     final check1 = find.byKey(const Key('confirm_phrase_check_1'));
     final check2 = find.byKey(const Key('confirm_phrase_check_2'));
     final check3 = find.byKey(const Key('confirm_phrase_check_3'));
-    final continueButton = find.byKey(const Key('confirm_phrase_continue_button'));
+    final continueButton = find.byKey(
+      const Key('confirm_phrase_continue_button'),
+    );
 
     await tester.tap(check1);
     await tester.tap(check2);
@@ -202,7 +206,8 @@ void main() {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ConfirmPhraseScreen(screenCaptureGuard: guard),
+                    builder: (_) =>
+                        ConfirmPhraseScreen(screenCaptureGuard: guard),
                   ),
                 );
               },

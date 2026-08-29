@@ -12,10 +12,7 @@ import '../../widgets/mobile_scaffold.dart';
 /// Security acknowledgment screen before verifying the seed phrase
 /// Designed according to Figma specification (Confirm Secret Phrase Redesign)
 class ConfirmPhraseScreen extends StatefulWidget {
-  const ConfirmPhraseScreen({
-    super.key,
-    this.screenCaptureGuard,
-  });
+  const ConfirmPhraseScreen({super.key, this.screenCaptureGuard});
 
   final ScreenCaptureGuard? screenCaptureGuard;
 
@@ -252,10 +249,7 @@ class _ConfirmPhraseScreenState extends State<ConfirmPhraseScreen>
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    Color(0x26EA2A33),
-                    Color(0x00EA2A33),
-                  ],
+                  colors: [Color(0x26EA2A33), Color(0x00EA2A33)],
                 ),
               ),
             ),

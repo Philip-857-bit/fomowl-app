@@ -258,7 +258,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.accentRed, width: 1),
+                borderSide: const BorderSide(
+                  color: AppColors.accentRed,
+                  width: 1,
+                ),
               ),
             ),
           ),
@@ -280,10 +283,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(
-              color: const Color(0x80A0A0A0),
-              width: 1,
-            ),
+            border: Border.all(color: const Color(0x80A0A0A0), width: 1),
           ),
           child: Text(
             '${_tabManager.tabCount}',

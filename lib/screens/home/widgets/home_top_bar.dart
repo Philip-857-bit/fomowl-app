@@ -205,9 +205,7 @@ class _NetworkChip extends StatelessWidget {
                 width: 16,
                 height: 16,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(shape: BoxShape.circle),
                 clipBehavior: Clip.antiAlias,
                 child: ChainLogoImage(
                   chainId: chainId,

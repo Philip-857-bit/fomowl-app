@@ -510,9 +510,7 @@ class _ProductCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF1E1E1E),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             alignment: Alignment.center,
             child: _ProductArtwork(product: product),
@@ -801,9 +799,7 @@ class _DappLogo extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: imageWidget,
     );

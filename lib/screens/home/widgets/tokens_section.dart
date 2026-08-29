@@ -380,7 +380,9 @@ class _AssetTabChip extends StatelessWidget {
             height: 4,
             decoration: BoxDecoration(
               color: selected ? activeColor : Colors.transparent,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(999)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(999),
+              ),
             ),
           ),
         ],
@@ -415,11 +417,7 @@ class _AssetToolbarButton extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
-          child: Icon(
-            icon,
-            color: const Color(0xFF9CA3AF),
-            size: 15,
-          ),
+          child: Icon(icon, color: const Color(0xFF9CA3AF), size: 15),
         ),
       ),
     );

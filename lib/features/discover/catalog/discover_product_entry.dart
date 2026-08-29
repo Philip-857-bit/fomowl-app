@@ -44,10 +44,12 @@ class DiscoverProductEntry {
     }
     final dappId = dapp?.id ?? dapp?.slug;
     return switch (dappId) {
-      'discover-fomowl-nfts' || 'fomowl-nfts' || 'fomowl_nfts' =>
-        'assets/images/discover/fomowl_nfts_card.png',
-      'discover-owlletpay' || 'owlletpay' || 'owllet_pay' =>
-        'assets/images/discover/owlletpay_card.png',
+      'discover-fomowl-nfts' ||
+      'fomowl-nfts' ||
+      'fomowl_nfts' => 'assets/images/discover/fomowl_nfts_card.png',
+      'discover-owlletpay' ||
+      'owlletpay' ||
+      'owllet_pay' => 'assets/images/discover/owlletpay_card.png',
       _ => null,
     };
   }
