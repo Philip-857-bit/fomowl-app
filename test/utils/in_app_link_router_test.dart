@@ -33,7 +33,9 @@ void main() {
       expect(controller.pendingDiscoverUrl, isNull);
     });
 
-    testWidgets('opens discover url if AppShellController is present', (tester) async {
+    testWidgets('opens discover url if AppShellController is present', (
+      tester,
+    ) async {
       final controller = AppShellController();
       await tester.pumpWidget(
         MaterialApp(
@@ -60,7 +62,9 @@ void main() {
       expect(controller.currentTab, AppShellTab.discover);
     });
 
-    testWidgets('pushes /shell route if AppShellController is not present', (tester) async {
+    testWidgets('pushes /shell route if AppShellController is not present', (
+      tester,
+    ) async {
       String? pushedRouteName;
       Object? pushedArguments;
 
