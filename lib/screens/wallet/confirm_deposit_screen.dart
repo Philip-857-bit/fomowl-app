@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../theme/app_chain_theme.dart';
 import '../../widgets/deposit_modals.dart';
 
 class ThirdPartyDepositScreen extends StatefulWidget {
@@ -75,6 +76,9 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+    final isClassicTheme = theme.id == 'fomowl_signature';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -223,7 +227,9 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
                       Navigator.pushNamed(context, '/transaction-processing');
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentRed,
+                      backgroundColor: isClassicTheme
+                          ? AppColors.accentRed
+                          : theme.accentColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
@@ -233,7 +239,11 @@ class _ThirdPartyDepositScreenState extends State<ThirdPartyDepositScreen> {
                       style: GoogleFonts.outfit(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: isClassicTheme
+                            ? Colors.white
+                            : (theme.accentColor.computeLuminance() > 0.55
+                                  ? const Color(0xFF111111)
+                                  : Colors.white),
                       ),
                     ),
                   ),

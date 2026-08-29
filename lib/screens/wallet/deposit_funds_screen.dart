@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
+import '../../theme/app_chain_theme.dart';
 import '../../widgets/deposit_modals.dart';
 import '../profile/coming_soon_overlay.dart';
 
@@ -48,6 +49,9 @@ class _DepositFundsScreenState extends State<DepositFundsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.chainTheme;
+    final isClassicTheme = theme.id == 'fomowl_signature';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -105,9 +109,11 @@ class _DepositFundsScreenState extends State<DepositFundsScreen> {
                         Container(
                           width: 20,
                           height: 20,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.green,
+                            color: isClassicTheme
+                                ? Colors.green
+                                : theme.accentColor,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -142,14 +148,22 @@ class _DepositFundsScreenState extends State<DepositFundsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08),
+                    color: isClassicTheme
+                        ? Colors.white.withValues(alpha: 0.08)
+                        : theme.surfaceOverlay,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isClassicTheme
+                          ? Colors.transparent
+                          : theme.accentColor.withValues(alpha: 0.35),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
                     'Top up your balance directly from Fomowl',
                     style: GoogleFonts.outfit(
                       fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
                 ),

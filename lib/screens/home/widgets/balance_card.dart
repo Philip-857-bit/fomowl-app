@@ -206,13 +206,26 @@ class BalanceCard extends StatelessWidget {
                           vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEA2A33),
+                          color: isClassicTheme
+                              ? const Color(0xFFEA2A33)
+                              : null,
+                          gradient: isClassicTheme
+                              ? null
+                              : theme.buttonGradient,
                           borderRadius: BorderRadius.circular(999),
+                          border: isClassicTheme
+                              ? null
+                              : Border.all(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  width: 0.8,
+                                ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(
-                                0xFFEA2A33,
-                              ).withValues(alpha: 0.35),
+                              color:
+                                  (isClassicTheme
+                                          ? const Color(0xFFEA2A33)
+                                          : theme.accentColor)
+                                      .withValues(alpha: 0.35),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -221,7 +234,11 @@ class BalanceCard extends StatelessWidget {
                         child: Text(
                           addFundsLabel,
                           style: GoogleFonts.inter(
-                            color: Colors.white,
+                            color: isClassicTheme
+                                ? Colors.white
+                                : (theme.accentColor.computeLuminance() > 0.55
+                                      ? const Color(0xFF111111)
+                                      : Colors.white),
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
                           ),

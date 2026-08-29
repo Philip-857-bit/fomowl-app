@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/network_entry.dart';
+import 'package:fomowl_wallet/screens/home/home_portfolio_metrics.dart';
+import 'package:fomowl_wallet/screens/home/widgets/balance_card.dart';
 import 'package:fomowl_wallet/screens/home/widgets/home_top_bar.dart';
 import 'package:fomowl_wallet/screens/home/widgets/network_selector_sheet.dart';
 import 'package:fomowl_wallet/screens/home/widgets/quick_actions_row.dart';
@@ -183,6 +185,42 @@ void main() {
 
         await tester.tap(find.text('Ethereum Chain'));
         expect(selectedEntry?.name, 'Ethereum');
+      },
+    );
+
+    testWidgets(
+      'BalanceCard Add funds button reflects active chain adaptive theme',
+      (tester) async {
+        await tester.pumpWidget(
+          wrapWithTheme(
+            networkKey: 'evm:56', // BSC Gold #F3BA2F
+            child: BalanceCard(
+              titleText: 'TOTAL NET WORTH',
+              formattedBalance: '\$100.00',
+              portfolioMetrics: HomePortfolioMetrics.zero(),
+              isBalanceVisible: true,
+              isLoadingBalances: false,
+              onToggleVisibility: () {},
+              onHistoryTap: () {},
+              onAddFunds: () {},
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Add funds'), findsOneWidget);
+        final inkWidget = tester.widget<Ink>(
+          find.descendant(
+            of: find.byKey(const ValueKey('balance-add-funds')),
+            matching: find.byType(Ink),
+          ),
+        );
+        final decoration = inkWidget.decoration as BoxDecoration;
+        expect(decoration.gradient, isNotNull);
+        expect(
+          decoration.boxShadow?.first.color,
+          const Color(0xFFF3BA2F).withValues(alpha: 0.35),
+        );
       },
     );
   });
