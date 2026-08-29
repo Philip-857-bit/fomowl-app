@@ -20,8 +20,6 @@ class ScreenCaptureGuard {
     if (!_supportsProtection) return;
     try {
       await _channel.invokeMethod('enable');
-    } on MissingPluginException {
-      // Best effort only on unsupported shells.
     } on PlatformException {
       // Best effort only on unsupported shells.
     }
@@ -31,8 +29,6 @@ class ScreenCaptureGuard {
     if (!_supportsProtection) return;
     try {
       await _channel.invokeMethod('disable');
-    } on MissingPluginException {
-      // Best effort only on unsupported shells.
     } on PlatformException {
       // Best effort only on unsupported shells.
     }
