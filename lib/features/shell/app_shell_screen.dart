@@ -28,17 +28,17 @@ class _AppShellScreenState extends State<AppShellScreen> {
     _appliedInitialArgs = true;
     final args = ModalRoute.of(context)?.settings.arguments;
     final initialIndex = switch (args) {
-      int value => value,
-      String value => int.tryParse(value),
-      Map<String, dynamic> value => switch (value['tab']) {
-        int tab => tab,
-        String tab => int.tryParse(tab),
+      int() => args,
+      String() => int.tryParse(args),
+      Map<String, dynamic>() => switch (args['tab']) {
+        int() => args['tab'] as int,
+        String() => int.tryParse(args['tab'] as String),
         _ => null,
       },
       _ => null,
     };
     final initialDiscoverUrl = switch (args) {
-      Map<String, dynamic> value => value['discoverUrl']?.toString(),
+      Map<String, dynamic>() => args['discoverUrl']?.toString(),
       _ => null,
     };
     if (initialDiscoverUrl != null && initialDiscoverUrl.trim().isNotEmpty) {
