@@ -62,6 +62,7 @@ void main() {
           find.byKey(const ValueKey('floating-bottom-navigation')),
         )
         .dy;
-    expect(screenHeight - pillBottom, 46);
+    // 34 (bottom inset) + 8 (bottom padding) = 42
+    expect(screenHeight - pillBottom, 42);
   });
 }
