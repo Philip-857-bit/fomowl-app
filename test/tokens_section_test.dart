@@ -76,7 +76,7 @@ void main() {
     expect(find.byIcon(Icons.qr_code_scanner_rounded), findsOneWidget);
     expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
     expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
-    expect(find.text('Ethereum'), findsOneWidget);
+    expect(find.text('ETHEREUM'), findsWidgets);
   });
 
   testWidgets('shows manage icon on tokens tab and keeps nft tab intact', (
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
-    expect(find.text('Ethereum'), findsOneWidget);
+    expect(find.text('ETHEREUM'), findsWidgets);
 
     await tester.tap(find.text('NFTs'));
     await tester.pumpAndSettle();
