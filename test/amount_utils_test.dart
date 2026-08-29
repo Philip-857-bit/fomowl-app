@@ -70,14 +70,8 @@ void main() {
       });
 
       test('parses zero correctly', () {
-        expect(
-          AmountUtils.parseDecimalToBaseUnits('0', 18),
-          BigInt.zero,
-        );
-        expect(
-          AmountUtils.parseDecimalToBaseUnits('0.00', 18),
-          BigInt.zero,
-        );
+        expect(AmountUtils.parseDecimalToBaseUnits('0', 18), BigInt.zero);
+        expect(AmountUtils.parseDecimalToBaseUnits('0.00', 18), BigInt.zero);
       });
     });
 
@@ -90,14 +84,8 @@ void main() {
       });
 
       test('handles decimals <= 0', () {
-        expect(
-          AmountUtils.formatBaseUnits(BigInt.parse('123'), 0),
-          '123',
-        );
-        expect(
-          AmountUtils.formatBaseUnits(BigInt.parse('123'), -2),
-          '123',
-        );
+        expect(AmountUtils.formatBaseUnits(BigInt.parse('123'), 0), '123');
+        expect(AmountUtils.formatBaseUnits(BigInt.parse('123'), -2), '123');
       });
 
       test('handles negative values', () {
@@ -105,10 +93,7 @@ void main() {
           AmountUtils.formatBaseUnits(BigInt.parse('-1234500000000000000'), 18),
           '-1.2345',
         );
-        expect(
-          AmountUtils.formatBaseUnits(BigInt.parse('-123'), 0),
-          '-123',
-        );
+        expect(AmountUtils.formatBaseUnits(BigInt.parse('-123'), 0), '-123');
       });
 
       test('respects maxFractionDigits', () {
@@ -153,10 +138,7 @@ void main() {
       });
 
       test('formats zero correctly', () {
-        expect(
-          AmountUtils.formatBaseUnits(BigInt.zero, 18),
-          '0',
-        );
+        expect(AmountUtils.formatBaseUnits(BigInt.zero, 18), '0');
         expect(
           AmountUtils.formatBaseUnits(
             BigInt.zero,
