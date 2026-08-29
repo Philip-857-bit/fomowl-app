@@ -38,19 +38,19 @@ class FloatingNavigationPill extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
               key: const ValueKey('floating-bottom-navigation'),
-              height: 62,
+              height: 64,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0x591F1F1F),
+                color: const Color(0xEB1C1C1C),
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 24,
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
                 ],
@@ -97,7 +97,7 @@ class _NavigationItem extends StatelessWidget {
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: selected
-                ? accent.withValues(alpha: 0.14)
+                ? accent.withValues(alpha: 0.16)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
           ),
@@ -108,8 +108,8 @@ class _NavigationItem extends StatelessWidget {
             children: [
               Icon(
                 selected ? destination.selectedIcon : destination.icon,
-                color: selected ? accent : Colors.white.withValues(alpha: 0.5),
-                size: 20,
+                color: selected ? accent : Colors.white.withValues(alpha: 0.65),
+                size: 21,
               ),
               const SizedBox(height: 2),
               Text(
@@ -120,9 +120,9 @@ class _NavigationItem extends StatelessWidget {
                 style: GoogleFonts.inter(
                   color: selected
                       ? Colors.white
-                      : Colors.white.withValues(alpha: 0.5),
-                  fontSize: 9.2,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                      : Colors.white.withValues(alpha: 0.65),
+                  fontSize: 10,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
             ],

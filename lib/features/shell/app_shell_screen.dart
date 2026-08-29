@@ -84,12 +84,10 @@ class _AppShellScreenState extends State<AppShellScreen> {
             DecentralizedProfileScreen(showBottomNavigation: false),
           ],
         ),
-        bottomNavigationBar: controller.isBottomNavVisible
-            ? AppShellBottomNavigation(
-                currentTab: controller.currentTab,
-                onTap: controller.selectTab,
-              )
-            : null,
+        bottomNavigationBar: AppShellBottomNavigation(
+          currentTab: controller.currentTab,
+          onTap: controller.selectTab,
+        ),
       ),
     );
   }

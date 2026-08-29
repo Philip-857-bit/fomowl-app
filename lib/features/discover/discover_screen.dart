@@ -72,20 +72,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void dispose() {
     _shellController?.setDiscoverBackHandler(null);
-    _shellController?.setBottomNavVisible(true);
     _tabManager.removeListener(_syncSearchField);
     _tabManager.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _syncNavbarVisibility() {
-    final isBrowser = _sessionController.viewState == DiscoverViewState.browser;
-    _shellController?.setBottomNavVisible(!isBrowser);
-  }
-
   void _syncSearchField() {
-    _syncNavbarVisibility();
     if (_searchController.text == _sessionController.query) {
       return;
     }
