@@ -86,42 +86,48 @@ void main() {
           contractAddress: '0x123ABC',
           networkKey: 'evm:1',
         );
-        expect(
-          TokenVisibilityUtils.contains({'0x123abc'}, token),
-          isTrue,
-        );
+        expect(TokenVisibilityUtils.contains({'0x123abc'}, token), isTrue);
       });
 
-      test('returns true for unscoped token against scoped ID in set (suffix match)', () {
-        // Token in wallet/cache has NO networkKey
-        final token = defaultToken.copyWith(contractAddress: '0x123ABC');
-        // Set contains scoped ID
-        expect(
-          TokenVisibilityUtils.contains({'evm:1:0x123abc'}, token),
-          isTrue,
-        );
-      });
+      test(
+        'returns true for unscoped token against scoped ID in set (suffix match)',
+        () {
+          // Token in wallet/cache has NO networkKey
+          final token = defaultToken.copyWith(contractAddress: '0x123ABC');
+          // Set contains scoped ID
+          expect(
+            TokenVisibilityUtils.contains({'evm:1:0x123abc'}, token),
+            isTrue,
+          );
+        },
+      );
 
-      test('returns true for differently scoped token against scoped ID in set (suffix match)', () {
-        // This is robust against e.g., EVM chain mismatches when token leaks
-        final token = defaultToken.copyWith(
-          contractAddress: '0x123ABC',
-          networkKey: 'evm:137',
-        );
-        // Set contains scoped ID for a different chain
-        expect(
-          TokenVisibilityUtils.contains({'evm:1:0x123abc'}, token),
-          isTrue,
-        );
-      });
+      test(
+        'returns true for differently scoped token against scoped ID in set (suffix match)',
+        () {
+          // This is robust against e.g., EVM chain mismatches when token leaks
+          final token = defaultToken.copyWith(
+            contractAddress: '0x123ABC',
+            networkKey: 'evm:137',
+          );
+          // Set contains scoped ID for a different chain
+          expect(
+            TokenVisibilityUtils.contains({'evm:1:0x123abc'}, token),
+            isTrue,
+          );
+        },
+      );
 
-      test('returns true for unscoped native token against scoped ID in set', () {
-        final token = defaultToken.copyWith(symbol: 'ETH');
-        expect(
-          TokenVisibilityUtils.contains({'evm:1:native_eth'}, token),
-          isTrue,
-        );
-      });
+      test(
+        'returns true for unscoped native token against scoped ID in set',
+        () {
+          final token = defaultToken.copyWith(symbol: 'ETH');
+          expect(
+            TokenVisibilityUtils.contains({'evm:1:native_eth'}, token),
+            isTrue,
+          );
+        },
+      );
 
       test('returns false when no IDs match', () {
         final token = defaultToken.copyWith(
