@@ -8,18 +8,29 @@ class AppShellController extends ChangeNotifier {
   AppShellTab _currentTab = AppShellTab.wallet;
   String? _pendingDiscoverUrl;
   Token? _pendingSwapFromToken;
+  bool _isBottomNavVisible = true;
 
   AppShellTab get currentTab => _currentTab;
   String? get pendingDiscoverUrl => _pendingDiscoverUrl;
   Token? get pendingSwapFromToken => _pendingSwapFromToken;
+  bool get isBottomNavVisible => _isBottomNavVisible;
 
   int get currentIndex => AppShellTab.values.indexOf(_currentTab);
+
+  void setBottomNavVisible(bool visible) {
+    if (_isBottomNavVisible == visible) {
+      return;
+    }
+    _isBottomNavVisible = visible;
+    notifyListeners();
+  }
 
   void selectTab(AppShellTab tab) {
     if (_currentTab == tab) {
       return;
     }
     _currentTab = tab;
+    _isBottomNavVisible = true;
     notifyListeners();
   }
 

@@ -78,39 +78,45 @@ class BalanceCard extends StatelessWidget {
     final theme = context.chainTheme;
     final addFundsLabel = AppLocalizations.of(context).addFunds;
     final changeColor = _changeColor();
+    final isClassicTheme = theme.id == 'fomowl_signature';
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      constraints: const BoxConstraints(minHeight: 176),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        gradient: theme.balanceCardGradient,
-        borderRadius: BorderRadius.circular(24),
+        color: isClassicTheme ? const Color(0xFF1C1C1C) : null,
+        gradient: isClassicTheme ? null : theme.balanceCardGradient,
+        borderRadius: BorderRadius.circular(isClassicTheme ? 16 : 20),
         border: Border.all(
-          color: theme.accentColor.withValues(alpha: 0.42),
+          color: isClassicTheme
+              ? Colors.white.withValues(alpha: 0.05)
+              : theme.accentColor.withValues(alpha: 0.42),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.accentColor.withValues(alpha: 0.12),
-            blurRadius: 30,
-            offset: const Offset(0, 12),
+            color: isClassicTheme
+                ? Colors.black.withValues(alpha: 0.25)
+                : theme.accentColor.withValues(alpha: 0.12),
+            blurRadius: isClassicTheme ? 16 : 30,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 18, 16),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
                 Text(
                   titleText.toUpperCase(),
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: 8,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.6,
+                    color: const Color(0xFF888888),
+                    height: 1.4,
                     letterSpacing: 0.6,
                   ),
                 ),
@@ -121,8 +127,8 @@ class BalanceCard extends StatelessWidget {
                     isBalanceVisible
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    size: 15,
-                    color: Colors.white.withValues(alpha: 0.8),
+                    size: 14,
+                    color: const Color(0xFF888888),
                   ),
                 ),
                 if (isLoadingBalances) ...[
@@ -140,19 +146,19 @@ class BalanceCard extends StatelessWidget {
                 GestureDetector(
                   onTap: onHistoryTap,
                   child: Text(
-                    'History',
+                    'HISTORY',
                     style: GoogleFonts.inter(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Colors.white.withValues(alpha: 0.8),
-                      height: 1.6,
-                      letterSpacing: 0.6,
+                      color: const Color(0xFF888888),
+                      height: 1.4,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             if (statusText != null && statusText!.trim().isNotEmpty) ...[
               Text(
                 statusText!,
@@ -164,47 +170,24 @@ class BalanceCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
             ],
-            SizedBox(
-              width: double.infinity,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  formattedBalance,
-                  maxLines: 1,
-                  style: GoogleFonts.inter(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                    color: Colors.white,
-                    letterSpacing: -0.75,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
-                  child: Row(
-                    children: [
-                      Icon(_changeIcon(), size: 13, color: changeColor),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          _formatChangeText(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            height: 1.3,
-                            color: changeColor,
-                          ),
-                        ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      formattedBalance,
+                      maxLines: 1,
+                      style: GoogleFonts.inter(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w700,
+                        height: 1.15,
+                        color: Colors.white,
+                        letterSpacing: -0.025,
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -219,40 +202,49 @@ class BalanceCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                       child: Ink(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 9,
+                          horizontal: 16,
+                          vertical: 7,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: const Color(0xFFEA2A33),
                           borderRadius: BorderRadius.circular(999),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
+                              color: const Color(0xFFEA2A33).withValues(alpha: 0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.add_rounded,
-                              size: 15,
-                              color: theme.primaryColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              addFundsLabel,
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF111111),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          addFundsLabel,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(_changeIcon(), size: 12, color: changeColor),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    _formatChangeText(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      height: 1.3,
+                      color: changeColor,
                     ),
                   ),
                 ),

@@ -262,7 +262,6 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
           child: Column(
@@ -272,17 +271,17 @@ class _SectionTitle extends StatelessWidget {
                 title,
                 style: GoogleFonts.inter(
                   color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.35,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
                 ),
               ),
               if (subtitle != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   subtitle!,
                   style: GoogleFonts.inter(
-                    color: AppColors.textSecondary,
+                    color: const Color(0xFFA0A0A0),
                     fontSize: 12,
                   ),
                 ),
@@ -295,17 +294,29 @@ class _SectionTitle extends StatelessWidget {
             key: ValueKey('view-all-${title.toLowerCase()}'),
             onPressed: onAction,
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.accentRed,
+              foregroundColor: const Color(0xFFA0A0A0),
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text(
-              actionLabel!,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  actionLabel!,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFFA0A0A0),
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: Color(0xFFA0A0A0),
+                ),
+              ],
             ),
           ),
       ],
@@ -320,85 +331,107 @@ class _OwlletPayBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         key: const ValueKey('discover-owllet-pay-banner'),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
-          height: 142,
+          height: 99,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(
-              colors: [Color(0xFFB2161D), Color(0xFF4A080B), Color(0xFF171313)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              colors: [Color(0xFF121212), Color(0xFF3E0103)],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              stops: [0.49, 1.0],
             ),
-            border: Border.all(color: const Color(0x55FF5961)),
           ),
           child: Stack(
             clipBehavior: Clip.antiAlias,
             children: [
               Positioned(
-                right: -6,
-                bottom: -42,
+                right: 0,
+                bottom: 0,
                 child: Image.asset(
-                  'assets/images/owl_wallet.png',
-                  width: 166,
-                  height: 166,
-                  fit: BoxFit.contain,
+                  'assets/images/discover/promo_banner_mascot.png',
+                  width: 77,
+                  height: 89,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Image.asset(
+                    'assets/images/owl_wallet.png',
+                    width: 77,
+                    height: 89,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               Positioned.fill(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 145, 14),
+                  padding: const EdgeInsets.only(
+                    left: 13,
+                    right: 84,
+                    top: 11,
+                    bottom: 11,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'OwlletPay',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: Text(
-                            l.discoverOwlletPayPromoDescription,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              color: Colors.white.withValues(alpha: 0.72),
-                              fontSize: 11,
-                              height: 1.35,
-                            ),
+                      Flexible(
+                        child: Text(
+                          'Pay Bills & Buy Crypto',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFFEA2A33),
+                            fontSize: 19,
+                            fontWeight: FontWeight.w700,
+                            height: 1.07,
                           ),
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
+                      const SizedBox(height: 9),
+                      Flexible(
                         child: Text(
-                          l.discoverOpenOwlletPay,
+                          'Try OwlletPay - Fast & Easy',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF151111),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w500,
+                            height: 1.07,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF006C4B), Color(0xFF00D292)],
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              stops: [0.10, 1.0],
+                            ),
+                          ),
+                          child: Text(
+                            'Open OwlletPay',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.07,
+                            ),
                           ),
                         ),
                       ),
@@ -428,18 +461,17 @@ class _ProductsCarousel extends StatelessWidget {
     if (products.isEmpty) {
       return const _EmptyProductsCard();
     }
-    final cardWidth = math.min(MediaQuery.sizeOf(context).width * 0.68, 252.0);
     return SizedBox(
-      height: 150,
+      height: 242,
       child: ListView.separated(
         key: const ValueKey('discover-products-carousel'),
         scrollDirection: Axis.horizontal,
         itemCount: products.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
         itemBuilder: (context, index) {
           final product = products[index];
           return SizedBox(
-            width: cardWidth,
+            width: 160,
             child: _ProductCard(
               key: ValueKey('discover-product-${product.id}'),
               product: product,
@@ -467,90 +499,58 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gradients = <List<Color>>[
-      const [Color(0xFF7B1217), Color(0xFF211213)],
-      const [Color(0xFF251B45), Color(0xFF111017)],
-      const [Color(0xFF163F36), Color(0xFF101514)],
-      const [Color(0xFF18334D), Color(0xFF101318)],
-    ];
-    final colors = gradients[index % gradients.length];
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -8,
-                bottom: -12,
-                child: _ProductArtwork(product: product),
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 160,
+            height: 156,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
               ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 15, 86, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          product.isMiniApp ? 'MINI APP' : 'FEATURED',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withValues(alpha: 0.78),
-                            fontSize: 8,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.7,
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        product.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        product.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontSize: 9,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
+            ),
+            alignment: Alignment.center,
+            child: _ProductArtwork(product: product),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Expanded(
+                  child: Text(
+                    product.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFA0A0A0),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -566,15 +566,15 @@ class _ProductArtwork extends StatelessWidget {
     final asset = product.artworkAssetPath;
     final network = product.networkArtworkUrl;
     if (asset != null) {
-      return Image.asset(asset, width: 112, height: 112, fit: BoxFit.contain);
+      return Image.asset(asset, width: 140, height: 140, fit: BoxFit.contain);
     }
     if (network != null && network.trim().isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(10),
         child: Image.network(
           network,
-          width: 106,
-          height: 106,
+          width: 140,
+          height: 140,
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => _BrandedArtwork(title: product.title),
         ),
@@ -639,25 +639,29 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChoiceChip(
+    return InkWell(
       key: ValueKey('discover-category-$label'),
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-      showCheckmark: false,
-      selectedColor: AppColors.accentRed,
-      backgroundColor: AppColors.cardDark,
-      side: BorderSide(
-        color: selected
-            ? AppColors.accentRed
-            : Colors.white.withValues(alpha: 0.07),
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      labelStyle: GoogleFonts.inter(
-        color: selected ? Colors.white : AppColors.textSecondary,
-        fontSize: 11,
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? const Color(0xFFEF4444) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: selected ? const Color(0xFFEF4444) : const Color(0xFFA0A0A0),
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
       ),
     );
   }
@@ -675,19 +679,13 @@ class _CompactDappCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          height: 74,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.cardDark,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-          ),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
             children: [
               _DappLogo(entry: entry),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -699,8 +697,9 @@ class _CompactDappCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
                         color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -709,39 +708,35 @@ class _CompactDappCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
+                        color: const Color(0xFFA0A0A0),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              if (entry.badgeText?.trim().isNotEmpty == true)
+              if (entry.badgeText?.trim().isNotEmpty == true) ...[
+                const SizedBox(width: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
-                    vertical: 5,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.accentRed.withValues(alpha: 0.11),
-                    borderRadius: BorderRadius.circular(999),
+                    color: AppColors.accentRed.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     entry.badgeText!,
                     style: GoogleFonts.inter(
                       color: AppColors.accentRed,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.white.withValues(alpha: 0.3),
-                size: 13,
-              ),
+              ],
             ],
           ),
         ),
@@ -755,37 +750,72 @@ class _DappLogo extends StatelessWidget {
 
   final DiscoverDappEntry entry;
 
+  String? get _localAssetPath {
+    final slug = entry.slug.toLowerCase();
+    final id = entry.id.toLowerCase();
+    if (slug.contains('pancake') || id.contains('pancake')) {
+      return 'assets/images/discover/pancakeswap_dapp_logo.png';
+    }
+    if (slug.contains('owllet') || id.contains('owllet')) {
+      return 'assets/images/discover/owlletpay_dapp_logo.png';
+    }
+    if (slug.contains('nft') || id.contains('nft')) {
+      return 'assets/images/discover/fomowl_nfts_dapp_logo.png';
+    }
+    if (slug.contains('prince') || id.contains('prince')) {
+      return 'assets/images/discover/princewill_logo.png';
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final localAsset = _localAssetPath;
     final logoUrl = entry.logoUrl?.trim();
-    final fallback = Container(
-      width: 48,
-      height: 48,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.inputBackground,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Text(
-        entry.title.trim().isEmpty ? '?' : entry.title.trim()[0].toUpperCase(),
-        style: GoogleFonts.inter(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-    if (logoUrl == null || logoUrl.isEmpty) {
-      return fallback;
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(15),
-      child: Image.network(
+
+    Widget imageWidget;
+    if (localAsset != null) {
+      imageWidget = Image.asset(
+        localAsset,
+        width: 48,
+        height: 48,
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
+      );
+    } else if (logoUrl != null && logoUrl.isNotEmpty) {
+      imageWidget = Image.network(
         logoUrl,
         width: 48,
         height: 48,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => fallback,
+        errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
+      );
+    } else {
+      imageWidget = _fallbackLetter(entry.title);
+    }
+
+    return Container(
+      width: 64,
+      height: 64,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: imageWidget,
+    );
+  }
+
+  Widget _fallbackLetter(String title) {
+    return Text(
+      title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase(),
+      style: GoogleFonts.inter(
+        color: Colors.white,
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
       ),
     );
   }

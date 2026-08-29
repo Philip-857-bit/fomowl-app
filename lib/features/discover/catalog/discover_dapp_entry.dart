@@ -14,6 +14,7 @@ class DiscoverDappEntry {
     required this.featuredRank,
     required this.trendingRank,
     required this.isActive,
+    this.isFomowlProduct = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -32,6 +33,7 @@ class DiscoverDappEntry {
   final int? featuredRank;
   final int? trendingRank;
   final bool isActive;
+  final bool isFomowlProduct;
   final String createdAt;
   final String updatedAt;
 
@@ -71,6 +73,7 @@ class DiscoverDappEntry {
       featuredRank: _asInt(json['featuredRank']),
       trendingRank: _asInt(json['trendingRank']),
       isActive: json['isActive'] != false,
+      isFomowlProduct: json['isFomowlProduct'] == true,
       createdAt: requireTextField('createdAt'),
       updatedAt: requireTextField('updatedAt'),
     );
@@ -91,6 +94,7 @@ class DiscoverDappEntry {
     'featuredRank': featuredRank,
     'trendingRank': trendingRank,
     'isActive': isActive,
+    'isFomowlProduct': isFomowlProduct,
     'createdAt': createdAt,
     'updatedAt': updatedAt,
   };

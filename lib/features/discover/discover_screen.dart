@@ -72,13 +72,20 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void dispose() {
     _shellController?.setDiscoverBackHandler(null);
+    _shellController?.setBottomNavVisible(true);
     _tabManager.removeListener(_syncSearchField);
     _tabManager.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
+  void _syncNavbarVisibility() {
+    final isBrowser = _sessionController.viewState == DiscoverViewState.browser;
+    _shellController?.setBottomNavVisible(!isBrowser);
+  }
+
   void _syncSearchField() {
+    _syncNavbarVisibility();
     if (_searchController.text == _sessionController.query) {
       return;
     }
@@ -186,33 +193,21 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildLandingHeader() {
     final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
         children: [
           Stack(
             alignment: Alignment.center,
             children: [
               Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/images/logo.png',
-                      width: 25,
-                      height: 25,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      l.discoverBrowserFallbackTitle,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  l.discoverBrowserFallbackTitle,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
               Align(
@@ -221,7 +216,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 13),
+          const SizedBox(height: 16),
           TextField(
             key: const ValueKey('discover-search-field'),
             controller: _searchController,
@@ -232,40 +227,38 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               }
             },
             onSubmitted: _handleBrowserInput,
-
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 13),
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
             decoration: InputDecoration(
               hintText: l.discoverSearchHint,
               hintStyle: GoogleFonts.inter(
-                color: AppColors.textSecondary,
-                fontSize: 13,
+                color: const Color(0xFFA0A0A0),
+                fontSize: 14,
               ),
               prefixIcon: const Icon(
                 Icons.search_rounded,
-                color: Colors.white54,
+                color: Color(0xFFA0A0A0),
+                size: 18,
               ),
               suffixIcon: _sessionController.query.trim().isEmpty
                   ? null
                   : IconButton(
                       onPressed: () => _sessionController.updateQuery(''),
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const Icon(Icons.close_rounded, size: 18),
                     ),
               filled: true,
-              fillColor: AppColors.cardDark,
-              contentPadding: const EdgeInsets.symmetric(vertical: 13),
+              fillColor: const Color(0xFF1E1E1E),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.07),
-                ),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
-                borderSide: const BorderSide(color: AppColors.accentRed),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.accentRed, width: 1),
               ),
             ),
           ),
@@ -280,26 +273,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       label: AppLocalizations.of(context).discoverTabsTitle,
       child: InkWell(
         onTap: () => setState(() => _showTabOverview = true),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(999),
         child: Container(
-          width: 40,
-          height: 40,
+          width: 32,
+          height: 32,
           alignment: Alignment.center,
-          child: Container(
-            width: 25,
-            height: 25,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.white70, width: 1.5),
-              borderRadius: BorderRadius.circular(7),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: const Color(0x80A0A0A0),
+              width: 1,
             ),
-            child: Text(
-              '${_tabManager.tabCount}',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
+          ),
+          child: Text(
+            '${_tabManager.tabCount}',
+            style: GoogleFonts.inter(
+              color: const Color(0xFFEA2A33),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),

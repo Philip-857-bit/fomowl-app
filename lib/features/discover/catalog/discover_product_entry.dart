@@ -32,12 +32,25 @@ class DiscoverProductEntry {
 
   /// Existing committed FOMOwl artwork for known first-party cards. Future
   /// mini apps intentionally fall back to the branded tile in the widget.
-  String? get artworkAssetPath => switch (miniApp?.id) {
-    'owllet_pay' => 'assets/images/owl_wallet.png',
-    'affiliate' => 'assets/images/logo.png',
-    'burst' => 'assets/images/dancing_owls.png',
-    _ => null,
-  };
+  String? get artworkAssetPath {
+    final miniId = miniApp?.id;
+    if (miniId != null) {
+      return switch (miniId) {
+        'owllet_pay' => 'assets/images/discover/owlletpay_card.png',
+        'affiliate' => 'assets/images/logo.png',
+        'burst' => 'assets/images/dancing_owls.png',
+        _ => null,
+      };
+    }
+    final dappId = dapp?.id ?? dapp?.slug;
+    return switch (dappId) {
+      'discover-fomowl-nfts' || 'fomowl-nfts' || 'fomowl_nfts' =>
+        'assets/images/discover/fomowl_nfts_card.png',
+      'discover-owlletpay' || 'owlletpay' || 'owllet_pay' =>
+        'assets/images/discover/owlletpay_card.png',
+      _ => null,
+    };
+  }
 
   String? get normalizedOrigin {
     final app = miniApp;
@@ -71,10 +84,12 @@ class DiscoverProductEntry {
 
     final ranked =
         catalogDapps
-            .where((entry) => entry.isActive && entry.featuredRank != null)
+            .where((entry) => entry.isActive && entry.isFomowlProduct)
             .toList(growable: false)
           ..sort((left, right) {
-            final byRank = left.featuredRank!.compareTo(right.featuredRank!);
+            final byRank = (left.featuredRank ?? 999).compareTo(
+              right.featuredRank ?? 999,
+            );
             if (byRank != 0) {
               return byRank;
             }

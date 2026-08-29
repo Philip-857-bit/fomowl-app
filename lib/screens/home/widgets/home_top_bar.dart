@@ -111,13 +111,14 @@ class _WalletSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.chainTheme;
+    final isClassic = theme.id == 'fomowl_signature';
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.topBarSurface,
+          color: const Color(0xFF1C1C1C),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
@@ -125,17 +126,21 @@ class _WalletSelector extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 24,
-              height: 24,
+              width: isClassic ? 16 : 24,
+              height: isClassic ? 16 : 24,
               decoration: BoxDecoration(
-                color: AppColors.canvasDark,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                color: isClassic
+                    ? const Color(0xFFD31C31)
+                    : AppColors.canvasDark,
+                borderRadius: BorderRadius.circular(isClassic ? 4 : 999),
+                border: isClassic
+                    ? null
+                    : Border.all(color: Colors.white.withValues(alpha: 0.06)),
               ),
               child: Icon(
                 Icons.account_balance_wallet,
-                size: 14,
-                color: theme.accentColor,
+                size: isClassic ? 10 : 14,
+                color: isClassic ? Colors.white : theme.accentColor,
               ),
             ),
             const SizedBox(width: 8),
@@ -145,16 +150,16 @@ class _WalletSelector extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                   color: Colors.white,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             const Icon(
               Icons.keyboard_arrow_down,
               color: Colors.white,
-              size: 18,
+              size: 16,
             ),
           ],
         ),
@@ -186,10 +191,10 @@ class _NetworkChip extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          height: 38,
-          padding: const EdgeInsets.fromLTRB(8, 6, 7, 6),
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.topBarSurface,
+            color: const Color(0xFF1C1C1C),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
@@ -197,31 +202,36 @@ class _NetworkChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 24,
-                height: 24,
+                width: 16,
+                height: 16,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: AppColors.canvasDark,
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: theme.accentColor.withValues(alpha: 0.35),
-                  ),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: ChainLogoImage(
                   chainId: chainId,
                   logoUrl: chainLogoUrl,
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   fit: BoxFit.contain,
                   fallback: _symbolFallback(theme.accentColor),
                 ),
               ),
-              const SizedBox(width: 3),
+              const SizedBox(width: 6),
+              Text(
+                chainSymbol.toUpperCase(),
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 4),
               const Icon(
                 Icons.keyboard_arrow_down,
-                color: Color(0xFFCBD5E1),
-                size: 16,
+                color: Color(0xFFB3B3B3),
+                size: 14,
               ),
             ],
           ),
@@ -236,7 +246,7 @@ class _NetworkChip extends StatelessWidget {
       child: Text(
         symbol.isEmpty ? '?' : symbol.substring(0, 1).toUpperCase(),
         style: GoogleFonts.inter(
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.w700,
           color: accentColor,
         ),
@@ -274,18 +284,18 @@ class _HelpButton extends StatelessWidget {
               left: -8,
               top: -7,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(width: 2, color: AppColors.canvasDark),
+                  color: const Color(0xFFD31C31),
+                  borderRadius: BorderRadius.circular(2),
+                  border: Border.all(width: 1, color: AppColors.canvasDark),
                 ),
                 child: Text(
                   'HELP',
                   style: GoogleFonts.inter(
-                    color: Colors.black,
+                    color: Colors.white,
                     fontSize: 8,
-                    height: 1.5,
+                    height: 1.2,
                     fontWeight: FontWeight.w700,
                   ),
                 ),

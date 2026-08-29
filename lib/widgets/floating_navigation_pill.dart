@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../constants/app_colors.dart';
 import '../theme/app_chain_theme.dart';
 
 class FloatingNavigationDestinationData {
@@ -35,24 +34,24 @@ class FloatingNavigationPill extends StatelessWidget {
     return ColoredBox(
       color: Colors.transparent,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(14, 4, 14, 12 + bottomInset),
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 8 + bottomInset),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(999),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
               key: const ValueKey('floating-bottom-navigation'),
-              height: 70,
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              height: 62,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.navBackground.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
+                color: const Color(0x591F1F1F),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.45),
-                    blurRadius: 30,
-                    offset: const Offset(0, 14),
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -80,35 +79,39 @@ class _NavigationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = context.chainTheme.accentColor;
+    final theme = context.chainTheme;
+    final accent = theme.id == 'fomowl_signature'
+        ? const Color(0xFFEA2A33)
+        : theme.accentColor;
     final selected = destination.selected;
+
     return Semantics(
       selected: selected,
       button: true,
       label: destination.label,
       child: InkWell(
         onTap: destination.onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: selected
-                ? accent.withValues(alpha: 0.12)
+                ? accent.withValues(alpha: 0.14)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(999),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 selected ? destination.selectedIcon : destination.icon,
-                color: selected ? accent : Colors.white.withValues(alpha: 0.48),
-                size: 21,
+                color: selected ? accent : Colors.white.withValues(alpha: 0.5),
+                size: 20,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 destination.label,
                 maxLines: 1,
@@ -117,8 +120,8 @@ class _NavigationItem extends StatelessWidget {
                 style: GoogleFonts.inter(
                   color: selected
                       ? Colors.white
-                      : Colors.white.withValues(alpha: 0.46),
-                  fontSize: 10,
+                      : Colors.white.withValues(alpha: 0.5),
+                  fontSize: 9.2,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),

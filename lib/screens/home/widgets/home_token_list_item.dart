@@ -31,20 +31,19 @@ class HomeTokenListItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-        constraints: const BoxConstraints(minHeight: 74),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        constraints: const BoxConstraints(minHeight: 68),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.topBarSurface,
-          borderRadius: BorderRadius.circular(18),
+          color: const Color(0xFF1C1C1C),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Row(
           children: [
             Container(
-              width: 44,
-              height: 44,
-              padding: const EdgeInsets.all(4),
+              width: 40,
+              height: 40,
               decoration: const BoxDecoration(
                 color: AppColors.canvasDark,
                 shape: BoxShape.circle,
@@ -53,24 +52,25 @@ class HomeTokenListItem extends StatelessWidget {
                 tokenSymbol: token.symbol,
                 tokenAddress: token.contractAddress,
                 tokenImageUrl: token.imageUrl,
-                size: 36,
+                size: 40,
                 backgroundColor: AppColors.canvasDark,
                 chainId: chainId,
                 isCertified: token.isCertified,
               ),
             ),
-            const SizedBox(width: 13),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _displayName,
+                    _displayName.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 0.25,
                       color: Colors.white,
                     ),
                   ),
@@ -80,7 +80,7 @@ class HomeTokenListItem extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
-                      color: Colors.white.withValues(alpha: 0.45),
+                      color: const Color(0xFF9CA3AF),
                     ),
                   ),
                 ],
@@ -94,7 +94,7 @@ class HomeTokenListItem extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
@@ -107,10 +107,10 @@ class HomeTokenListItem extends StatelessWidget {
                       token.formattedChange,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w600,
                         color: token.isPositiveChange
-                            ? AppColors.success
-                            : AppColors.error,
+                            ? const Color(0xFF2EBD6B)
+                            : const Color(0xFFEA2A33),
                       ),
                     ),
                     // PATCH: DEX-only resolved tokens show a compact source badge.
@@ -122,7 +122,6 @@ class HomeTokenListItem extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          // PATCH: Use the app's existing primary accent token.
                           color: AppColors.primaryAccent.withValues(
                             alpha: 0.16,
                           ),
@@ -133,7 +132,6 @@ class HomeTokenListItem extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
-                            // PATCH: Use the app's existing primary accent token.
                             color: AppColors.primaryAccent,
                           ),
                         ),

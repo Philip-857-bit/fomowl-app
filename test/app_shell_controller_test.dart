@@ -24,4 +24,22 @@ void main() {
       expect(controller.pendingSwapFromToken, isNull);
     },
   );
+
+  test('bottom nav visibility controls and resets on tab change', () {
+    final controller = AppShellController();
+    expect(controller.isBottomNavVisible, isTrue);
+
+    var notified = false;
+    controller.addListener(() => notified = true);
+
+    controller.setBottomNavVisible(false);
+    expect(controller.isBottomNavVisible, isFalse);
+    expect(notified, isTrue);
+
+    // Switching tabs should restore bottom nav visibility
+    notified = false;
+    controller.selectTab(AppShellTab.discover);
+    expect(controller.isBottomNavVisible, isTrue);
+    expect(notified, isTrue);
+  });
 }

@@ -355,6 +355,9 @@ class _AssetTabChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.chainTheme;
+    final activeColor = theme.id == 'fomowl_signature'
+        ? const Color(0xFFD31C31)
+        : theme.accentColor;
 
     return GestureDetector(
       onTap: onTap,
@@ -365,19 +368,19 @@ class _AssetTabChip extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: selected ? theme.accentColor : const Color(0xFF94A3B8),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected ? activeColor : const Color(0xFF9CA3AF),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            width: selected ? 50 : 0,
+            width: selected ? 42 : 0,
             height: 4,
             decoration: BoxDecoration(
-              color: selected ? theme.accentColor : Colors.transparent,
-              borderRadius: BorderRadius.circular(999),
+              color: selected ? activeColor : Colors.transparent,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(999)),
             ),
           ),
         ],
@@ -405,17 +408,17 @@ class _AssetToolbarButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 34,
-          height: 34,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
-            color: AppColors.cardDark,
+            color: const Color(0xFF262626),
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           ),
           child: Icon(
             icon,
-            color: Colors.white.withValues(alpha: 0.72),
-            size: 17,
+            color: const Color(0xFF9CA3AF),
+            size: 15,
           ),
         ),
       ),
