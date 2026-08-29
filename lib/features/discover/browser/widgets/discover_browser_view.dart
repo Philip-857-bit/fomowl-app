@@ -114,13 +114,13 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
               InAppWebView(
                 initialSettings: InAppWebViewSettings(
                   javaScriptEnabled: true,
-                  javaScriptCanOpenWindowsAutomatically: true,
+                  javaScriptCanOpenWindowsAutomatically: false,
                   useShouldOverrideUrlLoading: true,
                   supportZoom: false,
                   domStorageEnabled: true,
                   databaseEnabled: true,
                   cacheEnabled: true,
-                  thirdPartyCookiesEnabled: true,
+                  thirdPartyCookiesEnabled: false,
                   // Opaque white content area, like a normal browser. A
                   // transparent webview over the app's dark scaffold makes
                   // failed-load / native error pages (dark text) render onto
