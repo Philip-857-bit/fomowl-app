@@ -30,8 +30,10 @@ void main() {
     expect(log[0].method, 'cancel');
     expect(log[1].method, 'showToast');
     expect(log[1].arguments['msg'], 'Success!');
-    expect(log[1].arguments['bgcolor'], AppColors.success.toARGB32());
-    expect(log[1].arguments['textcolor'], Colors.white.toARGB32());
+    // ignore: deprecated_member_use
+    expect(log[1].arguments['bgcolor'], AppColors.success.value);
+    // ignore: deprecated_member_use
+    expect(log[1].arguments['textcolor'], Colors.white.value);
     expect(log[1].arguments['gravity'], 'bottom'); // ToastGravity.BOTTOM
     expect(log[1].arguments['time'], 1); // Toast.LENGTH_SHORT
     expect(log[1].arguments['fontSize'], 14.0);
@@ -43,8 +45,10 @@ void main() {
     expect(log[0].method, 'cancel');
     expect(log[1].method, 'showToast');
     expect(log[1].arguments['msg'], 'Error!');
-    expect(log[1].arguments['bgcolor'], AppColors.error.toARGB32());
-    expect(log[1].arguments['textcolor'], Colors.white.toARGB32());
+    // ignore: deprecated_member_use
+    expect(log[1].arguments['bgcolor'], AppColors.error.value);
+    // ignore: deprecated_member_use
+    expect(log[1].arguments['textcolor'], Colors.white.value);
     expect(log[1].arguments['gravity'], 'bottom'); // ToastGravity.BOTTOM
     expect(log[1].arguments['time'], 1); // Toast.LENGTH_SHORT
     expect(log[1].arguments['fontSize'], 14.0);
@@ -58,9 +62,11 @@ void main() {
     expect(log[1].arguments['msg'], 'Info!');
     expect(
       log[1].arguments['bgcolor'],
-      Colors.white.withValues(alpha: 0.9).toARGB32(),
+      // ignore: deprecated_member_use
+      Colors.white.withOpacity(0.9).value,
     );
-    expect(log[1].arguments['textcolor'], Colors.black.toARGB32());
+    // ignore: deprecated_member_use
+    expect(log[1].arguments['textcolor'], Colors.black.value);
     expect(log[1].arguments['gravity'], 'bottom'); // ToastGravity.BOTTOM
     expect(log[1].arguments['time'], 1); // Toast.LENGTH_SHORT
     expect(log[1].arguments['fontSize'], 14.0);
