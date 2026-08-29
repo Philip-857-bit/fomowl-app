@@ -83,7 +83,7 @@ dependencies:
   flutter_inappwebview: ^6.2.0-beta.3
   crypto: ^3.0.7
   reown_walletkit: 1.3.8
-  app_links: 7.2.1
+  app_links: ^6.0.0
 
 
 dev_dependencies:

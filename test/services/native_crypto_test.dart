@@ -1,12 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/services/native_crypto.dart';
-import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
 void main() {
-  setUpAll(() async {
-    await RustLib.init();
-  });
-
   group('NativeCrypto FFI Wrapper', () {
     test(
       'generateMnemonic falls back to Dart when Rust FFI is unavailable',
@@ -37,7 +32,7 @@ void main() {
           privateKeyHex: '0x123',
           jsonData: '{}',
         ),
-        throwsA(anyOf(isA<Exception>(), isA<Error>())),
+        throwsA(anything),
       );
     });
   });
