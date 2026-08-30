@@ -313,6 +313,30 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'token': walletSessionToken,
         },
         'profile': profilePayload,
+        'tokenLogos': const <String, String>{
+          'USDT':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
+          'USDC':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+          'ETH':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+          'BNB':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
+          'MATIC':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+          'POL':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+          'SOL':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+          'TRX':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
+          'BTC':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/assets/BTCB-1DE/logo.png',
+          'DAI':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png',
+          'AVAX':
+              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
+        },
         'capabilities': <String, dynamic>{
           'ready': true,
           'close': true,
@@ -739,6 +763,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
               'valueUsd': token.valueUsd,
               'priceUsd': token.priceUsd,
               'isCertified': token.isCertified,
+              'imageUrl': token.imageUrl,
+              'logoUrl': token.imageUrl,
             });
           }
         }
@@ -814,6 +840,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'balance': balance,
           'valueUsd': valueUsd,
           'priceUsd': (token['priceUsd'] as num?)?.toDouble() ?? 0,
+          'imageUrl':
+              (token['imageUrl'] as String?) ?? (token['logoUrl'] as String?),
+          'logoUrl':
+              (token['logoUrl'] as String?) ?? (token['imageUrl'] as String?),
         });
       }
       return result;

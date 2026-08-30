@@ -505,11 +505,6 @@ class _ProductCard extends StatelessWidget {
           Container(
             width: 160,
             height: 156,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E1E1E),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            ),
             alignment: Alignment.center,
             child: _ProductArtwork(product: product),
           ),
@@ -749,16 +744,14 @@ class _DappLogo extends StatelessWidget {
   String? get _localAssetPath {
     final slug = entry.slug.toLowerCase();
     final id = entry.id.toLowerCase();
-    if (slug.contains('pancake') || id.contains('pancake')) {
+    if (slug == 'pancakeswap' ||
+        id == 'discover-pancakeswap' ||
+        slug == 'pancake') {
       return 'assets/images/discover/pancakeswap_dapp_logo.png';
     }
-    if (slug.contains('owllet') || id.contains('owllet')) {
-      return 'assets/images/discover/owlletpay_dapp_logo.png';
-    }
-    if (slug.contains('nft') || id.contains('nft')) {
-      return 'assets/images/discover/fomowl_nfts_dapp_logo.png';
-    }
-    if (slug.contains('prince') || id.contains('prince')) {
+    if (slug == 'princewill' ||
+        slug == 'princewill-world' ||
+        id.contains('princewill')) {
       return 'assets/images/discover/princewill_logo.png';
     }
     return null;
@@ -766,41 +759,38 @@ class _DappLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localAsset = _localAssetPath;
     final logoUrl = entry.logoUrl?.trim();
+    final localAsset = _localAssetPath;
 
     Widget imageWidget;
-    if (localAsset != null) {
-      imageWidget = Image.asset(
-        localAsset,
-        width: 48,
-        height: 48,
-        fit: BoxFit.contain,
-        errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
+    // Network logo URL from catalog/backend takes precedence so dApps show their real logos
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      imageWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          logoUrl,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
+        ),
       );
-    } else if (logoUrl != null && logoUrl.isNotEmpty) {
-      imageWidget = Image.network(
-        logoUrl,
-        width: 48,
-        height: 48,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
+    } else if (localAsset != null) {
+      imageWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          localAsset,
+          width: 56,
+          height: 56,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
+        ),
       );
     } else {
       imageWidget = _fallbackLetter(entry.title);
     }
 
-    return Container(
-      width: 64,
-      height: 64,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: imageWidget,
-    );
+    return SizedBox(width: 64, height: 64, child: Center(child: imageWidget));
   }
 
   Widget _fallbackLetter(String title) {

@@ -53,9 +53,8 @@ void main() {
       expect(find.textContaining('Fewer steps to apply'), findsOneWidget);
       expect(find.textContaining('Robinhood Chain'), findsOneWidget);
 
-      // Check Action Button
+      // Check Action Button (Figma 319:2898 single Upgrade now action)
       expect(find.text('Upgrade now'), findsOneWidget);
-      expect(find.text('Maybe later'), findsOneWidget);
     });
 
     testWidgets('ForcedUpdateDialog renders UPDATE REQUIRED badge and notes', (

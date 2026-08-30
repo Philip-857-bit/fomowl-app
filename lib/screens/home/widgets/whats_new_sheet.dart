@@ -46,7 +46,7 @@ class WhatsNewSheet extends StatelessWidget {
       child: Container(
         constraints: BoxConstraints(maxHeight: maxHeight),
         decoration: const BoxDecoration(
-          color: Color(0xFF171717),
+          color: Color(0xFF000000),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
@@ -60,7 +60,7 @@ class WhatsNewSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Mascot & Header Banner (Figma #319:2721)
+            // Top Mascot & Header Banner (Figma #319:2721 & #319:2895)
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
@@ -76,13 +76,13 @@ class WhatsNewSheet extends StatelessWidget {
                 ),
                 child: Stack(
                   children: [
-                    // Warm golden radial glow behind mascot
+                    // Warm golden radial glow behind mascot (Figma #319:2901)
                     Positioned(
                       left: 36,
                       top: 24,
                       child: Container(
-                        width: 100,
-                        height: 100,
+                        width: 97,
+                        height: 102,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: const Color(0x78FFAE0D),
@@ -96,7 +96,7 @@ class WhatsNewSheet extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // 3D Mascot Image
+                    // 3D Mascot Image (Figma #319:2902)
                     Positioned(
                       left: 18,
                       top: 10,
@@ -108,21 +108,21 @@ class WhatsNewSheet extends StatelessWidget {
                         fit: BoxFit.contain,
                       ),
                     ),
-                    // Header text & Badge
+                    // Header text & Badge (Figma #319:2903)
                     Positioned(
                       right: 18,
                       left: 160,
-                      top: 24,
+                      top: 22,
                       bottom: 16,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Gold Badge (NEW VERSION / UPDATE REQUIRED)
+                          // Gold Badge (NEW VERSION / UPDATE REQUIRED) (Figma #319:2904)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 14,
-                              vertical: 6,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
                               color: isForced
@@ -144,33 +144,38 @@ class WhatsNewSheet extends StatelessWidget {
                             child: Text(
                               isForced ? 'UPDATE REQUIRED' : 'NEW VERSION',
                               style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                                 color: isForced ? Colors.white : Colors.black,
-                                letterSpacing: 0.3,
+                                letterSpacing: 0.2,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
+                          // Subtitle 1: "Get the brand new app" (Figma #319:2907)
                           Text(
                             isForced
                                 ? 'Mandatory Security Update'
                                 : 'Get the brand new app',
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors.white,
                               height: 1.2,
                             ),
                           ),
                           const SizedBox(height: 4),
+                          // Subtitle 2: Version number (Figma #319:2908)
                           Text(
                             versionLabel,
                             style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w400,
                               color: const Color(0xFF9CA3AF),
                               decoration: TextDecoration.underline,
+                              decorationColor: const Color(0xFF9CA3AF),
                             ),
                           ),
                         ],
@@ -181,7 +186,7 @@ class WhatsNewSheet extends StatelessWidget {
               ),
             ),
 
-            // Scrollable Content Area (Release Notes)
+            // Scrollable Content Area (Release Notes - Figma #319:2910)
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
@@ -192,10 +197,15 @@ class WhatsNewSheet extends StatelessWidget {
                     if (notes.isNotEmpty) ...[
                       for (final note in notes) _buildNoteItem(note),
                     ] else ...[
+                      // Figma node #319:2910 default bullets
                       _buildNoteItem(
-                        isUpdate
-                            ? 'Performance enhancements and bug fixes are ready for your device.'
-                            : 'Welcome to the latest version of Owllet with enhanced stability and security.',
+                        '**New homepage:** AI market signals and curated news in one feed',
+                      ),
+                      _buildNoteItem(
+                        '**Owllet Wallet Card:** Fewer steps to apply, and smoother spending',
+                      ),
+                      _buildNoteItem(
+                        '**Robinhood Chain now supported:** Send, receive, and swap trending and new tokens',
                       ),
                     ],
                   ],
@@ -203,57 +213,37 @@ class WhatsNewSheet extends StatelessWidget {
               ),
             ),
 
-            // Bottom Actions (Always pinned and visible)
+            // Bottom Action Button (Figma #319:2898)
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        if (isUpdate || isForced) {
-                          (appStoreService ?? AppStoreService())
-                              .openStoreListing();
-                        } else {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEA2A33),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(9999),
-                        ),
-                      ),
-                      child: Text(
-                        isUpdate || isForced ? 'Upgrade now' : 'Got it',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 59,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (isUpdate || isForced) {
+                      (appStoreService ?? AppStoreService()).openStoreListing();
+                    } else {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEA2A33),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9999),
                     ),
                   ),
-                  if (!isForced && isUpdate) ...[
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Maybe later',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                      ),
+                  child: Text(
+                    isUpdate || isForced ? 'Upgrade now' : 'Got it',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
-                  ],
-                ],
+                  ),
+                ),
               ),
             ),
           ],
