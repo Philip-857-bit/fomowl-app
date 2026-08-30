@@ -346,28 +346,30 @@ class _OwlletPayBanner extends StatelessWidget {
               stops: [0.49, 1.0],
             ),
           ),
-          child: Stack(
-            clipBehavior: Clip.antiAlias,
-            children: [
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Image.asset(
-                  'assets/images/discover/promo_banner_mascot.png',
-                  width: 77,
-                  height: 89,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Image.asset(
-                    'assets/images/owl_wallet.png',
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              clipBehavior: Clip.antiAlias,
+              children: [
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Image.asset(
+                    'assets/images/discover/promo_banner_mascot.png',
                     width: 77,
                     height: 89,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Image.asset(
+                      'assets/images/owl_wallet.png',
+                      width: 77,
+                      height: 89,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.only(
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
                     left: 13,
                     right: 84,
                     top: 11,
@@ -438,6 +440,7 @@ class _OwlletPayBanner extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),
@@ -557,17 +560,41 @@ class _ProductArtwork extends StatelessWidget {
     final asset = product.artworkAssetPath;
     final network = product.networkArtworkUrl;
     if (asset != null) {
-      return Image.asset(asset, width: 140, height: 140, fit: BoxFit.contain);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 160,
+          height: 156,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Image.asset(
+            asset,
+            width: 160,
+            height: 156,
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
     }
     if (network != null && network.trim().isNotEmpty) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Image.network(
-          network,
-          width: 140,
-          height: 140,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _BrandedArtwork(title: product.title),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 160,
+          height: 156,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Image.network(
+            network,
+            width: 160,
+            height: 156,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _BrandedArtwork(title: product.title),
+          ),
         ),
       );
     }
@@ -583,35 +610,45 @@ class _BrandedArtwork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 104,
-      height: 104,
+      width: 160,
+      height: 156,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.black.withValues(alpha: 0.24),
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
-      child: Stack(
+      child: Container(
+        width: 80,
+        height: 80,
         alignment: Alignment.center,
-        children: [
-          Opacity(
-            opacity: 0.35,
-            child: Image.asset(
-              'assets/images/logo.png',
-              width: 66,
-              height: 66,
-              fit: BoxFit.contain,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.black.withValues(alpha: 0.24),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Opacity(
+              opacity: 0.35,
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 50,
+                height: 50,
+                fit: BoxFit.contain,
+              ),
             ),
-          ),
-          Text(
-            title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase(),
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
+            Text(
+              title.trim().isEmpty ? '?' : title.trim()[0].toUpperCase(),
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -744,15 +781,22 @@ class _DappLogo extends StatelessWidget {
   String? get _localAssetPath {
     final slug = entry.slug.toLowerCase();
     final id = entry.id.toLowerCase();
-    if (slug == 'pancakeswap' ||
-        id == 'discover-pancakeswap' ||
-        slug == 'pancake') {
+    if (slug.contains('pancake') || id.contains('pancake')) {
       return 'assets/images/discover/pancakeswap_dapp_logo.png';
     }
-    if (slug == 'princewill' ||
-        slug == 'princewill-world' ||
-        id.contains('princewill')) {
+    if (slug.contains('princewill') || id.contains('princewill')) {
       return 'assets/images/discover/princewill_logo.png';
+    }
+    if (slug.contains('owllet') ||
+        id.contains('owllet') ||
+        slug == 'cash_in' ||
+        id == 'cash_in' ||
+        slug == 'cash-in' ||
+        id == 'cash-in') {
+      return 'assets/images/discover/owlletpay_dapp_logo.png';
+    }
+    if (slug.contains('nft') || id.contains('nft')) {
+      return 'assets/images/discover/fomowl_nfts_dapp_logo.png';
     }
     return null;
   }
@@ -769,8 +813,8 @@ class _DappLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Image.network(
           logoUrl,
-          width: 56,
-          height: 56,
+          width: 64,
+          height: 64,
           fit: BoxFit.cover,
           errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
         ),
@@ -780,9 +824,9 @@ class _DappLogo extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Image.asset(
           localAsset,
-          width: 56,
-          height: 56,
-          fit: BoxFit.contain,
+          width: 64,
+          height: 64,
+          fit: BoxFit.cover,
           errorBuilder: (_, _, _) => _fallbackLetter(entry.title),
         ),
       );
@@ -790,7 +834,18 @@ class _DappLogo extends StatelessWidget {
       imageWidget = _fallbackLetter(entry.title);
     }
 
-    return SizedBox(width: 64, height: 64, child: Center(child: imageWidget));
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      alignment: Alignment.center,
+      child: imageWidget,
+    );
   }
 
   Widget _fallbackLetter(String title) {

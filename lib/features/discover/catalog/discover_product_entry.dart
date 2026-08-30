@@ -36,7 +36,10 @@ class DiscoverProductEntry {
     final miniId = miniApp?.id;
     if (miniId != null) {
       return switch (miniId) {
-        'owllet_pay' => 'assets/images/discover/owlletpay_card.png',
+        'owllet_pay' ||
+        'owlletpay' ||
+        'cash_in' ||
+        'cash-in' => 'assets/images/discover/owlletpay_card.png',
         'affiliate' => 'assets/images/logo.png',
         'burst' => 'assets/images/dancing_owls.png',
         _ => null,
