@@ -81,6 +81,43 @@ void main() {
     expect(service.tokens.single.symbol, 'BNB');
   });
 
+  test('separates EVM gas symbols from network identity labels', () {
+    final service = BlockchainService();
+
+    service.setActiveChainByChainId(8453);
+    expect(service.activeNetworkSymbol, 'ETH');
+    expect(service.activeNetworkDisplaySymbol, 'BASE');
+
+    service.setActiveChainByChainId(42161);
+    expect(service.activeNetworkSymbol, 'ETH');
+    expect(service.activeNetworkDisplaySymbol, 'ARB');
+
+    service.setActiveChainByChainId(10);
+    expect(service.activeNetworkSymbol, 'ETH');
+    expect(service.activeNetworkDisplaySymbol, 'OP');
+
+    service.setActiveChainByChainId(137);
+    expect(service.activeNetworkDisplaySymbol, 'MATIC');
+  });
+
+  test('safe mini-app switch rejects unknown and unavailable networks', () {
+    final service = BlockchainService();
+    final originalKey = service.activeNetworkKey;
+
+    expect(service.trySetActiveNetworkKey('evm:999999'), isFalse);
+    expect(service.activeNetworkKey, originalKey);
+
+    expect(service.trySetActiveNetworkKey('evm:8453'), isTrue);
+    expect(service.activeNetworkKey, 'evm:8453');
+
+    service.setActiveWalletContext(
+      address: '0x1111111111111111111111111111111111111111',
+      supportedFamilies: {ChainFamily.evm},
+    );
+    expect(service.trySetActiveNetworkKey('solana:mainnet'), isFalse);
+    expect(service.activeNetworkKey, 'evm:8453');
+  });
+
   test('wallet switch falls back when active family is unsupported', () {
     final service = BlockchainService();
 

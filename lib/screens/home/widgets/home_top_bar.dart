@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_chain_theme.dart';
 import '../../../widgets/chain_logo_image.dart';
 
@@ -13,7 +14,7 @@ class HomeTopBar extends StatelessWidget {
   final int? chainId;
   final String? chainLogoUrl;
   final VoidCallback onNetworkTap;
-  final VoidCallback onHelpTap;
+  final VoidCallback onSettingsTap;
   final VoidCallback onNotificationsTap;
   final bool showNotificationDot;
 
@@ -25,7 +26,7 @@ class HomeTopBar extends StatelessWidget {
     this.chainId,
     this.chainLogoUrl,
     required this.onNetworkTap,
-    required this.onHelpTap,
+    required this.onSettingsTap,
     required this.onNotificationsTap,
     this.showNotificationDot = false,
   });
@@ -33,6 +34,7 @@ class HomeTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.chainTheme;
+    final l = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
@@ -57,16 +59,17 @@ class HomeTopBar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          _HelpButton(onTap: onHelpTap, badgeColor: theme.accentColor),
-          const SizedBox(width: 14),
+          const SizedBox(width: 8),
+          _SettingsButton(onTap: onSettingsTap),
+          const SizedBox(width: 4),
           Stack(
             clipBehavior: Clip.none,
             children: [
               SizedBox(
-                width: 28,
-                height: 28,
+                width: 44,
+                height: 44,
                 child: IconButton(
+                  tooltip: l.notifications,
                   icon: const Icon(
                     Icons.notifications_none_rounded,
                     color: Color(0xFFCBD5E1),
@@ -75,15 +78,15 @@ class HomeTopBar extends StatelessWidget {
                   onPressed: onNotificationsTap,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
+                    minWidth: 44,
+                    minHeight: 44,
                   ),
                 ),
               ),
               if (showNotificationDot)
                 Positioned(
-                  right: 1,
-                  top: 0,
+                  right: 6,
+                  top: 6,
                   child: Container(
                     width: 10,
                     height: 10,
@@ -253,53 +256,27 @@ class _NetworkChip extends StatelessWidget {
   }
 }
 
-class _HelpButton extends StatelessWidget {
-  final Color badgeColor;
-  const _HelpButton({required this.onTap, required this.badgeColor});
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Open feedback',
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: Icon(
-                Icons.support_agent_rounded,
-                color: Color(0xFFCBD5E1),
-                size: 22,
-              ),
-            ),
-            Positioned(
-              left: -8,
-              top: -7,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD31C31),
-                  borderRadius: BorderRadius.circular(2),
-                  border: Border.all(width: 1, color: AppColors.canvasDark),
-                ),
-                child: Text(
-                  'HELP',
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 8,
-                    height: 1.2,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          ],
+    final l = AppLocalizations.of(context);
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        key: const ValueKey('home-settings-button'),
+        tooltip: l.settings,
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        icon: const Icon(
+          Icons.settings_outlined,
+          color: Color(0xFFCBD5E1),
+          size: 22,
         ),
       ),
     );

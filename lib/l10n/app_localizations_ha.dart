@@ -88,6 +88,9 @@ class AppLocalizationsHa extends AppLocalizations {
   String get payment => 'Biya';
 
   @override
+  String get pay => 'Biya';
+
+  @override
   String get me => 'Ni';
 
   @override

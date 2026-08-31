@@ -3650,11 +3650,7 @@ class _SwapScreenState extends State<SwapScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         bottomNavigationBar: widget.showBottomNavigation
-            ? BottomNavBar(
-                currentIndex: 1,
-                onTap: (index) =>
-                    BottomNavBar.handleNavigation(context, index, 1),
-              )
+            ? const BottomNavBar(currentTab: AppShellTab.swap)
             : null,
         floatingActionButton:
             _activeTab == SwapTab.limit && !_limitTutorialControlHidden

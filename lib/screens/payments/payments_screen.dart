@@ -119,10 +119,7 @@ class _PaymentsScreenState extends State<PaymentsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 3,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 3),
-      ),
+      bottomNavigationBar: const BottomNavBar(currentTab: null),
       body: SafeArea(
         child: Column(
           children: [

@@ -1,20 +1,55 @@
 import 'package:flutter/material.dart';
+
+import '../features/mini_apps/mini_app_host_screen.dart';
+import '../features/shell/app_shell_controller.dart';
 import '../l10n/app_localizations.dart';
 import 'floating_navigation_pill.dart';
 
-/// Shared Bottom Navigation Bar
-/// 4 destinations: Wallet, Swap, Discover, Settings.
-class BottomNavBar extends StatelessWidget {
-  static const int _discoverNavigationIndex = -1;
+/// Legacy wrapper used by standalone screens.
+///
+/// Wallet, Swap, and Discover are destinations. Pay is an action that opens a
+/// full-screen mini app and therefore never has a selected state.
+class BottomNavBar extends StatefulWidget {
+  const BottomNavBar({super.key, required this.currentTab});
 
-  final int currentIndex;
-  final Function(int) onTap;
+  final AppShellTab? currentTab;
 
-  const BottomNavBar({
-    super.key,
-    required this.currentIndex,
-    required this.onTap,
-  });
+  @override
+  State<BottomNavBar> createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<BottomNavBar> {
+  bool _openingOwlletPay = false;
+
+  void _openTab(AppShellTab tab) {
+    if (widget.currentTab == tab) {
+      return;
+    }
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/shell',
+      (route) => false,
+      arguments: tab.index,
+    );
+  }
+
+  Future<void> _openOwlletPay() async {
+    if (_openingOwlletPay) {
+      return;
+    }
+    _openingOwlletPay = true;
+    try {
+      await Navigator.of(context).pushNamed(
+        '/owllet-pay',
+        arguments: const MiniAppHostArguments(
+          miniAppId: 'owllet_pay',
+          launchSource: 'bottom_nav_pay',
+        ),
+      );
+    } finally {
+      _openingOwlletPay = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,75 +60,29 @@ class BottomNavBar extends StatelessWidget {
           icon: Icons.account_balance_wallet_outlined,
           selectedIcon: Icons.account_balance_wallet_rounded,
           label: l.wallet,
-          selected: currentIndex == 0,
-          onTap: () => onTap(0),
+          selected: widget.currentTab == AppShellTab.wallet,
+          onTap: () => _openTab(AppShellTab.wallet),
         ),
         FloatingNavigationDestinationData(
           icon: Icons.swap_horiz_outlined,
           selectedIcon: Icons.swap_horiz_rounded,
           label: l.swap,
-          selected: currentIndex == 1,
-          onTap: () => onTap(1),
+          selected: widget.currentTab == AppShellTab.swap,
+          onTap: () => _openTab(AppShellTab.swap),
+        ),
+        FloatingNavigationActionData(
+          icon: Icons.payments_rounded,
+          label: l.pay,
+          onTap: _openOwlletPay,
         ),
         FloatingNavigationDestinationData(
           icon: Icons.explore_outlined,
           selectedIcon: Icons.explore_rounded,
           label: l.discoverBrowserFallbackTitle,
-          selected: currentIndex == _discoverNavigationIndex,
-          onTap: () => onTap(_discoverNavigationIndex),
-        ),
-        FloatingNavigationDestinationData(
-          icon: Icons.settings_outlined,
-          selectedIcon: Icons.settings_rounded,
-          label: l.settings,
-          selected: currentIndex == 2,
-          onTap: () => onTap(2),
+          selected: widget.currentTab == AppShellTab.discover,
+          onTap: () => _openTab(AppShellTab.discover),
         ),
       ],
     );
-  }
-
-  /// Standard navigation handler
-  static void handleNavigation(
-    BuildContext context,
-    int index,
-    int currentScreenIndex,
-  ) {
-    if (index == currentScreenIndex) return;
-
-    switch (index) {
-      case 0: // Wallet
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/shell',
-          (route) => false,
-          arguments: 0,
-        );
-        break;
-      case 1: // Swap
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/shell',
-          (route) => false,
-          arguments: 1,
-        );
-        break;
-      case 2: // Me
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/shell',
-          (route) => false,
-          arguments: 3,
-        );
-        break;
-      case _discoverNavigationIndex: // Discover
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/shell',
-          (route) => false,
-          arguments: 2,
-        );
-        break;
-    }
   }
 }

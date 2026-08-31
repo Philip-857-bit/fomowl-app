@@ -88,6 +88,9 @@ class AppLocalizationsIg extends AppLocalizations {
   String get payment => 'Ịkwụ ụgwọ';
 
   @override
+  String get pay => 'Kwụọ';
+
+  @override
   String get me => 'Mụ onwe m';
 
   @override

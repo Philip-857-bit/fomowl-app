@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../screens/home/home_screen.dart';
-import '../../screens/profile/decentralized_profile_screen.dart';
 import '../../screens/swap/swap_screen.dart';
 import '../discover/discover_screen.dart';
+import '../mini_apps/mini_app_host_screen.dart';
 import 'app_shell_bottom_navigation.dart';
 import 'app_shell_controller.dart';
 
@@ -18,6 +18,25 @@ class AppShellScreen extends StatefulWidget {
 
 class _AppShellScreenState extends State<AppShellScreen> {
   bool _appliedInitialArgs = false;
+  bool _openingOwlletPay = false;
+
+  Future<void> _openOwlletPay() async {
+    if (_openingOwlletPay) {
+      return;
+    }
+    _openingOwlletPay = true;
+    try {
+      await Navigator.of(context).pushNamed(
+        '/owllet-pay',
+        arguments: const MiniAppHostArguments(
+          miniAppId: 'owllet_pay',
+          launchSource: 'bottom_nav_pay',
+        ),
+      );
+    } finally {
+      _openingOwlletPay = false;
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -81,12 +100,12 @@ class _AppShellScreenState extends State<AppShellScreen> {
             HomeScreen(showBottomNavigation: false),
             SwapScreen(showBottomNavigation: false),
             DiscoverScreen(),
-            DecentralizedProfileScreen(showBottomNavigation: false),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(
           currentTab: controller.currentTab,
-          onTap: controller.selectTab,
+          onTabTap: controller.selectTab,
+          onPayTap: _openOwlletPay,
         ),
       ),
     );

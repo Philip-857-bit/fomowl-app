@@ -87,6 +87,7 @@ void main() {
       expect(l.appName, isNotEmpty);
       expect(l.home, isNotEmpty);
       expect(l.wallet, isNotEmpty);
+      expect(l.pay, 'Pay');
     });
 
     testWidgets('loads all supported locales', (WidgetTester tester) async {
@@ -116,6 +117,7 @@ void main() {
         expect(l.appName, isNotEmpty, reason: 'appName empty for $locale');
         expect(l.home, isNotEmpty, reason: 'home empty for $locale');
         expect(l.wallet, isNotEmpty, reason: 'wallet empty for $locale');
+        expect(l.pay, isNotEmpty, reason: 'pay empty for $locale');
         expect(
           l.referralsSubtitle,
           isNotEmpty,

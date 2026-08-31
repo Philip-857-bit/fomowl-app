@@ -266,6 +266,12 @@ abstract class AppLocalizations {
   /// **'Payment'**
   String get payment;
 
+  /// No description provided for @pay.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay'**
+  String get pay;
+
   /// No description provided for @me.
   ///
   /// In en, this message translates to:

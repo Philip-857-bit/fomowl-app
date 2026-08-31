@@ -54,10 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 4,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 4),
-      ),
+      bottomNavigationBar: const BottomNavBar(currentTab: null),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(

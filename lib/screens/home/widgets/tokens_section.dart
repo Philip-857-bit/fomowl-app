@@ -22,7 +22,6 @@ class TokensSection extends StatefulWidget {
   final bool hasMoreNfts;
   final AppLocalizations localization;
   final VoidCallback onScan;
-  final VoidCallback onOpenSettings;
   final VoidCallback onManageTokens;
   final VoidCallback onOpenNfts;
   final bool Function(Token token) isTokenHidden;
@@ -43,7 +42,6 @@ class TokensSection extends StatefulWidget {
     required this.hasMoreNfts,
     required this.localization,
     required this.onScan,
-    required this.onOpenSettings,
     required this.onManageTokens,
     required this.onOpenNfts,
     required this.isTokenHidden,
@@ -122,12 +120,6 @@ class _TokensSectionState extends State<TokensSection> {
                       semanticLabel: 'Scan QR code',
                       icon: Icons.qr_code_scanner_rounded,
                       onTap: widget.onScan,
-                    ),
-                    const SizedBox(width: 7),
-                    _AssetToolbarButton(
-                      semanticLabel: 'Open settings',
-                      icon: Icons.settings_outlined,
-                      onTap: widget.onOpenSettings,
                     ),
                     const SizedBox(width: 7),
                     _AssetToolbarButton(

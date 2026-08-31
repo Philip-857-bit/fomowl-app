@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/token.dart';
 
-enum AppShellTab { wallet, swap, discover, settings }
+enum AppShellTab { wallet, swap, discover }
 
 class AppShellController extends ChangeNotifier {
   AppShellTab _currentTab = AppShellTab.wallet;

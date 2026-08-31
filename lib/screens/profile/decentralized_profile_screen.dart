@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
+import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
 import '../../models/patch_status_snapshot.dart';
@@ -53,6 +54,18 @@ class _DecentralizedProfileScreenState
     extends State<DecentralizedProfileScreen> {
   late final WalletService _walletService;
   late final StorageService _storageService;
+
+  void _closeStandaloneSettings() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+    navigator.pushReplacementNamed(
+      '/shell',
+      arguments: AppShellTab.wallet.index,
+    );
+  }
 
   String _walletName = 'Main Wallet';
   String _walletAddress = '--';
@@ -535,11 +548,7 @@ class _DecentralizedProfileScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       bottomNavigationBar: widget.showBottomNavigation
-          ? BottomNavBar(
-              currentIndex: 2,
-              onTap: (index) =>
-                  BottomNavBar.handleNavigation(context, index, 2),
-            )
+          ? const BottomNavBar(currentTab: null)
           : null,
       body: SafeArea(
         child: _loading
@@ -552,15 +561,43 @@ class _DecentralizedProfileScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
-                      child: Center(
-                        child: Text(
-                          l.profile,
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                          ),
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+                      child: SizedBox(
+                        height: 44,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Center(
+                              child: Text(
+                                l.settings,
+                                style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (!widget.showBottomNavigation)
+                              Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: IconButton(
+                                  key: const ValueKey('settings-back-button'),
+                                  tooltip: MaterialLocalizations.of(
+                                    context,
+                                  ).backButtonTooltip,
+                                  onPressed: _closeStandaloneSettings,
+                                  constraints: const BoxConstraints(
+                                    minWidth: 44,
+                                    minHeight: 44,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ),

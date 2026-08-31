@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../config/app_environment.dart';
 import '../../models/chain.dart';
+import '../../models/network_entry.dart';
 import '../../models/wallet_account.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
@@ -138,6 +139,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   int _progress = 0;
   bool _canGoBack = false;
   bool _loadingContext = true;
+  bool _switchNetworkRequestInFlight = false;
   Map<String, dynamic> _bridgeContext = const <String, dynamic>{};
 
   Uri? get _overrideUri {
@@ -245,8 +247,21 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     String? activeNetworkKey;
     String? activeChainFamily;
     int? activeChainId;
+    var availableNetworks = const <Map<String, dynamic>>[];
     try {
-      activeNetworkKey = context.read<BlockchainService>().activeNetworkKey;
+      final blockchain = context.read<BlockchainService>();
+      activeNetworkKey = blockchain.activeNetworkKey;
+      availableNetworks = blockchain.networkEntries
+          .map(
+            (entry) => <String, dynamic>{
+              'networkKey': entry.networkKey,
+              'name': entry.name,
+              'symbol': entry.identitySymbol,
+              'logoUrl': entry.logoUrl,
+              'chainFamily': entry.family.wireValue,
+            },
+          )
+          .toList(growable: false);
       // networkKey is "<family>:<rest>" — e.g. "evm:56", "tron:mainnet".
       if (activeNetworkKey.contains(':')) {
         final parts = activeNetworkKey.split(':');
@@ -259,6 +274,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       activeNetworkKey = null;
       activeChainFamily = null;
       activeChainId = null;
+      availableNetworks = const <Map<String, dynamic>>[];
     }
     final profilePayload = (profile == null && !hasWallet)
         ? null
@@ -279,7 +295,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'host': 'owllet-mobile',
         'hostInfo': <String, dynamic>{
           'name': 'owllet-mobile',
-          'version': '1.0',
+          'version': '1.1',
           'platform': defaultTargetPlatform.name,
           'theme': 'dark',
         },
@@ -296,6 +312,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'activeNetworkKey': activeNetworkKey,
         'activeChainFamily': activeChainFamily,
         'activeChainId': activeChainId,
+        'availableNetworks': availableNetworks,
         // Keep the wallet available at the context root as well as inside
         // profile/session. Older mini-app SDKs do not reliably expose nested
         // profile fields, while OwlletPay needs the EVM recipient for quotes.
@@ -349,6 +366,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'requestSignMessage': true,
           'notify': true,
           'getBalances': true,
+          'switchNetwork': true,
           'saveReceiptImage': true,
           'shareReceiptImage': true,
         },
@@ -565,12 +583,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final encodedContext = jsonEncode(_bridgeContext);
     return '''
 (function() {
-  const context = $encodedContext;
+  let context = $encodedContext;
   const callHost = function(payload) {
     return window.flutter_inappwebview.callHandler('$_handlerName', payload);
   };
   window.OwlletMiniApp = {
-    version: '1.0',
+    version: '1.1',
     host: 'owllet-mobile',
     ready: function(payload) {
       return callHost({ type: 'ready', payload: payload || {} });
@@ -604,6 +622,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     },
     getBalances: function() {
       return callHost({ type: 'get_balances' });
+    },
+    switchNetwork: function(networkKey) {
+      return callHost({ type: 'request_switch_network', payload: { networkKey: networkKey } });
+    },
+    __updateContext: function(nextContext) {
+      context = nextContext || context;
+      window.dispatchEvent(new CustomEvent('owllet:miniapp:context-changed', { detail: context }));
+      window.dispatchEvent(new CustomEvent('owllet:miniapp:network-changed', { detail: context.activeNetworkKey }));
     },
     getContext: function() {
       return context;
@@ -704,12 +730,127 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         return _handleNotifyRequest(notifyPayload.cast<String, dynamic>());
       case 'get_balances':
         return _handleGetBalancesRequest();
+      case 'request_switch_network':
+        final switchPayload = raw['payload'];
+        if (switchPayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid switch-network request.',
+          };
+        }
+        return _handleSwitchNetworkRequest(
+          switchPayload.cast<String, dynamic>(),
+        );
       default:
         return <String, dynamic>{
           'ok': false,
           'error': 'Unsupported bridge action: $type',
         };
     }
+  }
+
+  /// Handles a `request_switch_network` bridge call from a mini-app.
+  ///
+  /// Shows a native confirmation sheet so the user is always in control.
+  /// On approval the active network is updated globally, the bridge context
+  /// is refreshed, and `{ ok: true, networkKey }` is returned to the caller.
+  Future<Map<String, dynamic>> _handleSwitchNetworkRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final networkKey = payload['networkKey']?.toString().trim() ?? '';
+    if (networkKey.isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'networkKey is required.',
+      };
+    }
+
+    if (!mounted) {
+      return const <String, dynamic>{'ok': false, 'error': 'Host closed.'};
+    }
+
+    final blockchain = context.read<BlockchainService>();
+    final requestedNetwork = blockchain.availableNetworkEntryForKey(networkKey);
+    if (requestedNetwork == null) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'This network is not available for the active wallet.',
+      };
+    }
+    if (_switchNetworkRequestInFlight) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'A network switch is already in progress.',
+      };
+    }
+    if (blockchain.activeNetworkKey == requestedNetwork.networkKey) {
+      return <String, dynamic>{
+        'ok': true,
+        'networkKey': requestedNetwork.networkKey,
+      };
+    }
+
+    _switchNetworkRequestInFlight = true;
+    try {
+      // Show a native confirmation dialog — the user must explicitly approve.
+      final approved = await showModalBottomSheet<bool>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => _SwitchNetworkSheet(
+          networkLabel: requestedNetwork.name,
+          appName: widget.definition.title,
+        ),
+      );
+
+      if (approved != true) {
+        return const <String, dynamic>{'ok': false, 'error': 'User rejected.'};
+      }
+
+      if (!mounted) {
+        return const <String, dynamic>{'ok': false, 'error': 'Host closed.'};
+      }
+
+      final switched = blockchain.trySetActiveNetworkKey(
+        requestedNetwork.networkKey,
+      );
+      if (!switched) {
+        return const <String, dynamic>{
+          'ok': false,
+          'error': 'The wallet could not switch to that network.',
+        };
+      }
+
+      // Refresh both Flutter's context and the already-running JS bridge.
+      await _prepareBridgeContext();
+      await _publishBridgeContext();
+
+      return <String, dynamic>{
+        'ok': true,
+        'networkKey': blockchain.activeNetworkKey,
+      };
+    } catch (_) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'The network switch could not be completed.',
+      };
+    } finally {
+      _switchNetworkRequestInFlight = false;
+    }
+  }
+
+  Future<void> _publishBridgeContext() async {
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    final currentUri = (await controller.getUrl())?.uriValue;
+    if (currentUri == null || !_isTrustedOrigin(currentUri)) {
+      return;
+    }
+    final encodedContext = jsonEncode(_bridgeContext);
+    await controller.evaluateJavascript(
+      source: '''window.OwlletMiniApp?.__updateContext?.($encodedContext);''',
+    );
   }
 
   /// Returns the user's wallet token balances for the mini app across EVM,
@@ -2986,6 +3127,140 @@ class _MiniAppUnavailableScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Native confirmation bottom sheet shown when a mini-app requests a network
+/// switch via `OwlletMiniApp.switchNetwork()`. The user must explicitly approve
+/// — rejection returns `{ ok: false }` to the caller without any chain change.
+class _SwitchNetworkSheet extends StatelessWidget {
+  const _SwitchNetworkSheet({
+    required this.networkLabel,
+    required this.appName,
+  });
+
+  final String networkLabel;
+  final String appName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF141414),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        20,
+        24,
+        24 + MediaQuery.of(context).padding.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Network icon placeholder
+          Center(
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0c8f66).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFF0c8f66).withValues(alpha: 0.4),
+                  width: 1.5,
+                ),
+              ),
+              child: const Icon(
+                Icons.swap_horiz_rounded,
+                color: Color(0xFF50D199),
+                size: 28,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Switch Network',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$appName wants to switch your active network to $networkLabel.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.6),
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'This will change your active wallet network in the Owllet app.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.4),
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Approve button
+          SizedBox(
+            height: 52,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0c8f66),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('Switch to $networkLabel'),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Reject button
+          SizedBox(
+            height: 48,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white.withValues(alpha: 0.6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+          ),
+        ],
       ),
     );
   }

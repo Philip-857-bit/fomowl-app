@@ -4,6 +4,18 @@ import 'package:fomowl_wallet/features/shell/app_shell_controller.dart';
 import 'package:fomowl_wallet/models/token.dart';
 
 void main() {
+  test('shell exposes only the three persistent destinations', () {
+    expect(AppShellTab.values, [
+      AppShellTab.wallet,
+      AppShellTab.swap,
+      AppShellTab.discover,
+    ]);
+
+    final controller = AppShellController();
+    controller.selectIndex(3);
+    expect(controller.currentTab, AppShellTab.wallet);
+  });
+
   test(
     'opening swap for a token preserves the shell route and stashes token',
     () {

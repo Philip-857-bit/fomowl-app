@@ -88,6 +88,9 @@ class AppLocalizationsYo extends AppLocalizations {
   String get payment => 'Isanwo';
 
   @override
+  String get pay => 'Sanwo';
+
+  @override
   String get me => 'Èmi';
 
   @override

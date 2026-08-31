@@ -88,6 +88,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get payment => 'Payment';
 
   @override
+  String get pay => 'Pay';
+
+  @override
   String get me => 'Me';
 
   @override

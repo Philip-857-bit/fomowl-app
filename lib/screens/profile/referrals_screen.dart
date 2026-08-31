@@ -161,10 +161,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
     final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: 4,
-        onTap: (index) => BottomNavBar.handleNavigation(context, index, 4),
-      ),
+      bottomNavigationBar: const BottomNavBar(currentTab: null),
       body: SafeArea(
         child: _loading
             ? const Center(

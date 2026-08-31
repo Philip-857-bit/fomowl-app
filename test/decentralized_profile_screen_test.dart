@@ -83,6 +83,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.byKey(const ValueKey('settings-back-button')), findsOneWidget);
     final referralsFinder = find.text('Referrals');
     expect(referralsFinder, findsOneWidget);
 

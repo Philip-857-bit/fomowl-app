@@ -91,9 +91,10 @@ void main() {
       },
     );
 
-    testWidgets('HomeTopBar renders wallet selector and themed HELP badge', (
+    testWidgets('HomeTopBar renders wallet selector and settings action', (
       tester,
     ) async {
+      var settingsTapped = false;
       await tester.pumpWidget(
         wrapWithTheme(
           networkKey: 'evm:1', // Ethereum Blue #627EEA
@@ -103,7 +104,7 @@ void main() {
             chainSymbol: 'ETH',
             chainId: 1,
             onNetworkTap: () {},
-            onHelpTap: () {},
+            onSettingsTap: () => settingsTapped = true,
             onNotificationsTap: () {},
             showNotificationDot: true,
           ),
@@ -112,8 +113,12 @@ void main() {
       await tester.pump();
 
       expect(find.text('Main Wallet'), findsOneWidget);
-      expect(find.text('HELP'), findsOneWidget);
+      expect(find.text('HELP'), findsNothing);
+      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
       expect(find.byIcon(Icons.account_balance_wallet), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('home-settings-button')));
+      expect(settingsTapped, isTrue);
 
       final walletIcon = tester.widget<Icon>(
         find.byIcon(Icons.account_balance_wallet),

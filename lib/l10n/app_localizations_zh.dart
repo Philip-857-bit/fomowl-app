@@ -87,6 +87,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get payment => '支付';
 
   @override
+  String get pay => '支付';
+
+  @override
   String get me => '我';
 
   @override

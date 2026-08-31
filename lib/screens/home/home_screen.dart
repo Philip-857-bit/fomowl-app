@@ -1652,17 +1652,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openSettingsTab() {
-    try {
-      context.read<AppShellController>().selectTab(AppShellTab.settings);
-    } on ProviderNotFoundException {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/shell',
-        (route) => false,
-        arguments: AppShellTab.settings.index,
-      );
-    }
+  void _openSettingsScreen() {
+    Navigator.pushNamed(context, '/profile');
   }
 
   Future<void> _openTokenManager() async {
@@ -1783,21 +1774,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     key: _walletSwitcherShowcaseKey,
                     title: 'Wallet and support',
                     description:
-                        'Switch wallets, send feedback, and reach notifications from here.',
+                        'Switch wallets, open settings, and reach notifications from here.',
                     child: HomeTopBar(
                       walletName: _walletName ?? l.mainWallet,
                       onWalletTap: () async {
                         await Navigator.pushNamed(context, '/wallets');
                         await _loadWalletData();
                       },
-                      chainSymbol: blockchain.activeNetworkSymbol,
+                      chainSymbol: blockchain.activeNetworkDisplaySymbol,
                       chainId: blockchain.activeFamily == ChainFamily.evm
                           ? blockchain.activeChain.chainId
                           : null,
                       chainLogoUrl: blockchain.activeNetworkLogoUrl,
                       onNetworkTap: _showNetworkSelector,
-                      onHelpTap: () =>
-                          Navigator.pushNamed(context, '/feedback'),
+                      onSettingsTap: _openSettingsScreen,
                       showNotificationDot: _hasUnreadNotifications,
                       onNotificationsTap: () async {
                         await Navigator.pushNamed(context, '/notifications');
@@ -1950,7 +1940,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 initialTab: _selectedAssetTab,
                                 onScan: () =>
                                     Navigator.pushNamed(context, '/qr-scanner'),
-                                onOpenSettings: _openSettingsTab,
                                 onManageTokens: _openTokenManager,
                                 onOpenNfts: () {
                                   if (_hasMoreNfts) {
@@ -2000,11 +1989,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
       bottomNavigationBar: widget.showBottomNavigation
-          ? BottomNavBar(
-              currentIndex: 0,
-              onTap: (index) =>
-                  BottomNavBar.handleNavigation(context, index, 0),
-            )
+          ? const BottomNavBar(currentTab: AppShellTab.wallet)
           : null,
     );
   }

@@ -88,6 +88,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get payment => 'دفع';
 
   @override
+  String get pay => 'دفع';
+
+  @override
   String get me => 'أنا';
 
   @override

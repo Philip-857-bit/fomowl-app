@@ -14,10 +14,7 @@ class EarnComingSoonScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: const SizedBox.expand(),
-        bottomNavigationBar: BottomNavBar(
-          currentIndex: 2,
-          onTap: (index) => BottomNavBar.handleNavigation(context, index, 2),
-        ),
+        bottomNavigationBar: const BottomNavBar(currentTab: null),
       ),
     );
   }

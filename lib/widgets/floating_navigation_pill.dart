@@ -5,20 +5,38 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_chain_theme.dart';
 
-class FloatingNavigationDestinationData {
-  const FloatingNavigationDestinationData({
+sealed class FloatingNavigationItemData {
+  const FloatingNavigationItemData({
     required this.icon,
-    required this.selectedIcon,
     required this.label,
-    required this.selected,
     required this.onTap,
   });
 
   final IconData icon;
-  final IconData selectedIcon;
   final String label;
-  final bool selected;
   final VoidCallback onTap;
+}
+
+final class FloatingNavigationDestinationData
+    extends FloatingNavigationItemData {
+  const FloatingNavigationDestinationData({
+    required super.icon,
+    required this.selectedIcon,
+    required super.label,
+    required this.selected,
+    required super.onTap,
+  });
+
+  final IconData selectedIcon;
+  final bool selected;
+}
+
+final class FloatingNavigationActionData extends FloatingNavigationItemData {
+  const FloatingNavigationActionData({
+    required super.icon,
+    required super.label,
+    required super.onTap,
+  });
 }
 
 /// Shared floating, blurred navigation surface used by both the app shell and
@@ -26,7 +44,7 @@ class FloatingNavigationDestinationData {
 class FloatingNavigationPill extends StatelessWidget {
   const FloatingNavigationPill({super.key, required this.destinations});
 
-  final List<FloatingNavigationDestinationData> destinations;
+  final List<FloatingNavigationItemData> destinations;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +93,7 @@ class FloatingNavigationPill extends StatelessWidget {
 class _NavigationItem extends StatelessWidget {
   const _NavigationItem({required this.destination});
 
-  final FloatingNavigationDestinationData destination;
+  final FloatingNavigationItemData destination;
 
   @override
   Widget build(BuildContext context) {
@@ -83,52 +101,74 @@ class _NavigationItem extends StatelessWidget {
     final accent = theme.id == 'fomowl_signature'
         ? const Color(0xFFEA2A33)
         : theme.accentColor;
-    final selected = destination.selected;
+    final selected = switch (destination) {
+      FloatingNavigationDestinationData item => item.selected,
+      FloatingNavigationActionData() => false,
+    };
+    final isAction = destination is FloatingNavigationActionData;
+    final icon = switch (destination) {
+      FloatingNavigationDestinationData item when item.selected =>
+        item.selectedIcon,
+      _ => destination.icon,
+    };
 
+    final child = InkWell(
+      onTap: destination.onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: isAction
+              ? accent
+              : selected
+              ? accent.withValues(alpha: 0.16)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isAction
+                  ? Colors.white
+                  : selected
+                  ? accent
+                  : Colors.white.withValues(alpha: 0.65),
+              size: 21,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              destination.label,
+              maxLines: 1,
+              overflow: TextOverflow.fade,
+              softWrap: false,
+              style: GoogleFonts.inter(
+                color: isAction || selected
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.65),
+                fontSize: 10,
+                fontWeight: isAction || selected
+                    ? FontWeight.w600
+                    : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (isAction) {
+      return Semantics(button: true, label: destination.label, child: child);
+    }
     return Semantics(
       selected: selected,
       button: true,
       label: destination.label,
-      child: InkWell(
-        onTap: destination.onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            color: selected
-                ? accent.withValues(alpha: 0.16)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                selected ? destination.selectedIcon : destination.icon,
-                color: selected ? accent : Colors.white.withValues(alpha: 0.65),
-                size: 21,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                destination.label,
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: GoogleFonts.inter(
-                  color: selected
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.65),
-                  fontSize: 10,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: child,
     );
   }
 }

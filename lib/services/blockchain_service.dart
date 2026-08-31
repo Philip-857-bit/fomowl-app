@@ -152,6 +152,13 @@ class BlockchainService extends ChangeNotifier {
     ChainFamily.evm => _activeChain.symbol,
   };
 
+  /// Network identity for selectors/chips. This intentionally differs from
+  /// [activeNetworkSymbol] on EVM L2s whose gas token is ETH.
+  String get activeNetworkDisplaySymbol => networkIdentitySymbolForKey(
+    activeNetworkKey,
+    fallback: activeNetworkSymbol,
+  );
+
   String? get activeNetworkCoinGeckoId => switch (activeFamily) {
     ChainFamily.solana => _activeSolanaChain.coinGeckoId,
     ChainFamily.tron => _activeTronChain.coinGeckoId,
@@ -836,6 +843,32 @@ class BlockchainService extends ChangeNotifier {
     if (chainId != null) {
       setActiveChainByChainId(chainId);
     }
+  }
+
+  /// Resolves a mini-app requested network against the networks currently
+  /// available to this wallet. Unknown, disabled, and unsupported networks are
+  /// rejected instead of falling through to the default Ethereum chain.
+  NetworkEntry? availableNetworkEntryForKey(String networkKey) {
+    final normalized = networkKey.trim().toLowerCase();
+    final canonical = normalized == 'solana:mainnet-beta'
+        ? NetworkKey.solana('mainnet-beta')
+        : normalized;
+    for (final entry in networkEntries) {
+      if (entry.networkKey.toLowerCase() == canonical) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  /// Safely switches to an available network and verifies the postcondition.
+  bool trySetActiveNetworkKey(String networkKey) {
+    final entry = availableNetworkEntryForKey(networkKey);
+    if (entry == null) {
+      return false;
+    }
+    setActiveNetworkKey(entry.networkKey);
+    return activeNetworkKey == entry.networkKey;
   }
 
   Future<void> setEnabledFamilies(Set<ChainFamily> families) async {

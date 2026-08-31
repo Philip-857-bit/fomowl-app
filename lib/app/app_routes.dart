@@ -34,6 +34,7 @@ import '../screens/profile/coming_soon_overlay.dart';
 import '../screens/profile/coming_soon_screen.dart';
 import '../screens/profile/community_links_screen.dart';
 import '../screens/profile/connected_apps_screen.dart';
+import '../screens/profile/decentralized_profile_screen.dart';
 import '../screens/profile/feedback_screen.dart';
 import '../screens/profile/kyc_success_screen.dart';
 import '../screens/profile/login_profile_screen.dart';
@@ -93,7 +94,8 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/token-detail': (_) => const TokenDetailScreen(),
     '/token-management': (_) => const TokenManagementScreen(),
     '/nft-gallery': (_) => NftGalleryScreen(),
-    '/profile': (_) => const ShellRouteRedirect(tab: AppShellTab.settings),
+    '/profile': (_) =>
+        const DecentralizedProfileScreen(showBottomNavigation: false),
     '/notifications': (_) => const NotificationsScreen(),
     '/receive-token': (_) => const ReceiveTokenScreen(),
     '/qr-scanner': (_) => const QrScannerScreen(),
