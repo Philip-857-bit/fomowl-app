@@ -119,11 +119,7 @@ class _NavigationItem extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          color: isAction
-              ? accent
-              : selected
-              ? accent.withValues(alpha: 0.16)
-              : Colors.transparent,
+          color: selected ? accent.withValues(alpha: 0.16) : Colors.transparent,
           borderRadius: BorderRadius.circular(999),
         ),
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -133,11 +129,7 @@ class _NavigationItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: isAction
-                  ? Colors.white
-                  : selected
-                  ? accent
-                  : Colors.white.withValues(alpha: 0.65),
+              color: selected ? accent : Colors.white.withValues(alpha: 0.65),
               size: 21,
             ),
             const SizedBox(height: 2),
@@ -147,13 +139,11 @@ class _NavigationItem extends StatelessWidget {
               overflow: TextOverflow.fade,
               softWrap: false,
               style: GoogleFonts.inter(
-                color: isAction || selected
+                color: selected
                     ? Colors.white
                     : Colors.white.withValues(alpha: 0.65),
                 fontSize: 10,
-                fontWeight: isAction || selected
-                    ? FontWeight.w600
-                    : FontWeight.w500,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ],

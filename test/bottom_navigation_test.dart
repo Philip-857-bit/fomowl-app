@@ -76,6 +76,46 @@ void main() {
     expect(args.launchSource, 'bottom_nav_pay');
   });
 
+  testWidgets('Pay uses the normal unselected navigation appearance', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
+          bottomNavigationBar: BottomNavBar(currentTab: AppShellTab.wallet),
+        ),
+      ),
+    );
+
+    final payContainer = tester.widget<AnimatedContainer>(
+      find
+          .ancestor(
+            of: find.text('Pay'),
+            matching: find.byType(AnimatedContainer),
+          )
+          .first,
+    );
+    final decoration = payContainer.decoration! as BoxDecoration;
+    final payIcon = tester.widget<Icon>(find.byIcon(Icons.payments_rounded));
+    final discoverIcon = tester.widget<Icon>(
+      find.byIcon(Icons.explore_outlined),
+    );
+    final payLabel = tester.widget<Text>(find.text('Pay'));
+    final discoverLabel = tester.widget<Text>(find.text('Discover'));
+
+    expect(decoration.color, Colors.transparent);
+    expect(payIcon.color, discoverIcon.color);
+    expect(payLabel.style?.color, discoverLabel.style?.color);
+    expect(payLabel.style?.fontWeight, discoverLabel.style?.fontWeight);
+  });
+
   testWidgets('floating navigation stays above the bottom safe area', (
     tester,
   ) async {
