@@ -370,77 +370,77 @@ class _OwlletPayBanner extends StatelessWidget {
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.only(
-                    left: 13,
-                    right: 84,
-                    top: 11,
-                    bottom: 11,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Pay Bills & Buy Crypto',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFFEA2A33),
-                            fontSize: 19,
-                            fontWeight: FontWeight.w700,
-                            height: 1.07,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      Flexible(
-                        child: Text(
-                          'Try OwlletPay - Fast & Easy',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w500,
-                            height: 1.07,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 9),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 5,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF006C4B), Color(0xFF00D292)],
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              stops: [0.10, 1.0],
-                            ),
-                          ),
+                      left: 13,
+                      right: 84,
+                      top: 11,
+                      bottom: 11,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
                           child: Text(
-                            'Open OwlletPay',
+                            'Pay Bills & Buy Crypto',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFEA2A33),
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
                               height: 1.07,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 9),
+                        Flexible(
+                          child: Text(
+                            'Try OwlletPay - Fast & Easy',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w500,
+                              height: 1.07,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 9),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 5,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF006C4B), Color(0xFF00D292)],
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                                stops: [0.10, 1.0],
+                              ),
+                            ),
+                            child: Text(
+                              'Open OwlletPay',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                height: 1.07,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
@@ -569,12 +569,7 @@ class _ProductArtwork extends StatelessWidget {
             color: const Color(0xFF1E1E1E),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Image.asset(
-            asset,
-            width: 160,
-            height: 156,
-            fit: BoxFit.cover,
-          ),
+          child: Image.asset(asset, width: 160, height: 156, fit: BoxFit.cover),
         ),
       );
     }
