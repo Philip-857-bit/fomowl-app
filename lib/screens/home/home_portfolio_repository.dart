@@ -75,7 +75,7 @@ class HomePortfolioRepository {
   }) async {
     try {
       final tokens = await fetchTokens(chain.chainId);
-      return _filterSection(
+      return await _filterSection(
         section: HomePortfolioSection(chain: chain, tokens: tokens),
         loadHiddenTokens: loadHiddenTokens,
       );
