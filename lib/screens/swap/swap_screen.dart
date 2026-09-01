@@ -35,6 +35,7 @@ import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
+import '../../utils/token_trust_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'dart:convert';
@@ -409,7 +410,20 @@ class _SwapScreenState extends State<SwapScreen> {
     );
   }
 
-  String _limitButtonLabel() => _limitReadiness().buttonLabel;
+  bool _limitDestinationBlocked(BlockchainService blockchain) =>
+      _toToken != null &&
+      TokenTrustUtils.blocksDestination(
+        _toToken!,
+        chainId: _tokenStorageChainId(blockchain),
+      );
+
+  String _limitButtonLabel() {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (_limitDestinationBlocked(blockchain)) {
+      return 'Unverified token blocked';
+    }
+    return _limitReadiness().buttonLabel;
+  }
 
   String _limitStatusMessage() => _limitReadiness().statusMessage;
 
@@ -844,6 +858,12 @@ class _SwapScreenState extends State<SwapScreen> {
       builder: (ctx) => SwapTokenSelectorDialog(
         tokens: tokens,
         chainId: _tokenStorageChainId(blockchain),
+        blockUnverifiedSelection: !isFrom,
+        tokenFilter:
+            _activeTab == SwapTab.limit &&
+                blockchain.activeFamily == ChainFamily.evm
+            ? (token) => _limitOrderEligibleTokens([token]).isNotEmpty
+            : null,
       ),
     );
 
@@ -2162,7 +2182,6 @@ class _SwapScreenState extends State<SwapScreen> {
     if (_toController.text == nextToAmount && !shouldClearFeePreview) {
       return;
     }
-
     if (!mounted) {
       _toController.text = nextToAmount;
       _platformFeeUsd = 0.0;
@@ -2482,6 +2501,12 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.tryAgain);
       return;
     }
+    if (TokenTrustUtils.blocksDestination(to, chainId: chainId)) {
+      _showError(
+        'This destination token is not verified. Select a verified token and check its contract address.',
+      );
+      return;
+    }
     if ((from.contractAddress ?? '').isEmpty ||
         (to.contractAddress ?? '').isEmpty) {
       _showError('Limit orders require ERC-20 tokens.');
@@ -2666,6 +2691,16 @@ class _SwapScreenState extends State<SwapScreen> {
     }
     if (_tokensAreIdentical(from, to)) {
       _showError(l.tryAgain);
+      return;
+    }
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (TokenTrustUtils.blocksDestination(
+      to,
+      chainId: _tokenStorageChainId(blockchain),
+    )) {
+      _showError(
+        'This destination token is not verified. Select a verified token and check its contract address.',
+      );
       return;
     }
     final makerAmount = parseDecimalAmount(_fromController.text);
@@ -2986,6 +3021,16 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.selectTokenTitle);
       return;
     }
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (TokenTrustUtils.blocksDestination(
+      toToken,
+      chainId: _tokenStorageChainId(blockchain),
+    )) {
+      _showError(
+        'This destination token is not verified. Select a verified token and check its contract address.',
+      );
+      return;
+    }
     if (_tokensAreIdentical(fromToken, toToken)) {
       _showError(l.tryAgain);
       return;
@@ -2994,7 +3039,6 @@ class _SwapScreenState extends State<SwapScreen> {
       _showError(l.noQuoteAvailable);
       return;
     }
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
     if (blockchain.activeFamily == ChainFamily.evm &&
         _currentRelayQuote == null &&
         !_swapService.isChainSupported(
@@ -3624,19 +3668,28 @@ class _SwapScreenState extends State<SwapScreen> {
         parseDecimalAmount(_fromController.text) <=
             _balanceAsDecimal(_fromToken!);
     final hasBalance = localHasBalance;
+    final destinationBlocked =
+        _toToken != null &&
+        TokenTrustUtils.blocksDestination(
+          _toToken!,
+          chainId: _tokenStorageChainId(blockchain),
+        );
     final swapEnabled =
         hasInputAmount &&
         hasQuote &&
         hasBalance &&
         chainSupported &&
         !_tokensAreIdentical(_fromToken, _toToken) &&
+        !destinationBlocked &&
         !_isGaslessSourceUnsupported() &&
         !swapBusy;
     final limitButtonLabel = _limitButtonLabel();
     final limitStatusMessage = _limitStatusMessage();
 
     String? buttonLabel;
-    if (hasQuote && !hasBalance) {
+    if (destinationBlocked) {
+      buttonLabel = 'Unverified token blocked';
+    } else if (hasQuote && !hasBalance) {
       buttonLabel = l.insufficientBalance;
     }
 
@@ -4074,6 +4127,7 @@ class _SwapScreenState extends State<SwapScreen> {
         !_tokensAreIdentical(_fromToken, _toToken) &&
         _fromToken != null &&
         _toToken != null &&
+        !_limitDestinationBlocked(blockchain) &&
         approvalsOk &&
         !_isSubmittingLimit;
   }

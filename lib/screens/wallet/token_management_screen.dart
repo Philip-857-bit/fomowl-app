@@ -16,6 +16,7 @@ import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
+import '../../utils/token_trust_utils.dart';
 import 'helpers/token_management_query_helper.dart';
 import 'widgets/token_management/contract_import_card.dart';
 import 'widgets/token_management/managed_token_tile.dart';
@@ -272,6 +273,26 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     return token.contractAddress == null || token.contractAddress!.isEmpty;
   }
 
+  bool _isSuspiciousDefinition(
+    CustomTokenDefinition definition,
+    BlockchainService blockchain,
+  ) {
+    final token = Token(
+      symbol: definition.symbol,
+      name: definition.name,
+      contractAddress: definition.address,
+      balance: 0,
+      valueUsd: 0,
+      changePercent24h: 0,
+      decimals: definition.decimals,
+    );
+    return TokenTrustUtils.levelFor(
+          token,
+          chainId: _effectiveChainId(blockchain),
+        ) ==
+        TokenTrustLevel.suspicious;
+  }
+
   void _syncWalletTokensFromBlockchain(BlockchainService blockchain) {
     _walletTokens = List<Token>.from(blockchain.tokens);
   }
@@ -286,6 +307,14 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     final key = _tokenKey(token);
     final contract = token.contractAddress;
     if (_processingTokens.contains(key)) return;
+    if (enable &&
+        TokenTrustUtils.levelFor(token, chainId: chainId) ==
+            TokenTrustLevel.suspicious) {
+      ToastUtils.showError(
+        'This token uses a protected stablecoin symbol but its contract is not verified. Check the contract address before enabling it.',
+      );
+      return;
+    }
 
     // Optimistic UI update
     setState(() {
@@ -333,6 +362,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
               imageUrl: token.imageUrl ?? detected?.imageUrl,
               networkKey: token.networkKey ?? blockchain.activeNetworkKey,
               tokenStandard: token.tokenStandard,
+              isCertified: token.isCertified,
             );
           } else {
             // Solana / Tron — trust the search-result metadata.
@@ -345,6 +375,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
               imageUrl: token.imageUrl,
               networkKey: token.networkKey,
               tokenStandard: token.tokenStandard,
+              isCertified: token.isCertified,
             );
           }
           await blockchain.addCustomToken(chainId: chainId, token: tokenToAdd);
@@ -500,6 +531,12 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
         ToastUtils.showError(l.couldNotDetectTokenMetadata);
         return;
       }
+      if (_isSuspiciousDefinition(token, blockchain)) {
+        ToastUtils.showError(
+          'This contract uses a protected stablecoin symbol but is not verified.',
+        );
+        return;
+      }
       final added = await blockchain.addCustomToken(
         chainId: _effectiveChainId(blockchain),
         token: token,
@@ -549,6 +586,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
 
       final detected = await blockchain.detectTokenByContract(clipboardText);
       if (detected == null || !mounted) return;
+      if (_isSuspiciousDefinition(detected, blockchain)) return;
 
       final shouldAdd = await showDialog<bool>(
         context: context,
@@ -684,7 +722,7 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
           decimals: def.decimals,
           imageUrl: def.imageUrl,
           coinGeckoId: def.coinGeckoId,
-          isCertified: false,
+          isCertified: def.isCertified,
           networkKey: def.networkKey ?? blockchain.activeNetworkKey,
           tokenStandard: def.tokenStandard,
         ),
@@ -717,8 +755,18 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
     }
 
     // Filter by query
-    if (query.isEmpty) return sourceTokens;
-    return TokenManagementQueryHelper.filterLocalTokens(sourceTokens, query);
+    final filtered = query.isEmpty
+        ? sourceTokens
+        : TokenManagementQueryHelper.filterLocalTokens(sourceTokens, query);
+    final chainId = _effectiveChainId(blockchain);
+    filtered.sort((a, b) {
+      final trustA = TokenTrustUtils.levelFor(a, chainId: chainId).index;
+      final trustB = TokenTrustUtils.levelFor(b, chainId: chainId).index;
+      return trustA != trustB
+          ? trustA.compareTo(trustB)
+          : a.symbol.compareTo(b.symbol);
+    });
+    return filtered;
   }
 
   List<Token> _deduplicateTokens(List<Token> tokens) {
@@ -882,6 +930,10 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                               final isProcessing = _processingTokens.contains(
                                 key,
                               );
+                              final trustLevel = TokenTrustUtils.levelFor(
+                                token,
+                                chainId: _effectiveChainId(blockchain),
+                              );
 
                               return ManagedTokenTile(
                                 key: ValueKey(key),
@@ -895,6 +947,14 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                                     blockchain.activeFamily == ChainFamily.evm
                                     ? blockchain.activeChain.chainId
                                     : null,
+                                trustLabel: TokenTrustUtils.label(
+                                  token,
+                                  chainId: _effectiveChainId(blockchain),
+                                ),
+                                isSuspicious:
+                                    trustLevel == TokenTrustLevel.suspicious,
+                                isVerified:
+                                    trustLevel == TokenTrustLevel.verified,
                               );
                             },
                           ),

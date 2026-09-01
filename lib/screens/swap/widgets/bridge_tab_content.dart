@@ -23,6 +23,7 @@ import '../../../theme/app_chain_theme.dart';
 import '../../../utils/amount_utils.dart';
 import '../../../utils/app_error_utils.dart';
 import '../../../utils/toast_utils.dart';
+import '../../../utils/token_trust_utils.dart';
 import '../../../utils/value_formatter.dart';
 import '../../transaction/transaction_processing_screen.dart';
 import '../swap_screen_helpers.dart';
@@ -104,6 +105,24 @@ double? destinationAmountUsd({
   if (price == null || amount == null || amount <= 0) return null;
   return amount * price;
 }
+
+Token _bridgeCurrencyAsToken(BridgeCurrency currency) => Token(
+  symbol: currency.symbol,
+  name: currency.name,
+  contractAddress: currency.isNative ? null : currency.address,
+  balance: 0,
+  valueUsd: 0,
+  changePercent24h: 0,
+  decimals: currency.decimals,
+  imageUrl: currency.logoUri,
+  isCertified: currency.isNative,
+);
+
+bool _bridgeCurrencyBlocked(BridgeCurrency currency) =>
+    TokenTrustUtils.blocksDestination(
+      _bridgeCurrencyAsToken(currency),
+      chainId: currency.chainId,
+    );
 
 String formatBridgeFeeUsd(double? value) {
   if (value == null || value <= 0) return r'$0.00';
@@ -785,6 +804,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (_amountValue > 0 && !_hasSufficientBalance) {
       return 'Insufficient ${_fromToken?.symbol ?? 'balance'}';
     }
+    if (_toCurrency != null && _bridgeCurrencyBlocked(_toCurrency!)) {
+      return 'Unverified token blocked';
+    }
     return 'Bridge';
   }
 
@@ -795,6 +817,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _quote != null &&
       _hasSufficientBalance &&
       widget.walletAddress != null &&
+      (_toCurrency == null || !_bridgeCurrencyBlocked(_toCurrency!)) &&
       _quote!.canBeginExecution;
 
   Future<void> _executeBridge() async {
@@ -804,6 +827,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         from == null ||
         _isBridging ||
         _pendingOperation != null) {
+      return;
+    }
+    if (_toCurrency != null && _bridgeCurrencyBlocked(_toCurrency!)) {
+      setState(() {
+        _quoteError =
+            'This destination token is not verified. Select a verified token and check its contract address.';
+      });
       return;
     }
 
@@ -1806,7 +1836,13 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
     );
     if (!mounted) return;
     setState(() {
-      _currencies = results;
+      _currencies = [...results]
+        ..sort((a, b) {
+          final aBlocked = _bridgeCurrencyBlocked(a);
+          final bBlocked = _bridgeCurrencyBlocked(b);
+          final blocked = aBlocked == bBlocked ? 0 : (aBlocked ? 1 : -1);
+          return blocked != 0 ? blocked : a.symbol.compareTo(b.symbol);
+        });
       _loadError = results.isEmpty ? widget.bridgeService.lastError : null;
       _loading = false;
     });
@@ -1915,8 +1951,12 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                         itemCount: _currencies.length,
                         itemBuilder: (ctx, index) {
                           final c = _currencies[index];
+                          final blocked = _bridgeCurrencyBlocked(c);
                           return ListTile(
-                            onTap: () => Navigator.of(ctx).pop(c),
+                            enabled: !blocked,
+                            onTap: blocked
+                                ? null
+                                : () => Navigator.of(ctx).pop(c),
                             leading: _ChainLogoDot(url: c.logoUri),
                             title: Text(
                               c.symbol,
@@ -1927,7 +1967,14 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                               ),
                             ),
                             subtitle: Text(
-                              c.name,
+                              [
+                                c.name,
+                                c.isNative
+                                    ? 'Verified native token'
+                                    : blocked
+                                    ? 'Unverified · ${TokenTrustUtils.shortenedAddress(c.address)}'
+                                    : 'Verified · ${TokenTrustUtils.shortenedAddress(c.address)}',
+                              ].join(' · '),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
@@ -1943,7 +1990,15 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                                       color: const Color(0xFF848E9C),
                                     ),
                                   )
-                                : null,
+                                : Icon(
+                                    blocked
+                                        ? Icons.warning_amber_rounded
+                                        : Icons.verified_rounded,
+                                    size: 18,
+                                    color: blocked
+                                        ? const Color(0xFFEA2A33)
+                                        : const Color(0xFF39D98A),
+                                  ),
                           );
                         },
                       ),

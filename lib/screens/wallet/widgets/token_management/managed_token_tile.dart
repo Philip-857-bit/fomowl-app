@@ -15,6 +15,9 @@ class ManagedTokenTile extends StatelessWidget {
   final bool isProcessing;
   final ValueChanged<bool>? onToggleChanged;
   final int? chainId;
+  final String? trustLabel;
+  final bool isSuspicious;
+  final bool isVerified;
 
   const ManagedTokenTile({
     super.key,
@@ -24,6 +27,9 @@ class ManagedTokenTile extends StatelessWidget {
     this.isProcessing = false,
     this.onToggleChanged,
     this.chainId,
+    this.trustLabel,
+    this.isSuspicious = false,
+    this.isVerified = false,
   });
 
   @override
@@ -83,6 +89,21 @@ class ManagedTokenTile extends StatelessWidget {
                     ],
                   ],
                 ),
+                if (trustLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    trustLabel!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isSuspicious
+                          ? AppColors.accentRed
+                          : isVerified
+                          ? Colors.greenAccent
+                          : Colors.white38,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

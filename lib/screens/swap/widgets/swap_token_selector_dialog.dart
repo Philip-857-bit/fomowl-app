@@ -12,6 +12,7 @@ import '../../../services/blockchain_service.dart';
 import '../../../services/token_visibility_service.dart';
 import '../../../utils/app_error_utils.dart';
 import '../../../utils/token_visibility_utils.dart';
+import '../../../utils/token_trust_utils.dart';
 import '../../../utils/toast_utils.dart';
 import '../../wallet/helpers/token_management_query_helper.dart';
 import '../../../widgets/token_icon.dart';
@@ -23,6 +24,8 @@ class SwapTokenSelectorDialog extends StatefulWidget {
     required this.chainId,
     this.networkFamilies,
     this.activeNetworkFamily,
+    this.blockUnverifiedSelection = false,
+    this.tokenFilter,
   });
 
   final List<Token> tokens;
@@ -33,6 +36,8 @@ class SwapTokenSelectorDialog extends StatefulWidget {
   /// which switches the wallet network before showing that family's tokens.
   final Set<ChainFamily>? networkFamilies;
   final ChainFamily? activeNetworkFamily;
+  final bool blockUnverifiedSelection;
+  final bool Function(Token token)? tokenFilter;
 
   @override
   State<SwapTokenSelectorDialog> createState() =>
@@ -50,6 +55,8 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
   bool _isAddingToken = false;
   bool _contractLookupCompleted = false;
   CustomTokenDefinition? _detectedToken;
+  List<Token> _remoteResults = const [];
+  bool _isSearchingRemote = false;
 
   @override
   void initState() {
@@ -67,10 +74,35 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
   }
 
   List<Token> get _filteredTokens {
-    if (_query.isEmpty) {
-      return widget.tokens;
+    final candidates = _query.isEmpty
+        ? widget.tokens
+        : <Token>[...widget.tokens, ..._remoteResults];
+    final deduped = <String, Token>{};
+    for (final token in candidates) {
+      if (widget.tokenFilter != null && !widget.tokenFilter!(token)) continue;
+      final key =
+          (token.contractAddress?.trim().toLowerCase().isNotEmpty ?? false)
+          ? token.contractAddress!.trim().toLowerCase()
+          : 'native:${token.networkKey ?? widget.chainId}:${token.symbol.toUpperCase()}';
+      final existing = deduped[key];
+      if (existing == null || (!existing.isCertified && token.isCertified)) {
+        deduped[key] = token;
+      }
     }
-    return TokenManagementQueryHelper.filterLocalTokens(widget.tokens, _query);
+    final filtered = _query.isEmpty
+        ? deduped.values.toList()
+        : TokenManagementQueryHelper.filterLocalTokens(
+            deduped.values.toList(),
+            _query,
+          );
+    filtered.sort((a, b) {
+      final trustA = TokenTrustUtils.levelFor(a, chainId: widget.chainId).index;
+      final trustB = TokenTrustUtils.levelFor(b, chainId: widget.chainId).index;
+      final trust = trustA.compareTo(trustB);
+      if (trust != 0) return trust;
+      return a.symbol.toUpperCase().compareTo(b.symbol.toUpperCase());
+    });
+    return filtered;
   }
 
   bool get _isContractQuery {
@@ -104,6 +136,8 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       _detectedToken = null;
       _contractLookupCompleted = false;
       _isResolvingContract = false;
+      _remoteResults = const [];
+      _isSearchingRemote = false;
     });
 
     final family = context.read<BlockchainService>().activeFamily;
@@ -111,6 +145,12 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       nextQuery,
       family: family,
     )) {
+      if (nextQuery.length >= 2) {
+        _searchDebounce = Timer(
+          const Duration(milliseconds: 250),
+          () => _searchRemote(nextQuery),
+        );
+      }
       return;
     }
 
@@ -118,6 +158,24 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       const Duration(milliseconds: 250),
       () => _resolveContract(nextQuery),
     );
+  }
+
+  Future<void> _searchRemote(String query) async {
+    if (!mounted || _query != query) return;
+    setState(() => _isSearchingRemote = true);
+    try {
+      final results = await context
+          .read<BlockchainService>()
+          .searchTokensFromBackend(query, limit: 60);
+      if (!mounted || _query != query) return;
+      setState(() {
+        _remoteResults = results;
+        _isSearchingRemote = false;
+      });
+    } catch (_) {
+      if (!mounted || _query != query) return;
+      setState(() => _isSearchingRemote = false);
+    }
   }
 
   Future<void> _resolveContract(String contractAddress) async {
@@ -160,6 +218,17 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       ToastUtils.showError(l.couldNotDetectTokenMetadata);
       return;
     }
+    final detectedToken = _tokenFromDefinition(detected);
+    if (widget.blockUnverifiedSelection &&
+        TokenTrustUtils.blocksDestination(
+          detectedToken,
+          chainId: widget.chainId,
+        )) {
+      ToastUtils.showError(
+        'This contract is not a verified destination token. Check the contract address before enabling it in Token Management.',
+      );
+      return;
+    }
 
     setState(() => _isAddingToken = true);
     final blockchain = context.read<BlockchainService>();
@@ -170,8 +239,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
         widget.chainId,
       );
       Token selectedToken =
-          _findExistingToken(blockchain, normalizedAddress) ??
-          _tokenFromDefinition(detected);
+          _findExistingToken(blockchain, normalizedAddress) ?? detectedToken;
 
       if (TokenVisibilityUtils.contains(hiddenTokens, selectedToken)) {
         await _tokenVisibilityService.setTokenHidden(
@@ -256,6 +324,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
       coinGeckoId: definition.coinGeckoId,
       networkKey: definition.networkKey,
       tokenStandard: definition.tokenStandard,
+      isCertified: definition.isCertified,
     );
   }
 
@@ -337,7 +406,15 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
                   hintText: l.searchTokenOrPasteContract,
                   hintStyle: GoogleFonts.outfit(color: Colors.white54),
                   prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                  suffixIcon: _query.isEmpty
+                  suffixIcon: _isSearchingRemote
+                      ? const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : _query.isEmpty
                       ? null
                       : IconButton(
                           onPressed: _searchController.clear,
@@ -358,6 +435,13 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
                 isAdding: _isAddingToken,
                 lookupCompleted: _contractLookupCompleted,
                 onAdd: _handleAddDetectedToken,
+                selectionBlocked:
+                    widget.blockUnverifiedSelection &&
+                    _detectedToken != null &&
+                    TokenTrustUtils.blocksDestination(
+                      _tokenFromDefinition(_detectedToken!),
+                      chainId: widget.chainId,
+                    ),
               ),
             ],
             const SizedBox(height: 16),
@@ -386,6 +470,12 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
                         return _SwapTokenOption(
                           token: token,
                           chainId: _tokenIconChainId,
+                          blocked:
+                              widget.blockUnverifiedSelection &&
+                              TokenTrustUtils.blocksDestination(
+                                token,
+                                chainId: widget.chainId,
+                              ),
                           onTap: () => Navigator.pop(context, token),
                         );
                       },
@@ -406,6 +496,7 @@ class _SwapContractDetectionCard extends StatelessWidget {
     required this.isAdding,
     required this.lookupCompleted,
     required this.onAdd,
+    required this.selectionBlocked,
   });
 
   final int? chainId;
@@ -414,6 +505,7 @@ class _SwapContractDetectionCard extends StatelessWidget {
   final bool isAdding;
   final bool lookupCompleted;
   final VoidCallback onAdd;
+  final bool selectionBlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -454,7 +546,8 @@ class _SwapContractDetectionCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: (!hasToken || isResolving || isAdding)
+                onPressed:
+                    (!hasToken || isResolving || isAdding || selectionBlocked)
                     ? null
                     : onAdd,
                 style: ElevatedButton.styleFrom(
@@ -509,9 +602,13 @@ class _SwapContractDetectionCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        detectedToken!.symbol,
+                        selectionBlocked
+                            ? '${detectedToken!.symbol} · Unverified destination'
+                            : detectedToken!.symbol,
                         style: GoogleFonts.outfit(
-                          color: Colors.white54,
+                          color: selectionBlocked
+                              ? AppColors.accentRed
+                              : Colors.white54,
                           fontSize: 12,
                         ),
                       ),
@@ -532,16 +629,19 @@ class _SwapTokenOption extends StatelessWidget {
     required this.token,
     required this.chainId,
     required this.onTap,
+    required this.blocked,
   });
 
   final Token token;
   final int? chainId;
   final VoidCallback onTap;
+  final bool blocked;
 
   @override
   Widget build(BuildContext context) {
+    final trustLevel = TokenTrustUtils.levelFor(token, chainId: chainId ?? 0);
     return InkWell(
-      onTap: onTap,
+      onTap: blocked ? null : onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
@@ -581,6 +681,25 @@ class _SwapTokenOption extends StatelessWidget {
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       color: Colors.white54,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    [
+                      TokenTrustUtils.label(token, chainId: chainId ?? 0),
+                      if ((token.contractAddress ?? '').isNotEmpty)
+                        TokenTrustUtils.shortenedAddress(token.contractAddress),
+                    ].join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      color: blocked
+                          ? AppColors.accentRed
+                          : trustLevel == TokenTrustLevel.verified
+                          ? Colors.greenAccent
+                          : Colors.white38,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],

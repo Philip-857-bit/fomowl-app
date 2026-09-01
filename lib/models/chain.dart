@@ -219,6 +219,7 @@ class CustomTokenDefinition {
   final String? imageUrl;
   final String? networkKey;
   final TokenStandard tokenStandard;
+  final bool isCertified;
 
   const CustomTokenDefinition({
     required this.symbol,
@@ -229,6 +230,7 @@ class CustomTokenDefinition {
     this.imageUrl,
     this.networkKey,
     this.tokenStandard = TokenStandard.erc20,
+    this.isCertified = false,
   });
 
   factory CustomTokenDefinition.fromJson(Map<String, dynamic> json) {
@@ -243,6 +245,7 @@ class CustomTokenDefinition {
       tokenStandard: TokenStandardCodec.fromWireValue(
         json['tokenStandard'] as String?,
       ),
+      isCertified: json['isCertified'] == true,
     );
   }
 
@@ -255,6 +258,7 @@ class CustomTokenDefinition {
     'imageUrl': imageUrl,
     'networkKey': networkKey,
     'tokenStandard': tokenStandard.wireValue,
+    'isCertified': isCertified,
   };
 }
 

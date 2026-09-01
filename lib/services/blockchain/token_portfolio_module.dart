@@ -140,7 +140,7 @@ class TokenPortfolioModule {
           decimals: custom.decimals,
           imageUrl: custom.imageUrl,
           coinGeckoId: custom.coinGeckoId,
-          isCertified: false,
+          isCertified: custom.isCertified,
           // PATCH: Custom token prices from simple price lookup have no source metadata.
           priceSource: 'Unknown',
           networkKey: custom.networkKey ?? existing.firstOrNull?.networkKey,
@@ -190,8 +190,6 @@ class TokenPortfolioModule {
       final address = tDef['address']!;
       final decimals = int.tryParse(tDef['decimals'] ?? '') ?? 18;
       final bal = balanceByAddress[address.toLowerCase()] ?? 0.0;
-      if (bal <= 0) continue;
-
       final coinGeckoId = tDef['coinGeckoId'];
       final price = (coinGeckoId == null || coinGeckoId.isEmpty)
           ? 0.0

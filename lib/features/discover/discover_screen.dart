@@ -347,7 +347,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   ) {
     final miniApp = product.miniApp;
     if (miniApp != null) {
-      _openMiniApp(miniApp, launchSource: 'discover_products');
+      _openMiniApp(miniApp, launchSource: 'discover_fomowl_product');
       return;
     }
     _openDapp(session, product.dapp!);

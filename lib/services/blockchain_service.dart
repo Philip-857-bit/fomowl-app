@@ -1678,21 +1678,19 @@ class BlockchainService extends ChangeNotifier {
         customTokens: customTokens,
       );
 
-      // If backend discovery yielded only native (or near-empty), supplement
-      // with a fast local known-token scan so the list does not collapse.
-      if (merged.length <= 1) {
-        final supplemental = await _tokenPortfolioModule
-            .collectSupplementalKnownTokens(
-              walletAddress: walletAddress,
-              existing: merged,
-              knownTokens: _getWellKnownTokens(
-                requestedChainId,
-                networkKey: effectiveNetworkKey,
-              ),
-            );
-        if (supplemental.isNotEmpty) {
-          merged.addAll(supplemental);
-        }
+      // Canonical stablecoins are safety defaults and must remain selectable
+      // even at zero balance or when backend discovery already found assets.
+      final supplemental = await _tokenPortfolioModule
+          .collectSupplementalKnownTokens(
+            walletAddress: walletAddress,
+            existing: merged,
+            knownTokens: _getWellKnownTokens(
+              requestedChainId,
+              networkKey: effectiveNetworkKey,
+            ),
+          );
+      if (supplemental.isNotEmpty) {
+        merged.addAll(supplemental);
       }
 
       final scopedMerged = merged
@@ -1842,28 +1840,26 @@ class BlockchainService extends ChangeNotifier {
           tDef['address']!,
           parsedDecimals,
         );
-        if (bal > 0) {
-          final p = prices[tDef['coinGeckoId']] ?? 0;
-          tokens.add(
-            Token(
-              symbol: tDef['symbol']!,
-              name: tDef['name']!,
-              contractAddress: tDef['address'],
-              balance: bal,
-              valueUsd: bal * p,
-              priceUsd: p,
-              changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
-              decimals: parsedDecimals,
-              imageUrl:
-                  tDef['imageUrl'] ??
-                  BlockchainCatalog.iconUrlForSymbol(tDef['symbol']!),
-              coinGeckoId: tDef['coinGeckoId'],
-              isCertified: tDef['isCertified'] == 'true',
-              networkKey: NetworkKey.evm(requestedChainId),
-              tokenStandard: TokenStandard.erc20,
-            ),
-          );
-        }
+        final p = prices[tDef['coinGeckoId']] ?? 0;
+        tokens.add(
+          Token(
+            symbol: tDef['symbol']!,
+            name: tDef['name']!,
+            contractAddress: tDef['address'],
+            balance: bal,
+            valueUsd: bal * p,
+            priceUsd: p,
+            changePercent24h: prices['${tDef['coinGeckoId']}_change'] ?? 0,
+            decimals: parsedDecimals,
+            imageUrl:
+                tDef['imageUrl'] ??
+                BlockchainCatalog.iconUrlForSymbol(tDef['symbol']!),
+            coinGeckoId: tDef['coinGeckoId'],
+            isCertified: true,
+            networkKey: NetworkKey.evm(requestedChainId),
+            tokenStandard: TokenStandard.erc20,
+          ),
+        );
       }
 
       // Added tokens should appear in wallet/home even when balance is zero.
@@ -1906,7 +1902,7 @@ class BlockchainService extends ChangeNotifier {
             decimals: custom.decimals,
             imageUrl: custom.imageUrl,
             coinGeckoId: custom.coinGeckoId,
-            isCertified: false,
+            isCertified: custom.isCertified,
             networkKey: custom.networkKey ?? requestedChain.networkKey,
             tokenStandard: custom.tokenStandard,
           ),
@@ -2087,7 +2083,7 @@ class BlockchainService extends ChangeNotifier {
             decimals: token.decimals,
             imageUrl: token.imageUrl,
             coinGeckoId: token.coinGeckoId,
-            isCertified: false,
+            isCertified: token.isCertified,
             networkKey: token.networkKey ?? activeNetworkKey,
             tokenStandard: token.tokenStandard,
           ),
@@ -2107,7 +2103,7 @@ class BlockchainService extends ChangeNotifier {
           decimals: token.decimals,
           imageUrl: token.imageUrl,
           coinGeckoId: token.coinGeckoId,
-          isCertified: false,
+          isCertified: token.isCertified,
           networkKey: token.networkKey ?? activeNetworkKey,
           tokenStandard: token.tokenStandard,
         ),
@@ -2566,6 +2562,7 @@ class BlockchainService extends ChangeNotifier {
       imageUrl: token.imageUrl,
       networkKey: networkKey,
       tokenStandard: tokenStandard,
+      isCertified: token.isCertified,
     );
   }
 
@@ -2708,7 +2705,7 @@ class BlockchainService extends ChangeNotifier {
         decimals: token.decimals,
         imageUrl: token.imageUrl,
         coinGeckoId: token.coinGeckoId,
-        isCertified: false,
+        isCertified: token.isCertified,
         networkKey: token.networkKey ?? activeNetworkKey,
         tokenStandard: token.tokenStandard,
       ),
@@ -2742,6 +2739,7 @@ class BlockchainService extends ChangeNotifier {
           'address': 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
           'decimals': '6',
           'coinGeckoId': 'usd-coin',
+          'isCertified': 'true',
         },
         {
           'symbol': 'USDT',
@@ -2749,6 +2747,7 @@ class BlockchainService extends ChangeNotifier {
           'address': 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
           'decimals': '6',
           'coinGeckoId': 'tether',
+          'isCertified': 'true',
         },
       ];
     }
@@ -2761,6 +2760,7 @@ class BlockchainService extends ChangeNotifier {
           'address': 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
           'decimals': '6',
           'coinGeckoId': 'tether',
+          'isCertified': 'true',
         },
         {
           'symbol': 'USDC',
@@ -2768,6 +2768,7 @@ class BlockchainService extends ChangeNotifier {
           'address': 'TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8',
           'decimals': '6',
           'coinGeckoId': 'usd-coin',
+          'isCertified': 'true',
         },
       ];
     }
@@ -2782,6 +2783,7 @@ class BlockchainService extends ChangeNotifier {
           'decimals': '6',
           'coinGeckoId': 'usd-coin',
           'imageUrl': 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
+          'isCertified': 'true',
         },
         {
           'symbol': 'USDT',
@@ -2790,6 +2792,86 @@ class BlockchainService extends ChangeNotifier {
           'decimals': '6',
           'coinGeckoId': 'tether',
           'imageUrl': 'https://cryptologos.cc/logos/tether-usdt-logo.png',
+          'isCertified': 'true',
+        },
+      ]);
+    }
+    if (chainId == 56) {
+      tokens.addAll([
+        {
+          'symbol': 'USDT',
+          'name': 'Tether',
+          'address': '0x55d398326f99059fF775485246999027B3197955',
+          'decimals': '18',
+          'coinGeckoId': 'tether',
+          'isCertified': 'true',
+        },
+        {
+          'symbol': 'USDC',
+          'name': 'USD Coin',
+          'address': '0x8aC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+          'decimals': '18',
+          'coinGeckoId': 'usd-coin',
+          'isCertified': 'true',
+        },
+      ]);
+    }
+    if (chainId == 137) {
+      tokens.addAll([
+        {
+          'symbol': 'USDC',
+          'name': 'USD Coin',
+          'address': '0x3c499c542cef5e3811e1192ce70d8cc03d5c3359',
+          'decimals': '6',
+          'coinGeckoId': 'usd-coin',
+          'isCertified': 'true',
+        },
+        {
+          'symbol': 'USDT',
+          'name': 'Tether',
+          'address': '0xc2132D05D31c914a87C6611C10748AaCB58e8F',
+          'decimals': '6',
+          'coinGeckoId': 'tether',
+          'isCertified': 'true',
+        },
+      ]);
+    }
+    if (chainId == 8453) {
+      tokens.addAll([
+        {
+          'symbol': 'USDC',
+          'name': 'USD Coin',
+          'address': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+          'decimals': '6',
+          'coinGeckoId': 'usd-coin',
+          'isCertified': 'true',
+        },
+        {
+          'symbol': 'USDT',
+          'name': 'Tether',
+          'address': '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2',
+          'decimals': '6',
+          'coinGeckoId': 'tether',
+          'isCertified': 'true',
+        },
+      ]);
+    }
+    if (chainId == 42161) {
+      tokens.addAll([
+        {
+          'symbol': 'USDC',
+          'name': 'USD Coin',
+          'address': '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+          'decimals': '6',
+          'coinGeckoId': 'usd-coin',
+          'isCertified': 'true',
+        },
+        {
+          'symbol': 'USDT',
+          'name': 'Tether',
+          'address': '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+          'decimals': '6',
+          'coinGeckoId': 'tether',
           'isCertified': 'true',
         },
       ]);

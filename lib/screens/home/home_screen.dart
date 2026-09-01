@@ -1505,7 +1505,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openHomeBanner(HomeBannerItem banner) async {
-    await InAppLinkRouter.open(context, banner.linkUrl);
+    await InAppLinkRouter.open(
+      context,
+      banner.linkUrl,
+      miniAppLaunchSource: 'home_banner',
+    );
   }
 
   Future<void> _loadHomeBanners() async {
@@ -1627,7 +1631,7 @@ class _HomeScreenState extends State<HomeScreen> {
       '/owllet-pay',
       arguments: MiniAppHostArguments(
         miniAppId: 'owllet_pay',
-        launchSource: 'home',
+        launchSource: 'home_deposit',
         initialUrl: depositUrl,
       ),
     );
@@ -1646,7 +1650,7 @@ class _HomeScreenState extends State<HomeScreen> {
       '/owllet-pay',
       arguments: MiniAppHostArguments(
         miniAppId: 'owllet_pay',
-        launchSource: 'home',
+        launchSource: 'home_withdraw',
         initialUrl: withdrawUrl,
       ),
     );
