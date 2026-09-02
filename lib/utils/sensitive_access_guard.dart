@@ -13,10 +13,18 @@ import '../services/wallet_two_factor_service.dart';
 class SensitiveAccessGuard {
   SensitiveAccessGuard._();
 
-  static final WalletTwoFactorService _walletTwoFactorService =
-      WalletTwoFactorService();
-  static final BiometricService _biometricService = BiometricService();
-  static final StorageService _storage = StorageService();
+  @visibleForTesting
+  static WalletTwoFactorService? walletTwoFactorServiceMock;
+  @visibleForTesting
+  static BiometricService? biometricServiceMock;
+  @visibleForTesting
+  static StorageService? storageMock;
+
+  static WalletTwoFactorService get _walletTwoFactorService =>
+      walletTwoFactorServiceMock ?? WalletTwoFactorService();
+  static BiometricService get _biometricService =>
+      biometricServiceMock ?? BiometricService();
+  static StorageService get _storage => storageMock ?? StorageService();
 
   // Passcode rules must match the unlock screen (digit-only PIN pad,
   // 6-12 digits); otherwise a passcode set here could be impossible to
