@@ -29,7 +29,6 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
-  bool _isObscured = true;
   int _wordCount = 0;
 
   @override
@@ -238,9 +237,8 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                             ),
                             child: TextField(
                               controller: _secretPhraseController,
-                              obscureText: _isObscured,
-                              maxLines: _isObscured ? 1 : null,
-                              minLines: _isObscured ? 1 : 6,
+                              maxLines: null,
+                              minLines: 6,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 color: Colors.white,
@@ -265,49 +263,27 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                           Positioned(
                             right: 12,
                             bottom: 12,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  icon: Icon(
-                                    _isObscured
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                    color: const Color(0xFFB7B5B4),
-                                    size: 20,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _isObscured = !_isObscured;
-                                    });
-                                  },
+                            child: GestureDetector(
+                              onTap: _pasteFromClipboard,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
                                 ),
-                                const SizedBox(width: 12),
-                                GestureDetector(
-                                  onTap: _pasteFromClipboard,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0x0DFFB3AD),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      'PASTE',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: const Color(0xFFEA2A33),
-                                        letterSpacing: 0.6,
-                                      ),
-                                    ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x0DFFB3AD),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'PASTE',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFEA2A33),
+                                    letterSpacing: 0.6,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
