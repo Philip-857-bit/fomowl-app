@@ -26,7 +26,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   final List<TextEditingController> _controllers = [];
   final List<FocusNode> _focusNodes = [];
-  final Random _random = Random();
+  final Random _random = Random.secure();
 
   List<String>? _originalPhrase;
   List<int> _verificationIndexes = const [];
