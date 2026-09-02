@@ -20,6 +20,7 @@ void main() {
         '0.0.0.0',
         '255.255.255.255',
         '::1',
+        '::',
         'fd00::1',
         'fe80::1',
         '[::1]',
@@ -28,6 +29,12 @@ void main() {
       ]) {
         expect(isBlockedRpcHost(host), isTrue, reason: 'should block $host');
       }
+    });
+
+    test('blocks empty or whitespace hosts', () {
+      expect(isBlockedRpcHost(''), isTrue);
+      expect(isBlockedRpcHost('   '), isTrue);
+      expect(isBlockedRpcHost('[]'), isTrue);
     });
 
     test('allows public hosts and public IPs', () {
@@ -51,6 +58,7 @@ void main() {
     });
 
     test('rejects empty, non-https, malformed and private hosts', () {
+      expect(validateCustomRpcUrl(null), isNotNull);
       expect(validateCustomRpcUrl(''), isNotNull);
       expect(validateCustomRpcUrl('   '), isNotNull);
       expect(validateCustomRpcUrl('http://eth.llamarpc.com'), isNotNull);
