@@ -26,6 +26,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final TextEditingController _privateKeyController = TextEditingController();
   final WalletService _walletService = WalletService();
   bool _isLoading = false;
+  bool _isObscured = true;
   ChainFamily _selectedChain = ChainFamily.evm;
 
   @override
@@ -298,7 +299,8 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     children: [
                       TextField(
                         controller: _privateKeyController,
-                        maxLines: 4,
+                        obscureText: _isObscured,
+                        maxLines: _isObscured ? 1 : 4,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           color: Colors.white,
@@ -321,17 +323,36 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                       // Paste button
                       Positioned(
                         right: 12,
-                        bottom: 12,
-                        child: TextButton(
-                          onPressed: _pasteFromClipboard,
-                          child: Text(
-                            l.paste,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFFEB3F3F),
+                        bottom: 4,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                _isObscured
+                                    ? Icons.visibility
+                                    : Icons.visibility_off,
+                                color: Colors.white70,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isObscured = !_isObscured;
+                                });
+                              },
                             ),
-                          ),
+                            TextButton(
+                              onPressed: _pasteFromClipboard,
+                              child: Text(
+                                l.paste,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFFEB3F3F),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
