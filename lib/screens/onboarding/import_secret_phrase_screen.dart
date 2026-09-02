@@ -26,6 +26,7 @@ class ImportSecretPhraseScreen extends StatefulWidget {
 class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   final TextEditingController _walletNameController = TextEditingController();
   final TextEditingController _secretPhraseController = TextEditingController();
+  bool _obscureSecretPhrase = true;
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
@@ -237,8 +238,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                             ),
                             child: TextField(
                               controller: _secretPhraseController,
-                              maxLines: null,
-                              minLines: 6,
+                              maxLines: _obscureSecretPhrase ? 1 : null,
+                              minLines: _obscureSecretPhrase ? 1 : 6,
+                              obscureText: _obscureSecretPhrase,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 color: Colors.white,
@@ -256,6 +258,20 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                                 hintStyle: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: const Color(0xB8B7B5B4),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureSecretPhrase
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Colors.white54,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureSecretPhrase =
+                                          !_obscureSecretPhrase;
+                                    });
+                                  },
                                 ),
                               ),
                             ),

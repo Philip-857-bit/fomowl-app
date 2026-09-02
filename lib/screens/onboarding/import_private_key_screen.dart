@@ -24,6 +24,7 @@ class ImportPrivateKeyScreen extends StatefulWidget {
 class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final TextEditingController _walletNameController = TextEditingController();
   final TextEditingController _privateKeyController = TextEditingController();
+  bool _obscurePrivateKey = true;
   final WalletService _walletService = WalletService();
   bool _isLoading = false;
   ChainFamily _selectedChain = ChainFamily.evm;
@@ -298,7 +299,8 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     children: [
                       TextField(
                         controller: _privateKeyController,
-                        maxLines: 4,
+                        maxLines: _obscurePrivateKey ? 1 : 4,
+                        obscureText: _obscurePrivateKey,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           color: Colors.white,
@@ -315,6 +317,19 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                           hintStyle: GoogleFonts.outfit(
                             fontSize: 16,
                             color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePrivateKey
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                              color: Colors.white54,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePrivateKey = !_obscurePrivateKey;
+                              });
+                            },
                           ),
                         ),
                       ),
