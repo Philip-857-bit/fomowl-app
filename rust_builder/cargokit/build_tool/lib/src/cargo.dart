@@ -9,7 +9,7 @@ import 'package:toml/toml.dart';
 class ManifestException {
   ManifestException(this.message, {required this.fileName});
 
-  String? fileName;
+  final String? fileName;
   final String message;
 
   @override
@@ -27,7 +27,7 @@ class CrateInfo {
 
   final String packageName;
 
-  static CrateInfo parseManifest(String manifest, {String? fileName}) {
+  static CrateInfo parseManifest(String manifest, {final String? fileName}) {
     final toml = TomlDocument.parse(manifest);
     final package = toml.toMap()['package'];
     if (package == null) {
