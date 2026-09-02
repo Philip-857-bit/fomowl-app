@@ -12,9 +12,7 @@ import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
 void main() {
   setUpAll(() async {
-    try {
-      await RustLib.init();
-    } catch (_) {}
+    await RustLib.init();
   });
 
   test('normalizeMnemonic collapses whitespace and lowercases', () {
@@ -237,11 +235,7 @@ void main() {
         );
         final walletService = WalletService(storageService: storage);
 
-        try {
-          await walletService.createWalletFromMnemonic(mnemonic);
-        } catch (_) {
-          return; // Skip if FFI is not available
-        }
+        await walletService.createWalletFromMnemonic(mnemonic);
         final account = await walletService.getActiveWalletAccount();
         expect(account, isNotNull);
 
@@ -291,11 +285,7 @@ void main() {
       );
       final walletService = WalletService(storageService: storage);
 
-      try {
-        await walletService.createWalletFromMnemonic(mnemonic);
-      } catch (_) {
-        return; // Skip if FFI is not available
-      }
+      await walletService.createWalletFromMnemonic(mnemonic);
       final original = (await walletService.getActiveWalletAccount())!;
       final evmKey = await walletService.exportPrivateKeyForFamily(
         original,
