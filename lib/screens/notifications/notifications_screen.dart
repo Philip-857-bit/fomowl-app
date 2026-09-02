@@ -126,7 +126,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final response = await _apiClient.get(path);
 
       if (response.statusCode == 200) {
-        final data = response.data;
+        final rawData = response.data;
+        if (rawData is! Map<String, dynamic>) {
+          if (!mounted) return;
+          setState(() {
+            _isLoading = false;
+            _errorMessage = l.networkError;
+          });
+          return;
+        }
+        final data = rawData;
         final rawList = data['notifications'];
         final notifList = rawList is List ? rawList : const <dynamic>[];
 
