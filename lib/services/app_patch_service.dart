@@ -209,6 +209,8 @@ class AppPatchService extends ChangeNotifier {
       );
     } on UpdateException catch (error) {
       await _setFailure(error.message);
+    } on ReadPatchException catch (error) {
+      await _setFailure(error.message);
     } catch (error) {
       await _setFailure(error.toString());
     }

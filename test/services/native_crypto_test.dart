@@ -32,7 +32,7 @@ void main() {
           privateKeyHex: '0x123',
           jsonData: '{}',
         ),
-        throwsA(anything),
+        throwsA(anyOf(isA<Exception>(), isA<Error>())),
       );
     });
   });
