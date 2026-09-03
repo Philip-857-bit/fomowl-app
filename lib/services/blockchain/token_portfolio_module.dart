@@ -2,12 +2,11 @@ import '../../models/chain.dart';
 import '../../models/token.dart';
 
 typedef PriceFetcher = Future<Map<String, double>> Function(List<String> ids);
-typedef BalanceFetcher =
-    Future<double> Function(
-      String walletAddress,
-      String tokenAddress,
-      int decimals,
-    );
+typedef BalanceFetcher = Future<double> Function(
+  String walletAddress,
+  String tokenAddress,
+  int decimals,
+);
 typedef IconResolver = String? Function(String symbol);
 
 class TokenPortfolioModule {

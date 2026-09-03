@@ -33,8 +33,7 @@ class AdminMaintainersSection extends StatelessWidget {
       children: [
         AdminSectionHeading(
           title: l10n.adminMaintainers,
-          subtitle:
-              'Manage privileged wallets for admin actions. Added maintainers can use the panel immediately.',
+          subtitle: 'Manage privileged wallets for admin actions. Added maintainers can use the panel immediately.',
         ),
         AdminCard(
           child: Column(
@@ -77,8 +76,7 @@ class AdminMaintainersSection extends StatelessWidget {
         if (maintainers.isEmpty)
           const AdminEmptyState(
             title: 'No maintainers loaded',
-            message:
-                'No maintainer records were returned yet. Try refreshing this section.',
+            message: 'No maintainer records were returned yet. Try refreshing this section.',
           )
         else
           ...maintainers.map(
@@ -138,8 +136,7 @@ class AdminRegistrySection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Token registry',
-          subtitle:
-              'Search discovered tokens and approve trusted assets for wallet display.',
+          subtitle: 'Search discovered tokens and approve trusted assets for wallet display.',
         ),
         AdminCard(
           child: Column(
@@ -187,8 +184,7 @@ class AdminRegistrySection extends StatelessWidget {
         if (registryTokens.isEmpty)
           const AdminEmptyState(
             title: 'No registry tokens found',
-            message:
-                'No tokens matched the current filter. Clear search or refresh the list.',
+            message: 'No tokens matched the current filter. Clear search or refresh the list.',
           )
         else
           ...registryTokens.map(

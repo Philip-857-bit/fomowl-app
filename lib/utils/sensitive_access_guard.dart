@@ -365,8 +365,7 @@ class SensitiveAccessGuard {
                             final code = controller.text.trim();
                             if (code.length != 6) {
                               setState(() {
-                                errorText =
-                                    'Enter the 6-digit code from your authenticator app.';
+                                errorText = 'Enter the 6-digit code from your authenticator app.';
                               });
                               return;
                             }

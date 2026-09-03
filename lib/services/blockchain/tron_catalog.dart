@@ -9,8 +9,7 @@ class TronCatalog {
     rpcUrl: 'https://api.trongrid.io',
     coinGeckoId: 'tron',
     explorerUrl: 'https://tronscan.org',
-    logoUrl:
-        'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
+    logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
   );
 
   static const List<TronChain> builtInChains = [mainnet];

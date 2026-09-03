@@ -31,8 +31,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/1/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://etherscan.io',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
     ),
     EvmChain(
       name: 'BNB Smart Chain',
@@ -41,8 +40,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/56/rpc').toString(),
       coinGeckoId: 'binancecoin',
       explorerUrl: 'https://bscscan.com',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
     ),
     EvmChain(
       name: 'Polygon',
@@ -51,8 +49,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/137/rpc').toString(),
       coinGeckoId: 'matic-network',
       explorerUrl: 'https://polygonscan.com',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
     ),
     EvmChain(
       name: 'Arbitrum One',
@@ -61,8 +58,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/42161/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://arbiscan.io',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
     ),
     EvmChain(
       name: 'Optimism',
@@ -71,8 +67,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/10/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://optimistic.etherscan.io',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
     ),
     EvmChain(
       name: 'Base',
@@ -81,8 +76,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/8453/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://basescan.org',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/base/info/logo.png',
     ),
     EvmChain(
       name: 'ZkSync Era',
@@ -91,8 +85,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/324/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://explorer.zksync.io',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zksync/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zksync/info/logo.png',
     ),
     EvmChain(
       name: 'Avalanche C-Chain',
@@ -101,8 +94,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/43114/rpc').toString(),
       coinGeckoId: 'avalanche-2',
       explorerUrl: 'https://snowtrace.io',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
     ),
     EvmChain(
       name: 'Fantom',
@@ -111,8 +103,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/250/rpc').toString(),
       coinGeckoId: 'fantom',
       explorerUrl: 'https://ftmscan.com',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/fantom/info/logo.png',
     ),
     EvmChain(
       name: 'Gnosis',
@@ -121,8 +112,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/100/rpc').toString(),
       coinGeckoId: 'xdai',
       explorerUrl: 'https://gnosisscan.io',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
     ),
     EvmChain(
       name: 'Klaytn',
@@ -131,8 +121,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/8217/rpc').toString(),
       coinGeckoId: 'klay-token',
       explorerUrl: 'https://scope.klaytn.com',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
     ),
     EvmChain(
       name: 'Aurora',
@@ -141,8 +130,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/1313161554/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://explorer.mainnet.aurora.dev',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png',
+      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aurora/info/logo.png',
     ),
     EvmChain(
       name: 'Robinhood Chain',
@@ -151,8 +139,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/4663/rpc').toString(),
       coinGeckoId: 'ethereum',
       explorerUrl: 'https://robinhoodchain.blockscout.com',
-      logoUrl:
-          'https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/rh_favicon_152.png',
+      logoUrl: 'https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/rh_favicon_152.png',
     ),
   ];
 

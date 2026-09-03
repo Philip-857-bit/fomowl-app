@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../services/storage_service.dart';
 
 /// Available app wallet theme modes corresponding to Figma #318:2526 and #318:2332.

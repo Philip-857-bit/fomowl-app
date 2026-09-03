@@ -126,18 +126,16 @@ void main() {
       }),
     );
 
-    final snapshot = await DiscoverTabStorage(
-      secureStore: secureStore,
-    ).load(maxTabs: 5, scopeKey: '0xabc');
+    final snapshot = await DiscoverTabStorage(secureStore: secureStore)
+        .load(maxTabs: 5, scopeKey: '0xabc');
 
     expect(snapshot, isNotNull);
     expect(snapshot!.tabs.length, 5);
     expect(snapshot.activeTabId, snapshot.tabs.first.id);
 
     expect(
-      await DiscoverTabStorage(
-        secureStore: secureStore,
-      ).load(maxTabs: 5, scopeKey: '0xdef'),
+      await DiscoverTabStorage(secureStore: secureStore)
+          .load(maxTabs: 5, scopeKey: '0xdef'),
       isNull,
     );
   });

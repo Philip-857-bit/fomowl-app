@@ -91,9 +91,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
       }
       debugPrint('Failed to persist biometric setting: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateBiometric)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.unableToUpdateBiometric)));
       }
     }
   }
@@ -156,9 +155,8 @@ class _PasswordSecurityScreenState extends State<PasswordSecurityScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _autoLockMinutes = previous);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l.unableToUpdateAutoLock)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.unableToUpdateAutoLock)));
       }
       debugPrint('Failed to persist auto-lock setting: $e');
     }

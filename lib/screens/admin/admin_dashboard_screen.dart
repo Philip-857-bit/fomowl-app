@@ -1041,9 +1041,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _selectSection(_AdminSection section) {

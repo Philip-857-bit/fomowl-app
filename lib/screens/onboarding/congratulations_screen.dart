@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 
@@ -110,9 +111,8 @@ class _CongratulationsScreenState extends State<CongratulationsScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.2),
+                            color: const Color(0xFFEA2A33)
+                                .withValues(alpha: 0.2),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
                           ),

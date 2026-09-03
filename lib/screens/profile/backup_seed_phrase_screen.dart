@@ -14,8 +14,10 @@ import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
 import '../../widgets/mobile_scaffold.dart';
 
-typedef SensitiveAuthVerifier =
-    Future<bool> Function(BuildContext context, {String? reason});
+typedef SensitiveAuthVerifier = Future<bool> Function(
+  BuildContext context, {
+  String? reason,
+});
 typedef VerificationRandomFactory = Random Function();
 typedef SensitiveAccessErrorNotifier = void Function(String message);
 

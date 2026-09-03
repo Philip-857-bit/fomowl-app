@@ -34,9 +34,8 @@ class BuildCMake {
 
     for (final lib in libs) {
       if (lib.type == AritifactType.dylib) {
-        File(
-          lib.path,
-        ).copySync(path.join(Environment.outputDir, lib.finalFileName));
+        File(lib.path)
+            .copySync(path.join(Environment.outputDir, lib.finalFileName));
       }
     }
   }

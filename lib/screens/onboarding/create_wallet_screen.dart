@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+
 import 'dart:async';
 import 'dart:ui';
+
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../services/native_crypto.dart';
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';

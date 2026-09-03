@@ -77,7 +77,6 @@ LimitOrderReadiness resolveLimitOrderReadiness({
   }
   return LimitOrderReadiness(
     buttonLabel: 'Place $side Order',
-    statusMessage:
-        'You pay no gas to place or cancel a limit order. Your first sell-token approval may still need a network fee.',
+    statusMessage: 'You pay no gas to place or cancel a limit order. Your first sell-token approval may still need a network fee.',
   );
 }

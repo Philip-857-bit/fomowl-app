@@ -68,22 +68,19 @@ void main() {
       expect(theme.balanceCardGradient.colors.first, const Color(0xFF3B080A));
     });
 
-    test(
-      'Built-in Preset chains (Polygon, Arbitrum, Optimism, Avalanche) resolve correctly',
-      () {
-        final polygonTheme = AppChainTheme.forNetworkKey('evm:137');
-        expect(polygonTheme.accentColor, const Color(0xFF8247E5));
+    test('Built-in Preset chains (Polygon, Arbitrum, Optimism, Avalanche) resolve correctly', () {
+      final polygonTheme = AppChainTheme.forNetworkKey('evm:137');
+      expect(polygonTheme.accentColor, const Color(0xFF8247E5));
 
-        final arbTheme = AppChainTheme.forNetworkKey('evm:42161');
-        expect(arbTheme.accentColor, const Color(0xFF28A0F0));
+      final arbTheme = AppChainTheme.forNetworkKey('evm:42161');
+      expect(arbTheme.accentColor, const Color(0xFF28A0F0));
 
-        final opTheme = AppChainTheme.forNetworkKey('evm:10');
-        expect(opTheme.accentColor, const Color(0xFFFF0420));
+      final opTheme = AppChainTheme.forNetworkKey('evm:10');
+      expect(opTheme.accentColor, const Color(0xFFFF0420));
 
-        final avaxTheme = AppChainTheme.forNetworkKey('evm:43114');
-        expect(avaxTheme.accentColor, const Color(0xFFE84142));
-      },
-    );
+      final avaxTheme = AppChainTheme.forNetworkKey('evm:43114');
+      expect(avaxTheme.accentColor, const Color(0xFFE84142));
+    });
 
     test('Custom unconfigured EVM chain resolves deterministic fallback', () {
       final customChain = const EvmChain(

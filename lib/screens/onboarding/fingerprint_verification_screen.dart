@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../widgets/mobile_scaffold.dart';
 
 /// Fingerprint Verification Screen – intro (Figma 41:341)
@@ -83,9 +84,8 @@ class FingerprintVerificationScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.3),
+                            color: const Color(0xFFEA2A33)
+                                .withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 8),
                           ),

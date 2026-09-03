@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/biometric_service.dart';
 import '../../services/storage_service.dart';
@@ -141,9 +142,8 @@ class _BiometricSetupScreenState extends State<BiometricSetupScreen> {
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(
-                                  0xFFEA2A33,
-                                ).withValues(alpha: 0.3),
+                                color: const Color(0xFFEA2A33)
+                                    .withValues(alpha: 0.3),
                                 blurRadius: 15,
                                 offset: const Offset(0, 10),
                               ),

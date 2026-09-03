@@ -331,28 +331,17 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         },
         'profile': profilePayload,
         'tokenLogos': const <String, String>{
-          'USDT':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
-          'USDC':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
-          'ETH':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
-          'BNB':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
-          'MATIC':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
-          'POL':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
-          'SOL':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
-          'TRX':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
-          'BTC':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/assets/BTCB-1DE/logo.png',
-          'DAI':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png',
-          'AVAX':
-              'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
+          'USDT': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
+          'USDC': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
+          'ETH': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+          'BNB': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png',
+          'MATIC': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+          'POL': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
+          'SOL': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+          'TRX': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
+          'BTC': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/binance/assets/BTCB-1DE/logo.png',
+          'DAI': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png',
+          'AVAX': 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
         },
         'capabilities': <String, dynamic>{
           'ready': true,
@@ -1398,8 +1387,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         action != 'wallet_transfer') {
       return const <String, dynamic>{
         'ok': false,
-        'error':
-            'Withdrawals settle in USDT or USDC. To withdraw another token, swap it to USDT in your wallet first, then withdraw.',
+        'error': 'Withdrawals settle in USDT or USDC. To withdraw another token, swap it to USDT in your wallet first, then withdraw.',
       };
     }
 
@@ -1626,8 +1614,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       if (pinned == null) {
         return const <String, dynamic>{
           'ok': false,
-          'error':
-              'The requested address does not match any wallet in this Owllet account.',
+          'error': 'The requested address does not match any wallet in this Owllet account.',
         };
       }
     }

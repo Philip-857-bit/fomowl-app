@@ -4,7 +4,9 @@ import 'dart:math';
 
 import 'package:argon2/argon2.dart' as dart_argon2;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../src/rust/api/argon2.dart' as rust_argon2;
+
 import 'package:flutter/foundation.dart';
 
 import '../models/chain.dart';
