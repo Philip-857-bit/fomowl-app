@@ -29,7 +29,7 @@ class TokenTrustUtils {
       'USDT': {'0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9'},
     },
     792703809: {
-      'USDC': {'epjfwdd5aufqssqem2qn1xzybapc8g4wegkgzwytdt1v'},
+      'USDC': {'epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v'},
       'USDT': {'es9vmfrzacermjfrf4h2fyd4kconky11mcce8benwnyb'},
     },
     728126428: {
@@ -37,7 +37,7 @@ class TokenTrustUtils {
       'USDC': {'tekxitehnzsmse2xqrbj4w32run966rdz8'},
     },
     -501: {
-      'USDC': {'epjfwdd5aufqssqem2qn1xzybapc8g4wegkgzwytdt1v'},
+      'USDC': {'epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v'},
       'USDT': {'es9vmfrzacermjfrf4h2fyd4kconky11mcce8benwnyb'},
     },
     -195: {
