@@ -29,6 +29,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
+  bool _obscureSecretPhrase = true;
   int _wordCount = 0;
 
   @override
@@ -237,8 +238,9 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                             ),
                             child: TextField(
                               controller: _secretPhraseController,
-                              maxLines: null,
-                              minLines: 6,
+                              obscureText: _obscureSecretPhrase,
+                              maxLines: _obscureSecretPhrase ? 1 : null,
+                              minLines: _obscureSecretPhrase ? 1 : 6,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 color: Colors.white,
@@ -256,6 +258,20 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                                 hintStyle: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: const Color(0xB8B7B5B4),
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureSecretPhrase
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscureSecretPhrase =
+                                          !_obscureSecretPhrase;
+                                    });
+                                  },
                                 ),
                               ),
                             ),

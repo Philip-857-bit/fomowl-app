@@ -26,6 +26,7 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final TextEditingController _privateKeyController = TextEditingController();
   final WalletService _walletService = WalletService();
   bool _isLoading = false;
+  bool _obscurePrivateKey = true;
   ChainFamily _selectedChain = ChainFamily.evm;
 
   @override
@@ -298,7 +299,8 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                     children: [
                       TextField(
                         controller: _privateKeyController,
-                        maxLines: 4,
+                        obscureText: _obscurePrivateKey,
+                        maxLines: _obscurePrivateKey ? 1 : 4,
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           color: Colors.white,
@@ -315,6 +317,19 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                           hintStyle: GoogleFonts.outfit(
                             fontSize: 16,
                             color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePrivateKey
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.white.withValues(alpha: 0.5),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePrivateKey = !_obscurePrivateKey;
+                              });
+                            },
                           ),
                         ),
                       ),
