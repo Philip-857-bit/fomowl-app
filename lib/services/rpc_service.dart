@@ -1,7 +1,5 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
-
 import 'base_service.dart';
 import 'http_client_service.dart';
 

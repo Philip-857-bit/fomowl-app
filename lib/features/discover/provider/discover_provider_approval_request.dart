@@ -12,7 +12,8 @@ class DiscoverProviderApprovalRequest {
   final String confirmLabel;
 }
 
-typedef DiscoverProviderApprovalHandler = Future<bool> Function(
-  BuildContext context,
-  DiscoverProviderApprovalRequest request,
-);
+typedef DiscoverProviderApprovalHandler =
+    Future<bool> Function(
+      BuildContext context,
+      DiscoverProviderApprovalRequest request,
+    );

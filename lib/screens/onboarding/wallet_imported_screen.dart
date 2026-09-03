@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../widgets/mobile_scaffold.dart';
 
 /// Wallet Imported Success Screen (Figma 41-2)

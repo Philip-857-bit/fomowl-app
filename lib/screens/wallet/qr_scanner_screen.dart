@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-
 import '../../constants/app_colors.dart';
 import '../../services/walletconnect/wallet_connect_service.dart';
 

@@ -249,7 +249,9 @@ class BrowserSessionController extends ChangeNotifier {
         BlockedNavigationState(
           url: uri.toString(),
           origin: uri.host.isEmpty ? '' : normalizeOriginFromUri(uri),
-          reason: phishingCheck.reason ?? 'Security Alert: Access to this website is blocked to protect your funds.',
+          reason:
+              phishingCheck.reason ??
+              'Security Alert: Access to this website is blocked to protect your funds.',
         ),
       );
       return false;

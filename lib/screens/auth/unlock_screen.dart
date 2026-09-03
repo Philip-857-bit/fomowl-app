@@ -1,8 +1,6 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../../services/storage_service.dart';
 import '../../services/biometric_service.dart';
 import '../../widgets/mobile_scaffold.dart';

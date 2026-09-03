@@ -129,8 +129,9 @@ class ForcedUpdateDialog extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFEA2A33)
-                                        .withValues(alpha: 0.35),
+                                    color: const Color(
+                                      0xFFEA2A33,
+                                    ).withValues(alpha: 0.35),
                                     blurRadius: 10,
                                     offset: const Offset(0, 2),
                                   ),

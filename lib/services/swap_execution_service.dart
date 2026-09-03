@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:web3dart/crypto.dart';

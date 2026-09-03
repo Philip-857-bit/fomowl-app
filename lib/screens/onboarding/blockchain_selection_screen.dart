@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
 import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/referral_service.dart';
@@ -41,7 +40,8 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
       label: 'EVM Ecosystem',
       subtitle: 'Ethereum, L2s, and Sidechains',
       iconBgColor: Color(0xFF627EEA),
-      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
       logoSize: 34,
     ),
     _ChainOption(
@@ -49,7 +49,8 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
       label: 'Solana',
       subtitle: 'High-speed monolithic chain',
       iconBgColor: Colors.black,
-      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
       logoSize: 28,
     ),
     _ChainOption(
@@ -57,7 +58,8 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
       label: 'Tron',
       subtitle: 'Global payment infrastructure',
       iconBgColor: Color(0xFF1B1B1B),
-      logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
       logoSize: 28,
     ),
   ];

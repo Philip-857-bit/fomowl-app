@@ -361,8 +361,9 @@ class AppErrorUtils {
       '10.0.3.2',
       'onrender.com',
     ]);
-    final hasInfraShape = RegExp(r'\b\d{1,3}(\.\d{1,3}){3}:\d+\b')
-        .hasMatch(raw);
+    final hasInfraShape = RegExp(
+      r'\b\d{1,3}(\.\d{1,3}){3}:\d+\b',
+    ).hasMatch(raw);
 
     return hasUrl || hasLocalHost || hasInfraShape;
   }

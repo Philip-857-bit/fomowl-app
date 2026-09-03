@@ -331,8 +331,9 @@ class _DecentralizedProfileScreenState
       final trimmedSecret = secret?.trim() ?? '';
       if (trimmedSecret.isEmpty) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
         return;
       }
 
@@ -372,8 +373,9 @@ class _DecentralizedProfileScreenState
         if (verifyResponse.statusCode == 401 ||
             verifyResponse.statusCode == 403) {
           if (mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l.adminSecretRequired)));
           }
           return;
         }
@@ -538,8 +540,9 @@ class _DecentralizedProfileScreenState
     final blockchain = Provider.of<BlockchainService>(context);
     final patchService = context.watch<AppPatchService>();
     final localeName =
-        LanguageUtils.languageNamesByCode[Localizations.localeOf(context)
-            .languageCode] ??
+        LanguageUtils.languageNamesByCode[Localizations.localeOf(
+          context,
+        ).languageCode] ??
         LanguageUtils.languageNamesByCode['en']!;
 
     return Scaffold(
@@ -579,8 +582,9 @@ class _DecentralizedProfileScreenState
                                 alignment: AlignmentDirectional.centerStart,
                                 child: IconButton(
                                   key: const ValueKey('settings-back-button'),
-                                  tooltip: MaterialLocalizations.of(context)
-                                      .backButtonTooltip,
+                                  tooltip: MaterialLocalizations.of(
+                                    context,
+                                  ).backButtonTooltip,
                                   onPressed: _closeStandaloneSettings,
                                   constraints: const BoxConstraints(
                                     minWidth: 44,
@@ -866,8 +870,9 @@ class _DecentralizedProfileScreenState
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFEF4444),
                           side: BorderSide(
-                            color: const Color(0xFFEF4444)
-                                .withValues(alpha: 0.25),
+                            color: const Color(
+                              0xFFEF4444,
+                            ).withValues(alpha: 0.25),
                             width: 1,
                           ),
                           padding: const EdgeInsets.symmetric(

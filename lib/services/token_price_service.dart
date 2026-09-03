@@ -1,7 +1,5 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
-
 import '../config/app_environment.dart';
 import 'base_service.dart';
 import '../models/token_market_data.dart';

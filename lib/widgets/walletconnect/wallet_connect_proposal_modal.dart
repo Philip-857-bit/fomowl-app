@@ -287,7 +287,8 @@ class WalletConnectProposalModal extends StatelessWidget {
                           const SizedBox(height: 6),
                           _buildPermissionItem(
                             icon: Icons.touch_app_outlined,
-                            text: 'Request approval for transactions and signatures',
+                            text:
+                                'Request approval for transactions and signatures',
                           ),
                         ],
                       ),

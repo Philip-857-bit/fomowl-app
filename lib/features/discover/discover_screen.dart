@@ -368,8 +368,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     }
     session.openDapp(
       dapp,
-      invalidLaunchUrlReason: AppLocalizations.of(context)
-          .discoverInvalidLaunchUrl,
+      invalidLaunchUrlReason: AppLocalizations.of(
+        context,
+      ).discoverInvalidLaunchUrl,
     );
   }
 
@@ -476,8 +477,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         builder: (_) => FeedbackScreen(
           initialCategory: 'dapp_request',
           initialSubject: AppLocalizations.of(context).discoverSupportSubject,
-          initialMessage: AppLocalizations.of(context)
-              .discoverSupportMessage(state.origin, state.url, state.reason),
+          initialMessage: AppLocalizations.of(
+            context,
+          ).discoverSupportMessage(state.origin, state.url, state.reason),
         ),
       ),
     );

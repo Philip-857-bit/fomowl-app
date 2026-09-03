@@ -59,9 +59,11 @@ const legalContactRows = [
 const termsDocument = LegalDocument(
   heroTitle: 'Terms of Service for Owllet',
   effectiveDate: '29/03/2026',
-  intro: 'Please read these terms carefully. By accessing Owllet, you enter a binding digital compact governing your use of our decentralized wallet infrastructure.',
+  intro:
+      'Please read these terms carefully. By accessing Owllet, you enter a binding digital compact governing your use of our decentralized wallet infrastructure.',
   finalQuote: '"Not your keys, not your coins"',
-  finalBody: 'Owllet is designed to give you full control and ownership of your assets. With that control comes full personal responsibility. Use responsibly and stay safe.',
+  finalBody:
+      'Owllet is designed to give you full control and ownership of your assets. With that control comes full personal responsibility. Use responsibly and stay safe.',
   sections: [
     LegalSection(
       number: '01',
@@ -106,7 +108,8 @@ const termsDocument = LegalDocument(
       ],
       warning: LegalWarning(
         title: 'Important Warning',
-        body: 'If you lose your recovery seed phrase or private keys, your funds may be permanently inaccessible. FOMOwl Inc. cannot recover them.',
+        body:
+            'If you lose your recovery seed phrase or private keys, your funds may be permanently inaccessible. FOMOwl Inc. cannot recover them.',
       ),
     ),
     LegalSection(
@@ -222,9 +225,11 @@ const termsDocument = LegalDocument(
 const privacyDocument = LegalDocument(
   heroTitle: 'Privacy Policy for Owllet',
   effectiveDate: '29/03/2026',
-  intro: 'This Privacy Policy explains how FOMOwl Inc. handles information when you use Owllet, our non-custodial cryptocurrency wallet.',
+  intro:
+      'This Privacy Policy explains how FOMOwl Inc. handles information when you use Owllet, our non-custodial cryptocurrency wallet.',
   finalQuote: 'You own your keys. You own your data.',
-  finalBody: 'Owllet is designed with maximum user privacy and control in mind. We collect as little as possible and keep sensitive wallet operations on your device.',
+  finalBody:
+      'Owllet is designed with maximum user privacy and control in mind. We collect as little as possible and keep sensitive wallet operations on your device.',
   sections: [
     LegalSection(
       number: '01',
