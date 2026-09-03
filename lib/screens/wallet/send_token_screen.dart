@@ -15,6 +15,7 @@ import '../../utils/amount_utils.dart';
 import '../../utils/send_amount_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
+import 'widgets/send/amount_font_fit.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/send_primary_button.dart';
@@ -566,6 +567,19 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     return 0.0;
   }
 
+  /// Shrinks the amount so a long value (e.g. from the 100% button) always fits
+  /// before the token symbol suffix instead of overflowing into it.
+  double _amountFontSizeFor(String text, String suffix, double boxWidth) {
+    return fittedAmountFontSize(
+      amountText: text,
+      amountStyleFor: (fontSize) =>
+          GoogleFonts.inter(fontSize: fontSize, fontWeight: FontWeight.w700),
+      suffixText: suffix,
+      suffixStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
+      boxWidth: boxWidth,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     context.select<CurrencyController, String>(
@@ -764,37 +778,57 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: const Color(0xFF2A333D)),
                       ),
-                      child: TextField(
-                        controller: _displayController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: '0',
-                          hintStyle: GoogleFonts.inter(
-                            color: const Color(0xFF64748B),
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          suffixText: tokenSymbol,
-                          suffixStyle: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: _displayController,
+                            builder: (context, value, _) {
+                              // Shrink the amount so a long value (e.g. from the
+                              // 100% button) always fits before the token symbol
+                              // instead of overflowing into it.
+                              final amountFontSize = _amountFontSizeFor(
+                                value.text,
+                                tokenSymbol,
+                                constraints.maxWidth,
+                              );
+                              return TextField(
+                                controller: _displayController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: amountFontSize,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                decoration: InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: '0',
+                                  hintStyle: GoogleFonts.inter(
+                                    color: const Color(0xFF64748B),
+                                    fontSize: amountFontSize,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  suffixText: tokenSymbol,
+                                  suffixStyle: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
                     ),
                     if (equivalentText.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
                         equivalentText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
                           color: const Color(0xFF94A3B8),
                           fontSize: 12,
