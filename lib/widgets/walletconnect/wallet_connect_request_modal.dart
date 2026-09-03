@@ -157,8 +157,9 @@ class WalletConnectRequestModal extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: _isTransactionRequest
                                 ? AppColors.accentRed.withValues(alpha: 0.15)
-                                : const Color(0xFF3B82F6)
-                                      .withValues(alpha: 0.15),
+                                : const Color(
+                                    0xFF3B82F6,
+                                  ).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(

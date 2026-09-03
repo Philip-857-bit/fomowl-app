@@ -403,7 +403,8 @@ class _SendNftScreenState extends State<SendNftScreen> {
                         const _StateMessage(
                           icon: Icons.info_outline,
                           title: 'Unsupported network',
-                          message: 'This NFT belongs to a network that is not configured in the wallet.',
+                          message:
+                              'This NFT belongs to a network that is not configured in the wallet.',
                         ),
                       ],
                     ],

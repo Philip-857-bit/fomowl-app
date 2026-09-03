@@ -130,10 +130,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: FakeWalletService(),
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => false,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => false,
       );
 
       final response = await bridge.handleRequest(
@@ -164,10 +165,11 @@ void main() {
           sessionController: controller,
           permissionService: FakeDappPermissionService(),
           walletService: FakeWalletService(),
-          approvalHandler: (
-            BuildContext context,
-            DiscoverProviderApprovalRequest request,
-          ) async => true,
+          approvalHandler:
+              (
+                BuildContext context,
+                DiscoverProviderApprovalRequest request,
+              ) async => true,
         );
 
         final response = await bridge.handleRequest(
@@ -204,10 +206,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: FakeWalletService(),
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => true,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
       );
 
       final response = await bridge.handleRequest(
@@ -255,10 +258,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: FakeWalletService(),
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => true,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
       );
 
       final response = await bridge.handleRequest(
@@ -303,10 +307,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: FakeWalletService(),
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => true,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
       );
 
       final response = await bridge.handleRequest(
@@ -344,10 +349,11 @@ void main() {
           sessionController: controller,
           permissionService: FakeDappPermissionService(),
           walletService: walletService,
-          approvalHandler: (
-            BuildContext context,
-            DiscoverProviderApprovalRequest request,
-          ) async => true,
+          approvalHandler:
+              (
+                BuildContext context,
+                DiscoverProviderApprovalRequest request,
+              ) async => true,
           authVerifier: (context, {reason}) async => true,
         );
         const payload = '0x5369676e20696e20746f204f70656e536561';
@@ -385,10 +391,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: walletService,
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => true,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
         authVerifier: (context, {reason}) async => true,
       );
 
@@ -438,10 +445,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: FakeWalletService(),
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => true,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
       );
 
       final response = await bridge.handleRequest(
@@ -484,10 +492,11 @@ void main() {
         sessionController: controller,
         permissionService: FakeDappPermissionService(),
         walletService: walletService,
-        approvalHandler: (
-          BuildContext context,
-          DiscoverProviderApprovalRequest request,
-        ) async => true,
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
         authVerifier: (context, {reason}) async => true,
       );
 

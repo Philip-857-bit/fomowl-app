@@ -140,20 +140,23 @@ void main() {
       },
     );
 
-    test('loadCatalog keeps both live and cached failure details when fallback fails', () async {
-      final controller = BrowserSessionController(
-        catalogService: _FakeDiscoverCatalogService(
-          error: StateError('catalog fetch failed'),
-          cacheError: StateError('cache fetch failed'),
-        ),
-      );
+    test(
+      'loadCatalog keeps both live and cached failure details when fallback fails',
+      () async {
+        final controller = BrowserSessionController(
+          catalogService: _FakeDiscoverCatalogService(
+            error: StateError('catalog fetch failed'),
+            cacheError: StateError('cache fetch failed'),
+          ),
+        );
 
-      await controller.loadCatalog();
+        await controller.loadCatalog();
 
-      expect(controller.snapshot, isNull);
-      expect(controller.catalogError, contains('catalog fetch failed'));
-      expect(controller.catalogError, contains('cache fetch failed'));
-    });
+        expect(controller.snapshot, isNull);
+        expect(controller.catalogError, contains('catalog fetch failed'));
+        expect(controller.catalogError, contains('cache fetch failed'));
+      },
+    );
 
     test(
       'openManualInput opens non-allowlisted URL in general web mode',

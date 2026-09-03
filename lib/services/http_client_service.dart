@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:math';
-
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-
 import '../config/app_environment.dart';
 import 'pinned_http_client_stub.dart'
     if (dart.library.io) 'pinned_http_client_io.dart';

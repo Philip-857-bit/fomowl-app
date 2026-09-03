@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 
 import '../config/app_environment.dart';
@@ -225,7 +224,8 @@ class TronSwapService {
     final permit2 = data['permit2'];
     final finalizePayload = data['finalizePayload'];
     if (tx == null && (permit2 is! Map || finalizePayload is! Map)) {
-      _lastError = 'Swap quote response was missing its authorization data. Please try again.';
+      _lastError =
+          'Swap quote response was missing its authorization data. Please try again.';
       return null;
     }
 

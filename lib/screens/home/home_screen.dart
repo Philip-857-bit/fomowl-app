@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
-
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
@@ -1500,8 +1498,9 @@ class _HomeScreenState extends State<HomeScreen> {
     // zone so the displayed time matches the user's clock (TimeOfDay reads the
     // DateTime's hour/minute fields verbatim, so the conversion must happen
     // before extracting it).
-    final time = MaterialLocalizations.of(context)
-        .formatTimeOfDay(TimeOfDay.fromDateTime(updatedAt.toLocal()));
+    final time = MaterialLocalizations.of(
+      context,
+    ).formatTimeOfDay(TimeOfDay.fromDateTime(updatedAt.toLocal()));
     return l.balanceUpdatedAt(time);
   }
 
@@ -1778,7 +1777,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Showcase(
                     key: _walletSwitcherShowcaseKey,
                     title: 'Wallet and support',
-                    description: 'Switch wallets, open settings, and reach notifications from here.',
+                    description:
+                        'Switch wallets, open settings, and reach notifications from here.',
                     child: HomeTopBar(
                       walletName: _walletName ?? l.mainWallet,
                       onWalletTap: () async {
@@ -1857,7 +1857,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Showcase(
                               key: _balanceShowcaseKey,
                               title: 'Portfolio status',
-                              description: 'Use this card to track live value, hide balances, and jump into transaction history.',
+                              description:
+                                  'Use this card to track live value, hide balances, and jump into transaction history.',
                               child: BalanceCard(
                                 titleText: _balanceTitleText(l),
                                 formattedBalance: _formattedTotalBalance,
@@ -1884,7 +1885,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Showcase(
                               key: _quickActionsShowcaseKey,
                               title: 'Core wallet actions',
-                              description: 'Receive, send, and withdraw stay visible on the home screen for the main wallet flow.',
+                              description:
+                                  'Receive, send, and withdraw stay visible on the home screen for the main wallet flow.',
                               child: QuickActionsRow(
                                 onReceive: () => Navigator.pushNamed(
                                   context,
@@ -1900,7 +1902,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               Showcase(
                                 key: _promoCarouselShowcaseKey,
                                 title: 'Spotlight',
-                                description: 'Quick updates, featured campaigns, and Owllet announcements appear here.',
+                                description:
+                                    'Quick updates, featured campaigns, and Owllet announcements appear here.',
                                 child: HomePromoCarousel(
                                   banners: _homeBanners,
                                   showFallbackSocialBanner:
@@ -1926,7 +1929,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             Showcase(
                               key: _assetTabsShowcaseKey,
                               title: 'Asset views',
-                              description: 'Move between Tokens, Portfolio, and NFTs without leaving the dashboard.',
+                              description:
+                                  'Move between Tokens, Portfolio, and NFTs without leaving the dashboard.',
                               child: TokensSection(
                                 tokens: _displayableTokens(_tokens),
                                 portfolioSections: _portfolioSections,

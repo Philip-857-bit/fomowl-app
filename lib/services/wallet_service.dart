@@ -6,9 +6,7 @@ import 'package:web3dart/web3dart.dart';
 import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:hex/hex.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
-
 import 'http_client_service.dart';
-
 import 'package:hex/hex.dart' as pkg_hex;
 
 import '../config/app_environment.dart';
@@ -19,12 +17,13 @@ import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
 import 'native_crypto.dart';
 
-typedef SeedAccountActivityChecker = Future<bool> Function({
-  required String evmAddress,
-  required String solanaAddress,
-  required String tronAddress,
-  required int derivationIndex,
-});
+typedef SeedAccountActivityChecker =
+    Future<bool> Function({
+      required String evmAddress,
+      required String solanaAddress,
+      required String tronAddress,
+      required int derivationIndex,
+    });
 
 /// Wallet Service
 /// Handles wallet creation, import, and key management
@@ -1034,9 +1033,9 @@ class WalletService {
     final estimatedGas = estimates[1] as BigInt;
     final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
     final totalFeeWei = gasPrice.getInWei * bufferedGas;
-    final totalFeeNativeDouble = EtherAmount.inWei(totalFeeWei)
-        .getValueInUnit(EtherUnit.ether)
-        .toDouble();
+    final totalFeeNativeDouble = EtherAmount.inWei(
+      totalFeeWei,
+    ).getValueInUnit(EtherUnit.ether).toDouble();
 
     return {
       'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
@@ -1080,9 +1079,9 @@ class WalletService {
     );
     final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
     final totalFeeWei = gasPrice.getInWei * bufferedGas;
-    final totalFeeNativeDouble = EtherAmount.inWei(totalFeeWei)
-        .getValueInUnit(EtherUnit.ether)
-        .toDouble();
+    final totalFeeNativeDouble = EtherAmount.inWei(
+      totalFeeWei,
+    ).getValueInUnit(EtherUnit.ether).toDouble();
 
     return {
       'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
@@ -1148,7 +1147,8 @@ class WalletService {
       throw Exception(
         AppErrorUtils.backendMessage(
           prepareResp.body,
-          fallback: 'Solana transaction failed. Please check your balance and try again.',
+          fallback:
+              'Solana transaction failed. Please check your balance and try again.',
         ),
       );
     }
@@ -1193,7 +1193,8 @@ class WalletService {
       throw Exception(
         AppErrorUtils.backendMessage(
           broadcastResp.body,
-          fallback: 'Solana transaction failed. Please check your balance and try again.',
+          fallback:
+              'Solana transaction failed. Please check your balance and try again.',
         ),
       );
     }
@@ -1294,7 +1295,8 @@ class WalletService {
       throw Exception(
         AppErrorUtils.backendMessage(
           broadcastResp.body,
-          fallback: 'Solana transaction failed. Please check your balance and try again.',
+          fallback:
+              'Solana transaction failed. Please check your balance and try again.',
         ),
       );
     }
@@ -1332,7 +1334,8 @@ class WalletService {
       throw Exception(
         AppErrorUtils.backendMessage(
           response.body,
-          fallback: 'The compressed NFT transfer proof could not be prepared. Please try again.',
+          fallback:
+              'The compressed NFT transfer proof could not be prepared. Please try again.',
         ),
       );
     }
@@ -1628,7 +1631,8 @@ class WalletService {
       throw Exception(
         AppErrorUtils.backendMessage(
           prepareResp.body,
-          fallback: 'Tron transaction failed. Please check your balance and try again.',
+          fallback:
+              'Tron transaction failed. Please check your balance and try again.',
         ),
       );
     }
@@ -1677,7 +1681,8 @@ class WalletService {
       throw Exception(
         AppErrorUtils.backendMessage(
           broadcastResp.body,
-          fallback: 'Tron transaction failed. Please check your balance and try again.',
+          fallback:
+              'Tron transaction failed. Please check your balance and try again.',
         ),
       );
     }

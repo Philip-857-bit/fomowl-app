@@ -1,11 +1,8 @@
 import 'package:flutter/foundation.dart';
-
 import 'dart:convert';
 import 'dart:math';
 import 'dart:async';
-
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../config/app_environment.dart';
 import '../models/token.dart';
 import '../models/chain.dart';
@@ -1920,7 +1917,8 @@ class BlockchainService extends ChangeNotifier {
     var isStale = false;
     if (previousTokens.isNotEmpty && finalTokens.length <= 1) {
       finalTokens = previousTokens;
-      fallbackMessage = 'Using cached wallet tokens while the latest live refresh is incomplete.';
+      fallbackMessage =
+          'Using cached wallet tokens while the latest live refresh is incomplete.';
       isStale = true;
     }
     final fetchedAt = DateTime.now();
@@ -1975,8 +1973,9 @@ class BlockchainService extends ChangeNotifier {
             '$normalizedBase/${_activeChain.chainId}/token-search';
       }
 
-      final url = Uri.parse(tokenSearchPath)
-          .replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
+      final url = Uri.parse(
+        tokenSearchPath,
+      ).replace(queryParameters: {'q': trimmed, 'limit': '$safeLimit'});
 
       try {
         final response = await _httpClientService

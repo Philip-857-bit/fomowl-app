@@ -146,47 +146,53 @@ void main() {
     expect(status.userFacingFailureMessage, isNot(contains('Do not submit')));
   });
 
-  test('accepts a dry TRON preview and commits only on explicit request', () async {
-    final requestedUris = <Uri>[];
-    final client = MockClient((request) async {
-      requestedUris.add(request.url);
-      final committed = request.url.queryParameters['commit'] == 'true';
-      return http.Response(
-        '''{"originChainId":728126428,"destinationChainId":1399811149,"amountIn":"1000000","amountOut":"900000","feeUsd":0,"gasFeeUsd":0,"requestId":"${committed ? 'near:TDeposit' : ''}","steps":${committed ? '[{"id":"deposit","description":"Deposit","items":[{"data":{"chainType":"tvm","chainId":728126428,"depositAddress":"TDeposit","transaction":{"raw_data_hex":"deadbeef"}}}]}]' : '[]'},"extra":{"committed":$committed,"deadline":"2099-01-01T00:00:00Z"}}''',
-        200,
+  test(
+    'accepts a dry TRON preview and commits only on explicit request',
+    () async {
+      final requestedUris = <Uri>[];
+      final client = MockClient((request) async {
+        requestedUris.add(request.url);
+        final committed = request.url.queryParameters['commit'] == 'true';
+        return http.Response(
+          '''{"originChainId":728126428,"destinationChainId":1399811149,"amountIn":"1000000","amountOut":"900000","feeUsd":0,"gasFeeUsd":0,"requestId":"${committed ? 'near:TDeposit' : ''}","steps":${committed ? '[{"id":"deposit","description":"Deposit","items":[{"data":{"chainType":"tvm","chainId":728126428,"depositAddress":"TDeposit","transaction":{"raw_data_hex":"deadbeef"}}}]}]' : '[]'},"extra":{"committed":$committed,"deadline":"2099-01-01T00:00:00Z"}}''',
+          200,
+        );
+      });
+      final service = BridgeService(
+        httpClientService: _HttpClientServiceMock(client),
       );
-    });
-    final service = BridgeService(
-      httpClientService: _HttpClientServiceMock(client),
-    );
 
-    final preview = await service.getQuote(
-      originChainId: BridgeService.tronBridgeChainId,
-      destinationChainId: BridgeService.relaySolanaChainId,
-      originCurrency: BridgeService.tronNativeCurrency,
-      destinationCurrency: BridgeService.solanaNativeCurrency,
-      amountWei: '1000000',
-      walletAddress: 'TWallet',
-    );
-    final committed = await service.commitQuote(
-      originChainId: BridgeService.tronBridgeChainId,
-      destinationChainId: BridgeService.relaySolanaChainId,
-      originCurrency: BridgeService.tronNativeCurrency,
-      destinationCurrency: BridgeService.solanaNativeCurrency,
-      amountWei: '1000000',
-      walletAddress: 'TWallet',
-    );
+      final preview = await service.getQuote(
+        originChainId: BridgeService.tronBridgeChainId,
+        destinationChainId: BridgeService.relaySolanaChainId,
+        originCurrency: BridgeService.tronNativeCurrency,
+        destinationCurrency: BridgeService.solanaNativeCurrency,
+        amountWei: '1000000',
+        walletAddress: 'TWallet',
+      );
+      final committed = await service.commitQuote(
+        originChainId: BridgeService.tronBridgeChainId,
+        destinationChainId: BridgeService.relaySolanaChainId,
+        originCurrency: BridgeService.tronNativeCurrency,
+        destinationCurrency: BridgeService.solanaNativeCurrency,
+        amountWei: '1000000',
+        walletAddress: 'TWallet',
+      );
 
-    expect(preview, isNotNull);
-    expect(preview!.committed, isFalse);
-    expect(preview.steps, isEmpty);
-    expect(preview.canBeginExecution, isTrue);
-    expect(committed, isNotNull);
-    expect(committed!.committed, isTrue);
-    expect(committed.steps.single.isTron, isTrue);
-    expect(requestedUris.first.queryParameters.containsKey('commit'), isFalse);
-    expect(requestedUris.last.queryParameters['commit'], 'true');
-  });
+      expect(preview, isNotNull);
+      expect(preview!.committed, isFalse);
+      expect(preview.steps, isEmpty);
+      expect(preview.canBeginExecution, isTrue);
+      expect(committed, isNotNull);
+      expect(committed!.committed, isTrue);
+      expect(committed.steps.single.isTron, isTrue);
+      expect(
+        requestedUris.first.queryParameters.containsKey('commit'),
+        isFalse,
+      );
+      expect(requestedUris.last.queryParameters['commit'], 'true');
+    },
+  );
 
   test('accepts flattened NEAR Intents preview metadata', () async {
     final client = MockClient(

@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
 import '../../constants/app_colors.dart';
 import '../../widgets/token_selector_modal.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
-
 import 'package:provider/provider.dart';
-
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../models/chain.dart';

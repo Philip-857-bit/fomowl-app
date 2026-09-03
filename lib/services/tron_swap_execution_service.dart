@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 
 import '../utils/app_error_utils.dart';
@@ -74,7 +73,8 @@ class TronSwapExecutionService {
         if (typedData == null || finalizePayload == null) {
           return const TronSwapExecutionResult(
             success: false,
-            error: 'This TRON swap authorization is incomplete. Refresh the quote.',
+            error:
+                'This TRON swap authorization is incomplete. Refresh the quote.',
           );
         }
         final permitSignature = await _walletService.signTypedDataForAddress(
@@ -124,7 +124,8 @@ class TronSwapExecutionService {
           return TronSwapExecutionResult(
             success: false,
             transactionHash: txid,
-            error: 'The swap was submitted but is still pending. Do not submit it again.',
+            error:
+                'The swap was submitted but is still pending. Do not submit it again.',
           );
         }
 

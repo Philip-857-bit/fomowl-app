@@ -8,55 +8,54 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('WhatsNewSheet & ForcedUpdateDialog Tests', () {
-    testWidgets(
-      'WhatsNewSheet renders new version modal matching Figma 319:2721',
-      (tester) async {
-        final result = WhatsNewResult(
-          isUpdateAvailable: true,
-          minVersion: '1.0.0',
-          installedVersion: '1.6.0',
-          serverVersion: '2.0.0',
-          releaseNotes: [
-            '**New homepage:** AI market signals and curated news in one feed',
-            '**Owllet Wallet Card:** Fewer steps to apply, and smoother spending',
-            '**Robinhood Chain now supported:** Send, receive, and swap trending and new tokens',
-          ],
-        );
+    testWidgets('WhatsNewSheet renders new version modal matching Figma 319:2721', (
+      tester,
+    ) async {
+      final result = WhatsNewResult(
+        isUpdateAvailable: true,
+        minVersion: '1.0.0',
+        installedVersion: '1.6.0',
+        serverVersion: '2.0.0',
+        releaseNotes: [
+          '**New homepage:** AI market signals and curated news in one feed',
+          '**Owllet Wallet Card:** Fewer steps to apply, and smoother spending',
+          '**Robinhood Chain now supported:** Send, receive, and swap trending and new tokens',
+        ],
+      );
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) {
-                  return ElevatedButton(
-                    onPressed: () => WhatsNewSheet.show(context, result),
-                    child: const Text('Show'),
-                  );
-                },
-              ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                return ElevatedButton(
+                  onPressed: () => WhatsNewSheet.show(context, result),
+                  child: const Text('Show'),
+                );
+              },
             ),
           ),
-        );
-        await tester.pumpAndSettle();
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Open sheet
-        await tester.tap(find.text('Show'));
-        await tester.pumpAndSettle();
+      // Open sheet
+      await tester.tap(find.text('Show'));
+      await tester.pumpAndSettle();
 
-        // Check Header & Badge
-        expect(find.text('NEW VERSION'), findsOneWidget);
-        expect(find.text('Get the brand new app'), findsOneWidget);
-        expect(find.text('v2.0.0'), findsOneWidget);
+      // Check Header & Badge
+      expect(find.text('NEW VERSION'), findsOneWidget);
+      expect(find.text('Get the brand new app'), findsOneWidget);
+      expect(find.text('v2.0.0'), findsOneWidget);
 
-        // Check Release Notes
-        expect(find.textContaining('AI market signals'), findsOneWidget);
-        expect(find.textContaining('Fewer steps to apply'), findsOneWidget);
-        expect(find.textContaining('Robinhood Chain'), findsOneWidget);
+      // Check Release Notes
+      expect(find.textContaining('AI market signals'), findsOneWidget);
+      expect(find.textContaining('Fewer steps to apply'), findsOneWidget);
+      expect(find.textContaining('Robinhood Chain'), findsOneWidget);
 
-        // Check Action Button (Figma 319:2898 single Upgrade now action)
-        expect(find.text('Upgrade now'), findsOneWidget);
-      },
-    );
+      // Check Action Button (Figma 319:2898 single Upgrade now action)
+      expect(find.text('Upgrade now'), findsOneWidget);
+    });
 
     testWidgets('ForcedUpdateDialog renders UPDATE REQUIRED badge and notes', (
       tester,

@@ -61,11 +61,13 @@ class AdminDiscoverDappsSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Discover DApps',
-          subtitle: 'Manage the global Discover DApp directory. Launch URL is required; slug, title, and artwork can autofill from the site.',
+          subtitle:
+              'Manage the global Discover DApp directory. Launch URL is required; slug, title, and artwork can autofill from the site.',
         ),
         const AdminBanner(
           title: 'URL-first onboarding',
-          message: 'Paste the live site URL first. Owllet will fill the title, icon, hero artwork, and related metadata unless you override them below.',
+          message:
+              'Paste the live site URL first. Owllet will fill the title, icon, hero artwork, and related metadata unless you override them below.',
         ),
         const SizedBox(height: 14),
         AdminCard(
@@ -150,8 +152,9 @@ class AdminDiscoverDappsSection extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Theme(
-                data: Theme.of(context)
-                    .copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   childrenPadding: const EdgeInsets.only(bottom: 4),
@@ -357,7 +360,8 @@ class AdminDiscoverDappsSection extends StatelessWidget {
         if (dapps.isEmpty)
           const AdminEmptyState(
             title: 'No Discover DApps yet',
-            message: 'Create the first approved DApp above and it will start appearing in the in-app Discover browser.',
+            message:
+                'Create the first approved DApp above and it will start appearing in the in-app Discover browser.',
           )
         else
           ...dapps.map(

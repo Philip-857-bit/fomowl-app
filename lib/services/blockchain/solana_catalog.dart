@@ -12,7 +12,8 @@ class SolanaCatalog {
     rpcUrl: 'https://api.mainnet-beta.solana.com',
     coinGeckoId: 'solana',
     explorerUrl: 'https://explorer.solana.com',
-    logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+    logoUrl:
+        'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
   );
 
   static const SolanaChain devnet = SolanaChain(
@@ -22,7 +23,8 @@ class SolanaCatalog {
     rpcUrl: 'https://api.devnet.solana.com',
     coinGeckoId: 'solana',
     explorerUrl: 'https://explorer.solana.com/?cluster=devnet',
-    logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+    logoUrl:
+        'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
   );
 
   static const SolanaChain testnet = SolanaChain(
@@ -32,7 +34,8 @@ class SolanaCatalog {
     rpcUrl: 'https://api.testnet.solana.com',
     coinGeckoId: 'solana',
     explorerUrl: 'https://explorer.solana.com/?cluster=testnet',
-    logoUrl: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+    logoUrl:
+        'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
   );
 
   static const List<SolanaChain> builtInChains = [mainnet, devnet, testnet];

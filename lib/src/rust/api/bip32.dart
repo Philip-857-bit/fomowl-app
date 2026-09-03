@@ -4,7 +4,6 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
-
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `derive_secp256k1_private_key`, `evm_address_from_public_key`, `hardened`, `parse_32_byte_hex`, `parse_solana_key_hex`, `parse_solana_private_key`, `public_key_from_private_key`, `slip10_ed25519_derive_child`, `slip10_ed25519_master_key`, `slip10_key_from_hmac`, `solana_keypair_from_bytes`, `to_eip55_address`, `tron_address_from_public_key`, `validate_seed`

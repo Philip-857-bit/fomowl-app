@@ -132,7 +132,9 @@ class HomePortfolioApiService {
         chainId: -501,
         rpcUrl: '',
         coinGeckoId: 'solana',
-        logoUrl: chainLogoUrl ?? 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
+        logoUrl:
+            chainLogoUrl ??
+            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
         family: ChainFamily.solana,
       );
     }
@@ -143,7 +145,9 @@ class HomePortfolioApiService {
         chainId: -195,
         rpcUrl: '',
         coinGeckoId: 'tron',
-        logoUrl: chainLogoUrl ?? 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
+        logoUrl:
+            chainLogoUrl ??
+            'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
         family: ChainFamily.tron,
       );
     }

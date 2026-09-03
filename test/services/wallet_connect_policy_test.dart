@@ -101,9 +101,9 @@ void main() {
 
     test('TRON personal messages use the canonical prefixed Keccak digest', () {
       expect(
-        WalletService.tronPersonalMessageDigest('hello')
-            .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-            .join(),
+        WalletService.tronPersonalMessageDigest(
+          'hello',
+        ).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join(),
         'a07d8e5b946cc0416662f5420751673680809e5f10313e20c7c5badb0ef4226d',
       );
     });

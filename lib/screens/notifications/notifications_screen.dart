@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
 import '../../services/api_client.dart';
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
@@ -121,8 +120,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       _walletAddress = address;
       final normalizedAddress = address.trim().toLowerCase();
 
-      final path = AppEnvironment.notifications('/$normalizedAddress')
-          .toString();
+      final path = AppEnvironment.notifications(
+        '/$normalizedAddress',
+      ).toString();
       final response = await _apiClient.get(path);
 
       if (response.statusCode == 200) {

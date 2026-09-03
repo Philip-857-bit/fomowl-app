@@ -20,10 +20,8 @@ import 'discover_provider_approval_request.dart';
 /// Signature of the biometric/passcode guard used before signing or
 /// broadcasting. Mirrors [SensitiveAccessGuard.verify] so tests can inject a
 /// fake without driving real platform auth dialogs.
-typedef SensitiveAuthVerifier = Future<bool> Function(
-  BuildContext context, {
-  String? reason,
-});
+typedef SensitiveAuthVerifier =
+    Future<bool> Function(BuildContext context, {String? reason});
 
 class DappProviderBridge {
   DappProviderBridge({

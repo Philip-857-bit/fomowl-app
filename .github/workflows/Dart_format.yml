@@ -22,8 +22,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Dart
-        uses: dart-lang/setup-dart@v1
+      # Use the Flutter-bundled Dart (same SDK as dart.yml / release builds)
+      # instead of standalone Dart. This keeps the formatter version and the
+      # resolved package language version identical to local development, so the
+      # committed formatting is stable across CI and contributors.
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.6
+          cache: true
+
+      # Resolve dependencies so `dart format` can read analysis_options.yaml
+      # (which includes package:flutter_lints/...) and each file's language
+      # version instead of falling back to the SDK default.
+      - name: Install dependencies
+        run: flutter pub get
 
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed .

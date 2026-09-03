@@ -12,14 +12,17 @@ void main() {
       },
     );
 
-    test('mnemonicToSeed falls back to Dart when Rust FFI is unavailable', () async {
-      const mnemonic =
-          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    test(
+      'mnemonicToSeed falls back to Dart when Rust FFI is unavailable',
+      () async {
+        const mnemonic =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
-      final seed = await NativeCrypto.mnemonicToSeed(mnemonic);
+        final seed = await NativeCrypto.mnemonicToSeed(mnemonic);
 
-      expect(seed.length, 64);
-    });
+        expect(seed.length, 64);
+      },
+    );
 
     test('signTypedData surfaces FFI absence in Dart-only tests', () async {
       // flutter_test runs without the compiled host Rust binary here, so the

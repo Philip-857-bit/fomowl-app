@@ -35,7 +35,8 @@ class AdminFeedbackSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Feedback queue',
-          subtitle: 'Review incoming reports, filter by wallet, and export the visible queue.',
+          subtitle:
+              'Review incoming reports, filter by wallet, and export the visible queue.',
         ),
         AdminCard(
           child: Column(
@@ -88,7 +89,8 @@ class AdminFeedbackSection extends StatelessWidget {
         if (feedbackItems.isEmpty)
           const AdminEmptyState(
             title: 'No feedback found',
-            message: 'Try a different wallet filter or refresh after new feedback arrives.',
+            message:
+                'Try a different wallet filter or refresh after new feedback arrives.',
           )
         else
           ...feedbackItems.map(
@@ -143,7 +145,8 @@ class AdminActionsSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Manual actions',
-          subtitle: 'Run one-off checks and test wallet push delivery from a single place.',
+          subtitle:
+              'Run one-off checks and test wallet push delivery from a single place.',
         ),
         AdminCard(
           child: Column(
@@ -235,7 +238,8 @@ class AdminPushSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Broadcast push',
-          subtitle: 'Publish one message to all wallets with registered devices in one action.',
+          subtitle:
+              'Publish one message to all wallets with registered devices in one action.',
         ),
         AdminCard(
           child: Column(

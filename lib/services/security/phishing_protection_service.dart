@@ -132,7 +132,8 @@ class PhishingProtectionService {
       return PhishingCheckResult(
         isBlocked: true,
         threatCategory: 'Homograph Phishing Attack',
-        reason: 'Security Alert: This domain uses deceptive international character substitution (homograph attack) mimicking a legitimate website.',
+        reason:
+            'Security Alert: This domain uses deceptive international character substitution (homograph attack) mimicking a legitimate website.',
       );
     }
 

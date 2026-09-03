@@ -527,7 +527,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (_isTronOrigin && widget.blockchain.activeNetworkKey != 'tron:mainnet') {
       setState(() {
         _resetQuote();
-        _quoteError = 'TRON bridges use Mainnet assets. Switch from Nile to TRON Mainnet to bridge.';
+        _quoteError =
+            'TRON bridges use Mainnet assets. Switch from Nile to TRON Mainnet to bridge.';
       });
       return;
     }
@@ -830,7 +831,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
     if (_toCurrency != null && _bridgeCurrencyBlocked(_toCurrency!)) {
       setState(() {
-        _quoteError = 'This destination token is not verified. Select a verified token and check its contract address.';
+        _quoteError =
+            'This destination token is not verified. Select a verified token and check its contract address.';
       });
       return;
     }
@@ -922,7 +924,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         .fold<BigInt>(BigInt.zero, (sum, step) => sum + step.value);
     if (isNative ? totalValue > amountIn : totalValue > BigInt.zero) {
       setState(() {
-        _quoteError = 'Bridge transaction values do not match the quote. Aborting for your safety; please refresh the quote.';
+        _quoteError =
+            'Bridge transaction values do not match the quote. Aborting for your safety; please refresh the quote.';
       });
       return;
     }
@@ -1262,9 +1265,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
     if (nativeBalanceWei < requiredNativeWei) {
       final missingWei = requiredNativeWei - nativeBalanceWei;
-      final missing = EtherAmount.inWei(missingWei)
-          .getValueInUnit(EtherUnit.ether)
-          .toStringAsFixed(6);
+      final missing = EtherAmount.inWei(
+        missingWei,
+      ).getValueInUnit(EtherUnit.ether).toStringAsFixed(6);
       throw Exception(
         'Not enough $symbol to pay the bridge amount and network fee. Add at least $missing $symbol, then try again.',
       );
