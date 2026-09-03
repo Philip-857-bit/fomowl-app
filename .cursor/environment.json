@@ -1,0 +1,8 @@
+{
+  "name": "Owllet Flutter + Rust",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "user": "ubuntu",
+  "install": "bash ./.cursor/install.sh"
+}
