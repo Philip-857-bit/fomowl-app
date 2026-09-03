@@ -64,6 +64,11 @@ RUN mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools" \
         "platforms;android-37.0" \
         "build-tools;37.0.0" \
         "ndk;28.2.13676358" >/dev/null \
+    # Android API 37 ships minor-versioned platforms (android-37.0), but AGP 9.0
+    # resolves compileSdk=37 to the plain "android-37" hash. Expose an alias so
+    # `flutter build apk` (compileSdk=37 in android/app/build.gradle.kts) resolves.
+    && cp -a "${ANDROID_SDK_ROOT}/platforms/android-37.0" "${ANDROID_SDK_ROOT}/platforms/android-37" \
+    && sed -i 's/^AndroidVersion.ApiLevel=37.0/AndroidVersion.ApiLevel=37/' "${ANDROID_SDK_ROOT}/platforms/android-37/source.properties" \
     && chmod -R a+rwX "${ANDROID_SDK_ROOT}"
 
 ENV PATH="${FLUTTER_HOME}/bin:${CARGO_HOME}/bin:${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin:${ANDROID_SDK_ROOT}/platform-tools:${JAVA_HOME}/bin:${PATH}"
