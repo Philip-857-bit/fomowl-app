@@ -161,24 +161,27 @@ void main() {
     expect(service.activeNetworkKey, startsWith('evm:'));
   });
 
-  test('prefers canonical network wallet token endpoint before legacy alias', () {
-    final service = BlockchainService();
+  test(
+    'prefers canonical network wallet token endpoint before legacy alias',
+    () {
+      final service = BlockchainService();
 
-    final urls = service.walletTokenDiscoveryUrisForTest(
-      'https://example.test/api/blockchain',
-      8453,
-      '0xabc',
-    );
+      final urls = service.walletTokenDiscoveryUrisForTest(
+        'https://example.test/api/blockchain',
+        8453,
+        '0xabc',
+      );
 
-    expect(
-      urls.first.toString(),
-      'https://example.test/api/blockchain/networks/evm%3A8453/wallet-tokens/0xabc',
-    );
-    expect(
-      urls.last.toString(),
-      'https://example.test/api/blockchain/8453/wallet-tokens/0xabc',
-    );
-  });
+      expect(
+        urls.first.toString(),
+        'https://example.test/api/blockchain/networks/evm%3A8453/wallet-tokens/0xabc',
+      );
+      expect(
+        urls.last.toString(),
+        'https://example.test/api/blockchain/8453/wallet-tokens/0xabc',
+      );
+    },
+  );
 
   test('parses backend token network metadata', () {
     final service = BlockchainService();

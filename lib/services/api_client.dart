@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:dio_smart_retry/dio_smart_retry.dart';
 import 'package:flutter/foundation.dart';
+
 import '../config/app_environment.dart';
 import 'cert_pinning_stub.dart' if (dart.library.io) 'cert_pinning_io.dart';
 

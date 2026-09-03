@@ -89,9 +89,8 @@ class WalletList extends StatelessWidget {
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                             color: account.origin == WalletOrigin.imported
-                                ? const Color(
-                                    0xFFF59E0B,
-                                  ).withValues(alpha: 0.85)
+                                ? const Color(0xFFF59E0B)
+                                      .withValues(alpha: 0.85)
                                 : Colors.white38,
                           ),
                         ),

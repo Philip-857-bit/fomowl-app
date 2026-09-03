@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../config/app_environment.dart';
@@ -331,8 +332,7 @@ class BridgeService {
       final data = Map<String, dynamic>.from(raw);
       final amountOut = data['amountOut']?.toString() ?? '';
       if (amountOut.isEmpty || amountOut == '0') {
-        _lastError =
-            'This bridge is not available right now. Try a different amount or token.';
+        _lastError = 'This bridge is not available right now. Try a different amount or token.';
         return null;
       }
 

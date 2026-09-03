@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:decimal/decimal.dart';
+
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../models/chain.dart';

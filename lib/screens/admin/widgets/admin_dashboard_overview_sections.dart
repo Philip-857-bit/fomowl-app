@@ -146,8 +146,7 @@ class AdminStatsSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Key metrics',
-          subtitle:
-              'Live adoption and reliability counters for support and release decisions.',
+          subtitle: 'Live adoption and reliability counters for support and release decisions.',
         ),
         GridView.count(
           shrinkWrap: true,
@@ -227,8 +226,7 @@ class AdminOpsSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Ops and error audit',
-          subtitle:
-              'Traffic, rate-limit pressure, push readiness, and recent service alerts.',
+          subtitle: 'Traffic, rate-limit pressure, push readiness, and recent service alerts.',
         ),
         AdminCard(
           child: Column(

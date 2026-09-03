@@ -41,15 +41,12 @@ void main() {
     );
   });
 
-  test(
-    'validateMnemonic accepts valid phrases pasted with irregular spacing',
-    () async {
-      const pasted =
-          ' abandon   abandon\nabandon\tabandon abandon abandon abandon abandon abandon abandon abandon about ';
+  test('validateMnemonic accepts valid phrases pasted with irregular spacing', () async {
+    const pasted =
+        ' abandon   abandon\nabandon\tabandon abandon abandon abandon abandon abandon abandon abandon about ';
 
-      expect(await WalletService().validateMnemonic(pasted), isTrue);
-    },
-  );
+    expect(await WalletService().validateMnemonic(pasted), isTrue);
+  });
 
   group('Solana base58 helpers', () {
     test('decodeBase58Bytes accepts 32-byte seed material', () {
@@ -134,19 +131,16 @@ void main() {
       );
     });
 
-    test(
-      'accepts a valid 64-character hex key and derives EIP-55 address',
-      () async {
-        // Hardhat default account #0 — well-known test key, safe to use in tests
-        const validKey =
-            'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
-        final result = await walletService.importWalletFromPrivateKey(validKey);
-        expect(result['address'], isNotEmpty);
-        // Ethereum addresses are 42 chars including 0x prefix
-        expect(result['address']!.length, 42);
-        expect(result['address'], startsWith('0x'));
-      },
-    );
+    test('accepts a valid 64-character hex key and derives EIP-55 address', () async {
+      // Hardhat default account #0 — well-known test key, safe to use in tests
+      const validKey =
+          'ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+      final result = await walletService.importWalletFromPrivateKey(validKey);
+      expect(result['address'], isNotEmpty);
+      // Ethereum addresses are 42 chars including 0x prefix
+      expect(result['address']!.length, 42);
+      expect(result['address'], startsWith('0x'));
+    });
   });
 
   group('active family addresses', () {

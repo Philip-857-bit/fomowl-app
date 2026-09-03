@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/biometric_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -82,9 +83,8 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFFEA2A33,
-                              ).withValues(alpha: 0.1),
+                              color: const Color(0xFFEA2A33)
+                                  .withValues(alpha: 0.1),
                             ),
                           ),
                         ),
@@ -94,9 +94,8 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFFEA2A33,
-                              ).withValues(alpha: 0.2),
+                              color: const Color(0xFFEA2A33)
+                                  .withValues(alpha: 0.2),
                             ),
                           ),
                         ),
@@ -107,15 +106,13 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
                             color: const Color(0xFF0E0E0E),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFF5D3F3D,
-                              ).withValues(alpha: 0.15),
+                              color: const Color(0xFF5D3F3D)
+                                  .withValues(alpha: 0.15),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(
-                                  0xFFEA2A33,
-                                ).withValues(alpha: 0.4),
+                                color: const Color(0xFFEA2A33)
+                                    .withValues(alpha: 0.4),
                                 blurRadius: 7.5,
                               ),
                             ],
@@ -139,9 +136,8 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
                             width: 192,
                             height: 192,
                             child: CircularProgressIndicator(
-                              color: const Color(
-                                0xFFEA2A33,
-                              ).withValues(alpha: 0.6),
+                              color: const Color(0xFFEA2A33)
+                                  .withValues(alpha: 0.6),
                               strokeWidth: 2,
                             ),
                           ),
@@ -186,9 +182,8 @@ class _FingerprintCheckScreenState extends State<FingerprintCheckScreen> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.3),
+                            color: const Color(0xFFEA2A33)
+                                .withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 8),
                           ),

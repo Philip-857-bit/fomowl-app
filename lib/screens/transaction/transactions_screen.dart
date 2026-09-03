@@ -964,9 +964,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         titleText: _entryTitle(entry, AppLocalizations.of(context)),
         messageText: _entryDescription(entry, AppLocalizations.of(context)),
         amountText: _formattedAmount(entry).trim(),
-        timestampText: DateFormat(
-          'MMM d, yyyy - HH:mm',
-        ).format(entry.createdAt),
+        timestampText: DateFormat('MMM d, yyyy - HH:mm')
+            .format(entry.createdAt),
         networkText: _networkLabel(entry, AppLocalizations.of(context)),
         onOpenExplorer: _openExplorer,
       ),
@@ -1278,9 +1277,8 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   ) {
     final explorerUrl = _txExplorerUrl(entry, blockchain);
     final amountText = _formattedAmount(entry);
-    final displayTimestamp = DateFormat(
-      'MMM d, yyyy - HH:mm',
-    ).format(entry.createdAt);
+    final displayTimestamp = DateFormat('MMM d, yyyy - HH:mm')
+        .format(entry.createdAt);
     // ignore: unused_local_variable
     final timestamp = DateFormat('MMM d, yyyy • HH:mm').format(entry.createdAt);
 

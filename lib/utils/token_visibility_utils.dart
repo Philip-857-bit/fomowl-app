@@ -31,9 +31,8 @@ class TokenVisibilityUtils {
   }
 
   static bool contains(Set<String> identifiers, Token token) {
-    if (TokenVisibilityUtils.identifiers(
-      token,
-    ).any((id) => identifiers.contains(id))) {
+    if (TokenVisibilityUtils.identifiers(token)
+        .any((id) => identifiers.contains(id))) {
       return true;
     }
 

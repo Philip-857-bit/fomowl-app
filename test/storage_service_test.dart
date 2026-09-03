@@ -95,70 +95,69 @@ void main() {
       );
     });
 
-    test(
-      'recovers seed phrase from any account in the same seed group',
-      () async {
-        const mnemonic =
-            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-        await storage.saveWallet(
-          address: '0x1111111111111111111111111111111111111111',
-          privateKey: 'private-key-1',
-          mnemonic: mnemonic,
-          walletName: 'Wallet 1',
-          origin: WalletOrigin.derived,
-          derivationIndex: 0,
-          seedGroupId: 'seed_alpha',
-        );
-        await storage.saveWallet(
-          address: '0x2222222222222222222222222222222222222222',
-          privateKey: 'private-key-2',
-          walletName: 'Wallet 2',
-          origin: WalletOrigin.derived,
-          derivationIndex: 1,
-          seedGroupId: 'seed_alpha',
-        );
-
-        expect(
-          await storage.getMnemonic(
-            '0x2222222222222222222222222222222222222222',
-          ),
-          mnemonic,
-        );
-        expect(await storage.getMnemonicForSeedGroup('seed_alpha'), mnemonic);
-      },
-    );
-
-    test('clearAll wipes wallet, passcode, mnemonic, and prefs caches', () async {
-      final prefs = await SharedPreferences.getInstance();
+    test('recovers seed phrase from any account in the same seed group', () async {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
       await storage.saveWallet(
-        address: '0x1234567890123456789012345678901234567890',
-        privateKey: 'private-key',
-        mnemonic:
-            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+        address: '0x1111111111111111111111111111111111111111',
+        privateKey: 'private-key-1',
+        mnemonic: mnemonic,
         walletName: 'Wallet 1',
         origin: WalletOrigin.derived,
         derivationIndex: 0,
         seedGroupId: 'seed_alpha',
       );
-      await storage.savePasscode('123456');
-      await storage.setEnabledChainFamilies({
-        ChainFamily.evm,
-        ChainFamily.solana,
-      });
-      await prefs.setStringList('hidden_tokens_-501', ['solana:mainnet:mint']);
-      await prefs.setString('custom_tokens_v1', '{"-501":[]}');
+      await storage.saveWallet(
+        address: '0x2222222222222222222222222222222222222222',
+        privateKey: 'private-key-2',
+        walletName: 'Wallet 2',
+        origin: WalletOrigin.derived,
+        derivationIndex: 1,
+        seedGroupId: 'seed_alpha',
+      );
 
-      await storage.clearAll();
-
-      expect(await storage.getWalletAddress(), isNull);
-      expect(await storage.getMnemonic(), isNull);
-      expect(await storage.getMnemonicForSeedGroup('seed_alpha'), isNull);
-      expect(await storage.getWalletAccounts(), isEmpty);
-      expect(await storage.hasPasscode(), isFalse);
-      expect(prefs.getStringList('hidden_tokens_-501'), isNull);
-      expect(prefs.getString('custom_tokens_v1'), isNull);
-      expect(await storage.getEnabledChainFamilies(), isNull);
+      expect(
+        await storage.getMnemonic('0x2222222222222222222222222222222222222222'),
+        mnemonic,
+      );
+      expect(await storage.getMnemonicForSeedGroup('seed_alpha'), mnemonic);
     });
+
+    test(
+      'clearAll wipes wallet, passcode, mnemonic, and prefs caches',
+      () async {
+        final prefs = await SharedPreferences.getInstance();
+        await storage.saveWallet(
+          address: '0x1234567890123456789012345678901234567890',
+          privateKey: 'private-key',
+          mnemonic: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+          walletName: 'Wallet 1',
+          origin: WalletOrigin.derived,
+          derivationIndex: 0,
+          seedGroupId: 'seed_alpha',
+        );
+        await storage.savePasscode('123456');
+        await storage.setEnabledChainFamilies({
+          ChainFamily.evm,
+          ChainFamily.solana,
+        });
+        await prefs.setStringList('hidden_tokens_-501', [
+          'solana:mainnet:mint',
+        ]);
+        await prefs.setString('custom_tokens_v1', '{"-501":[]}');
+
+        await storage.clearAll();
+
+        expect(await storage.getWalletAddress(), isNull);
+        expect(await storage.getMnemonic(), isNull);
+        expect(await storage.getMnemonicForSeedGroup('seed_alpha'), isNull);
+        expect(await storage.getWalletAccounts(), isEmpty);
+        expect(await storage.hasPasscode(), isFalse);
+        expect(prefs.getStringList('hidden_tokens_-501'), isNull);
+        expect(prefs.getString('custom_tokens_v1'), isNull);
+        expect(await storage.getEnabledChainFamilies(), isNull);
+      },
+    );
 
     test('rust and dart argon2 derivation stay compatible', () async {
       final saltBytes = Uint8List.fromList(

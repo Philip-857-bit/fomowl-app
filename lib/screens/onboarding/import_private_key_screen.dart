@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../constants/app_colors.dart';
 import '../../models/chain.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
+
 import 'package:provider/provider.dart';
+
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';

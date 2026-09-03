@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/screen_capture_guard.dart';
+
 import 'package:provider/provider.dart';
+
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -251,8 +254,7 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                                   17,
                                   52,
                                 ),
-                                hintText:
-                                    'Enter your 24 or 12 word recovery phrase...',
+                                hintText: 'Enter your 24 or 12 word recovery phrase...',
                                 hintStyle: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: const Color(0xB8B7B5B4),

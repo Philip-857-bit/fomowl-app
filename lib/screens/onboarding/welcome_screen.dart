@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../l10n/app_localizations.dart';
 import '../../utils/language_utils.dart';
 
@@ -177,9 +178,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   Widget _buildLanguageOverlay(BuildContext context) {
     final currentLanguage =
-        LanguageUtils.languageNamesByCode[Localizations.localeOf(
-          context,
-        ).languageCode] ??
+        LanguageUtils.languageNamesByCode[Localizations.localeOf(context)
+            .languageCode] ??
         AppLocalizations.of(context).chooseLanguage;
 
     return GestureDetector(

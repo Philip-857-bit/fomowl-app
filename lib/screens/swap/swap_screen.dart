@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
+
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
@@ -38,9 +39,11 @@ import '../../utils/token_visibility_utils.dart';
 import '../../utils/token_trust_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
+
 import 'dart:convert';
 import 'dart:async';
 import 'dart:typed_data';
+
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'swap_screen_helpers.dart';
@@ -3756,9 +3759,8 @@ class _SwapScreenState extends State<SwapScreen> {
                         icon: const Icon(Icons.arrow_back_ios_new_rounded),
                         color: Colors.white,
                         iconSize: 20,
-                        tooltip: MaterialLocalizations.of(
-                          context,
-                        ).backButtonTooltip,
+                        tooltip: MaterialLocalizations.of(context)
+                            .backButtonTooltip,
                       ),
                     ),
                     Center(
@@ -3819,8 +3821,7 @@ class _SwapScreenState extends State<SwapScreen> {
                       Showcase(
                         key: _limitTabShowcaseKey,
                         title: 'Limit orders',
-                        description:
-                            'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
+                        description: 'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
                         child: SwapTabSelector(
                           activeTab: _activeTab,
                           showLimitTab: _supportsLimitTab(blockchain),

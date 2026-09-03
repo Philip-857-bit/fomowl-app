@@ -904,8 +904,7 @@ class LimitTabContent extends StatelessWidget {
         _withShowcase(
           showcaseKey: executionPriceShowcaseKey,
           title: 'Execution price',
-          description:
-              'Set the target price. Your order can fill only at this price or better.',
+          description: 'Set the target price. Your order can fill only at this price or better.',
           child: LimitExecutionCard(
             controller: limitPriceController,
             onChanged: onLimitPriceChanged,
@@ -1031,8 +1030,7 @@ class LimitTabContent extends StatelessWidget {
         _withShowcase(
           showcaseKey: summaryShowcaseKey,
           title: 'Order summary',
-          description:
-              'Creating or cancelling a limit order costs 0 gas. Your first sell-token approval may still need a network fee.',
+          description: 'Creating or cancelling a limit order costs 0 gas. Your first sell-token approval may still need a network fee.',
           child: SwapPriceDetailsCard(
             priceText: executionPriceText,
             platformFeePercent: platformFeePercent,
@@ -1053,8 +1051,7 @@ class LimitTabContent extends StatelessWidget {
         _withShowcase(
           showcaseKey: submitShowcaseKey,
           title: 'Submit limit order',
-          description:
-              'You sign the order with the selected wallet. It stays open until the target price is met or the order expires.',
+          description: 'You sign the order with the selected wallet. It stays open until the target price is met or the order expires.',
           child: SwapPrimaryButton(
             enabled: limitEnabled,
             isBusy: limitBusy,

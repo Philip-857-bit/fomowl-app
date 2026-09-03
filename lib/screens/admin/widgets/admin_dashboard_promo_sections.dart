@@ -57,13 +57,11 @@ class AdminHomeBannersSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'Home promos',
-          subtitle:
-              'Manage the wallet spotlight. Owllet can rotate up to four active promos on the home screen.',
+          subtitle: 'Manage the wallet spotlight. Owllet can rotate up to four active promos on the home screen.',
         ),
         const AdminBanner(
           title: 'Spotlight behavior',
-          message:
-              'Choose whether Owllet should keep the default social spotlight visible whenever no live promos are active.',
+          message: 'Choose whether Owllet should keep the default social spotlight visible whenever no live promos are active.',
         ),
         const SizedBox(height: 14),
         AdminCard(
@@ -416,8 +414,7 @@ class AdminHomeBannersSection extends StatelessWidget {
         if (banners.isEmpty)
           const AdminEmptyState(
             title: 'No home promos yet',
-            message:
-                'Create up to four active banners and Owllet will rotate them on the wallet home screen.',
+            message: 'Create up to four active banners and Owllet will rotate them on the wallet home screen.',
           )
         else
           ...banners.map(
@@ -578,13 +575,11 @@ class AdminAppReleaseSection extends StatelessWidget {
       children: [
         const AdminSectionHeading(
           title: 'App release',
-          subtitle:
-              'Manage the version, minimum required version, and release notes shown to users inside the wallet.',
+          subtitle: 'Manage the version, minimum required version, and release notes shown to users inside the wallet.',
         ),
         const AdminBanner(
           title: 'Release notes format',
-          message:
-              'Enter one bullet point per line. Each line becomes a separate entry in the "What\'s New" sheet.',
+          message: 'Enter one bullet point per line. Each line becomes a separate entry in the "What\'s New" sheet.',
         ),
         const SizedBox(height: 14),
         AdminCard(
@@ -664,8 +659,7 @@ class AdminAppReleaseSection extends StatelessWidget {
                 maxLines: 6,
                 decoration: adminInputDecoration(
                   label: 'Release notes (one bullet per line)',
-                  hint:
-                      'Solana and Tron wallets are now fully supported\nSend, receive and view transaction history cross-chain',
+                  hint: 'Solana and Tron wallets are now fully supported\nSend, receive and view transaction history cross-chain',
                   icon: Icons.notes_rounded,
                 ),
               ),

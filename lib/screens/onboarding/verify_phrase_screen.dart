@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+
 import 'dart:async';
 import 'dart:math';
+
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/screen_capture_guard.dart';
+
 import 'package:provider/provider.dart';
+
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 
@@ -256,9 +261,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                               width: 1,
                             ),
                             borderRadius: BorderRadius.circular(16),
-                            color: const Color(
-                              0xFF2C2B2B,
-                            ).withValues(alpha: 0.3),
+                            color: const Color(0xFF2C2B2B)
+                                .withValues(alpha: 0.3),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,

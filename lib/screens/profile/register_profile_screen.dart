@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../constants/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../services/wallet_service.dart';
@@ -145,8 +146,7 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
                       () {
                         setState(() => _obscureSecret = !_obscureSecret);
                       },
-                      helperText:
-                          'Used to authorize sensitive changes (like swapping linked wallets).',
+                      helperText: 'Used to authorize sensitive changes (like swapping linked wallets).',
                     ),
                     const SizedBox(height: 48),
 

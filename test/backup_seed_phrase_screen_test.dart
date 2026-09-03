@@ -10,6 +10,7 @@ import 'package:fomowl_wallet/screens/onboarding/verify_phrase_screen.dart';
 import 'package:fomowl_wallet/screens/profile/backup_seed_phrase_screen.dart';
 import 'package:fomowl_wallet/services/screen_capture_guard.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
+
 import 'dart:math';
 
 void main() {

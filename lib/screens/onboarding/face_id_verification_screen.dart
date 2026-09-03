@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../widgets/mobile_scaffold.dart';
 
 /// Face ID Verification Screen – intro (Figma 41:399)
@@ -41,9 +42,8 @@ class FaceIdVerificationScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFFEA2A33,
-                              ).withValues(alpha: 0.1),
+                              color: const Color(0xFFEA2A33)
+                                  .withValues(alpha: 0.1),
                             ),
                           ),
                         ),
@@ -53,9 +53,8 @@ class FaceIdVerificationScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFFEA2A33,
-                              ).withValues(alpha: 0.2),
+                              color: const Color(0xFFEA2A33)
+                                  .withValues(alpha: 0.2),
                             ),
                           ),
                         ),
@@ -66,15 +65,13 @@ class FaceIdVerificationScreen extends StatelessWidget {
                             color: const Color(0xFF0E0E0E),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFF5D3F3D,
-                              ).withValues(alpha: 0.15),
+                              color: const Color(0xFF5D3F3D)
+                                  .withValues(alpha: 0.15),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(
-                                  0xFFEA2A33,
-                                ).withValues(alpha: 0.4),
+                                color: const Color(0xFFEA2A33)
+                                    .withValues(alpha: 0.4),
                                 blurRadius: 7.5,
                               ),
                             ],
@@ -136,9 +133,8 @@ class FaceIdVerificationScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(
-                              0xFFEA2A33,
-                            ).withValues(alpha: 0.3),
+                            color: const Color(0xFFEA2A33)
+                                .withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 8),
                           ),

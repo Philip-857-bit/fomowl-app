@@ -8,8 +8,7 @@ class OwlletMiniApps {
   static MiniAppDefinition get owlletPay => MiniAppDefinition(
     id: 'owllet_pay',
     title: 'OwlletPay',
-    description:
-        'Shop with crypto, fund your wallet, pay bills, and withdraw through OwlletPay.',
+    description: 'Shop with crypto, fund your wallet, pay bills, and withdraw through OwlletPay.',
     launchUrl: AppEnvironment.owlletPayMiniAppUrl,
     allowedOrigins: AppEnvironment.owlletPayMiniAppAllowedOrigins,
   );
