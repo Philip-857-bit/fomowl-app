@@ -771,7 +771,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                         ),
                         style: GoogleFonts.inter(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
                         ),
                         decoration: InputDecoration(
@@ -779,7 +779,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                           hintText: '0',
                           hintStyle: GoogleFonts.inter(
                             color: const Color(0xFF64748B),
-                            fontSize: 24,
+                            fontSize: 20,
                             fontWeight: FontWeight.w700,
                           ),
                           suffixText: tokenSymbol,
@@ -795,6 +795,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                       const SizedBox(height: 8),
                       Text(
                         equivalentText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
                           color: const Color(0xFF94A3B8),
                           fontSize: 12,
