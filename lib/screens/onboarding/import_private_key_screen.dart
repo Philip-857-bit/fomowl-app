@@ -320,7 +320,9 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePrivateKey ? Icons.visibility : Icons.visibility_off,
+                              _obscurePrivateKey
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: Colors.white.withValues(alpha: 0.5),
                             ),
                             onPressed: () {

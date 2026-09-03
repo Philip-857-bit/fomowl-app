@@ -261,12 +261,15 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscureSecretPhrase ? Icons.visibility : Icons.visibility_off,
+                                    _obscureSecretPhrase
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
                                     color: Colors.white.withValues(alpha: 0.5),
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _obscureSecretPhrase = !_obscureSecretPhrase;
+                                      _obscureSecretPhrase =
+                                          !_obscureSecretPhrase;
                                     });
                                   },
                                 ),
