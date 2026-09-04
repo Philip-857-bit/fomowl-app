@@ -141,6 +141,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   bool _loadingContext = true;
   bool _switchNetworkRequestInFlight = false;
   Map<String, dynamic> _bridgeContext = const <String, dynamic>{};
+  BlockchainService? _blockchain;
+  String _publishedWalletAddress = '';
+  bool _walletContextRefreshInFlight = false;
 
   Uri? get _overrideUri {
     final raw = widget.initialUrl?.trim();
@@ -164,11 +167,49 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = context.read<BlockchainService>();
+    if (!identical(blockchain, _blockchain)) {
+      _blockchain?.removeListener(_handleActiveWalletChange);
+      _blockchain = blockchain;
+      _blockchain?.addListener(_handleActiveWalletChange);
+    }
+  }
+
+  @override
   void dispose() {
+    _blockchain?.removeListener(_handleActiveWalletChange);
     // Don't leave the lock-on-background suppressed once the user leaves the
     // mini app; the guard is only meant to cover an in-flight capture here.
     SystemPickerGuard.clear();
     super.dispose();
+  }
+
+  void _handleActiveWalletChange() {
+    if (!mounted) {
+      return;
+    }
+    final nextAddress =
+        _blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
+    if (nextAddress.isEmpty ||
+        nextAddress == _publishedWalletAddress.toLowerCase()) {
+      return;
+    }
+    unawaited(_refreshBridgeContextForActiveWallet());
+  }
+
+  Future<void> _refreshBridgeContextForActiveWallet() async {
+    if (_walletContextRefreshInFlight) {
+      return;
+    }
+    _walletContextRefreshInFlight = true;
+    try {
+      await _prepareBridgeContext();
+      await _publishBridgeContext();
+    } finally {
+      _walletContextRefreshInFlight = false;
+    }
   }
 
   Future<void> _prepareBridgeContext() async {
@@ -290,6 +331,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             'email_verified': profile?['email_verified'],
             'two_factor_enabled': profile?['two_factor_enabled'],
           };
+    _publishedWalletAddress = walletAddress?.trim().toLowerCase() ?? '';
     setState(() {
       _bridgeContext = <String, dynamic>{
         'host': 'owllet-mobile',
