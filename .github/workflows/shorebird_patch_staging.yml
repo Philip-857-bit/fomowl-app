@@ -1,0 +1,553 @@
+# Staging Shorebird patches for releases created by
+# "Shorebird Android Release (Staging)". Uses the same staging hosts hardcoded
+# in that workflow. Prefer SHOREBIRD_STAGING_APP_ID when set.
+name: Shorebird Patch (Staging)
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Target platform for the patch
+        required: true
+        type: choice
+        options:
+          - android
+          - ios
+      release_version:
+        description: Exact release version and build, for example 1.2.8+13
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  patch_android:
+    if: inputs.platform == 'android'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      FLUTTER_VERSION: 3.44.6
+      SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_STAGING_APP_ID || secrets.SHOREBIRD_STAGING_APP_ID || vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+      SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
+      SHOREBIRD_PATCH_PRIVATE_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 }}
+      GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
+      BACKEND_BASE_URL: https://corestaging.owlletapp.com
+      BACKEND_CERT_SHA256_PINS: ''
+      BACKEND_CERT_PINNING_ENABLED: 'false'
+      COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
+      CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
+      PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+      FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY || '' }}
+      FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID || '' }}
+      FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID || secrets.FIREBASE_IOS_APP_ID || '' }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID || '' }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
+      FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || '' }}
+      CASH_IN_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
+      CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
+      OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
+      OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
+      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+      MANIFEST_NAME: shorebird-staging-release-manifest-android-${{ inputs.release_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free up disk space
+        run: |
+          set -euo pipefail
+          echo "Disk space before cleanup:"
+          df -h /
+          # The Android patch build is a full release build (4 native ABIs of
+          # Rust libs, ProGuard/R8, dex desugaring) and exhausts the runner's
+          # ~14 GB of free space at mergeReleaseNativeLibs ("No space left on
+          # device"). Remove large pre-installed toolchains this build does not
+          # use to reclaim ~15-20 GB.
+          sudo rm -rf /usr/local/.ghcup || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/share/swift || true
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/lib/node_modules || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo docker image prune --all --force || true
+          echo "Disk space after cleanup:"
+          df -h /
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust Android targets
+        run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Setup Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Report Shorebird toolchain
+        run: shorebird --version
+
+      - name: Validate Shorebird patch inputs
+        run: |
+          set -euo pipefail
+          required=(
+            SHOREBIRD_TOKEN
+            SHOREBIRD_APP_ID
+            SHOREBIRD_PATCH_PUBLIC_KEY_BASE64
+            SHOREBIRD_PATCH_PRIVATE_KEY_BASE64
+            KEYSTORE_BASE64
+            KEYSTORE_PASSWORD
+            KEY_ALIAS
+            KEY_PASSWORD
+          )
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required secret or variable: $key" >&2
+              exit 1
+            fi
+          done
+
+      - name: Fetch release manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python scripts/shorebird_fetch_release_manifest.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --manifest-name "$MANIFEST_NAME" \
+            --platform android \
+            --flutter-version "$FLUTTER_VERSION" \
+            --output "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --workdir "$RUNNER_TEMP"
+
+      - name: Align build args with release manifest
+        run: |
+          set -euo pipefail
+          # A Shorebird patch must be built with the same Flutter flags as the
+          # release line it targets, otherwise the patch guard (and Shorebird)
+          # reject it. Derive --no-tree-shake-icons from the release manifest
+          # instead of hardcoding it, so patches work regardless of which flag
+          # the original store release was built with.
+          no_tree_shake=$(python -c "import json; m=json.load(open('$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json')); print(str(bool(m.get('flutter_build_settings', {}).get('no_tree_shake_icons', False))).lower())")
+          if [[ "$no_tree_shake" == "true" ]]; then
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=--no-tree-shake-icons" >> "$GITHUB_ENV"
+          else
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=" >> "$GITHUB_ENV"
+            echo "::warning::Release ${{ inputs.release_version }} was built with icon tree-shaking (no_tree_shake_icons=false), so it bundles a SUBSETTED MaterialIcons font. A patch that changes which Material icons the app uses will fail with UnpatchableChangeException because the tree-shaken font asset differs from the release. If this patch fails on 'asset changes' (MaterialIcons-Regular.otf), cut a NEW store release (the release workflow builds with --no-tree-shake-icons and bundles the full, stable font) and patch against that version instead."
+          fi
+          echo "Release line no_tree_shake_icons=$no_tree_shake; aligned SHOREBIRD_FLUTTER_BUILD_ARGS to match."
+
+      - name: Render Shorebird config
+        run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Enforce patch guard
+        run: |
+          set -euo pipefail
+          if [[ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" == *"--no-tree-shake-icons"* ]]; then
+            patch_guard_args=(--no-tree-shake-icons)
+          else
+            patch_guard_args=()
+          fi
+          python scripts/shorebird_patch_guard.py \
+            --repo-root . \
+            --manifest "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --flutter-version "$FLUTTER_VERSION" \
+            "${patch_guard_args[@]}"
+
+      - name: Run Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Configure Android signing
+        run: |
+          set -euo pipefail
+          mkdir -p keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > keystore/owllet-release.jks
+          cat > android/key.properties <<EOF
+          storeFile=../keystore/owllet-release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Configure Firebase Android services
+        if: env.GOOGLE_SERVICES_JSON_BASE64 != ''
+        run: |
+          set -euo pipefail
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+
+      - name: Prepare Flutter dart-defines
+        id: dart_defines
+        run: |
+          set -euo pipefail
+          sanitize() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+
+          {
+            echo "args<<EOF"
+            echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
+            echo "--dart-define=BACKEND_CERT_SHA256_PINS=$(sanitize "$BACKEND_CERT_SHA256_PINS")"
+            echo "--dart-define=BACKEND_CERT_PINNING_ENABLED=$(sanitize "${BACKEND_CERT_PINNING_ENABLED:-false}")"
+            echo "--dart-define=COINGECKO_API_BASE_URL=$(sanitize "$COINGECKO_API_BASE_URL")"
+            echo "--dart-define=CONNECTIVITY_CHECK_URL=$(sanitize "$CONNECTIVITY_CHECK_URL")"
+            echo "--dart-define=PUSH_NOTIFICATIONS_ENABLED=$(sanitize "$PUSH_NOTIFICATIONS_ENABLED")"
+            echo "--dart-define=FIREBASE_API_KEY=$(sanitize "$FIREBASE_API_KEY")"
+            echo "--dart-define=FIREBASE_ANDROID_APP_ID=$(sanitize "$FIREBASE_ANDROID_APP_ID")"
+            echo "--dart-define=FIREBASE_IOS_APP_ID=$(sanitize "$FIREBASE_IOS_APP_ID")"
+            echo "--dart-define=FIREBASE_MESSAGING_SENDER_ID=$(sanitize "$FIREBASE_MESSAGING_SENDER_ID")"
+            echo "--dart-define=FIREBASE_PROJECT_ID=$(sanitize "$FIREBASE_PROJECT_ID")"
+            echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
+            echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
+            echo "--dart-define=CASH_IN_MINI_APP_URL=$(sanitize "$CASH_IN_MINI_APP_URL")"
+            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=OWLLET_PAY_MINI_APP_URL=$(sanitize "$OWLLET_PAY_MINI_APP_URL")"
+            echo "--dart-define=OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
+            echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Shorebird patch-signing keys
+        run: |
+          set -euo pipefail
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 \
+            --kind public \
+            --output "$RUNNER_TEMP/shorebird_public.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 \
+            --kind private \
+            --output "$RUNNER_TEMP/shorebird_private.pem"
+
+      - name: Create Shorebird Android patch
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
+          set +o pipefail
+          printf 'y\n' | shorebird patch android \
+            --release-version="${{ inputs.release_version }}" \
+            --allow-asset-diffs \
+            --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
+            --private-key-path="$RUNNER_TEMP/shorebird_private.pem" \
+            -- \
+            "${SHOREBIRD_BUILD_ARGS[@]}" \
+            "${DART_DEFINES[@]}"
+          status=$?
+          set -o pipefail
+          exit $status
+
+  patch_ios:
+    if: inputs.platform == 'ios'
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    env:
+      FLUTTER_VERSION: 3.44.6
+      XCODE_VERSION: '16.4'
+      SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_STAGING_APP_ID || secrets.SHOREBIRD_STAGING_APP_ID || vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+      SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
+      SHOREBIRD_PATCH_PRIVATE_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 }}
+      BACKEND_BASE_URL: https://corestaging.owlletapp.com
+      BACKEND_CERT_SHA256_PINS: ''
+      BACKEND_CERT_PINNING_ENABLED: 'false'
+      COINGECKO_API_BASE_URL: ${{ vars.COINGECKO_API_BASE_URL || secrets.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
+      CONNECTIVITY_CHECK_URL: ${{ vars.CONNECTIVITY_CHECK_URL || secrets.CONNECTIVITY_CHECK_URL || 'https://www.google.com' }}
+      PUSH_NOTIFICATIONS_ENABLED: ${{ vars.PUSH_NOTIFICATIONS_ENABLED || 'false' }}
+      FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY || secrets.FIREBASE_API_KEY || '' }}
+      FIREBASE_ANDROID_APP_ID: ${{ vars.FIREBASE_ANDROID_APP_ID || secrets.FIREBASE_ANDROID_APP_ID || '' }}
+      FIREBASE_IOS_APP_ID: ${{ vars.FIREBASE_IOS_APP_ID || secrets.FIREBASE_IOS_APP_ID || '' }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID || secrets.FIREBASE_MESSAGING_SENDER_ID || '' }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID || secrets.FIREBASE_PROJECT_ID || '' }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET || secrets.FIREBASE_STORAGE_BUCKET || '' }}
+      FIREBASE_IOS_BUNDLE_ID: ${{ vars.FIREBASE_IOS_BUNDLE_ID || secrets.FIREBASE_IOS_BUNDLE_ID || 'com.fomowl.fomowlWallet' }}
+      CASH_IN_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
+      CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
+      OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
+      OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
+      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+      IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+      IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      IOS_EXPORT_METHOD: ${{ vars.IOS_EXPORT_METHOD || secrets.IOS_EXPORT_METHOD || 'app-store' }}
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID || secrets.APPLE_TEAM_ID || '' }}
+      MANIFEST_NAME: shorebird-staging-release-manifest-ios-${{ inputs.release_version }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Pin Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add Rust iOS targets
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+
+      - name: Setup Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Report Shorebird toolchain
+        run: shorebird --version
+
+      - name: Validate Shorebird patch inputs
+        run: |
+          set -euo pipefail
+          required=(
+            SHOREBIRD_TOKEN
+            SHOREBIRD_APP_ID
+            SHOREBIRD_PATCH_PUBLIC_KEY_BASE64
+            SHOREBIRD_PATCH_PRIVATE_KEY_BASE64
+            IOS_CERTIFICATE_BASE64
+            IOS_CERTIFICATE_PASSWORD
+            IOS_PROVISIONING_PROFILE_BASE64
+            APPLE_TEAM_ID
+          )
+          for key in "${required[@]}"; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required secret or variable: $key" >&2
+              exit 1
+            fi
+          done
+
+      - name: Fetch release manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python scripts/shorebird_fetch_release_manifest.py \
+            --repo "$GITHUB_REPOSITORY" \
+            --manifest-name "$MANIFEST_NAME" \
+            --platform ios \
+            --flutter-version "$FLUTTER_VERSION" \
+            --output "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --workdir "$RUNNER_TEMP"
+
+      - name: Align build args with release manifest
+        run: |
+          set -euo pipefail
+          # A Shorebird patch must be built with the same Flutter flags as the
+          # release line it targets, otherwise the patch guard (and Shorebird)
+          # reject it. Derive --no-tree-shake-icons from the release manifest
+          # instead of hardcoding it, so patches work regardless of which flag
+          # the original store release was built with.
+          no_tree_shake=$(python -c "import json; m=json.load(open('$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json')); print(str(bool(m.get('flutter_build_settings', {}).get('no_tree_shake_icons', False))).lower())")
+          if [[ "$no_tree_shake" == "true" ]]; then
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=--no-tree-shake-icons" >> "$GITHUB_ENV"
+          else
+            echo "SHOREBIRD_FLUTTER_BUILD_ARGS=" >> "$GITHUB_ENV"
+            echo "::warning::Release ${{ inputs.release_version }} was built with icon tree-shaking (no_tree_shake_icons=false), so it bundles a SUBSETTED MaterialIcons font. A patch that changes which Material icons the app uses will fail with UnpatchableChangeException because the tree-shaken font asset differs from the release. If this patch fails on 'asset changes' (MaterialIcons-Regular.otf), cut a NEW store release (the release workflow builds with --no-tree-shake-icons and bundles the full, stable font) and patch against that version instead."
+          fi
+          echo "Release line no_tree_shake_icons=$no_tree_shake; aligned SHOREBIRD_FLUTTER_BUILD_ARGS to match."
+
+      - name: Render Shorebird config
+        run: python scripts/write_shorebird_yaml.py --app-id "$SHOREBIRD_APP_ID" --output shorebird.yaml --auto-update false
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Enforce patch guard
+        run: |
+          set -euo pipefail
+          if [[ "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}" == *"--no-tree-shake-icons"* ]]; then
+            patch_guard_args=(--no-tree-shake-icons)
+          else
+            patch_guard_args=()
+          fi
+          python scripts/shorebird_patch_guard.py \
+            --repo-root . \
+            --manifest "$RUNNER_TEMP/shorebird-manifest/shorebird-release-manifest.json" \
+            --flutter-version "$FLUTTER_VERSION" \
+            "${patch_guard_args[@]}"
+
+      - name: Run Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Configure Firebase iOS services
+        if: env.GOOGLE_SERVICE_INFO_PLIST_BASE64 != ''
+        run: |
+          set -euo pipefail
+          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+
+      - name: Ensure CocoaPods is available
+        run: pod --version
+
+      - name: Install iOS pods
+        run: |
+          set -euo pipefail
+          cd ios
+          pod install --repo-update
+
+      - name: Prepare Flutter dart-defines
+        id: dart_defines
+        run: |
+          set -euo pipefail
+          sanitize() {
+            printf '%s' "$1" | tr -d '\r\n'
+          }
+
+          {
+            echo "args<<EOF"
+            echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
+            echo "--dart-define=BACKEND_CERT_SHA256_PINS=$(sanitize "$BACKEND_CERT_SHA256_PINS")"
+            echo "--dart-define=BACKEND_CERT_PINNING_ENABLED=$(sanitize "${BACKEND_CERT_PINNING_ENABLED:-false}")"
+            echo "--dart-define=COINGECKO_API_BASE_URL=$(sanitize "$COINGECKO_API_BASE_URL")"
+            echo "--dart-define=CONNECTIVITY_CHECK_URL=$(sanitize "$CONNECTIVITY_CHECK_URL")"
+            echo "--dart-define=PUSH_NOTIFICATIONS_ENABLED=$(sanitize "$PUSH_NOTIFICATIONS_ENABLED")"
+            echo "--dart-define=FIREBASE_API_KEY=$(sanitize "$FIREBASE_API_KEY")"
+            echo "--dart-define=FIREBASE_ANDROID_APP_ID=$(sanitize "$FIREBASE_ANDROID_APP_ID")"
+            echo "--dart-define=FIREBASE_IOS_APP_ID=$(sanitize "$FIREBASE_IOS_APP_ID")"
+            echo "--dart-define=FIREBASE_MESSAGING_SENDER_ID=$(sanitize "$FIREBASE_MESSAGING_SENDER_ID")"
+            echo "--dart-define=FIREBASE_PROJECT_ID=$(sanitize "$FIREBASE_PROJECT_ID")"
+            echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
+            echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
+            echo "--dart-define=CASH_IN_MINI_APP_URL=$(sanitize "$CASH_IN_MINI_APP_URL")"
+            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=OWLLET_PAY_MINI_APP_URL=$(sanitize "$OWLLET_PAY_MINI_APP_URL")"
+            echo "--dart-define=OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
+            echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Configure iOS code signing assets
+        run: |
+          set -euo pipefail
+          CERT_PATH="$RUNNER_TEMP/ios_certificate.p12"
+          PROFILE_PATH="$RUNNER_TEMP/owllet.mobileprovision"
+          KEYCHAIN_PATH="$RUNNER_TEMP/owllet-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+
+          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > "$CERT_PATH"
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/owllet.mobileprovision"
+
+      - name: Create ExportOptions.plist
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>compileBitcode</key>
+            <false/>
+            <key>method</key>
+            <string>${IOS_EXPORT_METHOD}</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>thinning</key>
+            <string>&lt;none&gt;</string>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Create Shorebird patch-signing keys
+        run: |
+          set -euo pipefail
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 \
+            --kind public \
+            --output "$RUNNER_TEMP/shorebird_public.pem"
+          python scripts/write_shorebird_key.py \
+            --env SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 \
+            --kind private \
+            --output "$RUNNER_TEMP/shorebird_private.pem"
+
+      - name: Create Shorebird iOS patch
+        run: |
+          set -euo pipefail
+          readarray -t DART_DEFINES <<< "${{ steps.dart_defines.outputs.args }}"
+          read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
+          set +o pipefail
+          printf 'y\n' | shorebird patch ios \
+            --release-version="${{ inputs.release_version }}" \
+            --allow-asset-diffs \
+            --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
+            --private-key-path="$RUNNER_TEMP/shorebird_private.pem" \
+            -- \
+            "${SHOREBIRD_BUILD_ARGS[@]}" \
+            --export-options-plist="$RUNNER_TEMP/ExportOptions.plist" \
+            "${DART_DEFINES[@]}"
+          status=$?
+          set -o pipefail
+          exit $status
