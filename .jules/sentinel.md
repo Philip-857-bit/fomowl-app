@@ -1,4 +1,4 @@
-## 2024-05-18 - [Fix Input Visibility]
-**Vulnerability:** Private key and secret phrase inputs in the import onboarding flow were visible in plain text.
-**Learning:** These text fields lacked the `obscureText: true` property by default, risking shoulder-surfing exposure of critical secrets. Furthermore, when implementing `obscureText: true` in Flutter's `TextField`, `maxLines` must be dynamically changed to 1 because Flutter doesn't support multi-line obscured text.
-**Prevention:** Make sure all `TextField`s accepting sensitive information (passwords, keys, phrases) initialize with `obscureText: true` and have a toggle button for visibility, handling `maxLines` constraint accordingly.
+## YYYY-MM-DD - [Re-enabled Screenshot Protection & Protected Import Private Key Screen]
+**Vulnerability:** Screen capture protection (`ScreenCaptureGuard`) was globally disabled (`protectionEnabled = false`) for tutorial recordings, leaving all sensitive screens (like seed phrase backups) vulnerable to screenshots and screen recording. Additionally, the `ImportPrivateKeyScreen` did not utilize the guard at all.
+**Learning:** Development/debug flags (like disabling screenshot protection for tutorials) must be carefully audited and not shipped to production, as they can compromise the core security posture of a self-custodial wallet.
+**Prevention:** Ensure security guards like `ScreenCaptureGuard` are properly integrated into the lifecycle (`initState`/`dispose`) of all screens handling sensitive data (private keys, mnemonics), and that global security flags are not left in a disabled state for production builds.
