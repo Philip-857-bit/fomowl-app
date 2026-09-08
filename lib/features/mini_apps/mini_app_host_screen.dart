@@ -902,6 +902,40 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   /// not drop the others. Including non-EVM balances lets off-ramp assets like
   /// USDT·SOL surface a balance (previously only EVM chains were returned).
   Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
+    final walletAddress = _publishedWalletAddress;
+    Future<List<Map<String, dynamic>>> publish(
+      Future<List<Map<String, dynamic>>> request,
+    ) async {
+      final balances = await request;
+      if (mounted && walletAddress == _publishedWalletAddress) {
+        final detail = jsonEncode({
+          'walletAddress': walletAddress,
+          'balances': balances,
+        });
+        try {
+          await _controller?.evaluateJavascript(
+            source:
+                'window.dispatchEvent(new CustomEvent("owllet:balances-progress", {detail: $detail}));',
+          );
+        } catch (_) {
+          // The page may have navigated; the full bridge response still follows.
+        }
+      }
+      return balances;
+    }
+
+    final results = await Future.wait([
+      publish(_fetchEvmBridgeBalances()),
+      publish(_fetchNonEvmBridgeBalances(ChainFamily.solana, 'solana:mainnet')),
+      publish(_fetchNonEvmBridgeBalances(ChainFamily.tron, 'tron:mainnet')),
+    ]);
+    return <String, dynamic>{
+      'ok': true,
+      'balances': results.expand((balances) => balances).toList(),
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchEvmBridgeBalances() async {
     final balances = <Map<String, dynamic>>[];
     final visibilityService = TokenVisibilityService();
 
@@ -956,16 +990,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       }
     }
 
-    // Non-EVM balances (Solana, Tron) so off-ramp assets on those chains show a
-    // balance and can be validated client-side.
-    balances.addAll(
-      await _fetchNonEvmBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
-    );
-    balances.addAll(
-      await _fetchNonEvmBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
-    );
-
-    return <String, dynamic>{'ok': true, 'balances': balances};
+    return balances;
   }
 
   /// Fetch non-EVM (Solana/Tron) wallet token balances statelessly via the
