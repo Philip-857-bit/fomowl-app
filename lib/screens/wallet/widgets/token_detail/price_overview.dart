@@ -22,12 +22,18 @@ class PriceOverview extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          priceText,
-          style: GoogleFonts.outfit(
-            fontSize: 46,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            priceText,
+            maxLines: 1,
+            style: GoogleFonts.outfit(
+              fontSize: 30,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
           ),
         ),
         const SizedBox(height: 4),
