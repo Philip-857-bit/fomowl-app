@@ -16,6 +16,8 @@ class Token {
 
   /// Per-token USD price, used for swap math and detail screens.
   final double priceUsd;
+  final String priceStatus;
+  final DateTime? priceUpdatedAt;
   final double changePercent24h;
   final int decimals;
   final String? imageUrl;
@@ -37,6 +39,8 @@ class Token {
     required this.balance,
     required this.valueUsd,
     this.priceUsd = 0.0,
+    this.priceStatus = 'price_unavailable',
+    this.priceUpdatedAt,
     required this.changePercent24h,
     this.decimals = 18,
     this.imageUrl,
@@ -66,6 +70,8 @@ class Token {
     double? balance,
     double? valueUsd,
     double? priceUsd,
+    String? priceStatus,
+    DateTime? priceUpdatedAt,
     double? changePercent24h,
     int? decimals,
     String? imageUrl,
@@ -87,6 +93,8 @@ class Token {
       balance: balance ?? this.balance,
       valueUsd: valueUsd ?? this.valueUsd,
       priceUsd: priceUsd ?? this.priceUsd,
+      priceStatus: priceStatus ?? this.priceStatus,
+      priceUpdatedAt: priceUpdatedAt ?? this.priceUpdatedAt,
       changePercent24h: changePercent24h ?? this.changePercent24h,
       decimals: decimals ?? this.decimals,
       imageUrl: imageUrl ?? this.imageUrl,
@@ -128,9 +136,12 @@ class Token {
   // PATCH: Used to render unavailable prices instead of a fake $0.00.
   bool get hasKnownPrice => unitPriceUsdDecimal > Decimal.zero;
 
+  bool get hasProviderError => priceStatus == 'provider_error';
+
   // PATCH: Used by wallet/home rows to show a compact DEX badge.
   bool get isDexPriced {
     return isDexOnly ||
+        priceSource == 'DexScreener' ||
         priceSource == 'PancakeSwapV2' ||
         priceSource == 'UniswapV3';
   }
@@ -158,15 +169,14 @@ class Token {
     if (balanceDecimal > Decimal.zero &&
         valueUsdDecimal <= Decimal.zero &&
         !hasKnownPrice) {
-      return ValueFormatter.formatUsdValue(Decimal.zero);
+      return r'$0';
     }
     return ValueFormatter.formatUsdValue(totalValueUsdDecimal);
   }
 
   /// Format per-token price for UI
   String get formattedPrice {
-    // PATCH: Per-token unknown prices render explicitly unavailable.
-    if (!hasKnownPrice) return 'Price unavailable';
+    if (!hasKnownPrice) return r'$0';
     return ValueFormatter.formatUsdPrice(unitPriceUsdDecimal);
   }
 

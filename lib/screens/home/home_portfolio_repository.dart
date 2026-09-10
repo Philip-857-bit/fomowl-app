@@ -1,5 +1,3 @@
-import 'package:decimal/decimal.dart';
-
 import '../../models/chain.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
@@ -8,8 +6,6 @@ import 'home_portfolio_data.dart';
 
 class HomePortfolioRepository {
   const HomePortfolioRepository();
-
-  static final Decimal _minVisibleUncertifiedUsd = Decimal.parse('0.01');
 
   List<Token> prepareVisibleTokens(
     List<Token> tokens,
@@ -173,15 +169,6 @@ class HomePortfolioRepository {
           token.totalValueUsd <= 0) {
         continue;
       }
-      if (!isNativeToken && !isUserAdded && !token.isCertified) {
-        final totalValueUsd = token.totalValueUsdDecimal;
-        final unitPriceUsd = token.unitPriceUsdDecimal;
-        if (unitPriceUsd <= Decimal.zero ||
-            totalValueUsd < _minVisibleUncertifiedUsd) {
-          continue;
-        }
-      }
-
       final key =
           (token.contractAddress?.trim().isNotEmpty == true
                   ? token.contractAddress

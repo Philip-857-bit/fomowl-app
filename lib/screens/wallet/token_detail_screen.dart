@@ -197,6 +197,8 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       isCertified: current.isCertified,
       // PATCH: Preserve backend price source metadata when metadata is refreshed.
       priceSource: current.priceSource,
+      priceStatus: current.priceStatus,
+      priceUpdatedAt: current.priceUpdatedAt,
       // PATCH: Preserve backend DEX liquidity metadata when metadata is refreshed.
       liquidityUsd: current.liquidityUsd,
       // PATCH: Preserve backend DEX-only marker when metadata is refreshed.
@@ -229,7 +231,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     if (coinId == null || coinId.isEmpty) {
       if (!mounted) return;
       setState(() {
-        _priceData = _buildFallbackChartData();
+        _priceData = const [];
         _isLoadingChart = false;
       });
       return;
@@ -241,7 +243,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     );
     if (mounted) {
       setState(() {
-        _priceData = data.isNotEmpty ? data : _buildFallbackChartData();
+        _priceData = data;
         _isLoadingChart = false;
       });
     }
@@ -341,36 +343,6 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       return 0;
     }
     return token.unitPriceUsd;
-  }
-
-  List<double> _buildFallbackChartData() {
-    final token = _token;
-    if (token == null) {
-      return const [];
-    }
-
-    final currentPrice = _resolvedDisplayPriceUsd();
-    if (currentPrice <= 0) {
-      return const [];
-    }
-
-    final changePercent = token.changePercent24h;
-    final denominator = 1 + (changePercent / 100);
-    final baselinePrice = denominator > 0
-        ? currentPrice / denominator
-        : currentPrice;
-    final safeBaseline = baselinePrice.isFinite && baselinePrice > 0
-        ? baselinePrice
-        : currentPrice;
-    final delta = currentPrice - safeBaseline;
-    const pointCount = 24;
-
-    return List<double>.generate(pointCount, (index) {
-      final progress = pointCount == 1 ? 1.0 : index / (pointCount - 1);
-      final wave = (progress < 0.5 ? progress : (1 - progress)) * 0.04;
-      final next = safeBaseline + (delta * progress) + (currentPrice * wave);
-      return next > 0 && next.isFinite ? next : currentPrice;
-    });
   }
 
   void _reloadTokenMarketData({bool force = false}) {

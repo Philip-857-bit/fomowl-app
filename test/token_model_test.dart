@@ -19,5 +19,37 @@ void main() {
       expect(token.formattedPrice, '\$2800');
       expect(token.totalValueUsd, greaterThan(3456));
     });
+
+    test('renders a positive unpriced holding as zero', () {
+      const token = Token(
+        symbol: 'NEW',
+        name: 'New token',
+        balance: 25,
+        valueUsd: 0,
+        priceUsd: 0,
+        priceStatus: 'provider_error',
+        changePercent24h: 0,
+      );
+
+      expect(token.formattedValue, '\$0');
+      expect(token.formattedPrice, '\$0');
+      expect(token.hasKnownPrice, isFalse);
+      expect(token.hasProviderError, isTrue);
+    });
+
+    test('recognizes DexScreener as a DEX price source', () {
+      const token = Token(
+        symbol: 'DEX',
+        name: 'DEX token',
+        balance: 1,
+        valueUsd: 1,
+        priceUsd: 1,
+        priceStatus: 'found',
+        priceSource: 'DexScreener',
+        changePercent24h: 0,
+      );
+
+      expect(token.isDexPriced, isTrue);
+    });
   });
 }

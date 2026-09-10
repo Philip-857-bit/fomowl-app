@@ -502,18 +502,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      // Paint the server's available snapshot before waiting for a full sync.
-      // Wallet/network guards inside the fetch also apply to this early result.
-      if (sync) {
-        await _fetchPortfolioData(walletAddress);
-        if (!mounted ||
-            !await _isStillActiveWalletRequest(
-              walletAddress,
-              requestNetworkKey,
-            )) {
-          return;
-        }
-      }
       final snapshot = _mergePortfolioSnapshotWithLiveChain(
         await _portfolioApiService
             .fetchPortfolio(walletAddress, sync: sync)

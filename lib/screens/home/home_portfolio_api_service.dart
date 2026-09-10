@@ -68,6 +68,17 @@ class HomePortfolioApiService {
               balance: (mapped['balance'] as num?)?.toDouble() ?? 0,
               valueUsd: (mapped['valueUsd'] as num?)?.toDouble() ?? 0,
               priceUsd: (mapped['priceUsd'] as num?)?.toDouble() ?? 0,
+              priceStatus:
+                  mapped['priceStatus'] as String? ??
+                  mapped['price_status'] as String? ??
+                  ((mapped['priceUsd'] as num?) != null
+                      ? 'found'
+                      : 'price_unavailable'),
+              priceUpdatedAt: _parseTimestamp(
+                mapped['priceUpdatedAt'] ??
+                    mapped['price_updated_at'] ??
+                    mapped['priceObservedAt'],
+              ),
               changePercent24h:
                   (mapped['changePercent24h'] as num?)?.toDouble() ?? 0,
               decimals: (mapped['decimals'] as num?)?.toInt() ?? 18,
@@ -187,5 +198,18 @@ class HomePortfolioApiService {
       return NetworkKey.tron('mainnet');
     }
     return NetworkKey.evm(chainId);
+  }
+
+  static DateTime? _parseTimestamp(Object? value) {
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(
+        value.toInt() * 1000,
+        isUtc: true,
+      );
+    }
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    return null;
   }
 }

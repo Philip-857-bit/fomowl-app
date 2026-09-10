@@ -84,4 +84,16 @@ void main() {
     expect(token.networkKey, 'solana:mainnet');
     expect(token.tokenStandard, TokenStandard.native);
   });
+
+  test('preserves a balance when the backend price is unavailable', () {
+    final snapshot = HomePortfolioApiService.parseResponse('''
+{"walletAddress":"0xabc","sections":[{"chainId":56,"chainName":"BNB Smart Chain","tokens":[{"symbol":"NEW","name":"New token","contractAddress":"0x1","balance":42,"valueUsd":0,"priceUsd":null,"priceStatus":"provider_error"}]}]}
+''');
+
+    final token = snapshot.sections.single.tokens.single;
+    expect(token.balance, 42);
+    expect(token.priceUsd, 0);
+    expect(token.priceStatus, 'provider_error');
+    expect(token.formattedValue, 'Price unavailable');
+  });
 }

@@ -7,7 +7,7 @@ void main() {
     test('allows regular DNS names', () {
       expect(isBlockedRpcHost('example.com'), isFalse);
       expect(isBlockedRpcHost('api.mainnet.com'), isFalse);
-      expect(isBlockedRpcHost('fomowl.com'), isFalse);
+      expect(isBlockedRpcHost('fomowlhq.com'), isFalse);
       expect(isBlockedRpcHost('rpc.ankr.com'), isFalse);
     });
 

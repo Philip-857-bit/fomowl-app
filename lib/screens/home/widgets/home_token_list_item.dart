@@ -34,11 +34,7 @@ class HomeTokenListItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
         constraints: const BoxConstraints(minHeight: 68),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1C1C1C),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
+        color: Colors.transparent,
         child: Row(
           children: [
             Container(

@@ -298,7 +298,10 @@ void main() {
         visible.map((token) => token.symbol),
         containsAll(['BNB', 'CUSTOM']),
       );
-      expect(visible.map((token) => token.symbol), isNot(contains('SPAM')));
+      // A positive holding remains visible when pricing/verification providers
+      // are unavailable; hiding it would make a provider outage look like a
+      // zero wallet balance.
+      expect(visible.map((token) => token.symbol), contains('SPAM'));
       expect(visible.map((token) => token.symbol), isNot(contains('HIDDEN')));
     });
   });

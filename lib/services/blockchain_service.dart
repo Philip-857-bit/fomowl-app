@@ -81,7 +81,7 @@ class BlockchainService extends ChangeNotifier {
   Timer? _livePriceTimer;
   final Map<String, Set<String>> _trackedPriceIdsByScope = {};
   final Map<String, Duration> _livePriceIntervalsByScope = {};
-  Duration _livePriceInterval = const Duration(seconds: 10);
+  Duration _livePriceInterval = const Duration(minutes: 1);
   bool _isLivePriceTicking = false;
   bool _initialized = false;
   Future<void>? _initFuture;
@@ -1075,7 +1075,7 @@ class BlockchainService extends ChangeNotifier {
 
   void setLivePriceTrackingForTokens(
     List<Token> tokens, {
-    Duration interval = const Duration(seconds: 10),
+    Duration interval = const Duration(minutes: 1),
     String scope = 'default',
   }) {
     final trackedIds = tokens
@@ -1125,14 +1125,16 @@ class BlockchainService extends ChangeNotifier {
         if (nextPrice == null || nextPrice <= 0) return token;
 
         final nextChange = prices['${id}_change'] ?? token.changePercent24h;
-        if ((nextPrice - token.priceUsd).abs() < 0.0000001 &&
-            (nextChange - token.changePercent24h).abs() < 0.0000001) {
+        if (nextPrice == token.priceUsd &&
+            nextChange == token.changePercent24h) {
           return token;
         }
 
         return token.copyWith(
           valueUsd: token.balance * nextPrice,
           priceUsd: nextPrice,
+          priceStatus: 'found',
+          priceUpdatedAt: DateTime.now().toUtc(),
           changePercent24h: nextChange,
         );
       }).toList();
@@ -1439,9 +1441,7 @@ class BlockchainService extends ChangeNotifier {
     }
 
     final inFlight = _walletTokensInFlight[cacheKey];
-    if (forceRefresh && inFlight != null) {
-      await inFlight;
-    } else if (inFlight != null) {
+    if (inFlight != null) {
       if (existingState != null && !existingState.isLoading) {
         _setWalletTokenState(
           cacheKey,
@@ -1478,7 +1478,11 @@ class BlockchainService extends ChangeNotifier {
       requestedNetworkKey: effectiveNetworkKey,
     );
     _walletTokensInFlight[cacheKey] = future;
-    future.whenComplete(() => _walletTokensInFlight.remove(cacheKey));
+    future.whenComplete(() {
+      if (identical(_walletTokensInFlight[cacheKey], future)) {
+        _walletTokensInFlight.remove(cacheKey);
+      }
+    });
     return future;
   }
 
@@ -1649,6 +1653,36 @@ class BlockchainService extends ChangeNotifier {
       _lastDiscoveryPartialFailure = discovered.partialFailure;
       _lastDiscoveryTokenCount = discovered.tokenCount;
       _lastDiscoveryMessage = discovered.message;
+
+      // Balance discovery is useful on its own. Publish it before optional
+      // metadata and price enrichment so a slow/free-tier provider cannot
+      // keep the wallet row spinner active.
+      final discoveredForNetwork = discovered.tokens
+          .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
+          .toList(growable: false);
+      if (discoveredForNetwork.isNotEmpty) {
+        final balanceFetchedAt = DateTime.now();
+        _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+          tokens: List<Token>.from(discoveredForNetwork),
+          fetchedAt: balanceFetchedAt,
+          source: discovered.source,
+          isStale: discovered.partialFailure,
+          message: discovered.message,
+        );
+        _setWalletTokenState(
+          cacheKey,
+          WalletTokenState(
+            tokens: List<Token>.from(discoveredForNetwork),
+            source: discovered.source,
+            isLoading: true,
+            isStale: discovered.partialFailure,
+            lastUpdatedAt: balanceFetchedAt,
+            message: discovered.message,
+          ),
+          chainId: requestedChainId,
+          notify: true,
+        );
+      }
 
       // --- Enrich discovered tokens with CoinGecko prices when backend omits them ---
       final String? nativeCoinGeckoId;
@@ -2031,6 +2065,15 @@ class BlockchainService extends ChangeNotifier {
             balance: 0,
             valueUsd: 0,
             priceUsd: _toDouble(entry['priceUsd']),
+            priceStatus:
+                _asTrimmedString(entry['priceStatus']) ??
+                _asTrimmedString(entry['price_status']) ??
+                (_toDouble(entry['priceUsd']) > 0
+                    ? 'found'
+                    : 'price_unavailable'),
+            priceUpdatedAt: _parseProviderTimestamp(
+              entry['priceUpdatedAt'] ?? entry['priceObservedAt'],
+            ),
             changePercent24h: _toDouble(entry['changePercent24h']),
             decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
             imageUrl: (entry['imageUrl'] as String?)?.trim(),
@@ -2323,6 +2366,13 @@ class BlockchainService extends ChangeNotifier {
           balance: _toDouble(e['balance']),
           valueUsd: _toDouble(e['valueUsd']),
           priceUsd: _toDouble(e['priceUsd']),
+          priceStatus:
+              _asTrimmedString(e['priceStatus']) ??
+              _asTrimmedString(e['price_status']) ??
+              (_toDouble(e['priceUsd']) > 0 ? 'found' : 'price_unavailable'),
+          priceUpdatedAt: _parseProviderTimestamp(
+            e['priceUpdatedAt'] ?? e['priceObservedAt'],
+          ),
           changePercent24h: _toDouble(e['changePercent24h']),
           decimals: _toInt(e['decimals']) ?? 18,
           imageUrl: isActiveNativeToken
@@ -2437,7 +2487,7 @@ class BlockchainService extends ChangeNotifier {
     }
 
     final interval = _livePriceIntervalsByScope.values.isEmpty
-        ? const Duration(seconds: 10)
+        ? const Duration(minutes: 1)
         : _livePriceIntervalsByScope.values.reduce((a, b) => a <= b ? a : b);
 
     _livePriceInterval = interval;
@@ -2998,6 +3048,19 @@ class BlockchainService extends ChangeNotifier {
     if (v == null) return null;
     if (v is num) return v.toDouble();
     if (v is String) return double.tryParse(v);
+    return null;
+  }
+
+  DateTime? _parseProviderTimestamp(dynamic value) {
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(
+        value.toInt() * 1000,
+        isUtc: true,
+      );
+    }
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
     return null;
   }
 
