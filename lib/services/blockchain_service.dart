@@ -38,6 +38,24 @@ class BlockchainService extends ChangeNotifier {
   static const Duration _walletTokensCacheTtl = Duration(minutes: 2);
   static const Duration _jitterMax = Duration(milliseconds: 100);
   static const int _circuitBreakerFailureThreshold = 3;
+
+  @visibleForTesting
+  static bool shouldApplyLivePriceUpdate({
+    required double currentPrice,
+    required double nextPrice,
+    required double currentChange,
+    required double nextChange,
+  }) {
+    if (!nextPrice.isFinite || nextPrice <= 0) return false;
+    if (!currentPrice.isFinite || currentPrice <= 0) return true;
+
+    final priceScale = max(currentPrice.abs(), nextPrice.abs());
+    final priceChanged =
+        (nextPrice - currentPrice).abs() > priceScale * 0.000001;
+    final changeChanged = (nextChange - currentChange).abs() >= 0.0000001;
+    return priceChanged || changeChanged;
+  }
+
   static const Duration _circuitBreakerInitialBackoff = Duration(seconds: 30);
   static const Duration _circuitBreakerMaxBackoff = Duration(minutes: 10);
   final StorageService _storageService = StorageService();
@@ -2439,14 +2457,20 @@ class BlockchainService extends ChangeNotifier {
         if (nextPrice == null || nextPrice <= 0) return token;
 
         final nextChange = prices['${id}_change'] ?? token.changePercent24h;
-        if ((nextPrice - token.priceUsd).abs() < 0.0000001 &&
-            (nextChange - token.changePercent24h).abs() < 0.0000001) {
+        if (!shouldApplyLivePriceUpdate(
+          currentPrice: token.priceUsd,
+          nextPrice: nextPrice,
+          currentChange: token.changePercent24h,
+          nextChange: nextChange,
+        )) {
           return token;
         }
         changed = true;
         return token.copyWith(
           valueUsd: token.balance * nextPrice,
           priceUsd: nextPrice,
+          priceStatus: 'found',
+          priceUpdatedAt: DateTime.now(),
           changePercent24h: nextChange,
         );
       }).toList();

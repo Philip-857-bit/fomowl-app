@@ -45,4 +45,15 @@ void main() {
     expect(updated.isStale, isTrue);
     expect(updated.message, 'cached');
   });
+
+  test('live price refresh accepts a recovered sub-micro token price', () {
+    final shouldApply = BlockchainService.shouldApplyLivePriceUpdate(
+      currentPrice: 0,
+      nextPrice: 0.000000000689739,
+      currentChange: 0,
+      nextChange: 0,
+    );
+
+    expect(shouldApply, isTrue);
+  });
 }
