@@ -1,0 +1,6 @@
+--- lib/screens/wallet/wallets_screen.dart
++++ lib/screens/wallet/wallets_screen.dart
+@@ -2,2 +2,3 @@
+ import 'dart:async';
+
++import '../../services/screen_capture_guard.dart';
