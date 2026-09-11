@@ -169,7 +169,7 @@ class Token {
     if (balanceDecimal > Decimal.zero &&
         valueUsdDecimal <= Decimal.zero &&
         !hasKnownPrice) {
-      return r'$0';
+      return 'Price unavailable';
     }
     return ValueFormatter.formatUsdValue(totalValueUsdDecimal);
   }

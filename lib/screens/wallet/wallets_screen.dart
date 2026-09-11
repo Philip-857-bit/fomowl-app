@@ -11,6 +11,7 @@ import '../../models/wallet_account.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../../utils/toast_utils.dart';
@@ -501,53 +502,63 @@ class _WalletsScreenState extends State<WalletsScreen> {
         ToastUtils.showError(l.noPrivateKeyFound);
         return;
       }
-      await showModalBottomSheet<void>(
-        context: context,
-        backgroundColor: AppColors.cardDark,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        builder: (ctx) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_familyLabel(exportFamily)} ${l.privateKey}',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
+      final screenCaptureGuard = ScreenCaptureGuard();
+      await screenCaptureGuard.enableProtection();
+      if (!mounted) return;
+      try {
+        await showModalBottomSheet<void>(
+          context: context,
+          backgroundColor: AppColors.cardDark,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (ctx) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_familyLabel(exportFamily)} ${l.privateKey}',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                SelectableText(
-                  familyAddress,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white54,
-                    fontSize: 12,
+                  const SizedBox(height: 10),
+                  SelectableText(
+                    familyAddress,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white54,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                SelectableText(
-                  privateKey,
-                  style: GoogleFonts.outfit(color: Colors.white70, height: 1.4),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  l.privateKeySecurityWarning,
-                  style: GoogleFonts.outfit(
-                    color: Colors.white38,
-                    fontSize: 12,
+                  const SizedBox(height: 10),
+                  SelectableText(
+                    privateKey,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white70,
+                      height: 1.4,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  Text(
+                    l.privateKeySecurityWarning,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white38,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
+        );
+      } finally {
+        await screenCaptureGuard.disableProtection();
+      }
     } catch (e) {
       ToastUtils.showError(
         AppErrorUtils.userMessage(

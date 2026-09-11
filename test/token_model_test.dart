@@ -31,7 +31,7 @@ void main() {
         changePercent24h: 0,
       );
 
-      expect(token.formattedValue, '\$0');
+      expect(token.formattedValue, 'Price unavailable');
       expect(token.formattedPrice, '\$0');
       expect(token.hasKnownPrice, isFalse);
       expect(token.hasProviderError, isTrue);
