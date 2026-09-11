@@ -104,6 +104,26 @@ class HomePortfolioSnapshotService {
   Future<void> saveSnapshot(HomeAggregatedPortfolioSnapshot snapshot) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (_isEmptyPartialSnapshot(snapshot)) {
+        final existingRaw = prefs.getString(_key(snapshot.walletAddress));
+        if (existingRaw != null && existingRaw.isNotEmpty) {
+          try {
+            final existingDecoded = jsonDecode(existingRaw);
+            if (existingDecoded is Map<String, dynamic>) {
+              final existing = HomeAggregatedPortfolioSnapshot.fromJson(
+                existingDecoded,
+              );
+              if (_hasPositiveBalance(existing)) {
+                // A timed-out multi-chain refresh is not evidence that the
+                // wallet became empty. Keep the last-known funded snapshot.
+                return;
+              }
+            }
+          } catch (_) {
+            // Replace malformed cache data with the new serializable snapshot.
+          }
+        }
+      }
       await prefs.setString(
         _key(snapshot.walletAddress),
         jsonEncode(snapshot.toJson()),
@@ -143,6 +163,14 @@ class HomePortfolioSnapshotService {
     }
   }
 }
+
+bool _isEmptyPartialSnapshot(HomeAggregatedPortfolioSnapshot snapshot) =>
+    snapshot.partialFailure && !_hasPositiveBalance(snapshot);
+
+bool _hasPositiveBalance(HomeAggregatedPortfolioSnapshot snapshot) => snapshot
+    .sections
+    .expand((section) => section.tokens)
+    .any((token) => token.balance > 0);
 
 DateTime _parseTimestamp(Object? rawValue) {
   final raw = rawValue?.toString();

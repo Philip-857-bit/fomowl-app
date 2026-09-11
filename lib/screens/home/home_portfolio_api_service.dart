@@ -20,12 +20,15 @@ class HomePortfolioApiService {
   Future<HomeAggregatedPortfolioSnapshot> fetchPortfolio(
     String walletAddress, {
     bool sync = false,
+    List<int>? chainIds,
   }) async {
     final normalizedAddress = walletAddress.trim().toLowerCase();
     final response = await _httpClientService.sendWithRetry(
       () => _httpClientService.client.get(
         AppEnvironment.blockchain('/portfolio/$normalizedAddress', {
           'sync': '$sync',
+          if (chainIds != null && chainIds.isNotEmpty)
+            'chains': chainIds.join(','),
         }),
       ),
     );
