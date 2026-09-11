@@ -504,6 +504,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
       }
       final screenCaptureGuard = ScreenCaptureGuard();
       await screenCaptureGuard.enableProtection();
+      if (!mounted) return;
       try {
         await showModalBottomSheet<void>(
           context: context,
