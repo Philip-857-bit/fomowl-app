@@ -20,8 +20,11 @@ void main() {
       final openSea = service.checkUri(Uri.parse('https://opensea.io'));
       expect(openSea.isBlocked, isFalse);
 
-      final fomowl = service.checkUri(Uri.parse('https://owlletapp.com'));
+      final fomowl = service.checkUri(Uri.parse('https://fomowlhq.com'));
       expect(fomowl.isBlocked, isFalse);
+
+      final owllet = service.checkUri(Uri.parse('https://owlletapp.com'));
+      expect(owllet.isBlocked, isFalse);
     });
 
     test('Blocks known malicious drainer domains', () {

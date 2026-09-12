@@ -7,6 +7,7 @@ import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/screens/swap/widgets/bridge_tab_content.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:fomowl_wallet/services/bridge_service.dart';
 
 Token token(String symbol, String networkKey, {String? address}) => Token(
   symbol: symbol,
@@ -115,6 +116,30 @@ void main() {
     expect(bridgeFamilyLogoUrl(ChainFamily.tron), isNotEmpty);
   });
 
+  test('same-chain committed quotes do not require a bridge deadline', () {
+    final now = DateTime.utc(2026, 9, 12, 12);
+    final sameChainQuote = _bridgeQuote(
+      originChainId: 56,
+      destinationChainId: 56,
+    );
+    final expiredSameChainQuote = _bridgeQuote(
+      originChainId: 56,
+      destinationChainId: 56,
+      deadline: now.subtract(const Duration(seconds: 1)),
+    );
+    final crossChainQuote = _bridgeQuote(
+      originChainId: 56,
+      destinationChainId: 1,
+    );
+
+    expect(committedBridgeQuoteIsFresh(sameChainQuote, now: now), isTrue);
+    expect(committedBridgeQuoteIsFresh(crossChainQuote, now: now), isFalse);
+    expect(
+      committedBridgeQuoteIsFresh(expiredSameChainQuote, now: now),
+      isFalse,
+    );
+  });
+
   testWidgets('bridge token modal stays on the active chain', (tester) async {
     final blockchain = _BridgeBlockchainService();
     final tokens = [
@@ -166,6 +191,29 @@ void main() {
     expect(blockchain.activeNetworkKey, 'tron:mainnet');
   });
 }
+
+BridgeQuote _bridgeQuote({
+  required int originChainId,
+  required int destinationChainId,
+  DateTime? deadline,
+}) => BridgeQuote(
+  originChainId: originChainId,
+  destinationChainId: destinationChainId,
+  amountIn: '1',
+  amountOut: '1',
+  amountOutUsd: 1,
+  bridgeFeeUsd: 0,
+  gasFeeUsd: 0,
+  routeProvider: '0x',
+  platformFeeBps: 0,
+  platformFeeUsd: 0,
+  effectiveSlippageBps: 50,
+  timeEstimateSeconds: null,
+  requestId: '',
+  steps: const [],
+  committed: true,
+  deadline: deadline,
+);
 
 class _BridgeSelectorHarness extends StatefulWidget {
   const _BridgeSelectorHarness({

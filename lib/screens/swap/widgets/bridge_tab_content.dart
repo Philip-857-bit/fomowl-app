@@ -106,6 +106,18 @@ double? destinationAmountUsd({
   return amount * price;
 }
 
+@visibleForTesting
+bool committedBridgeQuoteIsFresh(BridgeQuote quote, {required DateTime now}) {
+  final deadline = quote.deadline;
+  // Same-chain providers return immediately executable transactions rather
+  // than a cross-chain deposit intent, so they may omit an intent TTL. When a
+  // provider does include one, still enforce it.
+  if (deadline == null) {
+    return quote.originChainId == quote.destinationChainId;
+  }
+  return deadline.toUtc().isAfter(now.toUtc().add(const Duration(seconds: 30)));
+}
+
 Token _bridgeCurrencyAsToken(BridgeCurrency currency) => Token(
   symbol: currency.symbol,
   name: currency.name,
@@ -891,11 +903,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         });
         return;
       }
-      final deadline = committed.deadline;
-      if (deadline == null ||
-          deadline.toUtc().isBefore(
-            DateTime.now().toUtc().add(const Duration(seconds: 30)),
-          )) {
+      if (!committedBridgeQuoteIsFresh(committed, now: DateTime.now())) {
         setState(() {
           _isBridging = false;
           _quoteError =

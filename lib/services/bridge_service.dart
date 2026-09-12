@@ -290,25 +290,49 @@ class BridgeService {
   }) async {
     _lastError = null;
     final isSameChain = originChainId == destinationChainId;
+    final useSameChainEvmSwap =
+        isSameChain &&
+        originChainId != tronBridgeChainId &&
+        originChainId != relaySolanaChainId &&
+        originChainId != 1399811149;
     final routeKind = isSameChain ? 'swap' : 'bridge';
     try {
-      final params = <String, String>{
-        'originChainId': '$originChainId',
-        'destinationChainId': '$destinationChainId',
-        'originCurrency': originCurrency.isEmpty
-            ? nativeCurrency
-            : originCurrency,
-        'destinationCurrency': destinationCurrency.isEmpty
-            ? nativeCurrency
-            : destinationCurrency,
-        'amount': amountWei,
-        'user': walletAddress,
-        'recipient': recipientAddress ?? walletAddress,
-        if (amountUsd != null && amountUsd > 0) 'amountUsd': '$amountUsd',
-        if (slippageBps != null) 'slippageBps': '${slippageBps.clamp(1, 5000)}',
-        if (commit) 'commit': 'true',
-      };
-      final url = AppEnvironment.swap('/cross-chain/quote', params);
+      final normalizedOrigin = originCurrency.isEmpty
+          ? nativeCurrency
+          : originCurrency;
+      final normalizedDestination = destinationCurrency.isEmpty
+          ? nativeCurrency
+          : destinationCurrency;
+      final params = useSameChainEvmSwap
+          ? <String, String>{
+              // Same-chain EVM pairs belong to the standard route, whose
+              // provider order is 0x -> Relay -> OpenOcean. Sending them to
+              // /cross-chain/quote bypassed 0x and made Relay the primary.
+              'chainId': '$originChainId',
+              'src': _zeroExCurrency(normalizedOrigin),
+              'dst': _zeroExCurrency(normalizedDestination),
+              'amount': amountWei,
+              'taker': walletAddress,
+              if (slippageBps != null)
+                'slippageBps': '${slippageBps.clamp(1, 5000)}',
+            }
+          : <String, String>{
+              'originChainId': '$originChainId',
+              'destinationChainId': '$destinationChainId',
+              'originCurrency': normalizedOrigin,
+              'destinationCurrency': normalizedDestination,
+              'amount': amountWei,
+              'user': walletAddress,
+              'recipient': recipientAddress ?? walletAddress,
+              if (amountUsd != null && amountUsd > 0) 'amountUsd': '$amountUsd',
+              if (slippageBps != null)
+                'slippageBps': '${slippageBps.clamp(1, 5000)}',
+              if (commit) 'commit': 'true',
+            };
+      final url = AppEnvironment.swap(
+        useSameChainEvmSwap ? '/quote' : '/cross-chain/quote',
+        params,
+      );
 
       final response = await _http
           .sendWithRetry(
@@ -329,7 +353,10 @@ class BridgeService {
         return null;
       }
       final data = Map<String, dynamic>.from(raw);
-      final amountOut = data['amountOut']?.toString() ?? '';
+      final amountOut =
+          (useSameChainEvmSwap ? data['buyAmount'] : data['amountOut'])
+              ?.toString() ??
+          '';
       if (amountOut.isEmpty || amountOut == '0') {
         _lastError =
             'This bridge is not available right now. Try a different amount or token.';
@@ -339,8 +366,17 @@ class BridgeService {
       final extra = data['extra'] is Map
           ? Map<String, dynamic>.from(data['extra'] as Map)
           : const <String, dynamic>{};
-      final committed = (extra['committed'] ?? data['committed']) != false;
-      final steps = _parseSteps(data['steps']);
+      final committed = useSameChainEvmSwap
+          ? commit
+          : (extra['committed'] ?? data['committed']) != false;
+      final steps = useSameChainEvmSwap
+          ? _parseSameChainSteps(
+              data,
+              chainId: originChainId,
+              sellToken: normalizedOrigin,
+              sellAmount: amountWei,
+            )
+          : _parseSteps(data['steps']);
       if (committed && steps.isEmpty) {
         _lastError =
             'The $routeKind transaction could not be prepared. Please refresh the quote.';
@@ -355,12 +391,22 @@ class BridgeService {
         amountIn: data['amountIn']?.toString() ?? amountWei,
         amountOut: amountOut,
         amountOutUsd: _readAmountOutUsd(data),
-        bridgeFeeUsd: (data['feeUsd'] as num?)?.toDouble(),
-        gasFeeUsd: (data['gasFeeUsd'] as num?)?.toDouble(),
-        routeProvider: _readProvider(data),
+        bridgeFeeUsd: useSameChainEvmSwap
+            ? 0
+            : (data['feeUsd'] as num?)?.toDouble(),
+        gasFeeUsd:
+            ((useSameChainEvmSwap ? data['networkFeeUsd'] : data['gasFeeUsd'])
+                    as num?)
+                ?.toDouble(),
+        routeProvider: _readProvider(
+          data,
+          sameChainDefault: useSameChainEvmSwap,
+        ),
         platformFeeBps: (data['platformFeeBps'] as num?)?.toInt(),
         platformFeeUsd: (data['platformFeeUsd'] as num?)?.toDouble(),
-        effectiveSlippageBps: (data['effectiveSlippageBps'] as num?)?.toInt(),
+        effectiveSlippageBps:
+            (data['effectiveSlippageBps'] as num?)?.toInt() ??
+            (useSameChainEvmSwap ? slippageBps : null),
         timeEstimateSeconds: (data['timeEstimateSeconds'] as num?)?.toInt(),
         requestId: data['requestId']?.toString() ?? '',
         steps: steps,
@@ -749,8 +795,13 @@ class BridgeService {
     return double.tryParse(currencyOut['amountUsd']?.toString() ?? '') ?? 0.0;
   }
 
-  static String _readProvider(Map<String, dynamic> data) {
-    final protocol = data['protocolUsed']?.toString().trim() ?? '';
+  static String _readProvider(
+    Map<String, dynamic> data, {
+    bool sameChainDefault = false,
+  }) {
+    final protocol =
+        (data['protocolUsed'] ?? data['protocol_used'])?.toString().trim() ??
+        '';
     if (protocol.isNotEmpty) return protocol;
     final provider = data['provider'];
     if (provider is Map) {
@@ -760,8 +811,78 @@ class BridgeService {
       }
     }
     final value = provider?.toString().trim() ?? '';
-    return value.isEmpty ? 'Owllet routing' : value;
+    if (value.isNotEmpty) return value;
+    return sameChainDefault ? '0x' : 'Owllet routing';
   }
+
+  static String _zeroExCurrency(String currency) {
+    if (currency.isEmpty || currency.toLowerCase() == nativeCurrency) {
+      return '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    }
+    return currency;
+  }
+
+  static List<BridgeStepTx> _parseSameChainSteps(
+    Map<String, dynamic> data, {
+    required int chainId,
+    required String sellToken,
+    required String sellAmount,
+  }) {
+    final transaction = data['transaction'];
+    if (transaction is! Map) return const [];
+    final to = transaction['to']?.toString() ?? '';
+    final callData = transaction['data']?.toString() ?? '';
+    if (!_isEvmAddress(to) || !callData.startsWith('0x')) return const [];
+
+    final steps = <BridgeStepTx>[];
+    final isNative =
+        sellToken.isEmpty ||
+        sellToken.toLowerCase() == nativeCurrency ||
+        sellToken.toLowerCase() == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    final needsAllowance = data['needsAllowance'] == true;
+    final spender =
+        (data['allowanceSpender'] ?? data['allowanceTarget'])?.toString() ?? '';
+    if (!isNative && needsAllowance) {
+      final approvalData = _erc20ApprovalData(spender, sellAmount);
+      if (!_isEvmAddress(sellToken) || approvalData == null) return const [];
+      steps.add(
+        BridgeStepTx(
+          stepId: 'approve',
+          description: 'Approve token',
+          to: sellToken,
+          data: approvalData,
+          value: BigInt.zero,
+          chainId: chainId,
+        ),
+      );
+    }
+
+    steps.add(
+      BridgeStepTx(
+        stepId: 'swap',
+        description: 'Swap tokens',
+        to: to,
+        data: callData,
+        value: _parseBigInt(transaction['value']) ?? BigInt.zero,
+        chainId: chainId,
+        maxFeePerGas: _parseBigInt(transaction['maxFeePerGas']),
+        maxPriorityFeePerGas: _parseBigInt(transaction['maxPriorityFeePerGas']),
+      ),
+    );
+    return steps;
+  }
+
+  static String? _erc20ApprovalData(String spender, String amount) {
+    if (!_isEvmAddress(spender)) return null;
+    final parsedAmount = BigInt.tryParse(amount);
+    if (parsedAmount == null || parsedAmount <= BigInt.zero) return null;
+    final addressWord = spender.substring(2).toLowerCase().padLeft(64, '0');
+    final amountWord = parsedAmount.toRadixString(16).padLeft(64, '0');
+    return '0x095ea7b3$addressWord$amountWord';
+  }
+
+  static bool _isEvmAddress(String value) =>
+      RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(value);
 
   /// Parse raw Relay `steps` (as returned by the backend, e.g. the cash-in
   /// saga's /cashin/initiate) into executable [BridgeStepTx]s. Public so the

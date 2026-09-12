@@ -67,7 +67,7 @@ class PhishingProtectionService {
     'pump': ['pump.fun'],
     'coingecko': ['coingecko.com'],
     'coinmarketcap': ['coinmarketcap.com'],
-    'fomowl': ['fomowl.com', 'owlletapp.com'],
+    'fomowl': ['fomowlhq.com', 'owlletapp.com'],
   };
 
   // Suspicious keywords commonly attached to brand names by phishing drainers

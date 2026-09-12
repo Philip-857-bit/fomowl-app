@@ -934,32 +934,32 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final backgroundRequests =
         <Future<List<Map<String, dynamic>>> Function()>[];
     if (activeFamily == ChainFamily.solana) {
-      activeRequest = _fetchNonEvmBridgeBalances(
+      activeRequest = _fetchNetworkBridgeBalances(
         ChainFamily.solana,
         'solana:mainnet',
       );
       backgroundRequests.addAll([
         () => _fetchEvmBridgeBalances(useCached: false),
-        () => _fetchNonEvmBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
+        () => _fetchNetworkBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
       ]);
     } else if (activeFamily == ChainFamily.tron) {
-      activeRequest = _fetchNonEvmBridgeBalances(
+      activeRequest = _fetchNetworkBridgeBalances(
         ChainFamily.tron,
         'tron:mainnet',
       );
       backgroundRequests.addAll([
         () => _fetchEvmBridgeBalances(useCached: false),
-        () => _fetchNonEvmBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
+        () => _fetchNetworkBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
       ]);
     } else {
-      activeRequest = _fetchEvmBridgeBalances(
-        chainIds: activeEvmChainId == null ? null : [activeEvmChainId],
-      );
+      activeRequest = activeEvmChainId == null
+          ? _fetchEvmBridgeBalances()
+          : _fetchActiveEvmBridgeBalances(activeEvmChainId);
       backgroundRequests.addAll([
         if (activeEvmChainId != null)
           () => _fetchEvmBridgeBalances(useCached: false),
-        () => _fetchNonEvmBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
-        () => _fetchNonEvmBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
+        () => _fetchNetworkBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
+        () => _fetchNetworkBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
       ]);
     }
     final activeBalances = await publish(activeRequest);
@@ -1031,6 +1031,47 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     return const <Map<String, dynamic>>[];
   }
 
+  Future<List<Map<String, dynamic>>> _fetchActiveEvmBridgeBalances(
+    int chainId,
+  ) async {
+    final portfolioBalances = await _fetchEvmBridgeBalances(
+      chainIds: [chainId],
+    );
+    if (portfolioBalances.isNotEmpty) {
+      return portfolioBalances;
+    }
+
+    // A portfolio section can be absent when its shared multi-chain discovery
+    // leader times out. The chain-specific endpoint is independent and often
+    // remains healthy, so use it before reporting an empty active wallet.
+    final networkKey = 'evm:$chainId';
+    final directBalances = await _fetchNetworkBridgeBalances(
+      ChainFamily.evm,
+      networkKey,
+    );
+    if (directBalances.isEmpty) return directBalances;
+
+    final hiddenTokens = await TokenVisibilityService().loadHiddenTokens(
+      chainId,
+    );
+    if (hiddenTokens.isEmpty) return directBalances;
+    return directBalances.where((balance) {
+      final token = Token(
+        symbol: balance['symbol']?.toString() ?? '',
+        name: balance['name']?.toString() ?? '',
+        contractAddress: balance['contractAddress']?.toString(),
+        balance: (balance['balance'] as num?)?.toDouble() ?? 0,
+        valueUsd: (balance['valueUsd'] as num?)?.toDouble() ?? 0,
+        priceUsd: (balance['priceUsd'] as num?)?.toDouble() ?? 0,
+        changePercent24h: 0,
+        decimals: (balance['decimals'] as num?)?.toInt() ?? 18,
+        isCertified: balance['isCertified'] == true,
+        networkKey: networkKey,
+      );
+      return !TokenVisibilityUtils.contains(hiddenTokens, token);
+    }).toList();
+  }
+
   Future<void> _refreshEvmBridgeBalances(
     String evmAddress,
     HomeAggregatedPortfolioSnapshot cachedSnapshot,
@@ -1083,12 +1124,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         if (TokenVisibilityUtils.contains(hiddenTokens, token)) {
           continue;
         }
-        final isNative =
-            token.contractAddress == null ||
-            token.contractAddress!.trim().isEmpty;
-        if (!isNative && !token.isCertified && token.valueUsd < 0.01) {
-          continue;
-        }
+        // The backend already applies spam filtering. Do not hide a real token
+        // merely because its USD price provider is temporarily unavailable.
         final networkKey =
             (token.networkKey == null || token.networkKey!.trim().isEmpty)
             ? section.chain.networkKey
@@ -1133,10 +1170,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
   }
 
-  /// Fetch non-EVM (Solana/Tron) wallet token balances statelessly via the
+  /// Fetch one network's wallet token balances statelessly via the
   /// backend network-key wallet-tokens endpoint, normalized to the same shape
   /// as the EVM balances above. Best-effort: returns empty on any failure.
-  Future<List<Map<String, dynamic>>> _fetchNonEvmBridgeBalances(
+  Future<List<Map<String, dynamic>>> _fetchNetworkBridgeBalances(
     ChainFamily family,
     String networkKey,
   ) async {
@@ -1163,7 +1200,11 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       if (rawTokens is! List) {
         return const <Map<String, dynamic>>[];
       }
-      final defaultDecimals = family == ChainFamily.solana ? 9 : 6;
+      final defaultDecimals = family == ChainFamily.solana
+          ? 9
+          : family == ChainFamily.tron
+          ? 6
+          : 18;
       final result = <Map<String, dynamic>>[];
       for (final raw in rawTokens) {
         if (raw is! Map) continue;
@@ -1172,12 +1213,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         final balance = (token['balance'] as num?)?.toDouble() ?? 0;
         if (symbol.isEmpty || balance <= 0) continue;
         final contractAddress = token['contractAddress'] as String?;
-        final isNative =
-            contractAddress == null || contractAddress.trim().isEmpty;
         final isCertified = token['isCertified'] == true;
         final valueUsd = (token['valueUsd'] as num?)?.toDouble() ?? 0;
-        // Skip uncertified spam tokens with no meaningful value.
-        if (!isNative && !isCertified && valueUsd < 0.01) continue;
+        // The backend is the canonical spam filter. Price outages must not
+        // erase a positive token balance from OwlletPay.
         result.add(<String, dynamic>{
           'symbol': symbol,
           'name': (token['name'] as String?) ?? symbol,
@@ -1188,6 +1227,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'balance': balance,
           'valueUsd': valueUsd,
           'priceUsd': (token['priceUsd'] as num?)?.toDouble() ?? 0,
+          'isCertified': isCertified,
           'imageUrl':
               (token['imageUrl'] as String?) ?? (token['logoUrl'] as String?),
           'logoUrl':

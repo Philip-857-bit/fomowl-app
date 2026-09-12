@@ -85,31 +85,96 @@ void main() {
     expect(currency.priceUsd, 65000.25);
   });
 
-  test('passes selected slippage to the Relay quote endpoint', () async {
-    Uri? requestedUri;
-    final client = MockClient((request) async {
-      requestedUri = request.url;
-      return http.Response(
-        '{"code":"ROUTE_UNAVAILABLE","message":"No route."}',
-        400,
+  test(
+    'routes same-chain EVM quotes through the 0x-first swap endpoint',
+    () async {
+      Uri? requestedUri;
+      final client = MockClient((request) async {
+        requestedUri = request.url;
+        return http.Response(
+          '{"code":"ROUTE_UNAVAILABLE","message":"No route."}',
+          400,
+        );
+      });
+      final service = BridgeService(
+        httpClientService: _HttpClientServiceMock(client),
       );
-    });
+
+      await service.getQuote(
+        originChainId: 56,
+        destinationChainId: 56,
+        originCurrency: '0x1111111111111111111111111111111111111111',
+        destinationCurrency: BridgeService.nativeCurrency,
+        amountWei: '1000000000',
+        walletAddress: '0x2222222222222222222222222222222222222222',
+        slippageBps: 550,
+      );
+
+      expect(requestedUri?.queryParameters['slippageBps'], '550');
+      expect(requestedUri?.path, endsWith('/api/swap/quote'));
+      expect(requestedUri?.queryParameters['chainId'], '56');
+      expect(requestedUri?.queryParameters['src'], startsWith('0x1111'));
+      expect(
+        requestedUri?.queryParameters.containsKey('originChainId'),
+        isFalse,
+      );
+    },
+  );
+
+  test('turns a same-chain 0x quote into approval and swap steps', () async {
+    final client = MockClient(
+      (_) async => http.Response(
+        '''{"buyAmount":"900000","minBuyAmount":"890000","needsAllowance":true,"allowanceSpender":"0x3333333333333333333333333333333333333333","platformFeeBps":1000,"platformFeeUsd":1.0,"networkFeeUsd":0.02,"transaction":{"to":"0x4444444444444444444444444444444444444444","data":"0xabcdef","value":"0","gas":"250000","gasPrice":"1000000000"}}''',
+        200,
+      ),
+    );
     final service = BridgeService(
       httpClientService: _HttpClientServiceMock(client),
     );
 
-    await service.getQuote(
+    final quote = await service.getQuote(
       originChainId: 56,
       destinationChainId: 56,
       originCurrency: '0x1111111111111111111111111111111111111111',
       destinationCurrency: BridgeService.nativeCurrency,
-      amountWei: '1000000000',
+      amountWei: '1000000',
       walletAddress: '0x2222222222222222222222222222222222222222',
-      slippageBps: 550,
+      slippageBps: 50,
     );
 
-    expect(requestedUri?.queryParameters['slippageBps'], '550');
+    expect(quote, isNotNull);
+    expect(quote!.routeProviderLabel, '0x');
+    expect(quote.steps, hasLength(2));
+    expect(quote.steps.first.to, '0x1111111111111111111111111111111111111111');
+    expect(quote.steps.first.data, startsWith('0x095ea7b3'));
+    expect(quote.steps.last.to, '0x4444444444444444444444444444444444444444');
+    expect(quote.requestId, isEmpty);
   });
+
+  test(
+    'does not send a same-chain TRON route to the EVM swap endpoint',
+    () async {
+      Uri? requestedUri;
+      final client = MockClient((request) async {
+        requestedUri = request.url;
+        return http.Response('{"code":"ROUTE_UNAVAILABLE"}', 400);
+      });
+      final service = BridgeService(
+        httpClientService: _HttpClientServiceMock(client),
+      );
+
+      await service.getQuote(
+        originChainId: BridgeService.tronBridgeChainId,
+        destinationChainId: BridgeService.tronBridgeChainId,
+        originCurrency: BridgeService.tronNativeCurrency,
+        destinationCurrency: BridgeService.tronNativeCurrency,
+        amountWei: '1000000',
+        walletAddress: 'TWallet',
+      );
+
+      expect(requestedUri?.path, endsWith('/api/swap/cross-chain/quote'));
+    },
+  );
 
   test('parses actionable slippage refund guidance', () async {
     final client = MockClient(
