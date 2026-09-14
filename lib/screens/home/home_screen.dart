@@ -18,6 +18,7 @@ import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/runtime_config_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
 import '../../services/token_visibility_service.dart';
@@ -115,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _walletLoadGeneration = 0;
   final AppReleaseChecker _releaseChecker = AppReleaseChecker();
   final ConnectivityRecovery _connectivityRecovery = ConnectivityRecovery();
+  final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
   StreamSubscription<TokenVisibilityChange>? _tokenVisibilitySubscription;
   StreamSubscription<AppNotificationEvent>? _notificationEventSubscription;
   String _lastTokenSignature = '';
@@ -134,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _runtimeConfig.addListener(_handleRuntimeConfigChanged);
     _tokenVisibilitySubscription = _tokenVisibilityService.changes.listen((
       change,
     ) {
@@ -167,6 +170,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void _handleRuntimeConfigChanged() {
+    if (!mounted) return;
+    if (!_runtimeConfig.snapshot.portfolioUiEnabled &&
+        _selectedAssetTab == HomeAssetTab.portfolio) {
+      _selectedAssetTab = HomeAssetTab.tokens;
+    }
+    setState(() {});
+    if (_runtimeConfig.snapshot.portfolioEnabled &&
+        _runtimeConfig.snapshot.portfolioUiEnabled) {
+      unawaited(_loadWalletData());
+    }
+  }
+
+  bool get _portfolioRuntimeEnabled =>
+      _runtimeConfig.snapshot.portfolioEnabled &&
+      _runtimeConfig.snapshot.portfolioUiEnabled;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -196,6 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _blockchain?.removeListener(_handleBlockchainChange);
     _tokenVisibilitySubscription?.cancel();
     _notificationEventSubscription?.cancel();
+    _runtimeConfig.removeListener(_handleRuntimeConfigChanged);
     super.dispose();
   }
 
@@ -898,7 +919,9 @@ class _HomeScreenState extends State<HomeScreen> {
           preChainId,
           address,
         );
-        final portfolioSnapshotFuture = _applyPortfolioSnapshot(address);
+        final portfolioSnapshotFuture = _portfolioRuntimeEnabled
+            ? _applyPortfolioSnapshot(address)
+            : Future<void>.value();
 
         if (snapshot != null &&
             mounted &&
@@ -944,7 +967,9 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted || loadGeneration != _walletLoadGeneration) return;
 
         debugPrint('[OWLLET] Triggering background data sync...');
-        if (balanceAddress != null && balanceAddress.isNotEmpty) {
+        if (_portfolioRuntimeEnabled &&
+            balanceAddress != null &&
+            balanceAddress.isNotEmpty) {
           unawaited(_fetchRealBalances(balanceAddress));
         } else if (mounted) {
           setState(() {
@@ -1942,6 +1967,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 hasMoreNfts: _hasMoreNfts,
                                 localization: l,
                                 initialTab: _selectedAssetTab,
+                                portfolioEnabled:
+                                    _runtimeConfig.snapshot.portfolioUiEnabled,
                                 onScan: () =>
                                     Navigator.pushNamed(context, '/qr-scanner'),
                                 onManageTokens: _openTokenManager,

@@ -23,6 +23,7 @@ import '../../services/blockchain_service.dart';
 import '../../services/bridge_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/http_client_service.dart';
+import '../../services/runtime_config_service.dart';
 import '../../services/system_picker_guard.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/wallet_service.dart';
@@ -136,6 +137,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   final WalletService _walletService = WalletService();
   final WalletHistoryService _walletHistoryService = WalletHistoryService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
+  final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
   InAppWebViewController? _controller;
   int _progress = 0;
   bool _canGoBack = false;
@@ -164,6 +166,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   @override
   void initState() {
     super.initState();
+    _runtimeConfig.addListener(_handleRuntimeConfigChanged);
     _prepareBridgeContext();
   }
 
@@ -181,10 +184,15 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   @override
   void dispose() {
     _blockchain?.removeListener(_handleActiveWalletChange);
+    _runtimeConfig.removeListener(_handleRuntimeConfigChanged);
     // Don't leave the lock-on-background suppressed once the user leaves the
     // mini app; the guard is only meant to cover an in-flight capture here.
     SystemPickerGuard.clear();
     super.dispose();
+  }
+
+  void _handleRuntimeConfigChanged() {
+    unawaited(_prepareBridgeContext().then((_) => _publishBridgeContext()));
   }
 
   void _handleActiveWalletChange() {
@@ -409,7 +417,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'requestContractTransaction': widget.definition.id == 'burst',
           'requestSignMessage': true,
           'notify': true,
-          'getBalances': true,
+          'getBalances':
+              _runtimeConfig.snapshot.portfolioEnabled &&
+              _runtimeConfig.snapshot.legacyAggregateEnabled,
+          'getNetworkBalances':
+              _runtimeConfig.snapshot.portfolioEnabled &&
+              _runtimeConfig.snapshot.scopedBalancesEnabled,
           'switchNetwork': true,
           'saveReceiptImage': true,
           'shareReceiptImage': true,
@@ -632,7 +645,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     return window.flutter_inappwebview.callHandler('$_handlerName', payload);
   };
   window.OwlletMiniApp = {
-    version: '1.1',
+    version: '1.2',
     host: 'owllet-mobile',
     ready: function(payload) {
       return callHost({ type: 'ready', payload: payload || {} });
@@ -666,6 +679,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     },
     getBalances: function() {
       return callHost({ type: 'get_balances' });
+    },
+    getNetworkBalances: function(networkKey) {
+      return callHost({ type: 'get_network_balances', payload: { networkKey: networkKey } });
     },
     switchNetwork: function(networkKey) {
       return callHost({ type: 'request_switch_network', payload: { networkKey: networkKey } });
@@ -774,6 +790,17 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         return _handleNotifyRequest(notifyPayload.cast<String, dynamic>());
       case 'get_balances':
         return _handleGetBalancesRequest();
+      case 'get_network_balances':
+        final balancePayload = raw['payload'];
+        if (balancePayload is! Map) {
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Invalid network balances request.',
+          };
+        }
+        return _handleGetNetworkBalancesRequest(
+          balancePayload.cast<String, dynamic>(),
+        );
       case 'request_switch_network':
         final switchPayload = raw['payload'];
         if (switchPayload is! Map) {
@@ -904,6 +931,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   /// not drop the others. Including non-EVM balances lets off-ramp assets like
   /// USDT·SOL surface a balance (previously only EVM chains were returned).
   Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
+    if (!_runtimeConfig.snapshot.portfolioEnabled ||
+        !_runtimeConfig.snapshot.legacyAggregateEnabled) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Legacy aggregate balances are currently disabled.',
+        'balances': <Map<String, dynamic>>[],
+      };
+    }
     final walletAddress = _publishedWalletAddress;
     Future<List<Map<String, dynamic>>> publish(
       Future<List<Map<String, dynamic>>> request,
@@ -970,6 +1005,44 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       unawaited(publish(startRequest()));
     }
     return <String, dynamic>{'ok': true, 'balances': activeBalances};
+  }
+
+  /// Returns balances for exactly one host-approved network. This additive
+  /// bridge method lets current mini apps avoid the legacy all-chain discovery
+  /// path while older mini apps continue to use `getBalances` unchanged.
+  Future<Map<String, dynamic>> _handleGetNetworkBalancesRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    if (!_runtimeConfig.snapshot.portfolioEnabled ||
+        !_runtimeConfig.snapshot.scopedBalancesEnabled) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'Scoped balances are currently disabled.',
+        'balances': <Map<String, dynamic>>[],
+      };
+    }
+    final networkKey = payload['networkKey']?.toString().trim() ?? '';
+    final blockchain = context.read<BlockchainService>();
+    if (networkKey.isEmpty ||
+        blockchain.availableNetworkEntryForKey(networkKey) == null) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'This network is not available for the active wallet.',
+        'balances': <Map<String, dynamic>>[],
+      };
+    }
+
+    final family = NetworkKey.familyOf(networkKey);
+    final chainId = NetworkKey.evmChainIdOf(networkKey);
+    final balances = family == ChainFamily.evm && chainId != null
+        ? await _fetchActiveEvmBridgeBalances(chainId)
+        : await _fetchNetworkBridgeBalances(family, networkKey);
+    await _publishBalancesProgress(balances, networkKey: networkKey);
+    return <String, dynamic>{
+      'ok': true,
+      'networkKey': networkKey,
+      'balances': balances,
+    };
   }
 
   Future<List<Map<String, dynamic>>> _fetchEvmBridgeBalances({
@@ -1150,16 +1223,21 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   }
 
   Future<void> _publishBalancesProgress(
-    List<Map<String, dynamic>> balances,
-  ) async {
+    List<Map<String, dynamic>> balances, {
+    String? networkKey,
+  }) async {
     final walletAddress = _publishedWalletAddress;
     if (!mounted) {
       return;
     }
-    final detail = jsonEncode({
+    final detailPayload = <String, dynamic>{
       'walletAddress': walletAddress,
       'balances': balances,
-    });
+    };
+    if (networkKey != null) {
+      detailPayload['networkKey'] = networkKey;
+    }
+    final detail = jsonEncode(detailPayload);
     try {
       await _controller?.evaluateJavascript(
         source:

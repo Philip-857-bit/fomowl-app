@@ -31,6 +31,7 @@ void main() {
     WidgetTester tester, {
     VoidCallback? onScan,
     VoidCallback? onManageTokens,
+    bool portfolioEnabled = true,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -56,6 +57,7 @@ void main() {
               onSelectToken: (_) {},
               onSelectNftCollection: (_) {},
               chainId: 1,
+              portfolioEnabled: portfolioEnabled,
             ),
           ),
         ),
@@ -108,5 +110,15 @@ void main() {
 
     expect(scanTapped, isTrue);
     expect(manageTapped, isTrue);
+  });
+
+  testWidgets('hides the portfolio tab when runtime policy disables it', (
+    tester,
+  ) async {
+    await pumpSection(tester, portfolioEnabled: false);
+
+    expect(find.text('Tokens'), findsOneWidget);
+    expect(find.text('Portfolio'), findsNothing);
+    expect(find.text('NFTs'), findsOneWidget);
   });
 }

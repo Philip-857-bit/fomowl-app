@@ -11,6 +11,7 @@ import '../models/patch_status_snapshot.dart';
 import '../services/app_patch_service.dart';
 import '../services/app_release_checker.dart';
 import '../services/language_controller.dart';
+import '../services/runtime_config_service.dart';
 import '../services/storage_service.dart';
 import '../services/system_picker_guard.dart';
 import '../services/wallet_service.dart';
@@ -34,11 +35,13 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   final StorageService _storage = StorageService();
   final WalletService _walletService = WalletService();
   final AppReleaseChecker _releaseChecker = AppReleaseChecker();
+  final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
 
   bool _unlockInFlight = false;
   bool _wasBackgrounded = false;
   DateTime _lastInteractionAt = DateTime.now();
   Timer? _foregroundLockTimer;
+  Timer? _runtimeConfigTimer;
   AppPatchStatus? _lastVisiblePatchStatus;
   bool _requiredUpdateCheckInFlight = false;
   bool _requiredUpdateDialogVisible = false;
@@ -50,6 +53,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     AppPatchService.instance.addListener(_showVisiblePatchStatus);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_enforceRequiredUpdate());
+      unawaited(_runtimeConfig.refresh());
       unawaited(WalletConnectService.instance.initialize());
       unawaited(DeepLinkService.instance.initialize());
     });
@@ -58,12 +62,17 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
       const Duration(seconds: 15),
       (_) => _maybeRequireForegroundUnlock(),
     );
+    _runtimeConfigTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => unawaited(_runtimeConfig.refresh()),
+    );
   }
 
   @override
   void dispose() {
     DeepLinkService.instance.dispose();
     _foregroundLockTimer?.cancel();
+    _runtimeConfigTimer?.cancel();
     AppPatchService.instance.removeListener(_showVisiblePatchStatus);
     ShowcaseView.get().unregister();
     WidgetsBinding.instance.removeObserver(this);
@@ -108,6 +117,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       unawaited(AppPatchService.instance.handleAppResumed());
       unawaited(_enforceRequiredUpdate());
+      unawaited(_runtimeConfig.refresh());
       _maybeRequireUnlock();
     }
   }
@@ -281,17 +291,101 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
             ),
             useMaterial3: true,
           ),
-          builder: (context, child) => Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (_) => _recordInteraction(),
-            onPointerMove: (_) => _recordInteraction(),
-            onPointerSignal: (_) => _recordInteraction(),
-            child: child ?? const SizedBox.shrink(),
+          builder: (context, child) => AnimatedBuilder(
+            animation: _runtimeConfig,
+            builder: (context, _) {
+              final policy = _runtimeConfig.snapshot;
+              if (policy.fullMaintenance) {
+                return _MaintenanceScreen(message: policy.maintenanceMessage);
+              }
+              return Column(
+                children: [
+                  if (policy.readOnly)
+                    const Material(
+                      color: Color(0xFFFFC857),
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 7,
+                          ),
+                          child: Text(
+                            'Owllet is temporarily read-only. Existing activity remains available.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  Expanded(
+                    child: Listener(
+                      behavior: HitTestBehavior.translucent,
+                      onPointerDown: (_) => _recordInteraction(),
+                      onPointerMove: (_) => _recordInteraction(),
+                      onPointerSignal: (_) => _recordInteraction(),
+                      child: child ?? const SizedBox.shrink(),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           home: const AppBootstrapper(),
           routes: buildAppRoutes(),
         );
       },
+    );
+  }
+}
+
+class _MaintenanceScreen extends StatelessWidget {
+  const _MaintenanceScreen({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.construction_rounded,
+                  color: Color(0xFFFFC857),
+                  size: 58,
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'We’ll be back shortly',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message.isEmpty
+                      ? 'Owllet is temporarily undergoing maintenance. Please try again shortly.'
+                      : message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, height: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

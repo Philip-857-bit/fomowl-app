@@ -30,6 +30,7 @@ class TokensSection extends StatefulWidget {
   final int? chainId;
   final HomeAssetTab initialTab;
   final ValueChanged<HomeAssetTab>? onTabChanged;
+  final bool portfolioEnabled;
 
   const TokensSection({
     super.key,
@@ -50,6 +51,7 @@ class TokensSection extends StatefulWidget {
     this.chainId,
     this.initialTab = HomeAssetTab.tokens,
     this.onTabChanged,
+    this.portfolioEnabled = true,
   });
 
   @override
@@ -71,6 +73,10 @@ class _TokensSectionState extends State<TokensSection> {
     if (oldWidget.initialTab != widget.initialTab &&
         widget.initialTab != _selectedTab) {
       _selectedTab = widget.initialTab;
+    }
+    if (!widget.portfolioEnabled && _selectedTab == HomeAssetTab.portfolio) {
+      _selectedTab = HomeAssetTab.tokens;
+      widget.onTabChanged?.call(HomeAssetTab.tokens);
     }
   }
 
@@ -100,12 +106,14 @@ class _TokensSectionState extends State<TokensSection> {
                 onTap: () => _setTab(HomeAssetTab.tokens),
               ),
               const SizedBox(width: 20),
-              _AssetTabChip(
-                label: widget.localization.portfolio,
-                selected: _selectedTab == HomeAssetTab.portfolio,
-                onTap: () => _setTab(HomeAssetTab.portfolio),
-              ),
-              const SizedBox(width: 20),
+              if (widget.portfolioEnabled) ...[
+                _AssetTabChip(
+                  label: widget.localization.portfolio,
+                  selected: _selectedTab == HomeAssetTab.portfolio,
+                  onTap: () => _setTab(HomeAssetTab.portfolio),
+                ),
+                const SizedBox(width: 20),
+              ],
               _AssetTabChip(
                 label: widget.localization.nfts,
                 selected: _selectedTab == HomeAssetTab.nfts,
