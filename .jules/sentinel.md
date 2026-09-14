@@ -2,3 +2,8 @@
 **Vulnerability:** Private key and secret phrase inputs in the import onboarding flow were visible in plain text.
 **Learning:** These text fields lacked the `obscureText: true` property by default, risking shoulder-surfing exposure of critical secrets. Furthermore, when implementing `obscureText: true` in Flutter's `TextField`, `maxLines` must be dynamically changed to 1 because Flutter doesn't support multi-line obscured text.
 **Prevention:** Make sure all `TextField`s accepting sensitive information (passwords, keys, phrases) initialize with `obscureText: true` and have a toggle button for visibility, handling `maxLines` constraint accordingly.
+
+## 2026-09-14 - [Protect Private Key Import with ScreenCaptureGuard]
+**Vulnerability:** The `ImportPrivateKeyScreen` handles sensitive private keys but lacked screenshot and screen recording protection, risking exposure through malware or user mistakes.
+**Learning:** All screens handling raw sensitive secrets (seed phrases, private keys) must be explicitly protected by the custom `ScreenCaptureGuard` back-ended by the platform channel. It is a critical layer of defense-in-depth against credential theft.
+**Prevention:** Make sure `ScreenCaptureGuard.enableProtection()` is called during initialization and `disableProtection()` is called on disposal for any screen allowing input or viewing of sensitive cryptographic material.
