@@ -538,7 +538,10 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   const SizedBox(height: 10),
                   SelectableText(
                     privateKey,
-                    style: GoogleFonts.outfit(color: Colors.white70, height: 1.4),
+                    style: GoogleFonts.outfit(
+                      color: Colors.white70,
+                      height: 1.4,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
