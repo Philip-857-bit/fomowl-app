@@ -1264,16 +1264,23 @@ class WalletService {
   /// Returns the transaction hash on success.
   Future<String> signAndBroadcastSolanaTransactionRaw(
     String address,
-    Uint8List messageBytes,
-  ) async {
+    Uint8List messageBytes, {
+    String? family,
+  }) async {
     final signedBase64 = await signSolanaTransactionRaw(address, messageBytes);
-    return broadcastSignedSolanaTransactionRaw(signedBase64);
+    return broadcastSignedSolanaTransactionRaw(
+      signedBase64,
+      walletAddress: address,
+      family: family,
+    );
   }
 
   /// Broadcast a fully serialized and signed Solana transaction.
   Future<String> broadcastSignedSolanaTransactionRaw(
-    String signedBase64,
-  ) async {
+    String signedBase64, {
+    String? walletAddress,
+    String? family,
+  }) async {
     if (signedBase64.trim().isEmpty) {
       throw ArgumentError.value(
         signedBase64,
@@ -1288,7 +1295,12 @@ class WalletService {
         .post(
           broadcastUri,
           headers: const {'Content-Type': 'application/json'},
-          body: jsonEncode({'signedTransaction': signedBase64}),
+          body: jsonEncode({
+            'signedTransaction': signedBase64,
+            if (walletAddress != null && walletAddress.trim().isNotEmpty)
+              'walletAddress': walletAddress,
+            if (family != null && family.trim().isNotEmpty) 'family': family,
+          }),
         )
         .timeout(const Duration(seconds: 30));
     if (broadcastResp.statusCode < 200 || broadcastResp.statusCode >= 300) {
@@ -1347,6 +1359,7 @@ class WalletService {
     return signAndBroadcastSolanaTransactionRaw(
       fromAddress,
       Uint8List.fromList(base64Decode(unsignedMessage)),
+      family: 'nft',
     );
   }
 

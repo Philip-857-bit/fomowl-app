@@ -29,6 +29,7 @@ import '../../services/swap_execution_service.dart';
 import '../../services/token_visibility_service.dart';
 import '../../services/transaction_monitor.dart';
 import '../../services/referral_service.dart';
+import '../../services/runtime_config_service.dart';
 import '../../services/wallet_history_service.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
@@ -38,6 +39,7 @@ import '../../utils/token_visibility_utils.dart';
 import '../../utils/token_trust_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
+import '../../widgets/runtime_feature_gate.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'dart:typed_data';
@@ -75,6 +77,7 @@ class _SwapScreenState extends State<SwapScreen> {
   static const Duration _approvalUiTimeout = Duration(seconds: 90);
   static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
   static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
+  final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
 
   bool _isStablecoin(Token? token) => isSwapStablecoin(token);
 
@@ -460,6 +463,7 @@ class _SwapScreenState extends State<SwapScreen> {
   @override
   void initState() {
     super.initState();
+    _runtimeConfig.addListener(_handleRuntimePolicyChanged);
     _tokenApprovalService = TokenApprovalService(
       walletService: _walletService,
       swapService: _swapService,
@@ -488,6 +492,16 @@ class _SwapScreenState extends State<SwapScreen> {
     unawaited(_loadLimitTutorialPreferences());
     _loadWalletBalance();
     _activateSwapLiveTracking();
+  }
+
+  void _handleRuntimePolicyChanged() {
+    if (!mounted) return;
+    setState(() {
+      if (_activeTab == SwapTab.bridge &&
+          !_runtimeConfig.snapshot.allows(RuntimeFeature.bridges)) {
+        _activeTab = SwapTab.swap;
+      }
+    });
   }
 
   void _handleFromDisplayChanged() {
@@ -908,6 +922,7 @@ class _SwapScreenState extends State<SwapScreen> {
 
   @override
   void dispose() {
+    _runtimeConfig.removeListener(_handleRuntimePolicyChanged);
     _fromDisplayController.removeListener(_handleFromDisplayChanged);
     _fromDisplayController.dispose();
     _fromController.dispose();
@@ -3619,6 +3634,14 @@ class _SwapScreenState extends State<SwapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final runtimePolicy = _runtimeConfig.snapshot;
+    if (!runtimePolicy.allows(RuntimeFeature.swaps)) {
+      return RuntimeFeatureUnavailableScreen(
+        feature: RuntimeFeature.swaps,
+        message: runtimePolicy.unavailableMessage(RuntimeFeature.swaps),
+        onReturn: _handleBackNavigation,
+      );
+    }
     final selectedCurrencyCode = context.select<CurrencyController, String>(
       (controller) => controller.currencyCode,
     );
@@ -3824,9 +3847,15 @@ class _SwapScreenState extends State<SwapScreen> {
                         child: SwapTabSelector(
                           activeTab: _activeTab,
                           showLimitTab: _supportsLimitTab(blockchain),
-                          showBridgeTab: true,
+                          showBridgeTab: runtimePolicy.allows(
+                            RuntimeFeature.bridges,
+                          ),
                           onChanged: (tab) {
                             if (_activeTab == tab) return;
+                            if (tab == SwapTab.bridge &&
+                                !runtimePolicy.allows(RuntimeFeature.bridges)) {
+                              return;
+                            }
                             if (tab == SwapTab.limit &&
                                 !_supportsLimitTab(blockchain)) {
                               return;

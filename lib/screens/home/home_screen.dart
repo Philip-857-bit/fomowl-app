@@ -18,6 +18,7 @@ import '../../models/token.dart';
 import '../../widgets/bottom_navigation.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/affiliate_attribution_service.dart';
 import '../../services/runtime_config_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/currency_controller.dart';
@@ -90,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _walletName;
   bool _isLoading = true;
   bool _isLoadingBalances = false;
+  bool _balanceLoadFailed = false;
   bool _isLoadingPortfolio = false;
   bool _isLoadingNfts = false;
   HomePortfolioMetrics _portfolioMetrics = HomePortfolioMetrics.zero();
@@ -437,6 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
     HomeAggregatedPortfolioSnapshot snapshot, {
     required bool isUsingCachedData,
   }) async {
+    // Aggregate portfolio state is optional and must stay completely dormant
+    // when either the backend feature or its UI has been disabled at runtime.
+    // This second-line guard also rejects a request that completed after an
+    // administrator turned the feature off.
+    if (!_portfolioRuntimeEnabled) return;
     _portfolioRawSections = List<HomePortfolioSection>.from(snapshot.sections);
     final data = await _buildPortfolioDataFromSections(_portfolioRawSections);
     if (!mounted) {
@@ -474,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen> {
     String walletAddress, {
     bool sync = false,
   }) async {
-    if (!mounted || walletAddress.isEmpty) {
+    if (!mounted || walletAddress.isEmpty || !_portfolioRuntimeEnabled) {
       return;
     }
     final requestNetworkKey = _blockchain?.activeNetworkKey;
@@ -779,6 +786,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _applyPortfolioSnapshot(String walletAddress) async {
+    if (!_portfolioRuntimeEnabled) return;
     final requestNetworkKey = _blockchain?.activeNetworkKey;
     final snapshot = await _portfolioSnapshotService.loadSnapshot(
       walletAddress,
@@ -830,6 +838,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted || !_connectivityRecovery.shouldRefresh(online)) return;
     var balanceRefreshSucceeded = false;
     try {
+      await _runtimeConfig.refresh();
+      if (!mounted) return;
       await _loadWalletData(forcePortfolioSync: true);
       if (!mounted) return;
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
@@ -846,7 +856,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadWalletData({bool forcePortfolioSync = false}) async {
+  Future<void> _loadWalletData({
+    bool forcePortfolioSync = false,
+    bool forceRefresh = false,
+  }) async {
     if (!mounted) return;
     final loadGeneration = ++_walletLoadGeneration;
     debugPrint('[OWLLET] Starting wallet data load...');
@@ -879,6 +892,13 @@ class _HomeScreenState extends State<HomeScreen> {
       // and push the wallet context so the network selector hides families
       // the wallet does not actually support (e.g. EVM-only imports).
       final normalizedAddress = address?.trim().toLowerCase();
+      if (normalizedAddress != null &&
+          normalizedAddress.isNotEmpty &&
+          normalizedAddress != _lastWalletAddress) {
+        unawaited(
+          AffiliateAttributionService.instance.applyToWallet(normalizedAddress),
+        );
+      }
       final walletChanged =
           normalizedAddress != null && normalizedAddress != _lastWalletAddress;
       _lastWalletAddress = normalizedAddress;
@@ -967,10 +987,15 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted || loadGeneration != _walletLoadGeneration) return;
 
         debugPrint('[OWLLET] Triggering background data sync...');
-        if (_portfolioRuntimeEnabled &&
-            balanceAddress != null &&
-            balanceAddress.isNotEmpty) {
-          unawaited(_fetchRealBalances(balanceAddress));
+        if (balanceAddress != null && balanceAddress.isNotEmpty) {
+          unawaited(
+            blockchain.requestActiveBalanceRefresh(
+              reason: forceRefresh ? 'manual' : 'entry',
+            ),
+          );
+          unawaited(
+            _fetchRealBalances(balanceAddress, forceRefresh: forceRefresh),
+          );
         } else if (mounted) {
           setState(() {
             _replaceDisplayedTokens(const [], isUsingCachedData: false);
@@ -1216,6 +1241,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _replaceDisplayedTokens(realTokens, isUsingCachedData: false);
           _isLoadingBalances = false;
+          _balanceLoadFailed = blockchain.lastDiscoveryPartialFailure;
           _latestLiveBalanceWallet = address.toLowerCase();
         });
         blockchain.setLivePriceTrackingForTokens(
@@ -1261,26 +1287,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _isLoadingBalances = false;
-          // Keep existing tokens on transient failures. Only inject a native
-          // placeholder when we truly have nothing to show.
-          if (_tokens.isEmpty && !_isUsingCachedData) {
-            final blockchain = Provider.of<BlockchainService>(
-              context,
-              listen: false,
-            );
-            _replaceDisplayedTokens([
-              Token(
-                symbol: blockchain.activeNetworkSymbol,
-                name: blockchain.activeNetworkName,
-                balance: 0,
-                valueUsd: 0,
-                changePercent24h: 0,
-                coinGeckoId: blockchain.activeNetworkCoinGeckoId,
-                imageUrl: blockchain.activeNetworkLogoUrl,
-                networkKey: blockchain.activeNetworkKey,
-              ),
-            ], isUsingCachedData: false);
-          }
+          _balanceLoadFailed = true;
         });
       }
       return false;
@@ -1509,6 +1516,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return _selectedAssetTab == HomeAssetTab.portfolio
         ? l.totalNetWorth
         : l.availableBalance;
+  }
+
+  String? _tokenFreshnessCaption(AppLocalizations l) {
+    if (_hasInternet == false) return l.noInternetConnection;
+    if (_isLoadingBalances) return l.balanceSyncingStatus;
+    final blockchain = _blockchain;
+    if (blockchain != null && blockchain.lastDiscoveryPartialFailure) {
+      return l.balanceSyncingStatus;
+    }
+    if (_isUsingCachedData) return _balanceStatusText(l);
+    return null;
   }
 
   String? _balanceStatusText(AppLocalizations l) {
@@ -1829,7 +1847,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: AppColors.accentRed,
                       onRefresh: () async {
                         await Future.wait<void>([
-                          _loadWalletData(forcePortfolioSync: true),
+                          _loadWalletData(
+                            forcePortfolioSync: true,
+                            forceRefresh: true,
+                          ),
                           _loadHomeBanners(),
                         ]);
                       },
@@ -1959,6 +1980,18 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: TokensSection(
                                 tokens: _displayableTokens(_tokens),
                                 portfolioSections: _portfolioSections,
+                                freshnessCaption: _tokenFreshnessCaption(l),
+                                balancesUnavailable:
+                                    _tokens.isEmpty &&
+                                    (_hasInternet == false ||
+                                        _balanceLoadFailed ||
+                                        blockchain.lastDiscoveryPartialFailure),
+                                confirmedZero:
+                                    _hasInternet == true &&
+                                    !_isLoadingBalances &&
+                                    _tokens.isEmpty &&
+                                    !_balanceLoadFailed &&
+                                    !blockchain.lastDiscoveryPartialFailure,
                                 isLoading:
                                     _isLoadingBalances && !_isUsingCachedData,
                                 isLoadingPortfolio: _isLoadingPortfolio,

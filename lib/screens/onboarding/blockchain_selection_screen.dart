@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/chain.dart';
+import '../../services/affiliate_attribution_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/referral_service.dart';
 import '../../services/wallet_service.dart';
+
 import '../../widgets/mobile_scaffold.dart';
 
 class BlockchainSelectionScreen extends StatefulWidget {
@@ -97,19 +99,31 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
     await blockchain.setEnabledFamilies(Set.of(_enabled));
     blockchain.setActiveNetworkKey(_defaultNetworkKey());
 
-    final code = _referralController.text.trim().toUpperCase();
-    if (code.isNotEmpty) {
-      try {
+    final typedCode = _referralController.text.trim().toUpperCase();
+    var typedBindSucceeded = false;
+    try {
+      if (typedCode.isNotEmpty) {
         final walletAddress = await _walletService.getCurrentWalletAddress();
         if (walletAddress != null && walletAddress.isNotEmpty) {
           await _referralService.bindReferralCode(
             walletAddress: walletAddress,
-            referralCode: code,
+            referralCode: typedCode,
+            source: 'in_app',
           );
+          typedBindSucceeded = true;
         }
+      }
+    } catch (e) {
+      debugPrint(
+        '[BlockchainSelection] Referral bind failed (non-blocking): $e',
+      );
+    }
+    if (!typedBindSucceeded) {
+      try {
+        await AffiliateAttributionService.instance.applyPendingToCurrentWallet();
       } catch (e) {
         debugPrint(
-          '[BlockchainSelection] Referral bind failed (non-blocking): $e',
+          '[BlockchainSelection] Pending affiliate bind failed (non-blocking): $e',
         );
       }
     }

@@ -19,6 +19,8 @@ import 'wallet_backend_auth_service.dart';
 import 'http_client_service.dart';
 import 'blockchain/token_portfolio_module.dart';
 import 'home_snapshot_service.dart';
+import 'balance_refresh_coordinator.dart';
+import 'runtime_config_service.dart';
 import 'blockchain/rpc_resilience.dart';
 import 'blockchain/evm_decoding.dart';
 import 'blockchain/network_address.dart';
@@ -1410,10 +1412,133 @@ class BlockchainService extends ChangeNotifier {
 
   // ─── TOKEN LIST ──────────────────────────────────
 
+  Future<void> requestTransactionBalanceRefresh({
+    required String walletAddress,
+    required String networkKey,
+    String family = 'nft',
+    String? operationReference,
+  }) async {
+    final policy = RuntimeConfigService.instance.snapshot;
+    if (!policy.portfolioEnabled ||
+        !policy.scopedBalancesEnabled ||
+        !policy.refreshOnTransaction) {
+      return;
+    }
+    if (!networkKey.trim().toLowerCase().startsWith('evm:')) {
+      if (walletAddressLooksValidForNetwork(walletAddress, networkKey)) {
+        await fetchWalletTokens(walletAddress, forceRefresh: true);
+      }
+      return;
+    }
+    final encodedNetworkKey = Uri.encodeComponent(networkKey);
+    try {
+      await _walletBackendAuthService
+          .sendAuthorized(
+            walletAddress,
+            (headers) => _httpClientService.sendWithRetry(
+              () => _httpClientService.client.post(
+                AppEnvironment.blockchain(
+                  '/networks/$encodedNetworkKey/balances/refresh',
+                ),
+                headers: headers,
+                body: jsonEncode({
+                  'walletAddress': walletAddress,
+                  'reason': 'transaction',
+                  'family': family,
+                  if (operationReference != null &&
+                      operationReference.trim().isNotEmpty)
+                    'operationReference': operationReference,
+                }),
+              ),
+            ),
+            const {'Content-Type': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (error) {
+      debugPrint('[Balances] Transaction refresh hint failed: $error');
+    }
+  }
+
+  Future<void> requestActiveBalanceRefresh({String reason = 'entry'}) async {
+    final policy = RuntimeConfigService.instance.snapshot;
+    final reasonEnabled = switch (reason) {
+      'entry' => policy.refreshOnEntry,
+      'resume' => policy.refreshOnResume,
+      _ => true,
+    };
+    if (!policy.portfolioEnabled ||
+        !policy.scopedBalancesEnabled ||
+        !policy.refreshQueueEnabled ||
+        !policy.workerEnabled ||
+        !reasonEnabled) {
+      return;
+    }
+    final walletAddress = activeWalletAddress.trim().isNotEmpty
+        ? activeWalletAddress.trim()
+        : await _storageService.getWalletAddress();
+    if (walletAddress == null || walletAddress.isEmpty) return;
+    await BalanceRefreshCoordinator.instance.runExclusive(
+      wallet: walletAddress,
+      networkKey: activeNetworkKey,
+      reason: reason,
+      work: (generation) async {
+        final requestedNetworkKey = activeNetworkKey;
+        bool canApply() =>
+            activeWalletAddress.trim() == walletAddress &&
+            activeNetworkKey == requestedNetworkKey &&
+            BalanceRefreshCoordinator.instance.isCurrent(
+              walletAddress,
+              requestedNetworkKey,
+              generation,
+            );
+        if (!canApply()) {
+          return;
+        }
+        final forceRead =
+            forceLocalScopedReadForReason(reason) || reason == 'resume';
+        if (NetworkKey.familyOf(requestedNetworkKey) != ChainFamily.evm ||
+            forceRead) {
+          await fetchWalletTokens(
+            walletAddress,
+            forceRefresh: forceRead,
+            applyGuard: canApply,
+          );
+          if (NetworkKey.familyOf(requestedNetworkKey) != ChainFamily.evm) {
+            return;
+          }
+        }
+        final encodedNetworkKey = Uri.encodeComponent(requestedNetworkKey);
+        try {
+          await _walletBackendAuthService
+              .sendAuthorized(
+                walletAddress,
+                (headers) => _httpClientService.sendWithRetry(
+                  () => _httpClientService.client.post(
+                    AppEnvironment.blockchain(
+                      '/networks/$encodedNetworkKey/balances/refresh',
+                    ),
+                    headers: headers,
+                    body: jsonEncode({
+                      'walletAddress': walletAddress,
+                      'reason': reason,
+                    }),
+                  ),
+                ),
+                const {'Content-Type': 'application/json'},
+              )
+              .timeout(const Duration(seconds: 8));
+        } catch (error) {
+          debugPrint('[Balances] Refresh hint failed: $error');
+        }
+      },
+    );
+  }
+
   Future<List<Token>> fetchWalletTokens(
     String walletAddress, {
     int? chainId,
     bool forceRefresh = false,
+    bool Function()? applyGuard,
   }) async {
     // For non-EVM families, use the full activeNetworkKey; chainId is irrelevant.
     final effectiveNetworkKey = _isActiveNonEvmTokenRequest(chainId)
@@ -1459,7 +1584,7 @@ class BlockchainService extends ChangeNotifier {
     }
 
     final inFlight = _walletTokensInFlight[cacheKey];
-    if (inFlight != null) {
+    if (inFlight != null && !forceRefresh) {
       if (existingState != null && !existingState.isLoading) {
         _setWalletTokenState(
           cacheKey,
@@ -1494,6 +1619,7 @@ class BlockchainService extends ChangeNotifier {
       cacheKey,
       requestedChainId,
       requestedNetworkKey: effectiveNetworkKey,
+      applyGuard: applyGuard,
     );
     _walletTokensInFlight[cacheKey] = future;
     future.whenComplete(() {
@@ -1645,6 +1771,7 @@ class BlockchainService extends ChangeNotifier {
     String cacheKey,
     int requestedChainId, {
     String? requestedNetworkKey,
+    bool Function()? applyGuard,
   }) async {
     final effectiveNetworkKey =
         requestedNetworkKey ?? NetworkKey.evm(requestedChainId);
@@ -1666,6 +1793,7 @@ class BlockchainService extends ChangeNotifier {
       requestedChainId,
       networkKey: effectiveNetworkKey,
     );
+    if (applyGuard?.call() == false) return previousTokens;
     if (discovered != null) {
       _lastDiscoverySource = discovered.source;
       _lastDiscoveryPartialFailure = discovered.partialFailure;
@@ -1721,6 +1849,7 @@ class BlockchainService extends ChangeNotifier {
         discovered.tokens,
         nativeCoinGeckoId: nativeCoinGeckoId,
       );
+      if (applyGuard?.call() == false) return previousTokens;
 
       // Merge custom tokens that weren't discovered by the backend.
       final customTokens = _customTokens[customTokenChainKey] ?? const [];
@@ -1729,6 +1858,7 @@ class BlockchainService extends ChangeNotifier {
         existing: enriched,
         customTokens: customTokens,
       );
+      if (applyGuard?.call() == false) return previousTokens;
 
       // Canonical stablecoins are safety defaults and must remain selectable
       // even at zero balance or when backend discovery already found assets.
@@ -1741,6 +1871,7 @@ class BlockchainService extends ChangeNotifier {
               networkKey: effectiveNetworkKey,
             ),
           );
+      if (applyGuard?.call() == false) return previousTokens;
       if (supplemental.isNotEmpty) {
         merged.addAll(supplemental);
       }
@@ -1792,6 +1923,10 @@ class BlockchainService extends ChangeNotifier {
     // adapter is the only data source. Return whatever we already cached.
     if (isNonEvm) {
       final fetchedAt = DateTime.now();
+      _lastDiscoveryPartialFailure = true;
+      _lastDiscoverySource = 'fallback';
+      _lastDiscoveryMessage =
+          'Balance data is temporarily unavailable for this network.';
       final scopedPrevious = previousTokens
           .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
           .toList(growable: false);
@@ -1802,10 +1937,10 @@ class BlockchainService extends ChangeNotifier {
         tokens: List<Token>.from(fallbackTokens),
         fetchedAt: fetchedAt,
         source: 'fallback',
-        isStale: fallbackTokens.isNotEmpty,
+        isStale: true,
         message: fallbackTokens.isNotEmpty
             ? 'Using cached tokens - backend temporarily unavailable.'
-            : null,
+            : _lastDiscoveryMessage,
       );
       _setWalletTokenState(
         cacheKey,
@@ -1813,11 +1948,11 @@ class BlockchainService extends ChangeNotifier {
           tokens: List<Token>.from(fallbackTokens),
           source: 'fallback',
           isLoading: false,
-          isStale: fallbackTokens.isNotEmpty,
+          isStale: true,
           lastUpdatedAt: fetchedAt,
           message: fallbackTokens.isNotEmpty
               ? 'Using cached tokens - backend temporarily unavailable.'
-              : null,
+              : _lastDiscoveryMessage,
         ),
         chainId: requestedChainId,
         notify: true,
@@ -1974,6 +2109,7 @@ class BlockchainService extends ChangeNotifier {
       isStale = true;
     }
     final fetchedAt = DateTime.now();
+    if (applyGuard?.call() == false) return previousTokens;
     _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
       tokens: List<Token>.from(finalTokens),
       fetchedAt: fetchedAt,

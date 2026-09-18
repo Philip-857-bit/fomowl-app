@@ -6,6 +6,8 @@ import '../../screens/home/home_screen.dart';
 import '../../screens/swap/swap_screen.dart';
 import '../discover/discover_screen.dart';
 import '../mini_apps/mini_app_host_screen.dart';
+import '../../services/runtime_config_service.dart';
+import '../../widgets/runtime_feature_gate.dart';
 import 'app_shell_bottom_navigation.dart';
 import 'app_shell_controller.dart';
 
@@ -17,11 +19,55 @@ class AppShellScreen extends StatefulWidget {
 }
 
 class _AppShellScreenState extends State<AppShellScreen> {
+  final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
   bool _appliedInitialArgs = false;
   bool _openingOwlletPay = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _runtimeConfig.addListener(_recoverFromDisabledFeature);
+  }
+
+  @override
+  void dispose() {
+    _runtimeConfig.removeListener(_recoverFromDisabledFeature);
+    super.dispose();
+  }
+
+  void _recoverFromDisabledFeature() {
+    if (!mounted || _runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
+      return;
+    }
+    final controller = context.read<AppShellController>();
+    if (controller.currentTab == AppShellTab.swap) {
+      controller.selectTab(AppShellTab.wallet);
+    }
+  }
+
+  void _selectTab(AppShellTab tab) {
+    if (tab == AppShellTab.swap &&
+        !_runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
+      _showUnavailable(RuntimeFeature.swaps);
+      return;
+    }
+    context.read<AppShellController>().selectTab(tab);
+  }
+
+  void _showUnavailable(RuntimeFeature feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_runtimeConfig.snapshot.unavailableMessage(feature)),
+      ),
+    );
+  }
+
   Future<void> _openOwlletPay() async {
     if (_openingOwlletPay) {
+      return;
+    }
+    if (!_runtimeConfig.snapshot.allows(RuntimeFeature.miniApps)) {
+      _showUnavailable(RuntimeFeature.miniApps);
       return;
     }
     _openingOwlletPay = true;
@@ -64,7 +110,14 @@ class _AppShellScreenState extends State<AppShellScreen> {
       context.read<AppShellController>().openDiscoverUrl(initialDiscoverUrl);
     }
     if (initialIndex != null) {
-      context.read<AppShellController>().selectIndex(initialIndex);
+      final tab = initialIndex >= 0 && initialIndex < AppShellTab.values.length
+          ? AppShellTab.values[initialIndex]
+          : null;
+      if (tab != null &&
+          (tab != AppShellTab.swap ||
+              _runtimeConfig.snapshot.allows(RuntimeFeature.swaps))) {
+        context.read<AppShellController>().selectTab(tab);
+      }
     }
   }
 
@@ -98,13 +151,16 @@ class _AppShellScreenState extends State<AppShellScreen> {
           index: controller.currentIndex,
           children: const [
             HomeScreen(showBottomNavigation: false),
-            SwapScreen(showBottomNavigation: false),
+            RuntimeFeatureGate(
+              feature: RuntimeFeature.swaps,
+              child: SwapScreen(showBottomNavigation: false),
+            ),
             DiscoverScreen(),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(
           currentTab: controller.currentTab,
-          onTabTap: controller.selectTab,
+          onTabTap: _selectTab,
           onPayTap: _openOwlletPay,
         ),
       ),

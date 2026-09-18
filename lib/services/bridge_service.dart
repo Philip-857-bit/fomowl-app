@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import '../config/app_environment.dart';
 import '../utils/app_error_utils.dart';
 import 'http_client_service.dart';
+import 'wallet_backend_auth_service.dart';
 
 /// A single executable transaction extracted from a Relay quote step.
 /// The client signs and broadcasts these itself, in order.
@@ -249,10 +251,15 @@ class BridgeCurrency {
 ///   2. Caller signs and broadcasts each step transaction on its chain
 ///   3. [getStatus] polled with the quote's requestId until success/failure
 class BridgeService {
-  BridgeService({HttpClientService? httpClientService})
-    : _http = httpClientService ?? HttpClientService();
+  BridgeService({
+    HttpClientService? httpClientService,
+    WalletBackendAuthService? walletBackendAuthService,
+  }) : _http = httpClientService ?? HttpClientService(),
+       _walletBackendAuthService =
+           walletBackendAuthService ?? WalletBackendAuthService();
 
   final HttpClientService _http;
+  final WalletBackendAuthService _walletBackendAuthService;
   String? _lastError;
 
   String? get lastError => _lastError;
@@ -763,21 +770,29 @@ class BridgeService {
   }) async {
     try {
       final url = AppEnvironment.swap('/cross-chain/record');
-      await _http.client
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'walletAddress': walletAddress,
-              'originChainId': originChainId,
-              'destinationChainId': destinationChainId,
-              'sellToken': sellToken,
-              'buyToken': buyToken,
-              'amountUsd': amountUsd,
-              'txHash': txHash,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      final body = jsonEncode({
+        'walletAddress': walletAddress,
+        'originChainId': originChainId,
+        'destinationChainId': destinationChainId,
+        'sellToken': sellToken,
+        'buyToken': buyToken,
+        'amountUsd': amountUsd,
+        'txHash': txHash,
+      });
+      final normalizedWallet = walletAddress?.trim().toLowerCase();
+      final isEvmWallet =
+          normalizedWallet != null &&
+          RegExp(r'^0x[0-9a-f]{40}$').hasMatch(normalizedWallet);
+      Future<http.Response> request(Map<String, String> headers) =>
+          _http.client.post(url, headers: headers, body: body);
+      final response = isEvmWallet
+          ? _walletBackendAuthService.sendAuthorized(
+              normalizedWallet,
+              request,
+              const {'Content-Type': 'application/json'},
+            )
+          : request(const {'Content-Type': 'application/json'});
+      await response.timeout(const Duration(seconds: 10));
     } catch (e) {
       // Analytics only — a failure here must not affect the completed bridge.
       debugPrint('BridgeService.recordExecutedBridge error: $e');

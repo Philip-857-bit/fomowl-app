@@ -34,8 +34,6 @@ import '../../utils/in_app_link_router.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../services/token_visibility_service.dart';
 import '../../screens/transaction/transaction_processing_screen.dart';
-import '../../screens/home/home_portfolio_api_service.dart';
-import '../../screens/home/home_portfolio_snapshot_service.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
@@ -146,7 +144,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   Map<String, dynamic> _bridgeContext = const <String, dynamic>{};
   BlockchainService? _blockchain;
   String _publishedWalletAddress = '';
+  String _publishedNetworkKey = '';
   bool _walletContextRefreshInFlight = false;
+  bool _walletContextRefreshQueued = false;
 
   Uri? get _overrideUri {
     final raw = widget.initialUrl?.trim();
@@ -192,7 +192,12 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   }
 
   void _handleRuntimeConfigChanged() {
-    unawaited(_prepareBridgeContext().then((_) => _publishBridgeContext()));
+    unawaited(
+      _prepareBridgeContext().then((_) async {
+        await _publishBridgeContext();
+        await _publishRuntimeConfigChanged();
+      }),
+    );
   }
 
   void _handleActiveWalletChange() {
@@ -201,8 +206,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     }
     final nextAddress =
         _blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
+    final nextNetworkKey = _blockchain?.activeNetworkKey ?? '';
     if (nextAddress.isEmpty ||
-        nextAddress == _publishedWalletAddress.toLowerCase()) {
+        (nextAddress == _publishedWalletAddress.toLowerCase() &&
+            nextNetworkKey == _publishedNetworkKey)) {
       return;
     }
     unawaited(_refreshBridgeContextForActiveWallet());
@@ -210,12 +217,16 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
 
   Future<void> _refreshBridgeContextForActiveWallet() async {
     if (_walletContextRefreshInFlight) {
+      _walletContextRefreshQueued = true;
       return;
     }
     _walletContextRefreshInFlight = true;
     try {
-      await _prepareBridgeContext();
-      await _publishBridgeContext();
+      do {
+        _walletContextRefreshQueued = false;
+        await _prepareBridgeContext();
+        await _publishBridgeContext();
+      } while (_walletContextRefreshQueued && mounted);
     } finally {
       _walletContextRefreshInFlight = false;
     }
@@ -342,6 +353,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
             'two_factor_enabled': profile?['two_factor_enabled'],
           };
     _publishedWalletAddress = walletAddress?.trim().toLowerCase() ?? '';
+    _publishedNetworkKey = activeNetworkKey ?? '';
     setState(() {
       _bridgeContext = <String, dynamic>{
         'host': 'owllet-mobile',
@@ -382,6 +394,24 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'token': walletSessionToken,
         },
         'profile': profilePayload,
+        'runtimePolicy': <String, dynamic>{
+          'maintenanceMode': _runtimeConfig.snapshot.maintenanceMode,
+          'portfolioEnabled': _runtimeConfig.snapshot.portfolioEnabled,
+          'portfolioUiEnabled': _runtimeConfig.snapshot.portfolioUiEnabled,
+          'scopedBalancesEnabled':
+              _runtimeConfig.snapshot.scopedBalancesEnabled,
+          'legacyAggregateEnabled':
+              _runtimeConfig.snapshot.legacyAggregateEnabled,
+          'refreshOnTransaction': _runtimeConfig.snapshot.refreshOnTransaction,
+          'transfersEnabled': _runtimeConfig.snapshot.transfersEnabled,
+          'swapsEnabled': _runtimeConfig.snapshot.swapsEnabled,
+          'bridgesEnabled': _runtimeConfig.snapshot.bridgesEnabled,
+          'miniAppsEnabled': _runtimeConfig.snapshot.miniAppsEnabled,
+          'cashInEnabled': _runtimeConfig.snapshot.cashInEnabled,
+          'cashOutEnabled': _runtimeConfig.snapshot.cashOutEnabled,
+          'billsEnabled': _runtimeConfig.snapshot.billsEnabled,
+          'shopEnabled': _runtimeConfig.snapshot.shopEnabled,
+        },
         'tokenLogos': const <String, String>{
           'USDT':
               'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
@@ -411,15 +441,23 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'close': true,
           'openExternal': true,
           'getContext': true,
-          'requestWalletTransfer': true,
+          'requestWalletTransfer':
+              _runtimeConfig.snapshot.miniAppsEnabled &&
+              _runtimeConfig.snapshot.transfersEnabled,
           'requestSwapThenTransfer': false,
-          'requestCrossChainSwap': true,
-          'requestContractTransaction': widget.definition.id == 'burst',
+          'requestCrossChainSwap':
+              _runtimeConfig.snapshot.miniAppsEnabled &&
+              _runtimeConfig.snapshot.swapsEnabled &&
+              _runtimeConfig.snapshot.bridgesEnabled,
+          'requestContractTransaction':
+              _runtimeConfig.snapshot.miniAppsEnabled &&
+              _runtimeConfig.snapshot.transfersEnabled &&
+              widget.definition.id == 'burst',
           'requestSignMessage': true,
           'notify': true,
           'getBalances':
               _runtimeConfig.snapshot.portfolioEnabled &&
-              _runtimeConfig.snapshot.legacyAggregateEnabled,
+              _runtimeConfig.snapshot.scopedBalancesEnabled,
           'getNetworkBalances':
               _runtimeConfig.snapshot.portfolioEnabled &&
               _runtimeConfig.snapshot.scopedBalancesEnabled,
@@ -527,6 +565,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
                   }
                   if (!_isTrustedOrigin(next)) {
                     await _openExternal(next);
+                    return NavigationActionPolicy.CANCEL;
+                  }
+                  if (!_runtimeAllowsMiniAppUrl(next)) {
                     return NavigationActionPolicy.CANCEL;
                   }
                   await _applyBridgeIfTrusted(next);
@@ -725,6 +766,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       case 'ready':
         return <String, dynamic>{'ok': true, 'context': _bridgeContext};
       case 'request_wallet_transfer':
+        if (!await _runtimeFeatureEnabled('transfer')) {
+          return _runtimeFeatureDisabledResponse();
+        }
         final payload = raw['payload'];
         if (payload is! Map) {
           return const <String, dynamic>{
@@ -734,6 +778,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         }
         return _handleWalletTransferRequest(payload.cast<String, dynamic>());
       case 'request_cross_chain_swap':
+        if (!await _runtimeFeatureEnabled('bridge')) {
+          return _runtimeFeatureDisabledResponse();
+        }
         final swapPayload = raw['payload'];
         if (swapPayload is! Map) {
           return const <String, dynamic>{
@@ -745,6 +792,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           swapPayload.cast<String, dynamic>(),
         );
       case 'request_contract_transaction':
+        if (!await _runtimeFeatureEnabled('transfer')) {
+          return _runtimeFeatureDisabledResponse();
+        }
         final transactionPayload = raw['payload'];
         if (transactionPayload is! Map) {
           return const <String, dynamic>{
@@ -819,6 +869,26 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
     }
   }
+
+  Future<bool> _runtimeFeatureEnabled(String feature) async {
+    await _runtimeConfig.refresh();
+    final policy = _runtimeConfig.snapshot;
+    if (policy.fullMaintenance || policy.readOnly || !policy.miniAppsEnabled) {
+      return false;
+    }
+    return switch (feature) {
+      'transfer' => policy.transfersEnabled,
+      'swap' => policy.swapsEnabled,
+      'bridge' => policy.swapsEnabled && policy.bridgesEnabled,
+      _ => false,
+    };
+  }
+
+  Map<String, dynamic> _runtimeFeatureDisabledResponse() =>
+      const <String, dynamic>{
+        'ok': false,
+        'error': 'This transaction feature is temporarily unavailable.',
+      };
 
   /// Handles a `request_switch_network` bridge call from a mini-app.
   ///
@@ -924,87 +994,63 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     );
   }
 
-  /// Returns the user's wallet token balances for the mini app across EVM,
-  /// Solana, and Tron. Sourced from the same backend endpoints the wallet uses,
-  /// so the wallet address stays gated — only normalized per-token balances
-  /// cross the bridge. Each chain family is best-effort; a failure on one does
-  /// not drop the others. Including non-EVM balances lets off-ramp assets like
-  /// USDT·SOL surface a balance (previously only EVM chains were returned).
+  Future<void> _publishRuntimeConfigChanged() async {
+    if (!mounted) return;
+    final detail = jsonEncode({
+      'eventVersion': 1,
+      'contextGeneration': _runtimeConfig.snapshot.revision,
+      'policy': _bridgeContext['runtimePolicy'],
+    });
+    try {
+      await _controller?.evaluateJavascript(
+        source:
+            'window.dispatchEvent(new CustomEvent("owllet:miniapp:runtime-config-changed", {detail: $detail}));',
+      );
+    } catch (_) {
+      // The page may have navigated while policy propagation completed.
+    }
+  }
+
+  /// Legacy balance bridge, intentionally limited to the active network. Older
+  /// mini apps keep their response shape without triggering unrelated chain or
+  /// aggregate portfolio discovery.
   Future<Map<String, dynamic>> _handleGetBalancesRequest() async {
     if (!_runtimeConfig.snapshot.portfolioEnabled ||
-        !_runtimeConfig.snapshot.legacyAggregateEnabled) {
+        !_runtimeConfig.snapshot.scopedBalancesEnabled) {
       return const <String, dynamic>{
         'ok': false,
-        'error': 'Legacy aggregate balances are currently disabled.',
+        'error': 'Balances are currently disabled.',
         'balances': <Map<String, dynamic>>[],
       };
     }
-    final walletAddress = _publishedWalletAddress;
-    Future<List<Map<String, dynamic>>> publish(
-      Future<List<Map<String, dynamic>>> request,
-    ) async {
-      final balances = await request;
-      if (mounted && walletAddress == _publishedWalletAddress) {
-        final detail = jsonEncode({
-          'walletAddress': walletAddress,
-          'balances': balances,
-        });
-        try {
-          await _controller?.evaluateJavascript(
-            source:
-                'window.dispatchEvent(new CustomEvent("owllet:balances-progress", {detail: $detail}));',
-          );
-        } catch (_) {
-          // The page may have navigated; the full bridge response still follows.
-        }
-      }
-      return balances;
-    }
-
     final activeNetworkKey =
         _bridgeContext['activeNetworkKey']?.toString() ?? '';
+    if (activeNetworkKey.isEmpty) {
+      return const <String, dynamic>{
+        'ok': false,
+        'error': 'The active network is unavailable.',
+        'balances': <Map<String, dynamic>>[],
+      };
+    }
     final activeFamily = NetworkKey.familyOf(activeNetworkKey);
     final activeEvmChainId = NetworkKey.evmChainIdOf(activeNetworkKey);
-    late final Future<List<Map<String, dynamic>>> activeRequest;
-    final backgroundRequests =
-        <Future<List<Map<String, dynamic>>> Function()>[];
-    if (activeFamily == ChainFamily.solana) {
-      activeRequest = _fetchNetworkBridgeBalances(
-        ChainFamily.solana,
-        'solana:mainnet',
-      );
-      backgroundRequests.addAll([
-        () => _fetchEvmBridgeBalances(useCached: false),
-        () => _fetchNetworkBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
-      ]);
-    } else if (activeFamily == ChainFamily.tron) {
-      activeRequest = _fetchNetworkBridgeBalances(
-        ChainFamily.tron,
-        'tron:mainnet',
-      );
-      backgroundRequests.addAll([
-        () => _fetchEvmBridgeBalances(useCached: false),
-        () => _fetchNetworkBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
-      ]);
-    } else {
-      activeRequest = activeEvmChainId == null
-          ? _fetchEvmBridgeBalances()
-          : _fetchActiveEvmBridgeBalances(activeEvmChainId);
-      backgroundRequests.addAll([
-        if (activeEvmChainId != null)
-          () => _fetchEvmBridgeBalances(useCached: false),
-        () => _fetchNetworkBridgeBalances(ChainFamily.solana, 'solana:mainnet'),
-        () => _fetchNetworkBridgeBalances(ChainFamily.tron, 'tron:mainnet'),
-      ]);
-    }
-    final activeBalances = await publish(activeRequest);
-    // Do not let slow providers for unrelated networks compete with the chain
-    // the user is looking at. Start the rest only after the active result has
-    // crossed the bridge.
-    for (final startRequest in backgroundRequests) {
-      unawaited(publish(startRequest()));
-    }
-    return <String, dynamic>{'ok': true, 'balances': activeBalances};
+    final activeSnapshot =
+        activeFamily == ChainFamily.evm && activeEvmChainId != null
+        ? await _fetchActiveEvmBridgeBalances(activeEvmChainId)
+        : await _fetchNetworkBridgeBalances(activeFamily, activeNetworkKey);
+    await _publishBalancesProgress(
+      activeSnapshot.balances,
+      walletAddress: activeSnapshot.walletAddress,
+      networkKey: activeNetworkKey,
+      complete: activeSnapshot.complete,
+    );
+    return <String, dynamic>{
+      'ok': activeSnapshot.complete || activeSnapshot.balances.isNotEmpty,
+      if (!activeSnapshot.complete)
+        'error': 'Balances are temporarily unavailable.',
+      'complete': activeSnapshot.complete,
+      'balances': activeSnapshot.balances,
+    };
   }
 
   /// Returns balances for exactly one host-approved network. This additive
@@ -1034,101 +1080,44 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
 
     final family = NetworkKey.familyOf(networkKey);
     final chainId = NetworkKey.evmChainIdOf(networkKey);
-    final balances = family == ChainFamily.evm && chainId != null
+    final snapshot = family == ChainFamily.evm && chainId != null
         ? await _fetchActiveEvmBridgeBalances(chainId)
         : await _fetchNetworkBridgeBalances(family, networkKey);
-    await _publishBalancesProgress(balances, networkKey: networkKey);
+    await _publishBalancesProgress(
+      snapshot.balances,
+      walletAddress: snapshot.walletAddress,
+      networkKey: networkKey,
+      complete: snapshot.complete,
+    );
     return <String, dynamic>{
-      'ok': true,
+      'ok': snapshot.complete || snapshot.balances.isNotEmpty,
+      if (!snapshot.complete) 'error': 'Balances are temporarily unavailable.',
+      'complete': snapshot.complete,
       'networkKey': networkKey,
-      'balances': balances,
+      'balances': snapshot.balances,
     };
   }
 
-  Future<List<Map<String, dynamic>>> _fetchEvmBridgeBalances({
-    List<int>? chainIds,
-    bool useCached = true,
-  }) async {
-    final visibilityService = TokenVisibilityService();
-
-    // EVM balances via the aggregated portfolio endpoint.
-    final evmAddress = await _walletService.getWalletAddressForFamily(
-      ChainFamily.evm,
-    );
-    if (evmAddress != null && evmAddress.trim().isNotEmpty) {
-      final snapshotService = HomePortfolioSnapshotService();
-      final cachedSnapshot = useCached
-          ? await snapshotService.loadSnapshot(evmAddress)
-          : null;
-      final cachedBalances = cachedSnapshot == null
-          ? const <Map<String, dynamic>>[]
-          : await _evmBridgeBalancesFromSnapshot(
-              cachedSnapshot,
-              visibilityService,
-              chainIds: chainIds,
-            );
-      if (cachedSnapshot != null && cachedBalances.isNotEmpty) {
-        // Match the native home screen's cache-first behavior. The bridge
-        // responds immediately with last-known balances, then publishes a
-        // fresher portfolio when the backend completes successfully.
-        unawaited(
-          _refreshEvmBridgeBalances(
-            evmAddress,
-            cachedSnapshot,
-            visibilityService,
-            snapshotService,
-            chainIds: chainIds,
-          ),
-        );
-        return cachedBalances;
-      }
-
-      try {
-        final snapshot = await HomePortfolioApiService().fetchPortfolio(
-          evmAddress,
-          chainIds: chainIds,
-        );
-        if (chainIds == null) {
-          await snapshotService.saveSnapshot(snapshot);
-        }
-        return _evmBridgeBalancesFromSnapshot(
-          snapshot,
-          visibilityService,
-          chainIds: chainIds,
-        );
-      } catch (error) {
-        debugPrint('Mini-app getBalances: EVM portfolio failed: $error');
-      }
-    }
-
-    return const <Map<String, dynamic>>[];
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchActiveEvmBridgeBalances(
-    int chainId,
-  ) async {
-    final portfolioBalances = await _fetchEvmBridgeBalances(
-      chainIds: [chainId],
-    );
-    if (portfolioBalances.isNotEmpty) {
-      return portfolioBalances;
-    }
-
-    // A portfolio section can be absent when its shared multi-chain discovery
-    // leader times out. The chain-specific endpoint is independent and often
-    // remains healthy, so use it before reporting an empty active wallet.
+  Future<
+    ({
+      String? walletAddress,
+      List<Map<String, dynamic>> balances,
+      bool complete,
+    })
+  >
+  _fetchActiveEvmBridgeBalances(int chainId) async {
     final networkKey = 'evm:$chainId';
-    final directBalances = await _fetchNetworkBridgeBalances(
+    final directSnapshot = await _fetchNetworkBridgeBalances(
       ChainFamily.evm,
       networkKey,
     );
-    if (directBalances.isEmpty) return directBalances;
+    if (directSnapshot.balances.isEmpty) return directSnapshot;
 
     final hiddenTokens = await TokenVisibilityService().loadHiddenTokens(
       chainId,
     );
-    if (hiddenTokens.isEmpty) return directBalances;
-    return directBalances.where((balance) {
+    if (hiddenTokens.isEmpty) return directSnapshot;
+    final balances = directSnapshot.balances.where((balance) {
       final token = Token(
         symbol: balance['symbol']?.toString() ?? '',
         name: balance['name']?.toString() ?? '',
@@ -1143,96 +1132,30 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       );
       return !TokenVisibilityUtils.contains(hiddenTokens, token);
     }).toList();
-  }
-
-  Future<void> _refreshEvmBridgeBalances(
-    String evmAddress,
-    HomeAggregatedPortfolioSnapshot cachedSnapshot,
-    TokenVisibilityService visibilityService,
-    HomePortfolioSnapshotService snapshotService, {
-    List<int>? chainIds,
-  }) async {
-    try {
-      final liveSnapshot = await HomePortfolioApiService().fetchPortfolio(
-        evmAddress,
-        chainIds: chainIds,
-      );
-      if (liveSnapshot.partialFailure &&
-          !_snapshotHasPositiveBalance(liveSnapshot) &&
-          _snapshotHasPositiveBalance(cachedSnapshot)) {
-        return;
-      }
-      if (chainIds == null) {
-        await snapshotService.saveSnapshot(liveSnapshot);
-      }
-      final balances = await _evmBridgeBalancesFromSnapshot(
-        liveSnapshot,
-        visibilityService,
-        chainIds: chainIds,
-      );
-      await _publishBalancesProgress(balances);
-    } catch (error) {
-      debugPrint('Mini-app getBalances: EVM portfolio refresh failed: $error');
-    }
-  }
-
-  bool _snapshotHasPositiveBalance(HomeAggregatedPortfolioSnapshot snapshot) =>
-      snapshot.sections
-          .expand((section) => section.tokens)
-          .any((token) => token.balance > 0);
-
-  Future<List<Map<String, dynamic>>> _evmBridgeBalancesFromSnapshot(
-    HomeAggregatedPortfolioSnapshot snapshot,
-    TokenVisibilityService visibilityService, {
-    List<int>? chainIds,
-  }) async {
-    final balances = <Map<String, dynamic>>[];
-    for (final section in snapshot.sections) {
-      final chainId = section.chain.chainId;
-      if (chainIds != null && !chainIds.contains(chainId)) {
-        continue;
-      }
-      final hiddenTokens = await visibilityService.loadHiddenTokens(chainId);
-      for (final token in section.tokens) {
-        if (TokenVisibilityUtils.contains(hiddenTokens, token)) {
-          continue;
-        }
-        // The backend already applies spam filtering. Do not hide a real token
-        // merely because its USD price provider is temporarily unavailable.
-        final networkKey =
-            (token.networkKey == null || token.networkKey!.trim().isEmpty)
-            ? section.chain.networkKey
-            : token.networkKey!;
-        balances.add(<String, dynamic>{
-          'symbol': token.symbol,
-          'name': token.name,
-          'networkKey': networkKey,
-          'chainFamily': NetworkKey.familyOf(networkKey).wireValue,
-          'contractAddress': token.contractAddress,
-          'decimals': token.decimals,
-          'balance': token.balance,
-          'valueUsd': token.valueUsd,
-          'priceUsd': token.priceUsd,
-          'isCertified': token.isCertified,
-          'imageUrl': token.imageUrl,
-          'logoUrl': token.imageUrl,
-        });
-      }
-    }
-    return balances;
+    return (
+      walletAddress: directSnapshot.walletAddress,
+      balances: balances,
+      complete: directSnapshot.complete,
+    );
   }
 
   Future<void> _publishBalancesProgress(
     List<Map<String, dynamic>> balances, {
+    required String? walletAddress,
     String? networkKey,
+    required bool complete,
   }) async {
-    final walletAddress = _publishedWalletAddress;
     if (!mounted) {
       return;
     }
     final detailPayload = <String, dynamic>{
       'walletAddress': walletAddress,
       'balances': balances,
+      'eventVersion': 1,
+      'contextGeneration': _runtimeConfig.snapshot.revision,
+      'complete': complete,
+      'replacement': complete,
+      'scope': {'walletAddress': walletAddress, 'networkKey': networkKey},
     };
     if (networkKey != null) {
       detailPayload['networkKey'] = networkKey;
@@ -1241,7 +1164,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     try {
       await _controller?.evaluateJavascript(
         source:
-            'window.dispatchEvent(new CustomEvent("owllet:balances-progress", {detail: $detail}));',
+            'window.dispatchEvent(new CustomEvent("owllet:balances-progress", {detail: $detail}));'
+            'window.dispatchEvent(new CustomEvent("owllet:miniapp:balances-changed", {detail: $detail}));',
       );
     } catch (_) {
       // The page may have navigated while the background refresh completed.
@@ -1251,13 +1175,21 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
   /// Fetch one network's wallet token balances statelessly via the
   /// backend network-key wallet-tokens endpoint, normalized to the same shape
   /// as the EVM balances above. Best-effort: returns empty on any failure.
-  Future<List<Map<String, dynamic>>> _fetchNetworkBridgeBalances(
-    ChainFamily family,
-    String networkKey,
-  ) async {
+  Future<
+    ({
+      String? walletAddress,
+      List<Map<String, dynamic>> balances,
+      bool complete,
+    })
+  >
+  _fetchNetworkBridgeBalances(ChainFamily family, String networkKey) async {
     final address = await _walletService.getWalletAddressForFamily(family);
     if (address == null || address.trim().isEmpty) {
-      return const <Map<String, dynamic>>[];
+      return (
+        walletAddress: address,
+        balances: const <Map<String, dynamic>>[],
+        complete: false,
+      );
     }
     try {
       final uri = AppEnvironment.blockchain(
@@ -1268,15 +1200,27 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           .get(uri)
           .timeout(const Duration(seconds: 15));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return const <Map<String, dynamic>>[];
+        return (
+          walletAddress: address,
+          balances: const <Map<String, dynamic>>[],
+          complete: false,
+        );
       }
       final decoded = jsonDecode(response.body);
       if (decoded is! Map<String, dynamic>) {
-        return const <Map<String, dynamic>>[];
+        return (
+          walletAddress: address,
+          balances: const <Map<String, dynamic>>[],
+          complete: false,
+        );
       }
       final rawTokens = decoded['tokens'];
       if (rawTokens is! List) {
-        return const <Map<String, dynamic>>[];
+        return (
+          walletAddress: address,
+          balances: const <Map<String, dynamic>>[],
+          complete: false,
+        );
       }
       final defaultDecimals = family == ChainFamily.solana
           ? 9
@@ -1312,10 +1256,25 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
               (token['logoUrl'] as String?) ?? (token['imageUrl'] as String?),
         });
       }
-      return result;
+      final snapshot = decoded['snapshot'];
+      final discovery = decoded['discovery'];
+      final completeness = snapshot is Map
+          ? snapshot['completeness']?.toString()
+          : null;
+      final partialFailure =
+          discovery is Map && discovery['partialFailure'] == true;
+      return (
+        walletAddress: address,
+        balances: result,
+        complete: completeness != 'partial' && !partialFailure,
+      );
     } catch (error) {
       debugPrint('Mini-app getBalances: $networkKey fetch failed: $error');
-      return const <Map<String, dynamic>>[];
+      return (
+        walletAddress: address,
+        balances: const <Map<String, dynamic>>[],
+        complete: false,
+      );
     }
   }
 
@@ -1407,6 +1366,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'ok': false,
           'error': 'Mini-app was closed before the transaction could start.',
         };
+      }
+      if (!await _runtimeFeatureEnabled('transfer')) {
+        return _runtimeFeatureDisabledResponse();
       }
 
       // The user may leave the confirmation sheet open until the short-lived
@@ -1780,6 +1742,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'ok': false,
         'error': 'Wallet transfer was cancelled.',
       };
+    }
+    if (!await _runtimeFeatureEnabled('transfer')) {
+      return _runtimeFeatureDisabledResponse();
     }
 
     final token = Token(
@@ -2244,6 +2209,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         'error': 'Swap was cancelled.',
       };
     }
+    if (!await _runtimeFeatureEnabled('bridge')) {
+      return _runtimeFeatureDisabledResponse();
+    }
     if (!mounted) {
       return const <String, dynamic>{
         'ok': false,
@@ -2469,6 +2437,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
           'ok': false,
           'error': 'Swap was cancelled.',
         };
+      }
+      if (!await _runtimeFeatureEnabled('bridge')) {
+        return _runtimeFeatureDisabledResponse();
       }
       if (!mounted) {
         return const <String, dynamic>{
@@ -3377,6 +3348,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       debugPrint('[MiniAppHost] camera permission request failed: $error');
       return false;
     }
+  }
+
+  bool _runtimeAllowsMiniAppUrl(Uri uri) {
+    final feature = runtimeFeatureForMiniAppLaunch(
+      widget.definition.id,
+      uri.toString(),
+    );
+    return _runtimeConfig.snapshot.allows(feature);
   }
 
   bool _isTrustedOrigin(Uri uri) {

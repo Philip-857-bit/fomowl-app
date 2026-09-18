@@ -11,7 +11,9 @@ import '../models/patch_status_snapshot.dart';
 import '../services/app_patch_service.dart';
 import '../services/app_release_checker.dart';
 import '../services/language_controller.dart';
+import '../services/affiliate_attribution_service.dart';
 import '../services/runtime_config_service.dart';
+import '../services/blockchain_service.dart';
 import '../services/storage_service.dart';
 import '../services/system_picker_guard.dart';
 import '../services/wallet_service.dart';
@@ -53,9 +55,14 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     AppPatchService.instance.addListener(_showVisiblePatchStatus);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_enforceRequiredUpdate());
-      unawaited(_runtimeConfig.refresh());
+      unawaited(_runtimeConfig.hydrate().then((_) => _runtimeConfig.refresh()));
       unawaited(WalletConnectService.instance.initialize());
       unawaited(DeepLinkService.instance.initialize());
+      unawaited(
+        AffiliateAttributionService.instance.captureInstallReferrer().then(
+          (_) => AffiliateAttributionService.instance.applyPendingToCurrentWallet(),
+        ),
+      );
     });
     ShowcaseView.register(enableAutoScroll: true, blurValue: 1);
     _foregroundLockTimer = Timer.periodic(
@@ -115,11 +122,24 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
       return;
     }
     if (state == AppLifecycleState.resumed) {
+      final shouldRefreshBalances =
+          _wasBackgrounded && !SystemPickerGuard.isActive;
       unawaited(AppPatchService.instance.handleAppResumed());
       unawaited(_enforceRequiredUpdate());
-      unawaited(_runtimeConfig.refresh());
+      unawaited(_refreshRuntimeAndBalances(shouldRefreshBalances));
       _maybeRequireUnlock();
     }
+  }
+
+  Future<void> _refreshRuntimeAndBalances(bool refreshBalances) async {
+    await _runtimeConfig.refresh();
+    if (!refreshBalances || !_runtimeConfig.snapshot.refreshOnResume) return;
+    final context = appNavigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+    await Provider.of<BlockchainService>(
+      context,
+      listen: false,
+    ).requestActiveBalanceRefresh(reason: 'resume');
   }
 
   Future<void> _enforceRequiredUpdate() async {

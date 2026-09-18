@@ -132,22 +132,53 @@ class ReferralService {
     }
   }
 
+  /// Public install-link lookup. Returns true only for approved affiliates,
+  /// false when the code is missing or is an in-app friend referral, and
+  /// null when the check could not be completed.
+  Future<bool?> lookupAffiliateCode(String referralCode) async {
+    final normalized = referralCode.trim().toUpperCase();
+    if (normalized.isEmpty) return false;
+    try {
+      final encoded = Uri.encodeComponent(normalized);
+      final uri = AppEnvironment.referrals('/codes/$encoded');
+      final response = await _httpClientService
+          .sendWithRetry(() => _httpClientService.client.get(uri))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return null;
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return data['valid'] == true;
+    } on TimeoutException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> bindReferralCode({
     required String walletAddress,
     required String referralCode,
+    String source = 'in_app',
   }) async {
     try {
       final uri = AppEnvironment.referrals('/bind');
-      final response = await _httpClientService
-          .sendWithRetry(
-            () => _httpClientService.client.post(
-              uri,
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'walletAddress': _normalizeWallet(walletAddress),
-                'referralCode': referralCode,
-              }),
+      final normalizedWallet = _normalizeWallet(walletAddress);
+      final response = await _walletBackendAuthService
+          .sendAuthorized(
+            normalizedWallet,
+            (headers) => _httpClientService.sendWithRetry(
+              () => _httpClientService.client.post(
+                uri,
+                headers: headers,
+                body: jsonEncode({
+                  'walletAddress': normalizedWallet,
+                  'referralCode': referralCode,
+                  'source': source,
+                }),
+              ),
             ),
+            const {'Content-Type': 'application/json'},
           )
           .timeout(const Duration(seconds: 15));
 

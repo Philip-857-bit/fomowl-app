@@ -32,6 +32,10 @@ void main() {
     VoidCallback? onScan,
     VoidCallback? onManageTokens,
     bool portfolioEnabled = true,
+    List<Token> tokens = const [ethToken],
+    bool balancesUnavailable = false,
+    bool confirmedZero = false,
+    String? freshnessCaption,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -40,7 +44,7 @@ void main() {
         home: Builder(
           builder: (context) => Scaffold(
             body: TokensSection(
-              tokens: const [ethToken],
+              tokens: tokens,
               portfolioSections: const [
                 HomePortfolioSection(chain: ethereumChain, tokens: [ethToken]),
               ],
@@ -58,6 +62,9 @@ void main() {
               onSelectNftCollection: (_) {},
               chainId: 1,
               portfolioEnabled: portfolioEnabled,
+              balancesUnavailable: balancesUnavailable,
+              confirmedZero: confirmedZero,
+              freshnessCaption: freshnessCaption,
             ),
           ),
         ),
@@ -120,5 +127,23 @@ void main() {
     expect(find.text('Tokens'), findsOneWidget);
     expect(find.text('Portfolio'), findsNothing);
     expect(find.text('NFTs'), findsOneWidget);
+  });
+
+  testWidgets('distinguishes unavailable balances from a confirmed empty wallet', (
+    tester,
+  ) async {
+    await pumpSection(
+      tester,
+      tokens: const [],
+      balancesUnavailable: true,
+    );
+    expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+
+    await pumpSection(
+      tester,
+      tokens: const [],
+      confirmedZero: true,
+    );
+    expect(find.byIcon(Icons.account_balance_wallet_outlined), findsOneWidget);
   });
 }

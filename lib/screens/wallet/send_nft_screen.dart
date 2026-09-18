@@ -296,6 +296,16 @@ class _SendNftScreenState extends State<SendNftScreen> {
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
         );
+        if (!isCompressedSolana && chain != null) {
+          unawaited(
+            blockchain.requestTransactionBalanceRefresh(
+              walletAddress: fromAddress,
+              networkKey: NetworkKey.evm(chain.chainId),
+              family: 'nft',
+              operationReference: txHash,
+            ),
+          );
+        }
         unawaited(
           blockchain.refreshWalletTokens(
             fromAddress,

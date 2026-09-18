@@ -31,6 +31,9 @@ class TokensSection extends StatefulWidget {
   final HomeAssetTab initialTab;
   final ValueChanged<HomeAssetTab>? onTabChanged;
   final bool portfolioEnabled;
+  final String? freshnessCaption;
+  final bool balancesUnavailable;
+  final bool confirmedZero;
 
   const TokensSection({
     super.key,
@@ -52,6 +55,9 @@ class TokensSection extends StatefulWidget {
     this.initialTab = HomeAssetTab.tokens,
     this.onTabChanged,
     this.portfolioEnabled = true,
+    this.freshnessCaption,
+    this.balancesUnavailable = false,
+    this.confirmedZero = false,
   });
 
   @override
@@ -141,6 +147,16 @@ class _TokensSectionState extends State<TokensSection> {
           ),
         ),
         const SizedBox(height: 8),
+        if (_selectedTab == HomeAssetTab.tokens &&
+            widget.freshnessCaption != null &&
+            visibleTokens.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Text(
+              widget.freshnessCaption!,
+              style: GoogleFonts.outfit(fontSize: 12, color: Colors.white54),
+            ),
+          ),
         if (_selectedTab == HomeAssetTab.tokens)
           ..._buildTokensContent(visibleTokens)
         else if (_selectedTab == HomeAssetTab.portfolio)
@@ -162,6 +178,14 @@ class _TokensSectionState extends State<TokensSection> {
     }
 
     if (visibleTokens.isEmpty) {
+      final title = widget.balancesUnavailable
+          ? widget.localization.noInternetConnection
+          : widget.localization.noTokensYet;
+      final subtitle = widget.balancesUnavailable
+          ? (widget.freshnessCaption ?? widget.localization.noConnection)
+          : widget.confirmedZero
+          ? widget.localization.depositTokens
+          : (widget.freshnessCaption ?? widget.localization.depositTokens);
       return [
         Padding(
           padding: const EdgeInsets.all(40),
@@ -169,13 +193,15 @@ class _TokensSectionState extends State<TokensSection> {
             child: Column(
               children: [
                 Icon(
-                  Icons.account_balance_wallet_outlined,
+                  widget.balancesUnavailable
+                      ? Icons.cloud_off_outlined
+                      : Icons.account_balance_wallet_outlined,
                   size: 60,
                   color: Colors.white.withValues(alpha: 0.2),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  widget.localization.noTokensYet,
+                  title,
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -184,7 +210,7 @@ class _TokensSectionState extends State<TokensSection> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  widget.localization.depositTokens,
+                  subtitle,
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     color: Colors.white54,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_navigator.dart';
 import '../utils/in_app_link_router.dart';
+import 'affiliate_attribution_service.dart';
 import 'walletconnect/wallet_connect_service.dart';
 
 class DeepLinkService {
@@ -95,6 +96,13 @@ class DeepLinkService {
     final pairingUri = extractWalletConnectPairingUri(rawString);
     if (pairingUri != null && pairingUri.isNotEmpty) {
       await WalletConnectService.instance.pair(pairingUri);
+      return;
+    }
+
+    final affiliateCode = AffiliateAttributionService.parseCodeFromUri(uri);
+    if (affiliateCode != null) {
+      await AffiliateAttributionService.instance.rememberCode(affiliateCode);
+      await AffiliateAttributionService.instance.applyPendingToCurrentWallet();
       return;
     }
 

@@ -13,8 +13,10 @@ import '../../models/token.dart';
 import '../../models/token_market_data.dart';
 import '../swap/swap_screen.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/runtime_config_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../../widgets/runtime_feature_gate.dart';
 import 'widgets/token_detail/token_detail_header.dart';
 import 'widgets/token_detail/price_overview.dart';
 import 'widgets/token_detail/token_chart_card.dart';
@@ -479,8 +481,11 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                                     .openSwapWithToken(token);
                                 Navigator.of(context).push(
                                   MaterialPageRoute<void>(
-                                    builder: (_) => const SwapScreen(
-                                      showBottomNavigation: true,
+                                    builder: (_) => const RuntimeFeatureGate(
+                                      feature: RuntimeFeature.swaps,
+                                      child: SwapScreen(
+                                        showBottomNavigation: true,
+                                      ),
                                     ),
                                   ),
                                 );

@@ -45,8 +45,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
-      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
-      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      AFFILIATE_MINI_APP_URL: https://affiliatestaging.owlletapp.com
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: https://affiliatestaging.owlletapp.com
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}

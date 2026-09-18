@@ -59,6 +59,34 @@ import '../screens/wallet/token_detail_screen.dart';
 import '../screens/wallet/token_management_screen.dart';
 import '../screens/wallet/transfer_confirmation_screen.dart';
 import '../screens/wallet/wallets_screen.dart';
+import '../services/runtime_config_service.dart';
+import '../widgets/runtime_feature_gate.dart';
+
+Widget _gateRuntimeFeatures(Widget child, List<RuntimeFeature> features) {
+  return features.reversed.fold<Widget>(
+    child,
+    (current, feature) => RuntimeFeatureGate(feature: feature, child: current),
+  );
+}
+
+Widget _miniAppRoute(BuildContext context, {RuntimeFeature? requiredFeature}) {
+  final args = ModalRoute.of(context)?.settings.arguments;
+  final launchFeature =
+      requiredFeature ??
+      switch (args) {
+        MiniAppHostArguments value => runtimeFeatureForMiniAppLaunch(
+          value.miniAppId,
+          value.initialUrl,
+        ),
+        String value => runtimeFeatureForMiniAppLaunch(value, null),
+        _ => RuntimeFeature.miniApps,
+      };
+  final features = <RuntimeFeature>[RuntimeFeature.miniApps];
+  if (launchFeature != RuntimeFeature.miniApps) {
+    features.add(launchFeature);
+  }
+  return _gateRuntimeFeatures(MiniAppHostScreen.fromRoute(context), features);
+}
 
 Map<String, WidgetBuilder> buildAppRoutes() {
   return {
@@ -88,9 +116,18 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/wallets': (_) => const WalletsScreen(),
     '/swap': (_) => const ShellRouteRedirect(tab: AppShellTab.swap),
     '/select-token': (_) => const SelectTokenScreen(),
-    '/send-token': (_) => const SendTokenScreen(),
-    '/send-nft': (_) => const SendNftScreen(),
-    '/transfer-confirmation': (_) => const TransferConfirmationScreen(),
+    '/send-token': (_) => const RuntimeFeatureGate(
+      feature: RuntimeFeature.transfers,
+      child: SendTokenScreen(),
+    ),
+    '/send-nft': (_) => const RuntimeFeatureGate(
+      feature: RuntimeFeature.transfers,
+      child: SendNftScreen(),
+    ),
+    '/transfer-confirmation': (_) => const RuntimeFeatureGate(
+      feature: RuntimeFeature.transfers,
+      child: TransferConfirmationScreen(),
+    ),
     '/token-detail': (_) => const TokenDetailScreen(),
     '/token-management': (_) => const TokenManagementScreen(),
     '/nft-gallery': (_) => NftGalleryScreen(),
@@ -107,9 +144,10 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/backup-seed-phrase': (_) => const BackupSeedPhraseScreen(),
     '/password-security': (_) => const PasswordSecurityScreen(),
     '/two-factor-setup': (_) => const TwoFactorSetupScreen(),
-    '/owllet-pay': (context) => MiniAppHostScreen.fromRoute(context),
-    '/cash-in': (context) => MiniAppHostScreen.fromRoute(context),
-    '/mini-app-host': (context) => MiniAppHostScreen.fromRoute(context),
+    '/owllet-pay': (context) => _miniAppRoute(context),
+    '/cash-in': (context) =>
+        _miniAppRoute(context, requiredFeature: RuntimeFeature.cashIn),
+    '/mini-app-host': (context) => _miniAppRoute(context),
     '/referrals': (_) => const ReferralsScreen(),
     '/feedback': (_) => const FeedbackScreen(),
     '/community': (_) => const CommunityLinksScreen(),
@@ -117,17 +155,32 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/add-network': (_) => const AddNetworkScreen(),
     '/transaction-processing': (_) => const TransactionProcessingScreen(),
     '/transactions': (_) => const TransactionsScreen(),
-    '/bill-payment': (_) => const BillPaymentScreen(),
-    '/withdraw-to-bank': (_) => const ComingSoonOverlay(
-      title: 'Withdraw to Bank',
-      child: WithdrawToBankScreen(),
+    '/bill-payment': (_) => _gateRuntimeFeatures(
+      const BillPaymentScreen(),
+      const [RuntimeFeature.legacySystem, RuntimeFeature.bills],
     ),
-    '/deposit-funds': (_) => const ComingSoonOverlay(
-      title: 'Deposit Funds',
-      child: DepositFundsScreen(),
+    '/withdraw-to-bank': (_) => _gateRuntimeFeatures(
+      const ComingSoonOverlay(
+        title: 'Withdraw to Bank',
+        child: WithdrawToBankScreen(),
+      ),
+      const [RuntimeFeature.legacySystem, RuntimeFeature.cashOut],
     ),
-    '/third-party-deposit': (_) => const ThirdPartyDepositScreen(),
-    '/electricity-suppliers': (_) => const ElectricitySuppliersScreen(),
+    '/deposit-funds': (_) => _gateRuntimeFeatures(
+      const ComingSoonOverlay(
+        title: 'Deposit Funds',
+        child: DepositFundsScreen(),
+      ),
+      const [RuntimeFeature.legacySystem, RuntimeFeature.cashIn],
+    ),
+    '/third-party-deposit': (_) => _gateRuntimeFeatures(
+      const ThirdPartyDepositScreen(),
+      const [RuntimeFeature.legacySystem, RuntimeFeature.cashIn],
+    ),
+    '/electricity-suppliers': (_) => _gateRuntimeFeatures(
+      const ElectricitySuppliersScreen(),
+      const [RuntimeFeature.legacySystem, RuntimeFeature.bills],
+    ),
     '/kyc-success': (_) => const KycSuccessScreen(),
   };
 }

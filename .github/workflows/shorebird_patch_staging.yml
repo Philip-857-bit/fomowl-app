@@ -54,8 +54,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
-      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
-      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      AFFILIATE_MINI_APP_URL: https://affiliatestaging.owlletapp.com
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: https://affiliatestaging.owlletapp.com
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -271,6 +271,7 @@ jobs:
           read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird patch android \
+            --track=staging \
             --release-version="${{ inputs.release_version }}" \
             --allow-asset-diffs \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
@@ -313,8 +314,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
-      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
-      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      AFFILIATE_MINI_APP_URL: https://affiliatestaging.owlletapp.com
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: https://affiliatestaging.owlletapp.com
       GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
       IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
       IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -540,6 +541,7 @@ jobs:
           read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird patch ios \
+            --track=staging \
             --release-version="${{ inputs.release_version }}" \
             --allow-asset-diffs \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
