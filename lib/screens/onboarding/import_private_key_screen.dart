@@ -7,10 +7,12 @@ import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
+import 'dart:async';
 import 'package:provider/provider.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/screen_capture_guard.dart';
 
 /// Import Private Key Screen
 /// Allows users to import wallet using private key
@@ -26,13 +28,23 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final TextEditingController _privateKeyController = TextEditingController();
   bool _obscurePrivateKey = true;
   final WalletService _walletService = WalletService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
   ChainFamily _selectedChain = ChainFamily.evm;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
   void dispose() {
+    _walletNameController.text = '';
+    _privateKeyController.text = '';
     _walletNameController.dispose();
     _privateKeyController.dispose();
+    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 
