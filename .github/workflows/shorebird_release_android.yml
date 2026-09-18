@@ -91,7 +91,9 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
       - name: Set up Android SDK tools
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses >/dev/null || true
