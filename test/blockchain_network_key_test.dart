@@ -45,6 +45,22 @@ void main() {
   );
 
   test(
+    'falls back safely when a persisted built-in network was removed',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        'active_chain_id': 8217,
+        'active_network_key': 'evm:8217',
+      });
+      final service = BlockchainService();
+
+      await service.loadActiveNetworkForTest();
+
+      expect(service.activeChain.chainId, 1);
+      expect(service.activeNetworkKey, NetworkKey.evm(1));
+    },
+  );
+
+  test(
     'activates non-EVM networks and exposes family native token fallback',
     () {
       final service = BlockchainService();

@@ -42,6 +42,13 @@ class WalletConnectService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   ReownWalletKit? get client => _walletKit;
 
+  /// EVM namespaces advertised to WalletConnect DApps.
+  static Set<String> get supportedEip155Chains => BlockchainCatalog
+      .builtInChains
+      .where((chain) => chain.family == ChainFamily.evm)
+      .map((chain) => 'eip155:${chain.chainId}')
+      .toSet();
+
   /// Initialize the Reown Web3Wallet client
   Future<void> initialize() {
     if (_isInitialized) return Future.value();
@@ -273,12 +280,8 @@ class WalletConnectService extends ChangeNotifier {
     required String? solanaAddress,
     required String? tronAddress,
   }) {
-    final evmChains = BlockchainCatalog.builtInChains
-        .where((chain) => chain.family == ChainFamily.evm)
-        .map((chain) => 'eip155:${chain.chainId}')
-        .toSet();
     final availableChains = <String, Set<String>>{
-      'eip155': evmChains,
+      'eip155': supportedEip155Chains,
       'solana': {WalletConnectPolicy.solanaMainnetChain},
       'tron': {WalletConnectPolicy.tronMainnetChain},
     };

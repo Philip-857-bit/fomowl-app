@@ -150,16 +150,24 @@ class SwapService {
 
   static const Set<int> supportedQuoteChainIds = {
     1, // Ethereum
+    25, // Cronos
+    100, // Gnosis
     130, // Unichain
     137, // Polygon
     143, // Monad
     146, // Sonic
+    169, // Manta Pacific
+    250, // Fantom
+    324, // zkSync Era
     480, // World Chain
     999, // HyperEVM
+    1088, // Metis
+    1329, // Sei
     2741, // Abstract
     4217, // Tempo
     4663, // Robinhood Chain
     5000, // Mantle
+    5042, // Arc
     8453, // Base
     9745, // Plasma
     10, // OP Mainnet
@@ -169,10 +177,14 @@ class SwapService {
     57073, // Ink
     59144, // Linea (Swap API only)
     80094, // Berachain
+    98866, // Plume
+    1135, // Lisk
     33139, // ApeChain
+    42220, // Celo
     34443, // Mode
     81457, // Blast
     534352, // Scroll
+    1313161554, // Aurora
   };
   // Keep this separate from the Swap API set: Linea supports standard 0x
   // quotes but not Gasless API v2.
@@ -196,9 +208,6 @@ class SwapService {
     43114,
     57073,
     80094,
-    33139,
-    34443,
-    81457,
     534352,
   };
   static const Set<int> supportedLimitChainIds =

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/config/app_environment.dart';
 import 'package:fomowl_wallet/services/walletconnect/wallet_connect_models.dart';
+import 'package:fomowl_wallet/services/walletconnect/wallet_connect_service.dart';
 
 void main() {
   group('WalletConnect Models & Environment Tests', () {
@@ -8,6 +9,23 @@ void main() {
       final projectId = AppEnvironment.walletConnectProjectId;
       expect(projectId, isNotEmpty);
       expect(projectId.length, greaterThanOrEqualTo(8));
+    });
+
+    test('WalletConnect advertises every newly added EVM chain', () {
+      const expected = {
+        'eip155:25',
+        'eip155:169',
+        'eip155:1088',
+        'eip155:1329',
+        'eip155:5042',
+        'eip155:98866',
+      };
+
+      expect(WalletConnectService.supportedEip155Chains, containsAll(expected));
+      expect(
+        WalletConnectService.supportedEip155Chains,
+        isNot(contains('eip155:8217')),
+      );
     });
 
     test(

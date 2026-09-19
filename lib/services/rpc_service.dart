@@ -15,8 +15,8 @@ class RpcService extends BaseService {
 
   final Map<int, List<String>> _publicRpcFallbacks = {
     1: ['https://cloudflare-eth.com'],
-    56: ['https://bsc-dataseed.binance.org'],
-    137: ['https://polygon-rpc.com'],
+    56: ['https://bsc-dataseed.bnbchain.org'],
+    137: ['https://polygon.drpc.org'],
     42161: ['https://arb1.arbitrum.io/rpc'],
     10: ['https://mainnet.optimism.io'],
     8453: ['https://mainnet.base.org'],
@@ -24,8 +24,14 @@ class RpcService extends BaseService {
     43114: ['https://api.avax.network/ext/bc/C/rpc'],
     250: ['https://rpc.ankr.com/fantom'],
     100: ['https://rpc.gnosischain.com'],
-    8217: ['https://public-en-cypress.klaytn.net'],
     1313161554: ['https://mainnet.aurora.dev'],
+    25: ['https://evm.cronos.org'],
+    169: ['https://pacific-rpc.manta.network/http'],
+    1088: ['https://metis-rpc.publicnode.com'],
+    1329: ['https://evm-rpc.sei-apis.com'],
+    5042: ['https://rpc.mainnet.arc.io'],
+    98866: ['https://rpc.plume.org'],
+    34443: ['https://1rpc.io/mode', 'https://mode.drpc.org'],
   };
 
   /// Make a JSON-RPC call with automatic fallback support

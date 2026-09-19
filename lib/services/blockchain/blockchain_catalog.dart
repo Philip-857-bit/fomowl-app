@@ -8,19 +8,24 @@ class BlockchainCatalog {
   /// are intentionally excluded.
   static const Set<int> ethereumLayer2BadgeChainIds = {
     10, // OP Mainnet
+    169, // Manta Pacific
     130, // Unichain
     324, // zkSync Era
     480, // World Chain
     2741, // Abstract
     4663, // Robinhood Chain
     5000, // Mantle
+    1088, // Metis
     8453, // Base
+    1135, // Lisk
     33139, // ApeChain
     34443, // Mode
+    42220, // Celo
     42161, // Arbitrum One
     57073, // Ink
     59144, // Linea
     81457, // Blast
+    98866, // Plume
     534352, // Scroll
   };
 
@@ -124,16 +129,6 @@ class BlockchainCatalog {
       explorerUrl: 'https://gnosisscan.io',
       logoUrl:
           'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
-    ),
-    EvmChain(
-      name: 'Klaytn',
-      symbol: 'KLAY',
-      chainId: 8217,
-      rpcUrl: AppEnvironment.blockchain('/8217/rpc').toString(),
-      coinGeckoId: 'klay-token',
-      explorerUrl: 'https://scope.klaytn.com',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
     ),
     EvmChain(
       name: 'Aurora',
@@ -294,6 +289,80 @@ class BlockchainCatalog {
           'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/plasma/info/logo.png',
     ),
     EvmChain(
+      name: 'Lisk',
+      symbol: 'ETH',
+      chainId: 1135,
+      rpcUrl: AppEnvironment.blockchain('/1135/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://blockscout.lisk.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Celo',
+      symbol: 'CELO',
+      chainId: 42220,
+      rpcUrl: AppEnvironment.blockchain('/42220/rpc').toString(),
+      coinGeckoId: 'celo',
+      explorerUrl: 'https://celoscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/celo/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Cronos',
+      symbol: 'CRO',
+      chainId: 25,
+      rpcUrl: AppEnvironment.blockchain('/25/rpc').toString(),
+      coinGeckoId: 'crypto-com-chain',
+      explorerUrl: 'https://cronoscan.com',
+      logoUrl: 'https://assets.relay.link/icons/25/light.png',
+    ),
+    EvmChain(
+      name: 'Manta Pacific',
+      symbol: 'ETH',
+      chainId: 169,
+      rpcUrl: AppEnvironment.blockchain('/169/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://pacific-explorer.manta.network',
+      logoUrl: 'https://assets.relay.link/icons/169/light.png',
+    ),
+    EvmChain(
+      name: 'Metis',
+      symbol: 'METIS',
+      chainId: 1088,
+      rpcUrl: AppEnvironment.blockchain('/1088/rpc').toString(),
+      coinGeckoId: 'metis-token',
+      explorerUrl: 'https://explorer.metis.io',
+      logoUrl: 'https://assets.relay.link/icons/1088/light.png',
+    ),
+    EvmChain(
+      name: 'Sei',
+      symbol: 'SEI',
+      chainId: 1329,
+      rpcUrl: AppEnvironment.blockchain('/1329/rpc').toString(),
+      coinGeckoId: 'sei-network',
+      explorerUrl: 'https://seitrace.com',
+      logoUrl: 'https://assets.relay.link/icons/1329/light.png',
+    ),
+    EvmChain(
+      name: 'Arc',
+      symbol: 'USDC',
+      chainId: 5042,
+      rpcUrl: AppEnvironment.blockchain('/5042/rpc').toString(),
+      coinGeckoId: 'usd-coin',
+      explorerUrl: 'https://explorer.arc.io',
+      logoUrl: 'https://assets.relay.link/icons/5042/light.png',
+    ),
+    EvmChain(
+      name: 'Plume',
+      symbol: 'PLUME',
+      chainId: 98866,
+      rpcUrl: AppEnvironment.blockchain('/98866/rpc').toString(),
+      coinGeckoId: 'plume',
+      explorerUrl: 'https://explorer.plume.org',
+      logoUrl: 'https://assets.relay.link/icons/98866/light.png',
+    ),
+    EvmChain(
       name: 'Scroll',
       symbol: 'ETH',
       chainId: 534352,
@@ -345,10 +414,14 @@ class BlockchainCatalog {
       case 'XDAI':
       case 'DAI':
         return 'xdai';
-      case 'KLAY':
-        return 'klay-token';
       case 'CRO':
         return 'crypto-com-chain';
+      case 'METIS':
+        return 'metis-token';
+      case 'SEI':
+        return 'sei-network';
+      case 'PLUME':
+        return 'plume';
       case 'APE':
         return 'apecoin';
       case 'MNT':
@@ -363,6 +436,8 @@ class BlockchainCatalog {
         return 'hyperliquid';
       case 'XPL':
         return 'plasma';
+      case 'CELO':
+        return 'celo';
       default:
         return null;
     }
@@ -380,7 +455,6 @@ class BlockchainCatalog {
       43114 => 'avalanchec',
       250 => 'fantom',
       100 => 'xdai',
-      8217 => 'klaytn',
       1313161554 => 'aurora',
       143 => 'monad',
       146 => 'sonic',
@@ -390,6 +464,7 @@ class BlockchainCatalog {
       81457 => 'blast',
       534352 => 'scroll',
       9745 => 'plasma',
+      42220 => 'celo',
       _ => null,
     };
     if (chainId == 4663) {
@@ -397,6 +472,10 @@ class BlockchainCatalog {
     }
     if (chainId == 33139) {
       return 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png';
+    }
+    const relayLogoChainIds = {25, 169, 1088, 1329, 5042, 98866};
+    if (relayLogoChainIds.contains(chainId)) {
+      return 'https://assets.relay.link/icons/$chainId/light.png';
     }
     if (blockchainName == null) return null;
     return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$blockchainName/info/logo.png';
@@ -421,6 +500,8 @@ class BlockchainCatalog {
     80094 => 'assets/images/chains/berachain.png',
     81457 => 'assets/images/chains/blast.png',
     534352 => 'assets/images/chains/scroll.png',
+    1135 => 'assets/images/chains/lisk.webp',
+    42220 => 'assets/images/chains/celo.png',
     _ => null,
   };
 }

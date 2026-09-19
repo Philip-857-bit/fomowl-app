@@ -173,8 +173,6 @@ class TokenIcon extends StatelessWidget {
         return 'fantom';
       case 100:
         return 'xdai';
-      case 8217:
-        return 'klaytn';
       case 1313161554:
         return 'aurora';
       case 143:
@@ -193,6 +191,8 @@ class TokenIcon extends StatelessWidget {
         return 'scroll';
       case 9745:
         return 'plasma';
+      case 42220:
+        return 'celo';
       default:
         return 'ethereum';
     }
@@ -242,6 +242,17 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildNativeLogoFallback() {
+    if (chainId != null) {
+      final localChainLogo = BlockchainCatalog.localChainLogoAsset(chainId!);
+      if (localChainLogo != null) {
+        return Image.asset(
+          localChainLogo,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        );
+      }
+    }
     // For non-EVM tokens chainId is null; try the symbol-based CDN URL first.
     final symbolUrl = BlockchainCatalog.iconUrlForSymbol(tokenSymbol);
     if (symbolUrl != null && symbolUrl.isNotEmpty) {
