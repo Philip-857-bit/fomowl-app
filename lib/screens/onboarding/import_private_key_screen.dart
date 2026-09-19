@@ -8,9 +8,11 @@ import '../../services/wallet_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/blockchain_service.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/screen_capture_guard.dart';
 
 /// Import Private Key Screen
 /// Allows users to import wallet using private key
@@ -28,9 +30,17 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final WalletService _walletService = WalletService();
   bool _isLoading = false;
   ChainFamily _selectedChain = ChainFamily.evm;
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
 
   @override
   void dispose() {
+    unawaited(_screenCaptureGuard.disableProtection());
     _walletNameController.dispose();
     _privateKeyController.dispose();
     super.dispose();
