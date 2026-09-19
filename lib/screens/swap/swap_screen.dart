@@ -42,7 +42,6 @@ import '../../widgets/amount_input_mode_toggle.dart';
 import '../../widgets/runtime_feature_gate.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'dart:typed_data';
 import '../transaction/transaction_processing_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import 'swap_screen_helpers.dart';
@@ -2837,21 +2836,12 @@ class _SwapScreenState extends State<SwapScreen> {
 
       // ── Step 2: Sign the deposit transaction. Do NOT broadcast it — the
       // signed bytes go to /confirm and Jupiter submits it on-chain. ─────────
-      final txBytes = base64Decode(depositResult.transaction);
-      final msgOffset =
-          SolanaSwapExecutionService.compactU16ByteLenPublic(txBytes, 0) + 64;
-      final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
-      final signatureBase58 = await _walletService.signSolanaMessageRaw(
-        _walletAddress!,
-        messageBytes,
-      );
-      if (!mounted) return;
-
-      final depositSignedTx =
-          SolanaSwapExecutionService.assembleSignedTransaction(
-            txBytes,
-            signatureBase58,
+      final depositSignedTx = await _walletService
+          .signSerializedSolanaTransaction(
+            _walletAddress!,
+            depositResult.transaction,
           );
+      if (!mounted) return;
 
       // ── Step 3: Confirm the order (orders/price) ───────────────────────────
       final confirmResult = await _solanaLimitService.confirmOrder(
@@ -2912,23 +2902,14 @@ class _SwapScreenState extends State<SwapScreen> {
         return;
       }
 
-      final txBytes = base64Decode(txResult.transaction);
-      final msgOffset =
-          SolanaSwapExecutionService.compactU16ByteLenPublic(txBytes, 0) + 64;
-      final messageBytes = Uint8List.sublistView(txBytes, msgOffset);
-      final signatureBase58 = await _walletService.signSolanaMessageRaw(
-        _walletAddress!,
-        messageBytes,
-      );
-      if (!mounted) return;
-
       // Sign the withdrawal tx and hand it back to Jupiter via
       // confirm-cancel — Jupiter broadcasts it and returns the funds.
-      final signedTxBase64 =
-          SolanaSwapExecutionService.assembleSignedTransaction(
-            txBytes,
-            signatureBase58,
+      final signedTxBase64 = await _walletService
+          .signSerializedSolanaTransaction(
+            _walletAddress!,
+            txResult.transaction,
           );
+      if (!mounted) return;
       final confirmResult = await _solanaLimitService.confirmCancel(
         orderId: order.orderId,
         signedTransaction: signedTxBase64,

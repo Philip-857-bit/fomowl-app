@@ -1240,6 +1240,19 @@ class WalletService {
     );
   }
 
+  /// Sign an unsigned Solana transaction (Jupiter wire format, base64).
+  Future<String> signSerializedSolanaTransaction(
+    String address,
+    String unsignedTxBase64,
+  ) async {
+    final privateKeyBytes = await _getSolanaPrivateKey(address);
+    return NativeCrypto.signSerializedSolanaTransaction(
+      serializedTxBase64: unsignedTxBase64,
+      expectedSigner: address,
+      privateKeyBytes: privateKeyBytes,
+    );
+  }
+
   /// Sign [messageBytes] and return the fully-serialised signed Solana
   /// transaction as a base64 string: [1, <64-byte sig>, <message bytes>].
   Future<String> signSolanaTransactionRaw(

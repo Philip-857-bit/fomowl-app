@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1225982680;
+  int get rustContentHash => 1363220094;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -159,6 +159,12 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiSecp256K1ApiSignPersonalMessage({
     required String privateKeyHex,
     required String message,
+  });
+
+  Future<String> crateApiSolanaTxSignSerializedSolanaTransaction({
+    required String serializedTxBase64,
+    required String expectedSigner,
+    required List<int> privateKeyBytes,
   });
 
   Future<String> crateApiBip32SignSolanaMessage({
@@ -797,6 +803,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiSolanaTxSignSerializedSolanaTransaction({
+    required String serializedTxBase64,
+    required String expectedSigner,
+    required List<int> privateKeyBytes,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(serializedTxBase64, serializer);
+          sse_encode_String(expectedSigner, serializer);
+          sse_encode_list_prim_u_8_loose(privateKeyBytes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSolanaTxSignSerializedSolanaTransactionConstMeta,
+        argValues: [serializedTxBase64, expectedSigner, privateKeyBytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSolanaTxSignSerializedSolanaTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_serialized_solana_transaction",
+        argNames: ["serializedTxBase64", "expectedSigner", "privateKeyBytes"],
+      );
+
+  @override
   Future<String> crateApiBip32SignSolanaMessage({
     required List<int> privateKeyBytes,
     required List<int> message,
@@ -810,7 +853,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -845,7 +888,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -880,7 +923,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -911,7 +954,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },

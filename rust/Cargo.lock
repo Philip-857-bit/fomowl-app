@@ -1790,6 +1790,7 @@ dependencies = [
  "solana-keypair",
  "solana-message",
  "solana-pubkey 3.0.0",
+ "solana-signature",
  "solana-signer",
  "solana-transaction",
  "zeroize",
