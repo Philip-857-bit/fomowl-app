@@ -169,6 +169,9 @@ class SwapService {
     57073, // Ink
     59144, // Linea (Swap API only)
     80094, // Berachain
+    33139, // ApeChain
+    34443, // Mode
+    81457, // Blast
     534352, // Scroll
   };
   // Keep this separate from the Swap API set: Linea supports standard 0x
@@ -193,6 +196,9 @@ class SwapService {
     43114,
     57073,
     80094,
+    33139,
+    34443,
+    81457,
     534352,
   };
   static const Set<int> supportedLimitChainIds =

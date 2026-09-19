@@ -177,6 +177,22 @@ class TokenIcon extends StatelessWidget {
         return 'klaytn';
       case 1313161554:
         return 'aurora';
+      case 143:
+        return 'monad';
+      case 146:
+        return 'sonic';
+      case 999:
+        return 'hyperevm';
+      case 5000:
+        return 'mantle';
+      case 59144:
+        return 'linea';
+      case 81457:
+        return 'blast';
+      case 534352:
+        return 'scroll';
+      case 9745:
+        return 'plasma';
       default:
         return 'ethereum';
     }
