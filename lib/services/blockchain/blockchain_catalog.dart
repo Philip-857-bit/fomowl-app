@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import '../../config/app_environment.dart';
 import '../../models/chain.dart';
+import 'embedded_chain_logos.dart';
 
 /// Canonical EVM chain metadata and symbol/logo mapping helpers.
 class BlockchainCatalog {
@@ -351,7 +354,8 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/5042/rpc').toString(),
       coinGeckoId: 'usd-coin',
       explorerUrl: 'https://explorer.arc.io',
-      logoUrl: 'assets/images/chains/arc.png',
+      logoUrl:
+          'https://d2xo500swnpgl1.cloudfront.net/uploads/arc/Gradual-Arc-icon-43ee6ca5-45c5-404d-ac1b-f54f93c51f06-1761315436123.png',
     ),
     EvmChain(
       name: 'Plume',
@@ -473,6 +477,9 @@ class BlockchainCatalog {
     if (chainId == 33139) {
       return 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png';
     }
+    if (chainId == 5042) {
+      return 'https://d2xo500swnpgl1.cloudfront.net/uploads/arc/Gradual-Arc-icon-43ee6ca5-45c5-404d-ac1b-f54f93c51f06-1761315436123.png';
+    }
     const relayLogoChainIds = {25, 169, 1088, 1329, 98866};
     if (relayLogoChainIds.contains(chainId)) {
       return 'https://assets.relay.link/icons/$chainId/light.png';
@@ -480,6 +487,11 @@ class BlockchainCatalog {
     if (blockchainName == null) return null;
     return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$blockchainName/info/logo.png';
   }
+
+  /// In-memory embedded logo bytes for networks where runtime code patches
+  /// may not include newly created binary assets.
+  static Uint8List? embeddedChainLogoBytes(int chainId) =>
+      EmbeddedChainLogos.forChainId(chainId);
 
   /// Logos bundled with the app for chains that do not have a stable entry in
   /// the shared Trust Wallet asset repository.
@@ -505,4 +517,12 @@ class BlockchainCatalog {
     42220 => 'assets/images/chains/celo.png',
     _ => null,
   };
+
+  /// Looks up a built-in EVM chain by its chainId.
+  static EvmChain? findChain(int chainId) {
+    for (final chain in builtInChains) {
+      if (chain.chainId == chainId) return chain;
+    }
+    return null;
+  }
 }

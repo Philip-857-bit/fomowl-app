@@ -88,9 +88,26 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildChainBadge(int badgeChainId) {
+    final embeddedBytes = BlockchainCatalog.embeddedChainLogoBytes(badgeChainId);
+    if (embeddedBytes != null) {
+      return Image.memory(embeddedBytes, fit: BoxFit.cover);
+    }
     final localAsset = BlockchainCatalog.localChainLogoAsset(badgeChainId);
     if (localAsset != null) {
-      return Image.asset(localAsset, fit: BoxFit.cover);
+      return Image.asset(
+        localAsset,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          final url = BlockchainCatalog.defaultChainLogoUrl(badgeChainId);
+          if (url != null && url.isNotEmpty) {
+            return _buildNetworkImage(
+              url,
+              fallback: const ColoredBox(color: Color(0xFF627EEA)),
+            );
+          }
+          return const ColoredBox(color: Color(0xFF627EEA));
+        },
+      );
     }
     final url = BlockchainCatalog.defaultChainLogoUrl(badgeChainId);
     if (url != null && url.isNotEmpty) {
@@ -103,6 +120,12 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildIcon() {
+    // For Arc native token (gas token is USDC), display the Arc chain logo
+    // like HyperEVM and other L1/L2 native tokens rather than generic USDC.
+    if (chainId == 5042 && (tokenAddress == null || tokenAddress!.trim().isEmpty)) {
+      return _buildNativeLogoFallback();
+    }
+
     // Try local asset first only if we know it exists in the bundle.
     final symbolKey = tokenSymbol.toLowerCase();
     if (_bundledTokenIcons.contains(symbolKey)) {
@@ -243,6 +266,15 @@ class TokenIcon extends StatelessWidget {
 
   Widget _buildNativeLogoFallback() {
     if (chainId != null) {
+      final embedded = BlockchainCatalog.embeddedChainLogoBytes(chainId!);
+      if (embedded != null) {
+        return Image.memory(
+          embedded,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        );
+      }
       final localChainLogo = BlockchainCatalog.localChainLogoAsset(chainId!);
       if (localChainLogo != null) {
         return Image.asset(
@@ -250,6 +282,17 @@ class TokenIcon extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            final nativeLogoUrl =
+                BlockchainCatalog.defaultChainLogoUrl(chainId!);
+            if (nativeLogoUrl != null && nativeLogoUrl.isNotEmpty) {
+              return _buildNetworkImage(
+                nativeLogoUrl,
+                fallback: _buildPlaceholder(),
+              );
+            }
+            return _buildPlaceholder();
+          },
         );
       }
     }
