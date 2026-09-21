@@ -331,7 +331,9 @@ class NativeCrypto {
         privateKeyBytes: privateKeyBytes.toList(),
       );
     } catch (e) {
-      debugPrint('[NativeCrypto] signSerializedSolanaTransaction Rust error: $e');
+      debugPrint(
+        '[NativeCrypto] signSerializedSolanaTransaction Rust error: $e',
+      );
       rethrow;
     }
   }

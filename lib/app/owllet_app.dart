@@ -60,7 +60,8 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
       unawaited(DeepLinkService.instance.initialize());
       unawaited(
         AffiliateAttributionService.instance.captureInstallReferrer().then(
-          (_) => AffiliateAttributionService.instance.applyPendingToCurrentWallet(),
+          (_) => AffiliateAttributionService.instance
+              .applyPendingToCurrentWallet(),
         ),
       );
     });

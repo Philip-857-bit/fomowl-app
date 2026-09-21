@@ -113,8 +113,12 @@ void main() {
     test('Every built-in chain has a dedicated non-fallback theme', () {
       for (final chain in BlockchainCatalog.builtInChains) {
         final theme = AppChainTheme.forNetworkKey('evm:${chain.chainId}');
-        expect(theme.id, isNot('fomowl_signature'),
-            reason: '${chain.name} (${chain.chainId}) fell back to classic FOMOwl theme');
+        expect(
+          theme.id,
+          isNot('fomowl_signature'),
+          reason:
+              '${chain.name} (${chain.chainId}) fell back to classic FOMOwl theme',
+        );
         expect(theme.accentColor, isNotNull);
         expect(theme.balanceCardGradient.colors.isNotEmpty, true);
         expect(theme.buttonGradient.colors.isNotEmpty, true);

@@ -50,9 +50,7 @@ class AffiliateAttributionService {
     return null;
   }
 
-  static const _affiliateHosts = <String>{
-    'affiliates.owlletapp.com',
-  };
+  static const _affiliateHosts = <String>{'affiliates.owlletapp.com'};
 
   static String? parseCodeFromUri(Uri uri) {
     final scheme = uri.scheme.trim().toLowerCase();

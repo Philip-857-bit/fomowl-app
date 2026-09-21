@@ -88,7 +88,9 @@ class TokenIcon extends StatelessWidget {
   }
 
   Widget _buildChainBadge(int badgeChainId) {
-    final embeddedBytes = BlockchainCatalog.embeddedChainLogoBytes(badgeChainId);
+    final embeddedBytes = BlockchainCatalog.embeddedChainLogoBytes(
+      badgeChainId,
+    );
     if (embeddedBytes != null) {
       return Image.memory(embeddedBytes, fit: BoxFit.cover);
     }
@@ -122,7 +124,8 @@ class TokenIcon extends StatelessWidget {
   Widget _buildIcon() {
     // For Arc native token (gas token is USDC), display the Arc chain logo
     // like HyperEVM and other L1/L2 native tokens rather than generic USDC.
-    if (chainId == 5042 && (tokenAddress == null || tokenAddress!.trim().isEmpty)) {
+    if (chainId == 5042 &&
+        (tokenAddress == null || tokenAddress!.trim().isEmpty)) {
       return _buildNativeLogoFallback();
     }
 
@@ -283,8 +286,9 @@ class TokenIcon extends StatelessWidget {
           height: size,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
-            final nativeLogoUrl =
-                BlockchainCatalog.defaultChainLogoUrl(chainId!);
+            final nativeLogoUrl = BlockchainCatalog.defaultChainLogoUrl(
+              chainId!,
+            );
             if (nativeLogoUrl != null && nativeLogoUrl.isNotEmpty) {
               return _buildNetworkImage(
                 nativeLogoUrl,

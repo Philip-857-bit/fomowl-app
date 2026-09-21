@@ -26,10 +26,7 @@ class SocialBannerCard extends StatelessWidget {
         child: Container(
           margin: margin,
           constraints: const BoxConstraints(minHeight: 96),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: const Color(0xFFD31C31),
             gradient: const LinearGradient(

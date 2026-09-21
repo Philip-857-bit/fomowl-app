@@ -56,6 +56,11 @@ bool cashinExecutionPlanIsUsable(
 }
 
 @visibleForTesting
+bool cashinExecutionPlanIsTransfer(Map<String, dynamic> plan) {
+  return plan['routeType']?.toString() == 'direct_settlement';
+}
+
+@visibleForTesting
 bool burstOperationAllowsSelector(String operation, String selector) {
   final normalized = selector.toLowerCase();
   return switch (operation) {
@@ -2421,12 +2426,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
 
-      final fromSymbol = payload['fromAssetSymbol']?.toString() ?? '';
-      final toSymbol = payload['toAssetSymbol']?.toString() ?? '';
-      // Selling the settlement asset itself (USDC/USDT → USDC/USDT) is a plain
-      // transfer on-chain, so present it as a send rather than a swap.
-      final sameAsset =
-          fromSymbol.trim().toUpperCase() == toSymbol.trim().toUpperCase();
+      // The authenticated execution plan is authoritative. A direct-settlement
+      // route is a token transfer even if an older mini-app supplied stale or
+      // mismatched display labels.
+      final isDirectTransfer = cashinExecutionPlanIsTransfer(previewPlan);
       final confirmed = await _confirmCrossChainSwap(
         fromLabel: _swapLabel(payload, 'from'),
         toLabel: _swapLabel(payload, 'to'),
@@ -2434,7 +2437,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         stepCount: actionablePreviewSteps
             .where((step) => step['kind'] != 'providerSubmit')
             .length,
-        isTransfer: sameAsset,
+        isTransfer: isDirectTransfer,
       );
       if (confirmed != true) {
         return const <String, dynamic>{

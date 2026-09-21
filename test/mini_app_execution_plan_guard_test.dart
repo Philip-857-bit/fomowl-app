@@ -34,6 +34,24 @@ void main() {
     );
   });
 
+  test('direct settlement plans are presented as transfers', () {
+    expect(
+      cashinExecutionPlanIsTransfer({
+        'routeType': 'direct_settlement',
+        'settlementToken': '0x55d398326f99059ff775485246999027b3197955',
+      }),
+      isTrue,
+    );
+    expect(
+      cashinExecutionPlanIsTransfer({'routeType': 'same_chain_swap'}),
+      isFalse,
+    );
+    expect(
+      cashinExecutionPlanIsTransfer({'routeType': 'cross_chain'}),
+      isFalse,
+    );
+  });
+
   test('Burst permits only backend-defined contract selectors', () {
     expect(burstOperationAllowsSelector('approve', '095ea7b3'), isTrue);
     expect(burstOperationAllowsSelector('approve', 'a22cb465'), isTrue);
