@@ -55,6 +55,18 @@ bool cashinExecutionPlanIsUsable(
       true;
 }
 
+@visibleForTesting
+bool burstOperationAllowsSelector(String operation, String selector) {
+  final normalized = selector.toLowerCase();
+  return switch (operation) {
+    'approve' => const {'095ea7b3', 'a22cb465'}.contains(normalized),
+    'create' => const {'a4be8afd', 'fc50ee32'}.contains(normalized),
+    'push' => const {'9ad88796', 'c78a7f37'}.contains(normalized),
+    'set_root' => normalized == '7cb64759',
+    _ => false,
+  };
+}
+
 class _CashinExecutionPlanExpired implements Exception {
   const _CashinExecutionPlanExpired();
 }
@@ -1439,16 +1451,13 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
 
-      var backendConfirmed = true;
       final operation = transaction['operation']!.toString();
-      if (operation == 'create' || operation == 'set_root') {
-        backendConfirmed = await _confirmBurstTransactionWithBackend(
-          campaignId: plan['campaignId']!.toString(),
-          operation: operation,
-          transactionHash: transactionHash,
-          walletAddress: walletAddress,
-        );
-      }
+      final backendConfirmed = await _confirmBurstTransactionWithBackend(
+        campaignId: plan['campaignId']!.toString(),
+        operation: operation,
+        transactionHash: transactionHash,
+        walletAddress: walletAddress,
+      );
       return <String, dynamic>{
         'ok': true,
         'transactionHash': transactionHash,
@@ -1524,19 +1533,13 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       throw const FormatException('Burst requires a valid EVM chain ID.');
     }
     final operation = transaction['operation']?.toString() ?? '';
-    final selector = switch (operation) {
-      'approve' => '095ea7b3',
-      'create' => 'a4be8afd',
-      'set_root' => '7cb64759',
-      _ => throw const FormatException('Unsupported Burst transaction.'),
-    };
     final toAddress = transaction['toAddress']?.toString() ?? '';
     final calldata = transaction['calldata']?.toString() ?? '';
     if (!_isEvmAddress(toAddress) ||
         !RegExp(r'^0x[0-9a-fA-F]+$').hasMatch(calldata) ||
         calldata.length.isOdd ||
         calldata.length < 10 ||
-        calldata.substring(2, 10).toLowerCase() != selector) {
+        !burstOperationAllowsSelector(operation, calldata.substring(2, 10))) {
       throw const FormatException('The Burst transaction plan is malformed.');
     }
     final value = _parseBaseUnitValue(transaction['valueBaseUnits']);
@@ -1622,6 +1625,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final action = switch (operation) {
       'approve' => 'Approve token spending',
       'create' => 'Create Burst campaign',
+      'push' => 'Deposit NFT inventory',
       'set_root' => 'Publish participant allocation',
       _ => 'Submit Burst transaction',
     };

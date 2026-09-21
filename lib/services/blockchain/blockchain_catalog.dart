@@ -351,7 +351,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/5042/rpc').toString(),
       coinGeckoId: 'usd-coin',
       explorerUrl: 'https://explorer.arc.io',
-      logoUrl: 'https://assets.relay.link/icons/5042/light.png',
+      logoUrl: 'assets/images/chains/arc.png',
     ),
     EvmChain(
       name: 'Plume',
@@ -473,7 +473,7 @@ class BlockchainCatalog {
     if (chainId == 33139) {
       return 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png';
     }
-    const relayLogoChainIds = {25, 169, 1088, 1329, 5042, 98866};
+    const relayLogoChainIds = {25, 169, 1088, 1329, 98866};
     if (relayLogoChainIds.contains(chainId)) {
       return 'https://assets.relay.link/icons/$chainId/light.png';
     }
@@ -492,6 +492,7 @@ class BlockchainCatalog {
     2741 => 'assets/images/chains/abstract.webp',
     4663 => 'assets/images/chains/robinhood_chain.png',
     5000 => 'assets/images/chains/mantle.png',
+    5042 => 'assets/images/chains/arc.png',
     9745 => 'assets/images/chains/plasma.png',
     33139 => 'assets/images/chains/apechain.webp',
     34443 => 'assets/images/chains/mode.webp',

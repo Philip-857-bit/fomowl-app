@@ -73,6 +73,6 @@ void main() {
     expect(OwlletMiniApps.burst.id, 'burst');
     expect(OwlletMiniApps.byId('BURST')?.id, 'burst');
     expect(OwlletMiniApps.all.where((app) => app.id == 'burst'), hasLength(1));
-    expect(OwlletMiniApps.burst.requiresWalletSession, isFalse);
+    expect(OwlletMiniApps.burst.requiresWalletSession, isTrue);
   });
 }

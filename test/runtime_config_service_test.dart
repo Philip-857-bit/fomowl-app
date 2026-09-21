@@ -191,7 +191,8 @@ void main() {
 
       await service.hydrate();
 
-      expect(service.snapshot.fullMaintenance, isTrue);
+      expect(service.snapshot.fullMaintenance, isFalse);
+      expect(service.snapshot.cashOutEnabled, isFalse);
       expect(notifications, 0);
     },
   );

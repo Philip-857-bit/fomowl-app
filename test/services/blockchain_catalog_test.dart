@@ -35,7 +35,7 @@ void main() {
     expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, contains(33139));
   });
 
-  test('Celo and Lisk are bundled with logos', () {
+  test('Celo, Lisk, and Arc are bundled with logos', () {
     expect(
       BlockchainCatalog.localChainLogoAsset(42220),
       'assets/images/chains/celo.png',
@@ -45,11 +45,19 @@ void main() {
       'assets/images/chains/lisk.webp',
     );
     expect(
+      BlockchainCatalog.localChainLogoAsset(5042),
+      'assets/images/chains/arc.png',
+    );
+    expect(
       BlockchainCatalog.builtInChains.any((chain) => chain.chainId == 42220),
       isTrue,
     );
     expect(
       BlockchainCatalog.builtInChains.any((chain) => chain.chainId == 1135),
+      isTrue,
+    );
+    expect(
+      BlockchainCatalog.builtInChains.any((chain) => chain.chainId == 5042),
       isTrue,
     );
   });

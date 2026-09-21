@@ -33,4 +33,16 @@ void main() {
       isTrue,
     );
   });
+
+  test('Burst permits only backend-defined contract selectors', () {
+    expect(burstOperationAllowsSelector('approve', '095ea7b3'), isTrue);
+    expect(burstOperationAllowsSelector('approve', 'a22cb465'), isTrue);
+    expect(burstOperationAllowsSelector('create', 'a4be8afd'), isTrue);
+    expect(burstOperationAllowsSelector('create', 'fc50ee32'), isTrue);
+    expect(burstOperationAllowsSelector('push', '9ad88796'), isTrue);
+    expect(burstOperationAllowsSelector('push', 'c78a7f37'), isTrue);
+    expect(burstOperationAllowsSelector('set_root', '7cb64759'), isTrue);
+    expect(burstOperationAllowsSelector('push', '095ea7b3'), isFalse);
+    expect(burstOperationAllowsSelector('unknown', 'a4be8afd'), isFalse);
+  });
 }

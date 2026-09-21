@@ -234,7 +234,11 @@ class RuntimePolicySnapshot {
         ? (policy['features'] as Map).cast<String, dynamic>()
         : const <String, dynamic>{};
     final revision = json['revision'] ?? json['version'] ?? policy['revision'];
-    bool readFlag(Map<String, dynamic> source, String key, {required bool fallback}) {
+    bool readFlag(
+      Map<String, dynamic> source,
+      String key, {
+      required bool fallback,
+    }) {
       final value = source[key];
       if (value is bool) return value;
       if (value == 1 || value == '1' || value == 'true') return true;
@@ -301,12 +305,14 @@ class RuntimeConfigService extends ChangeNotifier {
   static const _etagKey = 'owllet.runtime_policy.etag.v1';
   static const _persistTtl = Duration(hours: 1);
 
-  // Fail closed until a persisted or freshly fetched policy is available.
+  // Fail closed at the feature level until a persisted or freshly fetched
+  // policy is available. Loading is not full maintenance: treating it as such
+  // removes the app's startup navigator and can strand the user on startup.
   // `fromJson` remains permissive for backward compatibility with older
   // backend payloads that do not contain the newer feature fields.
   RuntimePolicySnapshot _snapshot = const RuntimePolicySnapshot(
-    maintenanceMode: 'full',
-    maintenanceMessage: 'Loading Owllet configuration…',
+    maintenanceMode: 'off',
+    maintenanceMessage: '',
     portfolioEnabled: false,
     portfolioUiEnabled: false,
     scopedBalancesEnabled: false,
