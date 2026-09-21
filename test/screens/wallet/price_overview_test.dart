@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/screens/wallet/widgets/token_detail/price_overview.dart';
 
 void main() {
-  testWidgets('PriceOverview renders long price without overflowing', (tester) async {
+  testWidgets('PriceOverview renders long price without overflowing', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
