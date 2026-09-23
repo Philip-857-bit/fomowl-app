@@ -2,6 +2,123 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/mini_apps/mini_app_host_screen.dart';
 
 void main() {
+  test('swap preflight checks CROSS input rather than stablecoin output', () {
+    final spend = cashinPreflightTokenSpend({
+      'kind': 'transaction',
+      'expectedToken': '0x2222222222222222222222222222222222222222',
+      'amountCeiling': '9500000000000000000000',
+      'payload': {
+        'transaction': {'to': '0x3333333333333333333333333333333333333333'},
+        'sellToken': '0x1111111111111111111111111111111111111111',
+        'sellAmount': '9500000000000000000000',
+      },
+    });
+
+    expect(spend, (
+      '0x1111111111111111111111111111111111111111',
+      BigInt.parse('9500000000000000000000'),
+    ));
+  });
+
+  test('initial preflight skips the future Paycrest stablecoin transfer', () {
+    final steps = <Map<String, dynamic>>[
+      {
+        'kind': 'approval',
+        'status': 'pending',
+        'payload': {'type': 'erc20Approval'},
+      },
+      {
+        'kind': 'transaction',
+        'status': 'pending',
+        'payload': {'sellToken': '0x1111111111111111111111111111111111111111'},
+      },
+      {
+        'kind': 'transaction',
+        'status': 'pending',
+        'payload': {
+          'type': 'erc20Transfer',
+          'token': '0x2222222222222222222222222222222222222222',
+        },
+      },
+    ];
+
+    expect(cashinInitialPreflightStep(steps), same(steps[1]));
+  });
+
+  test('resumed submitted swap is not rechecked before confirmation', () {
+    final steps = <Map<String, dynamic>>[
+      {'kind': 'transaction', 'status': 'submitted'},
+      {
+        'kind': 'transaction',
+        'status': 'pending',
+        'payload': {'type': 'erc20Transfer'},
+      },
+    ];
+
+    expect(cashinInitialPreflightStep(steps), isNull);
+  });
+
+  test('stablecoin transfer is checked when it becomes the current step', () {
+    final spend = cashinPreflightTokenSpend({
+      'kind': 'transaction',
+      'expectedToken': '0x2222222222222222222222222222222222222222',
+      'amountCeiling': '28000000',
+      'payload': {
+        'type': 'erc20Transfer',
+        'token': '0x2222222222222222222222222222222222222222',
+        'amount': '28000000',
+      },
+    });
+
+    expect(spend, (
+      '0x2222222222222222222222222222222222222222',
+      BigInt.from(28000000),
+    ));
+  });
+
+  test('approval allowance is not mistaken for a token spend', () {
+    expect(
+      cashinPreflightTokenSpend({
+        'kind': 'approval',
+        'expectedToken': '0x1111111111111111111111111111111111111111',
+        'amountCeiling':
+            '115792089237316195423570985008687907853269984665640564039457584007913129639935',
+        'payload': {'type': 'erc20Approval'},
+      }),
+      isNull,
+    );
+  });
+
+  test('swap spend above the signed ceiling is rejected', () {
+    expect(
+      () => cashinPreflightTokenSpend({
+        'kind': 'transaction',
+        'amountCeiling': '9000',
+        'payload': {
+          'transaction': {'to': '0x3333333333333333333333333333333333333333'},
+          'sellToken': '0x1111111111111111111111111111111111111111',
+          'sellAmount': '9500',
+        },
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('native input does not trigger an ERC20 balance lookup', () {
+    expect(
+      cashinPreflightTokenSpend({
+        'kind': 'transaction',
+        'amountCeiling': '1000000000000000',
+        'payload': {
+          'transaction': {'to': '0x3333333333333333333333333333333333333333'},
+          'sellToken': '0x0000000000000000000000000000000000000000',
+          'sellAmount': '1000000000000000',
+        },
+      }),
+      isNull,
+    );
+  });
+
   test('expired plans cannot authorize a new wallet broadcast', () {
     final now = DateTime.utc(2026, 8, 8, 12);
     final plan = <String, dynamic>{

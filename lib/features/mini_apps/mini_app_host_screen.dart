@@ -61,6 +61,64 @@ bool cashinExecutionPlanIsTransfer(Map<String, dynamic> plan) {
 }
 
 @visibleForTesting
+Map<String, dynamic>? cashinInitialPreflightStep(
+  List<Map<String, dynamic>> steps,
+) {
+  for (final step in steps) {
+    // A submitted swap can have spent the input already. Confirm it before
+    // checking the balance for any later settlement transfer.
+    if (step['status'] == 'submitted') return null;
+    final kind = step['kind']?.toString();
+    if (kind == 'transaction' ||
+        (kind == 'typedData' &&
+            (step['payload'] as Map?)?['purpose'] == 'trade')) {
+      return step;
+    }
+  }
+  return null;
+}
+
+@visibleForTesting
+(String, BigInt)? cashinPreflightTokenSpend(Map<String, dynamic> step) {
+  final kind = step['kind']?.toString();
+  final payload = step['payload'];
+  if (payload is! Map) return null;
+  final transfer = payload['type'] == 'erc20Transfer';
+  final swap =
+      (kind == 'transaction' && payload['transaction'] is Map) ||
+      (kind == 'typedData' && payload['purpose'] == 'trade');
+  if (!transfer && !swap) return null;
+
+  final token =
+      (transfer ? payload['token'] : payload['sellToken'])
+          ?.toString()
+          .trim()
+          .toLowerCase() ??
+      '';
+  final amount = BigInt.tryParse(
+    (transfer ? payload['amount'] : payload['sellAmount'])?.toString() ?? '',
+  );
+  final ceiling = BigInt.tryParse(step['amountCeiling']?.toString() ?? '');
+  if (amount == null ||
+      amount <= BigInt.zero ||
+      ceiling == null ||
+      ceiling < amount) {
+    throw const FormatException('Invalid token spend limit in execution plan.');
+  }
+  if (transfer && step['expectedToken']?.toString().toLowerCase() != token) {
+    throw const FormatException('Invalid token transfer plan.');
+  }
+  if (token == '0x0000000000000000000000000000000000000000' ||
+      token == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+    return null;
+  }
+  if (!RegExp(r'^0x[0-9a-f]{40}$').hasMatch(token)) {
+    throw const FormatException('Invalid token address in execution plan.');
+  }
+  return (token, ceiling);
+}
+
+@visibleForTesting
 bool burstOperationAllowsSelector(String operation, String selector) {
   final normalized = selector.toLowerCase();
   return switch (operation) {
@@ -2414,11 +2472,16 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
       final blockchain = context.read<BlockchainService>();
-      await _preflightCashinExecutionBalance(
-        blockchain: blockchain,
-        walletAddress: walletAddress,
-        steps: actionablePreviewSteps,
+      final initialSpendStep = cashinInitialPreflightStep(
+        actionablePreviewSteps,
       );
+      if (initialSpendStep != null) {
+        await _preflightCashinExecutionBalance(
+          blockchain: blockchain,
+          walletAddress: walletAddress,
+          steps: [initialSpendStep],
+        );
+      }
       if (!mounted) {
         return const <String, dynamic>{
           'ok': false,
@@ -2613,6 +2676,15 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         final chainId = _requiredInt(step, 'chainId');
         String? transactionHash;
         String? signedPayload;
+        if (kind == 'approval' ||
+            kind == 'transaction' ||
+            kind == 'typedData') {
+          await _preflightCashinExecutionBalance(
+            blockchain: blockchain,
+            walletAddress: walletAddress,
+            steps: [step],
+          );
+        }
         if (kind == 'approval' || kind == 'transaction') {
           final chain = blockchain.allChains
               .where((candidate) => candidate.chainId == chainId)
@@ -2872,12 +2944,11 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final tokenRequirements = <String, BigInt>{};
     var nativeRequired = BigInt.zero;
     for (final step in onActiveChain) {
-      final token = step['expectedToken']?.toString().trim() ?? '';
-      final amount = BigInt.tryParse(step['amountCeiling']?.toString() ?? '');
-      if (_isEvmAddress(token) && amount != null && amount > BigInt.zero) {
-        final key = token.toLowerCase();
+      final spend = cashinPreflightTokenSpend(step);
+      if (spend != null) {
+        final key = spend.$1;
         final current = tokenRequirements[key] ?? BigInt.zero;
-        if (amount > current) tokenRequirements[key] = amount;
+        if (spend.$2 > current) tokenRequirements[key] = spend.$2;
       }
       final value = BigInt.tryParse(
         step['maxTransactionValue']?.toString() ?? '',
