@@ -13,7 +13,7 @@ class ScreenCaptureGuard {
   /// Temporarily set to `false` so the team can record tutorial videos of the
   /// app, including the otherwise-protected onboarding and backup screens.
   /// Restore to `true` to re-enable protection before shipping to production.
-  static bool protectionEnabled = false;
+  static bool protectionEnabled = true;
 
   Future<void> enableProtection() async {
     if (!protectionEnabled) return;
