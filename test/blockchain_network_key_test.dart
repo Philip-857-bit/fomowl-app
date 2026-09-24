@@ -297,6 +297,90 @@ void main() {
     expect(tokens.single.tokenStandard, TokenStandard.spl);
   });
 
+  test('partial Solana discovery retains an unobserved SOL balance', () {
+    const previous = Token(
+      symbol: 'SOL',
+      name: 'Solana',
+      balance: 2.25,
+      valueUsd: 450,
+      changePercent24h: 0,
+      networkKey: 'solana:mainnet',
+      tokenStandard: TokenStandard.native,
+    );
+    const observed = Token(
+      symbol: 'USDC',
+      name: 'USD Coin',
+      contractAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      balance: 5,
+      valueUsd: 5,
+      changePercent24h: 0,
+      networkKey: 'solana:mainnet',
+      tokenStandard: TokenStandard.spl,
+    );
+
+    final tokens = BlockchainService.preserveMissingTokensOnPartial(
+      [observed],
+      [previous],
+      nativeObserved: false,
+      splObserved: true,
+    );
+
+    expect(tokens, hasLength(2));
+    expect(tokens.last.balance, 2.25);
+  });
+
+  test('observed zero SOL replaces the previous balance', () {
+    const previous = Token(
+      symbol: 'SOL',
+      name: 'Solana',
+      balance: 2.25,
+      valueUsd: 450,
+      changePercent24h: 0,
+      networkKey: 'solana:mainnet',
+      tokenStandard: TokenStandard.native,
+    );
+    const observed = Token(
+      symbol: 'SOL',
+      name: 'Solana',
+      balance: 0,
+      valueUsd: 0,
+      changePercent24h: 0,
+      networkKey: 'solana:mainnet',
+      tokenStandard: TokenStandard.native,
+    );
+
+    final tokens = BlockchainService.preserveMissingTokensOnPartial(
+      [observed],
+      [previous],
+      nativeObserved: true,
+      splObserved: true,
+    );
+
+    expect(tokens.single.balance, 0);
+  });
+
+  test('complete SPL observation does not retain a spent token', () {
+    const previous = Token(
+      symbol: 'USDC',
+      name: 'USD Coin',
+      contractAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      balance: 5,
+      valueUsd: 5,
+      changePercent24h: 0,
+      networkKey: 'solana:mainnet',
+      tokenStandard: TokenStandard.spl,
+    );
+
+    final tokens = BlockchainService.preserveMissingTokensOnPartial(
+      const [],
+      [previous],
+      nativeObserved: false,
+      splObserved: true,
+    );
+
+    expect(tokens, isEmpty);
+  });
+
   test('token visibility identifiers include network scope', () {
     const evmHello = Token(
       symbol: 'HELLO',

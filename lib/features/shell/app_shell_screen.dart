@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../screens/home/home_screen.dart';
 import '../../screens/swap/swap_screen.dart';
+import '../../services/blockchain_service.dart';
 import '../discover/discover_screen.dart';
 import '../mini_apps/mini_app_host_screen.dart';
 import '../../services/runtime_config_service.dart';
@@ -22,6 +23,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
   final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
   bool _appliedInitialArgs = false;
   bool _openingOwlletPay = false;
+  int _walletRefreshRevision = 0;
 
   @override
   void initState() {
@@ -81,6 +83,24 @@ class _AppShellScreenState extends State<AppShellScreen> {
       );
     } finally {
       _openingOwlletPay = false;
+      if (mounted) {
+        // Home stays mounted inside IndexedStack while OwlletPay is open.
+        // Invalidate the active-chain snapshot before triggering its live read.
+        final blockchain = context.read<BlockchainService>();
+        final wallet = blockchain.activeWalletAddress.trim();
+        if (wallet.isNotEmpty) {
+          await blockchain.requestTransactionBalanceRefresh(
+            walletAddress: wallet,
+            networkKey: blockchain.activeNetworkKey,
+            family: 'transfer',
+            operationReference:
+                'owllet-pay-return-${DateTime.now().microsecondsSinceEpoch}',
+          );
+        }
+        if (mounted) {
+          setState(() => _walletRefreshRevision += 1);
+        }
+      }
     }
   }
 
@@ -149,13 +169,16 @@ class _AppShellScreenState extends State<AppShellScreen> {
       child: Scaffold(
         body: IndexedStack(
           index: controller.currentIndex,
-          children: const [
-            HomeScreen(showBottomNavigation: false),
-            RuntimeFeatureGate(
+          children: [
+            HomeScreen(
+              showBottomNavigation: false,
+              refreshRevision: _walletRefreshRevision,
+            ),
+            const RuntimeFeatureGate(
               feature: RuntimeFeature.swaps,
               child: SwapScreen(showBottomNavigation: false),
             ),
-            DiscoverScreen(),
+            const DiscoverScreen(),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(

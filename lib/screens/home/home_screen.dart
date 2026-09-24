@@ -56,9 +56,14 @@ import 'widgets/whats_new_sheet.dart';
 /// Home Screen - Main Wallet Dashboard
 /// Shows wallet balance, quick actions, and token list
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.showBottomNavigation = true});
+  const HomeScreen({
+    super.key,
+    this.showBottomNavigation = true,
+    this.refreshRevision = 0,
+  });
 
   final bool showBottomNavigation;
+  final int refreshRevision;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -67,6 +72,28 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const String _livePriceScope = 'home_screen';
   static const String _homeShowcaseSeenKey = 'home_showcase_seen_v1';
+
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshRevision != oldWidget.refreshRevision) {
+      unawaited(_refreshBalancesAfterMiniApp());
+    }
+  }
+
+  Future<void> _refreshBalancesAfterMiniApp() async {
+    final blockchain = _blockchain;
+    if (!mounted || blockchain == null) return;
+    final address = await _walletService.getActiveAddressForFamily(
+      blockchain.activeFamily,
+    );
+    if (!mounted || address == null || address.isEmpty) return;
+    await _fetchRealBalances(address, forceRefresh: true);
+    if (mounted && _portfolioRuntimeEnabled) {
+      await _fetchPortfolioData(address, sync: true);
+    }
+  }
+
   List<Token> _tokens = [];
   final WalletService _walletService = WalletService();
   final StorageService _storage = StorageService();
@@ -1666,10 +1693,10 @@ class _HomeScreenState extends State<HomeScreen> {
     await InAppLinkRouter.open(context, 'https://t.me/FOMOWL');
   }
 
-  void _openOwlletPayDeposit() {
+  Future<void> _openOwlletPayDeposit() async {
     final base = OwlletMiniApps.owlletPay.configuredLaunchUri;
     final depositUrl = base?.replace(path: '/deposit').toString();
-    Navigator.pushNamed(
+    await Navigator.pushNamed(
       context,
       '/owllet-pay',
       arguments: MiniAppHostArguments(
@@ -1678,6 +1705,21 @@ class _HomeScreenState extends State<HomeScreen> {
         initialUrl: depositUrl,
       ),
     );
+    if (!mounted) return;
+    final blockchain = context.read<BlockchainService>();
+    final wallet = blockchain.activeWalletAddress.trim();
+    if (wallet.isNotEmpty) {
+      await blockchain.requestTransactionBalanceRefresh(
+        walletAddress: wallet,
+        networkKey: blockchain.activeNetworkKey,
+        family: 'transfer',
+        operationReference:
+            'owllet-pay-deposit-return-${DateTime.now().microsecondsSinceEpoch}',
+      );
+    }
+    if (mounted) {
+      await _refreshBalancesAfterMiniApp();
+    }
   }
 
   /// Open OwlletPay straight on its withdraw (off-ramp) page. The
