@@ -92,7 +92,8 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   /// the DApp sees the same chain the app is on.
   void _onBlockchainChanged() {
     final blockchain = _blockchain;
-    if (blockchain == null || blockchain.activeChain.chainId == _syncedChainId) {
+    if (blockchain == null ||
+        blockchain.activeChain.chainId == _syncedChainId) {
       return;
     }
     unawaited(_syncInjectedProviderState());

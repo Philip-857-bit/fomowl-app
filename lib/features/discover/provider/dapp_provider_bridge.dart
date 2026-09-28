@@ -857,7 +857,6 @@ class DappProviderBridge {
         'The requested chainId is invalid.',
       );
     }
-    _ensureChainSupportedForDapp(context, chainId);
 
     final chainName = request['chainName']?.toString().trim();
     if (chainName == null || chainName.isEmpty) {

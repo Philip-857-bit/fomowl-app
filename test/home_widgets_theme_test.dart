@@ -194,7 +194,7 @@ void main() {
     );
 
     testWidgets(
-      'BalanceCard Add funds button reflects active chain adaptive theme',
+      'BalanceCard Buy Crypto button reflects active chain adaptive theme',
       (tester) async {
         await tester.pumpWidget(
           wrapWithTheme(
@@ -213,7 +213,7 @@ void main() {
         );
         await tester.pump();
 
-        expect(find.text('Add funds'), findsOneWidget);
+        expect(find.text('Buy Crypto'), findsOneWidget);
         final inkWidget = tester.widget<Ink>(
           find.descendant(
             of: find.byKey(const ValueKey('balance-add-funds')),
