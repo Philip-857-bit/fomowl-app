@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_environment.dart';
+import '../../../services/blockchain/blockchain_catalog.dart';
 import '../discover_url_utils.dart';
 import 'discover_catalog_snapshot.dart';
 import 'discover_dapp_entry.dart';
@@ -99,13 +100,25 @@ class DiscoverCatalogService {
     await prefs.setString(_cacheKey, jsonEncode(snapshot.toJson()));
   }
 
+  /// Every EVM chain the wallet can switch to.
+  ///
+  /// Derived from [BlockchainCatalog] rather than hand-listed so the bundled
+  /// fallback catalog can never drift behind the chain registry again. The
+  /// hand-maintained copies previously stopped at Arbitrum, which left newer
+  /// networks unusable in the fallback path and misreported per-DApp network
+  /// support in the UI.
+  static List<int> get _walletEvmChainIds => BlockchainCatalog.builtInChains
+      .map((chain) => chain.chainId)
+      .toList(growable: false);
+
   DiscoverCatalogSnapshot _bundledSnapshot() {
     // Keep the emergency catalog complementary to Owllet's native product.
     // Swap, bridge, NFT portfolio/marketplace, and fiat funding experiences
     // already have first-party surfaces and should not be duplicated here.
+    final walletChainIds = _walletEvmChainIds;
     return DiscoverCatalogSnapshot(
       fetchedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-      dapps: const <DiscoverDappEntry>[
+      dapps: <DiscoverDappEntry>[
         DiscoverDappEntry(
           id: 'discover-aave',
           slug: 'aave',
@@ -117,7 +130,7 @@ class DiscoverCatalogService {
           heroImageUrl: null,
           badgeText: 'LENDING',
           categories: <String>['defi', 'lending'],
-          supportedChainIds: <int>[1, 137, 42161, 10, 8453],
+          supportedChainIds: walletChainIds,
           featuredRank: 1,
           trendingRank: 1,
           isActive: true,
@@ -135,7 +148,7 @@ class DiscoverCatalogService {
           heroImageUrl: null,
           badgeText: 'STAKING',
           categories: <String>['staking'],
-          supportedChainIds: <int>[1],
+          supportedChainIds: walletChainIds,
           featuredRank: 2,
           trendingRank: 2,
           isActive: true,
@@ -153,7 +166,7 @@ class DiscoverCatalogService {
           heroImageUrl: null,
           badgeText: 'GOVERNANCE',
           categories: <String>['governance'],
-          supportedChainIds: <int>[1, 10, 56, 137, 42161, 8453],
+          supportedChainIds: walletChainIds,
           featuredRank: 3,
           trendingRank: 3,
           isActive: true,
@@ -171,7 +184,7 @@ class DiscoverCatalogService {
           heroImageUrl: null,
           badgeText: 'QUESTS',
           categories: <String>['community'],
-          supportedChainIds: <int>[1, 10, 56, 137, 42161, 8453],
+          supportedChainIds: walletChainIds,
           featuredRank: 4,
           trendingRank: 4,
           isActive: true,

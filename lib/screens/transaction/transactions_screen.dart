@@ -473,21 +473,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         return;
       }
 
-      WalletHistoryResponse? response;
-      String? fallbackWarning;
-      try {
-        response = await _walletHistoryService.fetchWalletHistory(
-          walletAddress: address,
-          limit: 120,
-        );
-      } catch (_) {
-        fallbackWarning = l.walletHistoryFallbackWarning;
-      }
+      // The two sources are independent, so fetch them concurrently. The
+      // explorer call is the slow one on Solana, and awaiting it in sequence
+      // meant the history screen waited for the sum of both timeouts rather
+      // than the slower of the two.
+      final (response, explorerHistory) = await (
+        _walletHistoryService
+            .fetchWalletHistory(walletAddress: address, limit: 120)
+            .then<WalletHistoryResponse?>(
+              (value) => value,
+              onError: (_) => null,
+            ),
+        _loadExplorerHistory(blockchain: blockchain, walletAddress: address),
+      ).wait;
 
-      final explorerHistory = await _loadExplorerHistory(
-        blockchain: blockchain,
-        walletAddress: address,
-      );
+      // Only the server call can fail softly here; the explorer loaders already
+      // swallow their own errors and return an empty list.
+      final fallbackWarning = response == null
+          ? l.walletHistoryFallbackWarning
+          : null;
+
       final mergedHistory = _mergeHistory(
         preferred: response?.history ?? const [],
         fallback: explorerHistory,
@@ -566,7 +571,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       );
       final resp = await http
           .get(uri, headers: const {'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 25));
       if (resp.statusCode < 200 || resp.statusCode >= 300) return const [];
       final data = jsonDecode(resp.body) as Map<String, dynamic>;
       final txs = (data['transactions'] as List<dynamic>?) ?? const [];
@@ -581,6 +586,77 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             : DateTime.now();
         final failed = item['status']?.toString() == 'failed';
         final memo = item['memo']?.toString() ?? '';
+
+        if (failed) {
+          history.add(
+            WalletHistoryEntry(
+              id: 'solana:$sig',
+              walletAddress: walletAddress,
+              networkName: 'Solana',
+              networkKey: 'solana:mainnet',
+              txHash: sig,
+              eventType: 'failed',
+              title: 'Failed transaction',
+              message: 'Transaction failed on Solana.',
+              tokenName: 'Solana',
+              tokenSymbol: 'SOL',
+              amount: 0,
+              isIncoming: false,
+              createdAt: ts,
+              source: 'explorer',
+            ),
+          );
+          continue;
+        }
+
+        // The backend enriches a bounded prefix of signatures with real
+        // balance deltas. Anything past that is signature-only, so fall back
+        // to a neutral row instead of inventing a "0 SOL sent" transfer.
+        final eventType = item['eventType']?.toString().trim() ?? '';
+        final isIncoming = item['isIncoming'] == true;
+        final tokenSymbol = item['tokenSymbol']?.toString().trim() ?? '';
+        final tokenName = item['tokenName']?.toString().trim() ?? '';
+        final amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+        final counterparty = item['counterparty']?.toString().trim() ?? '';
+        final isEnriched = eventType.isNotEmpty && tokenSymbol.isNotEmpty;
+
+        if (!isEnriched) {
+          history.add(
+            WalletHistoryEntry(
+              id: 'solana:$sig',
+              walletAddress: walletAddress,
+              networkName: 'Solana',
+              networkKey: 'solana:mainnet',
+              txHash: sig,
+              eventType: 'interaction',
+              title: 'Transaction',
+              message:
+                  'Transaction on Solana.${memo.isNotEmpty ? ' Memo: $memo' : ''}',
+              tokenName: 'Solana',
+              tokenSymbol: 'SOL',
+              amount: null,
+              isIncoming: false,
+              createdAt: ts,
+              source: 'explorer',
+            ),
+          );
+          continue;
+        }
+
+        final resolvedSymbol = tokenSymbol.isEmpty ? 'TOKEN' : tokenSymbol;
+        final resolvedName = tokenName.isEmpty ? resolvedSymbol : tokenName;
+        final amountText = _trimAmount(amount.abs());
+        final subject = isIncoming ? 'Received' : 'Sent';
+        final preposition = isIncoming ? 'from' : 'to';
+        final counterpartyText = counterparty.isEmpty
+            ? ''
+            : ' $preposition ${_shortAddress(counterparty)}';
+        final title = switch (eventType) {
+          'swap' => 'Swap confirmed on Solana',
+          'receive' => 'Transfer received',
+          _ => 'Transfer sent',
+        };
+
         history.add(
           WalletHistoryEntry(
             id: 'solana:$sig',
@@ -588,20 +664,20 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             networkName: 'Solana',
             networkKey: 'solana:mainnet',
             txHash: sig,
-            eventType: failed ? 'failed' : 'send',
-            title: failed ? 'Failed transaction' : 'Transaction',
-            message: failed
-                ? 'Transaction failed on Solana.'
-                : 'Transaction on Solana.${memo.isNotEmpty ? ' Memo: $memo' : ''}',
-            tokenName: 'Solana',
-            tokenSymbol: 'SOL',
-            amount: 0,
-            isIncoming: false,
+            eventType: eventType,
+            title: title,
+            message:
+                '$subject $amountText $resolvedSymbol$counterpartyText on Solana.',
+            tokenName: resolvedName,
+            tokenSymbol: resolvedSymbol,
+            amount: amount.abs(),
+            isIncoming: isIncoming,
             createdAt: ts,
             source: 'explorer',
           ),
         );
       }
+      history.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return history;
     } catch (_) {
       return const [];
@@ -733,7 +809,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       merged[_historyKey(entry)] = entry;
     }
     for (final entry in fallback) {
-      merged.putIfAbsent(_historyKey(entry), () => entry);
+      final key = _historyKey(entry);
+      final saved = merged[key];
+      // A saved Solana placeholder can have the same signature as an
+      // explorer row with the real SPL amount and direction. Prefer the
+      // enriched row so old "0 SOL sent" entries cannot mask a receive.
+      final enrichedSolanaEntry =
+          entry.networkKey == 'solana:mainnet' &&
+          entry.source == 'explorer' &&
+          entry.amount != null &&
+          entry.amount! > 0 &&
+          (entry.eventType == 'receive' || entry.eventType == 'send');
+      final savedPlaceholder =
+          saved != null &&
+          (saved.amount == null || saved.amount == 0) &&
+          saved.txHash?.isNotEmpty == true;
+      if (enrichedSolanaEntry && savedPlaceholder) {
+        merged[key] = entry;
+      } else {
+        merged.putIfAbsent(key, () => entry);
+      }
     }
 
     final history = merged.values.toList()
@@ -975,8 +1070,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   IconData _entryIcon(WalletHistoryEntry entry) {
     switch (entry.eventType) {
+      case 'failed':
+        return Icons.error_outline;
       case 'swap':
       case 'limit':
+      case 'interaction':
         return Icons.compare_arrows;
       case 'send':
         return Icons.arrow_upward;
@@ -987,8 +1085,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   Color _entryColor(WalletHistoryEntry entry) {
     switch (entry.eventType) {
+      case 'failed':
+        return AppColors.accentRed;
       case 'swap':
       case 'limit':
+      case 'interaction':
         return Colors.white;
       case 'send':
         return AppColors.accentRed;
@@ -1001,6 +1102,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final amount = entry.amount;
     final tokenSymbol = entry.tokenSymbol;
     if (amount == null || tokenSymbol == null || tokenSymbol.isEmpty) {
+      return '';
+    }
+    // Failed and no-balance-change interactions carry no meaningful delta, so
+    // rendering them would put a misleading "- 0 SOL" on the row.
+    if (entry.eventType == 'failed' || entry.eventType == 'interaction') {
       return '';
     }
     final prefix = entry.eventType == 'swap' || entry.eventType == 'limit'

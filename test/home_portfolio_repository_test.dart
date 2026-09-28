@@ -74,7 +74,7 @@ void main() {
               token(
                 symbol: 'USDT',
                 name: 'Tether',
-                contractAddress: '0xusdt',
+                contractAddress: '0x55d398326f99059fF775485246999027B3197955',
                 valueUsd: 50,
                 changePercent24h: 0,
               ),
@@ -191,6 +191,32 @@ void main() {
       expect(data.sections.single.tokens.single.symbol, 'ETH');
     });
 
+    test('keeps a user-added unpriced token in portfolio sections', () async {
+      const address = '0x3333333333333333333333333333333333333333';
+      final data = await repository.filterSections(
+        sections: [
+          HomePortfolioSection(
+            chain: chain(name: 'Base', symbol: 'ETH', chainId: 8453),
+            tokens: const [
+              Token(
+                symbol: 'CUSTOM',
+                name: 'Custom token',
+                contractAddress: address,
+                balance: 10,
+                valueUsd: 0,
+                priceUsd: 0,
+                changePercent24h: 0,
+              ),
+            ],
+          ),
+        ],
+        loadHiddenTokens: (_) async => <String>{},
+        loadUserAddedAddresses: (_) => {address},
+      );
+
+      expect(data.sections.single.tokens.single.symbol, 'CUSTOM');
+    });
+
     test(
       'does not allow Solana tokens inside EVM portfolio sections',
       () async {
@@ -298,11 +324,40 @@ void main() {
         visible.map((token) => token.symbol),
         containsAll(['BNB', 'CUSTOM']),
       );
-      // A positive holding remains visible when pricing/verification providers
-      // are unavailable; hiding it would make a provider outage look like a
-      // zero wallet balance.
-      expect(visible.map((token) => token.symbol), contains('SPAM'));
+      expect(visible.map((token) => token.symbol), isNot(contains('SPAM')));
       expect(visible.map((token) => token.symbol), isNot(contains('HIDDEN')));
     });
+
+    test(
+      'unpriced tokens remain searchable without flooding the default list',
+      () {
+        const unpriced = Token(
+          symbol: 'DEX',
+          name: 'DEX token',
+          contractAddress: '0x4444444444444444444444444444444444444444',
+          balance: 5,
+          valueUsd: 0,
+          priceUsd: 0,
+          changePercent24h: 0,
+        );
+
+        expect(
+          repository.prepareVisibleTokens([unpriced], {}, chainId: 8453),
+          isEmpty,
+        );
+        expect(
+          repository
+              .prepareVisibleTokens(
+                [unpriced],
+                {},
+                chainId: 8453,
+                explicitSearch: true,
+              )
+              .single
+              .symbol,
+          'DEX',
+        );
+      },
+    );
   });
 }

@@ -5,6 +5,8 @@ enum TokenTrustLevel { verified, unverified, suspicious }
 class TokenTrustUtils {
   TokenTrustUtils._();
 
+  static const double minimumUnverifiedWalletValueUsd = 0.25;
+
   static const Set<String> protectedStablecoinSymbols = {'USDT', 'USDC'};
 
   static const Map<int, Map<String, Set<String>>> _canonicalContracts = {
@@ -50,7 +52,8 @@ class TokenTrustUtils {
     if (token.contractAddress == null || token.contractAddress!.isEmpty) {
       return TokenTrustLevel.verified;
     }
-    if (token.isCertified || isCanonicalStablecoin(token, chainId: chainId)) {
+    if (isCanonicalStablecoin(token, chainId: chainId) ||
+        (token.isCertified && token.priceSource.toLowerCase() != 'zerion')) {
       return TokenTrustLevel.verified;
     }
     if (protectedStablecoinSymbols.contains(
@@ -70,6 +73,19 @@ class TokenTrustUtils {
 
   static bool blocksDestination(Token token, {required int chainId}) =>
       levelFor(token, chainId: chainId) == TokenTrustLevel.suspicious;
+
+  static bool showsByDefault(
+    Token token, {
+    required int chainId,
+    bool isUserAdded = false,
+  }) {
+    if (isUserAdded) return true;
+    final trust = levelFor(token, chainId: chainId);
+    if (trust == TokenTrustLevel.verified) return true;
+    if (trust == TokenTrustLevel.suspicious) return false;
+    return token.hasKnownPrice &&
+        token.totalValueUsd >= minimumUnverifiedWalletValueUsd;
+  }
 
   static String label(Token token, {required int chainId}) {
     return switch (levelFor(token, chainId: chainId)) {

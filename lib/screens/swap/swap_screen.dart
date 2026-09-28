@@ -1701,6 +1701,13 @@ class _SwapScreenState extends State<SwapScreen> {
     if (address == null) return;
     final activeBlockchain =
         blockchain ?? Provider.of<BlockchainService>(context, listen: false);
+    await activeBlockchain.requestTransactionBalanceRefresh(
+      walletAddress: address,
+      networkKey: activeBlockchain.activeNetworkKey,
+      family: 'swap',
+      operationReference:
+          'wallet-swap-${DateTime.now().microsecondsSinceEpoch}',
+    );
     if (activeBlockchain.activeFamily == ChainFamily.evm) {
       await activeBlockchain.refreshWalletTokens(
         address,

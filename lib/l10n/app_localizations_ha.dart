@@ -140,7 +140,7 @@ class AppLocalizationsHa extends AppLocalizations {
   String get withdraw => 'Cire kuɗi';
 
   @override
-  String get addFunds => 'Ƙara kuɗi';
+  String get addFunds => 'Sayi Crypto';
 
   @override
   String get buy => 'Saya';

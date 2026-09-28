@@ -312,6 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
       tokens,
       _hiddenTokenKeys,
       userAddedAddresses: userAdded,
+      chainId: _blockchain?.activeTokenStorageChainId ?? 0,
     );
     final blockchain = _blockchain;
     if (blockchain == null) {
@@ -432,6 +433,11 @@ class _HomeScreenState extends State<HomeScreen> {
     return _portfolioRepository.filterSections(
       sections: sections,
       loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+      loadUserAddedAddresses: (chainId) => {
+        for (final token
+            in _blockchain?.customTokensForChain(chainId) ?? const [])
+          token.address.trim().toLowerCase(),
+      },
     );
   }
 
@@ -676,7 +682,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final data = await _buildPortfolioDataFromSections(nextSections);
-    if (!mounted) {
+    if (!mounted ||
+        _lastChainId != currentChainId ||
+        _buildTokenSignature(_tokens) != _buildTokenSignature(chainTokens)) {
       return;
     }
 
@@ -704,6 +712,13 @@ class _HomeScreenState extends State<HomeScreen> {
         final visibleTokens = _portfolioRepository.prepareVisibleTokens(
           tokens,
           hiddenTokenKeys,
+          userAddedAddresses: {
+            for (final token in blockchain.customTokensForChain(
+              _effectiveVisibilityChainId(blockchain),
+            ))
+              token.address.trim().toLowerCase(),
+          },
+          chainId: _effectiveVisibilityChainId(blockchain),
         );
         if (visibleTokens.isEmpty) {
           return null;
@@ -742,6 +757,13 @@ class _HomeScreenState extends State<HomeScreen> {
           final visibleTokens = _portfolioRepository.prepareVisibleTokens(
             tokens,
             hiddenTokenKeys,
+            userAddedAddresses: {
+              for (final token in blockchain.customTokensForChain(
+                chain.chainId,
+              ))
+                token.address.trim().toLowerCase(),
+            },
+            chainId: chain.chainId,
           );
           if (visibleTokens.isEmpty) {
             return null;
@@ -797,6 +819,10 @@ class _HomeScreenState extends State<HomeScreen> {
               chainId: chainId,
             ),
             loadHiddenTokens: _tokenVisibilityService.loadHiddenTokens,
+            loadUserAddedAddresses: (chainId) => {
+              for (final token in blockchain.customTokensForChain(chainId))
+                token.address.trim().toLowerCase(),
+            },
           );
 
     if (!await _isStillActiveWalletRequest(walletAddress, requestNetworkKey) ||
@@ -1358,6 +1384,8 @@ class _HomeScreenState extends State<HomeScreen> {
       blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
       if (_portfolioRawSections.isEmpty) {
         unawaited(_reloadPortfolioFromCachedTokens());
+      } else {
+        unawaited(_upsertLiveChainPortfolioSection(nextTokens));
       }
       return;
     }

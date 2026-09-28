@@ -140,7 +140,7 @@ class AppLocalizationsYo extends AppLocalizations {
   String get withdraw => 'Yọ owó';
 
   @override
-  String get addFunds => 'Fi owó kún';
+  String get addFunds => 'Ra Crypto';
 
   @override
   String get buy => 'Ra';

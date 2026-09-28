@@ -37,6 +37,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
       const HomePortfolioRepository();
 
   List<Token> _allTokens = [];
+  List<Token> _searchableTokens = [];
   List<Token> _filteredTokens = [];
   Set<String> _hiddenTokens = <String>{};
   bool _isLoading = true;
@@ -124,8 +125,22 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
           _customTokensForActiveNetwork(blockchain),
         ],
       );
+      var searchableTokens = _mergeSelectableTokens(
+        blockchain: blockchain,
+        hiddenTokens: hiddenTokens,
+        tokenGroups: [
+          _getDefaultTokens(),
+          cachedTokens,
+          _customTokensForActiveNetwork(blockchain),
+        ],
+        explicitSearch: true,
+      );
       if (mergedTokens.isNotEmpty && mounted) {
-        _applyLoadedTokens(mergedTokens, isLoading: false);
+        _applyLoadedTokens(
+          mergedTokens,
+          searchableTokens: searchableTokens,
+          isLoading: false,
+        );
       }
 
       if (address != null) {
@@ -143,14 +158,30 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
             _customTokensForActiveNetwork(blockchain),
           ],
         );
+        searchableTokens = _mergeSelectableTokens(
+          blockchain: blockchain,
+          hiddenTokens: hiddenTokens,
+          tokenGroups: [
+            _getDefaultTokens(),
+            cachedTokens,
+            tokens,
+            _customTokensForActiveNetwork(blockchain),
+          ],
+          explicitSearch: true,
+        );
         if (mounted) {
-          _applyLoadedTokens(mergedTokens, isLoading: false);
+          _applyLoadedTokens(
+            mergedTokens,
+            searchableTokens: searchableTokens,
+            isLoading: false,
+          );
         }
       }
 
       if (mounted) {
         _applyLoadedTokens(
           mergedTokens.isNotEmpty ? mergedTokens : _getDefaultTokens(),
+          searchableTokens: searchableTokens,
           isLoading: false,
         );
       }
@@ -168,7 +199,11 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
         ],
       );
       if (mounted) {
-        _applyLoadedTokens(defaultTokens, isLoading: false);
+        _applyLoadedTokens(
+          defaultTokens,
+          searchableTokens: defaultTokens,
+          isLoading: false,
+        );
       }
     }
   }
@@ -206,9 +241,14 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     return const [];
   }
 
-  void _applyLoadedTokens(List<Token> tokens, {required bool isLoading}) {
+  void _applyLoadedTokens(
+    List<Token> tokens, {
+    required List<Token> searchableTokens,
+    required bool isLoading,
+  }) {
     setState(() {
       _allTokens = tokens;
+      _searchableTokens = searchableTokens;
       _filteredTokens = tokens;
       _isLoading = isLoading;
     });
@@ -255,6 +295,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     required BlockchainService blockchain,
     required Set<String> hiddenTokens,
     required List<List<Token>> tokenGroups,
+    bool explicitSearch = false,
   }) {
     final customAddresses = blockchain.customTokensForActiveChain
         .map((token) => token.address.trim().toLowerCase())
@@ -267,6 +308,8 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
           .toList(),
       hiddenTokens,
       userAddedAddresses: customAddresses,
+      chainId: blockchain.activeTokenStorageChainId,
+      explicitSearch: explicitSearch,
     );
     final byKey = <String, Token>{};
     for (final token in visibleTokens) {
@@ -370,7 +413,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     if (normalizedQuery.isEmpty) {
       return List<Token>.from(_allTokens);
     }
-    return _allTokens.where((token) {
+    return _searchableTokens.where((token) {
       return token.name.toLowerCase().contains(normalizedQuery) ||
           token.symbol.toLowerCase().contains(normalizedQuery) ||
           token.contractAddress?.toLowerCase().contains(normalizedQuery) ==

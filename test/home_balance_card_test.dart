@@ -142,7 +142,7 @@ void main() {
     expect(find.text('Updated 10:30'), findsOneWidget);
   });
 
-  testWidgets('Add funds action invokes the OwlletPay entry callback', (
+  testWidgets('Buy Crypto action invokes the OwlletPay entry callback', (
     tester,
   ) async {
     var tapped = false;
@@ -152,7 +152,7 @@ void main() {
       onAddFunds: () => tapped = true,
     );
 
-    expect(find.text('Add funds'), findsOneWidget);
+    expect(find.text('Buy Crypto'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('balance-add-funds')));
     expect(tapped, isTrue);
   });

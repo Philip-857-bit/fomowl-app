@@ -404,6 +404,9 @@ class BlockchainService extends ChangeNotifier {
         ),
       );
 
+  List<CustomTokenDefinition> customTokensForChain(int chainId) =>
+      List.unmodifiable(_customTokens[chainId] ?? const []);
+
   String get lastDiscoverySource => _lastDiscoverySource;
   bool get lastDiscoveryPartialFailure => _lastDiscoveryPartialFailure;
   int get lastDiscoveryTokenCount => _lastDiscoveryTokenCount;

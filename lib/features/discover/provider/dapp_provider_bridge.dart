@@ -796,7 +796,7 @@ class DappProviderBridge {
         'wallet_switchEthereumChain requires a valid chainId.',
       );
     }
-    _ensureChainAllowedForDapp(chainId);
+    _ensureChainSupportedForDapp(context, chainId);
 
     final blockchain = context.read<BlockchainService>();
     EvmChain? matchingChain;
@@ -857,7 +857,7 @@ class DappProviderBridge {
         'The requested chainId is invalid.',
       );
     }
-    _ensureChainAllowedForDapp(chainId);
+    _ensureChainSupportedForDapp(context, chainId);
 
     final chainName = request['chainName']?.toString().trim();
     if (chainName == null || chainName.isEmpty) {
@@ -1694,15 +1694,24 @@ class DappProviderBridge {
     return {'signedTransaction': signedTx};
   }
 
-  void _ensureChainAllowedForDapp(int chainId) {
-    final supported =
-        sessionController.activeDapp?.supportedChainIds ?? const <int>[];
-    if (supported.isNotEmpty && !supported.contains(chainId)) {
-      throw _ProviderBridgeException(
-        4200,
-        'This DApp is not approved to use the requested chain.',
-      );
+  /// Every EVM chain the wallet supports is usable inside a DApp session.
+  ///
+  /// This deliberately gates on the wallet's own chain registry rather than the
+  /// per-DApp `supportedChainIds` list. That list is a DApp-side catalog field
+  /// which drifts from reality: it lagged the registry by several chains, so
+  /// `wallet_switchEthereumChain` rejected networks the wallet could switch to
+  /// (Robinhood Chain being the reported case). The registry is the real
+  /// capability boundary, and `_walletSwitchEthereumChain` already resolves the
+  /// chain against it a few lines later.
+  void _ensureChainSupportedForDapp(BuildContext context, int chainId) {
+    final supported = context.read<BlockchainService>().allChains;
+    if (supported.any((chain) => chain.chainId == chainId)) {
+      return;
     }
+    throw _ProviderBridgeException(
+      4902,
+      'This network is not supported by Owllet.',
+    );
   }
 
   /// Enforces a biometric/passcode check before signing or broadcasting,

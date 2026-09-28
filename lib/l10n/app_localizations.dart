@@ -371,7 +371,7 @@ abstract class AppLocalizations {
   /// No description provided for @addFunds.
   ///
   /// In en, this message translates to:
-  /// **'Add funds'**
+  /// **'Buy Crypto'**
   String get addFunds;
 
   /// No description provided for @buy.

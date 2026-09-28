@@ -138,7 +138,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get withdraw => '提现';
 
   @override
-  String get addFunds => '添加资金';
+  String get addFunds => '购买加密货币';
 
   @override
   String get buy => '购买';

@@ -117,5 +117,41 @@ void main() {
       );
       expect(TokenTrustUtils.blocksDestination(unknown, chainId: 56), isFalse);
     });
+
+    test(
+      'hides unsolicited dust while retaining user-added and canonical assets',
+      () {
+        final dust = Token(
+          symbol: 'DUST',
+          name: 'Unsolicited token',
+          contractAddress: '0x3333333333333333333333333333333333333333',
+          balance: 50,
+          valueUsd: 0.02,
+          priceUsd: 0.0004,
+          changePercent24h: 0,
+          isCertified: true,
+          priceSource: 'zerion',
+        );
+        expect(TokenTrustUtils.showsByDefault(dust, chainId: 8453), isFalse);
+        expect(
+          TokenTrustUtils.showsByDefault(
+            dust,
+            chainId: 8453,
+            isUserAdded: true,
+          ),
+          isTrue,
+        );
+        expect(
+          TokenTrustUtils.showsByDefault(
+            token(
+              symbol: 'USDT',
+              address: '0xfde4c96c8593536e31f229ea8f37b2ada2699bb2',
+            ),
+            chainId: 8453,
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }
