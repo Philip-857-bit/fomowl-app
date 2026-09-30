@@ -76,12 +76,18 @@ void main() {
     expect(prefs.getBool('owllet.install_referrer_consumed.v1'), isNot(true));
   });
 
-  test('first stored affiliate code is not overwritten by a later link', () async {
-    SharedPreferences.setMockInitialValues({});
-    await AffiliateAttributionService.instance.rememberCode('QZ84KM');
-    await AffiliateAttributionService.instance.rememberCode('OTHER1');
-    expect(await AffiliateAttributionService.instance.pendingCode(), 'QZ84KM');
-  });
+  test(
+    'first stored affiliate code is not overwritten by a later link',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      await AffiliateAttributionService.instance.rememberCode('QZ84KM');
+      await AffiliateAttributionService.instance.rememberCode('OTHER1');
+      expect(
+        await AffiliateAttributionService.instance.pendingCode(),
+        'QZ84KM',
+      );
+    },
+  );
 
   test('does not consume a failed Play referrer read', () async {
     SharedPreferences.setMockInitialValues({});

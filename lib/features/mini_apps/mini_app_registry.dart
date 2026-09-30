@@ -35,6 +35,7 @@ class OwlletMiniApps {
         'Create and join on-chain token distributions with your Owllet wallet.',
     launchUrl: AppEnvironment.burstMiniAppUrl,
     allowedOrigins: AppEnvironment.burstMiniAppAllowedOrigins,
+    requiresWalletSession: true,
   );
 
   /// All registered mini apps. Order matters only for deterministic lookups.

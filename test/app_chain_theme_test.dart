@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/models/chain.dart';
 
 import 'package:fomowl_wallet/models/network_entry.dart';
+import 'package:fomowl_wallet/services/blockchain/blockchain_catalog.dart';
 import 'package:fomowl_wallet/services/blockchain/solana_catalog.dart';
 import 'package:fomowl_wallet/services/blockchain/tron_catalog.dart';
 import 'package:fomowl_wallet/theme/app_chain_theme.dart';
@@ -82,6 +83,14 @@ void main() {
 
         final avaxTheme = AppChainTheme.forNetworkKey('evm:43114');
         expect(avaxTheme.accentColor, const Color(0xFFE84142));
+
+        final arcTheme = AppChainTheme.forNetworkKey('evm:5042');
+        expect(arcTheme.id, 'arc');
+        expect(arcTheme.accentColor, const Color(0xFF00C0FF));
+
+        final hyperEvmTheme = AppChainTheme.forNetworkKey('evm:999');
+        expect(hyperEvmTheme.id, 'hyperevm');
+        expect(hyperEvmTheme.accentColor, const Color(0xFF1BE5B5));
       },
     );
 
@@ -99,6 +108,21 @@ void main() {
       expect(theme.accentColor, isNotNull);
       expect(theme.balanceCardGradient.colors.isNotEmpty, true);
       expect(theme.buttonGradient.colors.isNotEmpty, true);
+    });
+
+    test('Every built-in chain has a dedicated non-fallback theme', () {
+      for (final chain in BlockchainCatalog.builtInChains) {
+        final theme = AppChainTheme.forNetworkKey('evm:${chain.chainId}');
+        expect(
+          theme.id,
+          isNot('fomowl_signature'),
+          reason:
+              '${chain.name} (${chain.chainId}) fell back to classic FOMOwl theme',
+        );
+        expect(theme.accentColor, isNotNull);
+        expect(theme.balanceCardGradient.colors.isNotEmpty, true);
+        expect(theme.buttonGradient.colors.isNotEmpty, true);
+      }
     });
 
     test('Unresolvable/null key defaults to FOMOwl fallback signature', () {

@@ -25,6 +25,19 @@ class ChainLogoImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (chainId != null) {
+      final embeddedBytes = BlockchainCatalog.embeddedChainLogoBytes(chainId!);
+      if (embeddedBytes != null) {
+        return Image.memory(
+          embeddedBytes,
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (_, _, _) => _buildRemoteOrFallback(),
+        );
+      }
+    }
+
     final assetPath = chainId == null
         ? null
         : BlockchainCatalog.localChainLogoAsset(chainId!);
@@ -34,12 +47,16 @@ class ChainLogoImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (_, _, _) => fallback,
+        errorBuilder: (_, _, _) => _buildRemoteOrFallback(),
       );
     }
 
+    return _buildRemoteOrFallback();
+  }
+
+  Widget _buildRemoteOrFallback() {
     final remoteUrl = logoUrl?.trim() ?? '';
-    if (remoteUrl.isEmpty) return fallback;
+    if (remoteUrl.isEmpty || !remoteUrl.startsWith('http')) return fallback;
     return Image.network(
       remoteUrl,
       width: width,

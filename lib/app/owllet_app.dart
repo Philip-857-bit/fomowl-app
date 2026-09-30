@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
 import 'package:showcaseview/showcaseview.dart';
 
@@ -47,20 +48,25 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   AppPatchStatus? _lastVisiblePatchStatus;
   bool _requiredUpdateCheckInFlight = false;
   bool _requiredUpdateDialogVisible = false;
+  bool _maintenanceSplashReleased = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     AppPatchService.instance.addListener(_showVisiblePatchStatus);
+    _runtimeConfig.addListener(_releaseSplashForFullMaintenance);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _releaseSplashForFullMaintenance();
       unawaited(_enforceRequiredUpdate());
       unawaited(_runtimeConfig.hydrate().then((_) => _runtimeConfig.refresh()));
       unawaited(WalletConnectService.instance.initialize());
       unawaited(DeepLinkService.instance.initialize());
       unawaited(
         AffiliateAttributionService.instance.captureInstallReferrer().then(
-          (_) => AffiliateAttributionService.instance.applyPendingToCurrentWallet(),
+          (_) => AffiliateAttributionService.instance
+              .applyPendingToCurrentWallet(),
         ),
       );
     });
@@ -80,10 +86,26 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     DeepLinkService.instance.dispose();
     _foregroundLockTimer?.cancel();
     _runtimeConfigTimer?.cancel();
+    _runtimeConfig.removeListener(_releaseSplashForFullMaintenance);
     AppPatchService.instance.removeListener(_showVisiblePatchStatus);
     ShowcaseView.get().unregister();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _releaseSplashForFullMaintenance() {
+    if (!mounted ||
+        _maintenanceSplashReleased ||
+        !_runtimeConfig.snapshot.fullMaintenance) {
+      return;
+    }
+    // Full maintenance replaces the Navigator, so AppBootstrapper may never
+    // mount (or may be disposed before it can remove the native splash).
+    _maintenanceSplashReleased = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) FlutterNativeSplash.remove();
+    });
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   void _showVisiblePatchStatus() {

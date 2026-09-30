@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import '../../config/app_environment.dart';
 import '../../models/chain.dart';
+import 'embedded_chain_logos.dart';
 
 /// Canonical EVM chain metadata and symbol/logo mapping helpers.
 class BlockchainCatalog {
@@ -8,18 +11,24 @@ class BlockchainCatalog {
   /// are intentionally excluded.
   static const Set<int> ethereumLayer2BadgeChainIds = {
     10, // OP Mainnet
+    169, // Manta Pacific
     130, // Unichain
     324, // zkSync Era
     480, // World Chain
     2741, // Abstract
     4663, // Robinhood Chain
     5000, // Mantle
+    1088, // Metis
     8453, // Base
+    1135, // Lisk
+    33139, // ApeChain
     34443, // Mode
+    42220, // Celo
     42161, // Arbitrum One
     57073, // Ink
     59144, // Linea
     81457, // Blast
+    98866, // Plume
     534352, // Scroll
   };
 
@@ -125,16 +134,6 @@ class BlockchainCatalog {
           'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
     ),
     EvmChain(
-      name: 'Klaytn',
-      symbol: 'KLAY',
-      chainId: 8217,
-      rpcUrl: AppEnvironment.blockchain('/8217/rpc').toString(),
-      coinGeckoId: 'klay-token',
-      explorerUrl: 'https://scope.klaytn.com',
-      logoUrl:
-          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png',
-    ),
-    EvmChain(
       name: 'Aurora',
       symbol: 'ETH',
       chainId: 1313161554,
@@ -154,6 +153,229 @@ class BlockchainCatalog {
       logoUrl:
           'https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/rh_favicon_152.png',
     ),
+    EvmChain(
+      name: 'Unichain',
+      symbol: 'ETH',
+      chainId: 130,
+      rpcUrl: AppEnvironment.blockchain('/130/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://uniscan.xyz',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Monad',
+      symbol: 'MON',
+      chainId: 143,
+      rpcUrl: AppEnvironment.blockchain('/143/rpc').toString(),
+      coinGeckoId: 'monad',
+      explorerUrl: 'https://monadvision.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monad/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Sonic',
+      symbol: 'S',
+      chainId: 146,
+      rpcUrl: AppEnvironment.blockchain('/146/rpc').toString(),
+      coinGeckoId: 'sonic-3',
+      explorerUrl: 'https://sonicscan.org',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/sonic/info/logo.png',
+    ),
+    EvmChain(
+      name: 'World Chain',
+      symbol: 'ETH',
+      chainId: 480,
+      rpcUrl: AppEnvironment.blockchain('/480/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://worldscan.org',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'HyperEVM',
+      symbol: 'HYPE',
+      chainId: 999,
+      rpcUrl: AppEnvironment.blockchain('/999/rpc').toString(),
+      coinGeckoId: 'hyperliquid',
+      explorerUrl: 'https://hyperevmscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/hyperevm/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Abstract',
+      symbol: 'ETH',
+      chainId: 2741,
+      rpcUrl: AppEnvironment.blockchain('/2741/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://abscan.org',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Mantle',
+      symbol: 'MNT',
+      chainId: 5000,
+      rpcUrl: AppEnvironment.blockchain('/5000/rpc').toString(),
+      coinGeckoId: 'mantle',
+      explorerUrl: 'https://mantlescan.xyz',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png',
+    ),
+    EvmChain(
+      name: 'ApeChain',
+      symbol: 'APE',
+      chainId: 33139,
+      rpcUrl: AppEnvironment.blockchain('/33139/rpc').toString(),
+      coinGeckoId: 'apecoin',
+      explorerUrl: 'https://apescan.io',
+      logoUrl: 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png',
+    ),
+    EvmChain(
+      name: 'Mode',
+      symbol: 'ETH',
+      chainId: 34443,
+      rpcUrl: AppEnvironment.blockchain('/34443/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://explorer.mode.network',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Ink',
+      symbol: 'ETH',
+      chainId: 57073,
+      rpcUrl: AppEnvironment.blockchain('/57073/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://explorer.inkonchain.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Linea',
+      symbol: 'ETH',
+      chainId: 59144,
+      rpcUrl: AppEnvironment.blockchain('/59144/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://lineascan.build',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/linea/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Berachain',
+      symbol: 'BERA',
+      chainId: 80094,
+      rpcUrl: AppEnvironment.blockchain('/80094/rpc').toString(),
+      coinGeckoId: 'berachain-bera',
+      explorerUrl: 'https://berascan.com',
+      logoUrl: 'https://assets.coingecko.com/coins/images/25235/small/BERA.png',
+    ),
+    EvmChain(
+      name: 'Blast',
+      symbol: 'ETH',
+      chainId: 81457,
+      rpcUrl: AppEnvironment.blockchain('/81457/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://blastscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/blast/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Plasma',
+      symbol: 'XPL',
+      chainId: 9745,
+      rpcUrl: AppEnvironment.blockchain('/9745/rpc').toString(),
+      coinGeckoId: 'plasma',
+      explorerUrl: 'https://plasmascan.to',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/plasma/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Lisk',
+      symbol: 'ETH',
+      chainId: 1135,
+      rpcUrl: AppEnvironment.blockchain('/1135/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://blockscout.lisk.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Celo',
+      symbol: 'CELO',
+      chainId: 42220,
+      rpcUrl: AppEnvironment.blockchain('/42220/rpc').toString(),
+      coinGeckoId: 'celo',
+      explorerUrl: 'https://celoscan.io',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/celo/info/logo.png',
+    ),
+    EvmChain(
+      name: 'Cronos',
+      symbol: 'CRO',
+      chainId: 25,
+      rpcUrl: AppEnvironment.blockchain('/25/rpc').toString(),
+      coinGeckoId: 'crypto-com-chain',
+      explorerUrl: 'https://cronoscan.com',
+      logoUrl: 'https://assets.relay.link/icons/25/light.png',
+    ),
+    EvmChain(
+      name: 'Manta Pacific',
+      symbol: 'ETH',
+      chainId: 169,
+      rpcUrl: AppEnvironment.blockchain('/169/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://pacific-explorer.manta.network',
+      logoUrl: 'https://assets.relay.link/icons/169/light.png',
+    ),
+    EvmChain(
+      name: 'Metis',
+      symbol: 'METIS',
+      chainId: 1088,
+      rpcUrl: AppEnvironment.blockchain('/1088/rpc').toString(),
+      coinGeckoId: 'metis-token',
+      explorerUrl: 'https://explorer.metis.io',
+      logoUrl: 'https://assets.relay.link/icons/1088/light.png',
+    ),
+    EvmChain(
+      name: 'Sei',
+      symbol: 'SEI',
+      chainId: 1329,
+      rpcUrl: AppEnvironment.blockchain('/1329/rpc').toString(),
+      coinGeckoId: 'sei-network',
+      explorerUrl: 'https://seitrace.com',
+      logoUrl: 'https://assets.relay.link/icons/1329/light.png',
+    ),
+    EvmChain(
+      name: 'Arc',
+      symbol: 'USDC',
+      chainId: 5042,
+      rpcUrl: AppEnvironment.blockchain('/5042/rpc').toString(),
+      coinGeckoId: 'usd-coin',
+      explorerUrl: 'https://explorer.arc.io',
+      logoUrl:
+          'https://d2xo500swnpgl1.cloudfront.net/uploads/arc/Gradual-Arc-icon-43ee6ca5-45c5-404d-ac1b-f54f93c51f06-1761315436123.png',
+    ),
+    EvmChain(
+      name: 'Plume',
+      symbol: 'PLUME',
+      chainId: 98866,
+      rpcUrl: AppEnvironment.blockchain('/98866/rpc').toString(),
+      coinGeckoId: 'plume',
+      explorerUrl: 'https://explorer.plume.org',
+      logoUrl: 'https://assets.relay.link/icons/98866/light.png',
+    ),
+    EvmChain(
+      name: 'Scroll',
+      symbol: 'ETH',
+      chainId: 534352,
+      rpcUrl: AppEnvironment.blockchain('/534352/rpc').toString(),
+      coinGeckoId: 'ethereum',
+      explorerUrl: 'https://scrollscan.com',
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/scroll/info/logo.png',
+    ),
   ];
 
   static String? iconUrlForSymbol(String symbol) {
@@ -172,6 +394,10 @@ class BlockchainCatalog {
         return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png';
       case 'TRX':
         return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png';
+      case 'APE':
+        return 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png';
+      case 'MNT':
+        return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png';
       default:
         return null;
     }
@@ -192,10 +418,30 @@ class BlockchainCatalog {
       case 'XDAI':
       case 'DAI':
         return 'xdai';
-      case 'KLAY':
-        return 'klay-token';
       case 'CRO':
         return 'crypto-com-chain';
+      case 'METIS':
+        return 'metis-token';
+      case 'SEI':
+        return 'sei-network';
+      case 'PLUME':
+        return 'plume';
+      case 'APE':
+        return 'apecoin';
+      case 'MNT':
+        return 'mantle';
+      case 'BERA':
+        return 'berachain-bera';
+      case 'S':
+        return 'sonic-3';
+      case 'MON':
+        return 'monad';
+      case 'HYPE':
+        return 'hyperliquid';
+      case 'XPL':
+        return 'plasma';
+      case 'CELO':
+        return 'celo';
       default:
         return null;
     }
@@ -213,21 +459,70 @@ class BlockchainCatalog {
       43114 => 'avalanchec',
       250 => 'fantom',
       100 => 'xdai',
-      8217 => 'klaytn',
       1313161554 => 'aurora',
+      143 => 'monad',
+      146 => 'sonic',
+      999 => 'hyperevm',
+      5000 => 'mantle',
+      59144 => 'linea',
+      81457 => 'blast',
+      534352 => 'scroll',
+      9745 => 'plasma',
+      42220 => 'celo',
       _ => null,
     };
     if (chainId == 4663) {
       return 'https://cdn.robinhood.com/assets/generated_assets/hoodchain_docsite/rh_favicon_152.png';
     }
+    if (chainId == 33139) {
+      return 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png';
+    }
+    if (chainId == 5042) {
+      return 'https://d2xo500swnpgl1.cloudfront.net/uploads/arc/Gradual-Arc-icon-43ee6ca5-45c5-404d-ac1b-f54f93c51f06-1761315436123.png';
+    }
+    const relayLogoChainIds = {25, 169, 1088, 1329, 98866};
+    if (relayLogoChainIds.contains(chainId)) {
+      return 'https://assets.relay.link/icons/$chainId/light.png';
+    }
     if (blockchainName == null) return null;
     return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/$blockchainName/info/logo.png';
   }
 
+  /// In-memory embedded logo bytes for networks where runtime code patches
+  /// may not include newly created binary assets.
+  static Uint8List? embeddedChainLogoBytes(int chainId) =>
+      EmbeddedChainLogos.forChainId(chainId);
+
   /// Logos bundled with the app for chains that do not have a stable entry in
   /// the shared Trust Wallet asset repository.
   static String? localChainLogoAsset(int chainId) => switch (chainId) {
+    130 => 'assets/images/chains/unichain.webp',
+    143 => 'assets/images/chains/monad.png',
+    146 => 'assets/images/chains/sonic.png',
+    480 => 'assets/images/chains/worldchain.webp',
+    999 => 'assets/images/chains/hyperevm.png',
+    2741 => 'assets/images/chains/abstract.webp',
     4663 => 'assets/images/chains/robinhood_chain.png',
+    5000 => 'assets/images/chains/mantle.png',
+    5042 => 'assets/images/chains/arc.png',
+    9745 => 'assets/images/chains/plasma.png',
+    33139 => 'assets/images/chains/apechain.webp',
+    34443 => 'assets/images/chains/mode.webp',
+    57073 => 'assets/images/chains/ink.webp',
+    59144 => 'assets/images/chains/linea.png',
+    80094 => 'assets/images/chains/berachain.png',
+    81457 => 'assets/images/chains/blast.png',
+    534352 => 'assets/images/chains/scroll.png',
+    1135 => 'assets/images/chains/lisk.webp',
+    42220 => 'assets/images/chains/celo.png',
     _ => null,
   };
+
+  /// Looks up a built-in EVM chain by its chainId.
+  static EvmChain? findChain(int chainId) {
+    for (final chain in builtInChains) {
+      if (chain.chainId == chainId) return chain;
+    }
+    return null;
+  }
 }

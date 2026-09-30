@@ -404,6 +404,9 @@ class BlockchainService extends ChangeNotifier {
         ),
       );
 
+  List<CustomTokenDefinition> customTokensForChain(int chainId) =>
+      List.unmodifiable(_customTokens[chainId] ?? const []);
+
   String get lastDiscoverySource => _lastDiscoverySource;
   bool get lastDiscoveryPartialFailure => _lastDiscoveryPartialFailure;
   int get lastDiscoveryTokenCount => _lastDiscoveryTokenCount;
@@ -1565,6 +1568,7 @@ class BlockchainService extends ChangeNotifier {
     final cached = _walletTokensCache[cacheKey];
     final cachedIsFresh =
         cached != null &&
+        !cached.isStale &&
         now.difference(cached.fetchedAt) < _walletTokensCacheTtl;
     if (!forceRefresh && cached != null && cachedIsFresh) {
       _setWalletTokenState(
@@ -1806,10 +1810,18 @@ class BlockchainService extends ChangeNotifier {
       final discoveredForNetwork = discovered.tokens
           .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
           .toList(growable: false);
-      if (discoveredForNetwork.isNotEmpty) {
+      final initialTokens = discovered.partialFailure && isNonEvm
+          ? preserveMissingTokensOnPartial(
+              discoveredForNetwork,
+              previousTokens,
+              nativeObserved: discovered.nativeObserved,
+              splObserved: discovered.splObserved,
+            )
+          : discoveredForNetwork;
+      if (initialTokens.isNotEmpty) {
         final balanceFetchedAt = DateTime.now();
         _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
-          tokens: List<Token>.from(discoveredForNetwork),
+          tokens: List<Token>.from(initialTokens),
           fetchedAt: balanceFetchedAt,
           source: discovered.source,
           isStale: discovered.partialFailure,
@@ -1818,7 +1830,7 @@ class BlockchainService extends ChangeNotifier {
         _setWalletTokenState(
           cacheKey,
           WalletTokenState(
-            tokens: List<Token>.from(discoveredForNetwork),
+            tokens: List<Token>.from(initialTokens),
             source: discovered.source,
             isLoading: true,
             isStale: discovered.partialFailure,
@@ -1882,9 +1894,17 @@ class BlockchainService extends ChangeNotifier {
       final scopedPrevious = previousTokens
           .where((token) => _tokenMatchesNetwork(token, effectiveNetworkKey))
           .toList(growable: false);
-      final nextTokens = scopedMerged.isEmpty && scopedPrevious.isNotEmpty
-          ? scopedPrevious
+      final partialTokens = discovered.partialFailure && isNonEvm
+          ? preserveMissingTokensOnPartial(
+              scopedMerged,
+              scopedPrevious,
+              nativeObserved: discovered.nativeObserved,
+              splObserved: discovered.splObserved,
+            )
           : scopedMerged;
+      final nextTokens = partialTokens.isEmpty && scopedPrevious.isNotEmpty
+          ? scopedPrevious
+          : partialTokens;
       final nextMessage = scopedMerged.isEmpty && scopedPrevious.isNotEmpty
           ? (discovered.message ??
                 'Using cached wallet tokens because the latest backend refresh returned no token entries.')
@@ -2483,11 +2503,34 @@ class BlockchainService extends ChangeNotifier {
     return _parseBackendDiscoveredTokens(body)?.tokens;
   }
 
+  @visibleForTesting
+  static List<Token> preserveMissingTokensOnPartial(
+    List<Token> observed,
+    List<Token> previous, {
+    bool? nativeObserved,
+    bool? splObserved,
+  }) {
+    final observedKeys = observed.map(_balanceIdentity).toSet();
+    return [
+      ...observed,
+      for (final token in previous)
+        if (!observedKeys.contains(_balanceIdentity(token)) &&
+            (token.contractAddress == null
+                ? nativeObserved != true
+                : splObserved != true))
+          token,
+    ];
+  }
+
+  static String _balanceIdentity(Token token) =>
+      '${token.networkKey?.trim().toLowerCase() ?? ''}:${token.contractAddress?.trim() ?? '<native>'}';
+
   _BackendWalletTokensResponse? _parseBackendDiscoveredTokens(String body) {
     try {
       final data = jsonDecode(body) as Map<String, dynamic>;
       final list = data['tokens'] as List<dynamic>? ?? [];
       final discovery = data['discovery'] as Map<String, dynamic>? ?? const {};
+      final snapshot = data['snapshot'] as Map<String, dynamic>? ?? const {};
       final payloadNetworkKey =
           _asTrimmedString(data['networkKey']) ??
           NetworkKey.evm(_toInt(data['chainId']) ?? _activeChain.chainId);
@@ -2562,7 +2605,13 @@ class BlockchainService extends ChangeNotifier {
         source: (discovery['source'] as String?)?.trim().isNotEmpty == true
             ? (discovery['source'] as String)
             : 'unknown',
-        partialFailure: discovery['partialFailure'] == true,
+        partialFailure:
+            discovery['partialFailure'] == true ||
+            discovery['completeness'] == 'partial' ||
+            snapshot['completeness'] == 'partial' ||
+            snapshot['isStale'] == true,
+        nativeObserved: discovery['nativeObserved'] as bool?,
+        splObserved: discovery['splObserved'] as bool?,
         tokenCount: expectedCount,
         message: (discovery['message'] as String?)?.trim(),
       );
@@ -3325,6 +3374,8 @@ class _BackendWalletTokensResponse {
   final List<Token> tokens;
   final String source;
   final bool partialFailure;
+  final bool? nativeObserved;
+  final bool? splObserved;
   final int tokenCount;
   final String? message;
 
@@ -3332,6 +3383,8 @@ class _BackendWalletTokensResponse {
     required this.tokens,
     required this.source,
     required this.partialFailure,
+    this.nativeObserved,
+    this.splObserved,
     required this.tokenCount,
     this.message,
   });

@@ -140,7 +140,7 @@ class AppLocalizationsIg extends AppLocalizations {
   String get withdraw => 'Wepụ ego';
 
   @override
-  String get addFunds => 'Tinye ego';
+  String get addFunds => 'Zụta Crypto';
 
   @override
   String get buy => 'Zụta';

@@ -118,4 +118,18 @@ void main() {
     );
     expect(openOceanLimitContractForChain(999999), isNull);
   });
+
+  test('OpenOcean limit deployments include Sei and current newer chains', () {
+    expect(
+      openOceanLimitContractForChain(1329),
+      '0xfE9a934A8607EF020aDf22D4431d6cE6005Aa4d3',
+    );
+    expect(openOceanLimitContractForChain(999), isNotNull);
+    expect(openOceanLimitContractForChain(9745), isNotNull);
+    expect(openOceanLimitContractForChain(143), isNotNull);
+    expect(
+      openOceanSupportedLimitChainIds,
+      unorderedEquals(openOceanLimitContracts.keys),
+    );
+  });
 }

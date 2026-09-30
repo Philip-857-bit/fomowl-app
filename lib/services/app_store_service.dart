@@ -13,6 +13,30 @@ class AppStoreService {
     'https://play.google.com/store/apps/details?id=$androidPackageId',
   );
 
+  /// Resolve Owllet's own Play Store listing, including the intent redirect
+  /// emitted by Google Play when its page is opened inside a WebView.
+  static Uri? resolveOwlletStoreUrl(Uri uri) {
+    if (uri.host.toLowerCase() != 'play.google.com' ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasPort ||
+        uri.path != '/store/apps/details' ||
+        uri.queryParameters['id'] != androidPackageId) {
+      return null;
+    }
+    if (uri.scheme == 'https') return uri;
+    if (uri.scheme != 'intent') return null;
+
+    final intentParts = uri.fragment.split(';');
+    if (intentParts.first != 'Intent' ||
+        intentParts.last != 'end' ||
+        !intentParts.contains('scheme=https') ||
+        !intentParts.contains('action=android.intent.action.VIEW') ||
+        !intentParts.contains('package=com.android.vending')) {
+      return null;
+    }
+    return uri.replace(scheme: 'https', fragment: '');
+  }
+
   final InAppReview _inAppReview;
 
   Future<void> requestReviewOrOpenStore() async {

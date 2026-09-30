@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../config/app_environment.dart';
@@ -17,6 +18,7 @@ import '../../models/wallet_account.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
+import '../../services/app_store_service.dart';
 import '../../services/cashin_profile_auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
@@ -53,6 +55,81 @@ bool cashinExecutionPlanIsUsable(
         (step) => step is Map && step['status'] == 'submitted',
       ) ==
       true;
+}
+
+@visibleForTesting
+bool cashinExecutionPlanIsTransfer(Map<String, dynamic> plan) {
+  return plan['routeType']?.toString() == 'direct_settlement';
+}
+
+@visibleForTesting
+Map<String, dynamic>? cashinInitialPreflightStep(
+  List<Map<String, dynamic>> steps,
+) {
+  for (final step in steps) {
+    // A submitted swap can have spent the input already. Confirm it before
+    // checking the balance for any later settlement transfer.
+    if (step['status'] == 'submitted') return null;
+    final kind = step['kind']?.toString();
+    if (kind == 'transaction' ||
+        (kind == 'typedData' &&
+            (step['payload'] as Map?)?['purpose'] == 'trade')) {
+      return step;
+    }
+  }
+  return null;
+}
+
+@visibleForTesting
+(String, BigInt)? cashinPreflightTokenSpend(Map<String, dynamic> step) {
+  final kind = step['kind']?.toString();
+  final payload = step['payload'];
+  if (payload is! Map) return null;
+  final transfer = payload['type'] == 'erc20Transfer';
+  final swap =
+      (kind == 'transaction' && payload['transaction'] is Map) ||
+      (kind == 'typedData' && payload['purpose'] == 'trade');
+  if (!transfer && !swap) return null;
+
+  final token =
+      (transfer ? payload['token'] : payload['sellToken'])
+          ?.toString()
+          .trim()
+          .toLowerCase() ??
+      '';
+  final amount = BigInt.tryParse(
+    (transfer ? payload['amount'] : payload['sellAmount'])?.toString() ?? '',
+  );
+  final ceiling = BigInt.tryParse(step['amountCeiling']?.toString() ?? '');
+  if (amount == null ||
+      amount <= BigInt.zero ||
+      ceiling == null ||
+      ceiling < amount) {
+    throw const FormatException('Invalid token spend limit in execution plan.');
+  }
+  if (transfer && step['expectedToken']?.toString().toLowerCase() != token) {
+    throw const FormatException('Invalid token transfer plan.');
+  }
+  if (token == '0x0000000000000000000000000000000000000000' ||
+      token == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+    return null;
+  }
+  if (!RegExp(r'^0x[0-9a-f]{40}$').hasMatch(token)) {
+    throw const FormatException('Invalid token address in execution plan.');
+  }
+  return (token, ceiling);
+}
+
+@visibleForTesting
+bool burstOperationAllowsSelector(String operation, String selector) {
+  final normalized = selector.toLowerCase();
+  return switch (operation) {
+    'approve' => const {'095ea7b3', 'a22cb465'}.contains(normalized),
+    'create' => const {'a4be8afd', 'fc50ee32'}.contains(normalized),
+    'push' => const {'9ad88796', 'c78a7f37'}.contains(normalized),
+    'set_root' => normalized == '7cb64759',
+    _ => false,
+  };
 }
 
 class _CashinExecutionPlanExpired implements Exception {
@@ -761,6 +838,23 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         if (uri == null) {
           return const <String, dynamic>{'ok': false, 'error': 'Invalid URL.'};
         }
+        final storeUrl = AppStoreService.resolveOwlletStoreUrl(uri);
+        if (storeUrl != null) {
+          try {
+            if (await launchUrl(
+              storeUrl,
+              mode: LaunchMode.externalApplication,
+            )) {
+              return const <String, dynamic>{'ok': true};
+            }
+          } catch (error) {
+            debugPrint('[MiniAppHost] Could not open Google Play: $error');
+          }
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Could not open Google Play on this device.',
+          };
+        }
         await _openExternal(uri);
         return const <String, dynamic>{'ok': true};
       case 'ready':
@@ -1439,16 +1533,13 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
 
-      var backendConfirmed = true;
       final operation = transaction['operation']!.toString();
-      if (operation == 'create' || operation == 'set_root') {
-        backendConfirmed = await _confirmBurstTransactionWithBackend(
-          campaignId: plan['campaignId']!.toString(),
-          operation: operation,
-          transactionHash: transactionHash,
-          walletAddress: walletAddress,
-        );
-      }
+      final backendConfirmed = await _confirmBurstTransactionWithBackend(
+        campaignId: plan['campaignId']!.toString(),
+        operation: operation,
+        transactionHash: transactionHash,
+        walletAddress: walletAddress,
+      );
       return <String, dynamic>{
         'ok': true,
         'transactionHash': transactionHash,
@@ -1524,19 +1615,13 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       throw const FormatException('Burst requires a valid EVM chain ID.');
     }
     final operation = transaction['operation']?.toString() ?? '';
-    final selector = switch (operation) {
-      'approve' => '095ea7b3',
-      'create' => 'a4be8afd',
-      'set_root' => '7cb64759',
-      _ => throw const FormatException('Unsupported Burst transaction.'),
-    };
     final toAddress = transaction['toAddress']?.toString() ?? '';
     final calldata = transaction['calldata']?.toString() ?? '';
     if (!_isEvmAddress(toAddress) ||
         !RegExp(r'^0x[0-9a-fA-F]+$').hasMatch(calldata) ||
         calldata.length.isOdd ||
         calldata.length < 10 ||
-        calldata.substring(2, 10).toLowerCase() != selector) {
+        !burstOperationAllowsSelector(operation, calldata.substring(2, 10))) {
       throw const FormatException('The Burst transaction plan is malformed.');
     }
     final value = _parseBaseUnitValue(transaction['valueBaseUnits']);
@@ -1622,6 +1707,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final action = switch (operation) {
       'approve' => 'Approve token spending',
       'create' => 'Create Burst campaign',
+      'push' => 'Deposit NFT inventory',
       'set_root' => 'Publish participant allocation',
       _ => 'Submit Burst transaction',
     };
@@ -2365,6 +2451,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         reference: reference,
         executionReference: executionReference,
         walletAddress: walletAddress,
+        // A broadcast ERC-20 approval can remain pending after its quote TTL.
+        // It is safe to reload the plan only to wait for that submitted step;
+        // the loop still rejects expired calldata before each new broadcast.
+        allowExpiredForSubmittedSteps: true,
       );
       final rawSteps = previewPlan['steps'];
       if (rawSteps is! List || rawSteps.isEmpty) {
@@ -2405,11 +2495,16 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
       final blockchain = context.read<BlockchainService>();
-      await _preflightCashinExecutionBalance(
-        blockchain: blockchain,
-        walletAddress: walletAddress,
-        steps: actionablePreviewSteps,
+      final initialSpendStep = cashinInitialPreflightStep(
+        actionablePreviewSteps,
       );
+      if (initialSpendStep != null) {
+        await _preflightCashinExecutionBalance(
+          blockchain: blockchain,
+          walletAddress: walletAddress,
+          steps: [initialSpendStep],
+        );
+      }
       if (!mounted) {
         return const <String, dynamic>{
           'ok': false,
@@ -2417,12 +2512,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         };
       }
 
-      final fromSymbol = payload['fromAssetSymbol']?.toString() ?? '';
-      final toSymbol = payload['toAssetSymbol']?.toString() ?? '';
-      // Selling the settlement asset itself (USDC/USDT → USDC/USDT) is a plain
-      // transfer on-chain, so present it as a send rather than a swap.
-      final sameAsset =
-          fromSymbol.trim().toUpperCase() == toSymbol.trim().toUpperCase();
+      // The authenticated execution plan is authoritative. A direct-settlement
+      // route is a token transfer even if an older mini-app supplied stale or
+      // mismatched display labels.
+      final isDirectTransfer = cashinExecutionPlanIsTransfer(previewPlan);
       final confirmed = await _confirmCrossChainSwap(
         fromLabel: _swapLabel(payload, 'from'),
         toLabel: _swapLabel(payload, 'to'),
@@ -2430,7 +2523,7 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         stepCount: actionablePreviewSteps
             .where((step) => step['kind'] != 'providerSubmit')
             .length,
-        isTransfer: sameAsset,
+        isTransfer: isDirectTransfer,
       );
       if (confirmed != true) {
         return const <String, dynamic>{
@@ -2606,6 +2699,15 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         final chainId = _requiredInt(step, 'chainId');
         String? transactionHash;
         String? signedPayload;
+        if (kind == 'approval' ||
+            kind == 'transaction' ||
+            kind == 'typedData') {
+          await _preflightCashinExecutionBalance(
+            blockchain: blockchain,
+            walletAddress: walletAddress,
+            steps: [step],
+          );
+        }
         if (kind == 'approval' || kind == 'transaction') {
           final chain = blockchain.allChains
               .where((candidate) => candidate.chainId == chainId)
@@ -2865,12 +2967,11 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final tokenRequirements = <String, BigInt>{};
     var nativeRequired = BigInt.zero;
     for (final step in onActiveChain) {
-      final token = step['expectedToken']?.toString().trim() ?? '';
-      final amount = BigInt.tryParse(step['amountCeiling']?.toString() ?? '');
-      if (_isEvmAddress(token) && amount != null && amount > BigInt.zero) {
-        final key = token.toLowerCase();
+      final spend = cashinPreflightTokenSpend(step);
+      if (spend != null) {
+        final key = spend.$1;
         final current = tokenRequirements[key] ?? BigInt.zero;
-        if (amount > current) tokenRequirements[key] = amount;
+        if (spend.$2 > current) tokenRequirements[key] = spend.$2;
       }
       final value = BigInt.tryParse(
         step['maxTransactionValue']?.toString() ?? '',

@@ -377,30 +377,134 @@ class AppChainTheme {
     activeIndicatorColor: Color(0xFFD31C31),
   );
 
+  /// Arc Theme — Chain ID: 5042
+  static const AppChainTheme arc = AppChainTheme(
+    id: 'arc',
+    displayName: 'Arc',
+    primaryColor: Color(0xFF0066FF),
+    accentColor: Color(0xFF00C0FF),
+    secondaryAccent: Color(0xFF60A5FA),
+    balanceCardGradient: LinearGradient(
+      colors: [Color(0xFF0D2149), Color(0xFF081530), Color(0xFF0A0A0A)],
+      stops: [0.0, 0.55, 1.0],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    balanceCardBorderGradient: LinearGradient(
+      colors: [Color(0xFF0066FF), Color(0x00000000), Color(0xFF00C0FF)],
+      stops: [0.0, 0.67, 1.0],
+      begin: Alignment.topRight,
+      end: Alignment.bottomLeft,
+    ),
+    buttonGradient: LinearGradient(
+      colors: [Color(0xFF0066FF), Color(0xFF0044B3)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    glassTint: Color(0xFF0066FF),
+    badgeColor: Color(0xFF0066FF),
+    surfaceOverlay: Color(0x220066FF),
+    activeIndicatorColor: Color(0xFF0066FF),
+  );
+
+  /// HyperEVM Theme — Chain ID: 999
+  static const AppChainTheme hyperevm = AppChainTheme(
+    id: 'hyperevm',
+    displayName: 'HyperEVM',
+    primaryColor: Color(0xFF1BE5B5),
+    accentColor: Color(0xFF1BE5B5),
+    secondaryAccent: Color(0xFF4FFAD0),
+    balanceCardGradient: LinearGradient(
+      colors: [Color(0xFF072E26), Color(0xFF041A15), Color(0xFF0A0A0A)],
+      stops: [0.0, 0.55, 1.0],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    balanceCardBorderGradient: LinearGradient(
+      colors: [Color(0xFF1BE5B5), Color(0x00000000), Color(0xFF1BE5B5)],
+      stops: [0.0, 0.67, 1.0],
+      begin: Alignment.topRight,
+      end: Alignment.bottomLeft,
+    ),
+    buttonGradient: LinearGradient(
+      colors: [Color(0xFF1BE5B5), Color(0xFF0DA380)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    glassTint: Color(0xFF1BE5B5),
+    badgeColor: Color(0xFF1BE5B5),
+    surfaceOverlay: Color(0x221BE5B5),
+    activeIndicatorColor: Color(0xFF1BE5B5),
+  );
+
   // --------------------------------------------------------------------------
-  // Tier 4: Custom Chain Deterministic Theme Generator
+  // Tier 4: Dynamic & Custom Chain Adaptive Theme Generator
   // --------------------------------------------------------------------------
 
-  /// Dynamically computes a cohesive theme for any user-added custom EVM chain
-  static AppChainTheme fromCustomChain(EvmChain chain) {
-    final seed = chain.chainId.abs();
+  /// Dynamically computes a cohesive adaptive theme for any EVM chain
+  static AppChainTheme fromChainId(int chainId, {String? displayName}) {
+    final seed = chainId.abs();
     final hue = (seed * 137.5) % 360; // Golden angle color distribution
     final primary = HSLColor.fromAHSL(1.0, hue, 0.78, 0.52).toColor();
     final accent = HSLColor.fromAHSL(1.0, hue, 0.85, 0.58).toColor();
     final darkBase = HSLColor.fromAHSL(1.0, hue, 0.65, 0.12).toColor();
 
     return AppChainTheme(
-      id: 'custom_${chain.chainId}',
-      displayName: chain.name,
+      id: 'chain_$chainId',
+      displayName: displayName ?? 'Chain $chainId',
       primaryColor: primary,
       accentColor: accent,
       balanceCardGradient: LinearGradient(
-        colors: [darkBase, Color(0xFF0A0A0A)],
+        colors: [darkBase, const Color(0xFF0A0A0A)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
       balanceCardBorderGradient: LinearGradient(
-        colors: [accent, Color(0x00000000), accent],
+        colors: [accent, const Color(0x00000000), accent],
+        stops: const [0.0, 0.67, 1.0],
+        begin: Alignment.topRight,
+        end: Alignment.bottomLeft,
+      ),
+      buttonGradient: LinearGradient(
+        colors: [primary, darkBase],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      glassTint: accent,
+      badgeColor: accent,
+      surfaceOverlay: accent.withValues(alpha: 0.15),
+      activeIndicatorColor: accent,
+    );
+  }
+
+  /// Dynamically computes a cohesive theme for any user-added custom EVM chain
+  static AppChainTheme fromCustomChain(EvmChain chain) {
+    return fromChainId(chain.chainId, displayName: chain.name);
+  }
+
+  /// Helper to create a consistent, branded theme for any ecosystem chain
+  static AppChainTheme createBrandTheme({
+    required String id,
+    required String displayName,
+    required Color primary,
+    required Color accent,
+    Color? secondary,
+    required Color darkBase,
+  }) {
+    return AppChainTheme(
+      id: id,
+      displayName: displayName,
+      primaryColor: primary,
+      accentColor: accent,
+      secondaryAccent: secondary ?? accent,
+      balanceCardGradient: LinearGradient(
+        colors: [darkBase, const Color(0xFF0A0A0A)],
+        stops: const [0.0, 1.0],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      balanceCardBorderGradient: LinearGradient(
+        colors: [accent, const Color(0x00000000), accent],
         stops: const [0.0, 0.67, 1.0],
         begin: Alignment.topRight,
         end: Alignment.bottomLeft,
@@ -422,6 +526,7 @@ class AppChainTheme {
   // --------------------------------------------------------------------------
 
   static final Map<int, AppChainTheme> _evmPresetMap = {
+    // Hero & Curated Major Themes
     1: ethereum,
     56: bsc,
     8453: base,
@@ -429,6 +534,192 @@ class AppChainTheme {
     42161: arbitrum,
     10: optimism,
     43114: avalanche,
+    5042: arc,
+    999: hyperevm,
+
+    // Dedicated Ecosystem Brand Themes
+    324: createBrandTheme(
+      id: 'zksync',
+      displayName: 'ZKsync Era',
+      primary: const Color(0xFF3B68FF),
+      accent: const Color(0xFF5C82FF),
+      darkBase: const Color(0xFF0D183B),
+    ),
+    250: createBrandTheme(
+      id: 'fantom',
+      displayName: 'Fantom',
+      primary: const Color(0xFF1969FF),
+      accent: const Color(0xFF387BFF),
+      darkBase: const Color(0xFF061433),
+    ),
+    100: createBrandTheme(
+      id: 'gnosis',
+      displayName: 'Gnosis',
+      primary: const Color(0xFF00A389),
+      accent: const Color(0xFF00D1A7),
+      darkBase: const Color(0xFF03241E),
+    ),
+    1313161554: createBrandTheme(
+      id: 'aurora',
+      displayName: 'Aurora',
+      primary: const Color(0xFF70D44B),
+      accent: const Color(0xFF85E65E),
+      darkBase: const Color(0xFF122E09),
+    ),
+    4663: createBrandTheme(
+      id: 'robinhood',
+      displayName: 'Robinhood Chain',
+      primary: const Color(0xFF00C805),
+      accent: const Color(0xFF1FF224),
+      darkBase: const Color(0xFF032404),
+    ),
+    130: createBrandTheme(
+      id: 'unichain',
+      displayName: 'Unichain',
+      primary: const Color(0xFFFF007A),
+      accent: const Color(0xFFFF3399),
+      darkBase: const Color(0xFF36001A),
+    ),
+    143: createBrandTheme(
+      id: 'monad',
+      displayName: 'Monad',
+      primary: const Color(0xFF836EF9),
+      accent: const Color(0xFFA08EFF),
+      darkBase: const Color(0xFF191238),
+    ),
+    146: createBrandTheme(
+      id: 'sonic',
+      displayName: 'Sonic',
+      primary: const Color(0xFFFF8D3B),
+      accent: const Color(0xFFFFA566),
+      darkBase: const Color(0xFF361904),
+    ),
+    480: createBrandTheme(
+      id: 'worldchain',
+      displayName: 'World Chain',
+      primary: const Color(0xFF3B82F6),
+      accent: const Color(0xFF60A5FA),
+      darkBase: const Color(0xFF0B1B38),
+    ),
+    2741: createBrandTheme(
+      id: 'abstract',
+      displayName: 'Abstract',
+      primary: const Color(0xFF00E599),
+      accent: const Color(0xFF33FFB5),
+      darkBase: const Color(0xFF022B1D),
+    ),
+    5000: createBrandTheme(
+      id: 'mantle',
+      displayName: 'Mantle',
+      primary: const Color(0xFF00D692),
+      accent: const Color(0xFF26E6A7),
+      darkBase: const Color(0xFF03261A),
+    ),
+    33139: createBrandTheme(
+      id: 'apechain',
+      displayName: 'ApeChain',
+      primary: const Color(0xFF0054F5),
+      accent: const Color(0xFF2E75FF),
+      darkBase: const Color(0xFF05153D),
+    ),
+    34443: createBrandTheme(
+      id: 'mode',
+      displayName: 'Mode',
+      primary: const Color(0xFFDFFE00),
+      accent: const Color(0xFFE8FF33),
+      darkBase: const Color(0xFF2B3000),
+    ),
+    57073: createBrandTheme(
+      id: 'ink',
+      displayName: 'Ink',
+      primary: const Color(0xFF8B3DFF),
+      accent: const Color(0xFFA666FF),
+      darkBase: const Color(0xFF1B073B),
+    ),
+    59144: createBrandTheme(
+      id: 'linea',
+      displayName: 'Linea',
+      primary: const Color(0xFF61DFFF),
+      accent: const Color(0xFF8AE8FF),
+      darkBase: const Color(0xFF082630),
+    ),
+    80094: createBrandTheme(
+      id: 'berachain',
+      displayName: 'Berachain',
+      primary: const Color(0xFFE0702B),
+      accent: const Color(0xFFF59E0B),
+      darkBase: const Color(0xFF331604),
+    ),
+    81457: createBrandTheme(
+      id: 'blast',
+      displayName: 'Blast',
+      primary: const Color(0xFFFCFC03),
+      accent: const Color(0xFFFFF733),
+      darkBase: const Color(0xFF302F00),
+    ),
+    9745: createBrandTheme(
+      id: 'plasma',
+      displayName: 'Plasma',
+      primary: const Color(0xFFA855F7),
+      accent: const Color(0xFFC084FC),
+      darkBase: const Color(0xFF240938),
+    ),
+    1135: createBrandTheme(
+      id: 'lisk',
+      displayName: 'Lisk',
+      primary: const Color(0xFF005AFF),
+      accent: const Color(0xFF337CFF),
+      darkBase: const Color(0xFF06153B),
+    ),
+    42220: createBrandTheme(
+      id: 'celo',
+      displayName: 'Celo',
+      primary: const Color(0xFF35D07F),
+      accent: const Color(0xFFFCFF52),
+      darkBase: const Color(0xFF0B2917),
+    ),
+    25: createBrandTheme(
+      id: 'cronos',
+      displayName: 'Cronos',
+      primary: const Color(0xFF0B4596),
+      accent: const Color(0xFF1199FA),
+      darkBase: const Color(0xFF041838),
+    ),
+    169: createBrandTheme(
+      id: 'manta',
+      displayName: 'Manta Pacific',
+      primary: const Color(0xFF22C4FF),
+      accent: const Color(0xFFE46AFF),
+      darkBase: const Color(0xFF082033),
+    ),
+    1088: createBrandTheme(
+      id: 'metis',
+      displayName: 'Metis',
+      primary: const Color(0xFF00D2C4),
+      accent: const Color(0xFF29F0E2),
+      darkBase: const Color(0xFF032623),
+    ),
+    1329: createBrandTheme(
+      id: 'sei',
+      displayName: 'Sei',
+      primary: const Color(0xFFB81D24),
+      accent: const Color(0xFFE02B33),
+      darkBase: const Color(0xFF290507),
+    ),
+    98866: createBrandTheme(
+      id: 'plume',
+      displayName: 'Plume',
+      primary: const Color(0xFFFF5722),
+      accent: const Color(0xFFFF7A4D),
+      darkBase: const Color(0xFF331005),
+    ),
+    534352: createBrandTheme(
+      id: 'scroll',
+      displayName: 'Scroll',
+      primary: const Color(0xFFF69742),
+      accent: const Color(0xFFFFB570),
+      darkBase: const Color(0xFF2E1705),
+    ),
   };
 
   /// Resolves the active theme for any [NetworkEntry]
@@ -450,9 +741,7 @@ class AppChainTheme {
         return ethereumL2;
       }
 
-      if (chain.isCustom) {
-        return fomowlSignature;
-      }
+      return fromChainId(chainId, displayName: chain.name);
     }
 
     return fomowlSignature;
@@ -475,6 +764,8 @@ class AppChainTheme {
       if (BlockchainCatalog.ethereumLayer2BadgeChainIds.contains(chainId)) {
         return ethereumL2;
       }
+      final chain = BlockchainCatalog.findChain(chainId);
+      return fromChainId(chainId, displayName: chain?.name);
     }
 
     return fomowlSignature;

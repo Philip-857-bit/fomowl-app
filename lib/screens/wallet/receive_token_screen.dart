@@ -72,10 +72,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
         orElse: () => familyTokens.first,
       );
     } else {
-      // Tokens haven't loaded yet for this family — use a lightweight
-      // placeholder so we never fall back to ETH on a non-EVM network.
-      // didChangeDependencies will re-init once the real tokens arrive.
-      nativeToken = _placeholderNativeToken(family, activeNetworkKey);
+      // Tokens have not loaded yet. Derive the fallback from the active
+      // network so every EVM chain shows its correct native asset.
+      nativeToken = blockchain.activeNativeToken;
     }
 
     final address = await _walletService.getWalletAddressForFamily(family);
@@ -84,46 +83,6 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
         _selectedToken = nativeToken;
         _walletAddress = address ?? '';
       });
-    }
-  }
-
-  /// Returns a minimal native-token stub for [family] so the UI never shows
-  /// ETH while waiting for the real token list to load asynchronously.
-  Token _placeholderNativeToken(ChainFamily family, String networkKey) {
-    switch (family) {
-      case ChainFamily.solana:
-        return Token(
-          symbol: 'SOL',
-          name: 'Solana',
-          balance: 0,
-          valueUsd: 0,
-          changePercent24h: 0,
-          decimals: 9,
-          networkKey: networkKey,
-          tokenStandard: TokenStandard.native,
-        );
-      case ChainFamily.tron:
-        return Token(
-          symbol: 'TRX',
-          name: 'Tron',
-          balance: 0,
-          valueUsd: 0,
-          changePercent24h: 0,
-          decimals: 6,
-          networkKey: networkKey,
-          tokenStandard: TokenStandard.native,
-        );
-      case ChainFamily.evm:
-        return Token(
-          symbol: 'ETH',
-          name: 'Ethereum',
-          balance: 0,
-          valueUsd: 0,
-          changePercent24h: 0,
-          decimals: 18,
-          networkKey: networkKey,
-          tokenStandard: TokenStandard.native,
-        );
     }
   }
 

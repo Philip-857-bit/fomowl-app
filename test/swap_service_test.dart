@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:fomowl_wallet/services/cow_limit_order_signing.dart';
+import 'package:fomowl_wallet/services/blockchain/blockchain_catalog.dart';
 import 'package:fomowl_wallet/services/swap_service.dart';
 import 'package:fomowl_wallet/services/http_client_service.dart';
 
@@ -231,6 +232,33 @@ void main() {
       expect(service.isChainSupported(4663, isGasless: true), isTrue);
       expect(service.isChainSupported(59144, isGasless: false), isTrue);
       expect(service.isChainSupported(59144, isGasless: true), isFalse);
+      expect(service.isChainSupported(1135, isGasless: true), isFalse);
+      expect(service.isChainSupported(81457, isGasless: true), isFalse);
+    });
+
+    test('normal swaps accept every built-in EVM chain', () {
+      final service = SwapService();
+
+      for (final chain in BlockchainCatalog.builtInChains) {
+        expect(
+          service.isChainSupported(chain.chainId, isGasless: false),
+          isTrue,
+          reason: '${chain.name} (${chain.chainId}) should support swaps',
+        );
+      }
+    });
+
+    test('new chains use only provider-supported enhanced swap modes', () {
+      final service = SwapService();
+
+      for (final chainId in const [25, 169, 1088, 1329, 5042, 98866]) {
+        expect(service.isChainSupported(chainId, isGasless: false), isTrue);
+        expect(service.isChainSupported(chainId, isGasless: true), isFalse);
+      }
+      expect(service.isLimitChainSupported(1329), isTrue);
+      for (final chainId in const [25, 169, 1088, 5042, 98866]) {
+        expect(service.isLimitChainSupported(chainId), isFalse);
+      }
     });
 
     test(
@@ -307,17 +335,22 @@ void main() {
     test('supports only OpenOcean limit-order chains', () {
       final service = SwapService();
 
-      // Limit orders are backed by OpenOcean, whose supported chain set is a
-      // superset of the CoW chains.
+      // New limit orders are backed by OpenOcean's current deployment set.
       for (final chainId in openOceanSupportedLimitChainIds) {
         expect(service.isLimitChainSupported(chainId), isTrue);
       }
-      for (final chainId in cowSupportedLimitChainIds) {
-        expect(service.isLimitChainSupported(chainId), isTrue);
-      }
 
-      // Chains outside the supported set.
-      expect(service.isLimitChainSupported(5), isFalse);
+      expect(service.isLimitChainSupported(1329), isTrue);
+      expect(service.isLimitChainSupported(999), isTrue);
+      expect(service.isLimitChainSupported(9745), isTrue);
+      expect(service.isLimitChainSupported(143), isTrue);
+
+      // CoW legacy-order support does not imply new OpenOcean order support.
+      expect(cowSupportedLimitChainIds, contains(100));
+      expect(service.isLimitChainSupported(100), isFalse);
+      expect(service.isLimitChainSupported(250), isFalse);
+      expect(service.isLimitChainSupported(324), isFalse);
+      expect(service.isLimitChainSupported(59144), isFalse);
       expect(service.isLimitChainSupported(25), isFalse);
       expect(service.isLimitChainSupported(999999), isFalse);
     });

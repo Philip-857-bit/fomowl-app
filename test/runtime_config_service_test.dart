@@ -93,6 +93,33 @@ void main() {
     expect(bridgeDisabled.allows(RuntimeFeature.bridges), isFalse);
   });
 
+  test('disabling swaps does not disable bridging', () {
+    const snapshot = RuntimePolicySnapshot(swapsEnabled: false);
+    expect(snapshot.allows(RuntimeFeature.swaps), isFalse);
+    expect(snapshot.allows(RuntimeFeature.bridges), isTrue);
+    expect(snapshot.allowsTradingScreen(limitSupported: false), isTrue);
+  });
+
+  test(
+    'limit orders keep the trading screen available without swaps or bridges',
+    () {
+      const snapshot = RuntimePolicySnapshot(
+        swapsEnabled: false,
+        bridgesEnabled: false,
+      );
+      expect(snapshot.allowsTradingScreen(limitSupported: true), isTrue);
+      expect(snapshot.allowsTradingScreen(limitSupported: false), isFalse);
+      expect(
+        const RuntimePolicySnapshot(
+          maintenanceMode: 'read_only',
+          swapsEnabled: false,
+          bridgesEnabled: false,
+        ).allowsTradingScreen(limitSupported: true),
+        isFalse,
+      );
+    },
+  );
+
   test('parses every OwlletPay and legacy runtime feature flag', () {
     final snapshot = RuntimePolicySnapshot.fromJson({
       'policy': {
@@ -191,7 +218,8 @@ void main() {
 
       await service.hydrate();
 
-      expect(service.snapshot.fullMaintenance, isTrue);
+      expect(service.snapshot.fullMaintenance, isFalse);
+      expect(service.snapshot.cashOutEnabled, isFalse);
       expect(notifications, 0);
     },
   );

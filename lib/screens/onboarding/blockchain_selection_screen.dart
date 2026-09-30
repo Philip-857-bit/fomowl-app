@@ -120,7 +120,8 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
     }
     if (!typedBindSucceeded) {
       try {
-        await AffiliateAttributionService.instance.applyPendingToCurrentWallet();
+        await AffiliateAttributionService.instance
+            .applyPendingToCurrentWallet();
       } catch (e) {
         debugPrint(
           '[BlockchainSelection] Pending affiliate bind failed (non-blocking): $e',

@@ -4,10 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../screens/home/home_screen.dart';
 import '../../screens/swap/swap_screen.dart';
+import '../../services/blockchain_service.dart';
+import '../../models/chain.dart';
 import '../discover/discover_screen.dart';
 import '../mini_apps/mini_app_host_screen.dart';
 import '../../services/runtime_config_service.dart';
-import '../../widgets/runtime_feature_gate.dart';
 import 'app_shell_bottom_navigation.dart';
 import 'app_shell_controller.dart';
 
@@ -22,6 +23,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
   final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
   bool _appliedInitialArgs = false;
   bool _openingOwlletPay = false;
+  int _walletRefreshRevision = 0;
 
   @override
   void initState() {
@@ -36,7 +38,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   void _recoverFromDisabledFeature() {
-    if (!mounted || _runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
+    if (!mounted || _canOpenTradingScreen()) {
       return;
     }
     final controller = context.read<AppShellController>();
@@ -46,12 +48,18 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   void _selectTab(AppShellTab tab) {
-    if (tab == AppShellTab.swap &&
-        !_runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
+    if (tab == AppShellTab.swap && !_canOpenTradingScreen()) {
       _showUnavailable(RuntimeFeature.swaps);
       return;
     }
     context.read<AppShellController>().selectTab(tab);
+  }
+
+  bool _canOpenTradingScreen() {
+    final family = context.read<BlockchainService>().activeFamily;
+    return _runtimeConfig.snapshot.allowsTradingScreen(
+      limitSupported: family == ChainFamily.evm || family == ChainFamily.solana,
+    );
   }
 
   void _showUnavailable(RuntimeFeature feature) {
@@ -81,6 +89,24 @@ class _AppShellScreenState extends State<AppShellScreen> {
       );
     } finally {
       _openingOwlletPay = false;
+      if (mounted) {
+        // Home stays mounted inside IndexedStack while OwlletPay is open.
+        // Invalidate the active-chain snapshot before triggering its live read.
+        final blockchain = context.read<BlockchainService>();
+        final wallet = blockchain.activeWalletAddress.trim();
+        if (wallet.isNotEmpty) {
+          await blockchain.requestTransactionBalanceRefresh(
+            walletAddress: wallet,
+            networkKey: blockchain.activeNetworkKey,
+            family: 'transfer',
+            operationReference:
+                'owllet-pay-return-${DateTime.now().microsecondsSinceEpoch}',
+          );
+        }
+        if (mounted) {
+          setState(() => _walletRefreshRevision += 1);
+        }
+      }
     }
   }
 
@@ -113,9 +139,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
       final tab = initialIndex >= 0 && initialIndex < AppShellTab.values.length
           ? AppShellTab.values[initialIndex]
           : null;
-      if (tab != null &&
-          (tab != AppShellTab.swap ||
-              _runtimeConfig.snapshot.allows(RuntimeFeature.swaps))) {
+      if (tab != null && (tab != AppShellTab.swap || _canOpenTradingScreen())) {
         context.read<AppShellController>().selectTab(tab);
       }
     }
@@ -149,13 +173,13 @@ class _AppShellScreenState extends State<AppShellScreen> {
       child: Scaffold(
         body: IndexedStack(
           index: controller.currentIndex,
-          children: const [
-            HomeScreen(showBottomNavigation: false),
-            RuntimeFeatureGate(
-              feature: RuntimeFeature.swaps,
-              child: SwapScreen(showBottomNavigation: false),
+          children: [
+            HomeScreen(
+              showBottomNavigation: false,
+              refreshRevision: _walletRefreshRevision,
             ),
-            DiscoverScreen(),
+            const SwapScreen(showBottomNavigation: false),
+            const DiscoverScreen(),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(

@@ -50,6 +50,11 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   // True between load start and stop. Drives a themed loading cover so the
   // opaque (white) webview content area doesn't flash before a site paints.
   bool _isLoading = false;
+  // Chain id last pushed into the injected provider. The page only re-syncs on
+  // navigation otherwise, so without this a user switching networks from the
+  // app UI leaves the open DApp reading a stale window.ethereum.chainId.
+  BlockchainService? _blockchain;
+  int? _syncedChainId;
 
   @override
   void initState() {
@@ -61,12 +66,37 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = context.read<BlockchainService>();
+    if (identical(blockchain, _blockchain)) {
+      return;
+    }
+    _blockchain?.removeListener(_onBlockchainChanged);
+    _blockchain = blockchain;
+    blockchain.addListener(_onBlockchainChanged);
+  }
+
+  @override
   void dispose() {
+    _blockchain?.removeListener(_onBlockchainChanged);
+    _blockchain = null;
     widget.sessionController.setWebViewBackHandler(null);
     DappPermissionService.permissionRevision.removeListener(
       _onPermissionRevisionChanged,
     );
     super.dispose();
+  }
+
+  /// Propagates a wallet-level network change into the already-loaded page so
+  /// the DApp sees the same chain the app is on.
+  void _onBlockchainChanged() {
+    final blockchain = _blockchain;
+    if (blockchain == null ||
+        blockchain.activeChain.chainId == _syncedChainId) {
+      return;
+    }
+    unawaited(_syncInjectedProviderState());
   }
 
   /// Navigate back in the web view's page history if possible. Returns true if
@@ -498,6 +528,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     }
 
     final chainId = context.read<BlockchainService>().activeChain.chainId;
+    _syncedChainId = chainId;
     await controller.evaluateJavascript(
       source: await widget.providerBridge.buildProviderStateSyncScript(
         chainId: chainId,

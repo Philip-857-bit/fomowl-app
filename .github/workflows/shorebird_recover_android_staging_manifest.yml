@@ -1,0 +1,194 @@
+name: Recover Shorebird Android Staging Manifest
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Exact release version and build, for example 1.7.2+42
+        required: true
+        type: string
+      release_run_id:
+        description: Successful run ID from Shorebird Android Release (Staging)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  recover_manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate the successful staging release run
+        id: source
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+          RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
+            echo "Release version must look like 1.7.2+42." >&2
+            exit 1
+          fi
+          if [[ ! "$RELEASE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo "Release run ID must contain only digits." >&2
+            exit 1
+          fi
+
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}" \
+            > "$RUNNER_TEMP/shorebird-source-run.json"
+
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          run = json.loads(
+              Path(os.environ["RUNNER_TEMP"], "shorebird-source-run.json").read_text(encoding="utf-8")
+          )
+          expected_repo = os.environ["GITHUB_REPOSITORY"].casefold()
+          expected_version = os.environ["RELEASE_VERSION"]
+
+          checks = {
+              "repository": (run.get("repository", {}).get("full_name", "").casefold(), expected_repo),
+              "workflow path": (run.get("path"), ".github/workflows/shorebird_release_android_staging.yml"),
+              "event": (run.get("event"), "workflow_dispatch"),
+              "status": (run.get("status"), "completed"),
+              "conclusion": (run.get("conclusion"), "success"),
+          }
+          for label, (actual, expected) in checks.items():
+              if actual != expected:
+                  raise SystemExit(
+                      f"Run {os.environ['RELEASE_RUN_ID']} is not a successful staging Android release: "
+                      f"{label} was {actual!r}, expected {expected!r}."
+                  )
+
+          head_sha = run.get("head_sha", "")
+          if not re.fullmatch(r"[0-9a-fA-F]{40,64}", head_sha):
+              raise SystemExit("The selected release run has no valid source commit SHA.")
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"head_sha={head_sha}\n")
+              output.write(f"release_version={expected_version}\n")
+          PY
+
+      - name: Check out the original release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.head_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Regenerate and verify the manifest
+        env:
+          EXPECTED_RELEASE_VERSION: ${{ steps.source.outputs.release_version }}
+          EXPECTED_RELEASE_SHA: ${{ steps.source.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import subprocess
+          import sys
+
+          repo_root = pathlib.Path.cwd()
+          release_version = os.environ["EXPECTED_RELEASE_VERSION"]
+          release_sha = os.environ["EXPECTED_RELEASE_SHA"]
+
+          actual_sha = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], cwd=repo_root, text=True
+          ).strip()
+          if actual_sha.lower() != release_sha.lower():
+              raise SystemExit(
+                  f"Checked out {actual_sha}, but the release run points to {release_sha}."
+              )
+
+          sys.path.insert(0, str(repo_root / "scripts"))
+          from shorebird_ci_common import read_pubspec_release
+
+          app_version, build_number = read_pubspec_release(repo_root)
+          commit_version = f"{app_version}+{build_number}"
+          if commit_version != release_version:
+              raise SystemExit(
+                  f"Release run commit is {commit_version}, not requested {release_version}."
+              )
+
+          workflow_path = repo_root / ".github/workflows/shorebird_release_android_staging.yml"
+          workflow = workflow_path.read_text(encoding="utf-8")
+          release_job = re.search(
+              r"(?ms)^  release_android_staging:\s*\n(?P<body>.*?)(?=^  [A-Za-z_][A-Za-z0-9_-]*:\s*$|\Z)",
+              workflow,
+          )
+          if not release_job:
+              raise SystemExit("Could not find the Android staging release job at this commit.")
+
+          flutter_version = re.search(
+              r"(?m)^\s{6}FLUTTER_VERSION:\s*([^\s#]+)", release_job.group("body")
+          )
+          if not flutter_version:
+              raise SystemExit("Could not determine the release Flutter version from its workflow.")
+
+          manifest_step = re.search(
+              r"(?ms)^      - name: Generate release manifest\s*\n(?P<body>.*?)(?=^      - name:|\Z)",
+              release_job.group("body"),
+          )
+          if not manifest_step:
+              raise SystemExit("Could not find manifest settings in the original release workflow.")
+
+          manifest_path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "shorebird-release-manifest.json"
+          command = [
+              sys.executable,
+              str(repo_root / "scripts/shorebird_release_manifest.py"),
+              "--repo-root",
+              str(repo_root),
+              "--platform",
+              "android",
+              "--flutter-version",
+              flutter_version.group(1),
+              "--output",
+              str(manifest_path),
+          ]
+          if "--no-tree-shake-icons" in manifest_step.group("body"):
+              command.append("--no-tree-shake-icons")
+          subprocess.run(command, cwd=repo_root, check=True)
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          expected_fields = {
+              "platform": "android",
+              "release_version": release_version,
+              "release_commit_sha": release_sha,
+              "flutter_version": flutter_version.group(1),
+          }
+          for field, expected in expected_fields.items():
+              if manifest.get(field) != expected:
+                  raise SystemExit(
+                      f"Generated manifest {field} was {manifest.get(field)!r}, "
+                      f"expected {expected!r}."
+                  )
+
+          print(
+              f"Regenerated Android staging manifest for {release_version} "
+              f"from release commit {release_sha}."
+          )
+          PY
+
+      - name: Upload recovered release manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: shorebird-staging-release-manifest-android-${{ steps.source.outputs.release_version }}
+          path: ${{ runner.temp }}/shorebird-release-manifest.json
+          if-no-files-found: error
+          # Retention follows the repository's Actions artifact retention setting.

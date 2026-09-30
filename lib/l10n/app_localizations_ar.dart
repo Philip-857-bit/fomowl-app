@@ -140,7 +140,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get withdraw => 'سحب';
 
   @override
-  String get addFunds => 'إضافة أموال';
+  String get addFunds => 'شراء العملات الرقمية';
 
   @override
   String get buy => 'شراء';

@@ -1,5 +1,5 @@
 const String limitOrderUnsupportedMessage =
-    'Limit orders are available on Solana and on supported OpenOcean EVM networks such as Ethereum, BNB, Polygon, Base, Arbitrum, Avalanche, Optimism, Fantom, Linea, Sonic, and Berachain.';
+    'Limit orders are available on Solana and supported OpenOcean EVM networks: Ethereum, BNB, Polygon, Base, Arbitrum, Avalanche, Optimism, Sonic, HyperEVM, Sei, Plasma, Monad, and Berachain.';
 
 class LimitOrderReadiness {
   const LimitOrderReadiness({

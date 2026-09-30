@@ -10,6 +10,7 @@ import '../../features/mini_apps/mini_app_registry.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../screens/profile/feedback_screen.dart';
+import '../../services/app_store_service.dart';
 import '../../services/deep_link_service.dart';
 
 import '../../services/wallet_service.dart';
@@ -453,17 +454,18 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Future<void> _openExternal(String rawUrl) async {
     final uri = Uri.tryParse(rawUrl.trim());
     if (uri == null) return;
+    final target = AppStoreService.resolveOwlletStoreUrl(uri) ?? uri;
     try {
       final launched = await launchUrl(
-        uri,
+        target,
         mode: LaunchMode.externalApplication,
       );
       if (!launched) {
-        await launchUrl(uri);
+        await launchUrl(target);
       }
     } catch (_) {
       try {
-        await launchUrl(uri);
+        await launchUrl(target);
       } catch (_) {}
     }
   }

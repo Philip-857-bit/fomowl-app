@@ -33,3 +33,20 @@ Future<String> buildAndSignSolanaTransaction({
   lookupTablesJson: lookupTablesJson,
   privateKeyBytes: privateKeyBytes,
 );
+
+/// Sign a Jupiter (or other) unsigned Solana transaction.
+///
+/// `serialized_tx_base64` is a full wire-format VersionedTransaction (legacy
+/// or v0). If deserialize fails and the first byte has the v0 prefix bit,
+/// the payload is treated as a message-only VersionedMessage.
+///
+/// The matching required-signer slot is overwritten; extra signatures stay.
+Future<String> signSerializedSolanaTransaction({
+  required String serializedTxBase64,
+  required String expectedSigner,
+  required List<int> privateKeyBytes,
+}) => RustLib.instance.api.crateApiSolanaTxSignSerializedSolanaTransaction(
+  serializedTxBase64: serializedTxBase64,
+  expectedSigner: expectedSigner,
+  privateKeyBytes: privateKeyBytes,
+);

@@ -477,6 +477,8 @@ class _TransferConfirmationScreenState
     required BlockchainService blockchain,
     required ChainFamily family,
     required int? chainId,
+    required String networkKey,
+    required String transactionHash,
   }) async {
     final walletAddress = _fromAddress;
     if (walletAddress == null || walletAddress.isEmpty) return;
@@ -484,10 +486,20 @@ class _TransferConfirmationScreenState
     // For non-EVM families chainId is irrelevant — pass null so
     // fetchWalletTokens uses activeNetworkKey to hit the correct cache bucket.
     final effectiveChainId = family == ChainFamily.evm ? chainId : null;
-    await blockchain.refreshWalletTokens(
-      walletAddress,
-      chainId: effectiveChainId,
+    await blockchain.requestTransactionBalanceRefresh(
+      walletAddress: walletAddress,
+      networkKey: networkKey,
+      family: 'transfer',
+      operationReference: transactionHash,
     );
+    try {
+      await blockchain.refreshWalletTokens(
+        walletAddress,
+        chainId: effectiveChainId,
+      );
+    } catch (error) {
+      debugPrint('[Balances] Post-transfer refresh failed: $error');
+    }
     unawaited(
       Future<void>.delayed(const Duration(seconds: 3), () async {
         try {
@@ -668,6 +680,8 @@ class _TransferConfirmationScreenState
             blockchain: blockchain,
             family: activeFamily,
             chainId: evmChain?.chainId,
+            networkKey: transferNetworkKey,
+            transactionHash: txHash,
           ),
         );
         unawaited(

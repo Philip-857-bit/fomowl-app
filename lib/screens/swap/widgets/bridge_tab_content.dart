@@ -1733,6 +1733,18 @@ class _ChainLogoDot extends StatelessWidget {
     );
     final trimmed = url?.trim() ?? '';
     if (trimmed.isEmpty) return fallback;
+    if (trimmed.startsWith('assets/')) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.asset(
+          trimmed,
+          width: 20,
+          height: 20,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => fallback,
+        ),
+      );
+    }
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: Image.network(

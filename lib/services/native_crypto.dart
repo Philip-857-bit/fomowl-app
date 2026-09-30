@@ -318,6 +318,26 @@ class NativeCrypto {
     }
   }
 
+  /// Sign a Jupiter/Relay-style unsigned Solana transaction (base64 in, base64 out).
+  static Future<String> signSerializedSolanaTransaction({
+    required String serializedTxBase64,
+    required String expectedSigner,
+    required Uint8List privateKeyBytes,
+  }) async {
+    try {
+      return await rust_solana_tx.signSerializedSolanaTransaction(
+        serializedTxBase64: serializedTxBase64,
+        expectedSigner: expectedSigner,
+        privateKeyBytes: privateKeyBytes.toList(),
+      );
+    } catch (e) {
+      debugPrint(
+        '[NativeCrypto] signSerializedSolanaTransaction Rust error: $e',
+      );
+      rethrow;
+    }
+  }
+
   /// Sign a 32-byte TRON raw transaction hash. Returns a 0x-prefixed 65-byte
   /// hex signature with a 0/1 recovery ID.
   static Future<String> signTronRawHash({

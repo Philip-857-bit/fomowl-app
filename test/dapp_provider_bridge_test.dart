@@ -189,6 +189,54 @@ void main() {
       },
     );
 
+    testWidgets('wallet_switchEthereumChain supports newly added EVM chains', (
+      tester,
+    ) async {
+      const chainIds = [25, 169, 1088, 1329, 5042, 98866];
+      final entry = entryForTestDapp(
+        origin: 'https://app.example',
+        supportedChainIds: chainIds,
+      );
+      final controller = await controllerForEntry(entry);
+      final blockchainService = FakeBlockchainService();
+      final context = await pumpBridgeHarness(
+        tester,
+        blockchainService: blockchainService,
+        rpcService: FakeRpcService(),
+      );
+      final bridge = DappProviderBridge(
+        sessionController: controller,
+        permissionService: FakeDappPermissionService(),
+        walletService: FakeWalletService(),
+        approvalHandler:
+            (
+              BuildContext context,
+              DiscoverProviderApprovalRequest request,
+            ) async => true,
+      );
+
+      for (final chainId in chainIds) {
+        final response = await bridge.handleRequest(
+          context: context,
+          origin: entry.origin,
+          payload: {
+            'method': 'wallet_switchEthereumChain',
+            'params': [
+              {'chainId': '0x${chainId.toRadixString(16)}'},
+            ],
+          },
+          evaluateJavaScript: (_) async {},
+        );
+
+        expect(response['result'], isNull, reason: 'chain $chainId');
+        expect(
+          blockchainService.activeChain.chainId,
+          chainId,
+          reason: 'chain $chainId',
+        );
+      }
+    });
+
     testWidgets('wallet_addEthereumChain rejects non-https RPC URLs', (
       tester,
     ) async {

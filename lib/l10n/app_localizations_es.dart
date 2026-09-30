@@ -140,7 +140,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get withdraw => 'Retirar';
 
   @override
-  String get addFunds => 'Añadir fondos';
+  String get addFunds => 'Comprar criptomonedas';
 
   @override
   String get buy => 'Comprar';
