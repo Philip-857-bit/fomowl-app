@@ -87,14 +87,11 @@ mod tests {
     fn personal_sign_decodes_eip_1193_hex_data_before_signing() {
         let private_key = "4c0883a69102937d6231471b5dbb6204fe5129617082794a7a4da5f6d7d28e17";
 
-        let utf8_signature =
-            sign_personal_message(private_key.to_string(), "hello".to_string())
-                .expect("UTF-8 personal signature");
-        let hex_signature = sign_personal_message(
-            private_key.to_string(),
-            "0x68656c6c6f".to_string(),
-        )
-        .expect("hex personal signature");
+        let utf8_signature = sign_personal_message(private_key.to_string(), "hello".to_string())
+            .expect("UTF-8 personal signature");
+        let hex_signature =
+            sign_personal_message(private_key.to_string(), "0x68656c6c6f".to_string())
+                .expect("hex personal signature");
 
         assert_eq!(hex_signature, utf8_signature);
         assert!(hex_signature.starts_with("0x"));

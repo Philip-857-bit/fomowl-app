@@ -113,8 +113,7 @@ pub fn build_and_sign_solana_transaction(
         .map_err(|e| format!("Failed to compile Solana message: {e}"))?;
     let versioned = VersionedMessage::V0(message);
 
-    let keypair =
-        crate::api::bip32::solana_keypair_from_bytes(private_key_bytes, "bridge signer")?;
+    let keypair = crate::api::bip32::solana_keypair_from_bytes(private_key_bytes, "bridge signer")?;
     if keypair.pubkey() != payer_key {
         return Err("Signer does not match the payer address".to_string());
     }
@@ -154,7 +153,9 @@ pub fn sign_serialized_solana_transaction(
         Ok(tx) => tx,
         Err(primary) => {
             if bytes[0] & 0x80 == 0 {
-                return Err(format!("Failed to deserialize Solana transaction: {primary}"));
+                return Err(format!(
+                    "Failed to deserialize Solana transaction: {primary}"
+                ));
             }
             let message: VersionedMessage = bincode::deserialize(&bytes).map_err(|e| {
                 format!("Failed to deserialize Solana transaction ({primary}) or v0 message ({e})")
@@ -183,7 +184,9 @@ pub fn sign_serialized_solana_transaction(
     let signer_index = keys[..required]
         .iter()
         .position(|key| *key == expected)
-        .ok_or_else(|| "The transaction does not require the expected Solana account".to_string())?;
+        .ok_or_else(|| {
+            "The transaction does not require the expected Solana account".to_string()
+        })?;
 
     if tx.signatures.len() < required {
         tx.signatures
@@ -245,9 +248,7 @@ mod tests {
             bincode::deserialize(&BASE64.decode(signed).unwrap()).unwrap();
         assert_eq!(decoded.signatures.len(), 1);
         assert_ne!(decoded.signatures[0], Signature::default());
-        assert!(decoded
-            .signatures[0]
-            .verify(payer.pubkey().as_ref(), &decoded.message.serialize()));
+        assert!(decoded.signatures[0].verify(payer.pubkey().as_ref(), &decoded.message.serialize()));
     }
 
     #[test]
@@ -267,8 +268,7 @@ mod tests {
         let decoded: VersionedTransaction =
             bincode::deserialize(&BASE64.decode(signed).unwrap()).unwrap();
         assert_eq!(decoded.signatures[1], extra_sig);
-        assert!(decoded.signatures[0]
-            .verify(payer.pubkey().as_ref(), &decoded.message.serialize()));
+        assert!(decoded.signatures[0].verify(payer.pubkey().as_ref(), &decoded.message.serialize()));
     }
 
     #[test]

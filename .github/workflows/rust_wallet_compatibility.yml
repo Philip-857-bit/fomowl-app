@@ -1,0 +1,46 @@
+name: Owllet Rust Wallet Compatibility
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust_wallet_compatibility.yml'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust_wallet_compatibility.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: rust
+
+jobs:
+  wallet-compatibility:
+    name: Validate Wallet Invariants & Compatibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust -> target"
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lint with Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run full Rust test suite
+        run: cargo test --all-targets --all-features
