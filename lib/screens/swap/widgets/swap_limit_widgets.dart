@@ -17,6 +17,7 @@ class SwapTabSelector extends StatelessWidget {
   final ValueChanged<SwapTab> onChanged;
   final bool showLimitTab;
   final bool showBridgeTab;
+  final bool swapEnabled;
 
   const SwapTabSelector({
     super.key,
@@ -24,6 +25,7 @@ class SwapTabSelector extends StatelessWidget {
     required this.onChanged,
     this.showLimitTab = true,
     this.showBridgeTab = true,
+    this.swapEnabled = true,
   });
 
   @override
@@ -44,6 +46,7 @@ class SwapTabSelector extends StatelessWidget {
                 label: 'SWAP',
                 isActive: activeTab == SwapTab.swap,
                 onTap: () => onChanged(SwapTab.swap),
+                isDisabled: !swapEnabled,
               ),
             ),
             if (showLimitTab) ...[
@@ -77,17 +80,23 @@ class _SwapTabChip extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback? onTap;
+  final bool isDisabled;
 
   const _SwapTabChip({
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.isDisabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.chainTheme;
-    final effectiveColor = isActive ? Colors.white : const Color(0xFFA1A1A1);
+    final effectiveColor = isDisabled
+        ? Colors.white.withValues(alpha: 0.35)
+        : isActive
+        ? Colors.white
+        : const Color(0xFFA1A1A1);
 
     return GestureDetector(
       onTap: onTap,

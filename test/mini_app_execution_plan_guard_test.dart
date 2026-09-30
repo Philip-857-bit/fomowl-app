@@ -131,25 +131,28 @@ void main() {
     expect(cashinExecutionPlanIsUsable(plan, now: now), isFalse);
   });
 
-  test('expired plans are accepted only while polling submitted work', () {
-    final now = DateTime.utc(2026, 8, 8, 12);
-    final plan = <String, dynamic>{
-      'expiresAt': now.subtract(const Duration(minutes: 1)).toIso8601String(),
-      'steps': [
-        {'status': 'submitted'},
-      ],
-    };
+  test(
+    'expired plans are accepted only while polling a submitted approval',
+    () {
+      final now = DateTime.utc(2026, 8, 8, 12);
+      final plan = <String, dynamic>{
+        'expiresAt': now.subtract(const Duration(minutes: 1)).toIso8601String(),
+        'steps': [
+          {'kind': 'approval', 'status': 'submitted'},
+        ],
+      };
 
-    expect(cashinExecutionPlanIsUsable(plan, now: now), isFalse);
-    expect(
-      cashinExecutionPlanIsUsable(
-        plan,
-        now: now,
-        allowExpiredForSubmittedSteps: true,
-      ),
-      isTrue,
-    );
-  });
+      expect(cashinExecutionPlanIsUsable(plan, now: now), isFalse);
+      expect(
+        cashinExecutionPlanIsUsable(
+          plan,
+          now: now,
+          allowExpiredForSubmittedSteps: true,
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('direct settlement plans are presented as transfers', () {
     expect(

@@ -98,7 +98,7 @@ class RuntimePolicySnapshot {
     return switch (feature) {
       RuntimeFeature.transfers => transfersEnabled,
       RuntimeFeature.swaps => swapsEnabled,
-      RuntimeFeature.bridges => swapsEnabled && bridgesEnabled,
+      RuntimeFeature.bridges => bridgesEnabled,
       RuntimeFeature.miniApps => miniAppsEnabled,
       RuntimeFeature.cashIn => cashInEnabled,
       RuntimeFeature.cashOut => cashOutEnabled,
@@ -107,6 +107,11 @@ class RuntimePolicySnapshot {
       RuntimeFeature.legacySystem => legacySystemEnabled,
     };
   }
+
+  bool allowsTradingScreen({required bool limitSupported}) =>
+      allows(RuntimeFeature.swaps) ||
+      allows(RuntimeFeature.bridges) ||
+      (limitSupported && !fullMaintenance && !readOnly);
 
   String unavailableMessage(RuntimeFeature feature) {
     if (fullMaintenance) {

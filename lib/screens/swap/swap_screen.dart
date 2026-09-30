@@ -203,9 +203,8 @@ class _SwapScreenState extends State<SwapScreen> {
     final tokenSignature = _tokenSignature(visibleTokens);
     final walletChanged = _lastWalletKey != null && _lastWalletKey != walletKey;
     final tokensChanged = _lastTokenSignature != tokenSignature;
-    if (_activeTab == SwapTab.limit && !_supportsLimitTab(blockchain)) {
-      _activeTab = SwapTab.swap;
-    }
+    _activeTab =
+        _availableTab(_runtimeConfig.snapshot, blockchain) ?? _activeTab;
     if (_lastNetworkKey != networkKey || walletChanged) {
       _lastNetworkKey = networkKey;
       _lastWalletKey = walletKey;
@@ -264,7 +263,8 @@ class _SwapScreenState extends State<SwapScreen> {
   bool _isGasless = false;
 
   void _handleBackNavigation() {
-    if (_activeTab != SwapTab.swap) {
+    if (_activeTab != SwapTab.swap &&
+        _runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
       setState(() => _activeTab = SwapTab.swap);
       return;
     }
@@ -451,6 +451,30 @@ class _SwapScreenState extends State<SwapScreen> {
         blockchain.activeFamily == ChainFamily.solana;
   }
 
+  bool _tabAvailable(
+    SwapTab tab,
+    RuntimePolicySnapshot policy,
+    BlockchainService blockchain,
+  ) => switch (tab) {
+    SwapTab.swap => policy.allows(RuntimeFeature.swaps),
+    SwapTab.bridge => policy.allows(RuntimeFeature.bridges),
+    SwapTab.limit =>
+      _supportsLimitTab(blockchain) &&
+          !policy.fullMaintenance &&
+          !policy.readOnly,
+  };
+
+  SwapTab? _availableTab(
+    RuntimePolicySnapshot policy,
+    BlockchainService blockchain,
+  ) {
+    if (_tabAvailable(_activeTab, policy, blockchain)) return _activeTab;
+    for (final tab in [SwapTab.swap, SwapTab.bridge, SwapTab.limit]) {
+      if (_tabAvailable(tab, policy, blockchain)) return tab;
+    }
+    return null;
+  }
+
   int _tokenStorageChainId(BlockchainService blockchain) {
     return blockchain.activeTokenStorageChainId;
   }
@@ -495,11 +519,10 @@ class _SwapScreenState extends State<SwapScreen> {
 
   void _handleRuntimePolicyChanged() {
     if (!mounted) return;
+    final blockchain = context.read<BlockchainService>();
     setState(() {
-      if (_activeTab == SwapTab.bridge &&
-          !_runtimeConfig.snapshot.allows(RuntimeFeature.bridges)) {
-        _activeTab = SwapTab.swap;
-      }
+      _activeTab =
+          _availableTab(_runtimeConfig.snapshot, blockchain) ?? _activeTab;
     });
   }
 
@@ -1819,6 +1842,10 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   Future<void> _getQuote() async {
+    if (_activeTab != SwapTab.swap ||
+        !_runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
+      return;
+    }
     final l = AppLocalizations.of(context);
     if (_fromToken == null || _toToken == null) return;
     if (_tokensAreIdentical(_fromToken, _toToken)) {
@@ -3004,6 +3031,10 @@ class _SwapScreenState extends State<SwapScreen> {
   }
 
   void _executeSwap() async {
+    if (_activeTab != SwapTab.swap ||
+        !_runtimeConfig.snapshot.allows(RuntimeFeature.swaps)) {
+      return;
+    }
     if (_isSwapFlowActive || _isApproving || _isSwapping) {
       return;
     }
@@ -3623,7 +3654,10 @@ class _SwapScreenState extends State<SwapScreen> {
   @override
   Widget build(BuildContext context) {
     final runtimePolicy = _runtimeConfig.snapshot;
-    if (!runtimePolicy.allows(RuntimeFeature.swaps)) {
+    final blockchain = Provider.of<BlockchainService>(context);
+    if (!runtimePolicy.allowsTradingScreen(
+      limitSupported: _supportsLimitTab(blockchain),
+    )) {
       return RuntimeFeatureUnavailableScreen(
         feature: RuntimeFeature.swaps,
         message: runtimePolicy.unavailableMessage(RuntimeFeature.swaps),
@@ -3634,7 +3668,6 @@ class _SwapScreenState extends State<SwapScreen> {
       (controller) => controller.currencyCode,
     );
     final l = AppLocalizations.of(context);
-    final blockchain = Provider.of<BlockchainService>(context);
     final fromAmount = _parseAmount(_fromController);
     final toAmount = _parseAmount(_toController);
     final fromUsdValue = _usdValueFor(_fromToken, fromAmount);
@@ -3705,10 +3738,12 @@ class _SwapScreenState extends State<SwapScreen> {
     }
 
     return PopScope(
-      canPop: _activeTab == SwapTab.swap,
+      canPop:
+          _activeTab == SwapTab.swap ||
+          !runtimePolicy.allows(RuntimeFeature.swaps),
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && _activeTab != SwapTab.swap) {
-          setState(() => _activeTab = SwapTab.swap);
+          _handleBackNavigation();
         }
       },
       child: Scaffold(
@@ -3834,12 +3869,28 @@ class _SwapScreenState extends State<SwapScreen> {
                             'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
                         child: SwapTabSelector(
                           activeTab: _activeTab,
+                          swapEnabled: runtimePolicy.allows(
+                            RuntimeFeature.swaps,
+                          ),
                           showLimitTab: _supportsLimitTab(blockchain),
                           showBridgeTab: runtimePolicy.allows(
                             RuntimeFeature.bridges,
                           ),
                           onChanged: (tab) {
                             if (_activeTab == tab) return;
+                            if (tab == SwapTab.swap &&
+                                !runtimePolicy.allows(RuntimeFeature.swaps)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    runtimePolicy.unavailableMessage(
+                                      RuntimeFeature.swaps,
+                                    ),
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
                             if (tab == SwapTab.bridge &&
                                 !runtimePolicy.allows(RuntimeFeature.bridges)) {
                               return;

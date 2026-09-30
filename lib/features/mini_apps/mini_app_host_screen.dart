@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_colors.dart';
 import '../../config/app_environment.dart';
@@ -17,6 +18,7 @@ import '../../models/wallet_account.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
+import '../../services/app_store_service.dart';
 import '../../services/cashin_profile_auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
@@ -835,6 +837,23 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         final uri = Uri.tryParse(url);
         if (uri == null) {
           return const <String, dynamic>{'ok': false, 'error': 'Invalid URL.'};
+        }
+        final storeUrl = AppStoreService.resolveOwlletStoreUrl(uri);
+        if (storeUrl != null) {
+          try {
+            if (await launchUrl(
+              storeUrl,
+              mode: LaunchMode.externalApplication,
+            )) {
+              return const <String, dynamic>{'ok': true};
+            }
+          } catch (error) {
+            debugPrint('[MiniAppHost] Could not open Google Play: $error');
+          }
+          return const <String, dynamic>{
+            'ok': false,
+            'error': 'Could not open Google Play on this device.',
+          };
         }
         await _openExternal(uri);
         return const <String, dynamic>{'ok': true};
@@ -2432,6 +2451,10 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         reference: reference,
         executionReference: executionReference,
         walletAddress: walletAddress,
+        // A broadcast ERC-20 approval can remain pending after its quote TTL.
+        // It is safe to reload the plan only to wait for that submitted step;
+        // the loop still rejects expired calldata before each new broadcast.
+        allowExpiredForSubmittedSteps: true,
       );
       final rawSteps = previewPlan['steps'];
       if (rawSteps is! List || rawSteps.isEmpty) {
