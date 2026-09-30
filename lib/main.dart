@@ -73,6 +73,9 @@ Future<void> main() async {
     ),
   );
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
 
   if (kEnableRustBridge) {
     try {
