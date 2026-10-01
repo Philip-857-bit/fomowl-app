@@ -87,9 +87,13 @@ pub fn derive_solana_address_from_private_key(
     result
 }
 
-pub fn sign_solana_message(private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
-    let keypair = solana_keypair_from_bytes(private_key_bytes, "Solana private key")?;
-    Ok(keypair.sign_message(&message).to_string())
+pub fn sign_solana_message(
+    mut private_key_bytes: Vec<u8>,
+    message: Vec<u8>,
+) -> Result<String, String> {
+    let result = owllet_core::signing::sign_solana_message(&private_key_bytes, &message);
+    private_key_bytes.zeroize();
+    result
 }
 
 pub fn normalize_solana_private_key(private_key: String) -> Result<SolanaPrivateKeyImport, String> {
@@ -101,8 +105,7 @@ pub fn normalize_solana_private_key(private_key: String) -> Result<SolanaPrivate
 }
 
 pub fn sign_tron_raw_hash(private_key_hex: String, raw_hash_hex: String) -> Result<String, String> {
-    let digest = parse_32_byte_hex(&raw_hash_hex, "TRON raw transaction hash")?;
-    crate::api::secp256k1_api::sign_digest_with_recovery_id(private_key_hex, digest, false)
+    owllet_core::signing::sign_tron_raw_hash(&private_key_hex, &raw_hash_hex)
 }
 
 fn parse_solana_private_key(private_key: &str) -> Result<Keypair, String> {
@@ -165,10 +168,6 @@ pub(crate) fn solana_keypair_from_bytes(
     let result = owllet_core::accounts::solana_keypair_from_bytes(&bytes, source);
     bytes.zeroize();
     result
-}
-
-fn parse_32_byte_hex(value: &str, label: &str) -> Result<[u8; 32], String> {
-    owllet_core::accounts::parse_32_byte_hex(value, label)
 }
 
 #[cfg(test)]

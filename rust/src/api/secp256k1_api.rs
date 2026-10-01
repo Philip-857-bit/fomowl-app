@@ -1,81 +1,22 @@
-use ethers_core::types::transaction::eip712::{Eip712, TypedData};
-use secp256k1::{Message, Secp256k1, SecretKey};
-use sha3::{Digest, Keccak256};
-use std::str::FromStr;
-
-fn sign_digest(private_key_hex: &str, digest: [u8; 32]) -> Result<String, String> {
-    sign_digest_inner(private_key_hex, digest, true)
+pub fn sign_personal_message(private_key_hex: String, message: String) -> Result<String, String> {
+    owllet_core::signing::sign_personal_message(&private_key_hex, &message)
 }
 
+pub fn sign_typed_data(private_key_hex: String, json_data: String) -> Result<String, String> {
+    owllet_core::signing::sign_typed_data(&private_key_hex, &json_data)
+}
+
+#[allow(dead_code)]
 pub(crate) fn sign_digest_with_recovery_id(
     private_key_hex: String,
     digest: [u8; 32],
     ethereum_recovery_id: bool,
 ) -> Result<String, String> {
-    sign_digest_inner(&private_key_hex, digest, ethereum_recovery_id)
-}
-
-fn sign_digest_inner(
-    private_key_hex: &str,
-    digest: [u8; 32],
-    ethereum_recovery_id: bool,
-) -> Result<String, String> {
-    let secp = Secp256k1::new();
-    let normalized_private_key = private_key_hex
-        .trim()
-        .strip_prefix("0x")
-        .unwrap_or(private_key_hex.trim());
-    let secret_key = SecretKey::from_str(normalized_private_key)
-        .map_err(|e| format!("Invalid private key: {e}"))?;
-    let msg = Message::from_digest(digest);
-    let (recovery_id, sig) = secp
-        .sign_ecdsa_recoverable(msg, &secret_key)
-        .serialize_compact();
-    let mut signature = sig.to_vec();
-    let recovery_id = i32::from(recovery_id) as u8;
-    signature.push(if ethereum_recovery_id {
-        recovery_id + 27
-    } else {
-        recovery_id
-    });
-    Ok(format!("0x{}", hex::encode(signature)))
-}
-
-pub fn sign_personal_message(private_key_hex: String, message: String) -> Result<String, String> {
-    let message_bytes = decode_personal_sign_payload(&message);
-    let prefix = format!("\x19Ethereum Signed Message:\n{}", message_bytes.len());
-    let mut prefixed_message = prefix.into_bytes();
-    prefixed_message.extend_from_slice(&message_bytes);
-
-    let hash = Keccak256::digest(&prefixed_message);
-
-    let mut hash_arr = [0u8; 32];
-    hash_arr.copy_from_slice(&hash);
-    sign_digest(&private_key_hex, hash_arr)
-}
-
-fn decode_personal_sign_payload(message: &str) -> Vec<u8> {
-    let Some(hex_payload) = message
-        .strip_prefix("0x")
-        .or_else(|| message.strip_prefix("0X"))
-    else {
-        return message.as_bytes().to_vec();
-    };
-
-    if hex_payload.len() % 2 != 0 {
-        return message.as_bytes().to_vec();
-    }
-
-    hex::decode(hex_payload).unwrap_or_else(|_| message.as_bytes().to_vec())
-}
-
-pub fn sign_typed_data(private_key_hex: String, json_data: String) -> Result<String, String> {
-    let typed_data: TypedData =
-        serde_json::from_str(&json_data).map_err(|e| format!("Invalid typed data JSON: {}", e))?;
-    let digest = typed_data
-        .encode_eip712()
-        .map_err(|e| format!("Failed to encode typed data: {}", e))?;
-    sign_digest(&private_key_hex, digest)
+    owllet_core::signing::sign_digest_with_recovery_id(
+        &private_key_hex,
+        digest,
+        ethereum_recovery_id,
+    )
 }
 
 #[cfg(test)]

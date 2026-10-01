@@ -7,6 +7,11 @@
 
 pub mod accounts;
 pub mod mnemonic;
+pub mod signing;
 
 pub use accounts::*;
 pub use mnemonic::*;
+pub use signing::{
+    decode_personal_sign_payload, sign_digest, sign_digest_with_recovery_id, sign_personal_message,
+    sign_solana_message, sign_tron_raw_hash, sign_typed_data,
+};
