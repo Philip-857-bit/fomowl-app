@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../services/screen_capture_guard.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
@@ -26,11 +28,19 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
   final TextEditingController _privateKeyController = TextEditingController();
   bool _obscurePrivateKey = true;
   final WalletService _walletService = WalletService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   bool _isLoading = false;
   ChainFamily _selectedChain = ChainFamily.evm;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
   void dispose() {
+    unawaited(_screenCaptureGuard.disableProtection());
     _walletNameController.dispose();
     _privateKeyController.dispose();
     super.dispose();
