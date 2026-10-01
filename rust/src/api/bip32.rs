@@ -1,24 +1,8 @@
 use base64::{engine::general_purpose, Engine as _};
-use bip32::{DerivationPath, XPrv};
-use hmac::{Hmac, Mac};
-use secp256k1::{PublicKey, Secp256k1, SecretKey};
-use sha2::{Digest, Sha256, Sha512};
-use sha3::Keccak256;
+use flutter_rust_bridge::frb;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
-use std::str::FromStr;
-use zeroize::Zeroize;
-
-use flutter_rust_bridge::frb;
 use std::fmt;
-
-type HmacSha512 = Hmac<Sha512>;
-
-const HARDENED_OFFSET: u32 = 0x8000_0000;
-const EVM_DERIVATION_PURPOSE: u32 = 44;
-const EVM_COIN_TYPE: u32 = 60;
-const SOLANA_COIN_TYPE: u32 = 501;
-const TRON_COIN_TYPE: u32 = 195;
 
 #[frb(dart_code = "
   @override
@@ -48,85 +32,56 @@ pub fn derive_evm_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
-    let path = format!(
-        "m/{}'/{}'/0'/0/{}",
-        EVM_DERIVATION_PURPOSE, EVM_COIN_TYPE, derivation_index
-    );
-    derive_secp256k1_private_key(seed, &path)
+    owllet_core::accounts::derive_evm_private_key_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_evm_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
-    let private_key_hex = derive_evm_private_key_from_seed(seed, derivation_index)?;
-    derive_evm_address_from_private_key(private_key_hex)
+    owllet_core::accounts::derive_evm_address_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_evm_address_from_private_key(private_key_hex: String) -> Result<String, String> {
-    let public_key = public_key_from_private_key(&private_key_hex)?;
-    Ok(evm_address_from_public_key(&public_key))
+    owllet_core::accounts::derive_evm_address_from_private_key(&private_key_hex)
 }
 
 pub fn derive_tron_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
-    let path = format!(
-        "m/{}'/{}'/0'/0/{}",
-        EVM_DERIVATION_PURPOSE, TRON_COIN_TYPE, derivation_index
-    );
-    derive_secp256k1_private_key(seed, &path)
+    owllet_core::accounts::derive_tron_private_key_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_tron_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
-    let private_key_hex = derive_tron_private_key_from_seed(seed, derivation_index)?;
-    derive_tron_address_from_private_key(private_key_hex)
+    owllet_core::accounts::derive_tron_address_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_tron_address_from_private_key(private_key_hex: String) -> Result<String, String> {
-    let public_key = public_key_from_private_key(&private_key_hex)?;
-    Ok(tron_address_from_public_key(&public_key))
+    owllet_core::accounts::derive_tron_address_from_private_key(&private_key_hex)
 }
 
 pub fn derive_solana_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<Vec<u8>, String> {
-    validate_seed(&seed)?;
-
-    let path = [
-        hardened(EVM_DERIVATION_PURPOSE)?,
-        hardened(SOLANA_COIN_TYPE)?,
-        hardened(derivation_index)?,
-        hardened(0)?,
-    ];
-    let mut key = slip10_ed25519_master_key(&seed)?;
-    for child in path {
-        key = slip10_ed25519_derive_child(&key, child)?;
-    }
-
-    let private_key_bytes = key.key.to_vec();
-    key.zeroize();
-    Ok(private_key_bytes)
+    owllet_core::accounts::derive_solana_private_key_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_solana_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
-    let private_key_bytes = derive_solana_private_key_from_seed(seed, derivation_index)?;
-    derive_solana_address_from_private_key(private_key_bytes)
+    owllet_core::accounts::derive_solana_address_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_solana_address_from_private_key(
     private_key_bytes: Vec<u8>,
 ) -> Result<String, String> {
-    let keypair = solana_keypair_from_bytes(private_key_bytes, "Solana private key")?;
-    Ok(keypair.pubkey().to_string())
+    owllet_core::accounts::derive_solana_address_from_private_key(&private_key_bytes)
 }
 
 pub fn sign_solana_message(private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
@@ -145,41 +100,6 @@ pub fn normalize_solana_private_key(private_key: String) -> Result<SolanaPrivate
 pub fn sign_tron_raw_hash(private_key_hex: String, raw_hash_hex: String) -> Result<String, String> {
     let digest = parse_32_byte_hex(&raw_hash_hex, "TRON raw transaction hash")?;
     crate::api::secp256k1_api::sign_digest_with_recovery_id(private_key_hex, digest, false)
-}
-
-fn derive_secp256k1_private_key(seed: Vec<u8>, path_str: &str) -> Result<String, String> {
-    validate_seed(&seed)?;
-
-    let path =
-        DerivationPath::from_str(path_str).map_err(|e| format!("Invalid derivation path: {e}"))?;
-
-    let mut extended_prv = XPrv::new(seed.as_slice())
-        .map_err(|e| format!("Failed to create master key from seed: {e:?}"))?;
-
-    for child_num in path.into_iter() {
-        let child = extended_prv
-            .derive_child(child_num)
-            .map_err(|e| format!("Failed to derive child key: {e:?}"))?;
-        // Volatile-wipe the parent key bytes before overwriting the binding.
-        // write_volatile prevents the compiler from eliding the wipe.
-        unsafe {
-            let p = &extended_prv as *const XPrv as *mut u8;
-            for i in 0..std::mem::size_of::<XPrv>() {
-                std::ptr::write_volatile(p.add(i), 0u8);
-            }
-        }
-        extended_prv = child;
-    }
-
-    let key_hex = hex::encode(extended_prv.private_key().to_bytes());
-    // Volatile-wipe the final key before it is dropped.
-    unsafe {
-        let p = &extended_prv as *const XPrv as *mut u8;
-        for i in 0..std::mem::size_of::<XPrv>() {
-            std::ptr::write_volatile(p.add(i), 0u8);
-        }
-    }
-    Ok(key_hex)
 }
 
 fn parse_solana_private_key(private_key: &str) -> Result<Keypair, String> {
@@ -235,159 +155,12 @@ fn parse_solana_key_hex(value: &str) -> Result<Vec<u8>, String> {
     hex::decode(value).map_err(|e| format!("Invalid Solana hex key: {e}"))
 }
 
-pub(crate) fn solana_keypair_from_bytes(
-    mut bytes: Vec<u8>,
-    source: &str,
-) -> Result<Keypair, String> {
-    let result = match bytes.len() {
-        32 => {
-            let mut secret = [0u8; 32];
-            secret.copy_from_slice(&bytes);
-            let keypair = Keypair::new_from_array(secret);
-            secret.zeroize();
-            Ok(keypair)
-        }
-        64 => Keypair::try_from(bytes.as_slice())
-            .map_err(|e| format!("Invalid Solana {source} keypair bytes: {e}")),
-        len => Err(format!(
-            "Invalid Solana {source} key length: expected 32-byte seed or 64-byte keypair, got {len} bytes"
-        )),
-    };
-    bytes.zeroize();
-    result
-}
-
-fn validate_seed(seed: &[u8]) -> Result<(), String> {
-    if seed.len() < 16 || seed.len() > 64 {
-        return Err(format!(
-            "Invalid BIP-32 seed length: expected 16..=64 bytes, got {}",
-            seed.len()
-        ));
-    }
-    Ok(())
-}
-
-fn hardened(index: u32) -> Result<u32, String> {
-    index
-        .checked_add(HARDENED_OFFSET)
-        .ok_or_else(|| format!("Invalid hardened child index: {index}"))
-}
-
-#[derive(Clone)]
-struct Ed25519Slip10Key {
-    key: [u8; 32],
-    chain_code: [u8; 32],
-}
-
-impl Zeroize for Ed25519Slip10Key {
-    fn zeroize(&mut self) {
-        self.key.zeroize();
-        self.chain_code.zeroize();
-    }
-}
-
-impl Drop for Ed25519Slip10Key {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
-fn slip10_ed25519_master_key(seed: &[u8]) -> Result<Ed25519Slip10Key, String> {
-    let mut mac = HmacSha512::new_from_slice(b"ed25519 seed")
-        .map_err(|e| format!("Failed to initialize SLIP-0010 HMAC: {e}"))?;
-    mac.update(seed);
-    slip10_key_from_hmac(mac.finalize().into_bytes().as_slice())
-}
-
-fn slip10_ed25519_derive_child(
-    parent: &Ed25519Slip10Key,
-    child_index: u32,
-) -> Result<Ed25519Slip10Key, String> {
-    if child_index < HARDENED_OFFSET {
-        return Err("SLIP-0010 Ed25519 derivation only supports hardened children".to_string());
-    }
-
-    let mut data = [0u8; 37];
-    data[1..33].copy_from_slice(&parent.key);
-    data[33..37].copy_from_slice(&child_index.to_be_bytes());
-
-    let mut mac = HmacSha512::new_from_slice(&parent.chain_code)
-        .map_err(|e| format!("Failed to initialize child HMAC: {e}"))?;
-    mac.update(&data);
-    data.zeroize();
-    slip10_key_from_hmac(mac.finalize().into_bytes().as_slice())
-}
-
-fn slip10_key_from_hmac(output: &[u8]) -> Result<Ed25519Slip10Key, String> {
-    if output.len() != 64 {
-        return Err(format!(
-            "Invalid SLIP-0010 HMAC output length: expected 64 bytes, got {}",
-            output.len()
-        ));
-    }
-    let mut key = [0u8; 32];
-    let mut chain_code = [0u8; 32];
-    key.copy_from_slice(&output[..32]);
-    chain_code.copy_from_slice(&output[32..]);
-    Ok(Ed25519Slip10Key { key, chain_code })
+pub(crate) fn solana_keypair_from_bytes(bytes: Vec<u8>, source: &str) -> Result<Keypair, String> {
+    owllet_core::accounts::solana_keypair_from_bytes(&bytes, source)
 }
 
 fn parse_32_byte_hex(value: &str, label: &str) -> Result<[u8; 32], String> {
-    let normalized = value.trim().strip_prefix("0x").unwrap_or(value.trim());
-    let bytes = hex::decode(normalized).map_err(|e| format!("Invalid {label} hex: {e}"))?;
-    if bytes.len() != 32 {
-        return Err(format!(
-            "Invalid {label} length: expected 32 bytes, got {}",
-            bytes.len()
-        ));
-    }
-    let mut out = [0u8; 32];
-    out.copy_from_slice(&bytes);
-    Ok(out)
-}
-
-fn public_key_from_private_key(private_key_hex: &str) -> Result<PublicKey, String> {
-    let secp = Secp256k1::new();
-    let secret_bytes = parse_32_byte_hex(private_key_hex, "private key")?;
-    let secret_key = SecretKey::from_byte_array(secret_bytes)
-        .map_err(|e| format!("Invalid private key: {e}"))?;
-    Ok(PublicKey::from_secret_key(&secp, &secret_key))
-}
-
-fn evm_address_from_public_key(public_key: &PublicKey) -> String {
-    let uncompressed = public_key.serialize_uncompressed();
-    let hash = Keccak256::digest(&uncompressed[1..]);
-    to_eip55_address(&hash[12..])
-}
-
-fn tron_address_from_public_key(public_key: &PublicKey) -> String {
-    let uncompressed = public_key.serialize_uncompressed();
-    let hash = Keccak256::digest(&uncompressed[1..]);
-    let mut payload = Vec::with_capacity(25);
-    payload.push(0x41);
-    payload.extend_from_slice(&hash[12..]);
-
-    let checksum = Sha256::digest(Sha256::digest(&payload));
-    payload.extend_from_slice(&checksum[..4]);
-    bs58::encode(payload).into_string()
-}
-
-fn to_eip55_address(address: &[u8]) -> String {
-    let lower = hex::encode(address);
-    let hash = hex::encode(Keccak256::digest(lower.as_bytes()));
-    let mut result = String::with_capacity(42);
-    result.push_str("0x");
-
-    for (idx, ch) in lower.chars().enumerate() {
-        let hash_nibble = u8::from_str_radix(&hash[idx..idx + 1], 16).unwrap_or(0);
-        if ch.is_ascii_hexdigit() && hash_nibble >= 8 {
-            result.push(ch.to_ascii_uppercase());
-        } else {
-            result.push(ch);
-        }
-    }
-
-    result
+    owllet_core::accounts::parse_32_byte_hex(value, label)
 }
 
 #[cfg(test)]

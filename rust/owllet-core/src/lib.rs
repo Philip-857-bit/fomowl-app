@@ -5,6 +5,8 @@
 //! Browser entropy configuration for rand/getrandom will be handled by that
 //! adapter rather than enabling browser-specific dependencies in the platform-neutral core.
 
+pub mod accounts;
 pub mod mnemonic;
 
+pub use accounts::*;
 pub use mnemonic::*;
