@@ -818,17 +818,36 @@ class WalletService {
         'gasPriceWei and gasLimit must either both be supplied or both omitted',
       );
     }
-    final credentials = await getCredentials();
+
+    final fromAddress = await getCurrentWalletAddress();
+    if (fromAddress == null || fromAddress.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+    final sender = EthereumAddress.fromHex(fromAddress);
+
+    final privateKeyHex = await getPrivateKey();
+    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+
+    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
+      privateKeyHex,
+    );
+    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
+      throw Exception('Active EVM address does not match private key');
+    }
+
     final client = _clientForRpc(rpcUrl);
     final recipient = EthereumAddress.fromHex(toAddress);
-    final gasPrice = gasPriceWei == null
-        ? await client.getGasPrice()
-        : EtherAmount.inWei(gasPriceWei);
+
+    final resolvedGasPriceWei =
+        gasPriceWei ?? (await client.getGasPrice()).getInWei;
+
     final resolvedGasLimit =
         gasLimit ??
         BigInt.from(
           ((await client.estimateGas(
-                    sender: credentials.address,
+                    sender: sender,
                     to: recipient,
                     value: EtherAmount.inWei(amountInBaseUnits),
                   )).toInt() *
@@ -836,17 +855,29 @@ class WalletService {
               .ceil(),
         ).toInt();
 
-    return client.sendTransaction(
-      credentials,
-      Transaction(
-        to: recipient,
-        value: EtherAmount.inWei(amountInBaseUnits),
-        gasPrice: gasPrice,
-        maxGas: resolvedGasLimit,
-      ),
-      chainId: chainId,
-      fetchChainIdFromNetworkId: false,
+    final nonce = await client.getTransactionCount(
+      sender,
+      atBlock: const BlockNum.pending(),
     );
+
+    final rawTxHex = await NativeCrypto.signLegacyEvmTransaction(
+      privateKeyHex: privateKeyHex,
+      chainId: chainId,
+      nonce: nonce,
+      gasPriceWei: resolvedGasPriceWei,
+      gasLimit: resolvedGasLimit,
+      toAddress: recipient.hex,
+      valueWei: amountInBaseUnits,
+      dataHex: '',
+    );
+
+    final rawBytes = web3_crypto.hexToBytes(
+      rawTxHex.startsWith('0x') || rawTxHex.startsWith('0X')
+          ? rawTxHex.substring(2)
+          : rawTxHex,
+    );
+
+    return await client.sendRawTransaction(rawBytes);
   }
 
   Future<String> sendTokenTransaction({

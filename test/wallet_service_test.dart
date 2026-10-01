@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/wallet_account.dart';
+import 'package:fomowl_wallet/services/native_crypto.dart';
 import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
@@ -319,6 +320,29 @@ void main() {
         ChainFamily.tron,
       });
       expect(await walletService.getCurrentWalletAddress(), original.address);
+    });
+  });
+
+  group('Native EVM Transaction Signing (Rust / Alloy)', () {
+    test('signs official EIP-155 vector via NativeCrypto end-to-end', () async {
+      const privateKey =
+          '4646464646464646464646464646464646464646464646464646464646464646';
+      const toAddress = '0x3535353535353535353535353535353535353535';
+      const expectedRawTx =
+          '0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83';
+
+      final rawTx = await NativeCrypto.signLegacyEvmTransaction(
+        privateKeyHex: privateKey,
+        chainId: 1,
+        nonce: 9,
+        gasPriceWei: BigInt.from(20000000000),
+        gasLimit: 21000,
+        toAddress: toAddress,
+        valueWei: BigInt.parse('1000000000000000000'),
+        dataHex: '',
+      );
+
+      expect(rawTx, expectedRawTx);
     });
   });
 }

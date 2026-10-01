@@ -11,6 +11,7 @@ import 'package:bip39/bip39.dart' as dart_bip39;
 import '../src/rust/api/argon2.dart' as rust_argon2;
 import '../src/rust/api/bip32.dart' as rust_bip32;
 import '../src/rust/api/bip39.dart' as rust_bip39;
+import '../src/rust/api/evm_tx.dart' as rust_evm_tx;
 import '../src/rust/api/secp256k1_api.dart' as rust_secp;
 import '../src/rust/api/solana_tx.dart' as rust_solana_tx;
 
@@ -367,6 +368,36 @@ class NativeCrypto {
       );
     } catch (e) {
       debugPrint('[NativeCrypto] signTypedData Rust error: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign a legacy EVM transaction (EIP-155) via Rust and Alloy.
+  /// Returns a canonical 0x-prefixed raw transaction hex string.
+  /// Fail-closed: does not fall back to Dart signing.
+  static Future<String> signLegacyEvmTransaction({
+    required String privateKeyHex,
+    required int chainId,
+    required int nonce,
+    required BigInt gasPriceWei,
+    required int gasLimit,
+    required String toAddress,
+    required BigInt valueWei,
+    String dataHex = '',
+  }) async {
+    try {
+      return await rust_evm_tx.signLegacyEvmTransaction(
+        privateKeyHex: privateKeyHex,
+        chainId: BigInt.from(chainId),
+        nonce: BigInt.from(nonce),
+        gasPriceWei: gasPriceWei.toString(),
+        gasLimit: BigInt.from(gasLimit),
+        toAddress: toAddress,
+        valueWei: valueWei.toString(),
+        dataHex: dataHex,
+      );
+    } catch (e) {
+      debugPrint('[NativeCrypto] signLegacyEvmTransaction Rust error: $e');
       rethrow;
     }
   }

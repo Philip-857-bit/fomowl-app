@@ -6,6 +6,7 @@
 import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
+import 'api/evm_tx.dart';
 import 'api/secp256k1_api.dart';
 import 'api/simple.dart';
 import 'api/solana_tx.dart';
@@ -71,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1363220094;
+  int get rustContentHash => -1604441328;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -154,6 +155,17 @@ abstract class RustLibApi extends BaseApi {
 
   Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
     required String privateKey,
+  });
+
+  Future<String> crateApiEvmTxSignLegacyEvmTransaction({
+    required String privateKeyHex,
+    required BigInt chainId,
+    required BigInt nonce,
+    required String gasPriceWei,
+    required BigInt gasLimit,
+    required String toAddress,
+    required String valueWei,
+    required String dataHex,
   });
 
   Future<String> crateApiSecp256K1ApiSignPersonalMessage({
@@ -768,6 +780,71 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiEvmTxSignLegacyEvmTransaction({
+    required String privateKeyHex,
+    required BigInt chainId,
+    required BigInt nonce,
+    required String gasPriceWei,
+    required BigInt gasLimit,
+    required String toAddress,
+    required String valueWei,
+    required String dataHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_u_64(chainId, serializer);
+          sse_encode_u_64(nonce, serializer);
+          sse_encode_String(gasPriceWei, serializer);
+          sse_encode_u_64(gasLimit, serializer);
+          sse_encode_String(toAddress, serializer);
+          sse_encode_String(valueWei, serializer);
+          sse_encode_String(dataHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEvmTxSignLegacyEvmTransactionConstMeta,
+        argValues: [
+          privateKeyHex,
+          chainId,
+          nonce,
+          gasPriceWei,
+          gasLimit,
+          toAddress,
+          valueWei,
+          dataHex,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEvmTxSignLegacyEvmTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_legacy_evm_transaction",
+        argNames: [
+          "privateKeyHex",
+          "chainId",
+          "nonce",
+          "gasPriceWei",
+          "gasLimit",
+          "toAddress",
+          "valueWei",
+          "dataHex",
+        ],
+      );
+
+  @override
   Future<String> crateApiSecp256K1ApiSignPersonalMessage({
     required String privateKeyHex,
     required String message,
@@ -781,7 +858,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -818,7 +895,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -853,7 +930,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -888,7 +965,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -923,7 +1000,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },
@@ -954,7 +1031,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1015,6 +1092,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -1070,6 +1153,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_u_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
   }
 
   @protected
@@ -1137,6 +1226,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_u_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
   }
 
   @protected
