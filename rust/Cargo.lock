@@ -1368,6 +1368,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "owllet-core"
+version = "0.1.0"
+dependencies = [
+ "bip39",
+ "rand 0.10.0",
+]
+
+[[package]]
 name = "parity-scale-codec"
 version = "3.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1778,6 +1786,7 @@ dependencies = [
  "flutter_rust_bridge",
  "hex",
  "hmac",
+ "owllet-core",
  "pbkdf2 0.12.2",
  "rand 0.10.0",
  "secp256k1 0.31.1",
