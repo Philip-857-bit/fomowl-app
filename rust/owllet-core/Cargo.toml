@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+alloy = { version = "2.0.5", default-features = false, features = ["consensus", "signer-local", "network", "eips"] }
 bip32 = "0.5.3"
 bip39 = "2.2.2"
 bs58 = "0.5.1"
