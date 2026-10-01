@@ -36,11 +36,20 @@ jobs:
         with:
           workspaces: "rust -> target"
 
-      - name: Check formatting
+      - name: Check formatting (rust_lib_fomowl_wallet)
         run: cargo fmt --all -- --check
 
-      - name: Lint with Clippy
+      - name: Lint with Clippy (rust_lib_fomowl_wallet)
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Run full Rust test suite
+      - name: Run full Rust test suite (rust_lib_fomowl_wallet)
         run: cargo test --all-targets --all-features
+
+      - name: Check formatting (owllet-core)
+        run: cargo fmt --manifest-path owllet-core/Cargo.toml --all -- --check
+
+      - name: Lint with Clippy (owllet-core)
+        run: cargo clippy --manifest-path owllet-core/Cargo.toml --all-targets --all-features -- -D warnings
+
+      - name: Run test suite (owllet-core)
+        run: cargo test --manifest-path owllet-core/Cargo.toml --all-targets --all-features
