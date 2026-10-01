@@ -3,6 +3,7 @@ use flutter_rust_bridge::frb;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
 use std::fmt;
+use zeroize::Zeroize;
 
 #[frb(dart_code = "
   @override
@@ -79,9 +80,11 @@ pub fn derive_solana_address_from_seed(
 }
 
 pub fn derive_solana_address_from_private_key(
-    private_key_bytes: Vec<u8>,
+    mut private_key_bytes: Vec<u8>,
 ) -> Result<String, String> {
-    owllet_core::accounts::derive_solana_address_from_private_key(&private_key_bytes)
+    let result = owllet_core::accounts::derive_solana_address_from_private_key(&private_key_bytes);
+    private_key_bytes.zeroize();
+    result
 }
 
 pub fn sign_solana_message(private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
@@ -155,8 +158,13 @@ fn parse_solana_key_hex(value: &str) -> Result<Vec<u8>, String> {
     hex::decode(value).map_err(|e| format!("Invalid Solana hex key: {e}"))
 }
 
-pub(crate) fn solana_keypair_from_bytes(bytes: Vec<u8>, source: &str) -> Result<Keypair, String> {
-    owllet_core::accounts::solana_keypair_from_bytes(&bytes, source)
+pub(crate) fn solana_keypair_from_bytes(
+    mut bytes: Vec<u8>,
+    source: &str,
+) -> Result<Keypair, String> {
+    let result = owllet_core::accounts::solana_keypair_from_bytes(&bytes, source);
+    bytes.zeroize();
+    result
 }
 
 fn parse_32_byte_hex(value: &str, label: &str) -> Result<[u8; 32], String> {

@@ -34,10 +34,16 @@ pub fn derive_solana_address_from_seed(
     seed: &[u8],
     derivation_index: u32,
 ) -> Result<String, String> {
-    let private_key_bytes = derive_solana_private_key_from_seed(seed, derivation_index)?;
-    derive_solana_address_from_private_key(&private_key_bytes)
+    let mut private_key_bytes = derive_solana_private_key_from_seed(seed, derivation_index)?;
+    let result = derive_solana_address_from_private_key(&private_key_bytes);
+    private_key_bytes.zeroize();
+    result
 }
 
+/// Derives a Solana Base58 public address from borrowed private key bytes (32-byte seed or 64-byte keypair).
+///
+/// Note: Because `private_key_bytes` is a borrowed slice, the caller retains ownership
+/// and responsibility for zeroizing the underlying buffer.
 pub fn derive_solana_address_from_private_key(private_key_bytes: &[u8]) -> Result<String, String> {
     let keypair = solana_keypair_from_bytes(private_key_bytes, "Solana private key")?;
     Ok(keypair.pubkey().to_string())
