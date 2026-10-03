@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
 import '../l10n/app_localizations.dart';
+import '../services/screen_capture_guard.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/wallet_two_factor_service.dart';
@@ -212,105 +215,111 @@ class SensitiveAccessGuard {
   static Future<bool> _promptToCreatePasscode(BuildContext context) async {
     final controller = TextEditingController();
     final confirmController = TextEditingController();
-    return await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) {
-            String? errorText;
-            return StatefulBuilder(
-              builder: (context, setState) => AlertDialog(
-                backgroundColor: AppColors.cardDark,
-                title: Text(
-                  'Set a passcode',
-                  style: GoogleFonts.outfit(color: Colors.white),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Create a passcode to protect access to sensitive wallet '
-                      'details. You will need it to reveal this information.',
-                      style: GoogleFonts.outfit(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: controller,
-                      obscureText: true,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(_maxPasscodeLength),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: 'Enter a passcode (6-12 digits)',
-                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
+    final screenCaptureGuard = ScreenCaptureGuard();
+    try {
+      await screenCaptureGuard.enableProtection();
+      return await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              String? errorText;
+              return StatefulBuilder(
+                builder: (context, setState) => AlertDialog(
+                  backgroundColor: AppColors.cardDark,
+                  title: Text(
+                    'Set a passcode',
+                    style: GoogleFonts.outfit(color: Colors.white),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Create a passcode to protect access to sensitive wallet '
+                        'details. You will need it to reveal this information.',
+                        style: GoogleFonts.outfit(color: Colors.white70),
                       ),
-                      style: GoogleFonts.outfit(color: Colors.white),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: confirmController,
-                      obscureText: true,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(_maxPasscodeLength),
-                      ],
-                      decoration: InputDecoration(
-                        hintText: 'Confirm passcode',
-                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
-                        errorText: errorText,
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: controller,
+                        obscureText: true,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(_maxPasscodeLength),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: 'Enter a passcode (6-12 digits)',
+                          hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                        ),
+                        style: GoogleFonts.outfit(color: Colors.white),
                       ),
-                      style: GoogleFonts.outfit(color: Colors.white),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: confirmController,
+                        obscureText: true,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(_maxPasscodeLength),
+                        ],
+                        decoration: InputDecoration(
+                          hintText: 'Confirm passcode',
+                          hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                          errorText: errorText,
+                        ),
+                        style: GoogleFonts.outfit(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.outfit(color: Colors.white54),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final passcode = controller.text.trim();
+                        final confirm = confirmController.text.trim();
+                        // Mirror the unlock screen's contract: the unlock PIN pad
+                        // is digit-only and caps at _maxPasscodeLength, so a
+                        // passcode that violates either rule could never be
+                        // re-entered to unlock the app.
+                        if (!_digitsOnly.hasMatch(passcode) ||
+                            passcode.length < _minPasscodeLength ||
+                            passcode.length > _maxPasscodeLength) {
+                          setState(
+                            () => errorText =
+                                'Passcode must be $_minPasscodeLength-$_maxPasscodeLength digits.',
+                          );
+                          return;
+                        }
+                        if (passcode != confirm) {
+                          setState(() => errorText = 'Passcodes do not match.');
+                          return;
+                        }
+                        await _storage.savePasscode(passcode);
+                        await _storage.resetFailedAttempts();
+                        if (!context.mounted) return;
+                        Navigator.pop(context, true);
+                      },
+                      child: Text(
+                        'Save',
+                        style: GoogleFonts.outfit(color: AppColors.accentRed),
+                      ),
                     ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.outfit(color: Colors.white54),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final passcode = controller.text.trim();
-                      final confirm = confirmController.text.trim();
-                      // Mirror the unlock screen's contract: the unlock PIN pad
-                      // is digit-only and caps at _maxPasscodeLength, so a
-                      // passcode that violates either rule could never be
-                      // re-entered to unlock the app.
-                      if (!_digitsOnly.hasMatch(passcode) ||
-                          passcode.length < _minPasscodeLength ||
-                          passcode.length > _maxPasscodeLength) {
-                        setState(
-                          () => errorText =
-                              'Passcode must be $_minPasscodeLength-$_maxPasscodeLength digits.',
-                        );
-                        return;
-                      }
-                      if (passcode != confirm) {
-                        setState(() => errorText = 'Passcodes do not match.');
-                        return;
-                      }
-                      await _storage.savePasscode(passcode);
-                      await _storage.resetFailedAttempts();
-                      if (!context.mounted) return;
-                      Navigator.pop(context, true);
-                    },
-                    child: Text(
-                      'Save',
-                      style: GoogleFonts.outfit(color: AppColors.accentRed),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ) ??
-        false;
+              );
+            },
+          ) ??
+          false;
+    } finally {
+      unawaited(screenCaptureGuard.disableProtection());
+    }
   }
 
   static Future<bool> _promptForTwoFactorCode(
@@ -319,107 +328,113 @@ class SensitiveAccessGuard {
     required String subtitle,
   }) async {
     final controller = TextEditingController();
-    return await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogContext) {
-            var errorText = '';
-            var submitting = false;
-            return StatefulBuilder(
-              builder: (dialogContext, setState) => AlertDialog(
-                backgroundColor: AppColors.cardDark,
-                title: Text(
-                  title,
-                  style: GoogleFonts.outfit(color: Colors.white),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.outfit(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: controller,
-                      autofocus: true,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      decoration: InputDecoration(
-                        counterText: '',
-                        hintText: '123456',
-                        hintStyle: GoogleFonts.outfit(color: Colors.white38),
-                        errorText: errorText.isEmpty ? null : errorText,
+    final screenCaptureGuard = ScreenCaptureGuard();
+    try {
+      await screenCaptureGuard.enableProtection();
+      return await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+              var errorText = '';
+              var submitting = false;
+              return StatefulBuilder(
+                builder: (dialogContext, setState) => AlertDialog(
+                  backgroundColor: AppColors.cardDark,
+                  title: Text(
+                    title,
+                    style: GoogleFonts.outfit(color: Colors.white),
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.outfit(color: Colors.white70),
                       ),
-                      style: GoogleFonts.outfit(color: Colors.white),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: controller,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: InputDecoration(
+                          counterText: '',
+                          hintText: '123456',
+                          hintStyle: GoogleFonts.outfit(color: Colors.white38),
+                          errorText: errorText.isEmpty ? null : errorText,
+                        ),
+                        style: GoogleFonts.outfit(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: submitting
+                          ? null
+                          : () => Navigator.pop(dialogContext, false),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.outfit(color: Colors.white54),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: submitting
+                          ? null
+                          : () async {
+                              final code = controller.text.trim();
+                              if (code.length != 6) {
+                                setState(() {
+                                  errorText =
+                                      'Enter the 6-digit code from your authenticator app.';
+                                });
+                                return;
+                              }
+
+                              setState(() {
+                                submitting = true;
+                                errorText = '';
+                              });
+                              final result = await _walletTwoFactorService
+                                  .confirmTwoFactorCode(code: code);
+                              if (!dialogContext.mounted) {
+                                return;
+                              }
+                              if (result['success'] == true) {
+                                Navigator.pop(dialogContext, true);
+                                return;
+                              }
+                              setState(() {
+                                submitting = false;
+                                errorText =
+                                    result['error']?.toString() ??
+                                    'Invalid authenticator code.';
+                              });
+                            },
+                      child: submitting
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.accentRed,
+                              ),
+                            )
+                          : Text(
+                              'Verify',
+                              style: GoogleFonts.outfit(
+                                color: AppColors.accentRed,
+                              ),
+                            ),
                     ),
                   ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: submitting
-                        ? null
-                        : () => Navigator.pop(dialogContext, false),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.outfit(color: Colors.white54),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: submitting
-                        ? null
-                        : () async {
-                            final code = controller.text.trim();
-                            if (code.length != 6) {
-                              setState(() {
-                                errorText =
-                                    'Enter the 6-digit code from your authenticator app.';
-                              });
-                              return;
-                            }
-
-                            setState(() {
-                              submitting = true;
-                              errorText = '';
-                            });
-                            final result = await _walletTwoFactorService
-                                .confirmTwoFactorCode(code: code);
-                            if (!dialogContext.mounted) {
-                              return;
-                            }
-                            if (result['success'] == true) {
-                              Navigator.pop(dialogContext, true);
-                              return;
-                            }
-                            setState(() {
-                              submitting = false;
-                              errorText =
-                                  result['error']?.toString() ??
-                                  'Invalid authenticator code.';
-                            });
-                          },
-                    child: submitting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.accentRed,
-                            ),
-                          )
-                        : Text(
-                            'Verify',
-                            style: GoogleFonts.outfit(
-                              color: AppColors.accentRed,
-                            ),
-                          ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ) ??
-        false;
+              );
+            },
+          ) ??
+          false;
+    } finally {
+      unawaited(screenCaptureGuard.disableProtection());
+    }
   }
 }
