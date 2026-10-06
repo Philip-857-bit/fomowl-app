@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/storage_service.dart';
 import '../../utils/toast_utils.dart';
@@ -15,6 +18,7 @@ class ConfirmPasscodeScreen extends StatefulWidget {
 }
 
 class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   String _passcode = '';
   String? _originalPasscode;
   String? _mode;
@@ -22,6 +26,18 @@ class _ConfirmPasscodeScreenState extends State<ConfirmPasscodeScreen> {
   static const int _maxLength = 12;
   final StorageService _storage = StorageService();
   bool _isVerifying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
+  void dispose() {
+    unawaited(_screenCaptureGuard.disableProtection());
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {

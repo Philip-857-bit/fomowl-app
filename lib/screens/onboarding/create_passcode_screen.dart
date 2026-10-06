@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 
 /// Create Passcode Screen
@@ -13,10 +16,23 @@ class CreatePasscodeScreen extends StatefulWidget {
 }
 
 class _CreatePasscodeScreenState extends State<CreatePasscodeScreen> {
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
   String _passcode = '';
   static const int _minLength = 6;
   static const int _maxLength = 12;
   String? _mode;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
+  void dispose() {
+    unawaited(_screenCaptureGuard.disableProtection());
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {

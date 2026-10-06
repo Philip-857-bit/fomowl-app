@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2026-10-01 - [Passcode Screen Capture Guard]
+**Vulnerability:** The create and confirm passcode screens lacked screen capture protection, potentially exposing sensitive wallet passcodes to background recording or malicious applications.
+**Learning:** Extending the previous learning, all screens that handle sensitive user input - including passcodes which gate wallet access - must implement `ScreenCaptureGuard`.
+**Prevention:** Always ensure any new or existing screens accepting sensitive information (passcodes, private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
