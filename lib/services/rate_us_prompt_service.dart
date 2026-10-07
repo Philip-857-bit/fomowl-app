@@ -48,8 +48,8 @@ class RateUsPromptService {
             },
             onMaybeLater: _markShownNow,
             onClose: _markShownNow,
-            onSubmitFeedback: (message) async {
-              await _submitFeedback(context, message);
+            onSubmitFeedback: (message, attachments) async {
+              await _submitFeedback(context, message, attachments);
               await _markShownNow();
             },
           );
@@ -74,7 +74,11 @@ class RateUsPromptService {
     await prefs.setString(_lastShownKey, DateTime.now().toIso8601String());
   }
 
-  Future<void> _submitFeedback(BuildContext context, String message) async {
+  Future<void> _submitFeedback(
+    BuildContext context,
+    String message,
+    List<FeedbackAttachment> attachments,
+  ) async {
     final walletAddress = await _walletService.getCurrentWalletAddress();
     if (walletAddress == null || walletAddress.isEmpty) {
       throw Exception('No active wallet found.');
@@ -94,6 +98,7 @@ class RateUsPromptService {
       message: message,
       appVersion: patchVersion.isEmpty ? fallbackVersion : patchVersion,
       languageCode: languageCode,
+      attachments: attachments,
     );
   }
 }

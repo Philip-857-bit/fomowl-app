@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/feedback_service.dart';
+import 'feedback_attachments.dart';
 
 const Color _ratePromptRed = Color(0xFFE53935);
 
@@ -17,7 +19,11 @@ class RateUsFeedbackModal extends StatefulWidget {
   final Future<void> Function() onRateNow;
   final Future<void> Function() onMaybeLater;
   final Future<void> Function() onClose;
-  final Future<void> Function(String message) onSubmitFeedback;
+  final Future<void> Function(
+    String message,
+    List<FeedbackAttachment> attachments,
+  )
+  onSubmitFeedback;
 
   @override
   State<RateUsFeedbackModal> createState() => _RateUsFeedbackModalState();
@@ -32,6 +38,8 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
   bool _submitted = false;
   bool _handled = false;
   String? _error;
+  List<FeedbackAttachment> _attachments = [];
+  bool _attachmentBusy = false;
 
   @override
   void dispose() {
@@ -40,7 +48,7 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
   }
 
   Future<void> _closeWith(Future<void> Function() action) async {
-    if (_handled) return;
+    if (_handled || _isSubmitting || _attachmentBusy) return;
     _handled = true;
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -49,6 +57,7 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
   }
 
   Future<void> _submitFeedback() async {
+    if (_isSubmitting || _attachmentBusy) return;
     final message = _feedbackController.text.trim();
     if (message.isEmpty) {
       setState(() => _error = 'Please enter your feedback message.');
@@ -59,7 +68,7 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
       _error = null;
     });
     try {
-      await widget.onSubmitFeedback(message);
+      await widget.onSubmitFeedback(message, _attachments);
       if (!mounted) return;
       _handled = true;
       setState(() => _submitted = true);
@@ -85,7 +94,7 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
     final cardWidth = width < 380 ? width - 48 : 342.0;
 
     return PopScope(
-      canPop: true,
+      canPop: !_isSubmitting && !_attachmentBusy,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop && !_handled) {
           _handled = true;
@@ -173,6 +182,11 @@ class _RateUsFeedbackModalState extends State<RateUsFeedbackModal> {
                               controller: _feedbackController,
                               error: _error,
                               isSubmitting: _isSubmitting,
+                              attachmentBusy: _attachmentBusy,
+                              onAttachmentsChanged: (files) =>
+                                  setState(() => _attachments = files),
+                              onAttachmentBusyChanged: (busy) =>
+                                  setState(() => _attachmentBusy = busy),
                               onSubmit: _submitFeedback,
                             )
                           : _RateState(
@@ -297,12 +311,18 @@ class _FeedbackState extends StatelessWidget {
     required this.error,
     required this.isSubmitting,
     required this.onSubmit,
+    required this.attachmentBusy,
+    required this.onAttachmentsChanged,
+    required this.onAttachmentBusyChanged,
   });
 
   final TextEditingController controller;
   final String? error;
   final bool isSubmitting;
   final VoidCallback onSubmit;
+  final bool attachmentBusy;
+  final ValueChanged<List<FeedbackAttachment>> onAttachmentsChanged;
+  final ValueChanged<bool> onAttachmentBusyChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -362,9 +382,15 @@ class _FeedbackState extends StatelessWidget {
             ),
           ),
         ],
+        const SizedBox(height: 12),
+        FeedbackAttachments(
+          disabled: isSubmitting,
+          onChanged: onAttachmentsChanged,
+          onBusyChanged: onAttachmentBusyChanged,
+        ),
         const SizedBox(height: 16),
         GestureDetector(
-          onTap: isSubmitting ? null : onSubmit,
+          onTap: isSubmitting || attachmentBusy ? null : onSubmit,
           child: Opacity(
             opacity: isSubmitting ? 0.72 : 1,
             child: Container(

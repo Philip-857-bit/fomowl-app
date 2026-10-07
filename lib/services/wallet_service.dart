@@ -50,6 +50,8 @@ class WalletService {
         "type": "function"
       }
     ]''', 'ERC20');
+  @visibleForTesting
+  static ContractAbi get erc20Abi => _erc20Abi;
   static final ContractAbi _erc721Abi = ContractAbi.fromJson('''[
       {
         "constant": false,
@@ -894,21 +896,40 @@ class WalletService {
         'gasPriceWei and gasLimit must either both be supplied or both omitted',
       );
     }
-    final credentials = await getCredentials();
+
+    final fromAddress = await getCurrentWalletAddress();
+    if (fromAddress == null || fromAddress.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+    final sender = EthereumAddress.fromHex(fromAddress);
+
+    final privateKeyHex = await getPrivateKey();
+    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+
+    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
+      privateKeyHex,
+    );
+    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
+      throw Exception('Active EVM address does not match private key');
+    }
+
     final client = _clientForRpc(rpcUrl);
     final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
     final recipient = EthereumAddress.fromHex(toAddress);
     final contract = DeployedContract(_erc20Abi, tokenContractAddress);
     final transferFunction = contract.function('transfer');
     final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
-    final gasPrice = gasPriceWei == null
-        ? await client.getGasPrice()
-        : EtherAmount.inWei(gasPriceWei);
+
+    final resolvedGasPriceWei =
+        gasPriceWei ?? (await client.getGasPrice()).getInWei;
+
     final resolvedGasLimit =
         gasLimit ??
         BigInt.from(
           ((await client.estimateGas(
-                    sender: credentials.address,
+                    sender: sender,
                     to: tokenContractAddress,
                     data: data,
                   )).toInt() *
@@ -916,18 +937,29 @@ class WalletService {
               .ceil(),
         ).toInt();
 
-    return client.sendTransaction(
-      credentials,
-      Transaction.callContract(
-        contract: contract,
-        function: transferFunction,
-        parameters: [recipient, amountInBaseUnits],
-        gasPrice: gasPrice,
-        maxGas: resolvedGasLimit,
-      ),
-      chainId: chainId,
-      fetchChainIdFromNetworkId: false,
+    final nonce = await client.getTransactionCount(
+      sender,
+      atBlock: const BlockNum.pending(),
     );
+
+    final rawTxHex = await NativeCrypto.signLegacyEvmTransaction(
+      privateKeyHex: privateKeyHex,
+      chainId: chainId,
+      nonce: nonce,
+      gasPriceWei: resolvedGasPriceWei,
+      gasLimit: resolvedGasLimit,
+      toAddress: tokenContractAddress.hex,
+      valueWei: BigInt.zero,
+      dataHex: '0x${HEX.encode(data)}',
+    );
+
+    final rawBytes = web3_crypto.hexToBytes(
+      rawTxHex.startsWith('0x') || rawTxHex.startsWith('0X')
+          ? rawTxHex.substring(2)
+          : rawTxHex,
+    );
+
+    return await client.sendRawTransaction(rawBytes);
   }
 
   Future<String> sendNftTransaction({

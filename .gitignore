@@ -32,6 +32,9 @@ graphify-out/
 .pub/
 /build/
 
+# Rust compiler output from embedded native crates
+**/target/
+
 # Symbolication related
 app.*.symbols
 

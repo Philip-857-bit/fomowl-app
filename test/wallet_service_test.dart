@@ -6,6 +6,9 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:hex/hex.dart';
+import 'package:web3dart/web3dart.dart';
+
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/services/native_crypto.dart';
@@ -323,7 +326,7 @@ void main() {
     });
   });
 
-  group('Native EVM Transaction Signing (Rust / Alloy)', () {
+  group('EVM Transaction Signing (Rust / Alloy)', () {
     test('signs official EIP-155 vector via NativeCrypto end-to-end', () async {
       const privateKey =
           '4646464646464646464646464646464646464646464646464646464646464646';
@@ -344,6 +347,47 @@ void main() {
 
       expect(rawTx, expectedRawTx);
     });
+
+    test(
+      'encodes ERC-20 transfer calldata with selector a9059cbb and signs legacy transaction',
+      () async {
+        const tokenAddress = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
+        const recipientAddress = '0x3535353535353535353535353535353535353535';
+        final amount = BigInt.parse('1000000');
+        const privateKey =
+            '4646464646464646464646464646464646464646464646464646464646464646';
+
+        final contract = DeployedContract(
+          WalletService.erc20Abi,
+          EthereumAddress.fromHex(tokenAddress),
+        );
+        final transferFunction = contract.function('transfer');
+        expect(HEX.encode(transferFunction.selector), 'a9059cbb');
+
+        final data = transferFunction.encodeCall([
+          EthereumAddress.fromHex(recipientAddress),
+          amount,
+        ]);
+        final dataHex = '0x${HEX.encode(data)}';
+
+        expect(dataHex.startsWith('0xa9059cbb'), isTrue);
+        expect(data.length, 68);
+
+        final rawTx = await NativeCrypto.signLegacyEvmTransaction(
+          privateKeyHex: privateKey,
+          chainId: 1,
+          nonce: 0,
+          gasPriceWei: BigInt.from(20000000000),
+          gasLimit: 60000,
+          toAddress: tokenAddress,
+          valueWei: BigInt.zero,
+          dataHex: dataHex,
+        );
+
+        expect(rawTx.startsWith('0x'), isTrue);
+        expect(rawTx.startsWith('0xf8'), isTrue);
+      },
+    );
   });
 }
 

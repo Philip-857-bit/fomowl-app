@@ -9,6 +9,7 @@ import '../../services/feedback_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
+import '../../widgets/feedback_attachments.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({
@@ -35,6 +36,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   final TextEditingController _emailController = TextEditingController();
 
   bool _submitting = false;
+  bool _attachmentBusy = false;
+  List<FeedbackAttachment> _attachments = [];
   String _category = 'general';
 
   @override
@@ -46,6 +49,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   }
 
   Future<void> _submit() async {
+    if (_submitting || _attachmentBusy) return;
     final l = AppLocalizations.of(context);
     final enterFeedbackMessage = l.enterFeedbackMessage;
     final noActiveWalletFound = l.noActiveWalletFound;
@@ -59,6 +63,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
     final patchReportVersion = context.read<AppPatchService>().reportVersion;
     final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (!mounted) return;
     if (walletAddress == null || walletAddress.isEmpty) {
       ToastUtils.showError(noActiveWalletFound);
       return;
@@ -79,6 +84,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             : _emailController.text.trim(),
         appVersion: patchReportVersion,
         languageCode: languageCode,
+        attachments: _attachments,
       );
       if (!mounted) return;
       ToastUtils.showSuccess(feedbackSubmitted);
@@ -219,8 +225,14 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 decoration: _inputDecoration(hint: l.feedbackEmailHint),
               ),
               const SizedBox(height: 20),
+              FeedbackAttachments(
+                disabled: _submitting,
+                onChanged: (files) => setState(() => _attachments = files),
+                onBusyChanged: (busy) => setState(() => _attachmentBusy = busy),
+              ),
+              const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _submitting ? null : _submit,
+                onPressed: _submitting || _attachmentBusy ? null : _submit,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(52),
                   backgroundColor: AppColors.accentRed,
