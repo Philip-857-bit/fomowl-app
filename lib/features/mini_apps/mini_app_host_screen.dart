@@ -14,7 +14,6 @@ import '../../constants/app_colors.dart';
 import '../../config/app_environment.dart';
 import '../../models/chain.dart';
 import '../../models/network_entry.dart';
-import '../../models/wallet_account.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
 import '../../services/auth_service.dart';
