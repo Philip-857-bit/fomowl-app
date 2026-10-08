@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
 import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:hex/hex.dart';
-import 'package:eth_sig_util/eth_sig_util.dart';
 import 'http_client_service.dart';
 import 'package:hex/hex.dart' as pkg_hex;
 
@@ -26,6 +25,12 @@ typedef SeedAccountActivityChecker =
       required int derivationIndex,
     });
 
+typedef EvmTypedDataSigner =
+    Future<String> Function({
+      required String privateKeyHex,
+      required String jsonData,
+    });
+
 /// Wallet Service
 /// Handles wallet creation, import, and key management
 class WalletService {
@@ -33,13 +38,16 @@ class WalletService {
     StorageService? storageService,
     SeedAccountActivityChecker? seedAccountActivityChecker,
     Web3Client Function(String rpcUrl)? web3ClientFactory,
+    EvmTypedDataSigner? typedDataSigner,
   }) : _storage = storageService ?? StorageService(),
        _seedAccountActivityChecker = seedAccountActivityChecker,
-       _web3ClientFactory = web3ClientFactory;
+       _web3ClientFactory = web3ClientFactory,
+       _typedDataSigner = typedDataSigner ?? NativeCrypto.signTypedData;
 
   final StorageService _storage;
   final SeedAccountActivityChecker? _seedAccountActivityChecker;
   final Web3Client Function(String rpcUrl)? _web3ClientFactory;
+  final EvmTypedDataSigner _typedDataSigner;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
   static final ContractAbi _erc20Abi = ContractAbi.fromJson('''[
@@ -775,21 +783,9 @@ class WalletService {
         ? privateKeyHex.substring(2)
         : privateKeyHex;
 
-    try {
-      return await NativeCrypto.signTypedData(
-        privateKeyHex: pk,
-        jsonData: jsonData,
-      );
-    } catch (error) {
-      debugPrint(
-        '[WalletService] Falling back to Dart typed-data signer: $error',
-      );
-      return EthSigUtil.signTypedData(
-        privateKey: pk,
-        jsonData: jsonData,
-        version: TypedDataVersion.V4,
-      );
-    }
+    // The Rust boundary is authoritative. A failure must not silently select
+    // a different cryptographic implementation for an approved payload.
+    return _typedDataSigner(privateKeyHex: pk, jsonData: jsonData);
   }
 
   /// Legacy compatibility API. Production transactions use Rust signing.

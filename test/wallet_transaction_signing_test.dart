@@ -9,12 +9,15 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:web3dart/web3dart.dart';
+import 'package:eth_sig_util/eth_sig_util.dart';
 
 import 'package:fomowl_wallet/services/wallet_service.dart';
 import 'package:fomowl_wallet/services/evm_transaction_service.dart';
 import 'package:fomowl_wallet/services/token_approval_service.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/models/token.dart';
+import 'package:fomowl_wallet/services/native_crypto.dart';
+import 'package:fomowl_wallet/services/cow_limit_order_signing.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
 const _key = '1ab42cc412b618bdea3a599e3c9bae199ebf030895b039e9db1e30dafb12b727';
@@ -31,8 +34,12 @@ const _idWord =
     '000000000000000000000000000000000000000000000000000000000000002a';
 
 class _Wallet extends WalletService {
-  _Wallet(Web3Client client, {this.key = _key, this.address = _sender})
-    : super(web3ClientFactory: (_) => client);
+  _Wallet(
+    Web3Client client, {
+    this.key = _key,
+    this.address = _sender,
+    super.typedDataSigner,
+  }) : super(web3ClientFactory: (_) => client);
 
   final String? key;
   final String? address;
@@ -146,6 +153,90 @@ Future<String> _referenceTransaction(
 
 void main() {
   setUpAll(() async => RustLib.init());
+
+  final cowOrder = buildCowOrderTypedData(
+    chainId: 1,
+    order: buildCowLimitOrderPayload(
+      sellToken: _contract,
+      buyToken: _recipient,
+      receiver: _sender,
+      sellAmount: '1000',
+      buyAmount: '2000',
+      validTo: 2000000000,
+    ),
+  );
+  final cancellation = buildCowOrderCancellationTypedData(
+    chainId: 1,
+    orderUids: ['0x${'ab' * 56}', '0x${'cd' * 56}'],
+  );
+  final permit = {
+    'types': {
+      'EIP712Domain': [
+        {'name': 'name', 'type': 'string'},
+        {'name': 'chainId', 'type': 'uint256'},
+        {'name': 'verifyingContract', 'type': 'address'},
+      ],
+      'TokenPermissions': [
+        {'name': 'token', 'type': 'address'},
+        {'name': 'amount', 'type': 'uint256'},
+      ],
+      'PermitTransferFrom': [
+        {'name': 'permitted', 'type': 'TokenPermissions'},
+        {'name': 'spender', 'type': 'address'},
+        {'name': 'nonce', 'type': 'uint256'},
+        {'name': 'deadline', 'type': 'uint256'},
+      ],
+    },
+    'primaryType': 'PermitTransferFrom',
+    'domain': {'name': 'Permit2', 'chainId': 1, 'verifyingContract': _contract},
+    'message': {
+      'permitted': {'token': _contract, 'amount': '1000'},
+      'spender': _recipient,
+      'nonce': '7',
+      'deadline': '2000000000',
+    },
+  };
+
+  for (final data in [cowOrder, cancellation, permit]) {
+    test(
+      'Rust EIP-712 matches legacy bytes for ${data['primaryType']}',
+      () async {
+        final json = jsonEncode(data);
+        final reference = EthSigUtil.signTypedData(
+          privateKey: _key,
+          jsonData: json,
+          version: TypedDataVersion.V4,
+        );
+        final signature = await NativeCrypto.signTypedData(
+          privateKeyHex: _key,
+          jsonData: json,
+        );
+        expect(signature, reference);
+      },
+    );
+  }
+
+  test(
+    'typed-data signing fails closed when its Rust boundary fails',
+    () async {
+      final rpc = _Rpc('');
+      addTearDown(rpc.client.dispose);
+      var attempts = 0;
+      final wallet = _Wallet(
+        rpc.client,
+        typedDataSigner: ({required privateKeyHex, required jsonData}) async {
+          attempts++;
+          throw StateError('Rust signer unavailable');
+        },
+      );
+      await expectLater(
+        wallet.signTypedData(jsonEncode(cowOrder)),
+        throwsStateError,
+      );
+      expect(attempts, 1);
+      expect(rpc.methods, isEmpty);
+    },
+  );
 
   for (final typed in [false, true]) {
     for (final creation in [false, true]) {
@@ -391,7 +482,7 @@ void main() {
     () async {
       final rpc = _Rpc('');
       addTearDown(rpc.client.dispose);
-        final account = await _Wallet(rpc.client).getEvmSigningAccount();
+      final account = await _Wallet(rpc.client).getEvmSigningAccount();
       expect(account.toString(), isNot(contains(_key)));
       await expectLater(
         EvmTransactionService.broadcastLegacy(
