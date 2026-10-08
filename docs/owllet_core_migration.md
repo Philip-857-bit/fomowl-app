@@ -30,7 +30,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Generic EVM requests | Legacy/type-2 calls and creation through the shared signer, host fee discovery retained | `2193d36` |
 | Standard swaps | Approved backend transaction routed through Rust wallet signing, quote guards retained | `038ca0d` |
 | Relay swaps | Sequential Rust requests; network, value, balance and gas-buffer guards retained | `dc30790` |
-| Bridge UI | Verified signing context, reusable preflight module, Rust broadcast | `refactor(wallet): isolate bridge preflight and Rust signing` |
+| Bridge UI | Verified signing context, reusable preflight module, Rust broadcast | `a11abee` |
+| Solana transaction core | v0 building and serialized signer-slot logic extracted; owned FFI secret inputs wiped | `refactor(wallet-core): extract Solana transaction engine` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.

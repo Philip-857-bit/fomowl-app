@@ -13,6 +13,7 @@ The current crate is an early engine foundation, not a complete wallet SDK.
 | `accounts::{evm,solana,tron}` | Chain-specific paths and address derivation |
 | `signing::{evm,secp256k1,solana,tron}` | Message, typed-data, and digest signing |
 | `transactions::evm` | Offline legacy/EIP-1559 signing and contract creation with Alloy |
+| `transactions::solana` | v0 instruction compilation and required-signer-slot signing of serialized legacy/v0 transactions |
 
 Use module-qualified APIs in new integrations. Existing root re-exports remain
 available for Flutter compatibility. Share primitives across chains; keep chain
@@ -41,7 +42,7 @@ owllet-core = { path = "../owllet-core", default-features = false, features = ["
 | `mnemonic-generation` | Convenience generation using `rand` and native entropy |
 | `secp256k1` | Shared secp256k1 derivation and digest signing primitives |
 | `evm` | EVM accounts/messages and Alloy legacy/EIP-1559 transactions; includes `secp256k1` |
-| `solana` | Solana accounts and message signatures |
+| `solana` | Solana accounts, message signatures, and transaction compilation/signing |
 | `tron` | TRON accounts and raw-hash signatures; includes `secp256k1` |
 
 Cargo features are additive: a dependency graph may enable more features than

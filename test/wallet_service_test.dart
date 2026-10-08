@@ -2,6 +2,7 @@
 library;
 
 import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,6 +23,45 @@ void main() {
   setUpAll(() async {
     await RustLib.init();
   });
+
+  test(
+    'Solana v0 building and signer-slot round trip through the shared core',
+    () async {
+      final key = Uint8List.fromList(List.filled(32, 7));
+      final payer = await NativeCrypto.deriveSolanaAddressFromPrivateKey(key);
+      final receiver = WalletService.encodeBase58Bytes(
+        Uint8List.fromList(List.filled(32, 8)),
+      );
+      final blockhash = WalletService.encodeBase58Bytes(
+        Uint8List.fromList(List.filled(32, 4)),
+      );
+      final signed = await NativeCrypto.buildAndSignSolanaTransaction(
+        payer: payer,
+        recentBlockhash: blockhash,
+        instructionsJson: jsonEncode([
+          {
+            'programId': '11111111111111111111111111111111',
+            'data': '020000000100000000000000',
+            'keys': [
+              {'pubkey': payer, 'isSigner': true, 'isWritable': true},
+              {'pubkey': receiver, 'isSigner': false, 'isWritable': true},
+            ],
+          },
+        ]),
+        lookupTablesJson: '[]',
+        privateKeyBytes: key,
+      );
+      final bytes = base64Decode(signed);
+      expect(bytes[0], 1); // One required signature.
+      expect(bytes[65], 0x80); // v0 message after the 64-byte signature.
+      final resigned = await NativeCrypto.signSerializedSolanaTransaction(
+        serializedTxBase64: signed,
+        expectedSigner: payer,
+        privateKeyBytes: key,
+      );
+      expect(resigned, signed);
+    },
+  );
 
   test('normalizeMnemonic collapses whitespace and lowercases', () {
     final walletService = WalletService();
