@@ -6,6 +6,7 @@
 import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
+import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
 import 'api/secp256k1_api.dart';
 import 'api/simple.dart';
@@ -72,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 65421731;
+  int get rustContentHash => -1990384325;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -83,12 +84,39 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiEvmSigningAccountRustEvmSigningAccountAddress({
+    required RustEvmSigningAccount that,
+  });
+
+  Future<void> crateApiEvmSigningAccountRustEvmSigningAccountClose({
+    required RustEvmSigningAccount that,
+  });
+
+  Future<String> crateApiEvmSigningAccountRustEvmSigningAccountSignTransaction({
+    required RustEvmSigningAccount that,
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  });
+
   Future<String> crateApiSolanaTxBuildAndSignSolanaTransaction({
     required String payer,
     required String recentBlockhash,
     required String instructionsJson,
     required String lookupTablesJson,
     required List<int> privateKeyBytes,
+  });
+
+  Future<RustEvmSigningAccount>
+  crateApiEvmSigningAccountCreateEvmSigningAccount({
+    required String privateKeyHex,
+    required String expectedAddress,
   });
 
   Future<String> crateApiBip32DeriveEvmAddressFromPrivateKey({
@@ -212,6 +240,15 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<bool> crateApiBip39ValidateMnemonic({required String phrase});
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_RustEvmSigningAccount;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_RustEvmSigningAccount;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_RustEvmSigningAccountPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -221,6 +258,160 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  @override
+  Future<String> crateApiEvmSigningAccountRustEvmSigningAccountAddress({
+    required RustEvmSigningAccount that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiEvmSigningAccountRustEvmSigningAccountAddressConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEvmSigningAccountRustEvmSigningAccountAddressConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustEvmSigningAccount_address",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiEvmSigningAccountRustEvmSigningAccountClose({
+    required RustEvmSigningAccount that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiEvmSigningAccountRustEvmSigningAccountCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEvmSigningAccountRustEvmSigningAccountCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustEvmSigningAccount_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<String> crateApiEvmSigningAccountRustEvmSigningAccountSignTransaction({
+    required RustEvmSigningAccount that,
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(chainId, serializer);
+          sse_encode_u_64(nonce, serializer);
+          sse_encode_u_64(gasLimit, serializer);
+          sse_encode_opt_String(toAddress, serializer);
+          sse_encode_String(valueWei, serializer);
+          sse_encode_String(dataHex, serializer);
+          sse_encode_opt_String(gasPriceWei, serializer);
+          sse_encode_opt_String(maxFeePerGasWei, serializer);
+          sse_encode_opt_String(maxPriorityFeePerGasWei, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiEvmSigningAccountRustEvmSigningAccountSignTransactionConstMeta,
+        argValues: [
+          that,
+          chainId,
+          nonce,
+          gasLimit,
+          toAddress,
+          valueWei,
+          dataHex,
+          gasPriceWei,
+          maxFeePerGasWei,
+          maxPriorityFeePerGasWei,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEvmSigningAccountRustEvmSigningAccountSignTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustEvmSigningAccount_sign_transaction",
+        argNames: [
+          "that",
+          "chainId",
+          "nonce",
+          "gasLimit",
+          "toAddress",
+          "valueWei",
+          "dataHex",
+          "gasPriceWei",
+          "maxFeePerGasWei",
+          "maxPriorityFeePerGasWei",
+        ],
+      );
 
   @override
   Future<String> crateApiSolanaTxBuildAndSignSolanaTransaction({
@@ -242,7 +433,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 4,
             port: port_,
           );
         },
@@ -276,6 +467,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<RustEvmSigningAccount>
+  crateApiEvmSigningAccountCreateEvmSigningAccount({
+    required String privateKeyHex,
+    required String expectedAddress,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_String(expectedAddress, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEvmSigningAccountCreateEvmSigningAccountConstMeta,
+        argValues: [privateKeyHex, expectedAddress],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEvmSigningAccountCreateEvmSigningAccountConstMeta =>
+      const TaskConstMeta(
+        debugName: "create_evm_signing_account",
+        argNames: ["privateKeyHex", "expectedAddress"],
+      );
+
+  @override
   Future<String> crateApiBip32DeriveEvmAddressFromPrivateKey({
     required String privateKeyHex,
   }) {
@@ -287,7 +516,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 6,
             port: port_,
           );
         },
@@ -322,7 +551,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 7,
             port: port_,
           );
         },
@@ -357,7 +586,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 8,
             port: port_,
           );
         },
@@ -390,7 +619,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 9,
             port: port_,
           );
         },
@@ -429,7 +658,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 10,
             port: port_,
           );
         },
@@ -462,7 +691,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 11,
             port: port_,
           );
         },
@@ -497,7 +726,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 12,
             port: port_,
           );
         },
@@ -532,7 +761,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 13,
             port: port_,
           );
         },
@@ -565,7 +794,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 14,
             port: port_,
           );
         },
@@ -600,7 +829,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 15,
             port: port_,
           );
         },
@@ -635,7 +864,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 16,
             port: port_,
           );
         },
@@ -670,7 +899,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 17,
             port: port_,
           );
         },
@@ -700,7 +929,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 18,
             port: port_,
           );
         },
@@ -725,7 +954,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -750,7 +979,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 20,
             port: port_,
           );
         },
@@ -778,7 +1007,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 21,
             port: port_,
           );
         },
@@ -808,7 +1037,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 22,
             port: port_,
           );
         },
@@ -859,7 +1088,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 23,
             port: port_,
           );
         },
@@ -928,7 +1157,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 24,
             port: port_,
           );
         },
@@ -981,7 +1210,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1018,7 +1247,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1053,7 +1282,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1088,7 +1317,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1123,7 +1352,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1154,7 +1383,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1171,6 +1400,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiBip39ValidateMnemonicConstMeta =>
       const TaskConstMeta(debugName: "validate_mnemonic", argNames: ["phrase"]);
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_RustEvmSigningAccount => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_RustEvmSigningAccount => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount;
+
+  @protected
+  RustEvmSigningAccount
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustEvmSigningAccount
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustEvmSigningAccount
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustEvmSigningAccount
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
 
   @protected
   String dco_decode_String(dynamic raw) {
@@ -1236,6 +1509,60 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void dco_decode_unit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return;
+  }
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  RustEvmSigningAccount
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustEvmSigningAccount
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustEvmSigningAccount
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustEvmSigningAccount
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustEvmSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
   }
 
   @protected
@@ -1313,9 +1640,67 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    RustEvmSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustEvmSigningAccountImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    RustEvmSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustEvmSigningAccountImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    RustEvmSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustEvmSigningAccountImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    RustEvmSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustEvmSigningAccountImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
   }
 
   @protected
@@ -1396,8 +1781,73 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
   }
+}
+
+@sealed
+class RustEvmSigningAccountImpl extends RustOpaque
+    implements RustEvmSigningAccount {
+  // Not to be used by end users
+  RustEvmSigningAccountImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  RustEvmSigningAccountImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_RustEvmSigningAccount,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_RustEvmSigningAccount,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_RustEvmSigningAccountPtr,
+  );
+
+  Future<String> address() => RustLib.instance.api
+      .crateApiEvmSigningAccountRustEvmSigningAccountAddress(that: this);
+
+  Future<void> close() => RustLib.instance.api
+      .crateApiEvmSigningAccountRustEvmSigningAccountClose(that: this);
+
+  Future<String> signTransaction({
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  }) => RustLib.instance.api
+      .crateApiEvmSigningAccountRustEvmSigningAccountSignTransaction(
+        that: this,
+        chainId: chainId,
+        nonce: nonce,
+        gasLimit: gasLimit,
+        toAddress: toAddress,
+        valueWei: valueWei,
+        dataHex: dataHex,
+        gasPriceWei: gasPriceWei,
+        maxFeePerGasWei: maxFeePerGasWei,
+        maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
+      );
 }

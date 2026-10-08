@@ -1,6 +1,7 @@
 pub mod argon2;
 pub mod bip32;
 pub mod bip39;
+pub mod evm_signing_account;
 pub mod evm_tx;
 pub mod secp256k1_api;
 pub mod simple; // Example file from codegen

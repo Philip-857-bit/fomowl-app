@@ -6,6 +6,8 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `request_from_fields`
+
 /// General transaction adapter. Fees must select exactly one engine policy;
 /// fee discovery and user permission checks remain with the host.
 Future<String> signEvmTransaction({

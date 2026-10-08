@@ -25,6 +25,54 @@ void main() {
   });
 
   test(
+    'opaque Rust EVM signer preserves fixture bytes and refuses use after close',
+    () async {
+      final key = '46' * 32;
+      final address = await NativeCrypto.deriveEvmAddressFromPrivateKey(key);
+      final signer = await NativeCrypto.createEvmSigningAccount(
+        privateKeyHex: key,
+        expectedAddress: address,
+      );
+      addTearDown(signer.dispose);
+      expect(await signer.address(), address);
+      final raw = await signer.signTransaction(
+        chainId: BigInt.one,
+        nonce: BigInt.from(9),
+        gasLimit: BigInt.from(21000),
+        toAddress: '0x3535353535353535353535353535353535353535',
+        valueWei: '1000000000000000000',
+        dataHex: '',
+        gasPriceWei: '20000000000',
+      );
+      expect(
+        raw,
+        '0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83',
+      );
+      await signer.close();
+      await expectLater(
+        signer.address(),
+        throwsA(
+          predicate<Object>((error) => error.toString().contains('locked')),
+        ),
+      );
+      await expectLater(
+        signer.signTransaction(
+          chainId: BigInt.one,
+          nonce: BigInt.from(9),
+          gasLimit: BigInt.from(21000),
+          toAddress: '0x3535353535353535353535353535353535353535',
+          valueWei: '0',
+          dataHex: '',
+          gasPriceWei: '1',
+        ),
+        throwsA(
+          predicate<Object>((error) => error.toString().contains('locked')),
+        ),
+      );
+    },
+  );
+
+  test(
     'Solana v0 building and signer-slot round trip through the shared core',
     () async {
       final key = Uint8List.fromList(List.filled(32, 7));

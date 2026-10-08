@@ -154,6 +154,28 @@ Future<String> _referenceTransaction(
 void main() {
   setUpAll(() async => RustLib.init());
 
+  test('closed Rust account cannot sign or fetch a nonce', () async {
+    final rpc = _Rpc('');
+    addTearDown(rpc.client.dispose);
+    final account = await _Wallet(rpc.client).getEvmSigningAccount();
+    await account.close();
+    await account.close();
+    expect(account.isClosed, isTrue);
+    await expectLater(
+      EvmTransactionService.broadcastLegacy(
+        client: rpc.client,
+        account: account,
+        chainId: 1,
+        to: EthereumAddress.fromHex(_contract),
+        valueWei: BigInt.zero,
+        gasPriceWei: BigInt.one,
+        gasLimit: 21000,
+      ),
+      throwsStateError,
+    );
+    expect(rpc.methods, isEmpty);
+  });
+
   final cowOrder = buildCowOrderTypedData(
     chainId: 1,
     order: buildCowLimitOrderPayload(
@@ -483,6 +505,7 @@ void main() {
       final rpc = _Rpc('');
       addTearDown(rpc.client.dispose);
       final account = await _Wallet(rpc.client).getEvmSigningAccount();
+      addTearDown(account.close);
       expect(account.toString(), isNot(contains(_key)));
       await expectLater(
         EvmTransactionService.broadcastLegacy(

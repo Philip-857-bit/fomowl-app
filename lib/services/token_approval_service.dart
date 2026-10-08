@@ -154,6 +154,7 @@ class TokenApprovalService {
     }
 
     final client = _clientForRpc(blockchain.activeChain.rpcUrl);
+    EvmSigningAccount? signingAccount;
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
@@ -197,12 +198,13 @@ class TokenApprovalService {
           error: 'No wallet found for token approval',
         );
       }
-      final account = await EvmTransactionService.verifyAccount(
+      signingAccount = await EvmTransactionService.verifyAccount(
         sender: ownerAddr,
         privateKeyHex: privateKeyHex,
         mismatchMessage:
             'Token approval wallet does not match the selected wallet',
       );
+      final account = signingAccount;
 
       // Approve only the exact amount this swap needs, never the unlimited
       // 2^256-1. The spender comes from the backend quote; bounding the
@@ -248,6 +250,7 @@ class TokenApprovalService {
     } catch (e) {
       return TokenApprovalResult(approvalSatisfied: false, error: e.toString());
     } finally {
+      await signingAccount?.close();
       // client.dispose() intentionally removed — HttpClient is a shared singleton.
     }
   }

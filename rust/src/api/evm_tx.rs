@@ -16,6 +16,33 @@ pub fn sign_evm_transaction(
     max_priority_fee_per_gas_wei: Option<String>,
 ) -> Result<String, String> {
     let private_key_hex = Zeroizing::new(private_key_hex);
+    let request = request_from_fields(
+        chain_id,
+        nonce,
+        gas_limit,
+        to_address,
+        value_wei,
+        data_hex,
+        gas_price_wei,
+        max_fee_per_gas_wei,
+        max_priority_fee_per_gas_wei,
+    )?;
+    let signed = owllet_core::sign_evm_transaction(&private_key_hex, &request)?;
+    Ok(signed.raw_transaction_hex)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn request_from_fields(
+    chain_id: u64,
+    nonce: u64,
+    gas_limit: u64,
+    to_address: Option<String>,
+    value_wei: String,
+    data_hex: String,
+    gas_price_wei: Option<String>,
+    max_fee_per_gas_wei: Option<String>,
+    max_priority_fee_per_gas_wei: Option<String>,
+) -> Result<owllet_core::EvmTransactionRequest, String> {
     let parse_fee = |value: &str| {
         value
             .trim()
@@ -40,7 +67,7 @@ pub fn sign_evm_transaction(
             )
         }
     };
-    let request = owllet_core::EvmTransactionRequest {
+    Ok(owllet_core::EvmTransactionRequest {
         chain_id,
         nonce,
         gas_limit,
@@ -48,9 +75,7 @@ pub fn sign_evm_transaction(
         value_wei,
         data_hex,
         fee,
-    };
-    let signed = owllet_core::sign_evm_transaction(&private_key_hex, &request)?;
-    Ok(signed.raw_transaction_hex)
+    })
 }
 
 #[allow(clippy::too_many_arguments)]

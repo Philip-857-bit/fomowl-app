@@ -5,16 +5,31 @@ import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:web3dart/web3dart.dart';
 
 import 'native_crypto.dart';
+import '../src/rust/api/evm_signing_account.dart' as rust_account;
 
 /// A sender whose address has been checked against its key by the Rust core.
 ///
-/// This is a temporary Dart signing context, not a Rust vault handle. Its key
-/// stays private to this adapter library and must never be logged or persisted.
+/// Dart holds only a Rust opaque reference and public address. Legacy key
+/// loading still passes through Dart at import; encrypted vault migration is later.
 class EvmSigningAccount {
-  EvmSigningAccount._(this.address, this._privateKeyHex);
+  EvmSigningAccount._(this.address, this._rustSigner);
 
   final EthereumAddress address;
-  final String _privateKeyHex;
+  final rust_account.RustEvmSigningAccount _rustSigner;
+  Future<void>? _closing;
+
+  bool get isClosed => _closing != null || _rustSigner.isDisposed;
+
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
+    if (_rustSigner.isDisposed) return;
+    try {
+      await _rustSigner.close();
+    } finally {
+      _rustSigner.dispose();
+    }
+  }
 
   @override
   String toString() =>
@@ -32,13 +47,20 @@ class EvmTransactionService {
     required String privateKeyHex,
     String mismatchMessage = 'Active EVM address does not match private key',
   }) async {
-    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
-      privateKeyHex,
-    );
-    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
-      throw Exception(mismatchMessage);
+    try {
+      final signer = await NativeCrypto.createEvmSigningAccount(
+        privateKeyHex: privateKeyHex,
+        expectedAddress: sender.hex,
+      );
+      return EvmSigningAccount._(sender, signer);
+    } catch (error) {
+      if (error.toString().contains(
+        'Active EVM address does not match private key',
+      )) {
+        throw Exception(mismatchMessage);
+      }
+      rethrow;
     }
-    return EvmSigningAccount._(sender, privateKeyHex);
   }
 
   static Future<String> broadcastLegacy({
@@ -76,6 +98,9 @@ class EvmTransactionService {
     BigInt? maxFeePerGasWei,
     BigInt? maxPriorityFeePerGasWei,
   }) async {
+    if (account.isClosed) {
+      throw StateError('EVM signing account is closed');
+    }
     final typed = maxFeePerGasWei != null || maxPriorityFeePerGasWei != null;
     final fees = [gasPriceWei, maxFeePerGasWei, maxPriorityFeePerGasWei];
     if (chainId <= 0 ||
@@ -102,17 +127,19 @@ class EvmTransactionService {
           account.address,
           atBlock: const BlockNum.pending(),
         );
-    final rawHex = await NativeCrypto.signEvmTransaction(
-      privateKeyHex: account._privateKeyHex,
-      chainId: chainId,
-      nonce: resolvedNonce,
-      gasLimit: gasLimit,
+    if (account.isClosed) {
+      throw StateError('EVM signing account is closed');
+    }
+    final rawHex = await account._rustSigner.signTransaction(
+      chainId: BigInt.from(chainId),
+      nonce: BigInt.from(resolvedNonce),
+      gasLimit: BigInt.from(gasLimit),
       toAddress: to?.hex,
-      valueWei: valueWei,
+      valueWei: valueWei.toString(),
       dataHex: data == null ? '' : '0x${HEX.encode(data)}',
-      gasPriceWei: gasPriceWei,
-      maxFeePerGasWei: maxFeePerGasWei,
-      maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
+      gasPriceWei: gasPriceWei?.toString(),
+      maxFeePerGasWei: maxFeePerGasWei?.toString(),
+      maxPriorityFeePerGasWei: maxPriorityFeePerGasWei?.toString(),
     );
     return client.sendRawTransaction(web3_crypto.hexToBytes(rawHex));
   }

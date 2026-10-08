@@ -36,7 +36,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Authoritative typed-data signing | Remove Dart fallback; CoW order/cancellation and nested permit signatures proven compatible | `81370bb` |
 | Owned secret inputs | Drop-based cleanup of adapter mnemonic, seed, import-key and signing-key inputs | `1107531` |
 | EVM metadata ownership | Derived/imported addresses and unprefixed 64-byte public keys come from Rust | `783265a` |
-| Native signing sessions | Rust-resident keys, scoped opaque handles, terminal lock/removal lifecycle, multi-chain signing | `feat(wallet-core): add scoped opaque signing sessions` |
+| Native signing sessions | Rust-resident keys, scoped opaque handles, terminal lock/removal lifecycle, multi-chain signing | `81154ea` |
+| Opaque EVM adapter | Dart contexts retain Rust references only; operation scopes explicitly close and dispose signers | `feat(wallet): use opaque Rust EVM signing contexts` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.

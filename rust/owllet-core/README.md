@@ -74,9 +74,11 @@ unlock, create a fresh session and re-import from host-managed secure storage.
 This module is an in-memory custody foundation. It performs no authentication,
 permission prompts, encrypted persistence, network calls, or hardware access.
 The host must serialize session mutation and apply its lifecycle policy. Flutter
-integration still uses transitional Dart contexts; these Rust session handles
-are not yet wired through FRB. Encrypted vault/storage migration is a separate
-step with verification before any legacy data removal.
+EVM transactions use an opaque Rust signing context through FRB, with explicit
+close/disposal at operation boundaries. Its legacy key import still crosses
+Dart once; transaction signing no longer sends or retains a key in its Dart
+context. Other family adapters and encrypted vault/storage migration are
+separate steps, with verification before any legacy data removal.
 
 ## Host integrations and current support
 

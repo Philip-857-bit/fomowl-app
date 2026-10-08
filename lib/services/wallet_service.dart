@@ -850,35 +850,39 @@ class WalletService {
     }
 
     final account = await _activeEvmSigningAccount();
-    final sender = account.address;
+    try {
+      final sender = account.address;
 
-    final client = _clientForRpc(rpcUrl);
-    final recipient = EthereumAddress.fromHex(toAddress);
+      final client = _clientForRpc(rpcUrl);
+      final recipient = EthereumAddress.fromHex(toAddress);
 
-    final resolvedGasPriceWei =
-        gasPriceWei ?? (await client.getGasPrice()).getInWei;
+      final resolvedGasPriceWei =
+          gasPriceWei ?? (await client.getGasPrice()).getInWei;
 
-    final resolvedGasLimit =
-        gasLimit ??
-        BigInt.from(
-          ((await client.estimateGas(
-                    sender: sender,
-                    to: recipient,
-                    value: EtherAmount.inWei(amountInBaseUnits),
-                  )).toInt() *
-                  1.1)
-              .ceil(),
-        ).toInt();
+      final resolvedGasLimit =
+          gasLimit ??
+          BigInt.from(
+            ((await client.estimateGas(
+                      sender: sender,
+                      to: recipient,
+                      value: EtherAmount.inWei(amountInBaseUnits),
+                    )).toInt() *
+                    1.1)
+                .ceil(),
+          ).toInt();
 
-    return EvmTransactionService.broadcastLegacy(
-      client: client,
-      account: account,
-      chainId: chainId,
-      to: recipient,
-      valueWei: amountInBaseUnits,
-      gasPriceWei: resolvedGasPriceWei,
-      gasLimit: resolvedGasLimit,
-    );
+      return await EvmTransactionService.broadcastLegacy(
+        client: client,
+        account: account,
+        chainId: chainId,
+        to: recipient,
+        valueWei: amountInBaseUnits,
+        gasPriceWei: resolvedGasPriceWei,
+        gasLimit: resolvedGasLimit,
+      );
+    } finally {
+      await account.close();
+    }
   }
 
   Future<String> sendTokenTransaction({
@@ -897,40 +901,44 @@ class WalletService {
     }
 
     final account = await _activeEvmSigningAccount();
-    final sender = account.address;
+    try {
+      final sender = account.address;
 
-    final client = _clientForRpc(rpcUrl);
-    final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
-    final recipient = EthereumAddress.fromHex(toAddress);
-    final contract = DeployedContract(_erc20Abi, tokenContractAddress);
-    final transferFunction = contract.function('transfer');
-    final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
+      final client = _clientForRpc(rpcUrl);
+      final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
+      final recipient = EthereumAddress.fromHex(toAddress);
+      final contract = DeployedContract(_erc20Abi, tokenContractAddress);
+      final transferFunction = contract.function('transfer');
+      final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
 
-    final resolvedGasPriceWei =
-        gasPriceWei ?? (await client.getGasPrice()).getInWei;
+      final resolvedGasPriceWei =
+          gasPriceWei ?? (await client.getGasPrice()).getInWei;
 
-    final resolvedGasLimit =
-        gasLimit ??
-        BigInt.from(
-          ((await client.estimateGas(
-                    sender: sender,
-                    to: tokenContractAddress,
-                    data: data,
-                  )).toInt() *
-                  1.1)
-              .ceil(),
-        ).toInt();
+      final resolvedGasLimit =
+          gasLimit ??
+          BigInt.from(
+            ((await client.estimateGas(
+                      sender: sender,
+                      to: tokenContractAddress,
+                      data: data,
+                    )).toInt() *
+                    1.1)
+                .ceil(),
+          ).toInt();
 
-    return EvmTransactionService.broadcastLegacy(
-      client: client,
-      account: account,
-      chainId: chainId,
-      to: tokenContractAddress,
-      valueWei: BigInt.zero,
-      gasPriceWei: resolvedGasPriceWei,
-      gasLimit: resolvedGasLimit,
-      data: data,
-    );
+      return await EvmTransactionService.broadcastLegacy(
+        client: client,
+        account: account,
+        chainId: chainId,
+        to: tokenContractAddress,
+        valueWei: BigInt.zero,
+        gasPriceWei: resolvedGasPriceWei,
+        gasLimit: resolvedGasLimit,
+        data: data,
+      );
+    } finally {
+      await account.close();
+    }
   }
 
   Future<String> sendNftTransaction({
@@ -955,37 +963,41 @@ class WalletService {
 
     final sender = EthereumAddress.fromHex(fromAddress);
     final account = await _activeEvmSigningAccount(expectedSender: sender);
-    final contractAddressHex = EthereumAddress.fromHex(contractAddress);
-    final recipient = EthereumAddress.fromHex(toAddress);
-    final isErc1155 = tokenType.toUpperCase().contains('1155');
-    final contract = DeployedContract(
-      isErc1155 ? _erc1155Abi : _erc721Abi,
-      contractAddressHex,
-    );
-    final transferFunction = contract.function('safeTransferFrom');
-    final parameters = isErc1155
-        ? <dynamic>[sender, recipient, tokenId, amount, Uint8List(0)]
-        : <dynamic>[sender, recipient, tokenId];
-    final data = transferFunction.encodeCall(parameters);
-    final client = _clientForRpc(rpcUrl);
-    final gasPrice = await client.getGasPrice();
-    final estimatedGas = await client.estimateGas(
-      sender: sender,
-      to: contractAddressHex,
-      data: data,
-    );
-    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
+    try {
+      final contractAddressHex = EthereumAddress.fromHex(contractAddress);
+      final recipient = EthereumAddress.fromHex(toAddress);
+      final isErc1155 = tokenType.toUpperCase().contains('1155');
+      final contract = DeployedContract(
+        isErc1155 ? _erc1155Abi : _erc721Abi,
+        contractAddressHex,
+      );
+      final transferFunction = contract.function('safeTransferFrom');
+      final parameters = isErc1155
+          ? <dynamic>[sender, recipient, tokenId, amount, Uint8List(0)]
+          : <dynamic>[sender, recipient, tokenId];
+      final data = transferFunction.encodeCall(parameters);
+      final client = _clientForRpc(rpcUrl);
+      final gasPrice = await client.getGasPrice();
+      final estimatedGas = await client.estimateGas(
+        sender: sender,
+        to: contractAddressHex,
+        data: data,
+      );
+      final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
 
-    return EvmTransactionService.broadcastLegacy(
-      client: client,
-      account: account,
-      chainId: chainId,
-      to: contractAddressHex,
-      valueWei: BigInt.zero,
-      gasPriceWei: gasPrice.getInWei,
-      gasLimit: bufferedGas.toInt(),
-      data: data,
-    );
+      return await EvmTransactionService.broadcastLegacy(
+        client: client,
+        account: account,
+        chainId: chainId,
+        to: contractAddressHex,
+        valueWei: BigInt.zero,
+        gasPriceWei: gasPrice.getInWei,
+        gasLimit: bufferedGas.toInt(),
+        data: data,
+      );
+    } finally {
+      await account.close();
+    }
   }
 
   Future<String> sendRawTransactionRequest({
@@ -1005,60 +1017,64 @@ class WalletService {
       throw ArgumentError('Legacy and EIP-1559 fees must not be mixed');
     }
     final account = await _activeEvmSigningAccount();
-    final client = _clientForRpc(rpcUrl);
-    final data = _decodeHexBytes(dataHex);
-    final to = toAddress == null || toAddress.isEmpty
-        ? null
-        : EthereumAddress.fromHex(toAddress);
-    final resolvedGasPrice = typed
-        ? null
-        : gasPriceWei ?? (await client.getGasPrice()).getInWei;
-    final priority = typed
-        ? maxPriorityFeePerGasWei ?? BigInt.from(1000000000)
-        : null;
-    BigInt? maxFee = maxFeePerGasWei;
-    if (typed && maxFee == null) {
-      final block = await client.getBlockInformation();
-      final baseFee = block.baseFeePerGas;
-      if (baseFee == null) {
-        throw Exception('RPC did not provide an EIP-1559 base fee');
+    try {
+      final client = _clientForRpc(rpcUrl);
+      final data = _decodeHexBytes(dataHex);
+      final to = toAddress == null || toAddress.isEmpty
+          ? null
+          : EthereumAddress.fromHex(toAddress);
+      final resolvedGasPrice = typed
+          ? null
+          : gasPriceWei ?? (await client.getGasPrice()).getInWei;
+      final priority = typed
+          ? maxPriorityFeePerGasWei ?? BigInt.from(1000000000)
+          : null;
+      BigInt? maxFee = maxFeePerGasWei;
+      if (typed && maxFee == null) {
+        final block = await client.getBlockInformation();
+        final baseFee = block.baseFeePerGas;
+        if (baseFee == null) {
+          throw Exception('RPC did not provide an EIP-1559 base fee');
+        }
+        maxFee = baseFee.getInWei * BigInt.two + priority!;
       }
-      maxFee = baseFee.getInWei * BigInt.two + priority!;
+      final resolvedNonce =
+          nonce ??
+          await client.getTransactionCount(
+            account.address,
+            atBlock: const BlockNum.pending(),
+          );
+      final resolvedGasLimit =
+          gasLimit ??
+          (await client.estimateGas(
+            sender: account.address,
+            to: to,
+            value: valueInWei == null ? null : EtherAmount.inWei(valueInWei),
+            data: data,
+            gasPrice: resolvedGasPrice == null
+                ? null
+                : EtherAmount.inWei(resolvedGasPrice),
+            maxFeePerGas: maxFee == null ? null : EtherAmount.inWei(maxFee),
+            maxPriorityFeePerGas: priority == null
+                ? null
+                : EtherAmount.inWei(priority),
+          )).toInt();
+      return await EvmTransactionService.broadcastTransaction(
+        client: client,
+        account: account,
+        chainId: chainId,
+        to: to,
+        valueWei: valueInWei ?? BigInt.zero,
+        gasLimit: resolvedGasLimit,
+        data: data,
+        nonce: resolvedNonce,
+        gasPriceWei: resolvedGasPrice,
+        maxFeePerGasWei: maxFee,
+        maxPriorityFeePerGasWei: priority,
+      );
+    } finally {
+      await account.close();
     }
-    final resolvedNonce =
-        nonce ??
-        await client.getTransactionCount(
-          account.address,
-          atBlock: const BlockNum.pending(),
-        );
-    final resolvedGasLimit =
-        gasLimit ??
-        (await client.estimateGas(
-          sender: account.address,
-          to: to,
-          value: valueInWei == null ? null : EtherAmount.inWei(valueInWei),
-          data: data,
-          gasPrice: resolvedGasPrice == null
-              ? null
-              : EtherAmount.inWei(resolvedGasPrice),
-          maxFeePerGas: maxFee == null ? null : EtherAmount.inWei(maxFee),
-          maxPriorityFeePerGas: priority == null
-              ? null
-              : EtherAmount.inWei(priority),
-        )).toInt();
-    return EvmTransactionService.broadcastTransaction(
-      client: client,
-      account: account,
-      chainId: chainId,
-      to: to,
-      valueWei: valueInWei ?? BigInt.zero,
-      gasLimit: resolvedGasLimit,
-      data: data,
-      nonce: resolvedNonce,
-      gasPriceWei: resolvedGasPrice,
-      maxFeePerGasWei: maxFee,
-      maxPriorityFeePerGasWei: priority,
-    );
   }
 
   Future<Map<String, dynamic>> estimateTransferFee({

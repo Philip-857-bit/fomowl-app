@@ -953,10 +953,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     );
     controller.setSwapSubmitting();
 
+    EvmSigningAccount? evmAccount;
     try {
       String? firstTxHash;
       String? latestTxHash;
-      EvmSigningAccount? evmAccount;
 
       for (var stepIndex = 0; stepIndex < quote.steps.length; stepIndex++) {
         final step = quote.steps[stepIndex];
@@ -1223,6 +1223,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ),
       );
     } finally {
+      await evmAccount?.close();
       if (mounted) {
         setState(() => _isBridging = false);
       }

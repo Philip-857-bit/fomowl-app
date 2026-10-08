@@ -12,6 +12,7 @@ import '../src/rust/api/argon2.dart' as rust_argon2;
 import '../src/rust/api/bip32.dart' as rust_bip32;
 import '../src/rust/api/bip39.dart' as rust_bip39;
 import '../src/rust/api/evm_tx.dart' as rust_evm_tx;
+import '../src/rust/api/evm_signing_account.dart' as rust_account;
 import '../src/rust/api/secp256k1_api.dart' as rust_secp;
 import '../src/rust/api/solana_tx.dart' as rust_solana_tx;
 
@@ -24,6 +25,14 @@ import '../src/rust/api/solana_tx.dart' as rust_solana_tx;
 ///   final privKey  = await NativeCrypto.deriveEvmPrivateKeyFromSeed(seed, 0);
 class NativeCrypto {
   NativeCrypto._();
+
+  static Future<rust_account.RustEvmSigningAccount> createEvmSigningAccount({
+    required String privateKeyHex,
+    required String expectedAddress,
+  }) => rust_account.createEvmSigningAccount(
+    privateKeyHex: privateKeyHex,
+    expectedAddress: expectedAddress,
+  );
 
   // ---------- BIP-39 -------------------------------------------------------
 
