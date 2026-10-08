@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 67 files · ~470,680 words
+- 67 files · ~471,104 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 346 nodes · 429 edges · 71 communities detected
+- 353 nodes · 441 edges · 71 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -83,7 +83,7 @@
 - [[_COMMUNITY_Community 70|Community 70]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `pde_ffi_dispatcher_primary_impl()` - 24 edges
+1. `pde_ffi_dispatcher_primary_impl()` - 25 edges
 2. `MainActivity` - 10 edges
 3. `sign_legacy_evm_transaction()` - 6 edges
 4. `eip155_request()` - 6 edges
@@ -100,8 +100,8 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.19
-Nodes (26): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_seed_impl() (+18 more)
+Cohesion: 0.18
+Nodes (27): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_seed_impl() (+19 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.14
@@ -113,15 +113,15 @@ Nodes (16): Create(), Destroy(), EnableFullDpiSupportIfAvailable(), GetClientAre
 
 ### Community 3 - "Community 3"
 Cohesion: 0.13
-Nodes (2): WalletCompatibilityFixture, WalletVector
+Nodes (5): crate::api::bip32::SolanaPrivateKeyImport, i32, Option<String>, String, Vec<u8>
 
 ### Community 4 - "Community 4"
-Cohesion: 0.28
-Nodes (12): eip155_request(), EvmTransactionFee, EvmTransactionRequest, LegacyEvmTransactionRequest, sign_evm_transaction(), sign_legacy_evm_transaction(), SignedEvmTransaction, test_chain_id_replay_protection() (+4 more)
+Cohesion: 0.13
+Nodes (2): WalletCompatibilityFixture, WalletVector
 
 ### Community 5 - "Community 5"
-Cohesion: 0.17
-Nodes (4): crate::api::bip32::SolanaPrivateKeyImport, i32, String, Vec<u8>
+Cohesion: 0.28
+Nodes (12): eip155_request(), EvmTransactionFee, EvmTransactionRequest, LegacyEvmTransactionRequest, sign_evm_transaction(), sign_legacy_evm_transaction(), SignedEvmTransaction, test_chain_id_replay_protection() (+4 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.18
@@ -140,36 +140,36 @@ Cohesion: 0.31
 Nodes (4): known_seed(), test_known_evm_derivation_index_0(), test_known_solana_derivation_index_0(), test_known_tron_derivation_index_0()
 
 ### Community 10 - "Community 10"
+Cohesion: 0.39
+Nodes (8): general_adapter_preserves_official_legacy_fixture(), general_adapter_rejects_ambiguous_fee_policy(), sign_evm_transaction(), sign_legacy_evm_transaction(), test_adapter_invalid_address(), test_adapter_invalid_gas_price(), test_adapter_invalid_key(), test_adapter_official_eip155_vector()
+
+### Community 11 - "Community 11"
 Cohesion: 0.48
 Nodes (4): Ed25519Slip10Key, slip10_ed25519_derive_child(), slip10_ed25519_master_key(), slip10_key_from_hmac()
 
-### Community 11 - "Community 11"
+### Community 12 - "Community 12"
 Cohesion: 0.33
 Nodes (2): digest_files(), sha256_git_blob()
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.62
 Nodes (6): download_artifact(), fetch_artifacts(), gh_json(), main(), regenerate_manifest(), run()
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.47
 Nodes (2): AppDelegate, FlutterAppDelegate
 
-### Community 14 - "Community 14"
+### Community 15 - "Community 15"
 Cohesion: 0.6
 Nodes (5): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), evm_address_from_public_key(), to_eip55_address()
-
-### Community 15 - "Community 15"
-Cohesion: 0.33
-Nodes (0):
 
 ### Community 16 - "Community 16"
 Cohesion: 0.33
 Nodes (0):
 
 ### Community 17 - "Community 17"
-Cohesion: 0.6
-Nodes (5): sign_legacy_evm_transaction(), test_adapter_invalid_address(), test_adapter_invalid_gas_price(), test_adapter_invalid_key(), test_adapter_official_eip155_vector()
+Cohesion: 0.33
+Nodes (0):
 
 ### Community 18 - "Community 18"
 Cohesion: 0.47
@@ -448,11 +448,13 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `i32` connect `Community 5` to `Community 0`?**
-  _High betweenness centrality (0.001) - this node is a cross-community bridge._
+- **Why does `i32` connect `Community 3` to `Community 0`?**
+  _High betweenness centrality (0.002) - this node is a cross-community bridge._
 - **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `LegacyEvmTransactionRequest` to the rest of the system?**
   _11 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.14 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
+  _Cohesion score 0.13 - nodes in this community are weakly interconnected._
+- **Should `Community 4` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._

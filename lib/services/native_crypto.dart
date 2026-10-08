@@ -401,4 +401,43 @@ class NativeCrypto {
       rethrow;
     }
   }
+
+  /// Signs a call or contract creation using one explicit Rust fee policy.
+  /// Returns canonical EIP-2718 bytes, including the type byte for EIP-1559.
+  static Future<String> signEvmTransaction({
+    required String privateKeyHex,
+    required int chainId,
+    required int nonce,
+    required int gasLimit,
+    String? toAddress,
+    required BigInt valueWei,
+    String dataHex = '',
+    BigInt? gasPriceWei,
+    BigInt? maxFeePerGasWei,
+    BigInt? maxPriorityFeePerGasWei,
+  }) {
+    final fees = [gasPriceWei, maxFeePerGasWei, maxPriorityFeePerGasWei];
+    if (chainId <= 0 ||
+        nonce < 0 ||
+        gasLimit <= 0 ||
+        valueWei < BigInt.zero ||
+        valueWei.bitLength > 256 ||
+        fees.any(
+          (fee) => fee != null && (fee < BigInt.zero || fee.bitLength > 128),
+        )) {
+      throw ArgumentError('Invalid EVM transaction fields');
+    }
+    return rust_evm_tx.signEvmTransaction(
+      privateKeyHex: privateKeyHex,
+      chainId: BigInt.from(chainId),
+      nonce: BigInt.from(nonce),
+      gasLimit: BigInt.from(gasLimit),
+      toAddress: toAddress,
+      valueWei: valueWei.toString(),
+      dataHex: dataHex,
+      gasPriceWei: gasPriceWei?.toString(),
+      maxFeePerGasWei: maxFeePerGasWei?.toString(),
+      maxPriorityFeePerGasWei: maxPriorityFeePerGasWei?.toString(),
+    );
+  }
 }

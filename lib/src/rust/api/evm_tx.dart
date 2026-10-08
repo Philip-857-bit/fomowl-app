@@ -6,6 +6,32 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// General transaction adapter. Fees must select exactly one engine policy;
+/// fee discovery and user permission checks remain with the host.
+Future<String> signEvmTransaction({
+  required String privateKeyHex,
+  required BigInt chainId,
+  required BigInt nonce,
+  required BigInt gasLimit,
+  String? toAddress,
+  required String valueWei,
+  required String dataHex,
+  String? gasPriceWei,
+  String? maxFeePerGasWei,
+  String? maxPriorityFeePerGasWei,
+}) => RustLib.instance.api.crateApiEvmTxSignEvmTransaction(
+  privateKeyHex: privateKeyHex,
+  chainId: chainId,
+  nonce: nonce,
+  gasLimit: gasLimit,
+  toAddress: toAddress,
+  valueWei: valueWei,
+  dataHex: dataHex,
+  gasPriceWei: gasPriceWei,
+  maxFeePerGasWei: maxFeePerGasWei,
+  maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
+);
+
 Future<String> signLegacyEvmTransaction({
   required String privateKeyHex,
   required BigInt chainId,

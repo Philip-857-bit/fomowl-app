@@ -328,6 +328,83 @@ void main() {
   });
 
   group('EVM Transaction Signing (Rust / Alloy)', () {
+    for (final typed in [false, true]) {
+      test(
+        'signs ${typed ? 'EIP-1559' : 'legacy'} creation through nullable FRB destination',
+        () async {
+          final client = Web3Client(
+            'https://rpc.invalid',
+            MockClient((_) => throw StateError('Reference must stay offline')),
+          );
+          addTearDown(client.dispose);
+          final gas = BigInt.from(30000000000);
+          final priority = BigInt.from(1000000000);
+          final expected = await client.signTransaction(
+            EthPrivateKey.fromHex('46' * 32),
+            Transaction(
+              nonce: 0,
+              maxGas: 55000,
+              value: EtherAmount.zero(),
+              data: Uint8List.fromList(HEX.decode('60006000')),
+              gasPrice: typed ? null : EtherAmount.inWei(gas),
+              maxFeePerGas: typed ? EtherAmount.inWei(gas) : null,
+              maxPriorityFeePerGas: typed ? EtherAmount.inWei(priority) : null,
+            ),
+            chainId: 1,
+            fetchChainIdFromNetworkId: false,
+          );
+          final raw = await NativeCrypto.signEvmTransaction(
+            privateKeyHex: '46' * 32,
+            chainId: 1,
+            nonce: 0,
+            gasLimit: 55000,
+            valueWei: BigInt.zero,
+            dataHex: '0x60006000',
+            gasPriceWei: typed ? null : gas,
+            maxFeePerGasWei: typed ? gas : null,
+            maxPriorityFeePerGasWei: typed ? priority : null,
+          );
+          expect(raw, '0x${typed ? '02' : ''}${HEX.encode(expected)}');
+        },
+      );
+    }
+
+    test('signs an independent EIP-1559 fixture through FRB', () async {
+      final raw = await NativeCrypto.signEvmTransaction(
+        privateKeyHex:
+            '8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63',
+        chainId: 4,
+        nonce: 819,
+        gasLimit: 35552,
+        toAddress: '0x000000000000000000000000000000000000aaaa',
+        valueWei: BigInt.from(43203529),
+        maxFeePerGasWei: BigInt.from(121212),
+        maxPriorityFeePerGasWei: BigInt.from(75853),
+      );
+      expect(
+        raw,
+        '0x02f86e048203338301284d8301d97c828ae094000000000000000000000000000000000000aaaa8402933bc980c080a00f924cb68412c8f1cfd74d9b581c71eeaf94fff6abdde3e5b02ca6b2931dcf47a07dd1c50027c3e31f8b565e25ce68a5072110f61fce5eee81b195dd51273c2f83',
+      );
+    });
+
+    test('Rust adapter rejects incomplete and mixed fee policies', () async {
+      for (final legacyGas in [null, BigInt.one]) {
+        await expectLater(
+          NativeCrypto.signEvmTransaction(
+            privateKeyHex: '46' * 32,
+            chainId: 1,
+            nonce: 0,
+            gasLimit: 21000,
+            toAddress: '0x3535353535353535353535353535353535353535',
+            valueWei: BigInt.zero,
+            gasPriceWei: legacyGas,
+            maxFeePerGasWei: BigInt.two,
+          ),
+          throwsA(anything),
+        );
+      }
+    });
+
     test('signs official EIP-155 vector via NativeCrypto end-to-end', () async {
       const privateKey =
           '4646464646464646464646464646464646464646464646464646464646464646';

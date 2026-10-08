@@ -72,7 +72,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1604441328;
+  int get rustContentHash => -488989270;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -155,6 +155,19 @@ abstract class RustLibApi extends BaseApi {
 
   Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
     required String privateKey,
+  });
+
+  Future<String> crateApiEvmTxSignEvmTransaction({
+    required String privateKeyHex,
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
   });
 
   Future<String> crateApiEvmTxSignLegacyEvmTransaction({
@@ -780,6 +793,79 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiEvmTxSignEvmTransaction({
+    required String privateKeyHex,
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_u_64(chainId, serializer);
+          sse_encode_u_64(nonce, serializer);
+          sse_encode_u_64(gasLimit, serializer);
+          sse_encode_opt_String(toAddress, serializer);
+          sse_encode_String(valueWei, serializer);
+          sse_encode_String(dataHex, serializer);
+          sse_encode_opt_String(gasPriceWei, serializer);
+          sse_encode_opt_String(maxFeePerGasWei, serializer);
+          sse_encode_opt_String(maxPriorityFeePerGasWei, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEvmTxSignEvmTransactionConstMeta,
+        argValues: [
+          privateKeyHex,
+          chainId,
+          nonce,
+          gasLimit,
+          toAddress,
+          valueWei,
+          dataHex,
+          gasPriceWei,
+          maxFeePerGasWei,
+          maxPriorityFeePerGasWei,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEvmTxSignEvmTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_evm_transaction",
+        argNames: [
+          "privateKeyHex",
+          "chainId",
+          "nonce",
+          "gasLimit",
+          "toAddress",
+          "valueWei",
+          "dataHex",
+          "gasPriceWei",
+          "maxFeePerGasWei",
+          "maxPriorityFeePerGasWei",
+        ],
+      );
+
+  @override
   Future<String> crateApiEvmTxSignLegacyEvmTransaction({
     required String privateKeyHex,
     required BigInt chainId,
@@ -805,7 +891,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -858,7 +944,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -895,7 +981,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -930,7 +1016,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -965,7 +1051,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1000,7 +1086,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1031,7 +1117,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1071,6 +1157,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
   }
 
   @protected
@@ -1134,6 +1226,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
   }
 
   @protected
@@ -1210,6 +1313,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
   }
 
   @protected
