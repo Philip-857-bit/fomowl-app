@@ -9,6 +9,7 @@
 import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
+import 'api/chain_rules.dart';
 import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
 import 'api/secp256k1_api.dart';

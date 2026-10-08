@@ -2476,7 +2476,7 @@
       "community": 1
     },
     {
-      "label": "RustOpaqueMoi<\n        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,\n    >",
+      "label": "RustOpaqueMoi<\r\n        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,\r\n    >",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L2405",
@@ -2492,7 +2492,7 @@
       "community": 1
     },
     {
-      "label": "RustOpaqueMoi<\n        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,\n    >",
+      "label": "RustOpaqueMoi<\r\n        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,\r\n    >",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L2417",

@@ -7,6 +7,7 @@ import 'swap_service.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
 import 'evm_transaction_service.dart';
+import 'native_crypto.dart';
 
 class TokenApprovalResult {
   final bool approvalSatisfied;
@@ -29,29 +30,6 @@ class TokenApprovalService {
   final WalletService _walletService;
   final Web3Client Function(String rpcUrl)? _web3ClientFactory;
   final HttpClientService _httpClientService = HttpClientService();
-  static final ContractAbi _erc20ApprovalAbi = ContractAbi.fromJson('''[
-        {
-          "constant": true,
-          "inputs": [
-            {"name": "owner", "type": "address"},
-            {"name": "spender", "type": "address"}
-          ],
-          "name": "allowance",
-          "outputs": [{"name": "", "type": "uint256"}],
-          "type": "function"
-        },
-        {
-          "constant": false,
-          "inputs": [
-            {"name": "spender", "type": "address"},
-            {"name": "amount", "type": "uint256"}
-          ],
-          "name": "approve",
-          "outputs": [{"name": "", "type": "bool"}],
-          "type": "function"
-        }
-      ]''', 'ERC20');
-
   TokenApprovalService({
     WalletService? walletService,
     SwapService? swapService, // signature compat
@@ -102,13 +80,11 @@ class TokenApprovalService {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
       final ownerAddr = EthereumAddress.fromHex(ownerAddress);
-      final contract = DeployedContract(_erc20ApprovalAbi, tokenAddr);
-      final approveFunc = contract.function('approve');
       final approvalAmount = BigInt.two.pow(256) - BigInt.one;
-      final approvalData = approveFunc.encodeCall([
-        spenderAddr,
-        approvalAmount,
-      ]);
+      final approvalData = await NativeCrypto.encodeErc20Approve(
+        spenderAddress: spenderAddr.hex,
+        amount: approvalAmount,
+      );
       final gasPrice = await client.getGasPrice().timeout(
         const Duration(seconds: 10),
       );
@@ -168,21 +144,16 @@ class TokenApprovalService {
         );
       }
 
-      final contract = DeployedContract(_erc20ApprovalAbi, tokenAddr);
-      final allowanceFunc = contract.function('allowance');
-      final approveFunc = contract.function('approve');
-
-      // Check current allowance with a tight timeout to prevent hangs on
-      // slow/unreliable RPC nodes.
-      final allowanceRes = await client
-          .call(
-            contract: contract,
-            function: allowanceFunc,
-            params: [ownerAddr, spenderAddr],
-          )
+      final allowanceData = await NativeCrypto.encodeErc20Allowance(
+        ownerAddress: ownerAddr.hex,
+        spenderAddress: spenderAddr.hex,
+      );
+      final allowanceRaw = await client
+          .callRaw(contract: tokenAddr, data: allowanceData)
           .timeout(const Duration(seconds: 10));
-
-      final currentAllowance = allowanceRes.first as BigInt;
+      final currentAllowance = await NativeCrypto.decodeAbiUint256Result(
+        allowanceRaw,
+      );
 
       if (currentAllowance >= requiredAmount) {
         return const TokenApprovalResult(approvalSatisfied: true);
@@ -202,7 +173,10 @@ class TokenApprovalService {
       // 2^256-1. The spender comes from the backend quote; bounding the
       // allowance means a tampered/compromised spender can move at most this
       // one swap's amount, not drain the entire balance forever.
-      final data = approveFunc.encodeCall([spenderAddr, requiredAmount]);
+      final data = await NativeCrypto.encodeErc20Approve(
+        spenderAddress: spenderAddr.hex,
+        amount: requiredAmount,
+      );
 
       // Timeout for the actual approval transaction broadcast — prevents
       // indefinite hang when the RPC node accepts the request but is slow

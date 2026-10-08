@@ -8,6 +8,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../src/rust/api/argon2.dart' as rust_argon2;
+import '../src/rust/api/chain_rules.dart' as rust_rules;
 import '../src/rust/api/bip32.dart' as rust_bip32;
 import '../src/rust/api/bip39.dart' as rust_bip39;
 import '../src/rust/api/evm_tx.dart' as rust_evm_tx;
@@ -55,6 +56,70 @@ class NativeCrypto {
     encryptedVault: encryptedVault,
     expectedAddress: expectedAddress,
     wrappingKey: wrappingKey,
+  );
+
+  static Future<Uint8List> encodeErc20Transfer({
+    required String toAddress,
+    required BigInt amount,
+  }) => rust_rules.encodeErc20TransferCall(
+    toAddress: toAddress,
+    amount: amount.toString(),
+  );
+
+  static Future<Uint8List> encodeErc20Approve({
+    required String spenderAddress,
+    required BigInt amount,
+  }) => rust_rules.encodeErc20ApproveCall(
+    spenderAddress: spenderAddress,
+    amount: amount.toString(),
+  );
+
+  static Future<Uint8List> encodeErc20Allowance({
+    required String ownerAddress,
+    required String spenderAddress,
+  }) => rust_rules.encodeErc20AllowanceCall(
+    ownerAddress: ownerAddress,
+    spenderAddress: spenderAddress,
+  );
+
+  static Future<BigInt> decodeAbiUint256Result(String dataHex) async =>
+      BigInt.parse(await rust_rules.decodeAbiUint256Result(dataHex: dataHex));
+
+  static Future<Uint8List> encodeNftTransfer({
+    required String fromAddress,
+    required String toAddress,
+    required BigInt tokenId,
+    required BigInt amount,
+    required bool isErc1155,
+  }) => isErc1155
+      ? rust_rules.encodeErc1155TransferCall(
+          fromAddress: fromAddress,
+          toAddress: toAddress,
+          tokenId: tokenId.toString(),
+          amount: amount.toString(),
+          data: Uint8List(0),
+        )
+      : rust_rules.encodeErc721TransferCall(
+          fromAddress: fromAddress,
+          toAddress: toAddress,
+          tokenId: tokenId.toString(),
+        );
+
+  static Future<Uint8List> tronPersonalMessageDigest(String message) =>
+      rust_rules.tronPersonalMessageDigest(message: message);
+
+  static Future<Uint8List> solanaTransactionMessageBytes(
+    Uint8List transaction,
+  ) => rust_rules.solanaTransactionMessageBytes(transaction: transaction);
+
+  static Future<Uint8List> attachSolanaTransactionSignature({
+    required Uint8List transaction,
+    required String signerAddress,
+    required Uint8List signature,
+  }) => rust_rules.attachSolanaTransactionSignature(
+    transaction: transaction,
+    signerAddress: signerAddress,
+    signature: signature,
   );
 
   // ---------- BIP-39 -------------------------------------------------------

@@ -193,3 +193,16 @@ and serialized-message extraction also move into the Solana wire module, keeping
 other signatures and message bytes and rejecting malformed/cross-account input.
 Validation: 57 core tests plus separate Solana/TRON feature builds and Clippy.
 Commit: `fix(wallet-core): preserve TRON prefixes and share Solana signer slots`.
+
+## Native shared-rule integration
+
+Core steps: `4054f55` and `6d823a8`. Transfer/approval/allowance/NFT calldata
+and allowance decoding now use Rust in both signing and fee-estimation paths.
+TRON signatures construct canonical message/transaction digests inside custody.
+Solana message-only signing and WalletConnect signature-slot/message operations
+also delegate wire rules to the core. RPC transport, permission checks, backend
+preparation, fee discovery, and WalletConnect result/error translation stay with
+the host. Independent Dart reference encoders and UTF-8 digest fixtures verify
+compatibility; 87 targeted Flutter tests, full analysis, 32 adapter tests, native
+release rebuild, and 57 core tests passed.
+Commit: `refactor(wallet): delegate remaining shared chain rules to Rust`.

@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart' as pkg_crypto;
+
 import 'package:flutter/foundation.dart';
 import 'package:web3dart/web3dart.dart';
-import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:hex/hex.dart';
 import 'http_client_service.dart';
 import 'package:hex/hex.dart' as pkg_hex;
@@ -55,55 +55,6 @@ class WalletService {
   final EvmTypedDataSigner _typedDataSigner;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
-  static final ContractAbi _erc20Abi = ContractAbi.fromJson('''[
-      {
-        "constant": false,
-        "inputs": [
-          {"name": "recipient", "type": "address"},
-          {"name": "amount", "type": "uint256"}
-        ],
-        "name": "transfer",
-        "outputs": [{"name": "", "type": "bool"}],
-        "type": "function"
-      }
-    ]''', 'ERC20');
-  @visibleForTesting
-  static ContractAbi get erc20Abi => _erc20Abi;
-  static final ContractAbi _erc721Abi = ContractAbi.fromJson('''[
-      {
-        "constant": false,
-        "inputs": [
-          {"name": "from", "type": "address"},
-          {"name": "to", "type": "address"},
-          {"name": "tokenId", "type": "uint256"}
-        ],
-        "name": "safeTransferFrom",
-        "outputs": [],
-        "type": "function"
-      }
-    ]''', 'ERC721');
-  static final ContractAbi _erc1155Abi = ContractAbi.fromJson('''[
-      {
-        "constant": false,
-        "inputs": [
-          {"name": "from", "type": "address"},
-          {"name": "to", "type": "address"},
-          {"name": "id", "type": "uint256"},
-          {"name": "amount", "type": "uint256"},
-          {"name": "data", "type": "bytes"}
-        ],
-        "name": "safeTransferFrom",
-        "outputs": [],
-        "type": "function"
-      }
-    ]''', 'ERC1155');
-
-  /// Generate a new 12-word mnemonic phrase (Rust FFI)
-  Future<String> generateMnemonic() async {
-    return await NativeCrypto.generateMnemonic();
-  }
-
-  /// Validate a mnemonic phrase (Rust FFI)
   Future<bool> validateMnemonic(String mnemonic) async {
     final normalizedMnemonic = normalizeMnemonic(mnemonic);
     if (normalizedMnemonic.isEmpty) return false;
@@ -1010,9 +961,10 @@ class WalletService {
       final client = _clientForRpc(rpcUrl);
       final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
       final recipient = EthereumAddress.fromHex(toAddress);
-      final contract = DeployedContract(_erc20Abi, tokenContractAddress);
-      final transferFunction = contract.function('transfer');
-      final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
+      final data = await NativeCrypto.encodeErc20Transfer(
+        toAddress: recipient.hex,
+        amount: amountInBaseUnits,
+      );
 
       final resolvedGasPriceWei =
           gasPriceWei ?? (await client.getGasPrice()).getInWei;
@@ -1070,15 +1022,13 @@ class WalletService {
       final contractAddressHex = EthereumAddress.fromHex(contractAddress);
       final recipient = EthereumAddress.fromHex(toAddress);
       final isErc1155 = tokenType.toUpperCase().contains('1155');
-      final contract = DeployedContract(
-        isErc1155 ? _erc1155Abi : _erc721Abi,
-        contractAddressHex,
+      final data = await NativeCrypto.encodeNftTransfer(
+        fromAddress: sender.hex,
+        toAddress: recipient.hex,
+        tokenId: tokenId,
+        amount: amount,
+        isErc1155: isErc1155,
       );
-      final transferFunction = contract.function('safeTransferFrom');
-      final parameters = isErc1155
-          ? <dynamic>[sender, recipient, tokenId, amount, Uint8List(0)]
-          : <dynamic>[sender, recipient, tokenId];
-      final data = transferFunction.encodeCall(parameters);
       final client = _clientForRpc(rpcUrl);
       final gasPrice = await client.getGasPrice();
       final estimatedGas = await client.estimateGas(
@@ -1200,9 +1150,10 @@ class WalletService {
       );
     } else {
       final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
-      final contract = DeployedContract(_erc20Abi, tokenContractAddress);
-      final transferFunction = contract.function('transfer');
-      final data = transferFunction.encodeCall([recipient, amountInBaseUnits]);
+      final data = await NativeCrypto.encodeErc20Transfer(
+        toAddress: recipient.hex,
+        amount: amountInBaseUnits,
+      );
       estimatedGasFuture = client.estimateGas(
         sender: sender,
         to: tokenContractAddress,
@@ -1247,15 +1198,13 @@ class WalletService {
     final recipient = EthereumAddress.fromHex(toAddress);
     final nftContractAddress = EthereumAddress.fromHex(contractAddress);
     final isErc1155 = tokenType.toUpperCase().contains('1155');
-    final contract = DeployedContract(
-      isErc1155 ? _erc1155Abi : _erc721Abi,
-      nftContractAddress,
+    final data = await NativeCrypto.encodeNftTransfer(
+      fromAddress: sender.hex,
+      toAddress: recipient.hex,
+      tokenId: tokenId,
+      amount: amount,
+      isErc1155: isErc1155,
     );
-    final transferFunction = contract.function('safeTransferFrom');
-    final parameters = isErc1155
-        ? <dynamic>[sender, recipient, tokenId, amount, Uint8List(0)]
-        : <dynamic>[sender, recipient, tokenId];
-    final data = transferFunction.encodeCall(parameters);
     final gasPrice = await client.getGasPrice();
     final estimatedGas = await client.estimateGas(
       sender: sender,
@@ -1348,18 +1297,10 @@ class WalletService {
 
     // 2. Sign the message bytes with the Ed25519 key via Rust FFI.
     //    signSolanaMessage returns a base58-encoded 64-byte signature.
-    final signatureBase58 = await signSolanaMessageRaw(
+    final signedBase64 = await signSolanaTransactionRaw(
       fromAddress,
       messageBytes,
     );
-    final sigBytes = decodeBase58Signature(signatureBase58);
-
-    // 3. Serialise: [1, <64-byte sig>, <message bytes>] ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ base64.
-    final txBytes = Uint8List(1 + sigBytes.length + messageBytes.length);
-    txBytes[0] = 1; // one signature
-    txBytes.setRange(1, 1 + sigBytes.length, sigBytes);
-    txBytes.setRange(1 + sigBytes.length, txBytes.length, messageBytes);
-    final signedBase64 = base64Encode(txBytes);
 
     // 4. Broadcast.
     final broadcastUri = AppEnvironment.blockchain(
@@ -1445,13 +1386,11 @@ class WalletService {
     String address,
     Uint8List messageBytes,
   ) async {
-    final signatureBase58 = await signSolanaMessageRaw(address, messageBytes);
-    final sigBytes = decodeBase58Signature(signatureBase58);
-    final txBytes = Uint8List(1 + sigBytes.length + messageBytes.length);
-    txBytes[0] = 1;
-    txBytes.setRange(1, 1 + sigBytes.length, sigBytes);
-    txBytes.setRange(1 + sigBytes.length, txBytes.length, messageBytes);
-    return base64Encode(txBytes);
+    return _withFamilySigner(
+      ChainFamily.solana,
+      address,
+      (signer) => signer.signSolanaTransactionMessage(message: messageBytes),
+    );
   }
 
   /// Sign and broadcast a pre-built Solana transaction message.
@@ -1572,13 +1511,10 @@ class WalletService {
     if (rawDataHex == null || rawDataHex.isEmpty) {
       throw Exception('signTronTransactionRaw: missing raw_data_hex');
     }
-    final rawBytes = HEX.decode(rawDataHex);
-    final digestBytes = _sha256(Uint8List.fromList(rawBytes));
-    final digestHex = HEX.encode(digestBytes);
     final signature = await _withFamilySigner(
       ChainFamily.tron,
       address,
-      (signer) => signer.signTronRawHash(rawHashHex: digestHex),
+      (signer) => signer.signTronTransaction(rawDataHex: rawDataHex),
     );
     final signatureHex = signature.startsWith('0x')
         ? signature.substring(2)
@@ -1592,24 +1528,10 @@ class WalletService {
   /// Sign a UTF-8 message using TRON's personal-message prefix.
   /// Returns a 0x-prefixed recoverable signature.
   Future<String> signTronMessageRaw(String address, String message) async {
-    final digest = tronPersonalMessageDigest(message);
-    final digestHex = HEX.encode(digest);
-    final signature = await _withFamilySigner(
+    return _withFamilySigner(
       ChainFamily.tron,
       address,
-      (signer) => signer.signTronRawHash(rawHashHex: digestHex),
-    );
-    return signature.startsWith('0x') ? signature : '0x$signature';
-  }
-
-  @visibleForTesting
-  static Uint8List tronPersonalMessageDigest(String message) {
-    final messageBytes = utf8.encode(message);
-    final prefix = utf8.encode(
-      '\x19TRON Signed Message:\n${messageBytes.length}',
-    );
-    return web3_crypto.keccak256(
-      Uint8List.fromList(<int>[...prefix, ...messageBytes]),
+      (signer) => signer.signTronMessage(message: message),
     );
   }
 
@@ -1856,15 +1778,10 @@ class WalletService {
     if (rawDataHex == null || rawDataHex.isEmpty) {
       throw Exception('unsignedTransaction missing raw_data_hex');
     }
-    final rawBytes = HEX.decode(rawDataHex);
-    // SHA-256 hash the raw bytes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â this 32-byte digest is what gets signed.
-    final digestBytes = _sha256(Uint8List.fromList(rawBytes));
-    final digestHex = HEX.encode(digestBytes);
-
     final signature = await _withFamilySigner(
       ChainFamily.tron,
       fromAddress,
-      (signer) => signer.signTronRawHash(rawHashHex: digestHex),
+      (signer) => signer.signTronTransaction(rawDataHex: rawDataHex),
     );
     final signatureHex = signature.startsWith('0x')
         ? signature.substring(2)
@@ -1901,11 +1818,6 @@ class WalletService {
       throw Exception('Broadcast succeeded but no transaction hash returned');
     }
     return txHash;
-  }
-
-  /// SHA-256 hash of [input] bytes.
-  static Uint8List _sha256(Uint8List input) {
-    return Uint8List.fromList(pkg_crypto.sha256.convert(input).bytes);
   }
 
   Uint8List? _decodeHexBytes(String? value) {

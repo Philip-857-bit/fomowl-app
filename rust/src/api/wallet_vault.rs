@@ -173,6 +173,21 @@ impl RustWalletSigningAccount {
             .sign_tron_raw_hash(&self.account, &raw_hash_hex)
             .map_err(|e| e.to_string())
     }
+    pub fn sign_tron_transaction(&self, raw_data_hex: String) -> Result<String, String> {
+        self.session
+            .sign_tron_transaction(&self.account, &raw_data_hex)
+            .map_err(|e| e.to_string())
+    }
+    pub fn sign_tron_message(&self, message: String) -> Result<String, String> {
+        self.session
+            .sign_tron_personal_message(&self.account, &message)
+            .map_err(|e| e.to_string())
+    }
+    pub fn sign_solana_transaction_message(&self, message: Vec<u8>) -> Result<String, String> {
+        self.session
+            .sign_solana_transaction_message(&self.account, &message)
+            .map_err(|e| e.to_string())
+    }
 }
 
 #[cfg(test)]

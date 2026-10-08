@@ -895,13 +895,13 @@ class WalletConnectService extends ChangeNotifier {
         'The Solana transaction encoding is invalid.',
       );
     }
-    final message = WalletConnectSolanaCodec.messageBytes(transaction);
+    final message = await WalletConnectSolanaCodec.messageBytes(transaction);
     final signatureBase58 = await _walletService.signSolanaMessageRaw(
       approvedAddress,
       message,
     );
     final signature = WalletService.decodeBase58Signature(signatureBase58);
-    final signed = WalletConnectSolanaCodec.attachSignature(
+    final signed = await WalletConnectSolanaCodec.attachSignature(
       transactionBytes: transaction,
       signerAddress: approvedAddress,
       signature: signature,

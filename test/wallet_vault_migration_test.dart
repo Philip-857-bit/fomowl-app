@@ -136,7 +136,7 @@ void main() {
         await NativeCrypto.signTronRawHash(
           privateKeyHex: exports[ChainFamily.tron]!,
           rawHashHex: HEX.encode(
-            WalletService.tronPersonalMessageDigest('hello'),
+            await NativeCrypto.tronPersonalMessageDigest('hello'),
           ),
         ),
       );
@@ -360,6 +360,24 @@ void main() {
         await wallet.signSerializedSolanaTransaction(address, transaction),
         transaction,
       );
+      final message = Uint8List.fromList(base64Decode(transaction).sublist(65));
+      expect(
+        await wallet.signSolanaTransactionRaw(address, message),
+        transaction,
+      );
+      final extraSigners = Uint8List.fromList(message)..[1] = 2;
+      await expectLater(
+        wallet.signSolanaTransactionRaw(address, extraSigners),
+        throwsA(anything),
+      );
+      await expectLater(
+        wallet.signSolanaTransactionRaw(
+          address,
+          Uint8List.fromList([...message, 0]),
+        ),
+        throwsA(anything),
+      );
+
       expect(store.values.containsKey('wallet_private_key'), isFalse);
     },
   );

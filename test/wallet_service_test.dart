@@ -647,17 +647,10 @@ void main() {
         const privateKey =
             '4646464646464646464646464646464646464646464646464646464646464646';
 
-        final contract = DeployedContract(
-          WalletService.erc20Abi,
-          EthereumAddress.fromHex(tokenAddress),
+        final data = await NativeCrypto.encodeErc20Transfer(
+          toAddress: recipientAddress,
+          amount: amount,
         );
-        final transferFunction = contract.function('transfer');
-        expect(HEX.encode(transferFunction.selector), 'a9059cbb');
-
-        final data = transferFunction.encodeCall([
-          EthereumAddress.fromHex(recipientAddress),
-          amount,
-        ]);
         final dataHex = '0x${HEX.encode(data)}';
 
         const expectedDataHex =

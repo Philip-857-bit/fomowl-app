@@ -65,6 +65,8 @@ abstract class RustWalletSigningAccount implements RustOpaqueInterface {
 
   Future<String> signSolanaMessage({required List<int> message});
 
+  Future<String> signSolanaTransactionMessage({required List<int> message});
+
   Future<String> signTransaction({
     required BigInt chainId,
     required BigInt nonce,
@@ -77,7 +79,11 @@ abstract class RustWalletSigningAccount implements RustOpaqueInterface {
     String? maxPriorityFeePerGasWei,
   });
 
+  Future<String> signTronMessage({required String message});
+
   Future<String> signTronRawHash({required String rawHashHex});
+
+  Future<String> signTronTransaction({required String rawDataHex});
 
   Future<String> signTypedData({required String jsonData});
 }
