@@ -21,7 +21,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Native transfers | Rust-owned signatures | `b154ab0` |
 | ERC-20 transfers | Rust-owned signatures | `46ee567` |
 | Transaction assertions | Exact calldata and complete signed bytes | `f3e2a26` |
-| Modular core foundation | Safe derivation cleanup, feature selection, host entropy, capability CI | `refactor(wallet-core): harden modular capabilities for multiple hosts` |
+| Modular core foundation | Safe derivation cleanup, feature selection, host entropy, capability CI | `a4f4bb5` |
+| NFT transfers | ERC-721/ERC-1155 Rust signatures, sender verification, mocked production RPC coverage | `feat(wallet): migrate NFT transfers to Rust signing` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.
@@ -31,8 +32,8 @@ release FFI was rebuilt before testing. Other target certification remains open.
 
 ## Transaction migration sequence
 
-1. NFT transfers: keep ERC-721/ERC-1155 calldata encoding and fee behavior;
-   verify the selected sender, sign in Rust, broadcast raw bytes.
+1. NFT transfers completed: existing calldata and 15% fee buffer retained;
+   selected sender verified, pending nonce used, Rust signature broadcast raw.
 2. Shared EVM transaction coordination: isolate key/address verification,
    nonce/fee resolution, and Rust signing in a reusable Flutter adapter module.
 3. Token approvals: reuse that adapter, preserve exact-amount allowances and

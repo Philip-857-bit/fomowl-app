@@ -31,11 +31,14 @@ class WalletService {
   WalletService({
     StorageService? storageService,
     SeedAccountActivityChecker? seedAccountActivityChecker,
+    Web3Client Function(String rpcUrl)? web3ClientFactory,
   }) : _storage = storageService ?? StorageService(),
-       _seedAccountActivityChecker = seedAccountActivityChecker;
+       _seedAccountActivityChecker = seedAccountActivityChecker,
+       _web3ClientFactory = web3ClientFactory;
 
   final StorageService _storage;
   final SeedAccountActivityChecker? _seedAccountActivityChecker;
+  final Web3Client Function(String rpcUrl)? _web3ClientFactory;
   final HttpClientService _httpClientService = HttpClientService();
   final Map<String, Web3Client> _web3Clients = {};
   static final ContractAbi _erc20Abi = ContractAbi.fromJson('''[
@@ -801,7 +804,9 @@ class WalletService {
   Web3Client _clientForRpc(String rpcUrl) {
     return _web3Clients.putIfAbsent(
       rpcUrl,
-      () => Web3Client(rpcUrl, _httpClientService.client),
+      () =>
+          _web3ClientFactory?.call(rpcUrl) ??
+          Web3Client(rpcUrl, _httpClientService.client),
     );
   }
 
@@ -982,8 +987,24 @@ class WalletService {
       throw Exception('NFT transfer amount must be greater than zero');
     }
 
-    final credentials = await getCredentials();
     final sender = EthereumAddress.fromHex(fromAddress);
+    final activeAddress = await getCurrentWalletAddress();
+    if (activeAddress == null || activeAddress.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+    if (activeAddress.toLowerCase() != sender.hex.toLowerCase()) {
+      throw Exception('NFT sender does not match the active wallet');
+    }
+    final privateKeyHex = await getPrivateKey();
+    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
+      privateKeyHex,
+    );
+    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
+      throw Exception('Active EVM address does not match private key');
+    }
     final contractAddressHex = EthereumAddress.fromHex(contractAddress);
     final recipient = EthereumAddress.fromHex(toAddress);
     final isErc1155 = tokenType.toUpperCase().contains('1155');
@@ -1005,18 +1026,21 @@ class WalletService {
     );
     final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
 
-    return client.sendTransaction(
-      credentials,
-      Transaction.callContract(
-        contract: contract,
-        function: transferFunction,
-        parameters: parameters,
-        gasPrice: gasPrice,
-        maxGas: bufferedGas.toInt(),
-      ),
-      chainId: chainId,
-      fetchChainIdFromNetworkId: false,
+    final nonce = await client.getTransactionCount(
+      sender,
+      atBlock: const BlockNum.pending(),
     );
+    final rawTxHex = await NativeCrypto.signLegacyEvmTransaction(
+      privateKeyHex: privateKeyHex,
+      chainId: chainId,
+      nonce: nonce,
+      gasPriceWei: gasPrice.getInWei,
+      gasLimit: bufferedGas.toInt(),
+      toAddress: contractAddressHex.hex,
+      valueWei: BigInt.zero,
+      dataHex: '0x${HEX.encode(data)}',
+    );
+    return client.sendRawTransaction(web3_crypto.hexToBytes(rawTxHex));
   }
 
   Future<String> sendRawTransactionRequest({
