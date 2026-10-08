@@ -37,12 +37,19 @@ void main() {
   setUpAll(() async {
     await RustLib.init();
   });
-  for (final family in ChainFamily.values) {
+  for (final family in const [
+    ChainFamily.evm,
+    ChainFamily.solana,
+    ChainFamily.tron,
+  ]) {
     test(
       '${family.name} migration verifies persistence, keeps identity and never reloads legacy keys',
       () async {
         final secret = '07' * 32;
         final address = switch (family) {
+          ChainFamily.bitcoin => throw UnsupportedError(
+            'Bitcoin is unavailable for this operation.',
+          ),
           ChainFamily.evm => await NativeCrypto.deriveEvmAddressFromPrivateKey(
             secret,
           ),

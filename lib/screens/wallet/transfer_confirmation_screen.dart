@@ -161,6 +161,8 @@ class _TransferConfirmationScreenState
     }
     final networkKey = _transferNetworkKey(blockchain);
     return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.bitcoin =>
+        networkKey == 'bitcoin:testnet4' ? 'Bitcoin Testnet4' : 'Bitcoin',
       ChainFamily.solana => 'Solana',
       ChainFamily.tron => 'TRON',
       ChainFamily.evm => _evmChainForTransfer(blockchain, networkKey).name,
@@ -174,6 +176,7 @@ class _TransferConfirmationScreenState
     }
     final networkKey = _transferNetworkKey(blockchain);
     return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.bitcoin => 'BTC',
       ChainFamily.solana => 'SOL',
       ChainFamily.tron => 'TRX',
       ChainFamily.evm => _evmChainForTransfer(blockchain, networkKey).symbol,
@@ -346,6 +349,9 @@ class _TransferConfirmationScreenState
 
   BigInt _estimatedNonEvmFeeBaseUnits(ChainFamily family) {
     return switch (family) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana => _solanaTransferFeeLamports,
       ChainFamily.tron => BigInt.zero,
       ChainFamily.evm => BigInt.zero,
@@ -354,6 +360,7 @@ class _TransferConfirmationScreenState
 
   int _nativeDecimalsForFamily(ChainFamily family) {
     return switch (family) {
+      ChainFamily.bitcoin => 8,
       ChainFamily.solana => 9,
       ChainFamily.tron => 6,
       ChainFamily.evm => 18,
@@ -376,6 +383,7 @@ class _TransferConfirmationScreenState
     ChainFamily family,
   ) {
     return switch (family) {
+      ChainFamily.bitcoin => 'bitcoin',
       ChainFamily.solana => 'solana',
       ChainFamily.tron => 'tron',
       ChainFamily.evm => blockchain.activeNetworkCoinGeckoId,
@@ -425,6 +433,8 @@ class _TransferConfirmationScreenState
     final family = NetworkKey.familyOf(networkKey);
 
     switch (family) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.solana:
         // Solana signatures are 87-88 base58 chars.
         if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {

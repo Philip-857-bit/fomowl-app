@@ -1846,6 +1846,9 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       tokenStandard: tokenContract == null || tokenContract.isEmpty
           ? TokenStandard.native
           : switch (family) {
+              ChainFamily.bitcoin => throw UnsupportedError(
+                'Bitcoin is unavailable for this operation.',
+              ),
               ChainFamily.solana => TokenStandard.spl,
               ChainFamily.tron => TokenStandard.trc20,
               ChainFamily.evm => TokenStandard.erc20,
@@ -1899,11 +1902,17 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
       if (confirmation == TransactionConfirmationStatus.confirmed) {
         if (!OwlletMiniApps.isOwlletPayId(widget.definition.id)) {
           final historyChainId = switch (family) {
+            ChainFamily.bitcoin => throw UnsupportedError(
+              'Bitcoin is unavailable for this operation.',
+            ),
             ChainFamily.solana => BridgeService.relaySolanaChainId,
             ChainFamily.tron => BridgeService.tronBridgeChainId,
             ChainFamily.evm => NetworkKey.evmChainIdOf(networkKey) ?? 0,
           };
           final historyNetworkName = switch (family) {
+            ChainFamily.bitcoin => throw UnsupportedError(
+              'Bitcoin is unavailable for this operation.',
+            ),
             ChainFamily.solana => 'Solana',
             ChainFamily.tron => 'TRON',
             ChainFamily.evm =>
@@ -3080,6 +3089,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
     final isNative =
         token.contractAddress == null || token.contractAddress!.isEmpty;
     switch (family) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.solana:
         return _walletService.sendSolanaTransaction(
           fromAddress: fromAddress,
@@ -3170,6 +3181,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
 
   bool _isValidAddressForFamily(String address, ChainFamily family) {
     switch (family) {
+      case ChainFamily.bitcoin:
+        return false;
       case ChainFamily.evm:
         return RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address);
       case ChainFamily.solana:
@@ -3181,6 +3194,8 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
 
   String? _transactionDetailsUrl(String hash, String networkKey) {
     switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.bitcoin:
+        return null;
       case ChainFamily.solana:
         if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {
           return null;

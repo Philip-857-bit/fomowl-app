@@ -466,6 +466,8 @@ class WalletService {
     }
 
     switch (family) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.evm:
         final privateKey = await _storage.getPrivateKeyForAddress(
           account.address,

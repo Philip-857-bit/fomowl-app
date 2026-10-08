@@ -191,6 +191,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
     // Native token decimals differ per family.
     final int nativeDecimals = switch (family) {
+      ChainFamily.bitcoin => 8,
       ChainFamily.solana => 9,
       ChainFamily.tron => 6,
       ChainFamily.evm => 18,
@@ -526,6 +527,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   bool _isValidAddressForFamily(String address, ChainFamily family) {
     switch (family) {
+      case ChainFamily.bitcoin:
+        return false;
       case ChainFamily.evm:
         return RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address);
       case ChainFamily.solana:

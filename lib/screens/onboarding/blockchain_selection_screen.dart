@@ -88,6 +88,7 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
   String _defaultNetworkKey() {
     final first = _selectionOrder.first;
     return switch (first) {
+      ChainFamily.bitcoin => NetworkKey.bitcoin('mainnet'),
       ChainFamily.solana => NetworkKey.solana('mainnet-beta'),
       ChainFamily.tron => NetworkKey.tron('mainnet'),
       ChainFamily.evm => NetworkKey.evm(1),

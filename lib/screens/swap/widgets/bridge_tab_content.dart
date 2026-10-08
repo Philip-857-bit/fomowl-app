@@ -75,6 +75,7 @@ Widget buildBridgeOriginTokenDialog({
 }
 
 String? bridgeFamilyLogoUrl(ChainFamily family) => switch (family) {
+  ChainFamily.bitcoin => null,
   ChainFamily.solana => SolanaCatalog.mainnet.logoUrl,
   ChainFamily.tron => TronCatalog.mainnet.logoUrl,
   ChainFamily.evm => null,

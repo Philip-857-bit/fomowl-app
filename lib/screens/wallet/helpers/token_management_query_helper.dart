@@ -15,6 +15,7 @@ class TokenManagementQueryHelper {
       return _evmRe.hasMatch(v) || _tronRe.hasMatch(v) || _solanaRe.hasMatch(v);
     }
     return switch (family) {
+      ChainFamily.bitcoin => false,
       ChainFamily.evm => _evmRe.hasMatch(v),
       ChainFamily.tron => _tronRe.hasMatch(v),
       ChainFamily.solana => _solanaRe.hasMatch(v),

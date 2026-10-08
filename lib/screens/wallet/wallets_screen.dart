@@ -559,6 +559,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
   }
 
   String _familyLabel(ChainFamily family) => switch (family) {
+    ChainFamily.bitcoin => 'Bitcoin',
     ChainFamily.evm => 'EVM',
     ChainFamily.solana => 'Solana',
     ChainFamily.tron => 'Tron',

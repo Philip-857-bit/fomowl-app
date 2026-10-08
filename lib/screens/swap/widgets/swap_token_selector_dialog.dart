@@ -366,6 +366,7 @@ class _SwapTokenSelectorDialogState extends State<SwapTokenSelectorDialog> {
                       ChoiceChip(
                         key: ValueKey('bridge-family-${family.wireValue}'),
                         label: Text(switch (family) {
+                          ChainFamily.bitcoin => 'Bitcoin',
                           ChainFamily.evm => 'EVM',
                           ChainFamily.solana => 'Solana',
                           ChainFamily.tron => 'TRON',

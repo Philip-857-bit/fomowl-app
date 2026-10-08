@@ -97,6 +97,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
   /// BIP-44 coin-type sentinels that cannot collide with any real chain ID.
   int _effectiveChainId(BlockchainService blockchain) =>
       switch (blockchain.activeFamily) {
+        ChainFamily.bitcoin => throw UnsupportedError(
+          'Bitcoin is unavailable for this operation.',
+        ),
         ChainFamily.evm => blockchain.activeChain.chainId,
         ChainFamily.solana => -501,
         ChainFamily.tron => -195,

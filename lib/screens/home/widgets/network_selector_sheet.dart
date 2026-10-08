@@ -266,6 +266,8 @@ class NetworkSelectorSheet extends StatelessWidget {
   }
 
   String _subtitle(NetworkEntry entry) => switch (entry) {
+    BitcoinNetworkEntry(:final chain) =>
+      chain.isMainnet ? 'Bitcoin · BTC' : 'Bitcoin Testnet4 · BTC',
     EvmNetworkEntry(:final chain) => 'Chain ID: ${chain.chainId}',
     SolanaNetworkEntry() => 'Solana · SPL tokens',
     TronNetworkEntry() => 'Tron · TRC-20 tokens',

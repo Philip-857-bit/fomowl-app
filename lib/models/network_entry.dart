@@ -109,3 +109,18 @@ final class TronNetworkEntry extends NetworkEntry {
   @override
   ChainFamily get family => ChainFamily.tron;
 }
+
+final class BitcoinNetworkEntry extends NetworkEntry {
+  final BitcoinChain chain;
+  BitcoinNetworkEntry(this.chain);
+  @override
+  String get networkKey => chain.networkKey;
+  @override
+  String get name => chain.name;
+  @override
+  String get symbol => chain.symbol;
+  @override
+  String? get logoUrl => chain.logoUrl;
+  @override
+  ChainFamily get family => ChainFamily.bitcoin;
+}

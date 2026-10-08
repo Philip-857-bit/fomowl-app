@@ -1,3 +1,4 @@
+import 'blockchain/bitcoin_catalog.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -160,13 +161,18 @@ class BlockchainService extends ChangeNotifier {
     );
   }
 
+  BitcoinChain get _activeBitcoinChain => BitcoinCatalog.builtInChains
+      .firstWhere((chain) => chain.networkKey == activeNetworkKey);
+
   String get activeNetworkName => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.name,
     ChainFamily.solana => _activeSolanaChain.name,
     ChainFamily.tron => _activeTronChain.name,
     ChainFamily.evm => _activeChain.name,
   };
 
   String get activeNetworkSymbol => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.symbol,
     ChainFamily.solana => _activeSolanaChain.symbol,
     ChainFamily.tron => _activeTronChain.symbol,
     ChainFamily.evm => _activeChain.symbol,
@@ -180,18 +186,21 @@ class BlockchainService extends ChangeNotifier {
   );
 
   String? get activeNetworkCoinGeckoId => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.coinGeckoId,
     ChainFamily.solana => _activeSolanaChain.coinGeckoId,
     ChainFamily.tron => _activeTronChain.coinGeckoId,
     ChainFamily.evm => _activeChain.coinGeckoId,
   };
 
   String? get activeNetworkExplorerUrl => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.explorerUrl,
     ChainFamily.solana => _activeSolanaChain.explorerUrl,
     ChainFamily.tron => _activeTronChain.explorerUrl,
     ChainFamily.evm => _activeChain.explorerUrl,
   };
 
   String? get activeNetworkLogoUrl => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.logoUrl,
     ChainFamily.solana => _activeSolanaChain.logoUrl,
     ChainFamily.tron => _activeTronChain.logoUrl,
     ChainFamily.evm => _activeChain.logoUrl,
@@ -278,6 +287,8 @@ class BlockchainService extends ChangeNotifier {
   bool _activateDefaultNetworkForFamily(ChainFamily family) {
     final before = activeNetworkKey;
     switch (family) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.evm:
         _activeNetworkKeyOverride = '';
         break;
@@ -388,6 +399,8 @@ class BlockchainService extends ChangeNotifier {
     int evmFallbackChainId,
   ) {
     switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.solana:
         return -501;
       case ChainFamily.tron:
@@ -467,6 +480,8 @@ class BlockchainService extends ChangeNotifier {
       return false;
     }
     switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.bitcoin:
+        return true;
       case ChainFamily.evm:
         return !RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address);
       case ChainFamily.solana:
@@ -480,6 +495,9 @@ class BlockchainService extends ChangeNotifier {
   }) {
     if (isNative) return TokenStandard.native;
     return switch (activeFamily) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana => TokenStandard.spl,
       ChainFamily.tron => TokenStandard.trc20,
       ChainFamily.evm => TokenStandard.erc20,
@@ -504,6 +522,7 @@ class BlockchainService extends ChangeNotifier {
       valueUsd: 0.0,
       changePercent24h: 0.0,
       decimals: switch (activeFamily) {
+        ChainFamily.bitcoin => 8,
         ChainFamily.solana => 9,
         ChainFamily.tron => 6,
         ChainFamily.evm => 18,
@@ -901,6 +920,7 @@ class BlockchainService extends ChangeNotifier {
     if (!_enabledFamilies.contains(activeFamily)) {
       final firstFamily = _enabledFamilies.first;
       final defaultKey = switch (firstFamily) {
+        ChainFamily.bitcoin => NetworkKey.bitcoin('mainnet'),
         ChainFamily.solana => NetworkKey.solana('mainnet-beta'),
         ChainFamily.tron => NetworkKey.tron('mainnet'),
         ChainFamily.evm => NetworkKey.evm(builtInChains[0].chainId),
@@ -2543,6 +2563,9 @@ class BlockchainService extends ChangeNotifier {
         final isActiveNativeToken =
             contractAddress == null && entryNetworkKey == activeNetworkKey;
         final defaultStandard = switch (NetworkKey.familyOf(entryNetworkKey)) {
+          ChainFamily.bitcoin => throw UnsupportedError(
+            'Bitcoin is unavailable for this operation.',
+          ),
           ChainFamily.solana => contractAddress == null ? 'native' : 'spl',
           ChainFamily.tron => contractAddress == null ? 'native' : 'trc20',
           ChainFamily.evm => contractAddress == null ? 'native' : 'erc20',
@@ -2802,6 +2825,9 @@ class BlockchainService extends ChangeNotifier {
         : _networkKeyForTokenStorageChainId(chainId);
     final family = NetworkKey.familyOf(networkKey);
     final tokenStandard = switch (family) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana =>
         token.tokenStandard == TokenStandard.erc20
             ? TokenStandard.spl

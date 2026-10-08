@@ -1443,6 +1443,8 @@ class _HomeScreenState extends State<HomeScreen> {
   /// EVM uses the real chainId; Solana = -501; Tron = -195.
   int _effectiveVisibilityChainId(BlockchainService blockchain) {
     switch (blockchain.activeFamily) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.solana:
         return -501;
       case ChainFamily.tron:
