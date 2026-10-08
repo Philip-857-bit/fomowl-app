@@ -273,3 +273,16 @@ Validation: 32 adapter tests/Clippy/release build and the private-Git consumer
 passed; 74 Flutter signing/vault/chain-rule FFI tests passed against the rebuilt
 library. SDK CI and private release runs completed successfully.
 Commit: `build(wallet): pin the private SDK release and configure read-only CI access`.
+
+## Embedded source removal
+
+The app's tracked core source and obsolete packaging helper have been removed.
+`rust/SDK_DEPENDENCY.md` describes ownership, authentication and upgrade checks.
+The earlier local artifact paths above are historical; current releases and
+packaging are owned by the standalone SDK repository. The canonical private
+v0.1.0 artifact SHA-256 is
+`81a1f9ace5d216db97f58d880dcff4adcb76fda079a3b493b96a61caaa5c6646`.
+Validation after removal: Cargo metadata resolves the exact private Git revision
+outside the former embedded source path. All 32 adapter tests, formatting, Clippy
+and the independent consumer's EVM/Solana/TRON self-tests passed offline. The
+app knowledge graph was rebuilt after removing the duplicate source.

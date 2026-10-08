@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 80 files · ~484,491 words
+- 53 files · ~473,754 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 574 nodes · 817 edges · 86 communities detected
+- 365 nodes · 509 edges · 60 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -70,44 +70,18 @@
 - [[_COMMUNITY_Community 57|Community 57]]
 - [[_COMMUNITY_Community 58|Community 58]]
 - [[_COMMUNITY_Community 59|Community 59]]
-- [[_COMMUNITY_Community 60|Community 60]]
-- [[_COMMUNITY_Community 61|Community 61]]
-- [[_COMMUNITY_Community 62|Community 62]]
-- [[_COMMUNITY_Community 63|Community 63]]
-- [[_COMMUNITY_Community 64|Community 64]]
-- [[_COMMUNITY_Community 65|Community 65]]
-- [[_COMMUNITY_Community 66|Community 66]]
-- [[_COMMUNITY_Community 67|Community 67]]
-- [[_COMMUNITY_Community 68|Community 68]]
-- [[_COMMUNITY_Community 69|Community 69]]
-- [[_COMMUNITY_Community 70|Community 70]]
-- [[_COMMUNITY_Community 71|Community 71]]
-- [[_COMMUNITY_Community 72|Community 72]]
-- [[_COMMUNITY_Community 73|Community 73]]
-- [[_COMMUNITY_Community 74|Community 74]]
-- [[_COMMUNITY_Community 75|Community 75]]
-- [[_COMMUNITY_Community 76|Community 76]]
-- [[_COMMUNITY_Community 77|Community 77]]
-- [[_COMMUNITY_Community 78|Community 78]]
-- [[_COMMUNITY_Community 79|Community 79]]
-- [[_COMMUNITY_Community 80|Community 80]]
-- [[_COMMUNITY_Community 81|Community 81]]
-- [[_COMMUNITY_Community 82|Community 82]]
-- [[_COMMUNITY_Community 83|Community 83]]
-- [[_COMMUNITY_Community 84|Community 84]]
-- [[_COMMUNITY_Community 85|Community 85]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `pde_ffi_dispatcher_primary_impl()` - 57 edges
-2. `SigningSession` - 26 edges
-3. `RustWalletSigningAccount` - 13 edges
-4. `MainActivity` - 10 edges
-5. `verify_key()` - 6 edges
-6. `seal_account_key()` - 6 edges
-7. `decrypt_key()` - 6 edges
-8. `sign_legacy_evm_transaction()` - 6 edges
-9. `eip155_request()` - 6 edges
-10. `address()` - 6 edges
+2. `RustWalletSigningAccount` - 13 edges
+3. `MainActivity` - 10 edges
+4. `fixture_seed()` - 6 edges
+5. `Create()` - 6 edges
+6. `Destroy()` - 6 edges
+7. `AppDelegate` - 5 edges
+8. `solana_message_signature_verifies()` - 5 edges
+9. `vault_adapter_authenticates_before_creating_a_signer()` - 5 edges
+10. `sign_legacy_evm_transaction()` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -119,8 +93,12 @@ Cohesion: 0.08
 Nodes (59): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+51 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.06
-Nodes (11): crate::api::bip32::SolanaPrivateKeyImport, FrbWrapper<RustEvmSigningAccount>, FrbWrapper<RustWalletSigningAccount>, i32, Option<String>, RustEvmSigningAccount, RustOpaqueMoi<
+Cohesion: 0.13
+Nodes (18): derive_evm_private_key_from_seed(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_private_key_from_seed(), derive_wallet_from_seed(), derives_known_family_addresses_from_seed(), fixture_seed(), normalize_solana_private_key() (+10 more)
+
+### Community 2 - "Community 2"
+Cohesion: 0.08
+Nodes (8): i32, Option<String>, RustEvmSigningAccount, RustOpaqueMoi<
 
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,
 
@@ -128,230 +106,226 @@ Nodes (11): crate::api::bip32::SolanaPrivateKeyImport, FrbWrapper<RustEvmSigning
 
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
 
-    > (+3 more)
-
-### Community 2 - "Community 2"
-Cohesion: 0.16
-Nodes (1): SigningSession
+    >, RustWalletSigningAccount, String, Vec<u8>
 
 ### Community 3 - "Community 3"
-Cohesion: 0.13
-Nodes (18): derive_evm_private_key_from_seed(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_private_key_from_seed(), derive_wallet_from_seed(), derives_known_family_addresses_from_seed(), fixture_seed(), normalize_solana_private_key() (+10 more)
-
-### Community 4 - "Community 4"
 Cohesion: 0.17
 Nodes (16): Create(), Destroy(), EnableFullDpiSupportIfAvailable(), GetClientArea(), GetThisFromHandle(), GetWindowClass(), MessageHandler(), OnCreate() (+8 more)
 
-### Community 5 - "Community 5"
-Cohesion: 0.22
-Nodes (17): aad(), canonical_address(), decrypt_key(), Envelope, export_account_key(), family_name(), fixture(), import_key() (+9 more)
-
-### Community 6 - "Community 6"
+### Community 4 - "Community 4"
 Cohesion: 0.14
 Nodes (6): all_family_adapters_keep_identity_signatures_and_explicit_exports(), export_wallet_vault_key(), family(), open_wallet_vault(), RustWalletSigningAccount, seal_wallet_vault()
 
-### Community 7 - "Community 7"
+### Community 5 - "Community 5"
 Cohesion: 0.13
 Nodes (2): WalletCompatibilityFixture, WalletVector
 
-### Community 8 - "Community 8"
-Cohesion: 0.26
-Nodes (13): build_and_sign_solana_transaction(), builder_rejects_instruction_plans_requiring_unavailable_signers(), builds_normalized_v0_instruction_payload_and_verifies_signature(), parse_pubkey(), preserves_extra_signature_slot(), rejects_signature_count_exceeding_required_signer_metadata(), rejects_wrong_expected_signer(), sign_serialized_solana_transaction() (+5 more)
-
-### Community 9 - "Community 9"
-Cohesion: 0.28
-Nodes (12): eip155_request(), EvmTransactionFee, EvmTransactionRequest, LegacyEvmTransactionRequest, sign_evm_transaction(), sign_legacy_evm_transaction(), SignedEvmTransaction, test_chain_id_replay_protection() (+4 more)
-
-### Community 10 - "Community 10"
-Cohesion: 0.35
-Nodes (9): address(), call(), dynamic_bytes_have_length_offset_and_padding(), encode_erc1155_safe_transfer(), encode_erc20_allowance(), encode_erc20_approve(), encode_erc20_transfer(), encode_erc721_safe_transfer() (+1 more)
-
-### Community 11 - "Community 11"
+### Community 6 - "Community 6"
 Cohesion: 0.26
 Nodes (7): create_evm_signing_account(), generate_vault_wrapping_key(), open_evm_vault_signing_account(), RustEvmSigningAccount, seal_evm_vault(), vault_adapter_authenticates_before_creating_a_signer(), verified_context_locks_and_refuses_further_access()
 
-### Community 12 - "Community 12"
+### Community 7 - "Community 7"
 Cohesion: 0.18
 Nodes (1): MainActivity
 
-### Community 13 - "Community 13"
-Cohesion: 0.29
-Nodes (6): generate_mnemonic(), generate_mnemonic_from_entropy(), mnemonic_to_seed(), test_generate_mnemonic_structure(), test_known_mnemonic_to_seed(), test_mnemonic_to_seed_error_format()
-
-### Community 14 - "Community 14"
+### Community 8 - "Community 8"
 Cohesion: 0.2
 Nodes (0):
 
-### Community 15 - "Community 15"
+### Community 9 - "Community 9"
 Cohesion: 0.36
 Nodes (9): general_adapter_preserves_official_legacy_fixture(), general_adapter_rejects_ambiguous_fee_policy(), request_from_fields(), sign_evm_transaction(), sign_legacy_evm_transaction(), test_adapter_invalid_address(), test_adapter_invalid_gas_price(), test_adapter_invalid_key() (+1 more)
 
-### Community 16 - "Community 16"
-Cohesion: 0.22
-Nodes (6): Account, AccountFamily, AccountHandle, AccountInfo, KeyMaterial, SessionError
+### Community 10 - "Community 10"
+Cohesion: 0.25
+Nodes (3): crate::api::bip32::SolanaPrivateKeyImport, FrbWrapper<RustEvmSigningAccount>, FrbWrapper<RustWalletSigningAccount>
 
-### Community 17 - "Community 17"
-Cohesion: 0.31
-Nodes (4): known_seed(), test_known_evm_derivation_index_0(), test_known_solana_derivation_index_0(), test_known_tron_derivation_index_0()
-
-### Community 18 - "Community 18"
-Cohesion: 0.48
-Nodes (5): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), evm_address_from_public_key(), to_eip55_address()
-
-### Community 19 - "Community 19"
-Cohesion: 0.48
-Nodes (4): Ed25519Slip10Key, slip10_ed25519_derive_child(), slip10_ed25519_master_key(), slip10_key_from_hmac()
-
-### Community 20 - "Community 20"
-Cohesion: 0.48
-Nodes (6): attach_solana_transaction_signature(), decode_transaction(), exact_wire_roundtrip_checks_signer_and_preserves_message(), external_signature_uses_the_matching_slot_and_preserves_other_signatures(), sign_solana_transaction_message(), solana_transaction_message_bytes()
-
-### Community 21 - "Community 21"
-Cohesion: 0.29
-Nodes (0):
-
-### Community 22 - "Community 22"
-Cohesion: 0.29
-Nodes (0):
-
-### Community 23 - "Community 23"
+### Community 11 - "Community 11"
 Cohesion: 0.57
 Nodes (5): preserves_extra_signature_slot(), rejects_wrong_expected_signer(), sign_serialized_solana_transaction(), signs_legacy_one_sig_round_trip(), unsigned_legacy()
 
-### Community 24 - "Community 24"
+### Community 12 - "Community 12"
 Cohesion: 0.33
 Nodes (2): digest_files(), sha256_git_blob()
 
-### Community 25 - "Community 25"
+### Community 13 - "Community 13"
 Cohesion: 0.62
 Nodes (6): download_artifact(), fetch_artifacts(), gh_json(), main(), regenerate_manifest(), run()
 
-### Community 26 - "Community 26"
+### Community 14 - "Community 14"
 Cohesion: 0.47
 Nodes (2): AppDelegate, FlutterAppDelegate
 
-### Community 27 - "Community 27"
-Cohesion: 0.33
-Nodes (0):
-
-### Community 28 - "Community 28"
-Cohesion: 0.47
-Nodes (3): personal_signature_preserves_one_hex_prefix_and_raw_recovery_id(), sign_tron_personal_message(), tron_personal_message_digest()
-
-### Community 29 - "Community 29"
-Cohesion: 0.53
-Nodes (4): assert_roundtrip(), evm_record_keeps_existing_format_and_export_identity(), solana_record_preserves_case_and_rejects_other_addresses(), tron_record_keeps_base58_address_and_export_identity()
-
-### Community 30 - "Community 30"
+### Community 15 - "Community 15"
 Cohesion: 0.47
 Nodes (4): personal_sign_decodes_eip_1193_hex_data_before_signing(), sign_personal_message(), sign_typed_data(), signs_typed_data_and_recovers_expected_address()
 
-### Community 31 - "Community 31"
-Cohesion: 0.6
-Nodes (5): command(), inventory(), main(), Build a verified proprietary source package without uploading to a registry., write_json()
-
-### Community 32 - "Community 32"
+### Community 16 - "Community 16"
 Cohesion: 0.67
 Nodes (5): ensure_commit_available(), is_non_runtime_root(), is_rust_ffi_bridge_path(), main(), rust_ffi_bridge_hashes()
 
-### Community 33 - "Community 33"
+### Community 17 - "Community 17"
 Cohesion: 0.67
 Nodes (5): decode_base64_text(), has_expected_pem_block(), main(), normalize_text(), parse_key_material()
 
-### Community 34 - "Community 34"
+### Community 18 - "Community 18"
 Cohesion: 0.33
 Nodes (1): FlutterWindow()
 
-### Community 35 - "Community 35"
+### Community 19 - "Community 19"
 Cohesion: 0.4
 Nodes (2): GeneratedPluginRegistrant, -registerWithRegistry
 
-### Community 36 - "Community 36"
+### Community 20 - "Community 20"
 Cohesion: 0.4
 Nodes (2): NotificationService, UNNotificationServiceExtension
 
-### Community 37 - "Community 37"
-Cohesion: 0.7
-Nodes (4): derive_solana_address_from_private_key(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), solana_keypair_from_bytes()
-
-### Community 38 - "Community 38"
-Cohesion: 0.7
-Nodes (4): derive_tron_address_from_private_key(), derive_tron_address_from_seed(), derive_tron_private_key_from_seed(), tron_address_from_public_key()
-
-### Community 39 - "Community 39"
-Cohesion: 0.7
-Nodes (4): contract_creation_preserves_data_and_empty_destination_for_both_fee_types(), eip1559_matches_independent_web3dart_fixture_and_recovers_sender(), fixture(), rejects_invalid_fee_policy_and_invalid_call_destination()
-
-### Community 40 - "Community 40"
+### Community 21 - "Community 21"
 Cohesion: 0.5
 Nodes (0):
 
-### Community 41 - "Community 41"
+### Community 22 - "Community 22"
 Cohesion: 0.5
 Nodes (2): handle_new_rx_page(), Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.
 
-### Community 42 - "Community 42"
+### Community 23 - "Community 23"
 Cohesion: 0.5
 Nodes (2): RunnerTests, XCTestCase
 
-### Community 43 - "Community 43"
+### Community 24 - "Community 24"
 Cohesion: 0.83
 Nodes (3): check(), main(), self_test()
 
-### Community 44 - "Community 44"
+### Community 25 - "Community 25"
 Cohesion: 0.5
 Nodes (0):
 
-### Community 45 - "Community 45"
-Cohesion: 0.67
-Nodes (2): decode_personal_sign_payload(), sign_personal_message()
-
-### Community 46 - "Community 46"
-Cohesion: 0.83
-Nodes (3): sign_digest(), sign_digest_inner(), sign_digest_with_recovery_id()
-
-### Community 47 - "Community 47"
-Cohesion: 0.67
-Nodes (2): sign_tron_transaction(), tron_transaction_digest()
-
-### Community 48 - "Community 48"
-Cohesion: 0.5
-Nodes (0):
-
-### Community 49 - "Community 49"
+### Community 26 - "Community 26"
 Cohesion: 0.67
 Nodes (2): GetCommandLineArguments(), Utf8FromUtf16()
 
-### Community 50 - "Community 50"
-Cohesion: 0.67
-Nodes (0):
-
-### Community 51 - "Community 51"
+### Community 27 - "Community 27"
 Cohesion: 0.67
 Nodes (1): bool
 
-### Community 52 - "Community 52"
+### Community 28 - "Community 28"
 Cohesion: 0.67
 Nodes (1): u32
 
-### Community 53 - "Community 53"
+### Community 29 - "Community 29"
 Cohesion: 0.67
 Nodes (1): u64
 
-### Community 54 - "Community 54"
+### Community 30 - "Community 30"
 Cohesion: 0.67
 Nodes (1): u8
 
-### Community 55 - "Community 55"
+### Community 31 - "Community 31"
 Cohesion: 0.67
 Nodes (1): ()
 
-### Community 56 - "Community 56"
+### Community 32 - "Community 32"
 Cohesion: 0.67
 Nodes (1): usize
 
-### Community 57 - "Community 57"
+### Community 33 - "Community 33"
 Cohesion: 0.67
+Nodes (0):
+
+### Community 34 - "Community 34"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 35 - "Community 35"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 36 - "Community 36"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 37 - "Community 37"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 38 - "Community 38"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 39 - "Community 39"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 40 - "Community 40"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 41 - "Community 41"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 42 - "Community 42"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 43 - "Community 43"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 44 - "Community 44"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 45 - "Community 45"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 46 - "Community 46"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 47 - "Community 47"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 48 - "Community 48"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 49 - "Community 49"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 50 - "Community 50"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 51 - "Community 51"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 52 - "Community 52"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 53 - "Community 53"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 54 - "Community 54"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 55 - "Community 55"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 56 - "Community 56"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 57 - "Community 57"
+Cohesion: 1.0
 Nodes (0):
 
 ### Community 58 - "Community 58"
@@ -360,186 +334,78 @@ Nodes (0):
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
-Nodes (0):
-
-### Community 60 - "Community 60"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 61 - "Community 61"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 62 - "Community 62"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 63 - "Community 63"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 64 - "Community 64"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 65 - "Community 65"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 66 - "Community 66"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 67 - "Community 67"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 68 - "Community 68"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 69 - "Community 69"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 70 - "Community 70"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 71 - "Community 71"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 72 - "Community 72"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 73 - "Community 73"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 74 - "Community 74"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 75 - "Community 75"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 76 - "Community 76"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 77 - "Community 77"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 78 - "Community 78"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 79 - "Community 79"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 80 - "Community 80"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 81 - "Community 81"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 82 - "Community 82"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 83 - "Community 83"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 84 - "Community 84"
-Cohesion: 1.0
-Nodes (0):
-
-### Community 85 - "Community 85"
-Cohesion: 1.0
-Nodes (0):
+Nodes (1): Build a verified proprietary source package without uploading to a registry.
 
 ## Knowledge Gaps
-- **19 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `AccountFamily`, `AccountInfo`, `KeyMaterial` (+14 more)
+- **7 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `FrbWrapper<RustEvmSigningAccount>`, `FrbWrapper<RustWalletSigningAccount>`, `WalletVector` (+2 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 58`** (2 nodes): `solana.rs`, `sign_solana_message()`
+- **Thin community `Community 34`** (2 nodes): `derive_passcode_hash_argon2()`, `argon2.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (2 nodes): `derive_passcode_hash_argon2()`, `argon2.rs`
+- **Thin community `Community 35`** (2 nodes): `Resolve-Symlinks()`, `resolve_symlinks.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (2 nodes): `Resolve-Symlinks()`, `resolve_symlinks.ps1`
+- **Thin community `Community 36`** (2 nodes): `shorebird_release_manifest.py`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (2 nodes): `shorebird_release_manifest.py`, `main()`
+- **Thin community `Community 37`** (2 nodes): `write_shorebird_yaml.py`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (2 nodes): `write_shorebird_yaml.py`, `main()`
+- **Thin community `Community 38`** (2 nodes): `RegisterPlugins()`, `generated_plugin_registrant.cc`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (2 nodes): `RegisterPlugins()`, `generated_plugin_registrant.cc`
+- **Thin community `Community 39`** (2 nodes): `wWinMain()`, `main.cpp`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (2 nodes): `wWinMain()`, `main.cpp`
+- **Thin community `Community 40`** (1 nodes): `build.gradle.kts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (1 nodes): `build.gradle.kts`
+- **Thin community `Community 41`** (1 nodes): `settings.gradle.kts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (1 nodes): `settings.gradle.kts`
+- **Thin community `Community 42`** (1 nodes): `GeneratedPluginRegistrant.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (1 nodes): `GeneratedPluginRegistrant.h`
+- **Thin community `Community 43`** (1 nodes): `Runner-Bridging-Header.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (1 nodes): `Runner-Bridging-Header.h`
+- **Thin community `Community 44`** (1 nodes): `lib.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (1 nodes): `lib.rs`
+- **Thin community `Community 45`** (1 nodes): `mod.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `mod.rs`
+- **Thin community `Community 46`** (1 nodes): `dummy_file.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (1 nodes): `lib.rs`
+- **Thin community `Community 47`** (1 nodes): `dummy_file.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (1 nodes): `mod.rs`
+- **Thin community `Community 48`** (1 nodes): `bump_mobile_version.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `dummy_file.c`
+- **Thin community `Community 49`** (1 nodes): `create_android_keystore.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (1 nodes): `dummy_file.c`
+- **Thin community `Community 50`** (1 nodes): `encode_android_keystore.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (1 nodes): `bump_mobile_version.ps1`
+- **Thin community `Community 51`** (1 nodes): `encode_google_services_json.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (1 nodes): `create_android_keystore.ps1`
+- **Thin community `Community 52`** (1 nodes): `generate_shorebird_patch_keys.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (1 nodes): `encode_android_keystore.ps1`
+- **Thin community `Community 53`** (1 nodes): `get_android_fingerprints.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `encode_google_services_json.ps1`
+- **Thin community `Community 54`** (1 nodes): `shorebird_patch_local.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (1 nodes): `generate_shorebird_patch_keys.ps1`
+- **Thin community `Community 55`** (1 nodes): `generated_plugin_registrant.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (1 nodes): `get_android_fingerprints.ps1`
+- **Thin community `Community 56`** (1 nodes): `resource.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (1 nodes): `shorebird_patch_local.ps1`
+- **Thin community `Community 57`** (1 nodes): `utils.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `generated_plugin_registrant.h`
+- **Thin community `Community 58`** (1 nodes): `win32_window.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (1 nodes): `resource.h`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (1 nodes): `utils.h`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `win32_window.h`
+- **Thin community `Community 59`** (1 nodes): `Build a verified proprietary source package without uploading to a registry.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SigningSession` connect `Community 2` to `Community 16`?**
-  _High betweenness centrality (0.003) - this node is a cross-community bridge._
-- **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `AccountFamily` to the rest of the system?**
-  _19 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `i32` connect `Community 2` to `Community 0`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `FrbWrapper<RustEvmSigningAccount>` to the rest of the system?**
+  _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._
-- **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._
-- **Should `Community 6` be split into smaller, more focused modules?**
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.08 - nodes in this community are weakly interconnected._
+- **Should `Community 4` be split into smaller, more focused modules?**
   _Cohesion score 0.14 - nodes in this community are weakly interconnected._
-- **Should `Community 7` be split into smaller, more focused modules?**
+- **Should `Community 5` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._
