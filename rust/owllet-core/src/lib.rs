@@ -15,6 +15,12 @@ pub mod mnemonic;
 pub mod signing;
 pub mod transactions;
 
+#[cfg(all(
+    feature = "signing-session",
+    any(feature = "evm", feature = "solana", feature = "tron")
+))]
+pub mod session;
+
 pub use accounts::*;
 pub use mnemonic::*;
 #[cfg(feature = "solana")]

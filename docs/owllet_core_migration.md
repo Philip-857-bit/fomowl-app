@@ -35,33 +35,37 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Solana signer metadata | Reject unavailable builder signers and excess serialized signature slots | `226c3f2` |
 | Authoritative typed-data signing | Remove Dart fallback; CoW order/cancellation and nested permit signatures proven compatible | `81370bb` |
 | Owned secret inputs | Drop-based cleanup of adapter mnemonic, seed, import-key and signing-key inputs | `1107531` |
-| EVM metadata ownership | Derived/imported addresses and unprefixed 64-byte public keys come from Rust | `refactor(wallet): derive EVM account metadata in Rust` |
+| EVM metadata ownership | Derived/imported addresses and unprefixed 64-byte public keys come from Rust | `783265a` |
+| Native signing sessions | Rust-resident keys, scoped opaque handles, terminal lock/removal lifecycle, multi-chain signing | `feat(wallet-core): add scoped opaque signing sessions` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.
-Nine minimal/single-feature/pair-feature configurations are covered by CI.
+Minimal/single-feature/pair-feature configurations and chain-specific signing
+sessions are covered by CI (12 configurations).
 Reduced runtime dependency trees were also checked locally. Native Windows
 release FFI was rebuilt before testing. Other target certification remains open.
 
-## Transaction migration sequence
+## Completed transaction milestone
 
-1. NFT transfers completed: existing calldata and 15% fee buffer retained;
-   selected sender verified, pending nonce used, Rust signature broadcast raw.
-2. Shared EVM transaction coordination: isolate key/address verification,
-   nonce/fee resolution, and Rust signing in a reusable Flutter adapter module.
-3. Token approvals: reuse that adapter, preserve exact-amount allowances and
-   timeout/callback behavior, reject owner/key mismatch before broadcasting.
-4. EIP-1559 and contract creation: add core engine support with independent
-   fixtures, then expose it through the adapter.
-5. Arbitrary EVM requests, swaps, Relay, and WalletConnect: migrate each path
-   separately while preserving approval/permission and backend quote boundaries.
+Native, ERC-20, NFT, approval, generic legacy/type-2/creation, standard swap,
+Relay swap, and bridge UI transactions use the shared Rust signer. WalletConnect,
+dApp, and mini-app callers retain their existing facade and permission checks.
+ABI encoding, RPC/fee discovery, quote guards, and confirmations remain in host
+modules. No production EVM `sendTransaction` caller or typed-data Dart fallback
+remains. The unused credentials API is retained as deprecated compatibility.
+
+The core also owns Solana normalized-instruction compilation and serialized
+signer-slot logic. Its builder rejects unavailable additional signers; serialized
+signing supports required partial-signature slots and rejects excess slots.
+Private-key address/public-key metadata comes from the Rust core.
 
 ## Subsequent product boundaries
 
-- Consolidate Solana and TRON transaction logic into the reusable core.
+- Consolidate remaining TRON transaction preparation and import-format parsing.
+- Expose the optional Rust signing-session module through platform adapters;
+  native Rust hosts can already consume it directly.
 - Introduce Rust-owned vault/key lifecycle and opaque account handles, with
   explicit backup/export flows and verified legacy-storage migration.
-- Remove production Dart cryptographic fallbacks after each replacement is proven.
 - Add further chains inside the core rather than separately in each host.
 - Build and validate WASM/native language adapters independently of the engine.
 - Assess `no_std`/resource-constrained devices separately from wallets embedded

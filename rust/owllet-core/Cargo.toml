@@ -12,6 +12,7 @@ tron = ["secp256k1", "dep:bs58", "dep:sha2", "dep:sha3"]
 # Shared primitive layer for EVM and TRON; also usable by native Rust hosts.
 secp256k1 = ["dep:bip32", "dep:secp256k1"]
 mnemonic-generation = ["dep:rand"]
+signing-session = []
 
 [dependencies]
 alloy = { version = "2.0.5", default-features = false, features = ["consensus", "signer-local", "network", "eips"], optional = true }

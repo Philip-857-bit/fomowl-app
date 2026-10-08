@@ -14,6 +14,7 @@ The current crate is an early engine foundation, not a complete wallet SDK.
 | `signing::{evm,secp256k1,solana,tron}` | Message, typed-data, and digest signing |
 | `transactions::evm` | Offline legacy/EIP-1559 signing and contract creation with Alloy |
 | `transactions::solana` | v0 instruction compilation and required-signer-slot signing of serialized legacy/v0 transactions |
+| `session` (optional) | Rust-owned transient keys, opaque scoped account handles, lock/removal lifecycle |
 
 Use module-qualified APIs in new integrations. Existing root re-exports remain
 available for Flutter compatibility. Share primitives across chains; keep chain
@@ -44,6 +45,7 @@ owllet-core = { path = "../owllet-core", default-features = false, features = ["
 | `evm` | EVM accounts/messages and Alloy legacy/EIP-1559 transactions; includes `secp256k1` |
 | `solana` | Solana accounts, message signatures, and transaction compilation/signing |
 | `tron` | TRON accounts and raw-hash signatures; includes `secp256k1` |
+| `signing-session` | Process-local signing sessions; select at least one chain feature to expose this module |
 
 Cargo features are additive: a dependency graph may enable more features than
 one consumer explicitly requests. They control compiled capabilities, not user
@@ -53,6 +55,28 @@ Browser and device hosts can avoid the native RNG convenience feature and pass
 128 bits of cryptographically secure entropy to `generate_mnemonic_from_entropy`.
 The host owns the supplied entropy buffer and must wipe it when no longer needed.
 Never substitute timestamps, identifiers, or a non-cryptographic RNG.
+
+## Rust-resident signing sessions
+
+Native and embedded Rust hosts can select `features = ["evm", "signing-session"]`
+and use `session::SigningSession`. After host authentication, import owned key
+material once and perform normal signing through the returned `AccountHandle`.
+`account_info` returns only the family and public address. There is no private-key
+export API in this module. Existing raw-key primitives remain available for
+compatibility and explicit low-level integrations.
+
+Handles are opaque Rust values with weak references, not serializable IDs or
+authorization tokens. A foreign session cannot use them. Removing an account,
+locking, or dropping its session invalidates access; keeping cloned handles does
+not retain the owned key buffers. Locks are terminal: after a new authenticated
+unlock, create a fresh session and re-import from host-managed secure storage.
+
+This module is an in-memory custody foundation. It performs no authentication,
+permission prompts, encrypted persistence, network calls, or hardware access.
+The host must serialize session mutation and apply its lifecycle policy. Flutter
+integration still uses transitional Dart contexts; these Rust session handles
+are not yet wired through FRB. Encrypted vault/storage migration is a separate
+step with verification before any legacy data removal.
 
 ## Host integrations and current support
 
