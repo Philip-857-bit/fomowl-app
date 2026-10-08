@@ -16,6 +16,7 @@ import 'storage_service.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
 import 'native_crypto.dart';
+import 'evm_transaction_service.dart';
 
 typedef SeedAccountActivityChecker =
     Future<bool> Function({
@@ -810,6 +811,27 @@ class WalletService {
     );
   }
 
+  Future<EvmSigningAccount> _activeEvmSigningAccount({
+    EthereumAddress? expectedSender,
+  }) async {
+    final fromAddress = await getCurrentWalletAddress();
+    if (fromAddress == null || fromAddress.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+    final sender = EthereumAddress.fromHex(fromAddress);
+    if (expectedSender != null && sender != expectedSender) {
+      throw Exception('Transaction sender does not match the active wallet');
+    }
+    final privateKeyHex = await getPrivateKey();
+    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
+      throw Exception('No wallet found');
+    }
+    return EvmTransactionService.verifyAccount(
+      sender: sender,
+      privateKeyHex: privateKeyHex,
+    );
+  }
+
   /// Send native coin (ETH/BNB/MATIC/etc.) to an address
   /// Returns the transaction hash if successful
   Future<String> sendNativeTransaction({
@@ -826,23 +848,8 @@ class WalletService {
       );
     }
 
-    final fromAddress = await getCurrentWalletAddress();
-    if (fromAddress == null || fromAddress.trim().isEmpty) {
-      throw Exception('No wallet found');
-    }
-    final sender = EthereumAddress.fromHex(fromAddress);
-
-    final privateKeyHex = await getPrivateKey();
-    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
-      throw Exception('No wallet found');
-    }
-
-    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
-      privateKeyHex,
-    );
-    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
-      throw Exception('Active EVM address does not match private key');
-    }
+    final account = await _activeEvmSigningAccount();
+    final sender = account.address;
 
     final client = _clientForRpc(rpcUrl);
     final recipient = EthereumAddress.fromHex(toAddress);
@@ -862,29 +869,15 @@ class WalletService {
               .ceil(),
         ).toInt();
 
-    final nonce = await client.getTransactionCount(
-      sender,
-      atBlock: const BlockNum.pending(),
-    );
-
-    final rawTxHex = await NativeCrypto.signLegacyEvmTransaction(
-      privateKeyHex: privateKeyHex,
+    return EvmTransactionService.broadcastLegacy(
+      client: client,
+      account: account,
       chainId: chainId,
-      nonce: nonce,
+      to: recipient,
+      valueWei: amountInBaseUnits,
       gasPriceWei: resolvedGasPriceWei,
       gasLimit: resolvedGasLimit,
-      toAddress: recipient.hex,
-      valueWei: amountInBaseUnits,
-      dataHex: '',
     );
-
-    final rawBytes = web3_crypto.hexToBytes(
-      rawTxHex.startsWith('0x') || rawTxHex.startsWith('0X')
-          ? rawTxHex.substring(2)
-          : rawTxHex,
-    );
-
-    return await client.sendRawTransaction(rawBytes);
   }
 
   Future<String> sendTokenTransaction({
@@ -902,23 +895,8 @@ class WalletService {
       );
     }
 
-    final fromAddress = await getCurrentWalletAddress();
-    if (fromAddress == null || fromAddress.trim().isEmpty) {
-      throw Exception('No wallet found');
-    }
-    final sender = EthereumAddress.fromHex(fromAddress);
-
-    final privateKeyHex = await getPrivateKey();
-    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
-      throw Exception('No wallet found');
-    }
-
-    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
-      privateKeyHex,
-    );
-    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
-      throw Exception('Active EVM address does not match private key');
-    }
+    final account = await _activeEvmSigningAccount();
+    final sender = account.address;
 
     final client = _clientForRpc(rpcUrl);
     final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
@@ -942,29 +920,16 @@ class WalletService {
               .ceil(),
         ).toInt();
 
-    final nonce = await client.getTransactionCount(
-      sender,
-      atBlock: const BlockNum.pending(),
-    );
-
-    final rawTxHex = await NativeCrypto.signLegacyEvmTransaction(
-      privateKeyHex: privateKeyHex,
+    return EvmTransactionService.broadcastLegacy(
+      client: client,
+      account: account,
       chainId: chainId,
-      nonce: nonce,
+      to: tokenContractAddress,
+      valueWei: BigInt.zero,
       gasPriceWei: resolvedGasPriceWei,
       gasLimit: resolvedGasLimit,
-      toAddress: tokenContractAddress.hex,
-      valueWei: BigInt.zero,
-      dataHex: '0x${HEX.encode(data)}',
+      data: data,
     );
-
-    final rawBytes = web3_crypto.hexToBytes(
-      rawTxHex.startsWith('0x') || rawTxHex.startsWith('0X')
-          ? rawTxHex.substring(2)
-          : rawTxHex,
-    );
-
-    return await client.sendRawTransaction(rawBytes);
   }
 
   Future<String> sendNftTransaction({
@@ -988,23 +953,7 @@ class WalletService {
     }
 
     final sender = EthereumAddress.fromHex(fromAddress);
-    final activeAddress = await getCurrentWalletAddress();
-    if (activeAddress == null || activeAddress.trim().isEmpty) {
-      throw Exception('No wallet found');
-    }
-    if (activeAddress.toLowerCase() != sender.hex.toLowerCase()) {
-      throw Exception('NFT sender does not match the active wallet');
-    }
-    final privateKeyHex = await getPrivateKey();
-    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
-      throw Exception('No wallet found');
-    }
-    final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
-      privateKeyHex,
-    );
-    if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
-      throw Exception('Active EVM address does not match private key');
-    }
+    final account = await _activeEvmSigningAccount(expectedSender: sender);
     final contractAddressHex = EthereumAddress.fromHex(contractAddress);
     final recipient = EthereumAddress.fromHex(toAddress);
     final isErc1155 = tokenType.toUpperCase().contains('1155');
@@ -1026,21 +975,16 @@ class WalletService {
     );
     final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.15).ceil());
 
-    final nonce = await client.getTransactionCount(
-      sender,
-      atBlock: const BlockNum.pending(),
-    );
-    final rawTxHex = await NativeCrypto.signLegacyEvmTransaction(
-      privateKeyHex: privateKeyHex,
+    return EvmTransactionService.broadcastLegacy(
+      client: client,
+      account: account,
       chainId: chainId,
-      nonce: nonce,
+      to: contractAddressHex,
+      valueWei: BigInt.zero,
       gasPriceWei: gasPrice.getInWei,
       gasLimit: bufferedGas.toInt(),
-      toAddress: contractAddressHex.hex,
-      valueWei: BigInt.zero,
-      dataHex: '0x${HEX.encode(data)}',
+      data: data,
     );
-    return client.sendRawTransaction(web3_crypto.hexToBytes(rawTxHex));
   }
 
   Future<String> sendRawTransactionRequest({

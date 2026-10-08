@@ -11,6 +11,7 @@ import 'package:http/testing.dart';
 import 'package:web3dart/web3dart.dart';
 
 import 'package:fomowl_wallet/services/wallet_service.dart';
+import 'package:fomowl_wallet/services/evm_transaction_service.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
 const _key = '1ab42cc412b618bdea3a599e3c9bae199ebf030895b039e9db1e30dafb12b727';
@@ -87,7 +88,11 @@ class _Rpc {
   }
 }
 
-Future<String> _referenceTransaction(String data) async {
+Future<String> _referenceTransaction(
+  String data, {
+  int gasLimit = 57500,
+  BigInt? valueWei,
+}) async {
   final client = Web3Client(
     'https://rpc.invalid',
     MockClient((_) => throw StateError('Reference signing must stay offline')),
@@ -98,9 +103,9 @@ Future<String> _referenceTransaction(String data) async {
       Transaction(
         nonce: 7,
         gasPrice: EtherAmount.inWei(BigInt.from(1000000000)),
-        maxGas: 57500,
+        maxGas: gasLimit,
         to: EthereumAddress.fromHex(_contract),
-        value: EtherAmount.zero(),
+        value: EtherAmount.inWei(valueWei ?? BigInt.zero),
         data: Uint8List.fromList(HEX.decode(data.substring(2))),
       ),
       chainId: 1,
@@ -114,6 +119,79 @@ Future<String> _referenceTransaction(String data) async {
 
 void main() {
   setUpAll(() async => RustLib.init());
+
+  for (final isNative in [true, false]) {
+    test(
+      'production ${isNative ? 'native' : 'token'} transfer preserves supplied fees',
+      () async {
+        final data = isNative
+            ? '0x'
+            : '0xa9059cbb$_recipientWord'
+                  '00000000000000000000000000000000000000000000000000000000000003e8';
+        final rpc = _Rpc(data);
+        addTearDown(rpc.client.dispose);
+        final wallet = _Wallet(rpc.client);
+        final amount = BigInt.from(isNative ? 10 : 1000);
+        final hash = isNative
+            ? await wallet.sendNativeTransaction(
+                toAddress: _contract,
+                amountInBaseUnits: amount,
+                rpcUrl: 'https://rpc.invalid',
+                chainId: 1,
+                gasPriceWei: BigInt.from(1000000000),
+                gasLimit: 75000,
+              )
+            : await wallet.sendTokenTransaction(
+                tokenAddress: _contract,
+                toAddress: _recipient,
+                amountInBaseUnits: amount,
+                rpcUrl: 'https://rpc.invalid',
+                chainId: 1,
+                gasPriceWei: BigInt.from(1000000000),
+                gasLimit: 75000,
+              );
+        expect(hash, _hash);
+        expect(
+          rpc.rawTransaction,
+          await _referenceTransaction(
+            data,
+            gasLimit: 75000,
+            valueWei: isNative ? amount : BigInt.zero,
+          ),
+        );
+        expect(rpc.methods, [
+          'eth_getTransactionCount',
+          'eth_sendRawTransaction',
+        ]);
+      },
+    );
+  }
+
+  test(
+    'shared adapter rejects invalid fields before RPC and redacts its account',
+    () async {
+      final rpc = _Rpc('');
+      addTearDown(rpc.client.dispose);
+      final account = await EvmTransactionService.verifyAccount(
+        sender: EthereumAddress.fromHex(_sender),
+        privateKeyHex: _key,
+      );
+      expect(account.toString(), isNot(contains(_key)));
+      await expectLater(
+        EvmTransactionService.broadcastLegacy(
+          client: rpc.client,
+          account: account,
+          chainId: 0,
+          to: EthereumAddress.fromHex(_contract),
+          valueWei: BigInt.zero,
+          gasPriceWei: BigInt.one,
+          gasLimit: 21000,
+        ),
+        throwsArgumentError,
+      );
+      expect(rpc.methods, isEmpty);
+    },
+  );
 
   for (final tokenType in ['ERC721', 'ERC1155']) {
     test('$tokenType production transfer signs canonical bytes in Rust', () async {
@@ -195,7 +273,7 @@ void main() {
               contains(
                 activeAddress == null
                     ? 'No wallet found'
-                    : 'NFT sender does not match',
+                    : 'Transaction sender does not match',
               ),
             ),
           ),
