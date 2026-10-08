@@ -24,6 +24,59 @@ void main() {
     await RustLib.init();
   });
 
+  test('encrypted vault opens directly into an opaque fixture signer', () async {
+    final key = '46' * 32;
+    final address = await NativeCrypto.deriveEvmAddressFromPrivateKey(key);
+    final wrappingKey = await NativeCrypto.generateVaultWrappingKey();
+    expect(wrappingKey.length, 32);
+    final record = await NativeCrypto.sealEvmVault(
+      privateKeyHex: key,
+      expectedAddress: address,
+      wrappingKey: wrappingKey,
+    );
+    expect(record.contains(key), isFalse);
+    final signer = await NativeCrypto.openEvmVaultSigningAccount(
+      encryptedVault: record,
+      expectedAddress: address,
+      wrappingKey: wrappingKey,
+    );
+    addTearDown(signer.dispose);
+    final raw = await signer.signTransaction(
+      chainId: BigInt.one,
+      nonce: BigInt.from(9),
+      gasLimit: BigInt.from(21000),
+      toAddress: '0x3535353535353535353535353535353535353535',
+      valueWei: '1000000000000000000',
+      dataHex: '',
+      gasPriceWei: '20000000000',
+    );
+    expect(
+      raw,
+      '0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83',
+    );
+    for (final badKey in [Uint8List(32), Uint8List(31)]) {
+      await expectLater(
+        NativeCrypto.openEvmVaultSigningAccount(
+          encryptedVault: record,
+          expectedAddress: address,
+          wrappingKey: badKey,
+        ),
+        throwsA(anything),
+      );
+    }
+    await expectLater(
+      NativeCrypto.openEvmVaultSigningAccount(
+        encryptedVault: record,
+        expectedAddress: '0x3535353535353535353535353535353535353535',
+        wrappingKey: wrappingKey,
+      ),
+      throwsA(anything),
+    );
+    await signer.close();
+    await expectLater(signer.address(), throwsA(anything));
+    wrappingKey.fillRange(0, wrappingKey.length, 0);
+  });
+
   test(
     'opaque Rust EVM signer preserves fixture bytes and refuses use after close',
     () async {

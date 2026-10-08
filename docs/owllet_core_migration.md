@@ -90,3 +90,19 @@ fail closed. Hosts supply secure wrapping keys and unique nonces. CI includes
 a vault-only feature configuration. Existing Flutter storage and legacy keys
 remain untouched. Native bindings and verified non-destructive storage migration
 are subsequent steps. Commit: `feat(wallet-core): add authenticated EVM vault records`.
+
+## Native encrypted-record adapter step
+
+Core vault commit: `d85ddf9`. Native/FRB APIs now generate host-managed wrapping
+material, seal legacy EVM keys with fresh native nonces, and authenticate records
+into the existing opaque signing account. Owned native secret inputs are guarded
+with `Zeroizing`; wrapping material still crosses the FFI boundary and must be
+protected by platform storage. No API returns a decrypted private key.
+The Flutter wrapper exposes the new operations; an FFI test verifies the official
+EIP-155 transaction bytes after vault open, wrong wrapping keys/length/address
+rejection, and terminal session closure. Storage migration remains a separate
+non-destructive step. Commit: `feat(wallet): expose encrypted vault signing through FRB`.
+
+Validation: 45 full core tests, 21 vault-only tests, 31 native adapter tests,
+48 Flutter FFI/transaction tests; Rust formatting/Clippy, scoped Dart analysis,
+and the native Windows release build passed.

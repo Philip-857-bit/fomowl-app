@@ -81,7 +81,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L1",
       "id": "android_app_src_main_kotlin_com_fomowl_fomowl_wallet_mainactivity_kt",
-      "community": 9
+      "community": 10
     },
     {
       "label": "MainActivity",
@@ -89,7 +89,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L27",
       "id": "mainactivity_mainactivity",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".onCreate()",
@@ -97,7 +97,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L37",
       "id": "mainactivity_mainactivity_oncreate",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".configureFlutterEngine()",
@@ -105,7 +105,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L45",
       "id": "mainactivity_mainactivity_configureflutterengine",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".ensureCameraPermission()",
@@ -113,7 +113,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L89",
       "id": "mainactivity_mainactivity_ensurecamerapermission",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".onRequestPermissionsResult()",
@@ -121,7 +121,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L106",
       "id": "mainactivity_mainactivity_onrequestpermissionsresult",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".ensureDefaultNotificationChannel()",
@@ -129,7 +129,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L121",
       "id": "mainactivity_mainactivity_ensuredefaultnotificationchannel",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".receiptBytes()",
@@ -137,7 +137,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L144",
       "id": "mainactivity_mainactivity_receiptbytes",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".hasPngSignature()",
@@ -145,7 +145,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L171",
       "id": "mainactivity_mainactivity_haspngsignature",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".saveReceiptImage()",
@@ -153,7 +153,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L179",
       "id": "mainactivity_mainactivity_savereceiptimage",
-      "community": 9
+      "community": 10
     },
     {
       "label": ".shareReceiptImage()",
@@ -161,7 +161,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L242",
       "id": "mainactivity_mainactivity_sharereceiptimage",
-      "community": 9
+      "community": 10
     },
     {
       "label": "flutter_lldb_helper.py",
@@ -361,7 +361,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_mnemonic_rs",
-      "community": 10
+      "community": 11
     },
     {
       "label": "generate_mnemonic()",
@@ -369,7 +369,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L10",
       "id": "mnemonic_generate_mnemonic",
-      "community": 10
+      "community": 11
     },
     {
       "label": "generate_mnemonic_from_entropy()",
@@ -377,7 +377,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L20",
       "id": "mnemonic_generate_mnemonic_from_entropy",
-      "community": 10
+      "community": 11
     },
     {
       "label": "validate_mnemonic()",
@@ -385,7 +385,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L27",
       "id": "mnemonic_validate_mnemonic",
-      "community": 10
+      "community": 11
     },
     {
       "label": "mnemonic_to_seed()",
@@ -393,7 +393,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L34",
       "id": "mnemonic_mnemonic_to_seed",
-      "community": 10
+      "community": 11
     },
     {
       "label": "test_generate_mnemonic_structure()",
@@ -401,7 +401,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L53",
       "id": "mnemonic_test_generate_mnemonic_structure",
-      "community": 10
+      "community": 11
     },
     {
       "label": "host_entropy_matches_known_bip39_vector()",
@@ -409,7 +409,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L68",
       "id": "mnemonic_host_entropy_matches_known_bip39_vector",
-      "community": 10
+      "community": 11
     },
     {
       "label": "test_validate_mnemonic()",
@@ -417,7 +417,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L73",
       "id": "mnemonic_test_validate_mnemonic",
-      "community": 10
+      "community": 11
     },
     {
       "label": "test_known_mnemonic_to_seed()",
@@ -425,7 +425,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L83",
       "id": "mnemonic_test_known_mnemonic_to_seed",
-      "community": 10
+      "community": 11
     },
     {
       "label": "test_mnemonic_to_seed_error_format()",
@@ -433,7 +433,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L90",
       "id": "mnemonic_test_mnemonic_to_seed_error_format",
-      "community": 10
+      "community": 11
     },
     {
       "label": "session.rs",
@@ -441,7 +441,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_session_rs",
-      "community": 12
+      "community": 13
     },
     {
       "label": "AccountFamily",
@@ -449,7 +449,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L13",
       "id": "session_accountfamily",
-      "community": 12
+      "community": 13
     },
     {
       "label": "AccountInfo",
@@ -457,7 +457,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L23",
       "id": "session_accountinfo",
-      "community": 12
+      "community": 13
     },
     {
       "label": "KeyMaterial",
@@ -465,7 +465,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L28",
       "id": "session_keymaterial",
-      "community": 12
+      "community": 13
     },
     {
       "label": "Account",
@@ -473,7 +473,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L37",
       "id": "session_account",
-      "community": 12
+      "community": 13
     },
     {
       "label": "AccountHandle",
@@ -481,7 +481,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L44",
       "id": "session_accounthandle",
-      "community": 12
+      "community": 13
     },
     {
       "label": ".fmt()",
@@ -489,7 +489,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L50",
       "id": "session_accounthandle_fmt",
-      "community": 12
+      "community": 13
     },
     {
       "label": "SessionError",
@@ -497,7 +497,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L56",
       "id": "session_sessionerror",
-      "community": 12
+      "community": 13
     },
     {
       "label": ".fmt()",
@@ -505,7 +505,7 @@
       "source_file": "rust\\owllet-core\\src\\session.rs",
       "source_location": "L67",
       "id": "session_sessionerror_fmt",
-      "community": 12
+      "community": 13
     },
     {
       "label": "SigningSession",
@@ -841,7 +841,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_accounts_mod_rs",
-      "community": 13
+      "community": 14
     },
     {
       "label": "known_seed()",
@@ -849,7 +849,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L24",
       "id": "mod_known_seed",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_known_evm_derivation_index_0()",
@@ -857,7 +857,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L29",
       "id": "mod_test_known_evm_derivation_index_0",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_known_solana_derivation_index_0()",
@@ -865,7 +865,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L50",
       "id": "mod_test_known_solana_derivation_index_0",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_known_tron_derivation_index_0()",
@@ -873,7 +873,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L72",
       "id": "mod_test_known_tron_derivation_index_0",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_negative_invalid_seed_length()",
@@ -881,7 +881,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L90",
       "id": "mod_test_negative_invalid_seed_length",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_negative_invalid_evm_private_key()",
@@ -889,7 +889,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L101",
       "id": "mod_test_negative_invalid_evm_private_key",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_negative_invalid_tron_private_key()",
@@ -897,7 +897,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L110",
       "id": "mod_test_negative_invalid_tron_private_key",
-      "community": 13
+      "community": 14
     },
     {
       "label": "test_negative_invalid_solana_private_key_bytes()",
@@ -905,7 +905,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\mod.rs",
       "source_location": "L116",
       "id": "mod_test_negative_invalid_solana_private_key_bytes",
-      "community": 13
+      "community": 14
     },
     {
       "label": "solana.rs",
@@ -1772,10 +1772,18 @@
       "community": 0
     },
     {
-      "label": "wire__crate__api__simple__greet_impl()",
+      "label": "wire__crate__api__evm_signing_account__generate_vault_wrapping_key_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L774",
+      "id": "frb_generated_wire_crate_api_evm_signing_account_generate_vault_wrapping_key_impl",
+      "community": 0
+    },
+    {
+      "label": "wire__crate__api__simple__greet_impl()",
+      "file_type": "code",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L808",
       "id": "frb_generated_wire_crate_api_simple_greet_impl",
       "community": 0
     },
@@ -1783,7 +1791,7 @@
       "label": "wire__crate__api__simple__init_app_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L804",
+      "source_location": "L838",
       "id": "frb_generated_wire_crate_api_simple_init_app_impl",
       "community": 0
     },
@@ -1791,7 +1799,7 @@
       "label": "wire__crate__api__bip39__mnemonic_to_seed_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L838",
+      "source_location": "L872",
       "id": "frb_generated_wire_crate_api_bip39_mnemonic_to_seed_impl",
       "community": 0
     },
@@ -1799,15 +1807,31 @@
       "label": "wire__crate__api__bip32__normalize_solana_private_key_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L871",
+      "source_location": "L905",
       "id": "frb_generated_wire_crate_api_bip32_normalize_solana_private_key_impl",
+      "community": 0
+    },
+    {
+      "label": "wire__crate__api__evm_signing_account__open_evm_vault_signing_account_impl()",
+      "file_type": "code",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L939",
+      "id": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "community": 0
+    },
+    {
+      "label": "wire__crate__api__evm_signing_account__seal_evm_vault_impl()",
+      "file_type": "code",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L979",
+      "id": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
       "community": 0
     },
     {
       "label": "wire__crate__api__evm_tx__sign_evm_transaction_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L905",
+      "source_location": "L1018",
       "id": "frb_generated_wire_crate_api_evm_tx_sign_evm_transaction_impl",
       "community": 0
     },
@@ -1815,7 +1839,7 @@
       "label": "wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L958",
+      "source_location": "L1071",
       "id": "frb_generated_wire_crate_api_evm_tx_sign_legacy_evm_transaction_impl",
       "community": 0
     },
@@ -1823,7 +1847,7 @@
       "label": "wire__crate__api__secp256k1_api__sign_personal_message_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1007",
+      "source_location": "L1120",
       "id": "frb_generated_wire_crate_api_secp256k1_api_sign_personal_message_impl",
       "community": 0
     },
@@ -1831,7 +1855,7 @@
       "label": "wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1044",
+      "source_location": "L1157",
       "id": "frb_generated_wire_crate_api_solana_tx_sign_serialized_solana_transaction_impl",
       "community": 0
     },
@@ -1839,7 +1863,7 @@
       "label": "wire__crate__api__bip32__sign_solana_message_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1083",
+      "source_location": "L1196",
       "id": "frb_generated_wire_crate_api_bip32_sign_solana_message_impl",
       "community": 0
     },
@@ -1847,7 +1871,7 @@
       "label": "wire__crate__api__bip32__sign_tron_raw_hash_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1118",
+      "source_location": "L1231",
       "id": "frb_generated_wire_crate_api_bip32_sign_tron_raw_hash_impl",
       "community": 0
     },
@@ -1855,7 +1879,7 @@
       "label": "wire__crate__api__secp256k1_api__sign_typed_data_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1155",
+      "source_location": "L1268",
       "id": "frb_generated_wire_crate_api_secp256k1_api_sign_typed_data_impl",
       "community": 0
     },
@@ -1863,7 +1887,7 @@
       "label": "wire__crate__api__bip39__validate_mnemonic_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1192",
+      "source_location": "L1305",
       "id": "frb_generated_wire_crate_api_bip39_validate_mnemonic_impl",
       "community": 0
     },
@@ -1871,7 +1895,7 @@
       "label": "RustEvmSigningAccount",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1235",
+      "source_location": "L1348",
       "id": "frb_generated_rustevmsigningaccount",
       "community": 2
     },
@@ -1879,7 +1903,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1237",
+      "source_location": "L1350",
       "id": "frb_generated_rustevmsigningaccount_sse_decode",
       "community": 2
     },
@@ -1887,7 +1911,7 @@
       "label": "RustOpaqueMoi<\n        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,\n    >",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1245",
+      "source_location": "L1358",
       "id": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount",
       "community": 2
     },
@@ -1895,7 +1919,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1251",
+      "source_location": "L1364",
       "id": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount_sse_decode",
       "community": 2
     },
@@ -1903,7 +1927,7 @@
       "label": "String",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1257",
+      "source_location": "L1370",
       "id": "frb_generated_string",
       "community": 2
     },
@@ -1911,7 +1935,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1259",
+      "source_location": "L1372",
       "id": "frb_generated_string_sse_decode",
       "community": 2
     },
@@ -1919,7 +1943,7 @@
       "label": "bool",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1265",
+      "source_location": "L1378",
       "id": "frb_generated_bool",
       "community": 42
     },
@@ -1927,7 +1951,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1267",
+      "source_location": "L1380",
       "id": "frb_generated_bool_sse_decode",
       "community": 42
     },
@@ -1935,7 +1959,7 @@
       "label": "Vec<u8>",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1272",
+      "source_location": "L1385",
       "id": "frb_generated_vec_u8",
       "community": 2
     },
@@ -1943,7 +1967,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1274",
+      "source_location": "L1387",
       "id": "frb_generated_vec_u8_sse_decode",
       "community": 2
     },
@@ -1951,7 +1975,7 @@
       "label": "Option<String>",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1284",
+      "source_location": "L1397",
       "id": "frb_generated_option_string",
       "community": 2
     },
@@ -1959,7 +1983,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1286",
+      "source_location": "L1399",
       "id": "frb_generated_option_string_sse_decode",
       "community": 2
     },
@@ -1967,7 +1991,7 @@
       "label": "crate::api::bip32::SolanaPrivateKeyImport",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1295",
+      "source_location": "L1408",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport",
       "community": 2
     },
@@ -1975,7 +1999,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1297",
+      "source_location": "L1410",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_decode",
       "community": 2
     },
@@ -1983,7 +2007,7 @@
       "label": "u32",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1307",
+      "source_location": "L1420",
       "id": "frb_generated_u32",
       "community": 43
     },
@@ -1991,7 +2015,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1309",
+      "source_location": "L1422",
       "id": "frb_generated_u32_sse_decode",
       "community": 43
     },
@@ -1999,7 +2023,7 @@
       "label": "u64",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1314",
+      "source_location": "L1427",
       "id": "frb_generated_u64",
       "community": 44
     },
@@ -2007,7 +2031,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1316",
+      "source_location": "L1429",
       "id": "frb_generated_u64_sse_decode",
       "community": 44
     },
@@ -2015,7 +2039,7 @@
       "label": "u8",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1321",
+      "source_location": "L1434",
       "id": "frb_generated_u8",
       "community": 45
     },
@@ -2023,7 +2047,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1323",
+      "source_location": "L1436",
       "id": "frb_generated_u8_sse_decode",
       "community": 45
     },
@@ -2031,7 +2055,7 @@
       "label": "()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1328",
+      "source_location": "L1441",
       "id": "frb_generated",
       "community": 46
     },
@@ -2039,7 +2063,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1330",
+      "source_location": "L1443",
       "id": "frb_generated_sse_decode",
       "community": 46
     },
@@ -2047,7 +2071,7 @@
       "label": "usize",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1333",
+      "source_location": "L1446",
       "id": "frb_generated_usize",
       "community": 47
     },
@@ -2055,7 +2079,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1335",
+      "source_location": "L1448",
       "id": "frb_generated_usize_sse_decode",
       "community": 47
     },
@@ -2063,7 +2087,7 @@
       "label": "i32",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1340",
+      "source_location": "L1453",
       "id": "frb_generated_i32",
       "community": 2
     },
@@ -2071,7 +2095,7 @@
       "label": ".sse_decode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1342",
+      "source_location": "L1455",
       "id": "frb_generated_i32_sse_decode",
       "community": 0
     },
@@ -2079,7 +2103,7 @@
       "label": "pde_ffi_dispatcher_primary_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1347",
+      "source_location": "L1460",
       "id": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "community": 0
     },
@@ -2087,7 +2111,7 @@
       "label": "pde_ffi_dispatcher_sync_impl()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1495",
+      "source_location": "L1626",
       "id": "frb_generated_pde_ffi_dispatcher_sync_impl",
       "community": 0
     },
@@ -2095,7 +2119,7 @@
       "label": "FrbWrapper<RustEvmSigningAccount>",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1511",
+      "source_location": "L1642",
       "id": "frb_generated_frbwrapper_rustevmsigningaccount",
       "community": 2
     },
@@ -2103,7 +2127,7 @@
       "label": ".into_dart()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1512",
+      "source_location": "L1643",
       "id": "frb_generated_frbwrapper_rustevmsigningaccount_into_dart",
       "community": 2
     },
@@ -2111,7 +2135,7 @@
       "label": ".into_into_dart()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1525",
+      "source_location": "L1656",
       "id": "frb_generated_rustevmsigningaccount_into_into_dart",
       "community": 2
     },
@@ -2119,7 +2143,7 @@
       "label": ".into_dart()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1532",
+      "source_location": "L1663",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_dart",
       "community": 2
     },
@@ -2127,7 +2151,7 @@
       "label": ".into_into_dart()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1547",
+      "source_location": "L1678",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_into_dart",
       "community": 2
     },
@@ -2135,7 +2159,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1554",
+      "source_location": "L1685",
       "id": "frb_generated_rustevmsigningaccount_sse_encode",
       "community": 2
     },
@@ -2143,7 +2167,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1570",
+      "source_location": "L1701",
       "id": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount_sse_encode",
       "community": 2
     },
@@ -2151,7 +2175,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1579",
+      "source_location": "L1710",
       "id": "frb_generated_string_sse_encode",
       "community": 2
     },
@@ -2159,7 +2183,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1586",
+      "source_location": "L1717",
       "id": "frb_generated_bool_sse_encode",
       "community": 42
     },
@@ -2167,7 +2191,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1593",
+      "source_location": "L1724",
       "id": "frb_generated_vec_u8_sse_encode",
       "community": 2
     },
@@ -2175,7 +2199,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1603",
+      "source_location": "L1734",
       "id": "frb_generated_option_string_sse_encode",
       "community": 2
     },
@@ -2183,7 +2207,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1613",
+      "source_location": "L1744",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_encode",
       "community": 2
     },
@@ -2191,7 +2215,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1621",
+      "source_location": "L1752",
       "id": "frb_generated_u32_sse_encode",
       "community": 43
     },
@@ -2199,7 +2223,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1628",
+      "source_location": "L1759",
       "id": "frb_generated_u64_sse_encode",
       "community": 44
     },
@@ -2207,7 +2231,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1635",
+      "source_location": "L1766",
       "id": "frb_generated_u8_sse_encode",
       "community": 45
     },
@@ -2215,7 +2239,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1642",
+      "source_location": "L1773",
       "id": "frb_generated_sse_encode",
       "community": 46
     },
@@ -2223,7 +2247,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1647",
+      "source_location": "L1778",
       "id": "frb_generated_usize_sse_encode",
       "community": 47
     },
@@ -2231,7 +2255,7 @@
       "label": ".sse_encode()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1657",
+      "source_location": "L1788",
       "id": "frb_generated_i32_sse_encode",
       "community": 2
     },
@@ -2239,7 +2263,7 @@
       "label": "frbgen_fomowl_wallet_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1682",
+      "source_location": "L1813",
       "id": "frb_generated_frbgen_fomowl_wallet_rust_arc_increment_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
       "community": 0
     },
@@ -2247,7 +2271,7 @@
       "label": "frbgen_fomowl_wallet_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1689",
+      "source_location": "L1820",
       "id": "frb_generated_frbgen_fomowl_wallet_rust_arc_decrement_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
       "community": 0
     },
@@ -2255,7 +2279,7 @@
       "label": "rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1721",
+      "source_location": "L1852",
       "id": "frb_generated_rust_arc_increment_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
       "community": 0
     },
@@ -2263,7 +2287,7 @@
       "label": "rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount()",
       "file_type": "code",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1728",
+      "source_location": "L1859",
       "id": "frb_generated_rust_arc_decrement_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
       "community": 0
     },
@@ -2657,63 +2681,95 @@
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
       "source_location": "L1",
       "id": "rust_src_api_evm_signing_account_rs",
-      "community": 14
+      "community": 9
+    },
+    {
+      "label": "generate_vault_wrapping_key()",
+      "file_type": "code",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L7",
+      "id": "evm_signing_account_generate_vault_wrapping_key",
+      "community": 9
+    },
+    {
+      "label": "seal_evm_vault()",
+      "file_type": "code",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L14",
+      "id": "evm_signing_account_seal_evm_vault",
+      "community": 9
+    },
+    {
+      "label": "open_evm_vault_signing_account()",
+      "file_type": "code",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L31",
+      "id": "evm_signing_account_open_evm_vault_signing_account",
+      "community": 9
     },
     {
       "label": "RustEvmSigningAccount",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L6",
+      "source_location": "L49",
       "id": "evm_signing_account_rustevmsigningaccount",
-      "community": 14
+      "community": 9
     },
     {
       "label": "create_evm_signing_account()",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L11",
+      "source_location": "L54",
       "id": "evm_signing_account_create_evm_signing_account",
-      "community": 14
+      "community": 9
     },
     {
       "label": ".address()",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L27",
+      "source_location": "L70",
       "id": "evm_signing_account_rustevmsigningaccount_address",
-      "community": 14
+      "community": 9
     },
     {
       "label": ".sign_transaction()",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L35",
+      "source_location": "L78",
       "id": "evm_signing_account_rustevmsigningaccount_sign_transaction",
-      "community": 14
+      "community": 9
     },
     {
       "label": ".close()",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L65",
+      "source_location": "L108",
       "id": "evm_signing_account_rustevmsigningaccount_close",
-      "community": 14
+      "community": 9
+    },
+    {
+      "label": "vault_adapter_authenticates_before_creating_a_signer()",
+      "file_type": "code",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L118",
+      "id": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "community": 9
     },
     {
       "label": "verified_context_locks_and_refuses_further_access()",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L75",
+      "source_location": "L137",
       "id": "evm_signing_account_verified_context_locks_and_refuses_further_access",
-      "community": 14
+      "community": 9
     },
     {
       "label": "context_creation_rejects_a_different_sender()",
       "file_type": "code",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L99",
+      "source_location": "L161",
       "id": "evm_signing_account_context_creation_rejects_a_different_sender",
-      "community": 14
+      "community": 9
     },
     {
       "label": "evm_tx.rs",
@@ -2721,7 +2777,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L1",
       "id": "rust_src_api_evm_tx_rs",
-      "community": 11
+      "community": 12
     },
     {
       "label": "sign_evm_transaction()",
@@ -2729,7 +2785,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L6",
       "id": "evm_tx_sign_evm_transaction",
-      "community": 11
+      "community": 12
     },
     {
       "label": "request_from_fields()",
@@ -2737,7 +2793,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L35",
       "id": "evm_tx_request_from_fields",
-      "community": 11
+      "community": 12
     },
     {
       "label": "sign_legacy_evm_transaction()",
@@ -2745,7 +2801,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L82",
       "id": "evm_tx_sign_legacy_evm_transaction",
-      "community": 11
+      "community": 12
     },
     {
       "label": "general_adapter_preserves_official_legacy_fixture()",
@@ -2753,7 +2809,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L123",
       "id": "evm_tx_general_adapter_preserves_official_legacy_fixture",
-      "community": 11
+      "community": 12
     },
     {
       "label": "general_adapter_rejects_ambiguous_fee_policy()",
@@ -2761,7 +2817,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L141",
       "id": "evm_tx_general_adapter_rejects_ambiguous_fee_policy",
-      "community": 11
+      "community": 12
     },
     {
       "label": "test_adapter_official_eip155_vector()",
@@ -2769,7 +2825,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L159",
       "id": "evm_tx_test_adapter_official_eip155_vector",
-      "community": 11
+      "community": 12
     },
     {
       "label": "test_adapter_invalid_gas_price()",
@@ -2777,7 +2833,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L179",
       "id": "evm_tx_test_adapter_invalid_gas_price",
-      "community": 11
+      "community": 12
     },
     {
       "label": "test_adapter_invalid_key()",
@@ -2785,7 +2841,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L196",
       "id": "evm_tx_test_adapter_invalid_key",
-      "community": 11
+      "community": 12
     },
     {
       "label": "test_adapter_invalid_address()",
@@ -2793,7 +2849,7 @@
       "source_file": "rust\\src\\api\\evm_tx.rs",
       "source_location": "L213",
       "id": "evm_tx_test_adapter_invalid_address",
-      "community": 11
+      "community": 12
     },
     {
       "label": "mod.rs",
@@ -6808,6 +6864,18 @@
       "source_location": "L774",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
+      "_tgt": "frb_generated_wire_crate_api_evm_signing_account_generate_vault_wrapping_key_impl",
+      "source": "rust_src_frb_generated_rs",
+      "target": "frb_generated_wire_crate_api_evm_signing_account_generate_vault_wrapping_key_impl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L808",
+      "weight": 1.0,
+      "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_simple_greet_impl",
       "source": "rust_src_frb_generated_rs",
       "target": "frb_generated_wire_crate_api_simple_greet_impl",
@@ -6817,7 +6885,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L804",
+      "source_location": "L838",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_simple_init_app_impl",
@@ -6829,7 +6897,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L838",
+      "source_location": "L872",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_bip39_mnemonic_to_seed_impl",
@@ -6841,7 +6909,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L871",
+      "source_location": "L905",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_bip32_normalize_solana_private_key_impl",
@@ -6853,7 +6921,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L905",
+      "source_location": "L939",
+      "weight": 1.0,
+      "_src": "rust_src_frb_generated_rs",
+      "_tgt": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "source": "rust_src_frb_generated_rs",
+      "target": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L979",
+      "weight": 1.0,
+      "_src": "rust_src_frb_generated_rs",
+      "_tgt": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
+      "source": "rust_src_frb_generated_rs",
+      "target": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L1018",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_evm_tx_sign_evm_transaction_impl",
@@ -6865,7 +6957,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L958",
+      "source_location": "L1071",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_evm_tx_sign_legacy_evm_transaction_impl",
@@ -6877,7 +6969,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1007",
+      "source_location": "L1120",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_secp256k1_api_sign_personal_message_impl",
@@ -6889,7 +6981,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1044",
+      "source_location": "L1157",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_solana_tx_sign_serialized_solana_transaction_impl",
@@ -6901,7 +6993,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1083",
+      "source_location": "L1196",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_bip32_sign_solana_message_impl",
@@ -6913,7 +7005,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1118",
+      "source_location": "L1231",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_bip32_sign_tron_raw_hash_impl",
@@ -6925,7 +7017,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1155",
+      "source_location": "L1268",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_secp256k1_api_sign_typed_data_impl",
@@ -6937,7 +7029,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1192",
+      "source_location": "L1305",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_wire_crate_api_bip39_validate_mnemonic_impl",
@@ -6949,7 +7041,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1347",
+      "source_location": "L1460",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_pde_ffi_dispatcher_primary_impl",
@@ -6961,7 +7053,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1495",
+      "source_location": "L1626",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_pde_ffi_dispatcher_sync_impl",
@@ -6973,7 +7065,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1682",
+      "source_location": "L1813",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_frbgen_fomowl_wallet_rust_arc_increment_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
@@ -6985,7 +7077,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1689",
+      "source_location": "L1820",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_frbgen_fomowl_wallet_rust_arc_decrement_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
@@ -6997,7 +7089,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1721",
+      "source_location": "L1852",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_rust_arc_increment_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
@@ -7009,7 +7101,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1728",
+      "source_location": "L1859",
       "weight": 1.0,
       "_src": "rust_src_frb_generated_rs",
       "_tgt": "frb_generated_rust_arc_decrement_strong_count_rustopaque_flutter_rust_bridgefor_generatedrustautoopaqueinnerrustevmsigningaccount",
@@ -7033,7 +7125,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1356",
+      "source_location": "L1469",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_evm_signing_account_rustevmsigningaccount_address_impl",
@@ -7057,7 +7149,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1362",
+      "source_location": "L1475",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_evm_signing_account_rustevmsigningaccount_close_impl",
@@ -7081,7 +7173,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1368",
+      "source_location": "L1481",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_evm_signing_account_rustevmsigningaccount_sign_transaction_impl",
@@ -7105,7 +7197,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1374",
+      "source_location": "L1487",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_solana_tx_build_and_sign_solana_transaction_impl",
@@ -7129,7 +7221,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1380",
+      "source_location": "L1493",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_evm_signing_account_create_evm_signing_account_impl",
@@ -7153,7 +7245,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1386",
+      "source_location": "L1499",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_evm_address_from_private_key_impl",
@@ -7177,7 +7269,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1392",
+      "source_location": "L1505",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_evm_address_from_seed_impl",
@@ -7201,7 +7293,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1398",
+      "source_location": "L1511",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_evm_private_key_from_seed_impl",
@@ -7225,7 +7317,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1404",
+      "source_location": "L1517",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_evm_public_key_from_private_key_impl",
@@ -7249,7 +7341,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1410",
+      "source_location": "L1523",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_argon2_derive_passcode_hash_argon2_impl",
@@ -7273,7 +7365,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1416",
+      "source_location": "L1529",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_solana_address_from_private_key_impl",
@@ -7297,7 +7389,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1422",
+      "source_location": "L1535",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_solana_address_from_seed_impl",
@@ -7321,7 +7413,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1428",
+      "source_location": "L1541",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_solana_private_key_from_seed_impl",
@@ -7345,7 +7437,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1434",
+      "source_location": "L1547",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_tron_address_from_private_key_impl",
@@ -7369,7 +7461,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1440",
+      "source_location": "L1553",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_tron_address_from_seed_impl",
@@ -7393,7 +7485,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1446",
+      "source_location": "L1559",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_tron_private_key_from_seed_impl",
@@ -7417,7 +7509,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1453",
+      "source_location": "L1566",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_derive_wallet_from_seed_impl",
@@ -7429,7 +7521,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1455",
+      "source_location": "L1568",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip39_generate_mnemonic_impl",
@@ -7441,7 +7533,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L795",
+      "source_location": "L1569",
+      "weight": 1.0,
+      "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
+      "_tgt": "frb_generated_wire_crate_api_evm_signing_account_generate_vault_wrapping_key_impl",
+      "source": "frb_generated_wire_crate_api_evm_signing_account_generate_vault_wrapping_key_impl",
+      "target": "frb_generated_pde_ffi_dispatcher_primary_impl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L829",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_simple_greet_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7453,7 +7557,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1503",
+      "source_location": "L1634",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_sync_impl",
       "_tgt": "frb_generated_wire_crate_api_simple_greet_impl",
@@ -7465,7 +7569,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1456",
+      "source_location": "L1575",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_simple_init_app_impl",
@@ -7477,7 +7581,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L860",
+      "source_location": "L894",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_bip39_mnemonic_to_seed_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7489,7 +7593,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1457",
+      "source_location": "L1576",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip39_mnemonic_to_seed_impl",
@@ -7501,7 +7605,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L893",
+      "source_location": "L927",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_bip32_normalize_solana_private_key_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7513,7 +7617,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1458",
+      "source_location": "L1577",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_normalize_solana_private_key_impl",
@@ -7525,7 +7629,55 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L927",
+      "source_location": "L961",
+      "weight": 1.0,
+      "_src": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "_tgt": "frb_generated_i32_sse_decode",
+      "source": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "target": "frb_generated_i32_sse_decode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L1583",
+      "weight": 1.0,
+      "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
+      "_tgt": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "source": "frb_generated_wire_crate_api_evm_signing_account_open_evm_vault_signing_account_impl",
+      "target": "frb_generated_pde_ffi_dispatcher_primary_impl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L1001",
+      "weight": 1.0,
+      "_src": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
+      "_tgt": "frb_generated_i32_sse_decode",
+      "source": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
+      "target": "frb_generated_i32_sse_decode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L1589",
+      "weight": 1.0,
+      "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
+      "_tgt": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
+      "source": "frb_generated_wire_crate_api_evm_signing_account_seal_evm_vault_impl",
+      "target": "frb_generated_pde_ffi_dispatcher_primary_impl",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\frb_generated.rs",
+      "source_location": "L1040",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_evm_tx_sign_evm_transaction_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7537,7 +7689,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1465",
+      "source_location": "L1596",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_evm_tx_sign_evm_transaction_impl",
@@ -7549,7 +7701,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L980",
+      "source_location": "L1093",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_evm_tx_sign_legacy_evm_transaction_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7561,7 +7713,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1467",
+      "source_location": "L1598",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_evm_tx_sign_legacy_evm_transaction_impl",
@@ -7573,7 +7725,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1029",
+      "source_location": "L1142",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_secp256k1_api_sign_personal_message_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7585,7 +7737,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1473",
+      "source_location": "L1604",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_secp256k1_api_sign_personal_message_impl",
@@ -7597,7 +7749,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1066",
+      "source_location": "L1179",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_solana_tx_sign_serialized_solana_transaction_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7609,7 +7761,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1479",
+      "source_location": "L1610",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_solana_tx_sign_serialized_solana_transaction_impl",
@@ -7621,7 +7773,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1105",
+      "source_location": "L1218",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_bip32_sign_solana_message_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7633,7 +7785,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1485",
+      "source_location": "L1616",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_sign_solana_message_impl",
@@ -7645,7 +7797,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1140",
+      "source_location": "L1253",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_bip32_sign_tron_raw_hash_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7657,7 +7809,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1486",
+      "source_location": "L1617",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip32_sign_tron_raw_hash_impl",
@@ -7669,7 +7821,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1177",
+      "source_location": "L1290",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_secp256k1_api_sign_typed_data_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7681,7 +7833,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1488",
+      "source_location": "L1619",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_secp256k1_api_sign_typed_data_impl",
@@ -7693,7 +7845,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1214",
+      "source_location": "L1327",
       "weight": 1.0,
       "_src": "frb_generated_wire_crate_api_bip39_validate_mnemonic_impl",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7705,7 +7857,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1490",
+      "source_location": "L1621",
       "weight": 1.0,
       "_src": "frb_generated_pde_ffi_dispatcher_primary_impl",
       "_tgt": "frb_generated_wire_crate_api_bip39_validate_mnemonic_impl",
@@ -7717,7 +7869,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1237",
+      "source_location": "L1350",
       "weight": 1.0,
       "_src": "frb_generated_rustevmsigningaccount",
       "_tgt": "frb_generated_rustevmsigningaccount_sse_decode",
@@ -7729,7 +7881,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1525",
+      "source_location": "L1656",
       "weight": 1.0,
       "_src": "frb_generated_rustevmsigningaccount",
       "_tgt": "frb_generated_rustevmsigningaccount_into_into_dart",
@@ -7741,7 +7893,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1554",
+      "source_location": "L1685",
       "weight": 1.0,
       "_src": "frb_generated_rustevmsigningaccount",
       "_tgt": "frb_generated_rustevmsigningaccount_sse_encode",
@@ -7753,7 +7905,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1238",
+      "source_location": "L1351",
       "weight": 1.0,
       "_src": "frb_generated_rustevmsigningaccount_sse_decode",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7765,7 +7917,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1251",
+      "source_location": "L1364",
       "weight": 1.0,
       "_src": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount",
       "_tgt": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount_sse_decode",
@@ -7777,7 +7929,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1570",
+      "source_location": "L1701",
       "weight": 1.0,
       "_src": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount",
       "_tgt": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount_sse_encode",
@@ -7789,7 +7941,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1252",
+      "source_location": "L1365",
       "weight": 1.0,
       "_src": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount_sse_decode",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7801,7 +7953,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1259",
+      "source_location": "L1372",
       "weight": 1.0,
       "_src": "frb_generated_string",
       "_tgt": "frb_generated_string_sse_decode",
@@ -7813,7 +7965,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1579",
+      "source_location": "L1710",
       "weight": 1.0,
       "_src": "frb_generated_string",
       "_tgt": "frb_generated_string_sse_encode",
@@ -7825,7 +7977,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1260",
+      "source_location": "L1373",
       "weight": 1.0,
       "_src": "frb_generated_string_sse_decode",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7837,7 +7989,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1267",
+      "source_location": "L1380",
       "weight": 1.0,
       "_src": "frb_generated_bool",
       "_tgt": "frb_generated_bool_sse_decode",
@@ -7849,7 +8001,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1586",
+      "source_location": "L1717",
       "weight": 1.0,
       "_src": "frb_generated_bool",
       "_tgt": "frb_generated_bool_sse_encode",
@@ -7861,7 +8013,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1274",
+      "source_location": "L1387",
       "weight": 1.0,
       "_src": "frb_generated_vec_u8",
       "_tgt": "frb_generated_vec_u8_sse_decode",
@@ -7873,7 +8025,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1593",
+      "source_location": "L1724",
       "weight": 1.0,
       "_src": "frb_generated_vec_u8",
       "_tgt": "frb_generated_vec_u8_sse_encode",
@@ -7885,7 +8037,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1275",
+      "source_location": "L1388",
       "weight": 1.0,
       "_src": "frb_generated_vec_u8_sse_decode",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7897,7 +8049,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1286",
+      "source_location": "L1399",
       "weight": 1.0,
       "_src": "frb_generated_option_string",
       "_tgt": "frb_generated_option_string_sse_decode",
@@ -7909,7 +8061,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1603",
+      "source_location": "L1734",
       "weight": 1.0,
       "_src": "frb_generated_option_string",
       "_tgt": "frb_generated_option_string_sse_encode",
@@ -7921,7 +8073,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1287",
+      "source_location": "L1400",
       "weight": 1.0,
       "_src": "frb_generated_option_string_sse_decode",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7933,7 +8085,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1297",
+      "source_location": "L1410",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport",
       "_tgt": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_decode",
@@ -7945,7 +8097,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1532",
+      "source_location": "L1663",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport",
       "_tgt": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_dart",
@@ -7957,7 +8109,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1547",
+      "source_location": "L1678",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport",
       "_tgt": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_into_dart",
@@ -7969,7 +8121,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1613",
+      "source_location": "L1744",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport",
       "_tgt": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_encode",
@@ -7981,7 +8133,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1298",
+      "source_location": "L1411",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_decode",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -7993,7 +8145,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1309",
+      "source_location": "L1422",
       "weight": 1.0,
       "_src": "frb_generated_u32",
       "_tgt": "frb_generated_u32_sse_decode",
@@ -8005,7 +8157,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1621",
+      "source_location": "L1752",
       "weight": 1.0,
       "_src": "frb_generated_u32",
       "_tgt": "frb_generated_u32_sse_encode",
@@ -8017,7 +8169,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1316",
+      "source_location": "L1429",
       "weight": 1.0,
       "_src": "frb_generated_u64",
       "_tgt": "frb_generated_u64_sse_decode",
@@ -8029,7 +8181,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1628",
+      "source_location": "L1759",
       "weight": 1.0,
       "_src": "frb_generated_u64",
       "_tgt": "frb_generated_u64_sse_encode",
@@ -8041,7 +8193,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1323",
+      "source_location": "L1436",
       "weight": 1.0,
       "_src": "frb_generated_u8",
       "_tgt": "frb_generated_u8_sse_decode",
@@ -8053,7 +8205,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1635",
+      "source_location": "L1766",
       "weight": 1.0,
       "_src": "frb_generated_u8",
       "_tgt": "frb_generated_u8_sse_encode",
@@ -8065,7 +8217,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1330",
+      "source_location": "L1443",
       "weight": 1.0,
       "_src": "frb_generated",
       "_tgt": "frb_generated_sse_decode",
@@ -8077,7 +8229,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1642",
+      "source_location": "L1773",
       "weight": 1.0,
       "_src": "frb_generated",
       "_tgt": "frb_generated_sse_encode",
@@ -8089,7 +8241,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1335",
+      "source_location": "L1448",
       "weight": 1.0,
       "_src": "frb_generated_usize",
       "_tgt": "frb_generated_usize_sse_decode",
@@ -8101,7 +8253,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1647",
+      "source_location": "L1778",
       "weight": 1.0,
       "_src": "frb_generated_usize",
       "_tgt": "frb_generated_usize_sse_encode",
@@ -8113,7 +8265,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1342",
+      "source_location": "L1455",
       "weight": 1.0,
       "_src": "frb_generated_i32",
       "_tgt": "frb_generated_i32_sse_decode",
@@ -8125,7 +8277,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1657",
+      "source_location": "L1788",
       "weight": 1.0,
       "_src": "frb_generated_i32",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8137,7 +8289,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1512",
+      "source_location": "L1643",
       "weight": 1.0,
       "_src": "frb_generated_frbwrapper_rustevmsigningaccount",
       "_tgt": "frb_generated_frbwrapper_rustevmsigningaccount_into_dart",
@@ -8149,7 +8301,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1513",
+      "source_location": "L1644",
       "weight": 1.0,
       "_src": "frb_generated_frbwrapper_rustevmsigningaccount_into_dart",
       "_tgt": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_dart",
@@ -8161,7 +8313,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1534",
+      "source_location": "L1665",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_dart",
       "_tgt": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_into_dart",
@@ -8173,7 +8325,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1555",
+      "source_location": "L1686",
       "weight": 1.0,
       "_src": "frb_generated_rustevmsigningaccount_sse_encode",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8185,7 +8337,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1572",
+      "source_location": "L1703",
       "weight": 1.0,
       "_src": "frb_generated_rustopaquemoi_flutter_rust_bridge_for_generated_rustautoopaqueinner_rustevmsigningaccount_sse_encode",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8197,7 +8349,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1580",
+      "source_location": "L1711",
       "weight": 1.0,
       "_src": "frb_generated_string_sse_encode",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8209,7 +8361,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1594",
+      "source_location": "L1725",
       "weight": 1.0,
       "_src": "frb_generated_vec_u8_sse_encode",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8221,7 +8373,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1604",
+      "source_location": "L1735",
       "weight": 1.0,
       "_src": "frb_generated_option_string_sse_encode",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8233,7 +8385,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\frb_generated.rs",
-      "source_location": "L1614",
+      "source_location": "L1745",
       "weight": 1.0,
       "_src": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_encode",
       "_tgt": "frb_generated_i32_sse_encode",
@@ -8977,7 +9129,43 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L6",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "rust_src_api_evm_signing_account_rs",
+      "_tgt": "evm_signing_account_generate_vault_wrapping_key",
+      "source": "rust_src_api_evm_signing_account_rs",
+      "target": "evm_signing_account_generate_vault_wrapping_key",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_src": "rust_src_api_evm_signing_account_rs",
+      "_tgt": "evm_signing_account_seal_evm_vault",
+      "source": "rust_src_api_evm_signing_account_rs",
+      "target": "evm_signing_account_seal_evm_vault",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L31",
+      "weight": 1.0,
+      "_src": "rust_src_api_evm_signing_account_rs",
+      "_tgt": "evm_signing_account_open_evm_vault_signing_account",
+      "source": "rust_src_api_evm_signing_account_rs",
+      "target": "evm_signing_account_open_evm_vault_signing_account",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L49",
       "weight": 1.0,
       "_src": "rust_src_api_evm_signing_account_rs",
       "_tgt": "evm_signing_account_rustevmsigningaccount",
@@ -8989,7 +9177,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L11",
+      "source_location": "L54",
       "weight": 1.0,
       "_src": "rust_src_api_evm_signing_account_rs",
       "_tgt": "evm_signing_account_create_evm_signing_account",
@@ -9001,7 +9189,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L75",
+      "source_location": "L118",
+      "weight": 1.0,
+      "_src": "rust_src_api_evm_signing_account_rs",
+      "_tgt": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "source": "rust_src_api_evm_signing_account_rs",
+      "target": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L137",
       "weight": 1.0,
       "_src": "rust_src_api_evm_signing_account_rs",
       "_tgt": "evm_signing_account_verified_context_locks_and_refuses_further_access",
@@ -9013,7 +9213,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L99",
+      "source_location": "L161",
       "weight": 1.0,
       "_src": "rust_src_api_evm_signing_account_rs",
       "_tgt": "evm_signing_account_context_creation_rejects_a_different_sender",
@@ -9022,10 +9222,46 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L121",
+      "weight": 1.0,
+      "_src": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "_tgt": "evm_signing_account_generate_vault_wrapping_key",
+      "source": "evm_signing_account_generate_vault_wrapping_key",
+      "target": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L123",
+      "weight": 1.0,
+      "_src": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "_tgt": "evm_signing_account_seal_evm_vault",
+      "source": "evm_signing_account_seal_evm_vault",
+      "target": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L125",
+      "weight": 1.0,
+      "_src": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "_tgt": "evm_signing_account_open_evm_vault_signing_account",
+      "source": "evm_signing_account_open_evm_vault_signing_account",
+      "target": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L27",
+      "source_location": "L70",
       "weight": 1.0,
       "_src": "evm_signing_account_rustevmsigningaccount",
       "_tgt": "evm_signing_account_rustevmsigningaccount_address",
@@ -9037,7 +9273,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L35",
+      "source_location": "L78",
       "weight": 1.0,
       "_src": "evm_signing_account_rustevmsigningaccount",
       "_tgt": "evm_signing_account_rustevmsigningaccount_sign_transaction",
@@ -9049,7 +9285,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L65",
+      "source_location": "L108",
       "weight": 1.0,
       "_src": "evm_signing_account_rustevmsigningaccount",
       "_tgt": "evm_signing_account_rustevmsigningaccount_close",
@@ -9061,7 +9297,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L78",
+      "source_location": "L140",
       "weight": 1.0,
       "_src": "evm_signing_account_verified_context_locks_and_refuses_further_access",
       "_tgt": "evm_signing_account_create_evm_signing_account",
@@ -9073,7 +9309,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\src\\api\\evm_signing_account.rs",
-      "source_location": "L80",
+      "source_location": "L128",
+      "weight": 1.0,
+      "_src": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "_tgt": "evm_signing_account_rustevmsigningaccount_close",
+      "source": "evm_signing_account_rustevmsigningaccount_close",
+      "target": "evm_signing_account_vault_adapter_authenticates_before_creating_a_signer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\src\\api\\evm_signing_account.rs",
+      "source_location": "L142",
       "weight": 1.0,
       "_src": "evm_signing_account_verified_context_locks_and_refuses_further_access",
       "_tgt": "evm_signing_account_rustevmsigningaccount_close",

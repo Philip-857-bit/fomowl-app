@@ -33,6 +33,30 @@ class NativeCrypto {
     expectedAddress: expectedAddress,
   );
 
+  /// Wrapping material must be persisted through protected host storage.
+  static Future<Uint8List> generateVaultWrappingKey() async =>
+      Uint8List.fromList(await rust_account.generateVaultWrappingKey());
+
+  static Future<String> sealEvmVault({
+    required String privateKeyHex,
+    required String expectedAddress,
+    required Uint8List wrappingKey,
+  }) => rust_account.sealEvmVault(
+    privateKeyHex: privateKeyHex,
+    expectedAddress: expectedAddress,
+    wrappingKey: wrappingKey,
+  );
+
+  static Future<rust_account.RustEvmSigningAccount> openEvmVaultSigningAccount({
+    required String encryptedVault,
+    required String expectedAddress,
+    required Uint8List wrappingKey,
+  }) => rust_account.openEvmVaultSigningAccount(
+    encryptedVault: encryptedVault,
+    expectedAddress: expectedAddress,
+    wrappingKey: wrappingKey,
+  );
+
   // ---------- BIP-39 -------------------------------------------------------
 
   /// Generate a new 12-word BIP-39 mnemonic (128-bit entropy).

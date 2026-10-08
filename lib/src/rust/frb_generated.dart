@@ -73,7 +73,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => -1990384325;
+  int get rustContentHash => 1663219616;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -179,6 +179,8 @@ abstract class RustLibApi extends BaseApi {
 
   Future<String> crateApiBip39GenerateMnemonic();
 
+  Future<Uint8List> crateApiEvmSigningAccountGenerateVaultWrappingKey();
+
   String crateApiSimpleGreet({required String name});
 
   Future<void> crateApiSimpleInitApp();
@@ -187,6 +189,19 @@ abstract class RustLibApi extends BaseApi {
 
   Future<SolanaPrivateKeyImport> crateApiBip32NormalizeSolanaPrivateKey({
     required String privateKey,
+  });
+
+  Future<RustEvmSigningAccount>
+  crateApiEvmSigningAccountOpenEvmVaultSigningAccount({
+    required String encryptedVault,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  });
+
+  Future<String> crateApiEvmSigningAccountSealEvmVault({
+    required String privateKeyHex,
+    required String expectedAddress,
+    required List<int> wrappingKey,
   });
 
   Future<String> crateApiEvmTxSignEvmTransaction({
@@ -948,13 +963,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "generate_mnemonic", argNames: []);
 
   @override
+  Future<Uint8List> crateApiEvmSigningAccountGenerateVaultWrappingKey() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_prim_u_8_strict,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiEvmSigningAccountGenerateVaultWrappingKeyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEvmSigningAccountGenerateVaultWrappingKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "generate_vault_wrapping_key",
+        argNames: [],
+      );
+
+  @override
   String crateApiSimpleGreet({required String name}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -979,7 +1025,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1007,7 +1053,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -1037,7 +1083,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1056,6 +1102,84 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "normalize_solana_private_key",
         argNames: ["privateKey"],
+      );
+
+  @override
+  Future<RustEvmSigningAccount>
+  crateApiEvmSigningAccountOpenEvmVaultSigningAccount({
+    required String encryptedVault,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(encryptedVault, serializer);
+          sse_encode_String(expectedAddress, serializer);
+          sse_encode_list_prim_u_8_loose(wrappingKey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiEvmSigningAccountOpenEvmVaultSigningAccountConstMeta,
+        argValues: [encryptedVault, expectedAddress, wrappingKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiEvmSigningAccountOpenEvmVaultSigningAccountConstMeta =>
+      const TaskConstMeta(
+        debugName: "open_evm_vault_signing_account",
+        argNames: ["encryptedVault", "expectedAddress", "wrappingKey"],
+      );
+
+  @override
+  Future<String> crateApiEvmSigningAccountSealEvmVault({
+    required String privateKeyHex,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_String(expectedAddress, serializer);
+          sse_encode_list_prim_u_8_loose(wrappingKey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiEvmSigningAccountSealEvmVaultConstMeta,
+        argValues: [privateKeyHex, expectedAddress, wrappingKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiEvmSigningAccountSealEvmVaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "seal_evm_vault",
+        argNames: ["privateKeyHex", "expectedAddress", "wrappingKey"],
       );
 
   @override
@@ -1088,7 +1212,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1157,7 +1281,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1210,7 +1334,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1247,7 +1371,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1282,7 +1406,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1317,7 +1441,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1352,7 +1476,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1383,7 +1507,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 33,
             port: port_,
           );
         },

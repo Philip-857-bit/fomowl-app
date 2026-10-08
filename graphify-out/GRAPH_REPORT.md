@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 72 files · ~475,565 words
+- 72 files · ~476,132 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 446 nodes · 585 edges · 78 communities detected
+- 453 nodes · 601 edges · 78 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -90,7 +90,7 @@
 - [[_COMMUNITY_Community 77|Community 77]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `pde_ffi_dispatcher_primary_impl()` - 30 edges
+1. `pde_ffi_dispatcher_primary_impl()` - 33 edges
 2. `SigningSession` - 22 edges
 3. `MainActivity` - 10 edges
 4. `sign_legacy_evm_transaction()` - 6 edges
@@ -107,8 +107,8 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.13
-Nodes (32): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+24 more)
+Cohesion: 0.12
+Nodes (35): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+27 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.13
@@ -145,28 +145,28 @@ Cohesion: 0.3
 Nodes (10): aad(), canonical_address(), Envelope, fixture(), open_evm_vault(), rejects_invalid_import_and_malformed_records(), rejects_wrong_key_address_and_tampered_envelope(), roundtrip_retains_signing_identity_and_lock_lifecycle() (+2 more)
 
 ### Community 9 - "Community 9"
+Cohesion: 0.26
+Nodes (7): create_evm_signing_account(), generate_vault_wrapping_key(), open_evm_vault_signing_account(), RustEvmSigningAccount, seal_evm_vault(), vault_adapter_authenticates_before_creating_a_signer(), verified_context_locks_and_refuses_further_access()
+
+### Community 10 - "Community 10"
 Cohesion: 0.18
 Nodes (1): MainActivity
 
-### Community 10 - "Community 10"
+### Community 11 - "Community 11"
 Cohesion: 0.29
 Nodes (6): generate_mnemonic(), generate_mnemonic_from_entropy(), mnemonic_to_seed(), test_generate_mnemonic_structure(), test_known_mnemonic_to_seed(), test_mnemonic_to_seed_error_format()
 
-### Community 11 - "Community 11"
+### Community 12 - "Community 12"
 Cohesion: 0.36
 Nodes (9): general_adapter_preserves_official_legacy_fixture(), general_adapter_rejects_ambiguous_fee_policy(), request_from_fields(), sign_evm_transaction(), sign_legacy_evm_transaction(), test_adapter_invalid_address(), test_adapter_invalid_gas_price(), test_adapter_invalid_key() (+1 more)
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.22
 Nodes (6): Account, AccountFamily, AccountHandle, AccountInfo, KeyMaterial, SessionError
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.31
 Nodes (4): known_seed(), test_known_evm_derivation_index_0(), test_known_solana_derivation_index_0(), test_known_tron_derivation_index_0()
-
-### Community 14 - "Community 14"
-Cohesion: 0.32
-Nodes (3): create_evm_signing_account(), RustEvmSigningAccount, verified_context_locks_and_refuses_further_access()
 
 ### Community 15 - "Community 15"
 Cohesion: 0.48
@@ -485,12 +485,12 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `SigningSession` connect `Community 3` to `Community 12`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
+- **Why does `SigningSession` connect `Community 3` to `Community 13`?**
+  _High betweenness centrality (0.003) - this node is a cross-community bridge._
 - **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `AccountFamily` to the rest of the system?**
   _17 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.13 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.12 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**

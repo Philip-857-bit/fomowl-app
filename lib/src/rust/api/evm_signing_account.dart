@@ -6,6 +6,34 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// Host-managed wrapping material; store only through protected platform storage.
+/// Like private-key imports, this compatibility boundary crosses the FFI wire.
+Future<Uint8List> generateVaultWrappingKey() =>
+    RustLib.instance.api.crateApiEvmSigningAccountGenerateVaultWrappingKey();
+
+/// Seals legacy material using fresh native entropy for each encryption nonce.
+/// The host persists the wrapping key separately through protected storage.
+Future<String> sealEvmVault({
+  required String privateKeyHex,
+  required String expectedAddress,
+  required List<int> wrappingKey,
+}) => RustLib.instance.api.crateApiEvmSigningAccountSealEvmVault(
+  privateKeyHex: privateKeyHex,
+  expectedAddress: expectedAddress,
+  wrappingKey: wrappingKey,
+);
+
+/// Authenticates storage before returning Rust-owned signing custody.
+Future<RustEvmSigningAccount> openEvmVaultSigningAccount({
+  required String encryptedVault,
+  required String expectedAddress,
+  required List<int> wrappingKey,
+}) => RustLib.instance.api.crateApiEvmSigningAccountOpenEvmVaultSigningAccount(
+  encryptedVault: encryptedVault,
+  expectedAddress: expectedAddress,
+  wrappingKey: wrappingKey,
+);
+
 Future<RustEvmSigningAccount> createEvmSigningAccount({
   required String privateKeyHex,
   required String expectedAddress,

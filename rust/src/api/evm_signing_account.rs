@@ -1,5 +1,48 @@
 use flutter_rust_bridge::frb;
 use owllet_core::session::{AccountHandle, SigningSession};
+use zeroize::Zeroizing;
+
+/// Host-managed wrapping material; store only through protected platform storage.
+/// Like private-key imports, this compatibility boundary crosses the FFI wire.
+pub fn generate_vault_wrapping_key() -> Vec<u8> {
+    let key = Zeroizing::new(rand::random::<[u8; 32]>());
+    key.to_vec()
+}
+
+/// Seals legacy material using fresh native entropy for each encryption nonce.
+/// The host persists the wrapping key separately through protected storage.
+pub fn seal_evm_vault(
+    private_key_hex: String,
+    expected_address: String,
+    wrapping_key: Vec<u8>,
+) -> Result<String, String> {
+    let private_key = Zeroizing::new(private_key_hex);
+    let wrapping_key = Zeroizing::new(wrapping_key);
+    let key: &[u8; 32] = wrapping_key
+        .as_slice()
+        .try_into()
+        .map_err(|_| "Vault wrapping key must contain exactly 32 bytes".to_string())?;
+    let nonce = rand::random::<[u8; 12]>();
+    owllet_core::vault::seal_evm_key(&private_key, &expected_address, key, &nonce)
+        .map_err(|error| error.to_string())
+}
+
+/// Authenticates storage before returning Rust-owned signing custody.
+pub fn open_evm_vault_signing_account(
+    encrypted_vault: String,
+    expected_address: String,
+    wrapping_key: Vec<u8>,
+) -> Result<RustEvmSigningAccount, String> {
+    let wrapping_key = Zeroizing::new(wrapping_key);
+    let key: &[u8; 32] = wrapping_key
+        .as_slice()
+        .try_into()
+        .map_err(|_| "Vault wrapping key must contain exactly 32 bytes".to_string())?;
+    let (session, account) =
+        owllet_core::vault::open_evm_vault(&encrypted_vault, &expected_address, key)
+            .map_err(|error| error.to_string())?;
+    Ok(RustEvmSigningAccount { session, account })
+}
 
 /// Rust-owned signing context. No API returns the private key to Dart.
 #[frb(opaque)]
@@ -70,6 +113,25 @@ impl RustEvmSigningAccount {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn vault_adapter_authenticates_before_creating_a_signer() {
+        let key = "46".repeat(32);
+        let address = owllet_core::derive_evm_address_from_private_key(&key).unwrap();
+        let wrapping_key = generate_vault_wrapping_key();
+        assert_eq!(wrapping_key.len(), 32);
+        let record = seal_evm_vault(key, address.clone(), wrapping_key.clone()).unwrap();
+        let mut signer =
+            open_evm_vault_signing_account(record.clone(), address.clone(), wrapping_key.clone())
+                .unwrap();
+        assert_eq!(signer.address().unwrap(), address);
+        signer.close();
+        assert!(signer.address().is_err());
+        assert!(
+            open_evm_vault_signing_account(record.clone(), address.clone(), vec![0; 32]).is_err()
+        );
+        assert!(open_evm_vault_signing_account(record, address, vec![0; 31]).is_err());
+    }
 
     #[test]
     fn verified_context_locks_and_refuses_further_access() {
