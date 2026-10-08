@@ -26,6 +26,7 @@
 // Section: imports
 
 use crate::api::evm_signing_account::*;
+use crate::api::wallet_vault::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
@@ -38,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1663219616;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1974301130;
 
 // Section: executor
 
@@ -214,6 +215,448 @@ fn wire__crate__api__evm_signing_account__RustEvmSigningAccount_sign_transaction
                             api_gas_price_wei,
                             api_max_fee_per_gas_wei,
                             api_max_priority_fee_per_gas_wei,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_address_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_address",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::wallet_vault::RustWalletSigningAccount::address(
+                        &*api_that_guard,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_build_and_sign_solana_transaction_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec,_,_>(flutter_rust_bridge::for_generated::TaskInfo{ debug_name: "RustWalletSigningAccount_build_and_sign_solana_transaction", port: Some(port_), mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal }, move || {
+            let message = unsafe { flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(ptr_, rust_vec_len_, data_len_) };
+            let mut deserializer = flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>>>::sse_decode(&mut deserializer);
+let api_recent_blockhash = <String>::sse_decode(&mut deserializer);
+let api_instructions_json = <String>::sse_decode(&mut deserializer);
+let api_lookup_tables_json = <String>::sse_decode(&mut deserializer);deserializer.end(); move |context|  {
+                    transform_result_sse::<_, String>((move ||  {
+                        let mut api_that_guard = None;
+let decode_indices_ = flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(&api_that, 0, false)]);
+        for i in decode_indices_ {
+            match i {
+                0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                _ => unreachable!(),
+            }
+        }
+        let api_that_guard = api_that_guard.unwrap();
+ let output_ok = crate::api::wallet_vault::RustWalletSigningAccount::build_and_sign_solana_transaction(&*api_that_guard, api_recent_blockhash, api_instructions_json, api_lookup_tables_json)?;   Ok(output_ok)
+                    })())
+                } })
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_close_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_close",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, true,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref_mut()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let mut api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::wallet_vault::RustWalletSigningAccount::close(
+                            &mut *api_that_guard,
+                        );
+                    })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_personal_message_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_sign_personal_message",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            let api_message = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::wallet_vault::RustWalletSigningAccount::sign_personal_message(
+                            &*api_that_guard,
+                            api_message,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_serialized_solana_transaction_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec,_,_>(flutter_rust_bridge::for_generated::TaskInfo{ debug_name: "RustWalletSigningAccount_sign_serialized_solana_transaction", port: Some(port_), mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal }, move || {
+            let message = unsafe { flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(ptr_, rust_vec_len_, data_len_) };
+            let mut deserializer = flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>>>::sse_decode(&mut deserializer);
+let api_transaction_base64 = <String>::sse_decode(&mut deserializer);deserializer.end(); move |context|  {
+                    transform_result_sse::<_, String>((move ||  {
+                        let mut api_that_guard = None;
+let decode_indices_ = flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(&api_that, 0, false)]);
+        for i in decode_indices_ {
+            match i {
+                0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                _ => unreachable!(),
+            }
+        }
+        let api_that_guard = api_that_guard.unwrap();
+ let output_ok = crate::api::wallet_vault::RustWalletSigningAccount::sign_serialized_solana_transaction(&*api_that_guard, api_transaction_base64)?;   Ok(output_ok)
+                    })())
+                } })
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_solana_message_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_sign_solana_message",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            let api_message = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::wallet_vault::RustWalletSigningAccount::sign_solana_message(
+                            &*api_that_guard,
+                            api_message,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_transaction_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_sign_transaction",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            let api_chain_id = <u64>::sse_decode(&mut deserializer);
+            let api_nonce = <u64>::sse_decode(&mut deserializer);
+            let api_gas_limit = <u64>::sse_decode(&mut deserializer);
+            let api_to_address = <Option<String>>::sse_decode(&mut deserializer);
+            let api_value_wei = <String>::sse_decode(&mut deserializer);
+            let api_data_hex = <String>::sse_decode(&mut deserializer);
+            let api_gas_price_wei = <Option<String>>::sse_decode(&mut deserializer);
+            let api_max_fee_per_gas_wei = <Option<String>>::sse_decode(&mut deserializer);
+            let api_max_priority_fee_per_gas_wei = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::wallet_vault::RustWalletSigningAccount::sign_transaction(
+                            &*api_that_guard,
+                            api_chain_id,
+                            api_nonce,
+                            api_gas_limit,
+                            api_to_address,
+                            api_value_wei,
+                            api_data_hex,
+                            api_gas_price_wei,
+                            api_max_fee_per_gas_wei,
+                            api_max_priority_fee_per_gas_wei,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_tron_raw_hash_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_sign_tron_raw_hash",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            let api_raw_hash_hex = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::wallet_vault::RustWalletSigningAccount::sign_tron_raw_hash(
+                            &*api_that_guard,
+                            api_raw_hash_hex,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_typed_data_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "RustWalletSigningAccount_sign_typed_data",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+            >>::sse_decode(&mut deserializer);
+            let api_json_data = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::wallet_vault::RustWalletSigningAccount::sign_typed_data(
+                            &*api_that_guard,
+                            api_json_data,
                         )?;
                     Ok(output_ok)
                 })())
@@ -739,6 +1182,47 @@ fn wire__crate__api__bip32__derive_wallet_from_seed_impl(
         },
     )
 }
+fn wire__crate__api__wallet_vault__export_wallet_vault_key_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "export_wallet_vault_key",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_chain_family = <String>::sse_decode(&mut deserializer);
+            let api_encrypted_vault = <String>::sse_decode(&mut deserializer);
+            let api_expected_address = <String>::sse_decode(&mut deserializer);
+            let api_wrapping_key = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::wallet_vault::export_wallet_vault_key(
+                        api_chain_family,
+                        api_encrypted_vault,
+                        api_expected_address,
+                        api_wrapping_key,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__bip39__generate_mnemonic_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -976,6 +1460,47 @@ fn wire__crate__api__evm_signing_account__open_evm_vault_signing_account_impl(
         },
     )
 }
+fn wire__crate__api__wallet_vault__open_wallet_vault_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "open_wallet_vault",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_chain_family = <String>::sse_decode(&mut deserializer);
+            let api_encrypted_vault = <String>::sse_decode(&mut deserializer);
+            let api_expected_address = <String>::sse_decode(&mut deserializer);
+            let api_wrapping_key = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::wallet_vault::open_wallet_vault(
+                        api_chain_family,
+                        api_encrypted_vault,
+                        api_expected_address,
+                        api_wrapping_key,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__evm_signing_account__seal_evm_vault_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1005,6 +1530,47 @@ fn wire__crate__api__evm_signing_account__seal_evm_vault_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::evm_signing_account::seal_evm_vault(
+                        api_private_key_hex,
+                        api_expected_address,
+                        api_wrapping_key,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__wallet_vault__seal_wallet_vault_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "seal_wallet_vault",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_chain_family = <String>::sse_decode(&mut deserializer);
+            let api_private_key_hex = <String>::sse_decode(&mut deserializer);
+            let api_expected_address = <String>::sse_decode(&mut deserializer);
+            let api_wrapping_key = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::wallet_vault::seal_wallet_vault(
+                        api_chain_family,
                         api_private_key_hex,
                         api_expected_address,
                         api_wrapping_key,
@@ -1342,6 +1908,9 @@ fn wire__crate__api__bip39__validate_mnemonic_impl(
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
     flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>
 );
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>
+);
 
 // Section: dart2rust
 
@@ -1355,9 +1924,31 @@ impl SseDecode for RustEvmSigningAccount {
     }
 }
 
+impl SseDecode for RustWalletSigningAccount {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
 impl SseDecode
     for RustOpaqueMoi<
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
+
+impl SseDecode
+    for RustOpaqueMoi<
+        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
     >
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1466,161 +2057,52 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__evm_signing_account__RustEvmSigningAccount_address_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        2 => wire__crate__api__evm_signing_account__RustEvmSigningAccount_close_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        3 => wire__crate__api__evm_signing_account__RustEvmSigningAccount_sign_transaction_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        4 => wire__crate__api__solana_tx__build_and_sign_solana_transaction_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        5 => wire__crate__api__evm_signing_account__create_evm_signing_account_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        6 => wire__crate__api__bip32__derive_evm_address_from_private_key_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        7 => wire__crate__api__bip32__derive_evm_address_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        8 => wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        9 => wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        10 => wire__crate__api__argon2__derive_passcode_hash_argon2_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        11 => wire__crate__api__bip32__derive_solana_address_from_private_key_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        12 => wire__crate__api__bip32__derive_solana_address_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        13 => wire__crate__api__bip32__derive_solana_private_key_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        14 => wire__crate__api__bip32__derive_tron_address_from_private_key_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        15 => wire__crate__api__bip32__derive_tron_address_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        16 => wire__crate__api__bip32__derive_tron_private_key_from_seed_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        17 => {
-            wire__crate__api__bip32__derive_wallet_from_seed_impl(port, ptr, rust_vec_len, data_len)
-        }
-        18 => wire__crate__api__bip39__generate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__evm_signing_account__generate_vault_wrapping_key_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        21 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__bip39__mnemonic_to_seed_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__bip32__normalize_solana_private_key_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        24 => wire__crate__api__evm_signing_account__open_evm_vault_signing_account_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        25 => wire__crate__api__evm_signing_account__seal_evm_vault_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        26 => {
-            wire__crate__api__evm_tx__sign_evm_transaction_impl(port, ptr, rust_vec_len, data_len)
-        }
-        27 => wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        28 => wire__crate__api__secp256k1_api__sign_personal_message_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        29 => wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        30 => wire__crate__api__bip32__sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__bip32__sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
-        32 => {
-            wire__crate__api__secp256k1_api__sign_typed_data_impl(port, ptr, rust_vec_len, data_len)
-        }
-        33 => wire__crate__api__bip39__validate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
-        _ => unreachable!(),
-    }
+                        1 => wire__crate__api__evm_signing_account__RustEvmSigningAccount_address_impl(port, ptr, rust_vec_len, data_len),
+2 => wire__crate__api__evm_signing_account__RustEvmSigningAccount_close_impl(port, ptr, rust_vec_len, data_len),
+3 => wire__crate__api__evm_signing_account__RustEvmSigningAccount_sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+4 => wire__crate__api__wallet_vault__RustWalletSigningAccount_address_impl(port, ptr, rust_vec_len, data_len),
+5 => wire__crate__api__wallet_vault__RustWalletSigningAccount_build_and_sign_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
+6 => wire__crate__api__wallet_vault__RustWalletSigningAccount_close_impl(port, ptr, rust_vec_len, data_len),
+7 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_personal_message_impl(port, ptr, rust_vec_len, data_len),
+8 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_serialized_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
+9 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
+10 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+11 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
+12 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_typed_data_impl(port, ptr, rust_vec_len, data_len),
+13 => wire__crate__api__solana_tx__build_and_sign_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
+14 => wire__crate__api__evm_signing_account__create_evm_signing_account_impl(port, ptr, rust_vec_len, data_len),
+15 => wire__crate__api__bip32__derive_evm_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+16 => wire__crate__api__bip32__derive_evm_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
+17 => wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
+18 => wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+19 => wire__crate__api__argon2__derive_passcode_hash_argon2_impl(port, ptr, rust_vec_len, data_len),
+20 => wire__crate__api__bip32__derive_solana_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+21 => wire__crate__api__bip32__derive_solana_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
+22 => wire__crate__api__bip32__derive_solana_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
+23 => wire__crate__api__bip32__derive_tron_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+24 => wire__crate__api__bip32__derive_tron_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
+25 => wire__crate__api__bip32__derive_tron_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
+26 => wire__crate__api__bip32__derive_wallet_from_seed_impl(port, ptr, rust_vec_len, data_len),
+27 => wire__crate__api__wallet_vault__export_wallet_vault_key_impl(port, ptr, rust_vec_len, data_len),
+28 => wire__crate__api__bip39__generate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+29 => wire__crate__api__evm_signing_account__generate_vault_wrapping_key_impl(port, ptr, rust_vec_len, data_len),
+31 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+32 => wire__crate__api__bip39__mnemonic_to_seed_impl(port, ptr, rust_vec_len, data_len),
+33 => wire__crate__api__bip32__normalize_solana_private_key_impl(port, ptr, rust_vec_len, data_len),
+34 => wire__crate__api__evm_signing_account__open_evm_vault_signing_account_impl(port, ptr, rust_vec_len, data_len),
+35 => wire__crate__api__wallet_vault__open_wallet_vault_impl(port, ptr, rust_vec_len, data_len),
+36 => wire__crate__api__evm_signing_account__seal_evm_vault_impl(port, ptr, rust_vec_len, data_len),
+37 => wire__crate__api__wallet_vault__seal_wallet_vault_impl(port, ptr, rust_vec_len, data_len),
+38 => wire__crate__api__evm_tx__sign_evm_transaction_impl(port, ptr, rust_vec_len, data_len),
+39 => wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl(port, ptr, rust_vec_len, data_len),
+40 => wire__crate__api__secp256k1_api__sign_personal_message_impl(port, ptr, rust_vec_len, data_len),
+41 => wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
+42 => wire__crate__api__bip32__sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
+43 => wire__crate__api__bip32__sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
+44 => wire__crate__api__secp256k1_api__sign_typed_data_impl(port, ptr, rust_vec_len, data_len),
+45 => wire__crate__api__bip39__validate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+                        _ => unreachable!(),
+                    }
 }
 
 fn pde_ffi_dispatcher_sync_impl(
@@ -1631,7 +2113,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        20 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1654,6 +2136,26 @@ impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<RustEvmSigningAccount>>
     for RustEvmSigningAccount
 {
     fn into_into_dart(self) -> FrbWrapper<RustEvmSigningAccount> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<RustWalletSigningAccount> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for FrbWrapper<RustWalletSigningAccount>
+{
+}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<RustWalletSigningAccount>>
+    for RustWalletSigningAccount
+{
+    fn into_into_dart(self) -> FrbWrapper<RustWalletSigningAccount> {
         self.into()
     }
 }
@@ -1692,9 +2194,34 @@ impl SseEncode for RustEvmSigningAccount {
     }
 }
 
+impl SseEncode for RustWalletSigningAccount {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+        >>::sse_encode(
+            flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self),
+            serializer,
+        );
+    }
+}
+
 impl SseEncode
     for RustOpaqueMoi<
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
+    for RustOpaqueMoi<
+        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
     >
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1799,6 +2326,7 @@ mod io {
 
     use super::*;
     use crate::api::evm_signing_account::*;
+    use crate::api::wallet_vault::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1822,6 +2350,20 @@ mod io {
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>>::decrement_strong_count(ptr as _);
     }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_fomowl_wallet_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_fomowl_wallet_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
@@ -1836,6 +2378,7 @@ mod web {
 
     use super::*;
     use crate::api::evm_signing_account::*;
+    use crate::api::wallet_vault::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
@@ -1860,6 +2403,20 @@ mod web {
         ptr: *const std::ffi::c_void,
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>>::decrement_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>>::decrement_strong_count(ptr as _);
     }
 }
 #[cfg(target_family = "wasm")]

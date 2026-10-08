@@ -11,6 +11,7 @@ import 'api/evm_tx.dart';
 import 'api/secp256k1_api.dart';
 import 'api/simple.dart';
 import 'api/solana_tx.dart';
+import 'api/wallet_vault.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -73,7 +74,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1663219616;
+  int get rustContentHash => -1974301130;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -103,6 +104,62 @@ abstract class RustLibApi extends BaseApi {
     String? gasPriceWei,
     String? maxFeePerGasWei,
     String? maxPriorityFeePerGasWei,
+  });
+
+  Future<String> crateApiWalletVaultRustWalletSigningAccountAddress({
+    required RustWalletSigningAccount that,
+  });
+
+  Future<String>
+  crateApiWalletVaultRustWalletSigningAccountBuildAndSignSolanaTransaction({
+    required RustWalletSigningAccount that,
+    required String recentBlockhash,
+    required String instructionsJson,
+    required String lookupTablesJson,
+  });
+
+  Future<void> crateApiWalletVaultRustWalletSigningAccountClose({
+    required RustWalletSigningAccount that,
+  });
+
+  Future<String>
+  crateApiWalletVaultRustWalletSigningAccountSignPersonalMessage({
+    required RustWalletSigningAccount that,
+    required String message,
+  });
+
+  Future<String>
+  crateApiWalletVaultRustWalletSigningAccountSignSerializedSolanaTransaction({
+    required RustWalletSigningAccount that,
+    required String transactionBase64,
+  });
+
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignSolanaMessage({
+    required RustWalletSigningAccount that,
+    required List<int> message,
+  });
+
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignTransaction({
+    required RustWalletSigningAccount that,
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  });
+
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignTronRawHash({
+    required RustWalletSigningAccount that,
+    required String rawHashHex,
+  });
+
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignTypedData({
+    required RustWalletSigningAccount that,
+    required String jsonData,
   });
 
   Future<String> crateApiSolanaTxBuildAndSignSolanaTransaction({
@@ -177,6 +234,13 @@ abstract class RustLibApi extends BaseApi {
     required int derivationIndex,
   });
 
+  Future<String> crateApiWalletVaultExportWalletVaultKey({
+    required String chainFamily,
+    required String encryptedVault,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  });
+
   Future<String> crateApiBip39GenerateMnemonic();
 
   Future<Uint8List> crateApiEvmSigningAccountGenerateVaultWrappingKey();
@@ -198,7 +262,21 @@ abstract class RustLibApi extends BaseApi {
     required List<int> wrappingKey,
   });
 
+  Future<RustWalletSigningAccount> crateApiWalletVaultOpenWalletVault({
+    required String chainFamily,
+    required String encryptedVault,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  });
+
   Future<String> crateApiEvmSigningAccountSealEvmVault({
+    required String privateKeyHex,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  });
+
+  Future<String> crateApiWalletVaultSealWalletVault({
+    required String chainFamily,
     required String privateKeyHex,
     required String expectedAddress,
     required List<int> wrappingKey,
@@ -264,6 +342,15 @@ abstract class RustLibApi extends BaseApi {
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_RustEvmSigningAccountPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_RustWalletSigningAccount;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_RustWalletSigningAccount;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_RustWalletSigningAccountPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -429,6 +516,411 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiWalletVaultRustWalletSigningAccountAddress({
+    required RustWalletSigningAccount that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiWalletVaultRustWalletSigningAccountAddressConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountAddressConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_address",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<String>
+  crateApiWalletVaultRustWalletSigningAccountBuildAndSignSolanaTransaction({
+    required RustWalletSigningAccount that,
+    required String recentBlockhash,
+    required String instructionsJson,
+    required String lookupTablesJson,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_String(recentBlockhash, serializer);
+          sse_encode_String(instructionsJson, serializer);
+          sse_encode_String(lookupTablesJson, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountBuildAndSignSolanaTransactionConstMeta,
+        argValues: [that, recentBlockhash, instructionsJson, lookupTablesJson],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountBuildAndSignSolanaTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_build_and_sign_solana_transaction",
+        argNames: [
+          "that",
+          "recentBlockhash",
+          "instructionsJson",
+          "lookupTablesJson",
+        ],
+      );
+
+  @override
+  Future<void> crateApiWalletVaultRustWalletSigningAccountClose({
+    required RustWalletSigningAccount that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiWalletVaultRustWalletSigningAccountCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<String>
+  crateApiWalletVaultRustWalletSigningAccountSignPersonalMessage({
+    required RustWalletSigningAccount that,
+    required String message,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_String(message, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountSignPersonalMessageConstMeta,
+        argValues: [that, message],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountSignPersonalMessageConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_sign_personal_message",
+        argNames: ["that", "message"],
+      );
+
+  @override
+  Future<String>
+  crateApiWalletVaultRustWalletSigningAccountSignSerializedSolanaTransaction({
+    required RustWalletSigningAccount that,
+    required String transactionBase64,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_String(transactionBase64, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountSignSerializedSolanaTransactionConstMeta,
+        argValues: [that, transactionBase64],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountSignSerializedSolanaTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName:
+            "RustWalletSigningAccount_sign_serialized_solana_transaction",
+        argNames: ["that", "transactionBase64"],
+      );
+
+  @override
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignSolanaMessage({
+    required RustWalletSigningAccount that,
+    required List<int> message,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_list_prim_u_8_loose(message, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountSignSolanaMessageConstMeta,
+        argValues: [that, message],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountSignSolanaMessageConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_sign_solana_message",
+        argNames: ["that", "message"],
+      );
+
+  @override
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignTransaction({
+    required RustWalletSigningAccount that,
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(chainId, serializer);
+          sse_encode_u_64(nonce, serializer);
+          sse_encode_u_64(gasLimit, serializer);
+          sse_encode_opt_String(toAddress, serializer);
+          sse_encode_String(valueWei, serializer);
+          sse_encode_String(dataHex, serializer);
+          sse_encode_opt_String(gasPriceWei, serializer);
+          sse_encode_opt_String(maxFeePerGasWei, serializer);
+          sse_encode_opt_String(maxPriorityFeePerGasWei, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountSignTransactionConstMeta,
+        argValues: [
+          that,
+          chainId,
+          nonce,
+          gasLimit,
+          toAddress,
+          valueWei,
+          dataHex,
+          gasPriceWei,
+          maxFeePerGasWei,
+          maxPriorityFeePerGasWei,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountSignTransactionConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_sign_transaction",
+        argNames: [
+          "that",
+          "chainId",
+          "nonce",
+          "gasLimit",
+          "toAddress",
+          "valueWei",
+          "dataHex",
+          "gasPriceWei",
+          "maxFeePerGasWei",
+          "maxPriorityFeePerGasWei",
+        ],
+      );
+
+  @override
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignTronRawHash({
+    required RustWalletSigningAccount that,
+    required String rawHashHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_String(rawHashHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountSignTronRawHashConstMeta,
+        argValues: [that, rawHashHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountSignTronRawHashConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_sign_tron_raw_hash",
+        argNames: ["that", "rawHashHex"],
+      );
+
+  @override
+  Future<String> crateApiWalletVaultRustWalletSigningAccountSignTypedData({
+    required RustWalletSigningAccount that,
+    required String jsonData,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+            that,
+            serializer,
+          );
+          sse_encode_String(jsonData, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 12,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiWalletVaultRustWalletSigningAccountSignTypedDataConstMeta,
+        argValues: [that, jsonData],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiWalletVaultRustWalletSigningAccountSignTypedDataConstMeta =>
+      const TaskConstMeta(
+        debugName: "RustWalletSigningAccount_sign_typed_data",
+        argNames: ["that", "jsonData"],
+      );
+
+  @override
   Future<String> crateApiSolanaTxBuildAndSignSolanaTransaction({
     required String payer,
     required String recentBlockhash,
@@ -448,7 +940,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 13,
             port: port_,
           );
         },
@@ -496,7 +988,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 14,
             port: port_,
           );
         },
@@ -531,7 +1023,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 15,
             port: port_,
           );
         },
@@ -566,7 +1058,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 16,
             port: port_,
           );
         },
@@ -601,7 +1093,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 17,
             port: port_,
           );
         },
@@ -634,7 +1126,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 18,
             port: port_,
           );
         },
@@ -673,7 +1165,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 19,
             port: port_,
           );
         },
@@ -706,7 +1198,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 20,
             port: port_,
           );
         },
@@ -741,7 +1233,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 21,
             port: port_,
           );
         },
@@ -776,7 +1268,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 22,
             port: port_,
           );
         },
@@ -809,7 +1301,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 23,
             port: port_,
           );
         },
@@ -844,7 +1336,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 24,
             port: port_,
           );
         },
@@ -879,7 +1371,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 25,
             port: port_,
           );
         },
@@ -914,7 +1406,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 26,
             port: port_,
           );
         },
@@ -936,6 +1428,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiWalletVaultExportWalletVaultKey({
+    required String chainFamily,
+    required String encryptedVault,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(chainFamily, serializer);
+          sse_encode_String(encryptedVault, serializer);
+          sse_encode_String(expectedAddress, serializer);
+          sse_encode_list_prim_u_8_loose(wrappingKey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiWalletVaultExportWalletVaultKeyConstMeta,
+        argValues: [chainFamily, encryptedVault, expectedAddress, wrappingKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiWalletVaultExportWalletVaultKeyConstMeta =>
+      const TaskConstMeta(
+        debugName: "export_wallet_vault_key",
+        argNames: [
+          "chainFamily",
+          "encryptedVault",
+          "expectedAddress",
+          "wrappingKey",
+        ],
+      );
+
+  @override
   Future<String> crateApiBip39GenerateMnemonic() {
     return handler.executeNormal(
       NormalTask(
@@ -944,7 +1480,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 28,
             port: port_,
           );
         },
@@ -971,7 +1507,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1000,7 +1536,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1025,7 +1561,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1053,7 +1589,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1083,7 +1619,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1121,7 +1657,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1146,6 +1682,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<RustWalletSigningAccount> crateApiWalletVaultOpenWalletVault({
+    required String chainFamily,
+    required String encryptedVault,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(chainFamily, serializer);
+          sse_encode_String(encryptedVault, serializer);
+          sse_encode_String(expectedAddress, serializer);
+          sse_encode_list_prim_u_8_loose(wrappingKey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiWalletVaultOpenWalletVaultConstMeta,
+        argValues: [chainFamily, encryptedVault, expectedAddress, wrappingKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiWalletVaultOpenWalletVaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "open_wallet_vault",
+        argNames: [
+          "chainFamily",
+          "encryptedVault",
+          "expectedAddress",
+          "wrappingKey",
+        ],
+      );
+
+  @override
   Future<String> crateApiEvmSigningAccountSealEvmVault({
     required String privateKeyHex,
     required String expectedAddress,
@@ -1161,7 +1742,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1180,6 +1761,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "seal_evm_vault",
         argNames: ["privateKeyHex", "expectedAddress", "wrappingKey"],
+      );
+
+  @override
+  Future<String> crateApiWalletVaultSealWalletVault({
+    required String chainFamily,
+    required String privateKeyHex,
+    required String expectedAddress,
+    required List<int> wrappingKey,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(chainFamily, serializer);
+          sse_encode_String(privateKeyHex, serializer);
+          sse_encode_String(expectedAddress, serializer);
+          sse_encode_list_prim_u_8_loose(wrappingKey, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiWalletVaultSealWalletVaultConstMeta,
+        argValues: [chainFamily, privateKeyHex, expectedAddress, wrappingKey],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiWalletVaultSealWalletVaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "seal_wallet_vault",
+        argNames: [
+          "chainFamily",
+          "privateKeyHex",
+          "expectedAddress",
+          "wrappingKey",
+        ],
       );
 
   @override
@@ -1212,7 +1837,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 38,
             port: port_,
           );
         },
@@ -1281,7 +1906,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1334,7 +1959,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 40,
             port: port_,
           );
         },
@@ -1371,7 +1996,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 41,
             port: port_,
           );
         },
@@ -1406,7 +2031,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 42,
             port: port_,
           );
         },
@@ -1441,7 +2066,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 43,
             port: port_,
           );
         },
@@ -1476,7 +2101,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 44,
             port: port_,
           );
         },
@@ -1507,7 +2132,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 45,
             port: port_,
           );
         },
@@ -1533,6 +2158,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   get rust_arc_decrement_strong_count_RustEvmSigningAccount => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount;
 
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_RustWalletSigningAccount => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_RustWalletSigningAccount => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount;
+
   @protected
   RustEvmSigningAccount
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
@@ -1540,6 +2173,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return RustEvmSigningAccountImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustWalletSigningAccount
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
   }
 
   @protected
@@ -1552,6 +2196,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustWalletSigningAccount
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
   RustEvmSigningAccount
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     dynamic raw,
@@ -1561,12 +2216,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustWalletSigningAccount
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
   RustEvmSigningAccount
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return RustEvmSigningAccountImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustWalletSigningAccount
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
   }
 
   @protected
@@ -1654,12 +2331,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustWalletSigningAccount
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   RustEvmSigningAccount
   sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return RustEvmSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustWalletSigningAccount
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -1678,12 +2379,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustWalletSigningAccount
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   RustEvmSigningAccount
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return RustEvmSigningAccountImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustWalletSigningAccount
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return RustWalletSigningAccountImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -1790,6 +2515,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustWalletSigningAccountImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     RustEvmSigningAccount self,
     SseSerializer serializer,
@@ -1797,6 +2535,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as RustEvmSigningAccountImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustWalletSigningAccountImpl).frbInternalSseEncode(move: false),
       serializer,
     );
   }
@@ -1816,6 +2567,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustWalletSigningAccountImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     RustEvmSigningAccount self,
     SseSerializer serializer,
@@ -1823,6 +2587,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as RustEvmSigningAccountImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as RustWalletSigningAccountImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -1973,5 +2750,116 @@ class RustEvmSigningAccountImpl extends RustOpaque
         gasPriceWei: gasPriceWei,
         maxFeePerGasWei: maxFeePerGasWei,
         maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
+      );
+}
+
+@sealed
+class RustWalletSigningAccountImpl extends RustOpaque
+    implements RustWalletSigningAccount {
+  // Not to be used by end users
+  RustWalletSigningAccountImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  RustWalletSigningAccountImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_RustWalletSigningAccount,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_RustWalletSigningAccount,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_RustWalletSigningAccountPtr,
+  );
+
+  Future<String> address() => RustLib.instance.api
+      .crateApiWalletVaultRustWalletSigningAccountAddress(that: this);
+
+  Future<String> buildAndSignSolanaTransaction({
+    required String recentBlockhash,
+    required String instructionsJson,
+    required String lookupTablesJson,
+  }) => RustLib.instance.api
+      .crateApiWalletVaultRustWalletSigningAccountBuildAndSignSolanaTransaction(
+        that: this,
+        recentBlockhash: recentBlockhash,
+        instructionsJson: instructionsJson,
+        lookupTablesJson: lookupTablesJson,
+      );
+
+  Future<void> close() => RustLib.instance.api
+      .crateApiWalletVaultRustWalletSigningAccountClose(that: this);
+
+  Future<String> signPersonalMessage({required String message}) => RustLib
+      .instance
+      .api
+      .crateApiWalletVaultRustWalletSigningAccountSignPersonalMessage(
+        that: this,
+        message: message,
+      );
+
+  Future<String> signSerializedSolanaTransaction({
+    required String transactionBase64,
+  }) => RustLib.instance.api
+      .crateApiWalletVaultRustWalletSigningAccountSignSerializedSolanaTransaction(
+        that: this,
+        transactionBase64: transactionBase64,
+      );
+
+  Future<String> signSolanaMessage({required List<int> message}) => RustLib
+      .instance
+      .api
+      .crateApiWalletVaultRustWalletSigningAccountSignSolanaMessage(
+        that: this,
+        message: message,
+      );
+
+  Future<String> signTransaction({
+    required BigInt chainId,
+    required BigInt nonce,
+    required BigInt gasLimit,
+    String? toAddress,
+    required String valueWei,
+    required String dataHex,
+    String? gasPriceWei,
+    String? maxFeePerGasWei,
+    String? maxPriorityFeePerGasWei,
+  }) => RustLib.instance.api
+      .crateApiWalletVaultRustWalletSigningAccountSignTransaction(
+        that: this,
+        chainId: chainId,
+        nonce: nonce,
+        gasLimit: gasLimit,
+        toAddress: toAddress,
+        valueWei: valueWei,
+        dataHex: dataHex,
+        gasPriceWei: gasPriceWei,
+        maxFeePerGasWei: maxFeePerGasWei,
+        maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
+      );
+
+  Future<String> signTronRawHash({required String rawHashHex}) => RustLib
+      .instance
+      .api
+      .crateApiWalletVaultRustWalletSigningAccountSignTronRawHash(
+        that: this,
+        rawHashHex: rawHashHex,
+      );
+
+  Future<String> signTypedData({required String jsonData}) => RustLib
+      .instance
+      .api
+      .crateApiWalletVaultRustWalletSigningAccountSignTypedData(
+        that: this,
+        jsonData: jsonData,
       );
 }

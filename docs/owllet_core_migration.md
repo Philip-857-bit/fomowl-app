@@ -115,3 +115,15 @@ address are authenticated; base58 addresses keep exact case. Explicit recovery
 export validates the record and account identity separately from ordinary opaque
 open. CI covers each chain/vault combination and vault without a chain.
 Commit: `feat(wallet-core): extend authenticated vaults across chain families`.
+
+## All-family native custody and verified loader
+
+Engine commit: `e5b73ce`. The generic FRB account provides EVM transaction and
+message signing, TRON hashing/typed permits, and Solana instruction/wire signing.
+Ordinary calls use opaque accounts; explicit export is separate. The reusable
+Flutter vault loader protects complete key/ciphertext records with the existing
+platform store, authenticates candidates and persisted readback, coalesces same-
+account migrations, and rejects corruption without fallback or cleanup.
+Validation: 49 core tests, each chain/vault feature tests and Clippy, 32 native
+tests, release rebuild, and eight all-family Flutter loader failure/restart tests.
+Commit: `feat(wallet): add all-family vault custody and verified migration loader`.

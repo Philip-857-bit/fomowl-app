@@ -14,6 +14,7 @@ import 'api/evm_tx.dart';
 import 'api/secp256k1_api.dart';
 import 'api/simple.dart';
 import 'api/solana_tx.dart';
+import 'api/wallet_vault.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -31,9 +32,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   get rust_arc_decrement_strong_count_RustEvmSigningAccountPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount;
 
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_RustWalletSigningAccountPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount;
+
   @protected
   RustEvmSigningAccount
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
+  RustWalletSigningAccount
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     dynamic raw,
   );
 
@@ -44,14 +55,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustWalletSigningAccount
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
   RustEvmSigningAccount
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     dynamic raw,
   );
 
   @protected
+  RustWalletSigningAccount
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
   RustEvmSigningAccount
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
+  RustWalletSigningAccount
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     dynamic raw,
   );
 
@@ -95,8 +124,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustWalletSigningAccount
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustEvmSigningAccount
   sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustWalletSigningAccount
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     SseDeserializer deserializer,
   );
 
@@ -107,8 +148,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustWalletSigningAccount
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustEvmSigningAccount
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustWalletSigningAccount
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     SseDeserializer deserializer,
   );
 
@@ -159,8 +212,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     RustEvmSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
     SseSerializer serializer,
   );
 
@@ -173,8 +240,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     RustEvmSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    RustWalletSigningAccount self,
     SseSerializer serializer,
   );
 
@@ -241,6 +322,22 @@ class RustLibWire implements BaseWire {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
         ptr,
       );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+        ptr,
+      );
 }
 
 @JS('wasm_bindgen')
@@ -256,6 +353,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     int ptr,
   );
 }
