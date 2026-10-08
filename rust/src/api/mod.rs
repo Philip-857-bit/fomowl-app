@@ -19,5 +19,6 @@ pub use solana_tx::*;
 pub mod wallet_vault;
 
 pub mod bitcoin_account;
+pub mod bitcoin_signing_account;
 pub mod bitcoin_transaction;
 pub mod chain_rules;
