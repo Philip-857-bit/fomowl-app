@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:hex/hex.dart';
+import 'package:http/testing.dart';
 import 'package:web3dart/web3dart.dart';
 
 import 'package:fomowl_wallet/models/chain.dart';
@@ -370,8 +371,11 @@ void main() {
         ]);
         final dataHex = '0x${HEX.encode(data)}';
 
-        expect(dataHex.startsWith('0xa9059cbb'), isTrue);
-        expect(data.length, 68);
+        const expectedDataHex =
+            '0xa9059cbb'
+            '0000000000000000000000003535353535353535353535353535353535353535'
+            '00000000000000000000000000000000000000000000000000000000000f4240';
+        expect(dataHex, expectedDataHex);
 
         final rawTx = await NativeCrypto.signLegacyEvmTransaction(
           privateKeyHex: privateKey,
@@ -384,8 +388,27 @@ void main() {
           dataHex: dataHex,
         );
 
-        expect(rawTx.startsWith('0x'), isTrue);
-        expect(rawTx.startsWith('0xf8'), isTrue);
+        // Independent legacy signer, using fixed calldata rather than the
+        // encoder output under test. All fields are supplied; RPC is forbidden.
+        final referenceClient = Web3Client(
+          'https://rpc.invalid',
+          MockClient((_) => throw StateError('This test must not use RPC')),
+        );
+        addTearDown(referenceClient.dispose);
+        final referenceBytes = await referenceClient.signTransaction(
+          EthPrivateKey.fromHex(privateKey),
+          Transaction(
+            nonce: 0,
+            gasPrice: EtherAmount.inWei(BigInt.from(20000000000)),
+            maxGas: 60000,
+            to: EthereumAddress.fromHex(tokenAddress),
+            value: EtherAmount.zero(),
+            data: Uint8List.fromList(HEX.decode(expectedDataHex.substring(2))),
+          ),
+          chainId: 1,
+          fetchChainIdFromNetworkId: false,
+        );
+        expect(rawTx, '0x${HEX.encode(referenceBytes)}');
       },
     );
   });

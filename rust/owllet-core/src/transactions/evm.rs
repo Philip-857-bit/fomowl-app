@@ -162,6 +162,8 @@ mod tests {
     #[test]
     fn test_non_empty_calldata() {
         let mut req = eip155_request();
+        req.to = "0xdAC17F958D2ee523a2206206994597C13D831ec7".to_string();
+        req.value_wei = "0".to_string();
         // ERC-20 transfer(address,uint256) signature + arguments
         req.data_hex = "a9059cbb00000000000000000000000035353535353535353535353535353535353535350000000000000000000000000000000000000000000000000de0b6b3a7640000".to_string();
 
@@ -176,6 +178,29 @@ mod tests {
         assert_eq!(
             signed.raw_transaction_hex,
             signed_with_prefix.raw_transaction_hex
+        );
+
+        let raw_bytes = hex::decode(signed.raw_transaction_hex.trim_start_matches("0x"))
+            .expect("raw transaction bytes");
+        let mut remaining = raw_bytes.as_slice();
+        let envelope = TxEnvelope::decode_2718(&mut remaining).expect("decode transaction");
+        assert!(remaining.is_empty(), "no trailing transaction bytes");
+        let TxEnvelope::Legacy(transaction) = envelope else {
+            panic!("expected legacy transaction");
+        };
+        let transaction = transaction.tx();
+        assert_eq!(transaction.chain_id, Some(req.chain_id));
+        assert_eq!(transaction.nonce, req.nonce);
+        assert_eq!(transaction.gas_price, req.gas_price_wei);
+        assert_eq!(transaction.gas_limit, req.gas_limit);
+        assert_eq!(
+            transaction.to,
+            TxKind::Call(Address::from_str(&req.to).expect("token contract address"))
+        );
+        assert_eq!(transaction.value, U256::ZERO);
+        assert_eq!(
+            transaction.input.as_ref(),
+            hex::decode(req.data_hex.trim_start_matches("0x")).expect("calldata bytes")
         );
     }
 
