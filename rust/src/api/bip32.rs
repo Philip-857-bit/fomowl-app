@@ -3,7 +3,7 @@ use flutter_rust_bridge::frb;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
 use std::fmt;
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 #[frb(dart_code = "
   @override
@@ -33,6 +33,7 @@ pub fn derive_evm_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
+    let seed = Zeroizing::new(seed);
     owllet_core::accounts::derive_evm_private_key_from_seed(&seed, derivation_index)
 }
 
@@ -40,10 +41,12 @@ pub fn derive_evm_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
+    let seed = Zeroizing::new(seed);
     owllet_core::accounts::derive_evm_address_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_evm_address_from_private_key(private_key_hex: String) -> Result<String, String> {
+    let private_key_hex = Zeroizing::new(private_key_hex);
     owllet_core::accounts::derive_evm_address_from_private_key(&private_key_hex)
 }
 
@@ -51,6 +54,7 @@ pub fn derive_tron_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
+    let seed = Zeroizing::new(seed);
     owllet_core::accounts::derive_tron_private_key_from_seed(&seed, derivation_index)
 }
 
@@ -58,10 +62,12 @@ pub fn derive_tron_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
+    let seed = Zeroizing::new(seed);
     owllet_core::accounts::derive_tron_address_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_tron_address_from_private_key(private_key_hex: String) -> Result<String, String> {
+    let private_key_hex = Zeroizing::new(private_key_hex);
     owllet_core::accounts::derive_tron_address_from_private_key(&private_key_hex)
 }
 
@@ -69,6 +75,7 @@ pub fn derive_solana_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<Vec<u8>, String> {
+    let seed = Zeroizing::new(seed);
     owllet_core::accounts::derive_solana_private_key_from_seed(&seed, derivation_index)
 }
 
@@ -76,27 +83,24 @@ pub fn derive_solana_address_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,
 ) -> Result<String, String> {
+    let seed = Zeroizing::new(seed);
     owllet_core::accounts::derive_solana_address_from_seed(&seed, derivation_index)
 }
 
 pub fn derive_solana_address_from_private_key(
-    mut private_key_bytes: Vec<u8>,
+    private_key_bytes: Vec<u8>,
 ) -> Result<String, String> {
-    let result = owllet_core::accounts::derive_solana_address_from_private_key(&private_key_bytes);
-    private_key_bytes.zeroize();
-    result
+    let private_key_bytes = Zeroizing::new(private_key_bytes);
+    owllet_core::accounts::derive_solana_address_from_private_key(&private_key_bytes)
 }
 
-pub fn sign_solana_message(
-    mut private_key_bytes: Vec<u8>,
-    message: Vec<u8>,
-) -> Result<String, String> {
-    let result = owllet_core::signing::sign_solana_message(&private_key_bytes, &message);
-    private_key_bytes.zeroize();
-    result
+pub fn sign_solana_message(private_key_bytes: Vec<u8>, message: Vec<u8>) -> Result<String, String> {
+    let private_key_bytes = Zeroizing::new(private_key_bytes);
+    owllet_core::signing::sign_solana_message(&private_key_bytes, &message)
 }
 
 pub fn normalize_solana_private_key(private_key: String) -> Result<SolanaPrivateKeyImport, String> {
+    let private_key = Zeroizing::new(private_key);
     let keypair = parse_solana_private_key(&private_key)?;
     Ok(SolanaPrivateKeyImport {
         private_key_bytes: keypair.secret_bytes().to_vec(),
@@ -105,6 +109,7 @@ pub fn normalize_solana_private_key(private_key: String) -> Result<SolanaPrivate
 }
 
 pub fn sign_tron_raw_hash(private_key_hex: String, raw_hash_hex: String) -> Result<String, String> {
+    let private_key_hex = Zeroizing::new(private_key_hex);
     owllet_core::signing::sign_tron_raw_hash(&private_key_hex, &raw_hash_hex)
 }
 
@@ -120,7 +125,7 @@ fn parse_solana_private_key(private_key: &str) -> Result<Keypair, String> {
         return solana_keypair_from_bytes(bytes, "JSON array");
     }
 
-    let compact = trimmed.split_whitespace().collect::<String>();
+    let compact = Zeroizing::new(trimmed.split_whitespace().collect::<String>());
     if let Some(hex_value) = compact
         .strip_prefix("0x")
         .or_else(|| compact.strip_prefix("0X"))
@@ -161,13 +166,9 @@ fn parse_solana_key_hex(value: &str) -> Result<Vec<u8>, String> {
     hex::decode(value).map_err(|e| format!("Invalid Solana hex key: {e}"))
 }
 
-pub(crate) fn solana_keypair_from_bytes(
-    mut bytes: Vec<u8>,
-    source: &str,
-) -> Result<Keypair, String> {
-    let result = owllet_core::accounts::solana_keypair_from_bytes(&bytes, source);
-    bytes.zeroize();
-    result
+pub(crate) fn solana_keypair_from_bytes(bytes: Vec<u8>, source: &str) -> Result<Keypair, String> {
+    let bytes = Zeroizing::new(bytes);
+    owllet_core::accounts::solana_keypair_from_bytes(&bytes, source)
 }
 
 #[cfg(test)]

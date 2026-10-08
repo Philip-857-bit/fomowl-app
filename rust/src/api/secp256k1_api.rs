@@ -1,8 +1,10 @@
 pub fn sign_personal_message(private_key_hex: String, message: String) -> Result<String, String> {
+    let private_key_hex = zeroize::Zeroizing::new(private_key_hex);
     owllet_core::signing::sign_personal_message(&private_key_hex, &message)
 }
 
 pub fn sign_typed_data(private_key_hex: String, json_data: String) -> Result<String, String> {
+    let private_key_hex = zeroize::Zeroizing::new(private_key_hex);
     owllet_core::signing::sign_typed_data(&private_key_hex, &json_data)
 }
 
@@ -12,6 +14,7 @@ pub(crate) fn sign_digest_with_recovery_id(
     digest: [u8; 32],
     ethereum_recovery_id: bool,
 ) -> Result<String, String> {
+    let private_key_hex = zeroize::Zeroizing::new(private_key_hex);
     owllet_core::signing::sign_digest_with_recovery_id(
         &private_key_hex,
         digest,

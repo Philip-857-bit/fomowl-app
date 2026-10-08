@@ -1,4 +1,4 @@
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 /// General transaction adapter. Fees must select exactly one engine policy;
 /// fee discovery and user permission checks remain with the host.
@@ -15,7 +15,7 @@ pub fn sign_evm_transaction(
     max_fee_per_gas_wei: Option<String>,
     max_priority_fee_per_gas_wei: Option<String>,
 ) -> Result<String, String> {
-    let private_key_hex = zeroize::Zeroizing::new(private_key_hex);
+    let private_key_hex = Zeroizing::new(private_key_hex);
     let parse_fee = |value: &str| {
         value
             .trim()
@@ -55,7 +55,7 @@ pub fn sign_evm_transaction(
 
 #[allow(clippy::too_many_arguments)]
 pub fn sign_legacy_evm_transaction(
-    mut private_key_hex: String,
+    private_key_hex: String,
     chain_id: u64,
     nonce: u64,
     gas_price_wei: String,
@@ -64,28 +64,24 @@ pub fn sign_legacy_evm_transaction(
     value_wei: String,
     data_hex: String,
 ) -> Result<String, String> {
-    let result = (|| {
-        let gas_price_u128 = gas_price_wei
-            .trim()
-            .parse::<u128>()
-            .map_err(|e| format!("Invalid gas price: {e}"))?;
+    let private_key_hex = Zeroizing::new(private_key_hex);
+    let gas_price_u128 = gas_price_wei
+        .trim()
+        .parse::<u128>()
+        .map_err(|e| format!("Invalid gas price: {e}"))?;
 
-        let request = owllet_core::LegacyEvmTransactionRequest {
-            chain_id,
-            nonce,
-            gas_price_wei: gas_price_u128,
-            gas_limit,
-            to: to_address,
-            value_wei,
-            data_hex,
-        };
+    let request = owllet_core::LegacyEvmTransactionRequest {
+        chain_id,
+        nonce,
+        gas_price_wei: gas_price_u128,
+        gas_limit,
+        to: to_address,
+        value_wei,
+        data_hex,
+    };
 
-        let signed = owllet_core::sign_legacy_evm_transaction(&private_key_hex, &request)?;
-        Ok(signed.raw_transaction_hex)
-    })();
-
-    private_key_hex.zeroize();
-    result
+    let signed = owllet_core::sign_legacy_evm_transaction(&private_key_hex, &request)?;
+    Ok(signed.raw_transaction_hex)
 }
 
 #[cfg(test)]

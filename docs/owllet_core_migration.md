@@ -33,7 +33,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Bridge UI | Verified signing context, reusable preflight module, Rust broadcast | `a11abee` |
 | Solana transaction core | v0 building and serialized signer-slot logic extracted; owned FFI secret inputs wiped | `f8c3af7` |
 | Solana signer metadata | Reject unavailable builder signers and excess serialized signature slots | `226c3f2` |
-| Authoritative typed-data signing | Remove Dart fallback; CoW order/cancellation and nested permit signatures proven compatible | `fix(wallet): fail closed on typed-data signer errors` |
+| Authoritative typed-data signing | Remove Dart fallback; CoW order/cancellation and nested permit signatures proven compatible | `81370bb` |
+| Owned secret inputs | Drop-based cleanup of adapter mnemonic, seed, import-key and signing-key inputs | `security(wallet): wipe owned Rust adapter secret inputs` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.
