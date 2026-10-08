@@ -2,6 +2,7 @@
 library;
 
 import 'dart:typed_data';
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/services/native_crypto.dart';
@@ -28,6 +29,11 @@ class _Store implements WalletVaultStore {
 }
 
 void main() {
+  setUp(WalletVaultService.unlock);
+  tearDown(() async {
+    await WalletVaultService.lockAll();
+    WalletVaultService.unlock();
+  });
   setUpAll(() async {
     await RustLib.init();
   });
@@ -178,4 +184,34 @@ void main() {
     );
     record.dispose();
   });
+
+  test(
+    'locking while legacy loading is pending cannot return custody or remove recovery material',
+    () async {
+      final address = await NativeCrypto.deriveEvmAddressFromPrivateKey(
+        '07' * 32,
+      );
+      final loaded = Completer<void>();
+      final secret = Completer<String?>();
+      var removed = false;
+      final account = WalletVaultService(_Store()).open(
+        family: ChainFamily.evm,
+        address: address,
+        loadLegacyKey: () {
+          loaded.complete();
+          return secret.future;
+        },
+        removeVerifiedLegacyKey: () async {
+          removed = true;
+        },
+      );
+      final rejected = expectLater(account, throwsStateError);
+      await loaded.future;
+      await WalletVaultService.lockAll();
+      secret.complete('07' * 32);
+      await rejected;
+      expect(removed, isFalse);
+      WalletVaultService.unlock();
+    },
+  );
 }

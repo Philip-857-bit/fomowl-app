@@ -1,7 +1,7 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 74 files · ~478,943 words
+- 74 files · ~479,304 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -115,9 +115,13 @@ Nodes (47): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), w
 ### Community 1 - "Community 1"
 Cohesion: 0.06
 Nodes (11): crate::api::bip32::SolanaPrivateKeyImport, FrbWrapper<RustEvmSigningAccount>, FrbWrapper<RustWalletSigningAccount>, i32, Option<String>, RustEvmSigningAccount, RustOpaqueMoi<
+
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,
+
     >, RustOpaqueMoi<
+
         flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
+
     > (+3 more)
 
 ### Community 2 - "Community 2"

@@ -14,6 +14,7 @@ import 'package:web3dart/web3dart.dart';
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/services/native_crypto.dart';
+import 'package:fomowl_wallet/services/wallet_vault_service.dart';
 import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
@@ -22,6 +23,7 @@ import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 void main() {
   setUpAll(() async {
     await RustLib.init();
+    WalletVaultService.unlock();
   });
 
   test('encrypted vault opens directly into an opaque fixture signer', () async {

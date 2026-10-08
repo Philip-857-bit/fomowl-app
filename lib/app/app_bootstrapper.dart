@@ -4,6 +4,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../screens/splash/splash_screen.dart';
 import '../services/storage_service.dart';
 import '../services/wallet_service.dart';
+import '../services/wallet_vault_service.dart';
 
 /// Orchestrates app startup:
 /// 1. Holds the native splash while determining the first route.
@@ -56,7 +57,15 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       final hasWallet = await _walletService.hasWallet();
       var nextRoute = '/welcome';
       if (hasWallet) {
-        nextRoute = await _storage.hasPasscode() ? '/unlock' : '/shell';
+        final needsUnlock = await _storage.hasPasscode();
+        if (needsUnlock) {
+          await WalletVaultService.lockAll();
+        } else {
+          WalletVaultService.unlock();
+        }
+        nextRoute = needsUnlock ? '/unlock' : '/shell';
+      } else {
+        WalletVaultService.unlock();
       }
 
       if (!mounted) return;

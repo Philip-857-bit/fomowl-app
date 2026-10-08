@@ -61,6 +61,37 @@ class WalletVaultRecord {
 class WalletVaultService {
   WalletVaultService(this.store);
   final WalletVaultStore store;
+  static final Set<rust.RustWalletSigningAccount> _accounts = {};
+  static final Expando<Future<void>> _closing = Expando();
+  static int _generation = 0;
+  // Custody starts locked; bootstrap or successful user authentication opens it.
+  static bool _locked = true;
+
+  static void unlock() {
+    _locked = false;
+    _generation++;
+  }
+
+  static Future<void> lockAll() async {
+    _locked = true;
+    await invalidateOpenAccounts();
+  }
+
+  static bool isOpen(rust.RustWalletSigningAccount signer) =>
+      !_locked && _accounts.contains(signer) && !signer.isDisposed;
+
+  /// Context changes revoke in-flight custody without changing authentication.
+  static Future<void> invalidateOpenAccounts() async {
+    _generation++;
+    await Future.wait(_accounts.toList().map(close));
+  }
+
+  static void _requireUnlocked(int generation) {
+    if (_locked || generation != _generation) {
+      throw StateError('Wallet signing session is locked');
+    }
+  }
+
   final Map<String, Future<void>> _migrations = {};
 
   Future<rust.RustWalletSigningAccount> _open(
@@ -81,7 +112,11 @@ class WalletVaultService {
     }
   }
 
-  static Future<void> close(rust.RustWalletSigningAccount signer) async {
+  static Future<void> close(rust.RustWalletSigningAccount signer) =>
+      _closing[signer] ??= _close(signer);
+
+  static Future<void> _close(rust.RustWalletSigningAccount signer) async {
+    _accounts.remove(signer);
     if (signer.isDisposed) return;
     try {
       await signer.close();
@@ -96,7 +131,10 @@ class WalletVaultService {
     required Future<String?> Function() loadLegacyKey,
     required Future<void> Function() removeVerifiedLegacyKey,
   }) async {
-    final slot = '${family.name}:$address';
+    final generation = _generation;
+    _requireUnlocked(generation);
+    final slot =
+        '${family.name}:${family == ChainFamily.evm ? address.toLowerCase() : address}';
     var raw = await store.readVaultRecord(family, address);
     if (raw == null) {
       final pending = _migrations[slot];
@@ -117,7 +155,10 @@ class WalletVaultService {
     // An existing record is authoritative: corruption never triggers fallback.
     final signer = await _open(family, address, raw);
     try {
+      _requireUnlocked(generation);
       await removeVerifiedLegacyKey();
+      _requireUnlocked(generation);
+      _accounts.add(signer);
       return signer;
     } catch (_) {
       await close(signer);
@@ -172,16 +213,20 @@ class WalletVaultService {
 
   /// Call only from explicit authenticated backup/private-key export flows.
   Future<String> exportKey(ChainFamily family, String address) async {
+    final generation = _generation;
+    _requireUnlocked(generation);
     final raw = await store.readVaultRecord(family, address);
     if (raw == null) throw StateError('Vault record is missing');
     final record = WalletVaultRecord.decode(raw);
     try {
-      return await rust.exportWalletVaultKey(
+      final secret = await rust.exportWalletVaultKey(
         chainFamily: family.name,
         encryptedVault: record.encryptedVault,
         expectedAddress: address,
         wrappingKey: record.wrappingKey,
       );
+      _requireUnlocked(generation);
+      return secret;
     } finally {
       record.dispose();
     }

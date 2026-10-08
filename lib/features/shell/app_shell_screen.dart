@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import '../../models/chain.dart';
 import '../discover/discover_screen.dart';
 import '../mini_apps/mini_app_host_screen.dart';
 import '../../services/runtime_config_service.dart';
+import '../../services/wallet_service.dart';
 import 'app_shell_bottom_navigation.dart';
 import 'app_shell_controller.dart';
 
@@ -29,6 +31,20 @@ class _AppShellScreenState extends State<AppShellScreen> {
   void initState() {
     super.initState();
     _runtimeConfig.addListener(_recoverFromDisabledFeature);
+    unawaited(_migrateWalletVaults());
+  }
+
+  Future<void> _migrateWalletVaults() async {
+    try {
+      await WalletService().migrateWalletVaults();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Some wallets could not be opened. Please try again.'),
+        ),
+      );
+    }
   }
 
   @override

@@ -16,6 +16,8 @@ import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
 import 'native_crypto.dart';
 import 'evm_transaction_service.dart';
+import 'wallet_vault_service.dart';
+import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
 typedef SeedAccountActivityChecker =
     Future<bool> Function({
@@ -27,7 +29,7 @@ typedef SeedAccountActivityChecker =
 
 typedef EvmTypedDataSigner =
     Future<String> Function({
-      required String privateKeyHex,
+      required EvmSigningAccount account,
       required String jsonData,
     });
 
@@ -42,7 +44,10 @@ class WalletService {
   }) : _storage = storageService ?? StorageService(),
        _seedAccountActivityChecker = seedAccountActivityChecker,
        _web3ClientFactory = web3ClientFactory,
-       _typedDataSigner = typedDataSigner ?? NativeCrypto.signTypedData;
+       _typedDataSigner =
+           typedDataSigner ??
+           (({required account, required jsonData}) =>
+               account.signTypedData(jsonData));
 
   final StorageService _storage;
   final SeedAccountActivityChecker? _seedAccountActivityChecker;
@@ -282,6 +287,7 @@ class WalletService {
         ChainFamily.tron: material.tronAddress,
       },
     );
+    await migrateWalletVaults();
   }
 
   String _seedGroupIdFromMnemonic(String normalizedMnemonic) {
@@ -374,6 +380,7 @@ class WalletService {
         origin: WalletOrigin.imported,
       );
 
+      await migrateWalletVaults();
       return {'address': address, 'privateKey': privateKey};
     } catch (e) {
       throw Exception('Failed to import wallet: ${e.toString()}');
@@ -413,6 +420,7 @@ class WalletService {
         privateKey: hexKey,
       );
 
+      await migrateWalletVaults();
       return {'address': address, 'privateKey': hexKey};
     } catch (e) {
       throw Exception('Failed to import Solana wallet: ${e.toString()}');
@@ -457,6 +465,7 @@ class WalletService {
         privateKey: privateKey,
       );
 
+      await migrateWalletVaults();
       return {'address': address, 'privateKey': privateKey};
     } catch (e) {
       throw Exception('Failed to import Tron wallet: ${e.toString()}');
@@ -523,30 +532,41 @@ class WalletService {
             : privateKey;
 
       case ChainFamily.solana:
-        final privateKeyBytes = await _solanaPrivateKeyForAccount(
-          account,
-          familyAddress,
-        );
-        final publicKeyBytes = decodeBase58Bytes(familyAddress);
-        if (publicKeyBytes.length != 32) {
-          throw Exception('Stored Solana address is invalid.');
+        final vault = await _storage.readVaultRecord(family, familyAddress);
+        final privateKeyBytes = vault == null
+            ? await _solanaPrivateKeyForAccount(account, familyAddress)
+            : Uint8List.fromList(
+                HEX.decode(
+                  await _storage.exportVaultKey(family, familyAddress),
+                ),
+              );
+        try {
+          final publicKeyBytes = decodeBase58Bytes(familyAddress);
+          if (publicKeyBytes.length != 32) {
+            throw Exception('Stored Solana address is invalid.');
+          }
+          final derivedAddress =
+              await NativeCrypto.deriveSolanaAddressFromPrivateKey(
+                privateKeyBytes,
+              );
+          if (derivedAddress != familyAddress) {
+            throw Exception('Stored Solana key does not match this account.');
+          }
+          return encodeBase58Bytes(
+            Uint8List.fromList([
+              ...privateKeyBytes.take(32),
+              ...publicKeyBytes,
+            ]),
+          );
+        } finally {
+          privateKeyBytes.fillRange(0, privateKeyBytes.length, 0);
         }
-        final derivedAddress =
-            await NativeCrypto.deriveSolanaAddressFromPrivateKey(
-              privateKeyBytes,
-            );
-        if (derivedAddress != familyAddress) {
-          throw Exception('Stored Solana key does not match this account.');
-        }
-        return encodeBase58Bytes(
-          Uint8List.fromList([...privateKeyBytes, ...publicKeyBytes]),
-        );
 
       case ChainFamily.tron:
-        final privateKey = await _tronPrivateKeyForAccount(
-          account,
-          familyAddress,
-        );
+        final vault = await _storage.readVaultRecord(family, familyAddress);
+        final privateKey = vault == null
+            ? await _tronPrivateKeyForAccount(account, familyAddress)
+            : await _storage.exportVaultKey(family, familyAddress);
         final derivedAddress =
             await NativeCrypto.deriveTronAddressFromPrivateKey(privateKey);
         if (derivedAddress != familyAddress) {
@@ -581,7 +601,7 @@ class WalletService {
     WalletAccount account,
     String familyAddress,
   ) async {
-    final imported = await _storage.getFamilyPrivateKey(
+    final imported = await _storage.getLegacyFamilyPrivateKey(
       ChainFamily.solana,
       familyAddress,
     );
@@ -603,7 +623,7 @@ class WalletService {
     WalletAccount account,
     String familyAddress,
   ) async {
-    final imported = await _storage.getFamilyPrivateKey(
+    final imported = await _storage.getLegacyFamilyPrivateKey(
       ChainFamily.tron,
       familyAddress,
     );
@@ -632,12 +652,14 @@ class WalletService {
 
   /// Delete wallet (logout)
   Future<void> deleteWallet() async {
+    await WalletVaultService.lockAll();
     await _storage.deleteWallet();
   }
 
   /// Fully reset local wallet state, including passcode, wallet lists, cached
   /// token visibility, backend sessions, and all stored key material.
   Future<void> resetAppData() async {
+    await WalletVaultService.lockAll();
     await _storage.clearAll();
   }
 
@@ -665,10 +687,12 @@ class WalletService {
   }
 
   Future<void> setActiveWallet(String address) async {
+    await WalletVaultService.invalidateOpenAccounts();
     await _storage.setActiveWallet(address);
   }
 
   Future<void> removeWalletAccount(String address) async {
+    await WalletVaultService.invalidateOpenAccounts();
     // Perform storage removal first.
     // This will handle active wallet replacement internally in StorageService.
     await _storage.removeWalletAccount(address);
@@ -745,23 +769,13 @@ class WalletService {
 
   /// Sign a message with a specific wallet when available (Rust FFI).
   Future<String> signMessageForAddress(String? address, String message) async {
-    final privateKeyHex = await getPrivateKey(address);
-    if (privateKeyHex == null) {
-      throw Exception('No wallet found');
+    final account = await _evmSigningAccountForAddress(address);
+    try {
+      final signature = await account.signPersonalMessage(message);
+      return signature.startsWith('0x') ? signature.substring(2) : signature;
+    } finally {
+      await account.close();
     }
-
-    final pk = privateKeyHex.startsWith('0x')
-        ? privateKeyHex.substring(2)
-        : privateKeyHex;
-
-    // Use Rust secp256k1 for personal message signing
-    final signature = await NativeCrypto.signPersonalMessage(
-      privateKeyHex: pk,
-      message: message,
-    );
-
-    // Remove 0x prefix if present (Rust returns 0x-prefixed)
-    return signature.startsWith('0x') ? signature.substring(2) : signature;
   }
 
   /// Sign EIP-712 typed data with the active wallet.
@@ -773,33 +787,27 @@ class WalletService {
     String? address,
     String jsonData,
   ) async {
-    final privateKeyHex = await getPrivateKey(address);
-    if (privateKeyHex == null) {
+    final resolved = address ?? await getCurrentWalletAddress();
+    if (resolved == null || resolved.isEmpty) {
       throw Exception('No wallet found');
     }
-
-    final pk = privateKeyHex.startsWith('0x')
-        ? privateKeyHex.substring(2)
-        : privateKeyHex;
-
-    // The Rust boundary is authoritative. A failure must not silently select
-    // a different cryptographic implementation for an approved payload.
-    return _typedDataSigner(privateKeyHex: pk, jsonData: jsonData);
-  }
-
-  /// Legacy compatibility API. Production transactions use Rust signing.
-  @Deprecated('Use the Rust transaction APIs or getEvmSigningAccount instead')
-  Future<EthPrivateKey> getCredentials() async {
-    final privateKeyHex = await getPrivateKey();
-    if (privateKeyHex == null) {
-      throw Exception('No wallet found');
+    if (!resolved.startsWith('0x')) {
+      return _withFamilySigner(
+        ChainFamily.tron,
+        resolved,
+        (signer) => signer.signTypedData(jsonData: jsonData),
+      );
     }
-
-    return EthPrivateKey.fromHex(privateKeyHex);
+    final account = await _evmSigningAccountForAddress(resolved);
+    try {
+      return await _typedDataSigner(account: account, jsonData: jsonData);
+    } finally {
+      await account.close();
+    }
   }
 
   /// Captures a verified sender for multi-step operations without exposing its
-  /// raw key to callers. This is a temporary Dart context until vault migration.
+  /// raw key to callers. The protected vault is opened into Rust custody.
   Future<EvmSigningAccount> getEvmSigningAccount() =>
       _activeEvmSigningAccount();
 
@@ -823,14 +831,109 @@ class WalletService {
     if (expectedSender != null && sender != expectedSender) {
       throw Exception('Transaction sender does not match the active wallet');
     }
-    final privateKeyHex = await getPrivateKey();
-    if (privateKeyHex == null || privateKeyHex.trim().isEmpty) {
+    return _evmSigningAccountForAddress(sender.hex);
+  }
+
+  Future<EvmSigningAccount> getEvmSigningAccountForAddress(
+    String address, {
+    String mismatchMessage = 'Active EVM address does not match private key',
+  }) => _evmSigningAccountForAddress(address, mismatchMessage: mismatchMessage);
+
+  Future<EvmSigningAccount> _evmSigningAccountForAddress(
+    String? address, {
+    String mismatchMessage = 'Active EVM address does not match private key',
+  }) async {
+    final resolved = address ?? await getCurrentWalletAddress();
+    if (resolved == null || resolved.isEmpty) {
       throw Exception('No wallet found');
     }
-    return EvmTransactionService.verifyAccount(
-      sender: sender,
-      privateKeyHex: privateKeyHex,
+    final sender = EthereumAddress.fromHex(resolved);
+    try {
+      final signer = await _storage.openVaultAccount(
+        family: ChainFamily.evm,
+        address: sender.hex,
+        loadLegacyKey: () => getPrivateKey(resolved),
+      );
+      return EvmTransactionService.fromVault(sender: sender, signer: signer);
+    } catch (error) {
+      if (error.toString().contains('Vault account address mismatch')) {
+        throw Exception(mismatchMessage);
+      }
+      rethrow;
+    }
+  }
+
+  Future<rust_vault.RustWalletSigningAccount> _openFamilySigner(
+    ChainFamily family,
+    String address,
+  ) async {
+    WalletAccount? selected;
+    for (final account in await getWalletAccounts()) {
+      if (account.getWalletAddressForFamily(family) == address) {
+        selected = account;
+        break;
+      }
+    }
+    if (selected == null) {
+      throw StateError(
+        'Wallet account does not own this ${family.name} address',
+      );
+    }
+    final account = selected;
+    return _storage.openVaultAccount(
+      family: family,
+      address: address,
+      loadLegacyKey: () async {
+        if (family == ChainFamily.solana) {
+          final bytes = await _solanaPrivateKeyForAccount(account, address);
+          try {
+            return HEX.encode(bytes);
+          } finally {
+            bytes.fillRange(0, bytes.length, 0);
+          }
+        }
+        return _tronPrivateKeyForAccount(account, address);
+      },
     );
+  }
+
+  Future<T> _withFamilySigner<T>(
+    ChainFamily family,
+    String address,
+    Future<T> Function(rust_vault.RustWalletSigningAccount) action,
+  ) async {
+    final signer = await _openFamilySigner(family, address);
+    try {
+      return await action(signer);
+    } finally {
+      await WalletVaultService.close(signer);
+    }
+  }
+
+  /// Eagerly migrates every managed family and verifies persisted signing custody.
+  /// A failed account keeps its legacy material and propagates the failure.
+  Future<void> migrateWalletVaults() async {
+    var failures = 0;
+    for (final account in await getWalletAccounts()) {
+      for (final family in ChainFamily.values) {
+        final address = account.getWalletAddressForFamily(family);
+        if (address == null) continue;
+        try {
+          if (family == ChainFamily.evm) {
+            final signer = await getEvmSigningAccountForAddress(address);
+            await signer.close();
+          } else {
+            final signer = await _openFamilySigner(family, address);
+            await WalletVaultService.close(signer);
+          }
+        } catch (_) {
+          failures++;
+        }
+      }
+    }
+    if (failures != 0) {
+      throw StateError('Could not verify $failures wallet account vaults');
+    }
   }
 
   /// Send native coin (ETH/BNB/MATIC/etc.) to an address
@@ -1206,7 +1309,6 @@ class WalletService {
     if (amountLamports > maxU64) {
       throw Exception('amountLamports exceeds maximum u64 value');
     }
-    final privateKeyBytes = await _getSolanaPrivateKey(fromAddress);
 
     // 1. Ask the backend to build the serialized unsigned message.
     final prepareUri = AppEnvironment.blockchain(
@@ -1246,9 +1348,9 @@ class WalletService {
 
     // 2. Sign the message bytes with the Ed25519 key via Rust FFI.
     //    signSolanaMessage returns a base58-encoded 64-byte signature.
-    final signatureBase58 = await NativeCrypto.signSolanaMessage(
-      privateKeyBytes: privateKeyBytes,
-      message: messageBytes,
+    final signatureBase58 = await signSolanaMessageRaw(
+      fromAddress,
+      messageBytes,
     );
     final sigBytes = decodeBase58Signature(signatureBase58);
 
@@ -1297,10 +1399,10 @@ class WalletService {
     String address,
     Uint8List messageBytes,
   ) async {
-    final privateKeyBytes = await _getSolanaPrivateKey(address);
-    return NativeCrypto.signSolanaMessage(
-      privateKeyBytes: privateKeyBytes,
-      message: messageBytes,
+    return _withFamilySigner(
+      ChainFamily.solana,
+      address,
+      (signer) => signer.signSolanaMessage(message: messageBytes),
     );
   }
 
@@ -1312,13 +1414,14 @@ class WalletService {
     required String instructionsJson,
     required String lookupTablesJson,
   }) async {
-    final privateKeyBytes = await _getSolanaPrivateKey(address);
-    return NativeCrypto.buildAndSignSolanaTransaction(
-      payer: address,
-      recentBlockhash: recentBlockhash,
-      instructionsJson: instructionsJson,
-      lookupTablesJson: lookupTablesJson,
-      privateKeyBytes: privateKeyBytes,
+    return _withFamilySigner(
+      ChainFamily.solana,
+      address,
+      (signer) => signer.buildAndSignSolanaTransaction(
+        recentBlockhash: recentBlockhash,
+        instructionsJson: instructionsJson,
+        lookupTablesJson: lookupTablesJson,
+      ),
     );
   }
 
@@ -1327,11 +1430,12 @@ class WalletService {
     String address,
     String unsignedTxBase64,
   ) async {
-    final privateKeyBytes = await _getSolanaPrivateKey(address);
-    return NativeCrypto.signSerializedSolanaTransaction(
-      serializedTxBase64: unsignedTxBase64,
-      expectedSigner: address,
-      privateKeyBytes: privateKeyBytes,
+    return _withFamilySigner(
+      ChainFamily.solana,
+      address,
+      (signer) => signer.signSerializedSolanaTransaction(
+        transactionBase64: unsignedTxBase64,
+      ),
     );
   }
 
@@ -1341,11 +1445,7 @@ class WalletService {
     String address,
     Uint8List messageBytes,
   ) async {
-    final privateKeyBytes = await _getSolanaPrivateKey(address);
-    final signatureBase58 = await NativeCrypto.signSolanaMessage(
-      privateKeyBytes: privateKeyBytes,
-      message: messageBytes,
-    );
+    final signatureBase58 = await signSolanaMessageRaw(address, messageBytes);
     final sigBytes = decodeBase58Signature(signatureBase58);
     final txBytes = Uint8List(1 + sigBytes.length + messageBytes.length);
     txBytes[0] = 1;
@@ -1467,7 +1567,6 @@ class WalletService {
     String address,
     Map<String, dynamic> unsignedTx,
   ) async {
-    final privateKeyHex = await _getTronPrivateKey(address);
     final rawDataHex = (unsignedTx['raw_data_hex'] ?? unsignedTx['rawDataHex'])
         ?.toString();
     if (rawDataHex == null || rawDataHex.isEmpty) {
@@ -1476,9 +1575,10 @@ class WalletService {
     final rawBytes = HEX.decode(rawDataHex);
     final digestBytes = _sha256(Uint8List.fromList(rawBytes));
     final digestHex = HEX.encode(digestBytes);
-    final signature = await NativeCrypto.signTronRawHash(
-      privateKeyHex: privateKeyHex,
-      rawHashHex: digestHex,
+    final signature = await _withFamilySigner(
+      ChainFamily.tron,
+      address,
+      (signer) => signer.signTronRawHash(rawHashHex: digestHex),
     );
     final signatureHex = signature.startsWith('0x')
         ? signature.substring(2)
@@ -1492,12 +1592,12 @@ class WalletService {
   /// Sign a UTF-8 message using TRON's personal-message prefix.
   /// Returns a 0x-prefixed recoverable signature.
   Future<String> signTronMessageRaw(String address, String message) async {
-    final privateKeyHex = await _getTronPrivateKey(address);
     final digest = tronPersonalMessageDigest(message);
     final digestHex = HEX.encode(digest);
-    final signature = await NativeCrypto.signTronRawHash(
-      privateKeyHex: privateKeyHex,
-      rawHashHex: digestHex,
+    final signature = await _withFamilySigner(
+      ChainFamily.tron,
+      address,
+      (signer) => signer.signTronRawHash(rawHashHex: digestHex),
     );
     return signature.startsWith('0x') ? signature : '0x$signature';
   }
@@ -1716,7 +1816,6 @@ class WalletService {
     if (amount <= BigInt.zero) {
       throw Exception('amount must be greater than zero');
     }
-    final privateKeyHex = await _getTronPrivateKey(fromAddress);
 
     // 1. Prepare the unsigned transaction via the backend.
     final prepareUri = AppEnvironment.blockchain(
@@ -1762,9 +1861,10 @@ class WalletService {
     final digestBytes = _sha256(Uint8List.fromList(rawBytes));
     final digestHex = HEX.encode(digestBytes);
 
-    final signature = await NativeCrypto.signTronRawHash(
-      privateKeyHex: privateKeyHex,
-      rawHashHex: digestHex,
+    final signature = await _withFamilySigner(
+      ChainFamily.tron,
+      fromAddress,
+      (signer) => signer.signTronRawHash(rawHashHex: digestHex),
     );
     final signatureHex = signature.startsWith('0x')
         ? signature.substring(2)
@@ -1806,47 +1906,6 @@ class WalletService {
   /// SHA-256 hash of [input] bytes.
   static Uint8List _sha256(Uint8List input) {
     return Uint8List.fromList(pkg_crypto.sha256.convert(input).bytes);
-  }
-
-  Future<Uint8List> _getSeedBytes() async {
-    final activeAccount = await getActiveWalletAccount();
-    final mnemonic = await getMnemonic(activeAccount?.address);
-    if (mnemonic == null || mnemonic.isEmpty) {
-      throw Exception(
-        'Seed phrase not available. Non-EVM transactions require a seed-phrase wallet.',
-      );
-    }
-    return NativeCrypto.mnemonicToSeed(mnemonic);
-  }
-
-  /// Returns the Ed25519 private key bytes for the given Solana [address].
-  /// Checks for a directly-imported key first; falls back to mnemonic derivation.
-  Future<Uint8List> _getSolanaPrivateKey(String address) async {
-    final imported = await _storage.getFamilyPrivateKey(
-      ChainFamily.solana,
-      address,
-    );
-    if (imported != null && imported.isNotEmpty) {
-      return Uint8List.fromList(pkg_hex.HEX.decode(imported));
-    }
-    final seed = await _getSeedBytes();
-    final account = await getActiveWalletAccount();
-    final derivationIndex = account?.derivationIndex ?? 0;
-    return NativeCrypto.deriveSolanaPrivateKeyFromSeed(seed, derivationIndex);
-  }
-
-  /// Returns the secp256k1 private key hex for the given Tron [address].
-  /// Checks for a directly-imported key first; falls back to mnemonic derivation.
-  Future<String> _getTronPrivateKey(String address) async {
-    final imported = await _storage.getFamilyPrivateKey(
-      ChainFamily.tron,
-      address,
-    );
-    if (imported != null && imported.isNotEmpty) return imported;
-    final seed = await _getSeedBytes();
-    final account = await getActiveWalletAccount();
-    final derivationIndex = account?.derivationIndex ?? 0;
-    return NativeCrypto.deriveTronPrivateKeyFromSeed(seed, derivationIndex);
   }
 
   Uint8List? _decodeHexBytes(String? value) {

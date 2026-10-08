@@ -12,11 +12,14 @@ import 'package:web3dart/web3dart.dart';
 import 'package:eth_sig_util/eth_sig_util.dart';
 
 import 'package:fomowl_wallet/services/wallet_service.dart';
+import 'package:fomowl_wallet/services/storage_service.dart';
+import 'package:fomowl_wallet/services/secure_store.dart';
 import 'package:fomowl_wallet/services/evm_transaction_service.dart';
 import 'package:fomowl_wallet/services/token_approval_service.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/services/native_crypto.dart';
+import 'package:fomowl_wallet/services/wallet_vault_service.dart';
 import 'package:fomowl_wallet/services/cow_limit_order_signing.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
@@ -39,7 +42,10 @@ class _Wallet extends WalletService {
     this.key = _key,
     this.address = _sender,
     super.typedDataSigner,
-  }) : super(web3ClientFactory: (_) => client);
+  }) : super(
+         web3ClientFactory: (_) => client,
+         storageService: StorageService(secureStore: _MemoryStore()),
+       );
 
   final String? key;
   final String? address;
@@ -49,10 +55,6 @@ class _Wallet extends WalletService {
 
   @override
   Future<String?> getPrivateKey([String? address]) async => key;
-
-  @override
-  Future<EthPrivateKey> getCredentials() =>
-      throw StateError('Migrated transactions must not use Dart credentials');
 }
 
 class _Rpc {
@@ -152,7 +154,10 @@ Future<String> _referenceTransaction(
 }
 
 void main() {
-  setUpAll(() async => RustLib.init());
+  setUpAll(() async {
+    await RustLib.init();
+    WalletVaultService.unlock();
+  });
 
   test('closed Rust account cannot sign or fetch a nonce', () async {
     final rpc = _Rpc('');
@@ -246,7 +251,7 @@ void main() {
       var attempts = 0;
       final wallet = _Wallet(
         rpc.client,
-        typedDataSigner: ({required privateKeyHex, required jsonData}) async {
+        typedDataSigner: ({required account, required jsonData}) async {
           attempts++;
           throw StateError('Rust signer unavailable');
         },
@@ -611,5 +616,25 @@ void main() {
         expect(rpc.methods, isEmpty);
       },
     );
+  }
+}
+
+class _MemoryStore implements SecureStore {
+  final _values = <String, String>{};
+  @override
+  Future<String?> read({required String key}) async => _values[key];
+  @override
+  Future<void> write({required String key, required String value}) async {
+    _values[key] = value;
+  }
+
+  @override
+  Future<void> delete({required String key}) async {
+    _values.remove(key);
+  }
+
+  @override
+  Future<void> deleteAll() async {
+    _values.clear();
   }
 }

@@ -2,7 +2,8 @@
 
 Owllet's shared Rust wallet engine for mobile apps, desktop apps, browser
 extensions, wallets embedded in other applications, and native integrations.
-The current crate is an early engine foundation, not a complete wallet SDK.
+The crate provides the shared engine and native Flutter adapter. Each additional
+product supplies its own storage, authentication, RPC, and UI adapter.
 
 ## Boundaries
 
@@ -15,6 +16,7 @@ The current crate is an early engine foundation, not a complete wallet SDK.
 | `transactions::evm` | Offline legacy/EIP-1559 signing and contract creation with Alloy |
 | `transactions::solana` | v0 instruction compilation and required-signer-slot signing of serialized legacy/v0 transactions |
 | `session` (optional) | Rust-owned transient keys, opaque scoped account handles, lock/removal lifecycle |
+| `vault` (optional) | Authenticated encrypted account records, opaque custody on open, explicit recovery export |
 
 Use module-qualified APIs in new integrations. Existing root re-exports remain
 available for Flutter compatibility. Share primitives across chains; keep chain
@@ -46,6 +48,7 @@ owllet-core = { path = "../owllet-core", default-features = false, features = ["
 | `solana` | Solana accounts, message signatures, and transaction compilation/signing |
 | `tron` | TRON accounts and raw-hash signatures; includes `secp256k1` |
 | `signing-session` | Process-local signing sessions; select at least one chain feature to expose this module |
+| `vault` | Chain-bound AES-256-GCM records and signing sessions; select the desired chain separately |
 
 Cargo features are additive: a dependency graph may enable more features than
 one consumer explicitly requests. They control compiled capabilities, not user
@@ -110,17 +113,17 @@ supported cleanup. BIP-32 serialization uses a `Zeroizing` buffer. Do not overwr
 the byte layout of a live dependency object to attempt secret cleanup. This does
 not claim that all seed, mnemonic, chain-code, or language-runtime copies are wiped.
 
-The intended end state adds a separate vault/key-lifecycle module with opaque
-wallet/account handles. Normal signing should operate on handles, while explicit
-backup/export remains a separately authorized operation. Preserve existing
-wallets using a versioned, verified migration before removing legacy storage.
+The `vault` and `session` modules now provide encrypted account records and
+opaque account handles. Native Flutter normal signing operates on custody;
+explicit backup/export is separate. Its storage adapter migrates legacy copies
+only after persisted record authentication and preserves wallet identities.
+App locking and account-context changes invalidate in-flight custody.
 
-Remaining engine work includes wiring other EVM transaction paths, complete
-Solana/TRON transaction support in this crate, vault ownership, and additional
-chains. Add chain implementations here once; reuse them from all hosts. UI,
-network orchestration, permissions prompts, and backend provider integrations
-continue to have their own boundaries. Audit and fuzz the shared engine before
-claiming it is hardened for new deployments.
+All current EVM transfer/approval/swap paths use Alloy signing; Solana instruction
+and serialized transaction signing and TRON raw-hash signing share the same
+custody model. Add chains here once and reuse them across hosts. Target-specific
+adapters, new-host certification, fuzzing, and independent audit remain separate
+work before claiming those deployments are hardened.
 
 ## Validation
 
@@ -141,7 +144,8 @@ current Flutter integration. Cross-target support needs additional target CI.
 ## Optional encrypted account records
 
 Enable `vault` with any enabled chain to obtain AES-256-GCM authenticated records
-and opaque signing custody on open. This feature enables signing sessions, without adding
+and opaque signing custody on open. This feature enables signing sessions without
+adding
 platform storage or authentication. The versioned record authenticates its
 algorithm, chain family, and account address; unsupported formats and failed
 authentication are rejected. Decrypted buffers are guarded with `Zeroizing`.

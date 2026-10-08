@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/storage_service.dart';
+import '../../services/wallet_vault_service.dart';
 import '../../services/biometric_service.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../utils/toast_utils.dart';
@@ -130,18 +131,22 @@ class _UnlockScreenState extends State<UnlockScreen> {
       );
 
       if (authenticated && mounted && !_navigated) {
-        _navigated = true;
-        await _storage.resetFailedAttempts();
-        if (mounted) {
-          if (_returnToPrevious) {
-            Navigator.pop(context, true);
-          } else {
-            Navigator.pushReplacementNamed(context, '/shell');
-          }
-        }
+        await _finishUnlock();
       }
     } catch (e) {
       // Biometric failed, user can enter passcode
+    }
+  }
+
+  Future<void> _finishUnlock() async {
+    _navigated = true;
+    await _storage.resetFailedAttempts();
+    WalletVaultService.unlock();
+    if (!mounted) return;
+    if (_returnToPrevious) {
+      Navigator.pop(context, true);
+    } else {
+      Navigator.pushReplacementNamed(context, '/shell');
     }
   }
 
@@ -176,16 +181,7 @@ class _UnlockScreenState extends State<UnlockScreen> {
     final isValid = await _storage.verifyPasscode(_passcode);
 
     if (isValid && mounted && !_navigated) {
-      // Correct passcode — reset attempts and navigate
-      _navigated = true;
-      await _storage.resetFailedAttempts();
-      if (mounted) {
-        if (_returnToPrevious) {
-          Navigator.pop(context, true);
-        } else {
-          Navigator.pushReplacementNamed(context, '/shell');
-        }
-      }
+      await _finishUnlock();
     } else if (mounted) {
       // Wrong passcode
       await _storage.incrementFailedAttempts();

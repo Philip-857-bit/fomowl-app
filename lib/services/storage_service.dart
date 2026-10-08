@@ -11,9 +11,11 @@ import '../models/chain.dart';
 import '../models/wallet_account.dart';
 import '../utils/language_utils.dart';
 import 'secure_store.dart';
+import 'wallet_vault_service.dart';
+import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
 /// Handles secure storage of sensitive data and preferences.
-class StorageService {
+class StorageService implements WalletVaultStore {
   StorageService({
     SecureStore? secureStore,
     SharedPreferences? sharedPreferences,
@@ -21,6 +23,9 @@ class StorageService {
        _sharedPreferences = sharedPreferences;
 
   final SecureStore _secureStore;
+  static final Expando<WalletVaultService> _vaults = Expando();
+  WalletVaultService get _vault =>
+      _vaults[_secureStore] ??= WalletVaultService(this);
   final SharedPreferences? _sharedPreferences;
 
   static const String _keyPrivateKey = 'wallet_private_key';
@@ -143,19 +148,88 @@ class StorageService {
 
   Future<String?> getWalletAddress() => _secureStore.read(key: _keyAddress);
 
+  /// Compatibility/private-key export boundary. Routine signing opens vaults.
   Future<String?> getPrivateKey() async {
     final address = await getWalletAddress();
-    if (address != null) {
-      final existing = await _secureStore.read(
-        key: _walletPrivateKeyKey(address),
-      );
-      if (existing != null) return existing;
-    }
+    if (address != null) return getPrivateKeyForAddress(address);
     return _secureStore.read(key: _keyPrivateKey);
   }
 
-  Future<String?> getPrivateKeyForAddress(String address) {
-    return _secureStore.read(key: _walletPrivateKeyKey(address));
+  Future<String?> getPrivateKeyForAddress(String address) async {
+    final family = _primaryFamily(address);
+    if (await readVaultRecord(family, address) != null) {
+      return _vault.exportKey(family, address);
+    }
+    return getLegacyPrivateKeyForAddress(address);
+  }
+
+  Future<String?> getLegacyPrivateKeyForAddress(String address) async {
+    final key = await _secureStore.read(key: _walletPrivateKeyKey(address));
+    if (key != null) return key;
+    final active = await getWalletAddress();
+    if (active != null &&
+        _sameAddress(_primaryFamily(address), active, address)) {
+      return _secureStore.read(key: _keyPrivateKey);
+    }
+    return null;
+  }
+
+  ChainFamily _primaryFamily(String address) => address.startsWith('0x')
+      ? ChainFamily.evm
+      : address.startsWith('T') && address.length == 34
+      ? ChainFamily.tron
+      : ChainFamily.solana;
+
+  bool _sameAddress(ChainFamily family, String a, String b) =>
+      family == ChainFamily.evm ? a.toLowerCase() == b.toLowerCase() : a == b;
+
+  String _vaultKey(ChainFamily family, String address) =>
+      'wallet_vault_v1_${family.name}_${family == ChainFamily.evm ? address.toLowerCase() : address}';
+
+  @override
+  Future<String?> readVaultRecord(ChainFamily family, String address) =>
+      _secureStore.read(key: _vaultKey(family, address));
+
+  @override
+  Future<void> writeVaultRecord(
+    ChainFamily family,
+    String address,
+    String value,
+  ) => _secureStore.write(key: _vaultKey(family, address), value: value);
+
+  Future<rust_vault.RustWalletSigningAccount> openVaultAccount({
+    required ChainFamily family,
+    required String address,
+    required Future<String?> Function() loadLegacyKey,
+  }) => _vault.open(
+    family: family,
+    address: address,
+    loadLegacyKey: loadLegacyKey,
+    removeVerifiedLegacyKey: () => _removeVerifiedLegacyKey(family, address),
+  );
+
+  Future<void> _removeVerifiedLegacyKey(
+    ChainFamily family,
+    String address,
+  ) async {
+    await _secureStore.delete(key: _familyPrivateKeyKey(family, address));
+    await _secureStore.delete(key: _walletPrivateKeyKey(address));
+    final active = await getWalletAddress();
+    if (active != null && _sameAddress(family, active, address)) {
+      await _secureStore.delete(key: _keyPrivateKey);
+    }
+  }
+
+  Future<String> exportVaultKey(ChainFamily family, String address) =>
+      _vault.exportKey(family, address);
+
+  Future<void> _deleteAccountVaults(WalletAccount account) async {
+    for (final family in ChainFamily.values) {
+      final address = account.getWalletAddressForFamily(family);
+      if (address == null) continue;
+      await _secureStore.delete(key: _vaultKey(family, address));
+      await _secureStore.delete(key: _familyPrivateKeyKey(family, address));
+    }
   }
 
   Future<String?> getMnemonic([String? address]) async {
@@ -350,6 +424,8 @@ class StorageService {
   Future<void> deleteWallet() async {
     final address = await getWalletAddress();
     if (address != null) {
+      final account = await _findWallet(address);
+      if (account != null) await _deleteAccountVaults(account);
       await _secureStore.delete(key: _walletMnemonicKey(address));
       await _secureStore.delete(key: _walletPrivateKeyKey(address));
     }
@@ -366,12 +442,20 @@ class StorageService {
     }
     final wallet = await _findWallet(address);
     if (wallet == null) throw Exception('Wallet not found');
-    final privateKey = await _secureStore.read(
-      key: _walletPrivateKeyKey(address),
-    );
-    if (privateKey == null) throw Exception('Missing private key for wallet');
+    final family = _primaryFamily(address);
+    final migrated = await readVaultRecord(family, address) != null;
+    final privateKey = migrated
+        ? null
+        : await getLegacyPrivateKeyForAddress(address);
+    if (!migrated && privateKey == null) {
+      throw Exception('Missing private key for wallet');
+    }
     await _secureStore.write(key: _keyAddress, value: address);
-    await _secureStore.write(key: _keyPrivateKey, value: privateKey);
+    if (migrated) {
+      await _secureStore.delete(key: _keyPrivateKey);
+    } else {
+      await _secureStore.write(key: _keyPrivateKey, value: privateKey!);
+    }
     await _secureStore.write(key: _keyWalletName, value: wallet.name);
     if (wallet.derivationIndex != null) {
       await _setCurrentDerivationIndex(wallet.derivationIndex!);
@@ -437,23 +521,30 @@ class StorageService {
       final replacement = accounts.firstWhere(
         (a) => a.address.toLowerCase() != normalized,
       );
-      final replacementPk = await _secureStore.read(
-        key: _walletPrivateKeyKey(replacement.address),
-      );
-      if (replacementPk == null) {
+      final family = _primaryFamily(replacement.address);
+      final migrated =
+          await readVaultRecord(family, replacement.address) != null;
+      final replacementPk = migrated
+          ? null
+          : await getLegacyPrivateKeyForAddress(replacement.address);
+      if (!migrated && replacementPk == null) {
         throw Exception('Replacement wallet private key is missing');
       }
-
       await _secureStore.write(key: _keyAddress, value: replacement.address);
-      await _secureStore.write(key: _keyPrivateKey, value: replacementPk);
+      if (migrated) {
+        await _secureStore.delete(key: _keyPrivateKey);
+      } else {
+        await _secureStore.write(key: _keyPrivateKey, value: replacementPk!);
+      }
       await _secureStore.write(key: _keyWalletName, value: replacement.name);
       if (replacement.derivationIndex != null) {
         await _setCurrentDerivationIndex(replacement.derivationIndex!);
       }
     }
 
-    accounts.removeAt(index);
+    final removedAccount = accounts.removeAt(index);
     await _saveWalletAccounts(accounts);
+    await _deleteAccountVaults(removedAccount);
     await _secureStore.delete(key: _walletPrivateKeyKey(address));
   }
 
@@ -604,8 +695,20 @@ class StorageService {
     value: privateKey,
   );
 
-  Future<String?> getFamilyPrivateKey(ChainFamily family, String address) =>
-      _secureStore.read(key: _familyPrivateKeyKey(family, address));
+  Future<String?> getFamilyPrivateKey(
+    ChainFamily family,
+    String address,
+  ) async {
+    if (await readVaultRecord(family, address) != null) {
+      return _vault.exportKey(family, address);
+    }
+    return getLegacyFamilyPrivateKey(family, address);
+  }
+
+  Future<String?> getLegacyFamilyPrivateKey(
+    ChainFamily family,
+    String address,
+  ) => _secureStore.read(key: _familyPrivateKeyKey(family, address));
 
   String _backendSessionKey(String address) =>
       '$_keyBackendSessionPrefix${address.toLowerCase()}';

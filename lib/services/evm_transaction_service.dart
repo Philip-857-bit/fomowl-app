@@ -4,31 +4,38 @@ import 'package:hex/hex.dart';
 import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:web3dart/web3dart.dart';
 
-import 'native_crypto.dart';
-import '../src/rust/api/evm_signing_account.dart' as rust_account;
+import '../src/rust/api/wallet_vault.dart' as rust_account;
+import 'wallet_vault_service.dart';
 
 /// A sender whose address has been checked against its key by the Rust core.
 ///
-/// Dart holds only a Rust opaque reference and public address. Legacy key
-/// loading still passes through Dart at import; encrypted vault migration is later.
+/// Dart holds only a Rust opaque reference and public address. Vault opening
+/// authenticates the protected record before signing.
 class EvmSigningAccount {
   EvmSigningAccount._(this.address, this._rustSigner);
 
   final EthereumAddress address;
-  final rust_account.RustEvmSigningAccount _rustSigner;
+  final rust_account.RustWalletSigningAccount _rustSigner;
   Future<void>? _closing;
 
-  bool get isClosed => _closing != null || _rustSigner.isDisposed;
+  bool get isClosed =>
+      _closing != null || !WalletVaultService.isOpen(_rustSigner);
 
   Future<void> close() => _closing ??= _close();
 
   Future<void> _close() async {
     if (_rustSigner.isDisposed) return;
-    try {
-      await _rustSigner.close();
-    } finally {
-      _rustSigner.dispose();
-    }
+    await WalletVaultService.close(_rustSigner);
+  }
+
+  Future<String> signPersonalMessage(String message) {
+    if (isClosed) throw StateError('EVM signing account is closed');
+    return _rustSigner.signPersonalMessage(message: message);
+  }
+
+  Future<String> signTypedData(String jsonData) {
+    if (isClosed) throw StateError('EVM signing account is closed');
+    return _rustSigner.signTypedData(jsonData: jsonData);
   }
 
   @override
@@ -42,23 +49,17 @@ class EvmSigningAccount {
 /// client lifecycle, and UI permission checks. This adapter verifies the signer,
 /// resolves the pending nonce when omitted, and broadcasts canonical Rust bytes.
 class EvmTransactionService {
-  static Future<EvmSigningAccount> verifyAccount({
+  static Future<EvmSigningAccount> fromVault({
     required EthereumAddress sender,
-    required String privateKeyHex,
-    String mismatchMessage = 'Active EVM address does not match private key',
+    required rust_account.RustWalletSigningAccount signer,
   }) async {
     try {
-      final signer = await NativeCrypto.createEvmSigningAccount(
-        privateKeyHex: privateKeyHex,
-        expectedAddress: sender.hex,
-      );
-      return EvmSigningAccount._(sender, signer);
-    } catch (error) {
-      if (error.toString().contains(
-        'Active EVM address does not match private key',
-      )) {
-        throw Exception(mismatchMessage);
+      if (EthereumAddress.fromHex(await signer.address()) != sender) {
+        throw StateError('Vault account address mismatch');
       }
+      return EvmSigningAccount._(sender, signer);
+    } catch (_) {
+      await WalletVaultService.close(signer);
       rethrow;
     }
   }
@@ -141,6 +142,9 @@ class EvmTransactionService {
       maxFeePerGasWei: maxFeePerGasWei?.toString(),
       maxPriorityFeePerGasWei: maxPriorityFeePerGasWei?.toString(),
     );
+    if (account.isClosed) {
+      throw StateError('EVM signing account is closed');
+    }
     return client.sendRawTransaction(web3_crypto.hexToBytes(rawHex));
   }
 }

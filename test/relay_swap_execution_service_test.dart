@@ -15,8 +15,6 @@ class _Wallet extends WalletService {
   Future<String?> getCurrentWalletAddress() async =>
       '0x4444444444444444444444444444444444444444';
   @override
-  Future<EthPrivateKey> getCredentials() => throw StateError('No Dart signer');
-  @override
   Future<String> sendRawTransactionRequest({
     required String rpcUrl,
     required int chainId,

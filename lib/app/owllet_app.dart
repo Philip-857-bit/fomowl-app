@@ -18,6 +18,7 @@ import '../services/blockchain_service.dart';
 import '../services/storage_service.dart';
 import '../services/system_picker_guard.dart';
 import '../services/wallet_service.dart';
+import '../services/wallet_vault_service.dart';
 import '../utils/language_utils.dart';
 import '../utils/toast_utils.dart';
 import '../widgets/forced_update_dialog.dart';
@@ -272,6 +273,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     _lastInteractionAt = DateTime.now();
     _unlockInFlight = true;
     try {
+      await WalletVaultService.lockAll();
       await navigator.pushNamed(
         '/unlock',
         arguments: {'returnToPrevious': true},

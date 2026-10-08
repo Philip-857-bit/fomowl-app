@@ -191,16 +191,8 @@ class TokenApprovalService {
       // 3. Needs additional approval — notify caller so UI can transition.
       onApprovalNeeded?.call();
 
-      final privateKeyHex = await _walletService.getPrivateKey(ownerAddress);
-      if (privateKeyHex == null) {
-        return const TokenApprovalResult(
-          approvalSatisfied: false,
-          error: 'No wallet found for token approval',
-        );
-      }
-      signingAccount = await EvmTransactionService.verifyAccount(
-        sender: ownerAddr,
-        privateKeyHex: privateKeyHex,
+      signingAccount = await _walletService.getEvmSigningAccountForAddress(
+        ownerAddress,
         mismatchMessage:
             'Token approval wallet does not match the selected wallet',
       );

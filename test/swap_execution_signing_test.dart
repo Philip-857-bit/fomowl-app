@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:web3dart/web3dart.dart';
 
 import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
@@ -9,9 +8,6 @@ import 'package:fomowl_wallet/services/wallet_service.dart';
 
 class _Wallet extends WalletService {
   Map<String, Object?>? request;
-
-  @override
-  Future<EthPrivateKey> getCredentials() => throw StateError('No Dart signer');
 
   @override
   Future<String> sendRawTransactionRequest({
