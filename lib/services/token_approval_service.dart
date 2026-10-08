@@ -6,6 +6,7 @@ import 'blockchain_service.dart';
 import 'swap_service.dart';
 import 'wallet_service.dart';
 import 'http_client_service.dart';
+import 'evm_transaction_service.dart';
 
 class TokenApprovalResult {
   final bool approvalSatisfied;
@@ -23,9 +24,10 @@ class TokenApprovalResult {
   bool get hasError => error != null;
 }
 
-/// Handles ERC20 allowance checks and approval transactions fully on-chain via Web3Dart
+/// Handles on-chain allowance checks and Rust-signed ERC-20 approvals.
 class TokenApprovalService {
   final WalletService _walletService;
+  final Web3Client Function(String rpcUrl)? _web3ClientFactory;
   final HttpClientService _httpClientService = HttpClientService();
   static final ContractAbi _erc20ApprovalAbi = ContractAbi.fromJson('''[
         {
@@ -53,7 +55,13 @@ class TokenApprovalService {
   TokenApprovalService({
     WalletService? walletService,
     SwapService? swapService, // signature compat
-  }) : _walletService = walletService ?? WalletService();
+    Web3Client Function(String rpcUrl)? web3ClientFactory,
+  }) : _walletService = walletService ?? WalletService(),
+       _web3ClientFactory = web3ClientFactory;
+
+  Web3Client _clientForRpc(String rpcUrl) =>
+      _web3ClientFactory?.call(rpcUrl) ??
+      Web3Client(rpcUrl, _httpClientService.client);
 
   /// Live estimate of the native gas cost of a swap on the active EVM chain,
   /// in wei, used to size the MAX-swap gas buffer so it reflects ACTUAL current
@@ -64,10 +72,7 @@ class TokenApprovalService {
     required BlockchainService blockchain,
     int swapGasUnits = 250000,
   }) async {
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
+    final client = _clientForRpc(blockchain.activeChain.rpcUrl);
     try {
       final gasPrice = await client.getGasPrice().timeout(
         const Duration(seconds: 8),
@@ -92,10 +97,7 @@ class TokenApprovalService {
       return BigInt.zero;
     }
 
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
+    final client = _clientForRpc(blockchain.activeChain.rpcUrl);
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
@@ -151,10 +153,7 @@ class TokenApprovalService {
       );
     }
 
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
+    final client = _clientForRpc(blockchain.activeChain.rpcUrl);
     try {
       final spenderAddr = EthereumAddress.fromHex(allowanceTarget);
       final tokenAddr = EthereumAddress.fromHex(tokenAddress);
@@ -198,40 +197,48 @@ class TokenApprovalService {
           error: 'No wallet found for token approval',
         );
       }
-      final credentials = EthPrivateKey.fromHex(
-        privateKeyHex.startsWith('0x')
-            ? privateKeyHex.substring(2)
-            : privateKeyHex,
+      final account = await EvmTransactionService.verifyAccount(
+        sender: ownerAddr,
+        privateKeyHex: privateKeyHex,
+        mismatchMessage:
+            'Token approval wallet does not match the selected wallet',
       );
-      if (credentials.address.hex.toLowerCase() !=
-          ownerAddr.hex.toLowerCase()) {
-        return const TokenApprovalResult(
-          approvalSatisfied: false,
-          error: 'Token approval wallet does not match the selected wallet',
-        );
-      }
 
       // Approve only the exact amount this swap needs, never the unlimited
       // 2^256-1. The spender comes from the backend quote; bounding the
       // allowance means a tampered/compromised spender can move at most this
       // one swap's amount, not drain the entire balance forever.
-      final tx = Transaction.callContract(
-        contract: contract,
-        function: approveFunc,
-        parameters: [spenderAddr, requiredAmount],
-      );
+      final data = approveFunc.encodeCall([spenderAddr, requiredAmount]);
 
       // Timeout for the actual approval transaction broadcast — prevents
       // indefinite hang when the RPC node accepts the request but is slow
       // to respond.
-      final txHash = await client
-          .sendTransaction(
-            credentials,
-            tx,
-            chainId: blockchain.activeChain.chainId,
-            fetchChainIdFromNetworkId: false,
-          )
-          .timeout(const Duration(seconds: 30));
+      // Keep the previous 30-second deadline around fee/nonce resolution,
+      // estimation, signing, and broadcast as one operation.
+      final txHash = await (() async {
+        final gasPrice = await client.getGasPrice();
+        final nonce = await client.getTransactionCount(
+          ownerAddr,
+          atBlock: const BlockNum.pending(),
+        );
+        final gasLimit = await client.estimateGas(
+          sender: ownerAddr,
+          to: tokenAddr,
+          data: data,
+          gasPrice: gasPrice,
+        );
+        return EvmTransactionService.broadcastLegacy(
+          client: client,
+          account: account,
+          chainId: blockchain.activeChain.chainId,
+          to: tokenAddr,
+          valueWei: BigInt.zero,
+          gasPriceWei: gasPrice.getInWei,
+          gasLimit: gasLimit.toInt(),
+          data: data,
+          nonce: nonce,
+        );
+      })().timeout(const Duration(seconds: 30));
 
       return TokenApprovalResult(
         approvalSatisfied: true,

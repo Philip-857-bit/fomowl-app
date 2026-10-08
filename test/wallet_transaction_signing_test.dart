@@ -12,6 +12,9 @@ import 'package:web3dart/web3dart.dart';
 
 import 'package:fomowl_wallet/services/wallet_service.dart';
 import 'package:fomowl_wallet/services/evm_transaction_service.dart';
+import 'package:fomowl_wallet/services/token_approval_service.dart';
+import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 
 const _key = '1ab42cc412b618bdea3a599e3c9bae199ebf030895b039e9db1e30dafb12b727';
@@ -46,11 +49,12 @@ class _Wallet extends WalletService {
 }
 
 class _Rpc {
-  _Rpc(this.expectedData) {
+  _Rpc(this.expectedData, {this.allowance = 0}) {
     client = Web3Client('https://rpc.invalid', MockClient(_handle));
   }
 
   final String expectedData;
+  final int allowance;
   final List<String> methods = [];
   String? rawTransaction;
   late final Web3Client client;
@@ -62,6 +66,11 @@ class _Rpc {
     methods.add(method);
     final Object result;
     switch (method) {
+      case 'eth_call':
+        final tx = params.first as Map<String, dynamic>;
+        expect((tx['to'] as String).toLowerCase(), _contract);
+        expect(tx['data'], '0xdd62ed3e$_senderWord$_recipientWord');
+        result = '0x${allowance.toRadixString(16).padLeft(64, '0')}';
       case 'eth_gasPrice':
         result = '0x3b9aca00';
       case 'eth_estimateGas':
@@ -119,6 +128,86 @@ Future<String> _referenceTransaction(
 
 void main() {
   setUpAll(() async => RustLib.init());
+
+  const token = Token(
+    symbol: 'TST',
+    name: 'Test token',
+    contractAddress: _contract,
+    balance: 1,
+    valueUsd: 1,
+    changePercent24h: 0,
+  );
+
+  for (final allowance in [0, 1000]) {
+    test(
+      'approval preserves exact amount and skips signing when allowance=$allowance',
+      () async {
+        const data =
+            '0x095ea7b3$_recipientWord'
+            '00000000000000000000000000000000000000000000000000000000000003e8';
+        final rpc = _Rpc(data, allowance: allowance);
+        addTearDown(rpc.client.dispose);
+        final blockchain = BlockchainService();
+        addTearDown(blockchain.dispose);
+        var callbacks = 0;
+        final result =
+            await TokenApprovalService(
+              walletService: _Wallet(rpc.client),
+              web3ClientFactory: (_) => rpc.client,
+            ).ensureApproval(
+              token: token,
+              amountWei: '1000',
+              ownerAddress: _sender,
+              blockchain: blockchain,
+              allowanceTarget: _recipient,
+              onApprovalNeeded: () => callbacks++,
+            );
+        expect(result.error, isNull);
+        expect(result.approvalSatisfied, isTrue);
+        expect(result.approvalSubmitted, allowance == 0);
+        expect(callbacks, allowance == 0 ? 1 : 0);
+        if (allowance == 0) {
+          expect(result.transactionHash, _hash);
+          expect(
+            rpc.rawTransaction,
+            await _referenceTransaction(data, gasLimit: 50000),
+          );
+          expect(rpc.methods, [
+            'eth_call',
+            'eth_gasPrice',
+            'eth_getTransactionCount',
+            'eth_estimateGas',
+            'eth_sendRawTransaction',
+          ]);
+        } else {
+          expect(result.transactionHash, isNull);
+          expect(rpc.rawTransaction, isNull);
+          expect(rpc.methods, ['eth_call']);
+        }
+      },
+    );
+  }
+
+  test('approval refuses a key that does not belong to its owner', () async {
+    final rpc = _Rpc('');
+    addTearDown(rpc.client.dispose);
+    final blockchain = BlockchainService();
+    addTearDown(blockchain.dispose);
+    final result =
+        await TokenApprovalService(
+          walletService: _Wallet(rpc.client, key: '46' * 32),
+          web3ClientFactory: (_) => rpc.client,
+        ).ensureApproval(
+          token: token,
+          amountWei: '1000',
+          ownerAddress: _sender,
+          blockchain: blockchain,
+          allowanceTarget: _recipient,
+        );
+    expect(result.approvalSatisfied, isFalse);
+    expect(result.error, contains('does not match the selected wallet'));
+    expect(rpc.methods, ['eth_call']);
+  });
 
   for (final isNative in [true, false]) {
     test(

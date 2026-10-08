@@ -23,7 +23,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Transaction assertions | Exact calldata and complete signed bytes | `f3e2a26` |
 | Modular core foundation | Safe derivation cleanup, feature selection, host entropy, capability CI | `a4f4bb5` |
 | NFT transfers | ERC-721/ERC-1155 Rust signatures, sender verification, mocked production RPC coverage | `1e27cfb` |
-| EVM adapter module | Shared signer verification, pending nonce, and canonical raw broadcast | `refactor(wallet): isolate shared EVM signing adapter` |
+| EVM adapter module | Shared signer verification, pending nonce, and canonical raw broadcast | `5fce8af` |
+| Token approvals | Exact-amount approvals signed in Rust; sufficient allowance skips signing | `feat(wallet): migrate token approvals to Rust signing` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.

@@ -30,12 +30,13 @@ class EvmTransactionService {
   static Future<EvmSigningAccount> verifyAccount({
     required EthereumAddress sender,
     required String privateKeyHex,
+    String mismatchMessage = 'Active EVM address does not match private key',
   }) async {
     final derivedAddress = await NativeCrypto.deriveEvmAddressFromPrivateKey(
       privateKeyHex,
     );
     if (derivedAddress.toLowerCase() != sender.hex.toLowerCase()) {
-      throw Exception('Active EVM address does not match private key');
+      throw Exception(mismatchMessage);
     }
     return EvmSigningAccount._(sender, privateKeyHex);
   }
