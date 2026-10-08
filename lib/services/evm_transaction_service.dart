@@ -51,15 +51,50 @@ class EvmTransactionService {
     required int gasLimit,
     Uint8List? data,
     int? nonce,
+  }) => broadcastTransaction(
+    client: client,
+    account: account,
+    chainId: chainId,
+    to: to,
+    valueWei: valueWei,
+    gasPriceWei: gasPriceWei,
+    gasLimit: gasLimit,
+    data: data,
+    nonce: nonce,
+  );
+
+  static Future<String> broadcastTransaction({
+    required Web3Client client,
+    required EvmSigningAccount account,
+    required int chainId,
+    EthereumAddress? to,
+    required BigInt valueWei,
+    required int gasLimit,
+    Uint8List? data,
+    int? nonce,
+    BigInt? gasPriceWei,
+    BigInt? maxFeePerGasWei,
+    BigInt? maxPriorityFeePerGasWei,
   }) async {
+    final typed = maxFeePerGasWei != null || maxPriorityFeePerGasWei != null;
+    final fees = [gasPriceWei, maxFeePerGasWei, maxPriorityFeePerGasWei];
     if (chainId <= 0 ||
         (nonce != null && nonce < 0) ||
         gasLimit <= 0 ||
-        gasPriceWei < BigInt.zero ||
-        gasPriceWei.bitLength > 128 ||
         valueWei < BigInt.zero ||
-        valueWei.bitLength > 256) {
-      throw ArgumentError('Invalid legacy EVM transaction fields');
+        valueWei.bitLength > 256 ||
+        fees.any(
+          (fee) => fee != null && (fee < BigInt.zero || fee.bitLength > 128),
+        ) ||
+        (typed
+            ? gasPriceWei != null ||
+                  maxFeePerGasWei == null ||
+                  maxPriorityFeePerGasWei == null
+            : gasPriceWei == null)) {
+      throw ArgumentError('Invalid EVM transaction fields or fee policy');
+    }
+    if (typed && maxPriorityFeePerGasWei! > maxFeePerGasWei!) {
+      throw ArgumentError('Priority fee exceeds maximum fee per gas');
     }
     final resolvedNonce =
         nonce ??
@@ -67,15 +102,17 @@ class EvmTransactionService {
           account.address,
           atBlock: const BlockNum.pending(),
         );
-    final rawHex = await NativeCrypto.signLegacyEvmTransaction(
+    final rawHex = await NativeCrypto.signEvmTransaction(
       privateKeyHex: account._privateKeyHex,
       chainId: chainId,
       nonce: resolvedNonce,
-      gasPriceWei: gasPriceWei,
       gasLimit: gasLimit,
-      toAddress: to.hex,
+      toAddress: to?.hex,
       valueWei: valueWei,
       dataHex: data == null ? '' : '0x${HEX.encode(data)}',
+      gasPriceWei: gasPriceWei,
+      maxFeePerGasWei: maxFeePerGasWei,
+      maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
     );
     return client.sendRawTransaction(web3_crypto.hexToBytes(rawHex));
   }

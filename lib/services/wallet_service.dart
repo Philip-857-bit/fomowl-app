@@ -999,30 +999,64 @@ class WalletService {
     int? gasLimit,
     int? nonce,
   }) async {
-    final credentials = await getCredentials();
+    final typed = maxFeePerGasWei != null || maxPriorityFeePerGasWei != null;
+    if (typed && gasPriceWei != null) {
+      throw ArgumentError('Legacy and EIP-1559 fees must not be mixed');
+    }
+    final account = await _activeEvmSigningAccount();
     final client = _clientForRpc(rpcUrl);
     final data = _decodeHexBytes(dataHex);
-
-    return client.sendTransaction(
-      credentials,
-      Transaction(
-        to: (toAddress == null || toAddress.isEmpty)
-            ? null
-            : EthereumAddress.fromHex(toAddress),
-        value: valueInWei == null ? null : EtherAmount.inWei(valueInWei),
-        data: data,
-        gasPrice: gasPriceWei == null ? null : EtherAmount.inWei(gasPriceWei),
-        maxFeePerGas: maxFeePerGasWei == null
-            ? null
-            : EtherAmount.inWei(maxFeePerGasWei),
-        maxPriorityFeePerGas: maxPriorityFeePerGasWei == null
-            ? null
-            : EtherAmount.inWei(maxPriorityFeePerGasWei),
-        maxGas: gasLimit,
-        nonce: nonce,
-      ),
+    final to = toAddress == null || toAddress.isEmpty
+        ? null
+        : EthereumAddress.fromHex(toAddress);
+    final resolvedGasPrice = typed
+        ? null
+        : gasPriceWei ?? (await client.getGasPrice()).getInWei;
+    final priority = typed
+        ? maxPriorityFeePerGasWei ?? BigInt.from(1000000000)
+        : null;
+    BigInt? maxFee = maxFeePerGasWei;
+    if (typed && maxFee == null) {
+      final block = await client.getBlockInformation();
+      final baseFee = block.baseFeePerGas;
+      if (baseFee == null) {
+        throw Exception('RPC did not provide an EIP-1559 base fee');
+      }
+      maxFee = baseFee.getInWei * BigInt.two + priority!;
+    }
+    final resolvedNonce =
+        nonce ??
+        await client.getTransactionCount(
+          account.address,
+          atBlock: const BlockNum.pending(),
+        );
+    final resolvedGasLimit =
+        gasLimit ??
+        (await client.estimateGas(
+          sender: account.address,
+          to: to,
+          value: valueInWei == null ? null : EtherAmount.inWei(valueInWei),
+          data: data,
+          gasPrice: resolvedGasPrice == null
+              ? null
+              : EtherAmount.inWei(resolvedGasPrice),
+          maxFeePerGas: maxFee == null ? null : EtherAmount.inWei(maxFee),
+          maxPriorityFeePerGas: priority == null
+              ? null
+              : EtherAmount.inWei(priority),
+        )).toInt();
+    return EvmTransactionService.broadcastTransaction(
+      client: client,
+      account: account,
       chainId: chainId,
-      fetchChainIdFromNetworkId: false,
+      to: to,
+      valueWei: valueInWei ?? BigInt.zero,
+      gasLimit: resolvedGasLimit,
+      data: data,
+      nonce: resolvedNonce,
+      gasPriceWei: resolvedGasPrice,
+      maxFeePerGasWei: maxFee,
+      maxPriorityFeePerGasWei: priority,
     );
   }
 

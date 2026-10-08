@@ -49,12 +49,13 @@ class _Wallet extends WalletService {
 }
 
 class _Rpc {
-  _Rpc(this.expectedData, {this.allowance = 0}) {
+  _Rpc(this.expectedData, {this.allowance = 0, this.baseFeeAvailable = true}) {
     client = Web3Client('https://rpc.invalid', MockClient(_handle));
   }
 
   final String expectedData;
   final int allowance;
+  final bool baseFeeAvailable;
   final List<String> methods = [];
   String? rawTransaction;
   late final Web3Client client;
@@ -66,6 +67,12 @@ class _Rpc {
     methods.add(method);
     final Object result;
     switch (method) {
+      case 'eth_getBlockByNumber':
+        expect(params, ['latest', true]);
+        result = {
+          'timestamp': '0x0',
+          if (baseFeeAvailable) 'baseFeePerGas': '0x3b9aca00',
+        };
       case 'eth_call':
         final tx = params.first as Map<String, dynamic>;
         expect((tx['to'] as String).toLowerCase(), _contract);
@@ -101,6 +108,9 @@ Future<String> _referenceTransaction(
   String data, {
   int gasLimit = 57500,
   BigInt? valueWei,
+  String? toAddress = _contract,
+  BigInt? maxFeePerGasWei,
+  BigInt? maxPriorityFeePerGasWei,
 }) async {
   final client = Web3Client(
     'https://rpc.invalid',
@@ -111,16 +121,24 @@ Future<String> _referenceTransaction(
       EthPrivateKey.fromHex(_key),
       Transaction(
         nonce: 7,
-        gasPrice: EtherAmount.inWei(BigInt.from(1000000000)),
+        gasPrice: maxFeePerGasWei == null
+            ? EtherAmount.inWei(BigInt.from(1000000000))
+            : null,
+        maxFeePerGas: maxFeePerGasWei == null
+            ? null
+            : EtherAmount.inWei(maxFeePerGasWei),
+        maxPriorityFeePerGas: maxPriorityFeePerGasWei == null
+            ? null
+            : EtherAmount.inWei(maxPriorityFeePerGasWei),
         maxGas: gasLimit,
-        to: EthereumAddress.fromHex(_contract),
+        to: toAddress == null ? null : EthereumAddress.fromHex(toAddress),
         value: EtherAmount.inWei(valueWei ?? BigInt.zero),
         data: Uint8List.fromList(HEX.decode(data.substring(2))),
       ),
       chainId: 1,
       fetchChainIdFromNetworkId: false,
     );
-    return '0x${HEX.encode(bytes)}';
+    return '0x${maxFeePerGasWei == null ? '' : '02'}${HEX.encode(bytes)}';
   } finally {
     await client.dispose();
   }
@@ -128,6 +146,118 @@ Future<String> _referenceTransaction(
 
 void main() {
   setUpAll(() async => RustLib.init());
+
+  for (final typed in [false, true]) {
+    for (final creation in [false, true]) {
+      test(
+        'generic production request signs ${typed ? 'typed' : 'legacy'} ${creation ? 'creation' : 'call'}',
+        () async {
+          const data = '0x60006000';
+          final rpc = _Rpc(data);
+          addTearDown(rpc.client.dispose);
+          final maxFee = typed ? BigInt.from(30000000000) : null;
+          final priority = typed ? BigInt.from(1000000000) : null;
+          final result = await _Wallet(rpc.client).sendRawTransactionRequest(
+            rpcUrl: 'https://rpc.invalid',
+            chainId: 1,
+            toAddress: creation ? null : _contract,
+            valueInWei: BigInt.zero,
+            dataHex: data,
+            gasLimit: 60000,
+            nonce: 7,
+            gasPriceWei: typed ? null : BigInt.from(1000000000),
+            maxFeePerGasWei: maxFee,
+            maxPriorityFeePerGasWei: priority,
+          );
+          expect(result, _hash);
+          expect(
+            rpc.rawTransaction,
+            await _referenceTransaction(
+              data,
+              gasLimit: 60000,
+              toAddress: creation ? null : _contract,
+              maxFeePerGasWei: maxFee,
+              maxPriorityFeePerGasWei: priority,
+            ),
+          );
+          expect(rpc.methods, ['eth_sendRawTransaction']);
+        },
+      );
+    }
+  }
+
+  test('generic request rejects mixed fee policies before RPC', () async {
+    final rpc = _Rpc('');
+    addTearDown(rpc.client.dispose);
+    await expectLater(
+      _Wallet(rpc.client).sendRawTransactionRequest(
+        rpcUrl: 'https://rpc.invalid',
+        chainId: 1,
+        toAddress: _contract,
+        gasPriceWei: BigInt.one,
+        maxFeePerGasWei: BigInt.two,
+      ),
+      throwsArgumentError,
+    );
+    expect(rpc.methods, isEmpty);
+  });
+
+  for (final typed in [false, true]) {
+    test(
+      'generic request resolves ${typed ? 'EIP-1559' : 'legacy'} missing fees, gas and pending nonce',
+      () async {
+        const data = '0x60006000';
+        final rpc = _Rpc(data);
+        addTearDown(rpc.client.dispose);
+        final priority = typed ? BigInt.from(1000000000) : null;
+        final hash = await _Wallet(rpc.client).sendRawTransactionRequest(
+          rpcUrl: 'https://rpc.invalid',
+          chainId: 1,
+          toAddress: _contract,
+          dataHex: data,
+          valueInWei: BigInt.zero,
+          maxPriorityFeePerGasWei: priority,
+        );
+        expect(hash, _hash);
+        expect(
+          rpc.rawTransaction,
+          await _referenceTransaction(
+            data,
+            gasLimit: 50000,
+            maxFeePerGasWei: typed ? BigInt.from(3000000000) : null,
+            maxPriorityFeePerGasWei: priority,
+          ),
+        );
+        expect(rpc.methods, [
+          typed ? 'eth_getBlockByNumber' : 'eth_gasPrice',
+          'eth_getTransactionCount',
+          'eth_estimateGas',
+          'eth_sendRawTransaction',
+        ]);
+      },
+    );
+  }
+
+  test('missing EIP-1559 base fee fails closed without broadcast', () async {
+    final rpc = _Rpc('', baseFeeAvailable: false);
+    addTearDown(rpc.client.dispose);
+    await expectLater(
+      _Wallet(rpc.client).sendRawTransactionRequest(
+        rpcUrl: 'https://rpc.invalid',
+        chainId: 1,
+        toAddress: _contract,
+        maxPriorityFeePerGasWei: BigInt.from(1000000000),
+      ),
+      throwsA(
+        isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains('base fee'),
+        ),
+      ),
+    );
+    expect(rpc.methods, ['eth_getBlockByNumber']);
+  });
 
   const token = Token(
     symbol: 'TST',

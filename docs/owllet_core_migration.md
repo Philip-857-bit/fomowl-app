@@ -26,7 +26,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | EVM adapter module | Shared signer verification, pending nonce, and canonical raw broadcast | `5fce8af` |
 | Token approvals | Exact-amount approvals signed in Rust; sufficient allowance skips signing | `5e456a0` |
 | Typed EVM engine | Explicit legacy/EIP-1559 fee policy and contract creation | `c1d1daf` |
-| Typed EVM bridge | General signing API, fee validation, regenerated FRB, creation/type-2 fixtures | `feat(wallet): expose typed EVM signing through FRB` |
+| Typed EVM bridge | General signing API, fee validation, regenerated FRB, creation/type-2 fixtures | `44fc857` |
+| Generic EVM requests | Legacy/type-2 calls and creation through the shared signer, host fee discovery retained | `feat(wallet): migrate generic EVM requests to Rust signing` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.
