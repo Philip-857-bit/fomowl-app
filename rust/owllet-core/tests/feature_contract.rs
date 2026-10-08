@@ -62,6 +62,19 @@ fn evm_feature_preserves_address_and_signing() {
     );
 }
 
+#[cfg(feature = "evm")]
+#[test]
+fn evm_public_key_metadata_preserves_unprefixed_xy_format() {
+    let key = format!("{:064x}", 1);
+    assert_eq!(
+        owllet_core::derive_evm_public_key_from_private_key(&key).expect("public key"),
+        concat!(
+            "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+            "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8"
+        )
+    );
+}
+
 #[cfg(feature = "solana")]
 #[test]
 fn solana_feature_preserves_address_and_signing() {

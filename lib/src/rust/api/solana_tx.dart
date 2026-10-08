@@ -6,20 +6,6 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `parse_pubkey`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `RelayAccountMeta`, `RelayInstruction`, `RelayLookupTable`
-
-/// Compile Relay instruction JSON into a signed Solana v0 transaction.
-///
-/// * `payer` — base58 fee payer (the user's wallet).
-/// * `recent_blockhash` — base58 blockhash fetched just before signing.
-/// * `instructions_json` — JSON array: `[{programId, data, keys: [{pubkey,
-///   isSigner, isWritable}]}]`.
-/// * `lookup_tables_json` — JSON array of resolved tables: `[{key,
-///   addresses: [base58...]}]` (pass `[]` when the quote uses none).
-/// * `private_key_bytes` — 32-byte seed or 64-byte keypair.
-///
-/// Returns the base64-encoded signed transaction ready to broadcast.
 Future<String> buildAndSignSolanaTransaction({
   required String payer,
   required String recentBlockhash,
@@ -34,13 +20,6 @@ Future<String> buildAndSignSolanaTransaction({
   privateKeyBytes: privateKeyBytes,
 );
 
-/// Sign a Jupiter (or other) unsigned Solana transaction.
-///
-/// `serialized_tx_base64` is a full wire-format VersionedTransaction (legacy
-/// or v0). If deserialize fails and the first byte has the v0 prefix bit,
-/// the payload is treated as a message-only VersionedMessage.
-///
-/// The matching required-signer slot is overwritten; extra signatures stay.
 Future<String> signSerializedSolanaTransaction({
   required String serializedTxBase64,
   required String expectedSigner,

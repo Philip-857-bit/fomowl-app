@@ -50,6 +50,11 @@ pub fn derive_evm_address_from_private_key(private_key_hex: String) -> Result<St
     owllet_core::accounts::derive_evm_address_from_private_key(&private_key_hex)
 }
 
+pub fn derive_evm_public_key_from_private_key(private_key_hex: String) -> Result<String, String> {
+    let private_key_hex = Zeroizing::new(private_key_hex);
+    owllet_core::accounts::derive_evm_public_key_from_private_key(&private_key_hex)
+}
+
 pub fn derive_tron_private_key_from_seed(
     seed: Vec<u8>,
     derivation_index: u32,

@@ -37,7 +37,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -488989270;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 65421731;
 
 // Section: executor
 
@@ -190,6 +190,41 @@ fn wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(
                     let output_ok = crate::api::bip32::derive_evm_private_key_from_seed(
                         api_seed,
                         api_derivation_index,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "derive_evm_public_key_from_private_key",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_private_key_hex = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::bip32::derive_evm_public_key_from_private_key(
+                        api_private_key_hex,
                     )?;
                     Ok(output_ok)
                 })())
@@ -1094,87 +1129,93 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__api__argon2__derive_passcode_hash_argon2_impl(
+        5 => wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__api__bip32__derive_solana_address_from_private_key_impl(
+        6 => wire__crate__api__argon2__derive_passcode_hash_argon2_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        7 => wire__crate__api__bip32__derive_solana_address_from_seed_impl(
+        7 => wire__crate__api__bip32__derive_solana_address_from_private_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__api__bip32__derive_solana_private_key_from_seed_impl(
+        8 => wire__crate__api__bip32__derive_solana_address_from_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__api__bip32__derive_tron_address_from_private_key_impl(
+        9 => wire__crate__api__bip32__derive_solana_private_key_from_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__api__bip32__derive_tron_address_from_seed_impl(
+        10 => wire__crate__api__bip32__derive_tron_address_from_private_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__bip32__derive_tron_private_key_from_seed_impl(
+        11 => wire__crate__api__bip32__derive_tron_address_from_seed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => {
+        12 => wire__crate__api__bip32__derive_tron_private_key_from_seed_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        13 => {
             wire__crate__api__bip32__derive_wallet_from_seed_impl(port, ptr, rust_vec_len, data_len)
         }
-        13 => wire__crate__api__bip39__generate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__bip39__mnemonic_to_seed_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__bip32__normalize_solana_private_key_impl(
+        14 => wire__crate__api__bip39__generate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__bip39__mnemonic_to_seed_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__bip32__normalize_solana_private_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => {
+        19 => {
             wire__crate__api__evm_tx__sign_evm_transaction_impl(port, ptr, rust_vec_len, data_len)
         }
-        19 => wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl(
+        20 => wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__secp256k1_api__sign_personal_message_impl(
+        21 => wire__crate__api__secp256k1_api__sign_personal_message_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl(
+        22 => wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__bip32__sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__bip32__sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
-        24 => {
+        23 => wire__crate__api__bip32__sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__bip32__sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
+        25 => {
             wire__crate__api__secp256k1_api__sign_typed_data_impl(port, ptr, rust_vec_len, data_len)
         }
-        25 => wire__crate__api__bip39__validate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__bip39__validate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1187,7 +1228,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        14 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

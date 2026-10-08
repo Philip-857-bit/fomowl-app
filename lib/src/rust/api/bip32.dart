@@ -39,6 +39,12 @@ Future<String> deriveEvmAddressFromPrivateKey({
   privateKeyHex: privateKeyHex,
 );
 
+Future<String> deriveEvmPublicKeyFromPrivateKey({
+  required String privateKeyHex,
+}) => RustLib.instance.api.crateApiBip32DeriveEvmPublicKeyFromPrivateKey(
+  privateKeyHex: privateKeyHex,
+);
+
 Future<String> deriveTronPrivateKeyFromSeed({
   required List<int> seed,
   required int derivationIndex,

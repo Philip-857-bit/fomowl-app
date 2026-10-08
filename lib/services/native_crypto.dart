@@ -123,6 +123,12 @@ class NativeCrypto {
     }
   }
 
+  /// Derive the existing unprefixed 64-byte EVM public-key metadata as hex.
+  static Future<String> deriveEvmPublicKeyFromPrivateKey(
+    String privateKeyHex,
+  ) =>
+      rust_bip32.deriveEvmPublicKeyFromPrivateKey(privateKeyHex: privateKeyHex);
+
   /// Derive a Solana Ed25519 private key seed at m/44'/501'/{index}'/0'.
   static Future<Uint8List> deriveSolanaPrivateKeyFromSeed(
     Uint8List seed,

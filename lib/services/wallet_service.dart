@@ -240,16 +240,17 @@ class WalletService {
       derivationIndex,
     );
 
-    // Create credentials from private key
-    final credentials = EthPrivateKey.fromHex(privateKey);
-
-    // Get address and public key from web3dart for existing EVM call sites.
-    final address = credentials.address.hexEip55;
+    // Verify the derived key against its account address inside the shared core.
+    final address = await NativeCrypto.deriveEvmAddressFromPrivateKey(
+      privateKey,
+    );
     if (address.toLowerCase() != evmAddress.toLowerCase()) {
       throw Exception('Derived EVM address mismatch');
     }
 
-    final publicKey = HEX.encode(credentials.encodedPublicKey);
+    final publicKey = await NativeCrypto.deriveEvmPublicKeyFromPrivateKey(
+      privateKey,
+    );
 
     return _DerivedWalletMaterial(
       derivationIndex: derivationIndex,
@@ -359,11 +360,9 @@ class WalletService {
         throw Exception('Invalid private key format: must be hexadecimal');
       }
 
-      // Create credentials from private key
-      final credentials = EthPrivateKey.fromHex(privateKey);
-
-      // Get address
-      final address = credentials.address.hexEip55;
+      final address = await NativeCrypto.deriveEvmAddressFromPrivateKey(
+        privateKey,
+      );
 
       await _ensureFamilyAddressNotManaged(ChainFamily.evm, address);
 

@@ -34,7 +34,8 @@ preserve existing wallet keys, derivation paths, addresses, and public call APIs
 | Solana transaction core | v0 building and serialized signer-slot logic extracted; owned FFI secret inputs wiped | `f8c3af7` |
 | Solana signer metadata | Reject unavailable builder signers and excess serialized signature slots | `226c3f2` |
 | Authoritative typed-data signing | Remove Dart fallback; CoW order/cancellation and nested permit signatures proven compatible | `81370bb` |
-| Owned secret inputs | Drop-based cleanup of adapter mnemonic, seed, import-key and signing-key inputs | `security(wallet): wipe owned Rust adapter secret inputs` |
+| Owned secret inputs | Drop-based cleanup of adapter mnemonic, seed, import-key and signing-key inputs | `1107531` |
+| EVM metadata ownership | Derived/imported addresses and unprefixed 64-byte public keys come from Rust | `refactor(wallet): derive EVM account metadata in Rust` |
 
 Foundation validation: 26 parent Rust tests, 22 core unit tests plus 4 public-API
 contract tests, 15 Dart/FRB tests, Rust formatting/Clippy, and Flutter analysis.

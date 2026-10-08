@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 68 files · ~471,865 words
+- 68 files · ~472,031 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 363 nodes · 460 edges · 72 communities detected
+- 367 nodes · 466 edges · 72 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -84,7 +84,7 @@
 - [[_COMMUNITY_Community 71|Community 71]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `pde_ffi_dispatcher_primary_impl()` - 25 edges
+1. `pde_ffi_dispatcher_primary_impl()` - 26 edges
 2. `MainActivity` - 10 edges
 3. `sign_legacy_evm_transaction()` - 6 edges
 4. `eip155_request()` - 6 edges
@@ -102,10 +102,10 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.18
-Nodes (27): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_seed_impl() (+19 more)
+Nodes (28): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+20 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (18): derive_evm_private_key_from_seed(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_private_key_from_seed(), derive_wallet_from_seed(), derives_known_family_addresses_from_seed(), fixture_seed(), normalize_solana_private_key() (+10 more)
 
 ### Community 2 - "Community 2"
@@ -146,31 +146,31 @@ Nodes (8): general_adapter_preserves_official_legacy_fixture(), general_adapter_
 
 ### Community 11 - "Community 11"
 Cohesion: 0.48
-Nodes (4): Ed25519Slip10Key, slip10_ed25519_derive_child(), slip10_ed25519_master_key(), slip10_key_from_hmac()
+Nodes (5): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), evm_address_from_public_key(), to_eip55_address()
 
 ### Community 12 - "Community 12"
+Cohesion: 0.48
+Nodes (4): Ed25519Slip10Key, slip10_ed25519_derive_child(), slip10_ed25519_master_key(), slip10_key_from_hmac()
+
+### Community 13 - "Community 13"
+Cohesion: 0.29
+Nodes (0):
+
+### Community 14 - "Community 14"
 Cohesion: 0.57
 Nodes (5): preserves_extra_signature_slot(), rejects_wrong_expected_signer(), sign_serialized_solana_transaction(), signs_legacy_one_sig_round_trip(), unsigned_legacy()
 
-### Community 13 - "Community 13"
+### Community 15 - "Community 15"
 Cohesion: 0.33
 Nodes (2): digest_files(), sha256_git_blob()
 
-### Community 14 - "Community 14"
+### Community 16 - "Community 16"
 Cohesion: 0.62
 Nodes (6): download_artifact(), fetch_artifacts(), gh_json(), main(), regenerate_manifest(), run()
 
-### Community 15 - "Community 15"
+### Community 17 - "Community 17"
 Cohesion: 0.47
 Nodes (2): AppDelegate, FlutterAppDelegate
-
-### Community 16 - "Community 16"
-Cohesion: 0.6
-Nodes (5): derive_evm_address_from_private_key(), derive_evm_address_from_seed(), derive_evm_private_key_from_seed(), evm_address_from_public_key(), to_eip55_address()
-
-### Community 17 - "Community 17"
-Cohesion: 0.33
-Nodes (0):
 
 ### Community 18 - "Community 18"
 Cohesion: 0.33
@@ -458,7 +458,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `LegacyEvmTransactionRequest` to the rest of the system?**
   _11 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.14 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._
 - **Should `Community 4` be split into smaller, more focused modules?**

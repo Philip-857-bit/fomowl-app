@@ -116,6 +116,22 @@ void main() {
     );
   });
 
+  test(
+    'Rust public-key metadata preserves web3dart unprefixed XY bytes',
+    () async {
+      const key =
+          '1ab42cc412b618bdea3a599e3c9bae199ebf030895b039e9db1e30dafb12b727';
+      final publicKey = await NativeCrypto.deriveEvmPublicKeyFromPrivateKey(
+        key,
+      );
+      expect(
+        publicKey,
+        HEX.encode(EthPrivateKey.fromHex(key).encodedPublicKey),
+      );
+      expect(publicKey.length, 128);
+    },
+  );
+
   test('normalizeMnemonic handles numbered and punctuated phrase pastes', () {
     final walletService = WalletService();
     final normalized = walletService.normalizeMnemonic(

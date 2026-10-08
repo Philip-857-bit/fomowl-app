@@ -26,6 +26,13 @@ pub fn derive_evm_address_from_private_key(private_key_hex: &str) -> Result<Stri
     Ok(evm_address_from_public_key(&public_key))
 }
 
+/// Ethereum's uncompressed X/Y public key, without the SEC1 0x04 prefix.
+/// Matches the existing 64-byte account metadata format used by the app.
+pub fn derive_evm_public_key_from_private_key(private_key_hex: &str) -> Result<String, String> {
+    let public_key = public_key_from_private_key(private_key_hex)?;
+    Ok(hex::encode(&public_key.serialize_uncompressed()[1..]))
+}
+
 pub fn evm_address_from_public_key(public_key: &PublicKey) -> String {
     let uncompressed = public_key.serialize_uncompressed();
     let hash = Keccak256::digest(&uncompressed[1..]);
