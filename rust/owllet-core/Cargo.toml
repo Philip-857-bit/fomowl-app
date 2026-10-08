@@ -3,21 +3,31 @@ name = "owllet-core"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+# Preserve the existing Flutter adapter API. Other hosts can opt into less.
+default = ["evm", "solana", "tron", "mnemonic-generation"]
+evm = ["secp256k1", "dep:alloy", "dep:ethers-core", "dep:serde_json", "dep:sha3"]
+solana = ["dep:bs58", "dep:hmac", "dep:sha2", "dep:solana-keypair", "dep:solana-signer"]
+tron = ["secp256k1", "dep:bs58", "dep:sha2", "dep:sha3"]
+# Shared primitive layer for EVM and TRON; also usable by native Rust hosts.
+secp256k1 = ["dep:bip32", "dep:secp256k1"]
+mnemonic-generation = ["dep:rand"]
+
 [dependencies]
-alloy = { version = "2.0.5", default-features = false, features = ["consensus", "signer-local", "network", "eips"] }
-bip32 = "0.5.3"
+alloy = { version = "2.0.5", default-features = false, features = ["consensus", "signer-local", "network", "eips"], optional = true }
+bip32 = { version = "0.5.3", optional = true }
 bip39 = "2.2.2"
-bs58 = "0.5.1"
-ethers-core = { version = "2.0.14", default-features = false }
+bs58 = { version = "0.5.1", optional = true }
+ethers-core = { version = "2.0.14", default-features = false, optional = true }
 hex = "0.4.3"
-hmac = "0.12.1"
-rand = "0.10.0"
-secp256k1 = { version = "0.31.1", features = ["recovery"] }
-serde_json = "1.0"
-sha2 = "0.10.9"
-sha3 = "0.10.8"
-solana-keypair = "3.0.0"
-solana-signer = "3.0.0"
+hmac = { version = "0.12.1", optional = true }
+rand = { version = "0.10.0", optional = true }
+secp256k1 = { version = "0.31.1", features = ["recovery"], optional = true }
+serde_json = { version = "1.0", optional = true }
+sha2 = { version = "0.10.9", optional = true }
+sha3 = { version = "0.10.8", optional = true }
+solana-keypair = { version = "3.0.0", optional = true }
+solana-signer = { version = "3.0.0", optional = true }
 zeroize = "1.8.2"
 
 [dev-dependencies]

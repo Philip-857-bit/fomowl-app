@@ -1,14 +1,24 @@
 use bip39::{Language, Mnemonic};
+#[cfg(feature = "mnemonic-generation")]
 use rand::Rng;
 
 /// Generates a new 12-word BIP-39 English mnemonic phrase (128 bits of entropy).
 ///
 /// Uses `rand::rng()` (a cryptographically secure PRNG seeded from OS entropy)
 /// to produce 16 bytes of entropy.
+#[cfg(feature = "mnemonic-generation")]
 pub fn generate_mnemonic() -> String {
-    let mut entropy = [0u8; 16];
-    rand::rng().fill_bytes(&mut entropy);
-    let mnemonic = Mnemonic::from_entropy_in(Language::English, &entropy)
+    let mut entropy = zeroize::Zeroizing::new([0u8; 16]);
+    rand::rng().fill_bytes(&mut *entropy);
+    generate_mnemonic_from_entropy(&entropy)
+}
+
+/// Generates a 12-word English mnemonic from host-supplied 128-bit entropy.
+///
+/// The host must supply cryptographically secure entropy and owns its cleanup.
+/// This deterministic function performs no OS or browser calls.
+pub fn generate_mnemonic_from_entropy(entropy: &[u8; 16]) -> String {
+    let mnemonic = Mnemonic::from_entropy_in(Language::English, entropy)
         .expect("16-byte (128-bit) entropy is always a valid BIP-39 entropy size");
     mnemonic.to_string()
 }
@@ -39,6 +49,7 @@ mod tests {
         "5eb00bbddcf069084889a8ab9155568165f5c453ccb85e70811aaed6f6da5fc19a5ac40b389cd370d086206dec8aa6c43daea6690f20ad3d8d48b2d2ce9e38e4";
 
     #[test]
+    #[cfg(feature = "mnemonic-generation")]
     fn test_generate_mnemonic_structure() {
         let mnemonic = generate_mnemonic();
         let words: Vec<&str> = mnemonic.split_whitespace().collect();
@@ -51,6 +62,11 @@ mod tests {
             validate_mnemonic(&mnemonic),
             "Generated mnemonic must be valid"
         );
+    }
+
+    #[test]
+    fn host_entropy_matches_known_bip39_vector() {
+        assert_eq!(generate_mnemonic_from_entropy(&[0u8; 16]), KNOWN_MNEMONIC);
     }
 
     #[test]

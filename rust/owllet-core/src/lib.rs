@@ -1,9 +1,14 @@
 //! `owllet-core` is a reusable, platform-neutral Rust wallet core.
 //!
-//! Note on future WASM target:
-//! `owllet-core` is intended to be reusable by a future browser WASM adapter.
-//! Browser entropy configuration for rand/getrandom will be handled by that
-//! adapter rather than enabling browser-specific dependencies in the platform-neutral core.
+//! Mobile, desktop, browser, and embedded-wallet hosts share this crate through
+//! separate platform adapters. RPC, storage, UI, and provider credentials belong
+//! outside the core. Chain features are opt-in when default features are disabled.
+//!
+//! Browser/device adapters can supply secure entropy to
+//! [`generate_mnemonic_from_entropy`] without enabling the native RNG feature.
+//! This crate currently requires `std`; WASM and `no_std` support are not certified.
+
+#![forbid(unsafe_code)]
 
 pub mod accounts;
 pub mod mnemonic;
@@ -12,10 +17,15 @@ pub mod transactions;
 
 pub use accounts::*;
 pub use mnemonic::*;
-pub use signing::{
-    decode_personal_sign_payload, sign_digest, sign_digest_with_recovery_id, sign_personal_message,
-    sign_solana_message, sign_tron_raw_hash, sign_typed_data,
-};
+#[cfg(feature = "solana")]
+pub use signing::sign_solana_message;
+#[cfg(feature = "tron")]
+pub use signing::sign_tron_raw_hash;
+#[cfg(feature = "evm")]
+pub use signing::{decode_personal_sign_payload, sign_personal_message, sign_typed_data};
+#[cfg(feature = "secp256k1")]
+pub use signing::{sign_digest, sign_digest_with_recovery_id};
+#[cfg(feature = "evm")]
 pub use transactions::{
     sign_legacy_evm_transaction, LegacyEvmTransactionRequest, SignedEvmTransaction,
 };

@@ -40,16 +40,44 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Lint with Clippy (rust_lib_fomowl_wallet)
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
 
       - name: Run full Rust test suite (rust_lib_fomowl_wallet)
-        run: cargo test --all-targets --all-features
+        run: cargo test --locked --all-targets --all-features
 
       - name: Check formatting (owllet-core)
         run: cargo fmt --manifest-path owllet-core/Cargo.toml --all -- --check
 
       - name: Lint with Clippy (owllet-core)
-        run: cargo clippy --manifest-path owllet-core/Cargo.toml --all-targets --all-features -- -D warnings
+        run: cargo clippy --locked --manifest-path owllet-core/Cargo.toml --all-targets --all-features -- -D warnings
 
       - name: Run test suite (owllet-core)
-        run: cargo test --manifest-path owllet-core/Cargo.toml --all-targets --all-features
+        run: cargo test --locked --manifest-path owllet-core/Cargo.toml --all-targets --all-features
+
+  core-features:
+    name: Core features (${{ matrix.features || 'minimal' }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        features: ['', 'mnemonic-generation', 'secp256k1', 'evm', 'solana', 'tron', 'evm,solana', 'evm,tron', 'solana,tron']
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust/owllet-core -> target"
+          key: core-${{ matrix.features }}
+      - name: Test public feature contracts
+        env:
+          CORE_FEATURES: ${{ matrix.features }}
+        run: cargo test --locked --manifest-path owllet-core/Cargo.toml --no-default-features --features "$CORE_FEATURES" --all-targets
+      - name: Lint selected features
+        env:
+          CORE_FEATURES: ${{ matrix.features }}
+        run: cargo clippy --locked --manifest-path owllet-core/Cargo.toml --no-default-features --features "$CORE_FEATURES" --all-targets -- -D warnings

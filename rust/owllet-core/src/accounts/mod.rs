@@ -1,14 +1,20 @@
 pub mod derivation;
+#[cfg(feature = "evm")]
 pub mod evm;
+#[cfg(feature = "solana")]
 pub mod solana;
+#[cfg(feature = "tron")]
 pub mod tron;
 
 pub use derivation::*;
+#[cfg(feature = "evm")]
 pub use evm::*;
+#[cfg(feature = "solana")]
 pub use solana::*;
+#[cfg(feature = "tron")]
 pub use tron::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "evm", feature = "solana", feature = "tron"))]
 mod tests {
     use super::*;
 

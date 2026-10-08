@@ -1,14 +1,22 @@
+#[cfg(feature = "evm")]
 pub mod evm;
+#[cfg(feature = "secp256k1")]
 pub mod secp256k1;
+#[cfg(feature = "solana")]
 pub mod solana;
+#[cfg(feature = "tron")]
 pub mod tron;
 
+#[cfg(feature = "evm")]
 pub use evm::*;
+#[cfg(feature = "secp256k1")]
 pub use secp256k1::*;
+#[cfg(feature = "solana")]
 pub use solana::*;
+#[cfg(feature = "tron")]
 pub use tron::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "evm", feature = "solana", feature = "tron"))]
 mod tests {
     use super::*;
     use ::secp256k1::{
