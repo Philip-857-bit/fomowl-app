@@ -12,7 +12,7 @@ The current crate is an early engine foundation, not a complete wallet SDK.
 | `accounts::derivation` | Shared BIP-32/secp256k1 and SLIP-0010 primitives |
 | `accounts::{evm,solana,tron}` | Chain-specific paths and address derivation |
 | `signing::{evm,secp256k1,solana,tron}` | Message, typed-data, and digest signing |
-| `transactions::evm` | Offline legacy EIP-155 transaction signing with Alloy |
+| `transactions::evm` | Offline legacy/EIP-1559 signing and contract creation with Alloy |
 
 Use module-qualified APIs in new integrations. Existing root re-exports remain
 available for Flutter compatibility. Share primitives across chains; keep chain
@@ -40,7 +40,7 @@ owllet-core = { path = "../owllet-core", default-features = false, features = ["
 | none | Mnemonic validation, seed derivation, host-supplied mnemonic entropy |
 | `mnemonic-generation` | Convenience generation using `rand` and native entropy |
 | `secp256k1` | Shared secp256k1 derivation and digest signing primitives |
-| `evm` | EVM accounts/messages and Alloy legacy transactions; includes `secp256k1` |
+| `evm` | EVM accounts/messages and Alloy legacy/EIP-1559 transactions; includes `secp256k1` |
 | `solana` | Solana accounts and message signatures |
 | `tron` | TRON accounts and raw-hash signatures; includes `secp256k1` |
 
@@ -88,7 +88,7 @@ wallet/account handles. Normal signing should operate on handles, while explicit
 backup/export remains a separately authorized operation. Preserve existing
 wallets using a versioned, verified migration before removing legacy storage.
 
-Remaining engine work includes other EVM transaction paths, EIP-1559, complete
+Remaining engine work includes wiring other EVM transaction paths, complete
 Solana/TRON transaction support in this crate, vault ownership, and additional
 chains. Add chain implementations here once; reuse them from all hosts. UI,
 network orchestration, permissions prompts, and backend provider integrations

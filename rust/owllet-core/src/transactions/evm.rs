@@ -1,4 +1,4 @@
-use alloy::consensus::{SignableTransaction, TxEnvelope, TxLegacy};
+use alloy::consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy};
 use alloy::eips::eip2718::Encodable2718;
 use alloy::network::TxSignerSync;
 use alloy::primitives::{Address, Bytes, TxKind, U256};
@@ -22,61 +22,132 @@ pub struct SignedEvmTransaction {
     pub transaction_hash: String,
 }
 
+/// Fee policy is explicit so a host cannot accidentally mix legacy and typed fees.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EvmTransactionFee {
+    Legacy {
+        gas_price_wei: u128,
+    },
+    Eip1559 {
+        max_fee_per_gas_wei: u128,
+        max_priority_fee_per_gas_wei: u128,
+    },
+}
+
+/// Platform-neutral call or contract-creation request, with host-resolved fees.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EvmTransactionRequest {
+    pub chain_id: u64,
+    pub nonce: u64,
+    pub gas_limit: u64,
+    pub to: Option<String>,
+    pub value_wei: String,
+    pub data_hex: String,
+    pub fee: EvmTransactionFee,
+}
+
+/// Compatibility API: legacy transfers always require a recipient address.
 pub fn sign_legacy_evm_transaction(
     private_key_hex: &str,
     request: &LegacyEvmTransactionRequest,
 ) -> Result<SignedEvmTransaction, String> {
+    sign_evm_transaction(
+        private_key_hex,
+        &EvmTransactionRequest {
+            chain_id: request.chain_id,
+            nonce: request.nonce,
+            gas_limit: request.gas_limit,
+            to: Some(request.to.clone()),
+            value_wei: request.value_wei.clone(),
+            data_hex: request.data_hex.clone(),
+            fee: EvmTransactionFee::Legacy {
+                gas_price_wei: request.gas_price_wei,
+            },
+        },
+    )
+}
+
+/// Signs canonical EIP-2718 bytes offline. No RPC, fee discovery, or key storage.
+pub fn sign_evm_transaction(
+    private_key_hex: &str,
+    request: &EvmTransactionRequest,
+) -> Result<SignedEvmTransaction, String> {
     if request.chain_id == 0 {
         return Err("Chain ID must be non-zero for EIP-155 replay protection".to_string());
     }
-
+    if request.gas_limit == 0 {
+        return Err("Gas limit must be non-zero".to_string());
+    }
+    if let EvmTransactionFee::Eip1559 {
+        max_fee_per_gas_wei,
+        max_priority_fee_per_gas_wei,
+    } = request.fee
+    {
+        if max_priority_fee_per_gas_wei > max_fee_per_gas_wei {
+            return Err("Priority fee exceeds maximum fee per gas".to_string());
+        }
+    }
     let normalized_key = private_key_hex
         .trim()
         .strip_prefix("0x")
         .unwrap_or(private_key_hex.trim());
     let signer = PrivateKeySigner::from_str(normalized_key)
         .map_err(|e| format!("Invalid private key: {e}"))?;
-
-    let to_address = Address::from_str(request.to.trim())
-        .map_err(|e| format!("Invalid recipient address: {e}"))?;
-
+    let to = match &request.to {
+        Some(address) => TxKind::Call(
+            Address::from_str(address.trim())
+                .map_err(|e| format!("Invalid recipient address: {e}"))?,
+        ),
+        None => TxKind::Create,
+    };
     let value = U256::from_str(&request.value_wei)
         .map_err(|e| format!("Invalid transaction value: {e}"))?;
-
-    let data_trimmed = request.data_hex.trim();
-    let data_clean = data_trimmed
+    let data = request.data_hex.trim();
+    let data = data
         .strip_prefix("0x")
-        .or_else(|| data_trimmed.strip_prefix("0X"))
-        .unwrap_or(data_trimmed);
-    let input = if data_clean.is_empty() {
-        Bytes::default()
-    } else {
-        let bytes = hex::decode(data_clean).map_err(|e| format!("Invalid calldata hex: {e}"))?;
-        Bytes::from(bytes)
+        .or_else(|| data.strip_prefix("0X"))
+        .unwrap_or(data);
+    let input = Bytes::from(hex::decode(data).map_err(|e| format!("Invalid calldata hex: {e}"))?);
+    let envelope: TxEnvelope = match request.fee {
+        EvmTransactionFee::Legacy { gas_price_wei } => {
+            let mut tx = TxLegacy {
+                chain_id: Some(request.chain_id),
+                nonce: request.nonce,
+                gas_price: gas_price_wei,
+                gas_limit: request.gas_limit,
+                to,
+                value,
+                input,
+            };
+            let signature = signer
+                .sign_transaction_sync(&mut tx)
+                .map_err(|e| format!("Failed to sign legacy transaction: {e}"))?;
+            tx.into_signed(signature).into()
+        }
+        EvmTransactionFee::Eip1559 {
+            max_fee_per_gas_wei,
+            max_priority_fee_per_gas_wei,
+        } => {
+            let mut tx = TxEip1559 {
+                chain_id: request.chain_id,
+                nonce: request.nonce,
+                max_fee_per_gas: max_fee_per_gas_wei,
+                max_priority_fee_per_gas: max_priority_fee_per_gas_wei,
+                gas_limit: request.gas_limit,
+                to,
+                value,
+                input,
+                access_list: Default::default(),
+            };
+            let signature = signer
+                .sign_transaction_sync(&mut tx)
+                .map_err(|e| format!("Failed to sign EIP-1559 transaction: {e}"))?;
+            tx.into_signed(signature).into()
+        }
     };
-
-    let mut tx = TxLegacy {
-        chain_id: Some(request.chain_id),
-        nonce: request.nonce,
-        gas_price: request.gas_price_wei,
-        gas_limit: request.gas_limit,
-        to: TxKind::Call(to_address),
-        value,
-        input,
-    };
-
-    let signature = signer
-        .sign_transaction_sync(&mut tx)
-        .map_err(|e| format!("Failed to sign legacy transaction: {e}"))?;
-
-    let signed = tx.into_signed(signature);
-    let envelope: TxEnvelope = signed.into();
-    let raw_bytes = envelope.encoded_2718();
-    let tx_hash = envelope.tx_hash();
-
     Ok(SignedEvmTransaction {
-        raw_transaction_hex: format!("0x{}", hex::encode(raw_bytes)),
-        transaction_hash: format!("{tx_hash:#x}"),
+        raw_transaction_hex: format!("0x{}", hex::encode(envelope.encoded_2718())),
+        transaction_hash: format!("{:#x}", envelope.tx_hash()),
     })
 }
 

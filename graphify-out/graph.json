@@ -9,7 +9,7 @@
       "source_file": "android\\build.gradle.kts",
       "source_location": "L1",
       "id": "android_build_gradle_kts",
-      "community": 49
+      "community": 50
     },
     {
       "label": "settings.gradle.kts",
@@ -17,7 +17,7 @@
       "source_file": "android\\settings.gradle.kts",
       "source_location": "L1",
       "id": "android_settings_gradle_kts",
-      "community": 50
+      "community": 51
     },
     {
       "label": "build.gradle.kts",
@@ -25,7 +25,7 @@
       "source_file": "android\\app\\build.gradle.kts",
       "source_location": "L1",
       "id": "android_app_build_gradle_kts",
-      "community": 26
+      "community": 27
     },
     {
       "label": "signingValue()",
@@ -33,7 +33,7 @@
       "source_file": "android\\app\\build.gradle.kts",
       "source_location": "L19",
       "id": "build_gradle_signingvalue",
-      "community": 26
+      "community": 27
     },
     {
       "label": "resolveSigningStoreFile()",
@@ -41,7 +41,7 @@
       "source_file": "android\\app\\build.gradle.kts",
       "source_location": "L25",
       "id": "build_gradle_resolvesigningstorefile",
-      "community": 26
+      "community": 27
     },
     {
       "label": "isReleaseTaskRequested()",
@@ -49,7 +49,7 @@
       "source_file": "android\\app\\build.gradle.kts",
       "source_location": "L55",
       "id": "build_gradle_isreleasetaskrequested",
-      "community": 26
+      "community": 27
     },
     {
       "label": "GeneratedPluginRegistrant.java",
@@ -81,7 +81,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L1",
       "id": "android_app_src_main_kotlin_com_fomowl_fomowl_wallet_mainactivity_kt",
-      "community": 5
+      "community": 6
     },
     {
       "label": "MainActivity",
@@ -89,7 +89,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L27",
       "id": "mainactivity_mainactivity",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".onCreate()",
@@ -97,7 +97,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L37",
       "id": "mainactivity_mainactivity_oncreate",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".configureFlutterEngine()",
@@ -105,7 +105,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L45",
       "id": "mainactivity_mainactivity_configureflutterengine",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".ensureCameraPermission()",
@@ -113,7 +113,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L89",
       "id": "mainactivity_mainactivity_ensurecamerapermission",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".onRequestPermissionsResult()",
@@ -121,7 +121,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L106",
       "id": "mainactivity_mainactivity_onrequestpermissionsresult",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".ensureDefaultNotificationChannel()",
@@ -129,7 +129,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L121",
       "id": "mainactivity_mainactivity_ensuredefaultnotificationchannel",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".receiptBytes()",
@@ -137,7 +137,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L144",
       "id": "mainactivity_mainactivity_receiptbytes",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".hasPngSignature()",
@@ -145,7 +145,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L171",
       "id": "mainactivity_mainactivity_haspngsignature",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".saveReceiptImage()",
@@ -153,7 +153,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L179",
       "id": "mainactivity_mainactivity_savereceiptimage",
-      "community": 5
+      "community": 6
     },
     {
       "label": ".shareReceiptImage()",
@@ -161,7 +161,7 @@
       "source_file": "android\\app\\src\\main\\kotlin\\com\\fomowl\\fomowl_wallet\\MainActivity.kt",
       "source_location": "L242",
       "id": "mainactivity_mainactivity_sharereceiptimage",
-      "community": 5
+      "community": 6
     },
     {
       "label": "flutter_lldb_helper.py",
@@ -169,7 +169,7 @@
       "source_file": "ios\\Flutter\\ephemeral\\flutter_lldb_helper.py",
       "source_location": "L1",
       "id": "ios_flutter_ephemeral_flutter_lldb_helper_py",
-      "community": 27
+      "community": 28
     },
     {
       "label": "handle_new_rx_page()",
@@ -177,7 +177,7 @@
       "source_file": "ios\\Flutter\\ephemeral\\flutter_lldb_helper.py",
       "source_location": "L7",
       "id": "flutter_lldb_helper_handle_new_rx_page",
-      "community": 27
+      "community": 28
     },
     {
       "label": "__lldb_init_module()",
@@ -185,14 +185,14 @@
       "source_file": "ios\\Flutter\\ephemeral\\flutter_lldb_helper.py",
       "source_location": "L24",
       "id": "flutter_lldb_helper_lldb_init_module",
-      "community": 27
+      "community": 28
     },
     {
       "label": "Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.",
       "file_type": "rationale",
       "source_file": "ios\\Flutter\\ephemeral\\flutter_lldb_helper.py",
       "source_location": "L8",
-      "community": 27,
+      "community": 28,
       "id": "flutter_lldb_helper_rationale_8"
     },
     {
@@ -289,7 +289,7 @@
       "source_file": "ios\\Runner\\GeneratedPluginRegistrant.h",
       "source_location": "L1",
       "id": "ios_runner_generatedpluginregistrant_h",
-      "community": 51
+      "community": 52
     },
     {
       "label": "GeneratedPluginRegistrant.m",
@@ -313,7 +313,7 @@
       "source_file": "ios\\Runner\\Runner-Bridging-Header.h",
       "source_location": "L1",
       "id": "ios_runner_runner_bridging_header_h",
-      "community": 52
+      "community": 53
     },
     {
       "label": "RunnerTests.swift",
@@ -321,7 +321,7 @@
       "source_file": "ios\\RunnerTests\\RunnerTests.swift",
       "source_location": "L1",
       "id": "ios_runnertests_runnertests_swift",
-      "community": 28
+      "community": 29
     },
     {
       "label": "RunnerTests",
@@ -329,7 +329,7 @@
       "source_file": "ios\\RunnerTests\\RunnerTests.swift",
       "source_location": "L5",
       "id": "runnertests_runnertests",
-      "community": 28
+      "community": 29
     },
     {
       "label": "XCTestCase",
@@ -337,7 +337,7 @@
       "source_file": "",
       "source_location": "",
       "id": "xctestcase",
-      "community": 28
+      "community": 29
     },
     {
       "label": ".testExample()",
@@ -345,7 +345,7 @@
       "source_file": "ios\\RunnerTests\\RunnerTests.swift",
       "source_location": "L7",
       "id": "runnertests_runnertests_testexample",
-      "community": 28
+      "community": 29
     },
     {
       "label": "lib.rs",
@@ -353,7 +353,7 @@
       "source_file": "rust\\owllet-core\\src\\lib.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_lib_rs",
-      "community": 53
+      "community": 54
     },
     {
       "label": "mnemonic.rs",
@@ -361,7 +361,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_mnemonic_rs",
-      "community": 7
+      "community": 8
     },
     {
       "label": "generate_mnemonic()",
@@ -369,7 +369,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L10",
       "id": "mnemonic_generate_mnemonic",
-      "community": 7
+      "community": 8
     },
     {
       "label": "generate_mnemonic_from_entropy()",
@@ -377,7 +377,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L20",
       "id": "mnemonic_generate_mnemonic_from_entropy",
-      "community": 7
+      "community": 8
     },
     {
       "label": "validate_mnemonic()",
@@ -385,7 +385,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L27",
       "id": "mnemonic_validate_mnemonic",
-      "community": 7
+      "community": 8
     },
     {
       "label": "mnemonic_to_seed()",
@@ -393,7 +393,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L34",
       "id": "mnemonic_mnemonic_to_seed",
-      "community": 7
+      "community": 8
     },
     {
       "label": "test_generate_mnemonic_structure()",
@@ -401,7 +401,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L53",
       "id": "mnemonic_test_generate_mnemonic_structure",
-      "community": 7
+      "community": 8
     },
     {
       "label": "host_entropy_matches_known_bip39_vector()",
@@ -409,7 +409,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L68",
       "id": "mnemonic_host_entropy_matches_known_bip39_vector",
-      "community": 7
+      "community": 8
     },
     {
       "label": "test_validate_mnemonic()",
@@ -417,7 +417,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L73",
       "id": "mnemonic_test_validate_mnemonic",
-      "community": 7
+      "community": 8
     },
     {
       "label": "test_known_mnemonic_to_seed()",
@@ -425,7 +425,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L83",
       "id": "mnemonic_test_known_mnemonic_to_seed",
-      "community": 7
+      "community": 8
     },
     {
       "label": "test_mnemonic_to_seed_error_format()",
@@ -433,7 +433,7 @@
       "source_file": "rust\\owllet-core\\src\\mnemonic.rs",
       "source_location": "L90",
       "id": "mnemonic_test_mnemonic_to_seed_error_format",
-      "community": 7
+      "community": 8
     },
     {
       "label": "evm.rs",
@@ -641,7 +641,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\mod.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_accounts_derivation_mod_rs",
-      "community": 29
+      "community": 30
     },
     {
       "label": "validate_seed()",
@@ -649,7 +649,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\mod.rs",
       "source_location": "L17",
       "id": "mod_validate_seed",
-      "community": 29
+      "community": 30
     },
     {
       "label": "hardened()",
@@ -657,7 +657,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\mod.rs",
       "source_location": "L27",
       "id": "mod_hardened",
-      "community": 29
+      "community": 30
     },
     {
       "label": "parse_32_byte_hex()",
@@ -665,7 +665,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\mod.rs",
       "source_location": "L33",
       "id": "mod_parse_32_byte_hex",
-      "community": 29
+      "community": 30
     },
     {
       "label": "secp256k1.rs",
@@ -673,7 +673,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\secp256k1.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_accounts_derivation_secp256k1_rs",
-      "community": 34
+      "community": 35
     },
     {
       "label": "derive_secp256k1_private_key()",
@@ -681,7 +681,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\secp256k1.rs",
       "source_location": "L7",
       "id": "secp256k1_derive_secp256k1_private_key",
-      "community": 34
+      "community": 35
     },
     {
       "label": "public_key_from_private_key()",
@@ -689,7 +689,7 @@
       "source_file": "rust\\owllet-core\\src\\accounts\\derivation\\secp256k1.rs",
       "source_location": "L31",
       "id": "secp256k1_public_key_from_private_key",
-      "community": 34
+      "community": 35
     },
     {
       "label": "slip10.rs",
@@ -753,7 +753,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\evm.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_signing_evm_rs",
-      "community": 30
+      "community": 31
     },
     {
       "label": "decode_personal_sign_payload()",
@@ -761,7 +761,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\evm.rs",
       "source_location": "L5",
       "id": "evm_decode_personal_sign_payload",
-      "community": 30
+      "community": 31
     },
     {
       "label": "sign_personal_message()",
@@ -769,7 +769,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\evm.rs",
       "source_location": "L20",
       "id": "evm_sign_personal_message",
-      "community": 30
+      "community": 31
     },
     {
       "label": "sign_typed_data()",
@@ -777,7 +777,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\evm.rs",
       "source_location": "L33",
       "id": "evm_sign_typed_data",
-      "community": 30
+      "community": 31
     },
     {
       "label": "mod.rs",
@@ -833,7 +833,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\secp256k1.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_signing_secp256k1_rs",
-      "community": 31
+      "community": 32
     },
     {
       "label": "sign_digest()",
@@ -841,7 +841,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\secp256k1.rs",
       "source_location": "L4",
       "id": "secp256k1_sign_digest",
-      "community": 31
+      "community": 32
     },
     {
       "label": "sign_digest_with_recovery_id()",
@@ -849,7 +849,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\secp256k1.rs",
       "source_location": "L8",
       "id": "secp256k1_sign_digest_with_recovery_id",
-      "community": 31
+      "community": 32
     },
     {
       "label": "sign_digest_inner()",
@@ -857,7 +857,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\secp256k1.rs",
       "source_location": "L16",
       "id": "secp256k1_sign_digest_inner",
-      "community": 31
+      "community": 32
     },
     {
       "label": "solana.rs",
@@ -865,7 +865,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\solana.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_signing_solana_rs",
-      "community": 41
+      "community": 42
     },
     {
       "label": "sign_solana_message()",
@@ -873,7 +873,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\solana.rs",
       "source_location": "L3",
       "id": "solana_sign_solana_message",
-      "community": 41
+      "community": 42
     },
     {
       "label": "tron.rs",
@@ -881,7 +881,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\tron.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_signing_tron_rs",
-      "community": 42
+      "community": 43
     },
     {
       "label": "sign_tron_raw_hash()",
@@ -889,7 +889,7 @@
       "source_file": "rust\\owllet-core\\src\\signing\\tron.rs",
       "source_location": "L4",
       "id": "tron_sign_tron_raw_hash",
-      "community": 42
+      "community": 43
     },
     {
       "label": "evm.rs",
@@ -897,7 +897,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_transactions_evm_rs",
-      "community": 8
+      "community": 4
     },
     {
       "label": "LegacyEvmTransactionRequest",
@@ -905,7 +905,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L9",
       "id": "evm_legacyevmtransactionrequest",
-      "community": 8
+      "community": 4
     },
     {
       "label": "SignedEvmTransaction",
@@ -913,63 +913,87 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L20",
       "id": "evm_signedevmtransaction",
-      "community": 8
+      "community": 4
+    },
+    {
+      "label": "EvmTransactionFee",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L27",
+      "id": "evm_evmtransactionfee",
+      "community": 4
+    },
+    {
+      "label": "EvmTransactionRequest",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L39",
+      "id": "evm_evmtransactionrequest",
+      "community": 4
     },
     {
       "label": "sign_legacy_evm_transaction()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L25",
+      "source_location": "L50",
       "id": "evm_sign_legacy_evm_transaction",
-      "community": 8
+      "community": 4
+    },
+    {
+      "label": "sign_evm_transaction()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L71",
+      "id": "evm_sign_evm_transaction",
+      "community": 4
     },
     {
       "label": "eip155_request()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L96",
+      "source_location": "L167",
       "id": "evm_eip155_request",
-      "community": 8
+      "community": 4
     },
     {
       "label": "test_official_eip155_vector()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L109",
+      "source_location": "L180",
       "id": "evm_test_official_eip155_vector",
-      "community": 8
+      "community": 4
     },
     {
       "label": "test_chain_id_replay_protection()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L142",
+      "source_location": "L213",
       "id": "evm_test_chain_id_replay_protection",
-      "community": 8
+      "community": 4
     },
     {
       "label": "test_non_empty_calldata()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L163",
+      "source_location": "L234",
       "id": "evm_test_non_empty_calldata",
-      "community": 8
+      "community": 4
     },
     {
       "label": "test_recover_signer_from_envelope()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L208",
+      "source_location": "L279",
       "id": "evm_test_recover_signer_from_envelope",
-      "community": 8
+      "community": 4
     },
     {
       "label": "test_negative_invalid_inputs()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L229",
+      "source_location": "L300",
       "id": "evm_test_negative_invalid_inputs",
-      "community": 8
+      "community": 4
     },
     {
       "label": "mod.rs",
@@ -977,7 +1001,47 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\mod.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_transactions_mod_rs",
-      "community": 54
+      "community": 55
+    },
+    {
+      "label": "evm_transaction_types.rs",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L1",
+      "id": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "community": 26
+    },
+    {
+      "label": "fixture()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L12",
+      "id": "evm_transaction_types_fixture",
+      "community": 26
+    },
+    {
+      "label": "eip1559_matches_independent_web3dart_fixture_and_recovers_sender()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L28",
+      "id": "evm_transaction_types_eip1559_matches_independent_web3dart_fixture_and_recovers_sender",
+      "community": 26
+    },
+    {
+      "label": "contract_creation_preserves_data_and_empty_destination_for_both_fee_types()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L55",
+      "id": "evm_transaction_types_contract_creation_preserves_data_and_empty_destination_for_both_fee_types",
+      "community": 26
+    },
+    {
+      "label": "rejects_invalid_fee_policy_and_invalid_call_destination()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L85",
+      "id": "evm_transaction_types_rejects_invalid_fee_policy_and_invalid_call_destination",
+      "community": 26
     },
     {
       "label": "feature_contract.rs",
@@ -1233,7 +1297,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L928",
       "id": "frb_generated_string",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_decode()",
@@ -1241,7 +1305,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L930",
       "id": "frb_generated_string_sse_decode",
-      "community": 4
+      "community": 5
     },
     {
       "label": "bool",
@@ -1249,7 +1313,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L936",
       "id": "frb_generated_bool",
-      "community": 35
+      "community": 36
     },
     {
       "label": ".sse_decode()",
@@ -1257,7 +1321,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L938",
       "id": "frb_generated_bool_sse_decode",
-      "community": 35
+      "community": 36
     },
     {
       "label": "Vec<u8>",
@@ -1265,7 +1329,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L943",
       "id": "frb_generated_vec_u8",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_decode()",
@@ -1273,7 +1337,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L945",
       "id": "frb_generated_vec_u8_sse_decode",
-      "community": 4
+      "community": 5
     },
     {
       "label": "crate::api::bip32::SolanaPrivateKeyImport",
@@ -1281,7 +1345,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L955",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_decode()",
@@ -1289,7 +1353,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L957",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_decode",
-      "community": 4
+      "community": 5
     },
     {
       "label": "u32",
@@ -1297,7 +1361,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L967",
       "id": "frb_generated_u32",
-      "community": 36
+      "community": 37
     },
     {
       "label": ".sse_decode()",
@@ -1305,7 +1369,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L969",
       "id": "frb_generated_u32_sse_decode",
-      "community": 36
+      "community": 37
     },
     {
       "label": "u64",
@@ -1313,7 +1377,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L974",
       "id": "frb_generated_u64",
-      "community": 37
+      "community": 38
     },
     {
       "label": ".sse_decode()",
@@ -1321,7 +1385,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L976",
       "id": "frb_generated_u64_sse_decode",
-      "community": 37
+      "community": 38
     },
     {
       "label": "u8",
@@ -1329,7 +1393,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L981",
       "id": "frb_generated_u8",
-      "community": 38
+      "community": 39
     },
     {
       "label": ".sse_decode()",
@@ -1337,7 +1401,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L983",
       "id": "frb_generated_u8_sse_decode",
-      "community": 38
+      "community": 39
     },
     {
       "label": "()",
@@ -1345,7 +1409,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L988",
       "id": "frb_generated",
-      "community": 39
+      "community": 40
     },
     {
       "label": ".sse_decode()",
@@ -1353,7 +1417,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L990",
       "id": "frb_generated_sse_decode",
-      "community": 39
+      "community": 40
     },
     {
       "label": "i32",
@@ -1361,7 +1425,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L993",
       "id": "frb_generated_i32",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_decode()",
@@ -1393,7 +1457,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1132",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_dart",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".into_into_dart()",
@@ -1401,7 +1465,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1147",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_into_into_dart",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_encode()",
@@ -1409,7 +1473,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1154",
       "id": "frb_generated_string_sse_encode",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_encode()",
@@ -1417,7 +1481,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1161",
       "id": "frb_generated_bool_sse_encode",
-      "community": 35
+      "community": 36
     },
     {
       "label": ".sse_encode()",
@@ -1425,7 +1489,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1168",
       "id": "frb_generated_vec_u8_sse_encode",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_encode()",
@@ -1433,7 +1497,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1178",
       "id": "frb_generated_crate_api_bip32_solanaprivatekeyimport_sse_encode",
-      "community": 4
+      "community": 5
     },
     {
       "label": ".sse_encode()",
@@ -1441,7 +1505,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1186",
       "id": "frb_generated_u32_sse_encode",
-      "community": 36
+      "community": 37
     },
     {
       "label": ".sse_encode()",
@@ -1449,7 +1513,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1193",
       "id": "frb_generated_u64_sse_encode",
-      "community": 37
+      "community": 38
     },
     {
       "label": ".sse_encode()",
@@ -1457,7 +1521,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1200",
       "id": "frb_generated_u8_sse_encode",
-      "community": 38
+      "community": 39
     },
     {
       "label": ".sse_encode()",
@@ -1465,7 +1529,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1207",
       "id": "frb_generated_sse_encode",
-      "community": 39
+      "community": 40
     },
     {
       "label": ".sse_encode()",
@@ -1473,7 +1537,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L1212",
       "id": "frb_generated_i32_sse_encode",
-      "community": 4
+      "community": 5
     },
     {
       "label": "lib.rs",
@@ -1481,7 +1545,7 @@
       "source_file": "rust\\src\\lib.rs",
       "source_location": "L1",
       "id": "rust_src_lib_rs",
-      "community": 55
+      "community": 56
     },
     {
       "label": "argon2.rs",
@@ -1489,7 +1553,7 @@
       "source_file": "rust\\src\\api\\argon2.rs",
       "source_location": "L1",
       "id": "rust_src_api_argon2_rs",
-      "community": 43
+      "community": 44
     },
     {
       "label": "derive_passcode_hash_argon2()",
@@ -1497,7 +1561,7 @@
       "source_file": "rust\\src\\api\\argon2.rs",
       "source_location": "L8",
       "id": "argon2_derive_passcode_hash_argon2",
-      "community": 43
+      "community": 44
     },
     {
       "label": "bip32.rs",
@@ -1705,7 +1769,7 @@
       "source_file": "rust\\src\\api\\bip39.rs",
       "source_location": "L1",
       "id": "rust_src_api_bip39_rs",
-      "community": 32
+      "community": 33
     },
     {
       "label": "generate_mnemonic()",
@@ -1713,7 +1777,7 @@
       "source_file": "rust\\src\\api\\bip39.rs",
       "source_location": "L3",
       "id": "bip39_generate_mnemonic",
-      "community": 32
+      "community": 33
     },
     {
       "label": "validate_mnemonic()",
@@ -1721,7 +1785,7 @@
       "source_file": "rust\\src\\api\\bip39.rs",
       "source_location": "L7",
       "id": "bip39_validate_mnemonic",
-      "community": 32
+      "community": 33
     },
     {
       "label": "mnemonic_to_seed()",
@@ -1729,7 +1793,7 @@
       "source_file": "rust\\src\\api\\bip39.rs",
       "source_location": "L11",
       "id": "bip39_mnemonic_to_seed",
-      "community": 32
+      "community": 33
     },
     {
       "label": "compatibility_tests.rs",
@@ -1905,7 +1969,7 @@
       "source_file": "rust\\src\\api\\mod.rs",
       "source_location": "L1",
       "id": "rust_src_api_mod_rs",
-      "community": 56
+      "community": 57
     },
     {
       "label": "secp256k1_api.rs",
@@ -1961,7 +2025,7 @@
       "source_file": "rust\\src\\api\\simple.rs",
       "source_location": "L1",
       "id": "rust_src_api_simple_rs",
-      "community": 40
+      "community": 41
     },
     {
       "label": "greet()",
@@ -1969,7 +2033,7 @@
       "source_file": "rust\\src\\api\\simple.rs",
       "source_location": "L2",
       "id": "simple_greet",
-      "community": 40
+      "community": 41
     },
     {
       "label": "init_app()",
@@ -1977,7 +2041,7 @@
       "source_file": "rust\\src\\api\\simple.rs",
       "source_location": "L7",
       "id": "simple_init_app",
-      "community": 40
+      "community": 41
     },
     {
       "label": "solana_tx.rs",
@@ -1985,7 +2049,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L1",
       "id": "rust_src_api_solana_tx_rs",
-      "community": 6
+      "community": 7
     },
     {
       "label": "RelayInstruction",
@@ -1993,7 +2057,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L23",
       "id": "solana_tx_relayinstruction",
-      "community": 6
+      "community": 7
     },
     {
       "label": "RelayAccountMeta",
@@ -2001,7 +2065,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L32",
       "id": "solana_tx_relayaccountmeta",
-      "community": 6
+      "community": 7
     },
     {
       "label": "RelayLookupTable",
@@ -2009,7 +2073,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L40",
       "id": "solana_tx_relaylookuptable",
-      "community": 6
+      "community": 7
     },
     {
       "label": "parse_pubkey()",
@@ -2017,7 +2081,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L45",
       "id": "solana_tx_parse_pubkey",
-      "community": 6
+      "community": 7
     },
     {
       "label": "build_and_sign_solana_transaction()",
@@ -2025,7 +2089,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L60",
       "id": "solana_tx_build_and_sign_solana_transaction",
-      "community": 6
+      "community": 7
     },
     {
       "label": "sign_serialized_solana_transaction()",
@@ -2033,7 +2097,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L140",
       "id": "solana_tx_sign_serialized_solana_transaction",
-      "community": 6
+      "community": 7
     },
     {
       "label": "unsigned_legacy()",
@@ -2041,7 +2105,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L212",
       "id": "solana_tx_unsigned_legacy",
-      "community": 6
+      "community": 7
     },
     {
       "label": "signs_legacy_one_sig_round_trip()",
@@ -2049,7 +2113,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L237",
       "id": "solana_tx_signs_legacy_one_sig_round_trip",
-      "community": 6
+      "community": 7
     },
     {
       "label": "preserves_extra_signature_slot()",
@@ -2057,7 +2121,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L255",
       "id": "solana_tx_preserves_extra_signature_slot",
-      "community": 6
+      "community": 7
     },
     {
       "label": "rejects_wrong_expected_signer()",
@@ -2065,7 +2129,7 @@
       "source_file": "rust\\src\\api\\solana_tx.rs",
       "source_location": "L275",
       "id": "solana_tx_rejects_wrong_expected_signer",
-      "community": 6
+      "community": 7
     },
     {
       "label": "resolve_symlinks.ps1",
@@ -2073,7 +2137,7 @@
       "source_file": "rust_builder\\cargokit\\cmake\\resolve_symlinks.ps1",
       "source_location": "L1",
       "id": "rust_builder_cargokit_cmake_resolve_symlinks_ps1",
-      "community": 44
+      "community": 45
     },
     {
       "label": "Resolve-Symlinks()",
@@ -2081,7 +2145,7 @@
       "source_file": "rust_builder\\cargokit\\cmake\\resolve_symlinks.ps1",
       "source_location": "L1",
       "id": "resolve_symlinks_resolve_symlinks",
-      "community": 44
+      "community": 45
     },
     {
       "label": "dummy_file.c",
@@ -2089,7 +2153,7 @@
       "source_file": "rust_builder\\ios\\Classes\\dummy_file.c",
       "source_location": "L1",
       "id": "rust_builder_ios_classes_dummy_file_c",
-      "community": 57
+      "community": 58
     },
     {
       "label": "dummy_file.c",
@@ -2097,7 +2161,7 @@
       "source_file": "rust_builder\\macos\\Classes\\dummy_file.c",
       "source_location": "L1",
       "id": "rust_builder_macos_classes_dummy_file_c",
-      "community": 58
+      "community": 59
     },
     {
       "label": "bump_mobile_version.ps1",
@@ -2105,7 +2169,7 @@
       "source_file": "scripts\\bump_mobile_version.ps1",
       "source_location": "L1",
       "id": "scripts_bump_mobile_version_ps1",
-      "community": 59
+      "community": 60
     },
     {
       "label": "create_android_keystore.ps1",
@@ -2113,7 +2177,7 @@
       "source_file": "scripts\\create_android_keystore.ps1",
       "source_location": "L1",
       "id": "scripts_create_android_keystore_ps1",
-      "community": 60
+      "community": 61
     },
     {
       "label": "encode_android_keystore.ps1",
@@ -2121,7 +2185,7 @@
       "source_file": "scripts\\encode_android_keystore.ps1",
       "source_location": "L1",
       "id": "scripts_encode_android_keystore_ps1",
-      "community": 61
+      "community": 62
     },
     {
       "label": "encode_google_services_json.ps1",
@@ -2129,7 +2193,7 @@
       "source_file": "scripts\\encode_google_services_json.ps1",
       "source_location": "L1",
       "id": "scripts_encode_google_services_json_ps1",
-      "community": 62
+      "community": 63
     },
     {
       "label": "generate_shorebird_patch_keys.ps1",
@@ -2137,7 +2201,7 @@
       "source_file": "scripts\\generate_shorebird_patch_keys.ps1",
       "source_location": "L1",
       "id": "scripts_generate_shorebird_patch_keys_ps1",
-      "community": 63
+      "community": 64
     },
     {
       "label": "get_android_fingerprints.ps1",
@@ -2145,7 +2209,7 @@
       "source_file": "scripts\\get_android_fingerprints.ps1",
       "source_location": "L1",
       "id": "scripts_get_android_fingerprints_ps1",
-      "community": 64
+      "community": 65
     },
     {
       "label": "shorebird_ci_common.py",
@@ -2313,7 +2377,7 @@
       "source_file": "scripts\\shorebird_patch_local.ps1",
       "source_location": "L1",
       "id": "scripts_shorebird_patch_local_ps1",
-      "community": 65
+      "community": 66
     },
     {
       "label": "shorebird_release_manifest.py",
@@ -2321,7 +2385,7 @@
       "source_file": "scripts\\shorebird_release_manifest.py",
       "source_location": "L1",
       "id": "scripts_shorebird_release_manifest_py",
-      "community": 45
+      "community": 46
     },
     {
       "label": "main()",
@@ -2329,7 +2393,7 @@
       "source_file": "scripts\\shorebird_release_manifest.py",
       "source_location": "L23",
       "id": "shorebird_release_manifest_main",
-      "community": 45
+      "community": 46
     },
     {
       "label": "write_shorebird_key.py",
@@ -2385,7 +2449,7 @@
       "source_file": "scripts\\write_shorebird_yaml.py",
       "source_location": "L1",
       "id": "scripts_write_shorebird_yaml_py",
-      "community": 46
+      "community": 47
     },
     {
       "label": "main()",
@@ -2393,7 +2457,7 @@
       "source_file": "scripts\\write_shorebird_yaml.py",
       "source_location": "L7",
       "id": "write_shorebird_yaml_main",
-      "community": 46
+      "community": 47
     },
     {
       "label": "generated_plugin_registrant.cc",
@@ -2401,7 +2465,7 @@
       "source_file": "windows\\flutter\\generated_plugin_registrant.cc",
       "source_location": "L1",
       "id": "windows_flutter_generated_plugin_registrant_cc",
-      "community": 47
+      "community": 48
     },
     {
       "label": "RegisterPlugins()",
@@ -2409,7 +2473,7 @@
       "source_file": "windows\\flutter\\generated_plugin_registrant.cc",
       "source_location": "L18",
       "id": "generated_plugin_registrant_registerplugins",
-      "community": 47
+      "community": 48
     },
     {
       "label": "generated_plugin_registrant.h",
@@ -2417,7 +2481,7 @@
       "source_file": "windows\\flutter\\generated_plugin_registrant.h",
       "source_location": "L1",
       "id": "windows_flutter_generated_plugin_registrant_h",
-      "community": 66
+      "community": 67
     },
     {
       "label": "flutter_window.cpp",
@@ -2473,7 +2537,7 @@
       "source_file": "windows\\runner\\main.cpp",
       "source_location": "L1",
       "id": "windows_runner_main_cpp",
-      "community": 48
+      "community": 49
     },
     {
       "label": "wWinMain()",
@@ -2481,7 +2545,7 @@
       "source_file": "windows\\runner\\main.cpp",
       "source_location": "L8",
       "id": "main_wwinmain",
-      "community": 48
+      "community": 49
     },
     {
       "label": "resource.h",
@@ -2489,7 +2553,7 @@
       "source_file": "windows\\runner\\resource.h",
       "source_location": "L1",
       "id": "windows_runner_resource_h",
-      "community": 67
+      "community": 68
     },
     {
       "label": "utils.cpp",
@@ -2497,7 +2561,7 @@
       "source_file": "windows\\runner\\utils.cpp",
       "source_location": "L1",
       "id": "windows_runner_utils_cpp",
-      "community": 33
+      "community": 34
     },
     {
       "label": "CreateAndAttachConsole()",
@@ -2505,7 +2569,7 @@
       "source_file": "windows\\runner\\utils.cpp",
       "source_location": "L10",
       "id": "utils_createandattachconsole",
-      "community": 33
+      "community": 34
     },
     {
       "label": "GetCommandLineArguments()",
@@ -2513,7 +2577,7 @@
       "source_file": "windows\\runner\\utils.cpp",
       "source_location": "L24",
       "id": "utils_getcommandlinearguments",
-      "community": 33
+      "community": 34
     },
     {
       "label": "Utf8FromUtf16()",
@@ -2521,7 +2585,7 @@
       "source_file": "windows\\runner\\utils.cpp",
       "source_location": "L44",
       "id": "utils_utf8fromutf16",
-      "community": 33
+      "community": 34
     },
     {
       "label": "utils.h",
@@ -2529,7 +2593,7 @@
       "source_file": "windows\\runner\\utils.h",
       "source_location": "L1",
       "id": "windows_runner_utils_h",
-      "community": 68
+      "community": 69
     },
     {
       "label": "win32_window.cpp",
@@ -2705,7 +2769,7 @@
       "source_file": "windows\\runner\\win32_window.h",
       "source_location": "L1",
       "id": "windows_runner_win32_window_h",
-      "community": 69
+      "community": 70
     }
   ],
   "links": [
@@ -4081,7 +4145,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L25",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_src_transactions_evm_rs",
+      "_tgt": "evm_evmtransactionfee",
+      "source": "rust_owllet_core_src_transactions_evm_rs",
+      "target": "evm_evmtransactionfee",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L39",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_src_transactions_evm_rs",
+      "_tgt": "evm_evmtransactionrequest",
+      "source": "rust_owllet_core_src_transactions_evm_rs",
+      "target": "evm_evmtransactionrequest",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L50",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_sign_legacy_evm_transaction",
@@ -4093,7 +4181,19 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L96",
+      "source_location": "L71",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_src_transactions_evm_rs",
+      "_tgt": "evm_sign_evm_transaction",
+      "source": "rust_owllet_core_src_transactions_evm_rs",
+      "target": "evm_sign_evm_transaction",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L167",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_eip155_request",
@@ -4105,7 +4205,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L109",
+      "source_location": "L180",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_test_official_eip155_vector",
@@ -4117,7 +4217,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L142",
+      "source_location": "L213",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_test_chain_id_replay_protection",
@@ -4129,7 +4229,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L163",
+      "source_location": "L234",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_test_non_empty_calldata",
@@ -4141,7 +4241,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L208",
+      "source_location": "L279",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_test_recover_signer_from_envelope",
@@ -4153,7 +4253,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L229",
+      "source_location": "L300",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_evm_rs",
       "_tgt": "evm_test_negative_invalid_inputs",
@@ -4165,7 +4265,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L131",
+      "source_location": "L54",
+      "weight": 1.0,
+      "_src": "evm_sign_legacy_evm_transaction",
+      "_tgt": "evm_sign_evm_transaction",
+      "source": "evm_sign_legacy_evm_transaction",
+      "target": "evm_sign_evm_transaction",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
+      "source_location": "L202",
       "weight": 1.0,
       "_src": "evm_test_official_eip155_vector",
       "_tgt": "evm_sign_legacy_evm_transaction",
@@ -4177,7 +4289,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L149",
+      "source_location": "L220",
       "weight": 1.0,
       "_src": "evm_test_chain_id_replay_protection",
       "_tgt": "evm_sign_legacy_evm_transaction",
@@ -4189,7 +4301,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L170",
+      "source_location": "L241",
       "weight": 1.0,
       "_src": "evm_test_non_empty_calldata",
       "_tgt": "evm_sign_legacy_evm_transaction",
@@ -4201,7 +4313,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L210",
+      "source_location": "L281",
       "weight": 1.0,
       "_src": "evm_test_recover_signer_from_envelope",
       "_tgt": "evm_sign_legacy_evm_transaction",
@@ -4213,7 +4325,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L110",
+      "source_location": "L181",
       "weight": 1.0,
       "_src": "evm_test_official_eip155_vector",
       "_tgt": "evm_eip155_request",
@@ -4225,7 +4337,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L143",
+      "source_location": "L214",
       "weight": 1.0,
       "_src": "evm_test_chain_id_replay_protection",
       "_tgt": "evm_eip155_request",
@@ -4237,7 +4349,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L164",
+      "source_location": "L235",
       "weight": 1.0,
       "_src": "evm_test_non_empty_calldata",
       "_tgt": "evm_eip155_request",
@@ -4249,7 +4361,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L209",
+      "source_location": "L280",
       "weight": 1.0,
       "_src": "evm_test_recover_signer_from_envelope",
       "_tgt": "evm_eip155_request",
@@ -4261,12 +4373,96 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
-      "source_location": "L230",
+      "source_location": "L301",
       "weight": 1.0,
       "_src": "evm_test_negative_invalid_inputs",
       "_tgt": "evm_eip155_request",
       "source": "evm_eip155_request",
       "target": "evm_test_negative_invalid_inputs",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "_tgt": "evm_transaction_types_fixture",
+      "source": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "target": "evm_transaction_types_fixture",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "_tgt": "evm_transaction_types_eip1559_matches_independent_web3dart_fixture_and_recovers_sender",
+      "source": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "target": "evm_transaction_types_eip1559_matches_independent_web3dart_fixture_and_recovers_sender",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L55",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "_tgt": "evm_transaction_types_contract_creation_preserves_data_and_empty_destination_for_both_fee_types",
+      "source": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "target": "evm_transaction_types_contract_creation_preserves_data_and_empty_destination_for_both_fee_types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "_tgt": "evm_transaction_types_rejects_invalid_fee_policy_and_invalid_call_destination",
+      "source": "rust_owllet_core_tests_evm_transaction_types_rs",
+      "target": "evm_transaction_types_rejects_invalid_fee_policy_and_invalid_call_destination",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L32",
+      "weight": 1.0,
+      "_src": "evm_transaction_types_eip1559_matches_independent_web3dart_fixture_and_recovers_sender",
+      "_tgt": "evm_transaction_types_fixture",
+      "source": "evm_transaction_types_fixture",
+      "target": "evm_transaction_types_eip1559_matches_independent_web3dart_fixture_and_recovers_sender",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L60",
+      "weight": 1.0,
+      "_src": "evm_transaction_types_contract_creation_preserves_data_and_empty_destination_for_both_fee_types",
+      "_tgt": "evm_transaction_types_fixture",
+      "source": "evm_transaction_types_fixture",
+      "target": "evm_transaction_types_contract_creation_preserves_data_and_empty_destination_for_both_fee_types",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\tests\\evm_transaction_types.rs",
+      "source_location": "L86",
+      "weight": 1.0,
+      "_src": "evm_transaction_types_rejects_invalid_fee_policy_and_invalid_call_destination",
+      "_tgt": "evm_transaction_types_fixture",
+      "source": "evm_transaction_types_fixture",
+      "target": "evm_transaction_types_rejects_invalid_fee_policy_and_invalid_call_destination",
       "confidence_score": 1.0
     },
     {

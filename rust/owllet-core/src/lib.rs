@@ -27,5 +27,6 @@ pub use signing::{decode_personal_sign_payload, sign_personal_message, sign_type
 pub use signing::{sign_digest, sign_digest_with_recovery_id};
 #[cfg(feature = "evm")]
 pub use transactions::{
-    sign_legacy_evm_transaction, LegacyEvmTransactionRequest, SignedEvmTransaction,
+    sign_evm_transaction, sign_legacy_evm_transaction, EvmTransactionFee, EvmTransactionRequest,
+    LegacyEvmTransactionRequest, SignedEvmTransaction,
 };
