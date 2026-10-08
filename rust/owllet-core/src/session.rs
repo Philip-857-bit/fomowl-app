@@ -256,6 +256,22 @@ impl SigningSession {
         crate::sign_typed_data(self.evm_key(handle)?, json).map_err(SessionError::Signing)
     }
 
+    /// Some TRON providers authorize permits using the EIP-712 secp256k1
+    /// digest format. The key remains scoped to the TRON account.
+    #[cfg(all(feature = "evm", feature = "tron"))]
+    pub fn sign_tron_typed_data(
+        &self,
+        handle: &AccountHandle,
+        json: &str,
+    ) -> Result<String, SessionError> {
+        match &self.resolve(handle)?.key {
+            KeyMaterial::Tron(key) => {
+                crate::sign_typed_data(key, json).map_err(SessionError::Signing)
+            }
+            _ => Err(SessionError::WrongFamily),
+        }
+    }
+
     #[cfg(feature = "solana")]
     pub fn sign_solana_message(
         &self,

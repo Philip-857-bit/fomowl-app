@@ -106,3 +106,12 @@ non-destructive step. Commit: `feat(wallet): expose encrypted vault signing thro
 Validation: 45 full core tests, 21 vault-only tests, 31 native adapter tests,
 48 Flutter FFI/transaction tests; Rust formatting/Clippy, scoped Dart analysis,
 and the native Windows release build passed.
+
+## All-family vault engine
+
+Previous adapter step: `187239b`. The vault now supports independently enabled
+EVM, Solana, and TRON families, retaining EVM version-1 compatibility. Family and
+address are authenticated; base58 addresses keep exact case. Explicit recovery
+export validates the record and account identity separately from ordinary opaque
+open. CI covers each chain/vault combination and vault without a chain.
+Commit: `feat(wallet-core): extend authenticated vaults across chain families`.

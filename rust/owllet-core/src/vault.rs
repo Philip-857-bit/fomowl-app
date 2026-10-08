@@ -1,13 +1,7 @@
-//! Authenticated EVM key records independent of host storage and authentication.
-//!
-//! Hosts protect the wrapping key and supply a fresh, unique 96-bit nonce for
-//! every encryption under that key. Opening returns signing custody, never key
-//! material. Records do not prevent rollback; hosts own version/backup policy.
-
-use crate::{
-    derive_evm_address_from_private_key,
-    session::{AccountHandle, SigningSession},
-};
+//! Authenticated account records independent of host storage and authentication.
+//! Hosts protect wrapping keys and supply unique nonces. Explicit export is a
+//! separate recovery operation; ordinary open returns opaque signing custody.
+use crate::session::{AccountFamily, AccountHandle, SigningSession};
 use aes_gcm::{
     aead::{Aead, Payload},
     Aes256Gcm, KeyInit, Nonce,
@@ -25,7 +19,6 @@ struct Envelope {
     nonce_hex: String,
     ciphertext_hex: String,
 }
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum VaultError {
     InvalidRecord,
@@ -33,49 +26,97 @@ pub enum VaultError {
     AddressMismatch,
     AuthenticationFailed,
 }
-
 impl std::fmt::Display for VaultError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::InvalidRecord => "Invalid or unsupported vault record",
-            Self::InvalidKey => "Invalid EVM private key",
+            Self::InvalidKey => "Invalid account private key",
             Self::AddressMismatch => "Vault account address mismatch",
             Self::AuthenticationFailed => "Vault authentication failed",
         })
     }
 }
 impl std::error::Error for VaultError {}
-
-fn canonical_address(address: &str) -> Result<String, VaultError> {
-    let body = address
-        .strip_prefix("0x")
-        .ok_or(VaultError::InvalidRecord)?;
-    if body.len() != 40 || !body.bytes().all(|c| c.is_ascii_hexdigit()) {
+fn family_name(family: AccountFamily) -> &'static str {
+    match family {
+        #[cfg(feature = "evm")]
+        AccountFamily::Evm => "evm",
+        #[cfg(feature = "solana")]
+        AccountFamily::Solana => "solana",
+        #[cfg(feature = "tron")]
+        AccountFamily::Tron => "tron",
+    }
+}
+fn canonical_address(family: AccountFamily, address: &str) -> Result<String, VaultError> {
+    if address.is_empty() || address.len() > 100 || !address.is_ascii() {
         return Err(VaultError::InvalidRecord);
     }
-    Ok(address.to_ascii_lowercase())
+    #[cfg(feature = "evm")]
+    if family == AccountFamily::Evm {
+        let body = address
+            .strip_prefix("0x")
+            .ok_or(VaultError::InvalidRecord)?;
+        if body.len() != 40 || !body.bytes().all(|c| c.is_ascii_hexdigit()) {
+            return Err(VaultError::InvalidRecord);
+        }
+        return Ok(address.to_ascii_lowercase());
+    }
+    let _ = family;
+    Ok(address.to_owned())
 }
-
-fn aad(address: &str) -> String {
-    format!("owllet-wallet:v1:AES-256-GCM:evm:{address}")
+fn import_key(
+    family: AccountFamily,
+    private_key: &str,
+) -> Result<(SigningSession, AccountHandle), VaultError> {
+    let mut session = SigningSession::new();
+    let handle = match family {
+        #[cfg(feature = "evm")]
+        AccountFamily::Evm => session.import_evm_key(private_key.to_owned()),
+        #[cfg(feature = "tron")]
+        AccountFamily::Tron => session.import_tron_key(private_key.to_owned()),
+        #[cfg(feature = "solana")]
+        AccountFamily::Solana => {
+            let bytes =
+                Zeroizing::new(hex::decode(private_key).map_err(|_| VaultError::InvalidKey)?);
+            session.import_solana_key(bytes.to_vec())
+        }
+    }
+    .map_err(|_| VaultError::InvalidKey)?;
+    Ok((session, handle))
 }
-
-/// Encrypts a key bound to its expected address. The caller MUST never reuse
-/// `nonce` with the same wrapping key, including after restore or failed writes.
-pub fn seal_evm_key(
+fn verify_key(
+    family: AccountFamily,
+    private_key: &str,
+    expected: &str,
+) -> Result<(SigningSession, AccountHandle), VaultError> {
+    let (session, handle) = import_key(family, private_key)?;
+    let actual = session
+        .account_info(&handle)
+        .map_err(|_| VaultError::InvalidKey)?
+        .address;
+    if canonical_address(family, &actual)? != canonical_address(family, expected)? {
+        return Err(VaultError::AddressMismatch);
+    }
+    Ok((session, handle))
+}
+fn aad(family: AccountFamily, address: &str) -> String {
+    format!(
+        "owllet-wallet:v1:AES-256-GCM:{}:{address}",
+        family_name(family)
+    )
+}
+/// Caller MUST never reuse a nonce under the same wrapping key, including retries.
+pub fn seal_account_key(
+    family: AccountFamily,
     private_key: &str,
     expected_address: &str,
     wrapping_key: &[u8; 32],
     nonce: &[u8; 12],
 ) -> Result<String, VaultError> {
-    let address = canonical_address(expected_address)?;
-    let derived =
-        derive_evm_address_from_private_key(private_key).map_err(|_| VaultError::InvalidKey)?;
-    if derived.to_ascii_lowercase() != address {
-        return Err(VaultError::AddressMismatch);
-    }
+    let address = canonical_address(family, expected_address)?;
+    verify_key(family, private_key, &address)?;
     let cipher = Aes256Gcm::new(wrapping_key.into());
-    let authenticated = aad(&address);
+    let authenticated = aad(family, &address);
     let ciphertext = cipher
         .encrypt(
             &Nonce::from(*nonce),
@@ -88,30 +129,30 @@ pub fn seal_evm_key(
     serde_json::to_string(&Envelope {
         version: 1,
         algorithm: "AES-256-GCM".into(),
-        family: "evm".into(),
+        family: family_name(family).into(),
         address,
         nonce_hex: hex::encode(nonce),
         ciphertext_hex: hex::encode(ciphertext),
     })
     .map_err(|_| VaultError::InvalidRecord)
 }
-
-/// Opens directly into opaque signing custody. Neither the result nor its
-/// account handle exposes the decrypted private key.
-pub fn open_evm_vault(
+fn decrypt_key(
+    family: AccountFamily,
     record: &str,
-    expected_address: &str,
+    expected: &str,
     wrapping_key: &[u8; 32],
-) -> Result<(SigningSession, AccountHandle), VaultError> {
-    // One EVM key record is small; bound allocations from untrusted storage.
+) -> Result<Zeroizing<String>, VaultError> {
     if record.len() > 4096 {
         return Err(VaultError::InvalidRecord);
     }
     let envelope: Envelope = serde_json::from_str(record).map_err(|_| VaultError::InvalidRecord)?;
-    if envelope.version != 1 || envelope.algorithm != "AES-256-GCM" || envelope.family != "evm" {
+    if envelope.version != 1
+        || envelope.algorithm != "AES-256-GCM"
+        || envelope.family != family_name(family)
+    {
         return Err(VaultError::InvalidRecord);
     }
-    let address = canonical_address(expected_address)?;
+    let address = canonical_address(family, expected)?;
     if envelope.address != address {
         return Err(VaultError::AddressMismatch);
     }
@@ -121,7 +162,7 @@ pub fn open_evm_vault(
         .map_err(|_| VaultError::InvalidRecord)?;
     let ciphertext = hex::decode(envelope.ciphertext_hex).map_err(|_| VaultError::InvalidRecord)?;
     let cipher = Aes256Gcm::new(wrapping_key.into());
-    let authenticated = aad(&address);
+    let authenticated = aad(family, &address);
     let plaintext = Zeroizing::new(
         cipher
             .decrypt(
@@ -133,33 +174,57 @@ pub fn open_evm_vault(
             )
             .map_err(|_| VaultError::AuthenticationFailed)?,
     );
-    let key = Zeroizing::new(
+    Ok(Zeroizing::new(
         std::str::from_utf8(&plaintext)
             .map_err(|_| VaultError::InvalidKey)?
             .to_owned(),
-    );
-    let mut session = SigningSession::new();
-    let handle = session
-        .import_evm_key(key.to_string())
-        .map_err(|_| VaultError::InvalidKey)?;
-    if session
-        .account_info(&handle)
-        .map_err(|_| VaultError::InvalidKey)?
-        .address
-        .to_ascii_lowercase()
-        != address
-    {
-        return Err(VaultError::AddressMismatch);
-    }
-    Ok((session, handle))
+    ))
 }
-
-#[cfg(test)]
+/// Ordinary account access returns custody rather than plaintext.
+pub fn open_account_vault(
+    family: AccountFamily,
+    record: &str,
+    expected: &str,
+    wrapping_key: &[u8; 32],
+) -> Result<(SigningSession, AccountHandle), VaultError> {
+    let key = decrypt_key(family, record, expected, wrapping_key)?;
+    verify_key(family, &key, expected)
+}
+/// Explicit recovery/export boundary. Hosts MUST authenticate the user before
+/// calling and protect returned key material. Never use this for routine signing.
+pub fn export_account_key(
+    family: AccountFamily,
+    record: &str,
+    expected: &str,
+    wrapping_key: &[u8; 32],
+) -> Result<Zeroizing<String>, VaultError> {
+    let key = decrypt_key(family, record, expected, wrapping_key)?;
+    verify_key(family, &key, expected)?;
+    Ok(key)
+}
+#[cfg(feature = "evm")]
+pub fn seal_evm_key(
+    key: &str,
+    address: &str,
+    wrapping_key: &[u8; 32],
+    nonce: &[u8; 12],
+) -> Result<String, VaultError> {
+    seal_account_key(AccountFamily::Evm, key, address, wrapping_key, nonce)
+}
+#[cfg(feature = "evm")]
+pub fn open_evm_vault(
+    record: &str,
+    address: &str,
+    wrapping_key: &[u8; 32],
+) -> Result<(SigningSession, AccountHandle), VaultError> {
+    open_account_vault(AccountFamily::Evm, record, address, wrapping_key)
+}
+#[cfg(all(test, feature = "evm"))]
 mod tests {
     use super::*;
     const KEY: &str = "0000000000000000000000000000000000000000000000000000000000000001";
     fn fixture() -> (String, String) {
-        let address = derive_evm_address_from_private_key(KEY).unwrap();
+        let address = crate::derive_evm_address_from_private_key(KEY).unwrap();
         (
             seal_evm_key(KEY, &address, &[7; 32], &[9; 12]).unwrap(),
             address,

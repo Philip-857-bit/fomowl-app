@@ -13,7 +13,7 @@ tron = ["secp256k1", "dep:bs58", "dep:sha2", "dep:sha3"]
 secp256k1 = ["dep:bip32", "dep:secp256k1"]
 mnemonic-generation = ["dep:rand"]
 signing-session = []
-vault = ["evm", "signing-session", "dep:aes-gcm", "dep:serde"]
+vault = ["signing-session", "dep:aes-gcm", "dep:serde", "dep:serde_json"]
 
 [dependencies]
 aes-gcm = { version = "0.10.3", features = ["zeroize"], optional = true }

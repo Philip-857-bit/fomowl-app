@@ -138,10 +138,10 @@ Keep exact known-address/signature fixtures and the official EIP-155 byte fixtur
 builds. The full adapter suite and Dart/FRB tests independently verify the
 current Flutter integration. Cross-target support needs additional target CI.
 
-## Optional encrypted EVM records
+## Optional encrypted account records
 
-Enable `vault` to obtain AES-256-GCM authenticated records and opaque signing
-custody on open. This feature enables EVM and signing sessions, without adding
+Enable `vault` with any enabled chain to obtain AES-256-GCM authenticated records
+and opaque signing custody on open. This feature enables signing sessions, without adding
 platform storage or authentication. The versioned record authenticates its
 algorithm, chain family, and account address; unsupported formats and failed
 authentication are rejected. Decrypted buffers are guarded with `Zeroizing`.
@@ -149,3 +149,7 @@ Hosts must protect the 32-byte wrapping key and supply a unique 12-byte nonce
 for every encryption under that key, including retries and restores. The API
 does not supply password derivation, rollback protection, or a hardware boundary.
 No existing Flutter wallet storage is migrated by this module alone.
+
+EVM, Solana, and TRON records share the vault format with authenticated family
+binding. `export_account_key` is the explicit recovery boundary; ordinary open
+never returns key material. Hosts own user authentication for recovery exports.

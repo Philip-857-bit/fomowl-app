@@ -10,7 +10,10 @@
 
 #![forbid(unsafe_code)]
 
-#[cfg(feature = "vault")]
+#[cfg(all(
+    feature = "vault",
+    any(feature = "evm", feature = "solana", feature = "tron")
+))]
 pub mod vault;
 
 pub mod accounts;
