@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.11.1";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1389923769;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1946570674;
 
 // Section: executor
 
@@ -873,6 +873,42 @@ fn wire__crate__api__solana_tx__build_and_sign_solana_transaction_impl(
                         api_lookup_tables_json,
                         api_private_key_bytes,
                     )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__bitcoin_transaction__create_bitcoin_transfer_psbt_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "create_bitcoin_transfer_psbt",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_plan = <crate::api::bitcoin_transaction::BitcoinTransactionPlanDto>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::bitcoin_transaction::create_bitcoin_transfer_psbt(api_plan)?;
                     Ok(output_ok)
                 })())
             }
@@ -1753,6 +1789,42 @@ fn wire__crate__api__wallet_vault__export_wallet_vault_key_impl(
         },
     )
 }
+fn wire__crate__api__bitcoin_transaction__finalize_bitcoin_transfer_psbt_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "finalize_bitcoin_transfer_psbt",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_psbt_base64 = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::bitcoin_transaction::finalize_bitcoin_transfer_psbt(
+                            api_psbt_base64,
+                        )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__bip39__generate_mnemonic_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1877,6 +1949,41 @@ fn wire__crate__api__simple__init_app_impl(
                     let output_ok = Result::<_, ()>::Ok({
                         crate::api::simple::init_app();
                     })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__bitcoin_transaction__inspect_bitcoin_transfer_psbt_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "inspect_bitcoin_transfer_psbt",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_psbt_base64 = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::bitcoin_transaction::inspect_bitcoin_transfer_psbt(
+                        api_psbt_base64,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -2024,6 +2131,61 @@ fn wire__crate__api__wallet_vault__open_wallet_vault_impl(
                         api_encrypted_vault,
                         api_expected_address,
                         api_wrapping_key,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__bitcoin_transaction__plan_bitcoin_transfer_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "plan_bitcoin_transfer",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_network =
+                <crate::api::bitcoin_account::BitcoinNetworkDto>::sse_decode(&mut deserializer);
+            let api_account =
+                <crate::api::bitcoin_account::BitcoinAccountDto>::sse_decode(&mut deserializer);
+            let api_candidate_utxos =
+                <Vec<crate::api::bitcoin_transaction::BitcoinUtxoDto>>::sse_decode(
+                    &mut deserializer,
+                );
+            let api_recipients =
+                <Vec<crate::api::bitcoin_transaction::BitcoinRecipientDto>>::sse_decode(
+                    &mut deserializer,
+                );
+            let api_fee_rate_sat_vb = <u64>::sse_decode(&mut deserializer);
+            let api_change_index = <u32>::sse_decode(&mut deserializer);
+            let api_rbf = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::bitcoin_transaction::plan_bitcoin_transfer(
+                        api_network,
+                        api_account,
+                        api_candidate_utxos,
+                        api_recipients,
+                        api_fee_rate_sat_vb,
+                        api_change_index,
+                        api_rbf,
                     )?;
                     Ok(output_ok)
                 })())
@@ -2467,6 +2629,42 @@ fn wire__crate__api__chain_rules__tron_personal_message_digest_impl(
         },
     )
 }
+fn wire__crate__api__bitcoin_transaction__validate_bitcoin_transfer_plan_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validate_bitcoin_transfer_plan",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_plan = <crate::api::bitcoin_transaction::BitcoinTransactionPlanDto>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::api::bitcoin_transaction::validate_bitcoin_transfer_plan(api_plan)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__bip39__validate_mnemonic_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2495,6 +2693,45 @@ fn wire__crate__api__bip39__validate_mnemonic_impl(
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
                         Result::<_, ()>::Ok(crate::api::bip39::validate_mnemonic(api_phrase))?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__bitcoin_transaction__verify_bitcoin_transfer_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "verify_bitcoin_transfer",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_plan = <crate::api::bitcoin_transaction::BitcoinTransactionPlanDto>::sse_decode(
+                &mut deserializer,
+            );
+            let api_raw_transaction_hex = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::bitcoin_transaction::verify_bitcoin_transfer(
+                        api_plan,
+                        api_raw_transaction_hex,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -2609,6 +2846,47 @@ impl SseDecode for crate::api::bitcoin_account::BitcoinNetworkDto {
     }
 }
 
+impl SseDecode for crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_psbtBase64 = <String>::sse_decode(deserializer);
+        let mut var_complete = <bool>::sse_decode(deserializer);
+        let mut var_rawTransactionHex = <Option<String>>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto {
+            psbt_base64: var_psbtBase64,
+            complete: var_complete,
+            raw_transaction_hex: var_rawTransactionHex,
+        };
+    }
+}
+
+impl SseDecode for crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_inputCount = <u32>::sse_decode(deserializer);
+        let mut var_outputs =
+            <Vec<crate::api::bitcoin_transaction::BitcoinPsbtOutputDto>>::sse_decode(deserializer);
+        let mut var_feeSat = <Option<u64>>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto {
+            input_count: var_inputCount,
+            outputs: var_outputs,
+            fee_sat: var_feeSat,
+        };
+    }
+}
+
+impl SseDecode for crate::api::bitcoin_transaction::BitcoinPsbtOutputDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_amountSat = <u64>::sse_decode(deserializer);
+        let mut var_scriptPubkeyHex = <String>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::BitcoinPsbtOutputDto {
+            amount_sat: var_amountSat,
+            script_pubkey_hex: var_scriptPubkeyHex,
+        };
+    }
+}
+
 impl SseDecode for crate::api::bitcoin_account::BitcoinPurposeDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2617,6 +2895,72 @@ impl SseDecode for crate::api::bitcoin_account::BitcoinPurposeDto {
             0 => crate::api::bitcoin_account::BitcoinPurposeDto::Bip84,
             1 => crate::api::bitcoin_account::BitcoinPurposeDto::Bip86,
             _ => unreachable!("Invalid variant for BitcoinPurposeDto: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::bitcoin_transaction::BitcoinRecipientDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_address = <String>::sse_decode(deserializer);
+        let mut var_amountSat = <u64>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::BitcoinRecipientDto {
+            address: var_address,
+            amount_sat: var_amountSat,
+        };
+    }
+}
+
+impl SseDecode for crate::api::bitcoin_transaction::BitcoinTransactionPlanDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_account =
+            <crate::api::bitcoin_account::BitcoinAccountDto>::sse_decode(deserializer);
+        let mut var_unsignedTxHex = <String>::sse_decode(deserializer);
+        let mut var_selectedUtxos =
+            <Vec<crate::api::bitcoin_transaction::BitcoinUtxoDto>>::sse_decode(deserializer);
+        let mut var_recipients =
+            <Vec<crate::api::bitcoin_transaction::BitcoinRecipientDto>>::sse_decode(deserializer);
+        let mut var_changeIndex = <u32>::sse_decode(deserializer);
+        let mut var_rbf = <bool>::sse_decode(deserializer);
+        let mut var_feeRateSatVb = <u64>::sse_decode(deserializer);
+        let mut var_recipientTotalSat = <u64>::sse_decode(deserializer);
+        let mut var_changeSat = <u64>::sse_decode(deserializer);
+        let mut var_feeSat = <u64>::sse_decode(deserializer);
+        let mut var_estimatedVbytes = <u64>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::BitcoinTransactionPlanDto {
+            account: var_account,
+            unsigned_tx_hex: var_unsignedTxHex,
+            selected_utxos: var_selectedUtxos,
+            recipients: var_recipients,
+            change_index: var_changeIndex,
+            rbf: var_rbf,
+            fee_rate_sat_vb: var_feeRateSatVb,
+            recipient_total_sat: var_recipientTotalSat,
+            change_sat: var_changeSat,
+            fee_sat: var_feeSat,
+            estimated_vbytes: var_estimatedVbytes,
+        };
+    }
+}
+
+impl SseDecode for crate::api::bitcoin_transaction::BitcoinUtxoDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_txid = <String>::sse_decode(deserializer);
+        let mut var_vout = <u32>::sse_decode(deserializer);
+        let mut var_valueSat = <u64>::sse_decode(deserializer);
+        let mut var_scriptPubkeyHex = <String>::sse_decode(deserializer);
+        let mut var_keychain =
+            <crate::api::bitcoin_account::BitcoinKeychainDto>::sse_decode(deserializer);
+        let mut var_addressIndex = <u32>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::BitcoinUtxoDto {
+            txid: var_txid,
+            vout: var_vout,
+            value_sat: var_valueSat,
+            script_pubkey_hex: var_scriptPubkeyHex,
+            keychain: var_keychain,
+            address_index: var_addressIndex,
         };
     }
 }
@@ -2632,6 +2976,46 @@ impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_i32::<NativeEndian>().unwrap()
+    }
+}
+
+impl SseDecode for Vec<crate::api::bitcoin_transaction::BitcoinPsbtOutputDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::api::bitcoin_transaction::BitcoinPsbtOutputDto>::sse_decode(deserializer),
+            );
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::bitcoin_transaction::BitcoinRecipientDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::api::bitcoin_transaction::BitcoinRecipientDto>::sse_decode(deserializer),
+            );
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::bitcoin_transaction::BitcoinUtxoDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = vec![];
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::bitcoin_transaction::BitcoinUtxoDto>::sse_decode(deserializer));
+        }
+        return ans_;
     }
 }
 
@@ -2655,6 +3039,35 @@ impl SseDecode for Option<String> {
         } else {
             return None;
         }
+    }
+}
+
+impl SseDecode for Option<u64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<u64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for crate::api::bitcoin_transaction::SignedBitcoinTransactionDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_rawTransactionHex = <String>::sse_decode(deserializer);
+        let mut var_txid = <String>::sse_decode(deserializer);
+        let mut var_wtxid = <String>::sse_decode(deserializer);
+        let mut var_feeSat = <u64>::sse_decode(deserializer);
+        let mut var_vbytes = <u64>::sse_decode(deserializer);
+        return crate::api::bitcoin_transaction::SignedBitcoinTransactionDto {
+            raw_transaction_hex: var_rawTransactionHex,
+            txid: var_txid,
+            wtxid: var_wtxid,
+            fee_sat: var_feeSat,
+            vbytes: var_vbytes,
+        };
     }
 }
 
@@ -2729,48 +3142,54 @@ fn pde_ffi_dispatcher_primary_impl(
 15 => wire__crate__api__wallet_vault__RustWalletSigningAccount_sign_typed_data_impl(port, ptr, rust_vec_len, data_len),
 16 => wire__crate__api__chain_rules__attach_solana_transaction_signature_impl(port, ptr, rust_vec_len, data_len),
 17 => wire__crate__api__solana_tx__build_and_sign_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
-18 => wire__crate__api__evm_signing_account__create_evm_signing_account_impl(port, ptr, rust_vec_len, data_len),
-19 => wire__crate__api__chain_rules__decode_abi_uint256_result_impl(port, ptr, rust_vec_len, data_len),
-20 => wire__crate__api__bitcoin_account__derive_bitcoin_account_address_impl(port, ptr, rust_vec_len, data_len),
-21 => wire__crate__api__bitcoin_account__derive_bitcoin_account_metadata_impl(port, ptr, rust_vec_len, data_len),
-22 => wire__crate__api__bitcoin_account__derive_bitcoin_owned_script_impl(port, ptr, rust_vec_len, data_len),
-23 => wire__crate__api__bip32__derive_evm_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
-24 => wire__crate__api__bip32__derive_evm_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
-25 => wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
-26 => wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(port, ptr, rust_vec_len, data_len),
-27 => wire__crate__api__argon2__derive_passcode_hash_argon2_impl(port, ptr, rust_vec_len, data_len),
-28 => wire__crate__api__bip32__derive_solana_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
-29 => wire__crate__api__bip32__derive_solana_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
-30 => wire__crate__api__bip32__derive_solana_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
-31 => wire__crate__api__bip32__derive_tron_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
-32 => wire__crate__api__bip32__derive_tron_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
-33 => wire__crate__api__bip32__derive_tron_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
-34 => wire__crate__api__bip32__derive_wallet_from_seed_impl(port, ptr, rust_vec_len, data_len),
-35 => wire__crate__api__chain_rules__encode_erc1155_transfer_call_impl(port, ptr, rust_vec_len, data_len),
-36 => wire__crate__api__chain_rules__encode_erc20_allowance_call_impl(port, ptr, rust_vec_len, data_len),
-37 => wire__crate__api__chain_rules__encode_erc20_approve_call_impl(port, ptr, rust_vec_len, data_len),
-38 => wire__crate__api__chain_rules__encode_erc20_transfer_call_impl(port, ptr, rust_vec_len, data_len),
-39 => wire__crate__api__chain_rules__encode_erc721_transfer_call_impl(port, ptr, rust_vec_len, data_len),
-40 => wire__crate__api__wallet_vault__export_wallet_vault_key_impl(port, ptr, rust_vec_len, data_len),
-41 => wire__crate__api__bip39__generate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
-42 => wire__crate__api__evm_signing_account__generate_vault_wrapping_key_impl(port, ptr, rust_vec_len, data_len),
-44 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
-45 => wire__crate__api__bip39__mnemonic_to_seed_impl(port, ptr, rust_vec_len, data_len),
-46 => wire__crate__api__bip32__normalize_solana_private_key_impl(port, ptr, rust_vec_len, data_len),
-47 => wire__crate__api__evm_signing_account__open_evm_vault_signing_account_impl(port, ptr, rust_vec_len, data_len),
-48 => wire__crate__api__wallet_vault__open_wallet_vault_impl(port, ptr, rust_vec_len, data_len),
-49 => wire__crate__api__evm_signing_account__seal_evm_vault_impl(port, ptr, rust_vec_len, data_len),
-50 => wire__crate__api__wallet_vault__seal_wallet_vault_impl(port, ptr, rust_vec_len, data_len),
-51 => wire__crate__api__evm_tx__sign_evm_transaction_impl(port, ptr, rust_vec_len, data_len),
-52 => wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl(port, ptr, rust_vec_len, data_len),
-53 => wire__crate__api__secp256k1_api__sign_personal_message_impl(port, ptr, rust_vec_len, data_len),
-54 => wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
-55 => wire__crate__api__bip32__sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
-56 => wire__crate__api__bip32__sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
-57 => wire__crate__api__secp256k1_api__sign_typed_data_impl(port, ptr, rust_vec_len, data_len),
-58 => wire__crate__api__chain_rules__solana_transaction_message_bytes_impl(port, ptr, rust_vec_len, data_len),
-59 => wire__crate__api__chain_rules__tron_personal_message_digest_impl(port, ptr, rust_vec_len, data_len),
-60 => wire__crate__api__bip39__validate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+18 => wire__crate__api__bitcoin_transaction__create_bitcoin_transfer_psbt_impl(port, ptr, rust_vec_len, data_len),
+19 => wire__crate__api__evm_signing_account__create_evm_signing_account_impl(port, ptr, rust_vec_len, data_len),
+20 => wire__crate__api__chain_rules__decode_abi_uint256_result_impl(port, ptr, rust_vec_len, data_len),
+21 => wire__crate__api__bitcoin_account__derive_bitcoin_account_address_impl(port, ptr, rust_vec_len, data_len),
+22 => wire__crate__api__bitcoin_account__derive_bitcoin_account_metadata_impl(port, ptr, rust_vec_len, data_len),
+23 => wire__crate__api__bitcoin_account__derive_bitcoin_owned_script_impl(port, ptr, rust_vec_len, data_len),
+24 => wire__crate__api__bip32__derive_evm_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+25 => wire__crate__api__bip32__derive_evm_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
+26 => wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
+27 => wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+28 => wire__crate__api__argon2__derive_passcode_hash_argon2_impl(port, ptr, rust_vec_len, data_len),
+29 => wire__crate__api__bip32__derive_solana_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+30 => wire__crate__api__bip32__derive_solana_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
+31 => wire__crate__api__bip32__derive_solana_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
+32 => wire__crate__api__bip32__derive_tron_address_from_private_key_impl(port, ptr, rust_vec_len, data_len),
+33 => wire__crate__api__bip32__derive_tron_address_from_seed_impl(port, ptr, rust_vec_len, data_len),
+34 => wire__crate__api__bip32__derive_tron_private_key_from_seed_impl(port, ptr, rust_vec_len, data_len),
+35 => wire__crate__api__bip32__derive_wallet_from_seed_impl(port, ptr, rust_vec_len, data_len),
+36 => wire__crate__api__chain_rules__encode_erc1155_transfer_call_impl(port, ptr, rust_vec_len, data_len),
+37 => wire__crate__api__chain_rules__encode_erc20_allowance_call_impl(port, ptr, rust_vec_len, data_len),
+38 => wire__crate__api__chain_rules__encode_erc20_approve_call_impl(port, ptr, rust_vec_len, data_len),
+39 => wire__crate__api__chain_rules__encode_erc20_transfer_call_impl(port, ptr, rust_vec_len, data_len),
+40 => wire__crate__api__chain_rules__encode_erc721_transfer_call_impl(port, ptr, rust_vec_len, data_len),
+41 => wire__crate__api__wallet_vault__export_wallet_vault_key_impl(port, ptr, rust_vec_len, data_len),
+42 => wire__crate__api__bitcoin_transaction__finalize_bitcoin_transfer_psbt_impl(port, ptr, rust_vec_len, data_len),
+43 => wire__crate__api__bip39__generate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+44 => wire__crate__api__evm_signing_account__generate_vault_wrapping_key_impl(port, ptr, rust_vec_len, data_len),
+46 => wire__crate__api__simple__init_app_impl(port, ptr, rust_vec_len, data_len),
+47 => wire__crate__api__bitcoin_transaction__inspect_bitcoin_transfer_psbt_impl(port, ptr, rust_vec_len, data_len),
+48 => wire__crate__api__bip39__mnemonic_to_seed_impl(port, ptr, rust_vec_len, data_len),
+49 => wire__crate__api__bip32__normalize_solana_private_key_impl(port, ptr, rust_vec_len, data_len),
+50 => wire__crate__api__evm_signing_account__open_evm_vault_signing_account_impl(port, ptr, rust_vec_len, data_len),
+51 => wire__crate__api__wallet_vault__open_wallet_vault_impl(port, ptr, rust_vec_len, data_len),
+52 => wire__crate__api__bitcoin_transaction__plan_bitcoin_transfer_impl(port, ptr, rust_vec_len, data_len),
+53 => wire__crate__api__evm_signing_account__seal_evm_vault_impl(port, ptr, rust_vec_len, data_len),
+54 => wire__crate__api__wallet_vault__seal_wallet_vault_impl(port, ptr, rust_vec_len, data_len),
+55 => wire__crate__api__evm_tx__sign_evm_transaction_impl(port, ptr, rust_vec_len, data_len),
+56 => wire__crate__api__evm_tx__sign_legacy_evm_transaction_impl(port, ptr, rust_vec_len, data_len),
+57 => wire__crate__api__secp256k1_api__sign_personal_message_impl(port, ptr, rust_vec_len, data_len),
+58 => wire__crate__api__solana_tx__sign_serialized_solana_transaction_impl(port, ptr, rust_vec_len, data_len),
+59 => wire__crate__api__bip32__sign_solana_message_impl(port, ptr, rust_vec_len, data_len),
+60 => wire__crate__api__bip32__sign_tron_raw_hash_impl(port, ptr, rust_vec_len, data_len),
+61 => wire__crate__api__secp256k1_api__sign_typed_data_impl(port, ptr, rust_vec_len, data_len),
+62 => wire__crate__api__chain_rules__solana_transaction_message_bytes_impl(port, ptr, rust_vec_len, data_len),
+63 => wire__crate__api__chain_rules__tron_personal_message_digest_impl(port, ptr, rust_vec_len, data_len),
+64 => wire__crate__api__bitcoin_transaction__validate_bitcoin_transfer_plan_impl(port, ptr, rust_vec_len, data_len),
+65 => wire__crate__api__bip39__validate_mnemonic_impl(port, ptr, rust_vec_len, data_len),
+66 => wire__crate__api__bitcoin_transaction__verify_bitcoin_transfer_impl(port, ptr, rust_vec_len, data_len),
                         _ => unreachable!(),
                     }
 }
@@ -2783,7 +3202,7 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        43 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__simple__greet_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2897,6 +3316,71 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_account::BitcoinNetwo
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.psbt_base64.into_into_dart().into_dart(),
+            self.complete.into_into_dart().into_dart(),
+            self.raw_transaction_hex.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto>
+    for crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.input_count.into_into_dart().into_dart(),
+            self.outputs.into_into_dart().into_dart(),
+            self.fee_sat.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto>
+    for crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_transaction::BitcoinPsbtOutputDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.amount_sat.into_into_dart().into_dart(),
+            self.script_pubkey_hex.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::BitcoinPsbtOutputDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::BitcoinPsbtOutputDto>
+    for crate::api::bitcoin_transaction::BitcoinPsbtOutputDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::BitcoinPsbtOutputDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_account::BitcoinPurposeDto {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -2914,6 +3398,108 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_account::BitcoinPurpo
     for crate::api::bitcoin_account::BitcoinPurposeDto
 {
     fn into_into_dart(self) -> crate::api::bitcoin_account::BitcoinPurposeDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_transaction::BitcoinRecipientDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.address.into_into_dart().into_dart(),
+            self.amount_sat.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::BitcoinRecipientDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::BitcoinRecipientDto>
+    for crate::api::bitcoin_transaction::BitcoinRecipientDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::BitcoinRecipientDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_transaction::BitcoinTransactionPlanDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.account.into_into_dart().into_dart(),
+            self.unsigned_tx_hex.into_into_dart().into_dart(),
+            self.selected_utxos.into_into_dart().into_dart(),
+            self.recipients.into_into_dart().into_dart(),
+            self.change_index.into_into_dart().into_dart(),
+            self.rbf.into_into_dart().into_dart(),
+            self.fee_rate_sat_vb.into_into_dart().into_dart(),
+            self.recipient_total_sat.into_into_dart().into_dart(),
+            self.change_sat.into_into_dart().into_dart(),
+            self.fee_sat.into_into_dart().into_dart(),
+            self.estimated_vbytes.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::BitcoinTransactionPlanDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::BitcoinTransactionPlanDto>
+    for crate::api::bitcoin_transaction::BitcoinTransactionPlanDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::BitcoinTransactionPlanDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::bitcoin_transaction::BitcoinUtxoDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.txid.into_into_dart().into_dart(),
+            self.vout.into_into_dart().into_dart(),
+            self.value_sat.into_into_dart().into_dart(),
+            self.script_pubkey_hex.into_into_dart().into_dart(),
+            self.keychain.into_into_dart().into_dart(),
+            self.address_index.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::BitcoinUtxoDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::BitcoinUtxoDto>
+    for crate::api::bitcoin_transaction::BitcoinUtxoDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::BitcoinUtxoDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart
+    for crate::api::bitcoin_transaction::SignedBitcoinTransactionDto
+{
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.raw_transaction_hex.into_into_dart().into_dart(),
+            self.txid.into_into_dart().into_dart(),
+            self.wtxid.into_into_dart().into_dart(),
+            self.fee_sat.into_into_dart().into_dart(),
+            self.vbytes.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::bitcoin_transaction::SignedBitcoinTransactionDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::bitcoin_transaction::SignedBitcoinTransactionDto>
+    for crate::api::bitcoin_transaction::SignedBitcoinTransactionDto
+{
+    fn into_into_dart(self) -> crate::api::bitcoin_transaction::SignedBitcoinTransactionDto {
         self
     }
 }
@@ -3039,6 +3625,35 @@ impl SseEncode for crate::api::bitcoin_account::BitcoinNetworkDto {
     }
 }
 
+impl SseEncode for crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.psbt_base64, serializer);
+        <bool>::sse_encode(self.complete, serializer);
+        <Option<String>>::sse_encode(self.raw_transaction_hex, serializer);
+    }
+}
+
+impl SseEncode for crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.input_count, serializer);
+        <Vec<crate::api::bitcoin_transaction::BitcoinPsbtOutputDto>>::sse_encode(
+            self.outputs,
+            serializer,
+        );
+        <Option<u64>>::sse_encode(self.fee_sat, serializer);
+    }
+}
+
+impl SseEncode for crate::api::bitcoin_transaction::BitcoinPsbtOutputDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.amount_sat, serializer);
+        <String>::sse_encode(self.script_pubkey_hex, serializer);
+    }
+}
+
 impl SseEncode for crate::api::bitcoin_account::BitcoinPurposeDto {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3055,6 +3670,49 @@ impl SseEncode for crate::api::bitcoin_account::BitcoinPurposeDto {
     }
 }
 
+impl SseEncode for crate::api::bitcoin_transaction::BitcoinRecipientDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.address, serializer);
+        <u64>::sse_encode(self.amount_sat, serializer);
+    }
+}
+
+impl SseEncode for crate::api::bitcoin_transaction::BitcoinTransactionPlanDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::bitcoin_account::BitcoinAccountDto>::sse_encode(self.account, serializer);
+        <String>::sse_encode(self.unsigned_tx_hex, serializer);
+        <Vec<crate::api::bitcoin_transaction::BitcoinUtxoDto>>::sse_encode(
+            self.selected_utxos,
+            serializer,
+        );
+        <Vec<crate::api::bitcoin_transaction::BitcoinRecipientDto>>::sse_encode(
+            self.recipients,
+            serializer,
+        );
+        <u32>::sse_encode(self.change_index, serializer);
+        <bool>::sse_encode(self.rbf, serializer);
+        <u64>::sse_encode(self.fee_rate_sat_vb, serializer);
+        <u64>::sse_encode(self.recipient_total_sat, serializer);
+        <u64>::sse_encode(self.change_sat, serializer);
+        <u64>::sse_encode(self.fee_sat, serializer);
+        <u64>::sse_encode(self.estimated_vbytes, serializer);
+    }
+}
+
+impl SseEncode for crate::api::bitcoin_transaction::BitcoinUtxoDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.txid, serializer);
+        <u32>::sse_encode(self.vout, serializer);
+        <u64>::sse_encode(self.value_sat, serializer);
+        <String>::sse_encode(self.script_pubkey_hex, serializer);
+        <crate::api::bitcoin_account::BitcoinKeychainDto>::sse_encode(self.keychain, serializer);
+        <u32>::sse_encode(self.address_index, serializer);
+    }
+}
+
 impl SseEncode for bool {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3066,6 +3724,36 @@ impl SseEncode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
+    }
+}
+
+impl SseEncode for Vec<crate::api::bitcoin_transaction::BitcoinPsbtOutputDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::bitcoin_transaction::BitcoinPsbtOutputDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::bitcoin_transaction::BitcoinRecipientDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::bitcoin_transaction::BitcoinRecipientDto>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::bitcoin_transaction::BitcoinUtxoDto> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::bitcoin_transaction::BitcoinUtxoDto>::sse_encode(item, serializer);
+        }
     }
 }
 
@@ -3086,6 +3774,27 @@ impl SseEncode for Option<String> {
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
         }
+    }
+}
+
+impl SseEncode for Option<u64> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <u64>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for crate::api::bitcoin_transaction::SignedBitcoinTransactionDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.raw_transaction_hex, serializer);
+        <String>::sse_encode(self.txid, serializer);
+        <String>::sse_encode(self.wtxid, serializer);
+        <u64>::sse_encode(self.fee_sat, serializer);
+        <u64>::sse_encode(self.vbytes, serializer);
     }
 }
 

@@ -7,6 +7,7 @@ import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
 import 'api/bitcoin_account.dart';
+import 'api/bitcoin_transaction.dart';
 import 'api/chain_rules.dart';
 import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
@@ -76,7 +77,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 1389923769;
+  int get rustContentHash => -1946570674;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -193,6 +194,10 @@ abstract class RustLibApi extends BaseApi {
     required String instructionsJson,
     required String lookupTablesJson,
     required List<int> privateKeyBytes,
+  });
+
+  Future<String> crateApiBitcoinTransactionCreateBitcoinTransferPsbt({
+    required BitcoinTransactionPlanDto plan,
   });
 
   Future<RustEvmSigningAccount>
@@ -320,6 +325,11 @@ abstract class RustLibApi extends BaseApi {
     required List<int> wrappingKey,
   });
 
+  Future<BitcoinPsbtFinalizationDto>
+  crateApiBitcoinTransactionFinalizeBitcoinTransferPsbt({
+    required String psbtBase64,
+  });
+
   Future<String> crateApiBip39GenerateMnemonic();
 
   Future<Uint8List> crateApiEvmSigningAccountGenerateVaultWrappingKey();
@@ -327,6 +337,11 @@ abstract class RustLibApi extends BaseApi {
   String crateApiSimpleGreet({required String name});
 
   Future<void> crateApiSimpleInitApp();
+
+  Future<BitcoinPsbtInspectionDto>
+  crateApiBitcoinTransactionInspectBitcoinTransferPsbt({
+    required String psbtBase64,
+  });
 
   Future<Uint8List> crateApiBip39MnemonicToSeed({required String phrase});
 
@@ -346,6 +361,17 @@ abstract class RustLibApi extends BaseApi {
     required String encryptedVault,
     required String expectedAddress,
     required List<int> wrappingKey,
+  });
+
+  Future<BitcoinTransactionPlanDto>
+  crateApiBitcoinTransactionPlanBitcoinTransfer({
+    required BitcoinNetworkDto network,
+    required BitcoinAccountDto account,
+    required List<BitcoinUtxoDto> candidateUtxos,
+    required List<BitcoinRecipientDto> recipients,
+    required BigInt feeRateSatVb,
+    required int changeIndex,
+    required bool rbf,
   });
 
   Future<String> crateApiEvmSigningAccountSealEvmVault({
@@ -419,7 +445,17 @@ abstract class RustLibApi extends BaseApi {
     required String message,
   });
 
+  Future<void> crateApiBitcoinTransactionValidateBitcoinTransferPlan({
+    required BitcoinTransactionPlanDto plan,
+  });
+
   Future<bool> crateApiBip39ValidateMnemonic({required String phrase});
+
+  Future<SignedBitcoinTransactionDto>
+  crateApiBitcoinTransactionVerifyBitcoinTransfer({
+    required BitcoinTransactionPlanDto plan,
+    required String rawTransactionHex,
+  });
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_RustEvmSigningAccount;
@@ -1221,6 +1257,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiBitcoinTransactionCreateBitcoinTransferPsbt({
+    required BitcoinTransactionPlanDto plan,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_bitcoin_transaction_plan_dto(plan, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiBitcoinTransactionCreateBitcoinTransferPsbtConstMeta,
+        argValues: [plan],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiBitcoinTransactionCreateBitcoinTransferPsbtConstMeta =>
+      const TaskConstMeta(
+        debugName: "create_bitcoin_transfer_psbt",
+        argNames: ["plan"],
+      );
+
+  @override
   Future<RustEvmSigningAccount>
   crateApiEvmSigningAccountCreateEvmSigningAccount({
     required String privateKeyHex,
@@ -1235,7 +1306,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -1270,7 +1341,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -1309,7 +1380,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1349,7 +1420,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -1389,7 +1460,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1422,7 +1493,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1457,7 +1528,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1492,7 +1563,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1525,7 +1596,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1564,7 +1635,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1597,7 +1668,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1632,7 +1703,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1667,7 +1738,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1700,7 +1771,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1735,7 +1806,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1770,7 +1841,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1805,7 +1876,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1846,7 +1917,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1881,7 +1952,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1916,7 +1987,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 38,
             port: port_,
           );
         },
@@ -1951,7 +2022,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1988,7 +2059,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 39,
+            funcId: 40,
             port: port_,
           );
         },
@@ -2027,7 +2098,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 40,
+            funcId: 41,
             port: port_,
           );
         },
@@ -2054,6 +2125,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<BitcoinPsbtFinalizationDto>
+  crateApiBitcoinTransactionFinalizeBitcoinTransferPsbt({
+    required String psbtBase64,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(psbtBase64, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 42,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bitcoin_psbt_finalization_dto,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiBitcoinTransactionFinalizeBitcoinTransferPsbtConstMeta,
+        argValues: [psbtBase64],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiBitcoinTransactionFinalizeBitcoinTransferPsbtConstMeta =>
+      const TaskConstMeta(
+        debugName: "finalize_bitcoin_transfer_psbt",
+        argNames: ["psbtBase64"],
+      );
+
+  @override
   Future<String> crateApiBip39GenerateMnemonic() {
     return handler.executeNormal(
       NormalTask(
@@ -2062,7 +2169,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 41,
+            funcId: 43,
             port: port_,
           );
         },
@@ -2089,7 +2196,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 44,
             port: port_,
           );
         },
@@ -2118,7 +2225,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         callFfi: () {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(name, serializer);
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -2143,7 +2250,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 44,
+            funcId: 46,
             port: port_,
           );
         },
@@ -2162,6 +2269,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
+  Future<BitcoinPsbtInspectionDto>
+  crateApiBitcoinTransactionInspectBitcoinTransferPsbt({
+    required String psbtBase64,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(psbtBase64, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bitcoin_psbt_inspection_dto,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiBitcoinTransactionInspectBitcoinTransferPsbtConstMeta,
+        argValues: [psbtBase64],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiBitcoinTransactionInspectBitcoinTransferPsbtConstMeta =>
+      const TaskConstMeta(
+        debugName: "inspect_bitcoin_transfer_psbt",
+        argNames: ["psbtBase64"],
+      );
+
+  @override
   Future<Uint8List> crateApiBip39MnemonicToSeed({required String phrase}) {
     return handler.executeNormal(
       NormalTask(
@@ -2171,7 +2314,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 48,
             port: port_,
           );
         },
@@ -2201,7 +2344,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 49,
             port: port_,
           );
         },
@@ -2239,7 +2382,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 50,
             port: port_,
           );
         },
@@ -2281,7 +2424,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 51,
             port: port_,
           );
         },
@@ -2309,6 +2452,68 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<BitcoinTransactionPlanDto>
+  crateApiBitcoinTransactionPlanBitcoinTransfer({
+    required BitcoinNetworkDto network,
+    required BitcoinAccountDto account,
+    required List<BitcoinUtxoDto> candidateUtxos,
+    required List<BitcoinRecipientDto> recipients,
+    required BigInt feeRateSatVb,
+    required int changeIndex,
+    required bool rbf,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bitcoin_network_dto(network, serializer);
+          sse_encode_box_autoadd_bitcoin_account_dto(account, serializer);
+          sse_encode_list_bitcoin_utxo_dto(candidateUtxos, serializer);
+          sse_encode_list_bitcoin_recipient_dto(recipients, serializer);
+          sse_encode_u_64(feeRateSatVb, serializer);
+          sse_encode_u_32(changeIndex, serializer);
+          sse_encode_bool(rbf, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 52,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bitcoin_transaction_plan_dto,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBitcoinTransactionPlanBitcoinTransferConstMeta,
+        argValues: [
+          network,
+          account,
+          candidateUtxos,
+          recipients,
+          feeRateSatVb,
+          changeIndex,
+          rbf,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBitcoinTransactionPlanBitcoinTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "plan_bitcoin_transfer",
+        argNames: [
+          "network",
+          "account",
+          "candidateUtxos",
+          "recipients",
+          "feeRateSatVb",
+          "changeIndex",
+          "rbf",
+        ],
+      );
+
+  @override
   Future<String> crateApiEvmSigningAccountSealEvmVault({
     required String privateKeyHex,
     required String expectedAddress,
@@ -2324,7 +2529,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 49,
+            funcId: 53,
             port: port_,
           );
         },
@@ -2363,7 +2568,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 50,
+            funcId: 54,
             port: port_,
           );
         },
@@ -2419,7 +2624,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 51,
+            funcId: 55,
             port: port_,
           );
         },
@@ -2488,7 +2693,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 52,
+            funcId: 56,
             port: port_,
           );
         },
@@ -2541,7 +2746,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 53,
+            funcId: 57,
             port: port_,
           );
         },
@@ -2578,7 +2783,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 54,
+            funcId: 58,
             port: port_,
           );
         },
@@ -2613,7 +2818,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 55,
+            funcId: 59,
             port: port_,
           );
         },
@@ -2648,7 +2853,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 56,
+            funcId: 60,
             port: port_,
           );
         },
@@ -2683,7 +2888,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 57,
+            funcId: 61,
             port: port_,
           );
         },
@@ -2716,7 +2921,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 58,
+            funcId: 62,
             port: port_,
           );
         },
@@ -2749,7 +2954,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 59,
+            funcId: 63,
             port: port_,
           );
         },
@@ -2771,6 +2976,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiBitcoinTransactionValidateBitcoinTransferPlan({
+    required BitcoinTransactionPlanDto plan,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_bitcoin_transaction_plan_dto(plan, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 64,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateApiBitcoinTransactionValidateBitcoinTransferPlanConstMeta,
+        argValues: [plan],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiBitcoinTransactionValidateBitcoinTransferPlanConstMeta =>
+      const TaskConstMeta(
+        debugName: "validate_bitcoin_transfer_plan",
+        argNames: ["plan"],
+      );
+
+  @override
   Future<bool> crateApiBip39ValidateMnemonic({required String phrase}) {
     return handler.executeNormal(
       NormalTask(
@@ -2780,7 +3020,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 60,
+            funcId: 65,
             port: port_,
           );
         },
@@ -2797,6 +3037,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiBip39ValidateMnemonicConstMeta =>
       const TaskConstMeta(debugName: "validate_mnemonic", argNames: ["phrase"]);
+
+  @override
+  Future<SignedBitcoinTransactionDto>
+  crateApiBitcoinTransactionVerifyBitcoinTransfer({
+    required BitcoinTransactionPlanDto plan,
+    required String rawTransactionHex,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_bitcoin_transaction_plan_dto(plan, serializer);
+          sse_encode_String(rawTransactionHex, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 66,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_signed_bitcoin_transaction_dto,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiBitcoinTransactionVerifyBitcoinTransferConstMeta,
+        argValues: [plan, rawTransactionHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiBitcoinTransactionVerifyBitcoinTransferConstMeta =>
+      const TaskConstMeta(
+        debugName: "verify_bitcoin_transfer",
+        argNames: ["plan", "rawTransactionHex"],
+      );
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_RustEvmSigningAccount => wire
@@ -2928,9 +3204,100 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BitcoinPsbtFinalizationDto dco_decode_bitcoin_psbt_finalization_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return BitcoinPsbtFinalizationDto(
+      psbtBase64: dco_decode_String(arr[0]),
+      complete: dco_decode_bool(arr[1]),
+      rawTransactionHex: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  BitcoinPsbtInspectionDto dco_decode_bitcoin_psbt_inspection_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return BitcoinPsbtInspectionDto(
+      inputCount: dco_decode_u_32(arr[0]),
+      outputs: dco_decode_list_bitcoin_psbt_output_dto(arr[1]),
+      feeSat: dco_decode_opt_box_autoadd_u_64(arr[2]),
+    );
+  }
+
+  @protected
+  BitcoinPsbtOutputDto dco_decode_bitcoin_psbt_output_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return BitcoinPsbtOutputDto(
+      amountSat: dco_decode_u_64(arr[0]),
+      scriptPubkeyHex: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   BitcoinPurposeDto dco_decode_bitcoin_purpose_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return BitcoinPurposeDto.values[raw as int];
+  }
+
+  @protected
+  BitcoinRecipientDto dco_decode_bitcoin_recipient_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return BitcoinRecipientDto(
+      address: dco_decode_String(arr[0]),
+      amountSat: dco_decode_u_64(arr[1]),
+    );
+  }
+
+  @protected
+  BitcoinTransactionPlanDto dco_decode_bitcoin_transaction_plan_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return BitcoinTransactionPlanDto(
+      account: dco_decode_bitcoin_account_dto(arr[0]),
+      unsignedTxHex: dco_decode_String(arr[1]),
+      selectedUtxos: dco_decode_list_bitcoin_utxo_dto(arr[2]),
+      recipients: dco_decode_list_bitcoin_recipient_dto(arr[3]),
+      changeIndex: dco_decode_u_32(arr[4]),
+      rbf: dco_decode_bool(arr[5]),
+      feeRateSatVb: dco_decode_u_64(arr[6]),
+      recipientTotalSat: dco_decode_u_64(arr[7]),
+      changeSat: dco_decode_u_64(arr[8]),
+      feeSat: dco_decode_u_64(arr[9]),
+      estimatedVbytes: dco_decode_u_64(arr[10]),
+    );
+  }
+
+  @protected
+  BitcoinUtxoDto dco_decode_bitcoin_utxo_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return BitcoinUtxoDto(
+      txid: dco_decode_String(arr[0]),
+      vout: dco_decode_u_32(arr[1]),
+      valueSat: dco_decode_u_64(arr[2]),
+      scriptPubkeyHex: dco_decode_String(arr[3]),
+      keychain: dco_decode_bitcoin_keychain_dto(arr[4]),
+      addressIndex: dco_decode_u_32(arr[5]),
+    );
   }
 
   @protected
@@ -2946,9 +3313,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BitcoinTransactionPlanDto dco_decode_box_autoadd_bitcoin_transaction_plan_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_bitcoin_transaction_plan_dto(raw);
+  }
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
   int dco_decode_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  List<BitcoinPsbtOutputDto> dco_decode_list_bitcoin_psbt_output_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_bitcoin_psbt_output_dto)
+        .toList();
+  }
+
+  @protected
+  List<BitcoinRecipientDto> dco_decode_list_bitcoin_recipient_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_bitcoin_recipient_dto)
+        .toList();
+  }
+
+  @protected
+  List<BitcoinUtxoDto> dco_decode_list_bitcoin_utxo_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_bitcoin_utxo_dto).toList();
   }
 
   @protected
@@ -2967,6 +3372,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  SignedBitcoinTransactionDto dco_decode_signed_bitcoin_transaction_dto(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return SignedBitcoinTransactionDto(
+      rawTransactionHex: dco_decode_String(arr[0]),
+      txid: dco_decode_String(arr[1]),
+      wtxid: dco_decode_String(arr[2]),
+      feeSat: dco_decode_u_64(arr[3]),
+      vbytes: dco_decode_u_64(arr[4]),
+    );
   }
 
   @protected
@@ -3152,12 +3580,115 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BitcoinPsbtFinalizationDto sse_decode_bitcoin_psbt_finalization_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_psbtBase64 = sse_decode_String(deserializer);
+    var var_complete = sse_decode_bool(deserializer);
+    var var_rawTransactionHex = sse_decode_opt_String(deserializer);
+    return BitcoinPsbtFinalizationDto(
+      psbtBase64: var_psbtBase64,
+      complete: var_complete,
+      rawTransactionHex: var_rawTransactionHex,
+    );
+  }
+
+  @protected
+  BitcoinPsbtInspectionDto sse_decode_bitcoin_psbt_inspection_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_inputCount = sse_decode_u_32(deserializer);
+    var var_outputs = sse_decode_list_bitcoin_psbt_output_dto(deserializer);
+    var var_feeSat = sse_decode_opt_box_autoadd_u_64(deserializer);
+    return BitcoinPsbtInspectionDto(
+      inputCount: var_inputCount,
+      outputs: var_outputs,
+      feeSat: var_feeSat,
+    );
+  }
+
+  @protected
+  BitcoinPsbtOutputDto sse_decode_bitcoin_psbt_output_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_amountSat = sse_decode_u_64(deserializer);
+    var var_scriptPubkeyHex = sse_decode_String(deserializer);
+    return BitcoinPsbtOutputDto(
+      amountSat: var_amountSat,
+      scriptPubkeyHex: var_scriptPubkeyHex,
+    );
+  }
+
+  @protected
   BitcoinPurposeDto sse_decode_bitcoin_purpose_dto(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return BitcoinPurposeDto.values[inner];
+  }
+
+  @protected
+  BitcoinRecipientDto sse_decode_bitcoin_recipient_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_address = sse_decode_String(deserializer);
+    var var_amountSat = sse_decode_u_64(deserializer);
+    return BitcoinRecipientDto(address: var_address, amountSat: var_amountSat);
+  }
+
+  @protected
+  BitcoinTransactionPlanDto sse_decode_bitcoin_transaction_plan_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_account = sse_decode_bitcoin_account_dto(deserializer);
+    var var_unsignedTxHex = sse_decode_String(deserializer);
+    var var_selectedUtxos = sse_decode_list_bitcoin_utxo_dto(deserializer);
+    var var_recipients = sse_decode_list_bitcoin_recipient_dto(deserializer);
+    var var_changeIndex = sse_decode_u_32(deserializer);
+    var var_rbf = sse_decode_bool(deserializer);
+    var var_feeRateSatVb = sse_decode_u_64(deserializer);
+    var var_recipientTotalSat = sse_decode_u_64(deserializer);
+    var var_changeSat = sse_decode_u_64(deserializer);
+    var var_feeSat = sse_decode_u_64(deserializer);
+    var var_estimatedVbytes = sse_decode_u_64(deserializer);
+    return BitcoinTransactionPlanDto(
+      account: var_account,
+      unsignedTxHex: var_unsignedTxHex,
+      selectedUtxos: var_selectedUtxos,
+      recipients: var_recipients,
+      changeIndex: var_changeIndex,
+      rbf: var_rbf,
+      feeRateSatVb: var_feeRateSatVb,
+      recipientTotalSat: var_recipientTotalSat,
+      changeSat: var_changeSat,
+      feeSat: var_feeSat,
+      estimatedVbytes: var_estimatedVbytes,
+    );
+  }
+
+  @protected
+  BitcoinUtxoDto sse_decode_bitcoin_utxo_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_txid = sse_decode_String(deserializer);
+    var var_vout = sse_decode_u_32(deserializer);
+    var var_valueSat = sse_decode_u_64(deserializer);
+    var var_scriptPubkeyHex = sse_decode_String(deserializer);
+    var var_keychain = sse_decode_bitcoin_keychain_dto(deserializer);
+    var var_addressIndex = sse_decode_u_32(deserializer);
+    return BitcoinUtxoDto(
+      txid: var_txid,
+      vout: var_vout,
+      valueSat: var_valueSat,
+      scriptPubkeyHex: var_scriptPubkeyHex,
+      keychain: var_keychain,
+      addressIndex: var_addressIndex,
+    );
   }
 
   @protected
@@ -3175,9 +3706,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  BitcoinTransactionPlanDto sse_decode_box_autoadd_bitcoin_transaction_plan_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_bitcoin_transaction_plan_dto(deserializer));
+  }
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  List<BitcoinPsbtOutputDto> sse_decode_list_bitcoin_psbt_output_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <BitcoinPsbtOutputDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_bitcoin_psbt_output_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<BitcoinRecipientDto> sse_decode_list_bitcoin_recipient_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <BitcoinRecipientDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_bitcoin_recipient_dto(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<BitcoinUtxoDto> sse_decode_list_bitcoin_utxo_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <BitcoinUtxoDto>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_bitcoin_utxo_dto(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -3203,6 +3790,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  SignedBitcoinTransactionDto sse_decode_signed_bitcoin_transaction_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_rawTransactionHex = sse_decode_String(deserializer);
+    var var_txid = sse_decode_String(deserializer);
+    var var_wtxid = sse_decode_String(deserializer);
+    var var_feeSat = sse_decode_u_64(deserializer);
+    var var_vbytes = sse_decode_u_64(deserializer);
+    return SignedBitcoinTransactionDto(
+      rawTransactionHex: var_rawTransactionHex,
+      txid: var_txid,
+      wtxid: var_wtxid,
+      feeSat: var_feeSat,
+      vbytes: var_vbytes,
+    );
   }
 
   @protected
@@ -3389,12 +4006,87 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_bitcoin_psbt_finalization_dto(
+    BitcoinPsbtFinalizationDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.psbtBase64, serializer);
+    sse_encode_bool(self.complete, serializer);
+    sse_encode_opt_String(self.rawTransactionHex, serializer);
+  }
+
+  @protected
+  void sse_encode_bitcoin_psbt_inspection_dto(
+    BitcoinPsbtInspectionDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.inputCount, serializer);
+    sse_encode_list_bitcoin_psbt_output_dto(self.outputs, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.feeSat, serializer);
+  }
+
+  @protected
+  void sse_encode_bitcoin_psbt_output_dto(
+    BitcoinPsbtOutputDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.amountSat, serializer);
+    sse_encode_String(self.scriptPubkeyHex, serializer);
+  }
+
+  @protected
   void sse_encode_bitcoin_purpose_dto(
     BitcoinPurposeDto self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_bitcoin_recipient_dto(
+    BitcoinRecipientDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.address, serializer);
+    sse_encode_u_64(self.amountSat, serializer);
+  }
+
+  @protected
+  void sse_encode_bitcoin_transaction_plan_dto(
+    BitcoinTransactionPlanDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bitcoin_account_dto(self.account, serializer);
+    sse_encode_String(self.unsignedTxHex, serializer);
+    sse_encode_list_bitcoin_utxo_dto(self.selectedUtxos, serializer);
+    sse_encode_list_bitcoin_recipient_dto(self.recipients, serializer);
+    sse_encode_u_32(self.changeIndex, serializer);
+    sse_encode_bool(self.rbf, serializer);
+    sse_encode_u_64(self.feeRateSatVb, serializer);
+    sse_encode_u_64(self.recipientTotalSat, serializer);
+    sse_encode_u_64(self.changeSat, serializer);
+    sse_encode_u_64(self.feeSat, serializer);
+    sse_encode_u_64(self.estimatedVbytes, serializer);
+  }
+
+  @protected
+  void sse_encode_bitcoin_utxo_dto(
+    BitcoinUtxoDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.txid, serializer);
+    sse_encode_u_32(self.vout, serializer);
+    sse_encode_u_64(self.valueSat, serializer);
+    sse_encode_String(self.scriptPubkeyHex, serializer);
+    sse_encode_bitcoin_keychain_dto(self.keychain, serializer);
+    sse_encode_u_32(self.addressIndex, serializer);
   }
 
   @protected
@@ -3413,9 +4105,60 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_bitcoin_transaction_plan_dto(
+    BitcoinTransactionPlanDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bitcoin_transaction_plan_dto(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_list_bitcoin_psbt_output_dto(
+    List<BitcoinPsbtOutputDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_bitcoin_psbt_output_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_bitcoin_recipient_dto(
+    List<BitcoinRecipientDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_bitcoin_recipient_dto(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_bitcoin_utxo_dto(
+    List<BitcoinUtxoDto> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_bitcoin_utxo_dto(item, serializer);
+    }
   }
 
   @protected
@@ -3448,6 +4191,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_String(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_signed_bitcoin_transaction_dto(
+    SignedBitcoinTransactionDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.rawTransactionHex, serializer);
+    sse_encode_String(self.txid, serializer);
+    sse_encode_String(self.wtxid, serializer);
+    sse_encode_u_64(self.feeSat, serializer);
+    sse_encode_u_64(self.vbytes, serializer);
   }
 
   @protected

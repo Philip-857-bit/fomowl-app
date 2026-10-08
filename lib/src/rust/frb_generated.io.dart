@@ -7,6 +7,7 @@ import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
 import 'api/bitcoin_account.dart';
+import 'api/bitcoin_transaction.dart';
 import 'api/chain_rules.dart';
 import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
@@ -97,7 +98,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BitcoinNetworkDto dco_decode_bitcoin_network_dto(dynamic raw);
 
   @protected
+  BitcoinPsbtFinalizationDto dco_decode_bitcoin_psbt_finalization_dto(
+    dynamic raw,
+  );
+
+  @protected
+  BitcoinPsbtInspectionDto dco_decode_bitcoin_psbt_inspection_dto(dynamic raw);
+
+  @protected
+  BitcoinPsbtOutputDto dco_decode_bitcoin_psbt_output_dto(dynamic raw);
+
+  @protected
   BitcoinPurposeDto dco_decode_bitcoin_purpose_dto(dynamic raw);
+
+  @protected
+  BitcoinRecipientDto dco_decode_bitcoin_recipient_dto(dynamic raw);
+
+  @protected
+  BitcoinTransactionPlanDto dco_decode_bitcoin_transaction_plan_dto(
+    dynamic raw,
+  );
+
+  @protected
+  BitcoinUtxoDto dco_decode_bitcoin_utxo_dto(dynamic raw);
 
   @protected
   bool dco_decode_bool(dynamic raw);
@@ -106,7 +129,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BitcoinAccountDto dco_decode_box_autoadd_bitcoin_account_dto(dynamic raw);
 
   @protected
+  BitcoinTransactionPlanDto dco_decode_box_autoadd_bitcoin_transaction_plan_dto(
+    dynamic raw,
+  );
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+
+  @protected
   int dco_decode_i_32(dynamic raw);
+
+  @protected
+  List<BitcoinPsbtOutputDto> dco_decode_list_bitcoin_psbt_output_dto(
+    dynamic raw,
+  );
+
+  @protected
+  List<BitcoinRecipientDto> dco_decode_list_bitcoin_recipient_dto(dynamic raw);
+
+  @protected
+  List<BitcoinUtxoDto> dco_decode_list_bitcoin_utxo_dto(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -116,6 +158,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  SignedBitcoinTransactionDto dco_decode_signed_bitcoin_transaction_dto(
+    dynamic raw,
+  );
 
   @protected
   SolanaPrivateKeyImport dco_decode_solana_private_key_import(dynamic raw);
@@ -202,9 +252,37 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BitcoinPsbtFinalizationDto sse_decode_bitcoin_psbt_finalization_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPsbtInspectionDto sse_decode_bitcoin_psbt_inspection_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPsbtOutputDto sse_decode_bitcoin_psbt_output_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   BitcoinPurposeDto sse_decode_bitcoin_purpose_dto(
     SseDeserializer deserializer,
   );
+
+  @protected
+  BitcoinRecipientDto sse_decode_bitcoin_recipient_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinTransactionPlanDto sse_decode_bitcoin_transaction_plan_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinUtxoDto sse_decode_bitcoin_utxo_dto(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -215,7 +293,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  BitcoinTransactionPlanDto sse_decode_box_autoadd_bitcoin_transaction_plan_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  List<BitcoinPsbtOutputDto> sse_decode_list_bitcoin_psbt_output_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BitcoinRecipientDto> sse_decode_list_bitcoin_recipient_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BitcoinUtxoDto> sse_decode_list_bitcoin_utxo_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -225,6 +326,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  SignedBitcoinTransactionDto sse_decode_signed_bitcoin_transaction_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SolanaPrivateKeyImport sse_decode_solana_private_key_import(
@@ -324,8 +433,44 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_bitcoin_psbt_finalization_dto(
+    BitcoinPsbtFinalizationDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_psbt_inspection_dto(
+    BitcoinPsbtInspectionDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_psbt_output_dto(
+    BitcoinPsbtOutputDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bitcoin_purpose_dto(
     BitcoinPurposeDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_recipient_dto(
+    BitcoinRecipientDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_transaction_plan_dto(
+    BitcoinTransactionPlanDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_utxo_dto(
+    BitcoinUtxoDto self,
     SseSerializer serializer,
   );
 
@@ -339,7 +484,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_bitcoin_transaction_plan_dto(
+    BitcoinTransactionPlanDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_bitcoin_psbt_output_dto(
+    List<BitcoinPsbtOutputDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_bitcoin_recipient_dto(
+    List<BitcoinRecipientDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_bitcoin_utxo_dto(
+    List<BitcoinUtxoDto> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -352,6 +524,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_signed_bitcoin_transaction_dto(
+    SignedBitcoinTransactionDto self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_solana_private_key_import(
