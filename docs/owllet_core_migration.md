@@ -229,3 +229,26 @@ and rejects overwriting an existing version with different content. It performs
 no uploads. Private Git/pinned commits or unpacked verified packages are supported;
 no registry endpoint or account has been configured.
 Commit: `build(wallet-core): prepare proprietary internal source releases`.
+
+## Verified internal release result
+
+Release source: `1834e7cad71916153f1e9da348e88c44fd59fc92`. Local annotated tag:
+`owllet-core-v0.1.0-internal`. Cargo packaged 35 files and compiled the extracted
+crate with all features. The internal artifact is 65,779 bytes; SHA-256:
+`61b733944731d410682cb027e9e9e5743ae8410e05773249b805e4dfd9ee6f77`.
+It is in `rust/owllet-core/target/internal-release/0.1.0/` with `SHA256SUMS` and
+`release.json`. The dependency metadata inventory has 399 runtime/build entries
+and no missing license metadata.
+
+The independent consumer was copied outside its normal source directory, pointed
+at the unpacked/checksummed `.crate`, and run with its own lockfile offline. Its
+EVM/Solana/TRON calldata/signature/wire/vault/export/lock checks passed, proving
+consumption from the package rather than the original Flutter checkout.
+
+Final checks: 57 core tests, 32 adapter tests, 87 targeted Flutter tests, and all
+664 Flutter tests passed (one existing skip). Full Flutter analysis, Rust formatting
+and Clippy passed; native Windows FFI was rebuilt. Windows native-consumer execution
+is verified locally; Windows/Linux consumer CI is configured but not run here.
+This is a local internal release. Registry publication is disabled and no upload
+or remote Git push was performed. Rust products can use the verified package
+or pinned private Git source; other languages still require host adapters.
