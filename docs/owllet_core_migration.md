@@ -79,3 +79,14 @@ The core must remain independent of UI, RPC, platform storage, and provider
 credentials. The Owllet backend continues to own payment/KYC/swap integrations.
 Raw keys still cross Dart today; moving signatures is not the completed vault
 security boundary. See `rust/owllet-core/README.md` for module responsibilities.
+
+## Encrypted-record engine step
+
+Previous step: `1698ec4` makes mnemonic engine failures fail closed.
+The optional core `vault` module now seals EVM keys using AES-256-GCM and opens
+records directly into a scoped signing session. Version/algorithm/family/address
+metadata is authenticated or strictly validated; malformed and tampered records
+fail closed. Hosts supply secure wrapping keys and unique nonces. CI includes
+a vault-only feature configuration. Existing Flutter storage and legacy keys
+remain untouched. Native bindings and verified non-destructive storage migration
+are subsequent steps. Commit: `feat(wallet-core): add authenticated EVM vault records`.

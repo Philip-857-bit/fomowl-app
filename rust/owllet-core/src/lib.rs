@@ -10,6 +10,9 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "vault")]
+pub mod vault;
+
 pub mod accounts;
 pub mod mnemonic;
 pub mod signing;

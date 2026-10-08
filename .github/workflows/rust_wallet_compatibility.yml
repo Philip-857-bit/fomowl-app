@@ -60,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        features: ['', 'mnemonic-generation', 'secp256k1', 'evm', 'solana', 'tron', 'evm,solana', 'evm,tron', 'solana,tron', 'evm,signing-session', 'solana,signing-session', 'tron,signing-session']
+        features: ['', 'mnemonic-generation', 'secp256k1', 'evm', 'solana', 'tron', 'evm,solana', 'evm,tron', 'solana,tron', 'evm,signing-session', 'solana,signing-session', 'tron,signing-session', 'vault']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
