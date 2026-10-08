@@ -9,6 +9,7 @@
 import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
+import 'api/bitcoin_account.dart';
 import 'api/chain_rules.dart';
 import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
@@ -89,7 +90,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  BitcoinAccountDto dco_decode_bitcoin_account_dto(dynamic raw);
+
+  @protected
+  BitcoinKeychainDto dco_decode_bitcoin_keychain_dto(dynamic raw);
+
+  @protected
+  BitcoinNetworkDto dco_decode_bitcoin_network_dto(dynamic raw);
+
+  @protected
+  BitcoinPurposeDto dco_decode_bitcoin_purpose_dto(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  BitcoinAccountDto dco_decode_box_autoadd_bitcoin_account_dto(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -170,7 +189,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  BitcoinAccountDto sse_decode_bitcoin_account_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinKeychainDto sse_decode_bitcoin_keychain_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinNetworkDto sse_decode_bitcoin_network_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPurposeDto sse_decode_bitcoin_purpose_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  BitcoinAccountDto sse_decode_box_autoadd_bitcoin_account_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -200,9 +247,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt sse_decode_usize(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   void
@@ -264,7 +308,40 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_bitcoin_account_dto(
+    BitcoinAccountDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_keychain_dto(
+    BitcoinKeychainDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_network_dto(
+    BitcoinNetworkDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_purpose_dto(
+    BitcoinPurposeDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_bitcoin_account_dto(
+    BitcoinAccountDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -298,9 +375,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class

@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 53 files · ~473,577 words
+- 54 files · ~474,916 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 366 nodes · 512 edges · 60 communities detected
+- 404 nodes · 571 edges · 60 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -72,7 +72,7 @@
 - [[_COMMUNITY_Community 59|Community 59]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `pde_ffi_dispatcher_primary_impl()` - 57 edges
+1. `pde_ffi_dispatcher_primary_impl()` - 60 edges
 2. `RustWalletSigningAccount` - 13 edges
 3. `MainActivity` - 10 edges
 4. `fixture_seed()` - 6 edges
@@ -89,24 +89,16 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.08
-Nodes (59): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+51 more)
+Cohesion: 0.07
+Nodes (62): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+54 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.13
-Nodes (18): derive_evm_private_key_from_seed(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_private_key_from_seed(), derive_wallet_from_seed(), derives_known_family_addresses_from_seed(), fixture_seed(), normalize_solana_private_key() (+10 more)
+Cohesion: 0.04
+Nodes (15): crate::api::bip32::SolanaPrivateKeyImport, crate::api::bitcoin_account::BitcoinAccountDto, crate::api::bitcoin_account::BitcoinKeychainDto, crate::api::bitcoin_account::BitcoinNetworkDto, crate::api::bitcoin_account::BitcoinPurposeDto, FrbWrapper<RustEvmSigningAccount>, FrbWrapper<RustWalletSigningAccount>, Option<String> (+7 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.08
-Nodes (8): i32, Option<String>, RustEvmSigningAccount, RustOpaqueMoi<
-
-        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustEvmSigningAccount>,
-
-    >, RustOpaqueMoi<
-
-        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<RustWalletSigningAccount>,
-
-    >, RustWalletSigningAccount, String, Vec<u8>
+Cohesion: 0.13
+Nodes (18): derive_evm_private_key_from_seed(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_private_key_from_seed(), derive_wallet_from_seed(), derives_known_family_addresses_from_seed(), fixture_seed(), normalize_solana_private_key() (+10 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.17
@@ -117,28 +109,28 @@ Cohesion: 0.14
 Nodes (6): all_family_adapters_keep_identity_signatures_and_explicit_exports(), export_wallet_vault_key(), family(), open_wallet_vault(), RustWalletSigningAccount, seal_wallet_vault()
 
 ### Community 5 - "Community 5"
+Cohesion: 0.2
+Nodes (8): BitcoinAccountDto, BitcoinKeychainDto, BitcoinNetworkDto, BitcoinPurposeDto, derive_bitcoin_account_address(), derive_bitcoin_account_metadata(), derive_bitcoin_owned_script(), official_vectors_and_explicit_networks_survive_the_adapter()
+
+### Community 6 - "Community 6"
 Cohesion: 0.13
 Nodes (2): WalletCompatibilityFixture, WalletVector
 
-### Community 6 - "Community 6"
+### Community 7 - "Community 7"
 Cohesion: 0.26
 Nodes (7): create_evm_signing_account(), generate_vault_wrapping_key(), open_evm_vault_signing_account(), RustEvmSigningAccount, seal_evm_vault(), vault_adapter_authenticates_before_creating_a_signer(), verified_context_locks_and_refuses_further_access()
 
-### Community 7 - "Community 7"
+### Community 8 - "Community 8"
 Cohesion: 0.18
 Nodes (1): MainActivity
 
-### Community 8 - "Community 8"
+### Community 9 - "Community 9"
 Cohesion: 0.2
 Nodes (0):
 
-### Community 9 - "Community 9"
+### Community 10 - "Community 10"
 Cohesion: 0.36
 Nodes (9): general_adapter_preserves_official_legacy_fixture(), general_adapter_rejects_ambiguous_fee_policy(), request_from_fields(), sign_evm_transaction(), sign_legacy_evm_transaction(), test_adapter_invalid_address(), test_adapter_invalid_gas_price(), test_adapter_invalid_key() (+1 more)
-
-### Community 10 - "Community 10"
-Cohesion: 0.25
-Nodes (3): crate::api::bip32::SolanaPrivateKeyImport, FrbWrapper<RustEvmSigningAccount>, FrbWrapper<RustWalletSigningAccount>
 
 ### Community 11 - "Community 11"
 Cohesion: 0.57
@@ -210,23 +202,23 @@ Nodes (1): bool
 
 ### Community 28 - "Community 28"
 Cohesion: 0.67
-Nodes (1): u32
+Nodes (1): i32
 
 ### Community 29 - "Community 29"
 Cohesion: 0.67
-Nodes (1): u64
+Nodes (1): u32
 
 ### Community 30 - "Community 30"
 Cohesion: 0.67
-Nodes (1): u8
+Nodes (1): u64
 
 ### Community 31 - "Community 31"
 Cohesion: 0.67
-Nodes (1): ()
+Nodes (1): u8
 
 ### Community 32 - "Community 32"
 Cohesion: 0.67
-Nodes (1): usize
+Nodes (1): ()
 
 ### Community 33 - "Community 33"
 Cohesion: 0.67
@@ -395,17 +387,17 @@ Nodes (1): Build a verified proprietary source package without uploading to a re
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `i32` connect `Community 2` to `Community 0`?**
-  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **Why does `usize` connect `Community 1` to `Community 0`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `FrbWrapper<RustEvmSigningAccount>` to the rest of the system?**
   _7 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.08 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.13 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.04 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.08 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.13 - nodes in this community are weakly interconnected._
 - **Should `Community 4` be split into smaller, more focused modules?**
   _Cohesion score 0.14 - nodes in this community are weakly interconnected._
-- **Should `Community 5` be split into smaller, more focused modules?**
+- **Should `Community 6` be split into smaller, more focused modules?**
   _Cohesion score 0.13 - nodes in this community are weakly interconnected._
