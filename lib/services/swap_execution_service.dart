@@ -1,7 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:web3dart/web3dart.dart';
-import 'package:web3dart/crypto.dart';
 
 import '../config/app_environment.dart';
 import '../models/token.dart';
@@ -100,116 +98,98 @@ class SwapExecutionService {
     // (and once more after an approval transaction). Reusing that exact quote
     // avoids a second backend request and an RPC health probe on the critical
     // path while keeping the approved calldata and displayed output aligned.
-    final client = Web3Client(
-      blockchain.activeChain.rpcUrl,
-      _httpClientService.client,
-    );
-    try {
-      if (quote.txTo == null || quote.txTo!.isEmpty) {
-        throw Exception(
-          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
-        );
-      }
-      final toAddress = EthereumAddress.fromHex(quote.txTo!);
-
-      final gasPriceStr = quote.txGasPrice;
-      final gasPrice = gasPriceStr != null ? _parseBigInt(gasPriceStr) : null;
-      if (gasPrice == null) {
-        throw Exception(
-          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
-        );
-      }
-
-      final dataStr = quote.txData;
-      if (dataStr == null) {
-        throw Exception(
-          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
-        );
-      }
-      final dataBytes = hexToBytes(dataStr.replaceFirst('0x', ''));
-
-      final valueStr = quote.txValue;
-      final valueWei = valueStr != null ? _parseBigInt(valueStr) : null;
-      if (valueWei == null) {
-        throw Exception(
-          'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
-        );
-      }
-
-      // SECURITY: do not blindly sign/broadcast backend-supplied calldata. We
-      // cannot fully decode arbitrary router calldata client-side, but we can
-      // enforce two strong invariants that bound what the transaction can do:
-      //
-      //  1. Native value invariant — for a native (gas-token) sale the tx must
-      //     send exactly the amount being sold; for an ERC-20 sale the router
-      //     pulls tokens via allowance and the tx must send zero native value.
-      //     This stops a tampered/compromised response from draining native
-      //     funds the user never intended to spend.
-      //  2. Minimum output — the freshly quoted output must still clear the
-      //     slippage floor of the amount the user approved, so the trade can't
-      //     be silently executed at a far worse rate than was displayed.
-      final sellAmountWei = _parseBigInt(fromAmountWei) ?? BigInt.zero;
-      if (_isNativeToken(fromToken)) {
-        if (valueWei != sellAmountWei) {
-          throw Exception(
-            'Swap transaction value does not match the amount you are selling. Aborting for your safety; please refresh the quote.',
-          );
-        }
-      } else if (valueWei != BigInt.zero) {
-        throw Exception(
-          'Swap transaction unexpectedly sends native funds for a token sale. Aborting for your safety; please refresh the quote.',
-        );
-      }
-
-      final quotedOut = _parseBigInt(quote.minAmountOutWei);
-      // Fail CLOSED: if the response carries no parseable output amount we
-      // cannot enforce the slippage floor, so refuse rather than sign a trade
-      // at an unknown rate. (Previously this check was skipped when the field
-      // was absent, letting a tampered response execute at any rate.)
-      if (expectedToAmount > 0) {
-        if (quotedOut == null) {
-          throw Exception(
-            'The swap quote is missing its output amount and cannot be safely executed. Please refresh the quote and try again.',
-          );
-        }
-        final floor = _minAcceptableOutBaseUnits(
-          expectedToAmount: expectedToAmount,
-          decimals: toToken.decimals,
-          slippageBps: slippageBps,
-        );
-        if (quotedOut < floor) {
-          throw Exception(
-            'The current swap rate is worse than the quote you approved. Please refresh the quote and try again.',
-          );
-        }
-      }
-
-      final tx = Transaction(
-        to: toAddress,
-        data: dataBytes,
-        value: EtherAmount.inWei(valueWei),
-        gasPrice: EtherAmount.inWei(gasPrice),
-        maxGas: _parseInt(quote.txGas),
+    if (quote.txTo == null || quote.txTo!.isEmpty) {
+      throw Exception(
+        'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
       );
-
-      final credentials = await _walletService.getCredentials();
-
-      // 3. Broadcast
-      final txHash = await client.sendTransaction(
-        credentials,
-        tx,
-        chainId: blockchain.activeChain.chainId,
-        fetchChainIdFromNetworkId: false,
-      );
-
-      return SwapExecutionResult(
-        success: true,
-        transactionHash: txHash,
-        analyticsEventId: quote.analyticsEventId,
-      );
-    } finally {
-      // client.dispose() intentionally removed — HttpClient is a shared singleton.
     }
+
+    final gasPriceStr = quote.txGasPrice;
+    final gasPrice = gasPriceStr != null ? _parseBigInt(gasPriceStr) : null;
+    if (gasPrice == null) {
+      throw Exception(
+        'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+      );
+    }
+
+    final dataStr = quote.txData;
+    if (dataStr == null) {
+      throw Exception(
+        'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+      );
+    }
+
+    final valueStr = quote.txValue;
+    final valueWei = valueStr != null ? _parseBigInt(valueStr) : null;
+    if (valueWei == null) {
+      throw Exception(
+        'Swap quote was missing executable transaction fields. Please refresh the quote and try again.',
+      );
+    }
+
+    // SECURITY: do not blindly sign/broadcast backend-supplied calldata. We
+    // cannot fully decode arbitrary router calldata client-side, but we can
+    // enforce two strong invariants that bound what the transaction can do:
+    //
+    //  1. Native value invariant — for a native (gas-token) sale the tx must
+    //     send exactly the amount being sold; for an ERC-20 sale the router
+    //     pulls tokens via allowance and the tx must send zero native value.
+    //     This stops a tampered/compromised response from draining native
+    //     funds the user never intended to spend.
+    //  2. Minimum output — the freshly quoted output must still clear the
+    //     slippage floor of the amount the user approved, so the trade can't
+    //     be silently executed at a far worse rate than was displayed.
+    final sellAmountWei = _parseBigInt(fromAmountWei) ?? BigInt.zero;
+    if (_isNativeToken(fromToken)) {
+      if (valueWei != sellAmountWei) {
+        throw Exception(
+          'Swap transaction value does not match the amount you are selling. Aborting for your safety; please refresh the quote.',
+        );
+      }
+    } else if (valueWei != BigInt.zero) {
+      throw Exception(
+        'Swap transaction unexpectedly sends native funds for a token sale. Aborting for your safety; please refresh the quote.',
+      );
+    }
+
+    final quotedOut = _parseBigInt(quote.minAmountOutWei);
+    // Fail CLOSED: if the response carries no parseable output amount we
+    // cannot enforce the slippage floor, so refuse rather than sign a trade
+    // at an unknown rate. (Previously this check was skipped when the field
+    // was absent, letting a tampered response execute at any rate.)
+    if (expectedToAmount > 0) {
+      if (quotedOut == null) {
+        throw Exception(
+          'The swap quote is missing its output amount and cannot be safely executed. Please refresh the quote and try again.',
+        );
+      }
+      final floor = _minAcceptableOutBaseUnits(
+        expectedToAmount: expectedToAmount,
+        decimals: toToken.decimals,
+        slippageBps: slippageBps,
+      );
+      if (quotedOut < floor) {
+        throw Exception(
+          'The current swap rate is worse than the quote you approved. Please refresh the quote and try again.',
+        );
+      }
+    }
+
+    final txHash = await _walletService.sendRawTransactionRequest(
+      rpcUrl: blockchain.activeChain.rpcUrl,
+      chainId: blockchain.activeChain.chainId,
+      toAddress: quote.txTo!,
+      dataHex: dataStr,
+      valueInWei: valueWei,
+      gasPriceWei: gasPrice,
+      gasLimit: _parseInt(quote.txGas),
+    );
+
+    return SwapExecutionResult(
+      success: true,
+      transactionHash: txHash,
+      analyticsEventId: quote.analyticsEventId,
+    );
   }
 
   /// Records analytics only after the UI's transaction monitor has confirmed
