@@ -792,7 +792,8 @@ class WalletService {
     }
   }
 
-  /// Get EthPrivateKey credentials for transactions
+  /// Legacy compatibility API. Production transactions use Rust signing.
+  @Deprecated('Use the Rust transaction APIs or getEvmSigningAccount instead')
   Future<EthPrivateKey> getCredentials() async {
     final privateKeyHex = await getPrivateKey();
     if (privateKeyHex == null) {
@@ -801,6 +802,11 @@ class WalletService {
 
     return EthPrivateKey.fromHex(privateKeyHex);
   }
+
+  /// Captures a verified sender for multi-step operations without exposing its
+  /// raw key to callers. This is a temporary Dart context until vault migration.
+  Future<EvmSigningAccount> getEvmSigningAccount() =>
+      _activeEvmSigningAccount();
 
   Web3Client _clientForRpc(String rpcUrl) {
     return _web3Clients.putIfAbsent(

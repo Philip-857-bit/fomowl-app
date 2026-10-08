@@ -391,10 +391,7 @@ void main() {
     () async {
       final rpc = _Rpc('');
       addTearDown(rpc.client.dispose);
-      final account = await EvmTransactionService.verifyAccount(
-        sender: EthereumAddress.fromHex(_sender),
-        privateKeyHex: _key,
-      );
+        final account = await _Wallet(rpc.client).getEvmSigningAccount();
       expect(account.toString(), isNot(contains(_key)));
       await expectLater(
         EvmTransactionService.broadcastLegacy(

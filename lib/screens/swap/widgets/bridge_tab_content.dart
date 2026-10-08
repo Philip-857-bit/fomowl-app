@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 
 import '../../../models/chain.dart';
@@ -17,6 +16,8 @@ import '../../../services/http_client_service.dart';
 import '../../../services/transaction_monitor.dart';
 import '../../../services/tron_swap_service.dart';
 import '../../../services/wallet_service.dart';
+import '../../../services/evm_transaction_service.dart';
+import '../../../services/evm_bridge_transaction_service.dart';
 import '../../../services/wallet_history_service.dart';
 import '../../../services/wallet_notification_service.dart';
 import '../../../theme/app_chain_theme.dart';
@@ -955,7 +956,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     try {
       String? firstTxHash;
       String? latestTxHash;
-      EthPrivateKey? evmCredentials;
+      EvmSigningAccount? evmAccount;
 
       for (var stepIndex = 0; stepIndex < quote.steps.length; stepIndex++) {
         final step = quote.steps[stepIndex];
@@ -1084,20 +1085,24 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           return;
         }
         final chain = matchingChains.first;
-        final credentials = evmCredentials ??= await widget.walletService
-            .getCredentials();
+        final account = evmAccount ??= await widget.walletService
+            .getEvmSigningAccount();
         final client = Web3Client(chain.rpcUrl, _httpClientService.client);
-        final tx = await _prepareEvmBridgeTransaction(
+        final tx = await EvmBridgeTransactionService.prepare(
           client: client,
-          credentials: credentials,
+          sender: account.address,
           step: step,
           nativeSymbol: chain.symbol,
         );
-        final txHash = await client.sendTransaction(
-          credentials,
-          tx,
+        final txHash = await EvmTransactionService.broadcastLegacy(
+          client: client,
+          account: account,
           chainId: step.chainId,
-          fetchChainIdFromNetworkId: false,
+          to: tx.to!,
+          data: tx.data,
+          valueWei: tx.value!.getInWei,
+          gasPriceWei: tx.gasPrice!.getInWei,
+          gasLimit: tx.maxGas!,
         );
         firstTxHash ??= txHash;
         latestTxHash = txHash;
@@ -1225,85 +1230,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   // ── Build ───────────────────────────────────────────────────────────────
-
-  Future<Transaction> _prepareEvmBridgeTransaction({
-    required Web3Client client,
-    required EthPrivateKey credentials,
-    required BridgeStepTx step,
-    required String nativeSymbol,
-  }) async {
-    final to = EthereumAddress.fromHex(step.to);
-    final data = hexToBytes(step.data.replaceFirst('0x', ''));
-    final value = EtherAmount.inWei(step.value);
-    final symbol = nativeSymbol.trim().isEmpty
-        ? 'the native gas token'
-        : nativeSymbol.trim();
-    late final List<Object> preflight;
-    try {
-      preflight = await Future.wait<Object>([
-        client.getBalance(credentials.address),
-        client.getGasPrice(),
-        client.estimateGas(
-          sender: credentials.address,
-          to: to,
-          value: value,
-          data: data,
-        ),
-      ]);
-    } catch (error) {
-      if (_isGasAllowanceError(error)) {
-        throw Exception(
-          'Not enough $symbol to cover the bridge network fee. Add more $symbol, then try again.',
-        );
-      }
-      rethrow;
-    }
-    final nativeBalanceWei = (preflight[0] as EtherAmount).getInWei;
-    if (nativeBalanceWei <= step.value) {
-      throw Exception(
-        'Not enough $symbol to pay the bridge amount and network fee. Add more $symbol, then try again.',
-      );
-    }
-
-    final gasPrice = preflight[1] as EtherAmount;
-    final estimatedGas = preflight[2] as BigInt;
-    final bufferedGas = _bufferGasLimit(estimatedGas);
-    final gasCostWei = gasPrice.getInWei * bufferedGas;
-    final requiredNativeWei = step.value + gasCostWei;
-
-    if (nativeBalanceWei < requiredNativeWei) {
-      final missingWei = requiredNativeWei - nativeBalanceWei;
-      final missing = EtherAmount.inWei(
-        missingWei,
-      ).getValueInUnit(EtherUnit.ether).toStringAsFixed(6);
-      throw Exception(
-        'Not enough $symbol to pay the bridge amount and network fee. Add at least $missing $symbol, then try again.',
-      );
-    }
-
-    return Transaction(
-      to: to,
-      data: data,
-      value: value,
-      gasPrice: gasPrice,
-      maxGas: bufferedGas.toInt(),
-    );
-  }
-
-  bool _isGasAllowanceError(Object error) {
-    final lower = error.toString().toLowerCase();
-    return lower.contains('gas required exceeds allowance') ||
-        lower.contains('insufficient funds') ||
-        lower.contains('insufficient native gas') ||
-        lower.contains('cannot afford') ||
-        (lower.contains('not enough') && lower.contains('gas'));
-  }
-
-  BigInt _bufferGasLimit(BigInt estimatedGas) {
-    final buffered =
-        (estimatedGas * BigInt.from(125) + BigInt.from(99)) ~/ BigInt.from(100);
-    return buffered > estimatedGas ? buffered : estimatedGas + BigInt.one;
-  }
 
   @override
   Widget build(BuildContext context) {
