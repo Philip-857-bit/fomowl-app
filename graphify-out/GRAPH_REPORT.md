@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 53 files · ~473,754 words
+- 53 files · ~473,577 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 365 nodes · 509 edges · 60 communities detected
+- 366 nodes · 512 edges · 60 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -181,20 +181,20 @@ Cohesion: 0.4
 Nodes (2): NotificationService, UNNotificationServiceExtension
 
 ### Community 21 - "Community 21"
-Cohesion: 0.5
-Nodes (0):
+Cohesion: 0.8
+Nodes (4): bitcoin_self_test(), check(), main(), self_test()
 
 ### Community 22 - "Community 22"
 Cohesion: 0.5
-Nodes (2): handle_new_rx_page(), Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.
+Nodes (0):
 
 ### Community 23 - "Community 23"
 Cohesion: 0.5
-Nodes (2): RunnerTests, XCTestCase
+Nodes (2): handle_new_rx_page(), Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.
 
 ### Community 24 - "Community 24"
-Cohesion: 0.83
-Nodes (3): check(), main(), self_test()
+Cohesion: 0.5
+Nodes (2): RunnerTests, XCTestCase
 
 ### Community 25 - "Community 25"
 Cohesion: 0.5
