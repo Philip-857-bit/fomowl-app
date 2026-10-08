@@ -21,4 +21,5 @@ pub mod wallet_vault;
 pub mod bitcoin_account;
 pub mod bitcoin_signing_account;
 pub mod bitcoin_transaction;
+pub mod bitcoin_vault;
 pub mod chain_rules;

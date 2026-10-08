@@ -9,6 +9,7 @@ import 'api/bip39.dart';
 import 'api/bitcoin_account.dart';
 import 'api/bitcoin_signing_account.dart';
 import 'api/bitcoin_transaction.dart';
+import 'api/bitcoin_vault.dart';
 import 'api/chain_rules.dart';
 import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
@@ -190,6 +191,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  SealedBitcoinAccountDto dco_decode_sealed_bitcoin_account_dto(dynamic raw);
 
   @protected
   SignedBitcoinTransactionDto dco_decode_signed_bitcoin_transaction_dto(
@@ -382,6 +386,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  SealedBitcoinAccountDto sse_decode_sealed_bitcoin_account_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SignedBitcoinTransactionDto sse_decode_signed_bitcoin_transaction_dto(
@@ -608,6 +617,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sealed_bitcoin_account_dto(
+    SealedBitcoinAccountDto self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_signed_bitcoin_transaction_dto(
