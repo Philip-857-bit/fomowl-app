@@ -897,7 +897,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_transactions_evm_rs",
-      "community": 5
+      "community": 6
     },
     {
       "label": "LegacyEvmTransactionRequest",
@@ -905,7 +905,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L9",
       "id": "evm_legacyevmtransactionrequest",
-      "community": 5
+      "community": 6
     },
     {
       "label": "SignedEvmTransaction",
@@ -913,7 +913,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L20",
       "id": "evm_signedevmtransaction",
-      "community": 5
+      "community": 6
     },
     {
       "label": "EvmTransactionFee",
@@ -921,7 +921,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L27",
       "id": "evm_evmtransactionfee",
-      "community": 5
+      "community": 6
     },
     {
       "label": "EvmTransactionRequest",
@@ -929,7 +929,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L39",
       "id": "evm_evmtransactionrequest",
-      "community": 5
+      "community": 6
     },
     {
       "label": "sign_legacy_evm_transaction()",
@@ -937,7 +937,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L50",
       "id": "evm_sign_legacy_evm_transaction",
-      "community": 5
+      "community": 6
     },
     {
       "label": "sign_evm_transaction()",
@@ -945,7 +945,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L71",
       "id": "evm_sign_evm_transaction",
-      "community": 5
+      "community": 6
     },
     {
       "label": "eip155_request()",
@@ -953,7 +953,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L167",
       "id": "evm_eip155_request",
-      "community": 5
+      "community": 6
     },
     {
       "label": "test_official_eip155_vector()",
@@ -961,7 +961,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L180",
       "id": "evm_test_official_eip155_vector",
-      "community": 5
+      "community": 6
     },
     {
       "label": "test_chain_id_replay_protection()",
@@ -969,7 +969,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L213",
       "id": "evm_test_chain_id_replay_protection",
-      "community": 5
+      "community": 6
     },
     {
       "label": "test_non_empty_calldata()",
@@ -977,7 +977,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L234",
       "id": "evm_test_non_empty_calldata",
-      "community": 5
+      "community": 6
     },
     {
       "label": "test_recover_signer_from_envelope()",
@@ -985,7 +985,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L279",
       "id": "evm_test_recover_signer_from_envelope",
-      "community": 5
+      "community": 6
     },
     {
       "label": "test_negative_invalid_inputs()",
@@ -993,7 +993,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\evm.rs",
       "source_location": "L300",
       "id": "evm_test_negative_invalid_inputs",
-      "community": 5
+      "community": 6
     },
     {
       "label": "mod.rs",
@@ -1009,7 +1009,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
       "source_location": "L1",
       "id": "rust_owllet_core_src_transactions_solana_rs",
-      "community": 6
+      "community": 5
     },
     {
       "label": "SolanaInstructionPayload",
@@ -1017,7 +1017,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
       "source_location": "L20",
       "id": "solana_solanainstructionpayload",
-      "community": 6
+      "community": 5
     },
     {
       "label": "SolanaAccountPayload",
@@ -1025,7 +1025,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
       "source_location": "L29",
       "id": "solana_solanaaccountpayload",
-      "community": 6
+      "community": 5
     },
     {
       "label": "SolanaLookupTablePayload",
@@ -1033,7 +1033,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
       "source_location": "L37",
       "id": "solana_solanalookuptablepayload",
-      "community": 6
+      "community": 5
     },
     {
       "label": "parse_pubkey()",
@@ -1041,7 +1041,7 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
       "source_location": "L42",
       "id": "solana_parse_pubkey",
-      "community": 6
+      "community": 5
     },
     {
       "label": "build_and_sign_solana_transaction()",
@@ -1049,55 +1049,71 @@
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
       "source_location": "L57",
       "id": "solana_build_and_sign_solana_transaction",
-      "community": 6
+      "community": 5
     },
     {
       "label": "sign_serialized_solana_transaction()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L138",
+      "source_location": "L143",
       "id": "solana_sign_serialized_solana_transaction",
-      "community": 6
+      "community": 5
     },
     {
       "label": "builds_normalized_v0_instruction_payload_and_verifies_signature()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L211",
+      "source_location": "L219",
       "id": "solana_builds_normalized_v0_instruction_payload_and_verifies_signature",
-      "community": 6
+      "community": 5
+    },
+    {
+      "label": "builder_rejects_instruction_plans_requiring_unavailable_signers()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L256",
+      "id": "solana_builder_rejects_instruction_plans_requiring_unavailable_signers",
+      "community": 5
+    },
+    {
+      "label": "rejects_signature_count_exceeding_required_signer_metadata()",
+      "file_type": "code",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L282",
+      "id": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "community": 5
     },
     {
       "label": "unsigned_legacy()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L247",
+      "source_location": "L298",
       "id": "solana_unsigned_legacy",
-      "community": 6
+      "community": 5
     },
     {
       "label": "signs_legacy_one_sig_round_trip()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L272",
+      "source_location": "L323",
       "id": "solana_signs_legacy_one_sig_round_trip",
-      "community": 6
+      "community": 5
     },
     {
       "label": "preserves_extra_signature_slot()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L290",
+      "source_location": "L341",
       "id": "solana_preserves_extra_signature_slot",
-      "community": 6
+      "community": 5
     },
     {
       "label": "rejects_wrong_expected_signer()",
       "file_type": "code",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L310",
+      "source_location": "L361",
       "id": "solana_rejects_wrong_expected_signer",
-      "community": 6
+      "community": 5
     },
     {
       "label": "evm_transaction_types.rs",
@@ -4565,7 +4581,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L138",
+      "source_location": "L143",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_solana_rs",
       "_tgt": "solana_sign_serialized_solana_transaction",
@@ -4577,7 +4593,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L211",
+      "source_location": "L219",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_solana_rs",
       "_tgt": "solana_builds_normalized_v0_instruction_payload_and_verifies_signature",
@@ -4589,7 +4605,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L247",
+      "source_location": "L256",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_src_transactions_solana_rs",
+      "_tgt": "solana_builder_rejects_instruction_plans_requiring_unavailable_signers",
+      "source": "rust_owllet_core_src_transactions_solana_rs",
+      "target": "solana_builder_rejects_instruction_plans_requiring_unavailable_signers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L282",
+      "weight": 1.0,
+      "_src": "rust_owllet_core_src_transactions_solana_rs",
+      "_tgt": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "source": "rust_owllet_core_src_transactions_solana_rs",
+      "target": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L298",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_solana_rs",
       "_tgt": "solana_unsigned_legacy",
@@ -4601,7 +4641,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L272",
+      "source_location": "L323",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_solana_rs",
       "_tgt": "solana_signs_legacy_one_sig_round_trip",
@@ -4613,7 +4653,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L290",
+      "source_location": "L341",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_solana_rs",
       "_tgt": "solana_preserves_extra_signature_slot",
@@ -4625,7 +4665,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L310",
+      "source_location": "L361",
       "weight": 1.0,
       "_src": "rust_owllet_core_src_transactions_solana_rs",
       "_tgt": "solana_rejects_wrong_expected_signer",
@@ -4649,7 +4689,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L224",
+      "source_location": "L232",
       "weight": 1.0,
       "_src": "solana_builds_normalized_v0_instruction_payload_and_verifies_signature",
       "_tgt": "solana_build_and_sign_solana_transaction",
@@ -4661,7 +4701,31 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L276",
+      "source_location": "L268",
+      "weight": 1.0,
+      "_src": "solana_builder_rejects_instruction_plans_requiring_unavailable_signers",
+      "_tgt": "solana_build_and_sign_solana_transaction",
+      "source": "solana_build_and_sign_solana_transaction",
+      "target": "solana_builder_rejects_instruction_plans_requiring_unavailable_signers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L287",
+      "weight": 1.0,
+      "_src": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "_tgt": "solana_sign_serialized_solana_transaction",
+      "source": "solana_sign_serialized_solana_transaction",
+      "target": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L327",
       "weight": 1.0,
       "_src": "solana_signs_legacy_one_sig_round_trip",
       "_tgt": "solana_sign_serialized_solana_transaction",
@@ -4673,7 +4737,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L297",
+      "source_location": "L348",
       "weight": 1.0,
       "_src": "solana_preserves_extra_signature_slot",
       "_tgt": "solana_sign_serialized_solana_transaction",
@@ -4685,7 +4749,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L315",
+      "source_location": "L366",
       "weight": 1.0,
       "_src": "solana_rejects_wrong_expected_signer",
       "_tgt": "solana_sign_serialized_solana_transaction",
@@ -4697,7 +4761,19 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L274",
+      "source_location": "L284",
+      "weight": 1.0,
+      "_src": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "_tgt": "solana_unsigned_legacy",
+      "source": "solana_rejects_signature_count_exceeding_required_signer_metadata",
+      "target": "solana_unsigned_legacy",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
+      "source_location": "L325",
       "weight": 1.0,
       "_src": "solana_signs_legacy_one_sig_round_trip",
       "_tgt": "solana_unsigned_legacy",
@@ -4709,7 +4785,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L294",
+      "source_location": "L345",
       "weight": 1.0,
       "_src": "solana_preserves_extra_signature_slot",
       "_tgt": "solana_unsigned_legacy",
@@ -4721,7 +4797,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "rust\\owllet-core\\src\\transactions\\solana.rs",
-      "source_location": "L313",
+      "source_location": "L364",
       "weight": 1.0,
       "_src": "solana_rejects_wrong_expected_signer",
       "_tgt": "solana_unsigned_legacy",

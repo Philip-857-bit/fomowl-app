@@ -60,6 +60,47 @@ void main() {
         privateKeyBytes: key,
       );
       expect(resigned, signed);
+      final excessSignatures = Uint8List.fromList([
+        2,
+        ...bytes.sublist(1, 65),
+        ...List.filled(64, 0),
+        ...bytes.sublist(65),
+      ]);
+      await expectLater(
+        NativeCrypto.signSerializedSolanaTransaction(
+          serializedTxBase64: base64Encode(excessSignatures),
+          expectedSigner: payer,
+          privateKeyBytes: key,
+        ),
+        throwsA(
+          predicate<Object>(
+            (error) => error.toString().contains('signature count'),
+          ),
+        ),
+      );
+      await expectLater(
+        NativeCrypto.buildAndSignSolanaTransaction(
+          payer: payer,
+          recentBlockhash: blockhash,
+          instructionsJson: jsonEncode([
+            {
+              'programId': '11111111111111111111111111111111',
+              'data': '00',
+              'keys': [
+                {'pubkey': payer, 'isSigner': true, 'isWritable': true},
+                {'pubkey': receiver, 'isSigner': true, 'isWritable': false},
+              ],
+            },
+          ]),
+          lookupTablesJson: '[]',
+          privateKeyBytes: key,
+        ),
+        throwsA(
+          predicate<Object>(
+            (error) => error.toString().contains('unavailable signers'),
+          ),
+        ),
+      );
     },
   );
 

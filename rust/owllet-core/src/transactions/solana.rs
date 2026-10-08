@@ -109,6 +109,11 @@ pub fn build_and_sign_solana_transaction(
 
     let message = v0::Message::try_compile(&payer_key, &instructions, &lookup_tables, blockhash)
         .map_err(|e| format!("Failed to compile Solana message: {e}"))?;
+    // This builder owns one key and promises broadcast-ready bytes. It cannot
+    // manufacture the signatures of additional instruction-plan signers.
+    if message.header.num_required_signatures != 1 {
+        return Err("Solana instruction plan requires additional unavailable signers".to_string());
+    }
     let versioned = VersionedMessage::V0(message);
 
     let keypair = crate::accounts::solana_keypair_from_bytes(private_key_bytes, "bridge signer")?;
@@ -179,6 +184,9 @@ pub fn sign_serialized_solana_transaction(
     if required == 0 || keys.len() < required {
         return Err("Solana transaction has invalid required-signer metadata".to_string());
     }
+    if tx.signatures.len() > required {
+        return Err("Solana signature count exceeds required-signer metadata".to_string());
+    }
     let signer_index = keys[..required]
         .iter()
         .position(|key| *key == expected)
@@ -242,6 +250,49 @@ mod tests {
         );
         assert_eq!(decoded.signatures.len(), 1);
         assert!(decoded.signatures[0].verify(payer.pubkey().as_ref(), &decoded.message.serialize()));
+    }
+
+    #[test]
+    fn builder_rejects_instruction_plans_requiring_unavailable_signers() {
+        let seed = [7u8; 32];
+        let payer = Keypair::new_from_array(seed);
+        let other = Keypair::new_from_array([8u8; 32]);
+        let instructions = serde_json::json!([{
+            "programId": "11111111111111111111111111111111", "data": "00",
+            "keys": [
+                {"pubkey": payer.pubkey().to_string(), "isSigner": true, "isWritable": true},
+                {"pubkey": other.pubkey().to_string(), "isSigner": true, "isWritable": false}
+            ]
+        }])
+        .to_string();
+        let result = build_and_sign_solana_transaction(
+            &payer.pubkey().to_string(),
+            &Hash::new_from_array([4u8; 32]).to_string(),
+            &instructions,
+            "[]",
+            &seed,
+        );
+        assert!(
+            result.is_err(),
+            "one key cannot produce a fully signed two-signer bridge transaction"
+        );
+    }
+
+    #[test]
+    fn rejects_signature_count_exceeding_required_signer_metadata() {
+        let payer = Keypair::new_from_array([7u8; 32]);
+        let mut unsigned = unsigned_legacy(&payer.pubkey(), None);
+        unsigned.signatures.push(Signature::default());
+        let encoded = BASE64.encode(bincode::serialize(&unsigned).unwrap());
+        let result = sign_serialized_solana_transaction(
+            &encoded,
+            &payer.pubkey().to_string(),
+            &payer.to_bytes(),
+        );
+        assert!(
+            result.is_err(),
+            "extra signature slots make the wire transaction invalid"
+        );
     }
 
     fn unsigned_legacy(payer: &Pubkey, extra: Option<&Pubkey>) -> VersionedTransaction {

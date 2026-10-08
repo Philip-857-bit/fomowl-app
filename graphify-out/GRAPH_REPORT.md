@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-10-08)
 
 ## Corpus Check
-- 68 files · ~471,590 words
+- 68 files · ~471,782 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 361 nodes · 455 edges · 72 communities detected
+- 363 nodes · 460 edges · 72 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -92,8 +92,8 @@
 6. `Create()` - 6 edges
 7. `Destroy()` - 6 edges
 8. `AppDelegate` - 5 edges
-9. `solana_message_signature_verifies()` - 5 edges
-10. `sign_legacy_evm_transaction()` - 5 edges
+9. `sign_serialized_solana_transaction()` - 5 edges
+10. `unsigned_legacy()` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -121,12 +121,12 @@ Cohesion: 0.13
 Nodes (2): WalletCompatibilityFixture, WalletVector
 
 ### Community 5 - "Community 5"
-Cohesion: 0.28
-Nodes (12): eip155_request(), EvmTransactionFee, EvmTransactionRequest, LegacyEvmTransactionRequest, sign_evm_transaction(), sign_legacy_evm_transaction(), SignedEvmTransaction, test_chain_id_replay_protection() (+4 more)
+Cohesion: 0.26
+Nodes (13): build_and_sign_solana_transaction(), builder_rejects_instruction_plans_requiring_unavailable_signers(), builds_normalized_v0_instruction_payload_and_verifies_signature(), parse_pubkey(), preserves_extra_signature_slot(), rejects_signature_count_exceeding_required_signer_metadata(), rejects_wrong_expected_signer(), sign_serialized_solana_transaction() (+5 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.29
-Nodes (11): build_and_sign_solana_transaction(), builds_normalized_v0_instruction_payload_and_verifies_signature(), parse_pubkey(), preserves_extra_signature_slot(), rejects_wrong_expected_signer(), sign_serialized_solana_transaction(), signs_legacy_one_sig_round_trip(), SolanaAccountPayload (+3 more)
+Cohesion: 0.28
+Nodes (12): eip155_request(), EvmTransactionFee, EvmTransactionRequest, LegacyEvmTransactionRequest, sign_evm_transaction(), sign_legacy_evm_transaction(), SignedEvmTransaction, test_chain_id_replay_protection() (+4 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.18
