@@ -81,3 +81,27 @@ jobs:
         env:
           CORE_FEATURES: ${{ matrix.features }}
         run: cargo clippy --locked --manifest-path owllet-core/Cargo.toml --no-default-features --features "$CORE_FEATURES" --all-targets -- -D warnings
+
+  native-consumer:
+    name: Independent native consumer (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "rust/consumers/owllet-core-smoke -> target"
+      - name: Check consumer formatting
+        run: cargo fmt --manifest-path consumers/owllet-core-smoke/Cargo.toml --all -- --check
+      - name: Lint independent consumer
+        run: cargo clippy --locked --manifest-path consumers/owllet-core-smoke/Cargo.toml --all-targets -- -D warnings
+      - name: Run public offline fixtures
+        run: cargo run --locked --manifest-path consumers/owllet-core-smoke/Cargo.toml -- --self-test

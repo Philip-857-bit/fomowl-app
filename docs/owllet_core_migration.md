@@ -206,3 +206,14 @@ the host. Independent Dart reference encoders and UTF-8 digest fixtures verify
 compatibility; 87 targeted Flutter tests, full analysis, 32 adapter tests, native
 release rebuild, and 57 core tests passed.
 Commit: `refactor(wallet): delegate remaining shared chain rules to Rust`.
+
+## Independent native consumer
+
+Adapter step: `01a3ac7`. `rust/consumers/owllet-core-smoke` is an independent
+Rust CLI with its own manifest/lockfile and only public core APIs. Public offline
+fixtures validate exact EIP-155 bytes, calldata, vault authentication/export/lock,
+Solana v0 compilation/message/wire roundtrip, and TRON digest/signature behavior.
+It uses no Flutter, FRB, RPC, backend or platform keystore. Windows execution
+passed; CI is configured to run the same proof on Windows and Linux. The complete
+Flutter suite passed 664 tests with one existing skip after shared-rule changes.
+Commit: `test(wallet-core): prove reuse from an independent native consumer`.
