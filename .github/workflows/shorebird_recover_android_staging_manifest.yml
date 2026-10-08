@@ -89,6 +89,11 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Configure private Owllet Core access
+        uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
+
       - name: Regenerate and verify the manifest
         env:
           EXPECTED_RELEASE_VERSION: ${{ steps.source.outputs.release_version }}

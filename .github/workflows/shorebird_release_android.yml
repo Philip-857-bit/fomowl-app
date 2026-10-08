@@ -44,6 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure private Owllet Core access
+        uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
+
       - name: Free up disk space
         run: |
           set -euo pipefail
@@ -363,6 +368,11 @@ jobs:
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure private Owllet Core access
+        uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
 
       - name: Setup Python
         uses: actions/setup-python@v5

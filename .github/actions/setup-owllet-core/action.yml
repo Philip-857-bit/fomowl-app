@@ -1,0 +1,29 @@
+name: Read-only Owllet Core access
+description: Configure Git access to the pinned private SDK without embedding credentials in source or binaries.
+inputs:
+  ssh-private-key:
+    description: Read-only deploy key scoped to Philip-857-bit/owllet-core
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Configure private SDK Git transport
+      shell: bash
+      env:
+        OWLLET_CORE_SSH_KEY: ${{ inputs.ssh-private-key }}
+      run: |
+        set -euo pipefail
+        if [ -z "$OWLLET_CORE_SSH_KEY" ]; then
+          echo "The OWLLET_CORE_SSH_KEY repository secret is required to fetch the private SDK."
+          exit 1
+        fi
+        key_dir="${RUNNER_TEMP//\\//}/owllet-core-ssh"
+        mkdir -p "$key_dir"
+        chmod 700 "$key_dir"
+        printf '%s\n' "$OWLLET_CORE_SSH_KEY" > "$key_dir/id_ed25519"
+        chmod 600 "$key_dir/id_ed25519"
+        # GitHub's Ed25519 host key, obtained through its authenticated HTTPS meta API.
+        printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$key_dir/known_hosts"
+        git config --global url."ssh://git@github.com/Philip-857-bit/owllet-core.git".insteadOf "https://github.com/Philip-857-bit/owllet-core.git"
+        printf '%s\n' 'CARGO_NET_GIT_FETCH_WITH_CLI=true' >> "$GITHUB_ENV"
+        printf 'GIT_SSH_COMMAND=ssh -i "%s/id_ed25519" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="%s/known_hosts"\n' "$key_dir" "$key_dir" >> "$GITHUB_ENV"

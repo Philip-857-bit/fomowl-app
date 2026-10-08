@@ -1,0 +1,3 @@
+[net]
+# Private SDK access uses the developer's Git credential helper or CI deploy key.
+git-fetch-with-cli = true

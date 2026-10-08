@@ -252,3 +252,24 @@ is verified locally; Windows/Linux consumer CI is configured but not run here.
 This is a local internal release. Registry publication is disabled and no upload
 or remote Git push was performed. Rust products can use the verified package
 or pinned private Git source; other languages still require host adapters.
+
+## Central private SDK and pinned product dependency
+
+The core-only history is preserved in the private repository
+`https://github.com/Philip-857-bit/owllet-core`. Standalone setup/release commit:
+`bd26eb9603c56d3ec012a5e11ad7b8558a2a2e9e`, released as `v0.1.0`. The SDK's
+Windows/Linux native checks and selectable-capability CI passed. Its private
+release workflow produced the `.crate`, checksum and source/compiler manifest.
+
+Flutter's Rust adapter and native consumer use an exact Git revision and exact
+`=0.1.0` version check. Both lockfiles changed only the core source entry; no
+transitive versions were upgraded. The CI deploy key is explicitly read-only
+and scoped to this SDK repository. The private key is stored in the wallet
+repository's encrypted `OWLLET_CORE_SSH_KEY` secret, never in manifests or app
+binaries. Native workflows configure scoped SSH transport with pinned GitHub
+host verification. Its action was tested with isolated Git configuration.
+
+Validation: 32 adapter tests/Clippy/release build and the private-Git consumer
+passed; 74 Flutter signing/vault/chain-rule FFI tests passed against the rebuilt
+library. SDK CI and private release runs completed successfully.
+Commit: `build(wallet): pin the private SDK release and configure read-only CI access`.

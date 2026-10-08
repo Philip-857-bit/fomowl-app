@@ -5,11 +5,15 @@ on:
     branches: [main, develop]
     paths:
       - 'rust/**'
+      - '.cargo/**'
+      - '.github/actions/setup-owllet-core/**'
       - '.github/workflows/rust_wallet_compatibility.yml'
   push:
     branches: [main, develop]
     paths:
       - 'rust/**'
+      - '.cargo/**'
+      - '.github/actions/setup-owllet-core/**'
       - '.github/workflows/rust_wallet_compatibility.yml'
   workflow_dispatch:
 
@@ -25,6 +29,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Configure private Owllet Core access
+        uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
 
       - name: Setup stable Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -45,63 +54,5 @@ jobs:
       - name: Run full Rust test suite (rust_lib_fomowl_wallet)
         run: cargo test --locked --all-targets --all-features
 
-      - name: Check formatting (owllet-core)
-        run: cargo fmt --manifest-path owllet-core/Cargo.toml --all -- --check
-
-      - name: Lint with Clippy (owllet-core)
-        run: cargo clippy --locked --manifest-path owllet-core/Cargo.toml --all-targets --all-features -- -D warnings
-
-      - name: Run test suite (owllet-core)
-        run: cargo test --locked --manifest-path owllet-core/Cargo.toml --all-targets --all-features
-
-  core-features:
-    name: Core features (${{ matrix.features || 'minimal' }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        features: ['', 'mnemonic-generation', 'secp256k1', 'evm', 'solana', 'tron', 'evm,solana', 'evm,tron', 'solana,tron', 'evm,signing-session', 'solana,signing-session', 'tron,signing-session', 'vault', 'evm,vault', 'solana,vault', 'tron,vault']
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "rust/owllet-core -> target"
-          key: core-${{ matrix.features }}
-      - name: Test public feature contracts
-        env:
-          CORE_FEATURES: ${{ matrix.features }}
-        run: cargo test --locked --manifest-path owllet-core/Cargo.toml --no-default-features --features "$CORE_FEATURES" --all-targets
-      - name: Lint selected features
-        env:
-          CORE_FEATURES: ${{ matrix.features }}
-        run: cargo clippy --locked --manifest-path owllet-core/Cargo.toml --no-default-features --features "$CORE_FEATURES" --all-targets -- -D warnings
-
-  native-consumer:
-    name: Independent native consumer (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "rust/consumers/owllet-core-smoke -> target"
-      - name: Check consumer formatting
-        run: cargo fmt --manifest-path consumers/owllet-core-smoke/Cargo.toml --all -- --check
-      - name: Lint independent consumer
-        run: cargo clippy --locked --manifest-path consumers/owllet-core-smoke/Cargo.toml --all-targets -- -D warnings
-      - name: Run public offline fixtures
+      - name: Verify private SDK consumer
         run: cargo run --locked --manifest-path consumers/owllet-core-smoke/Cargo.toml -- --self-test

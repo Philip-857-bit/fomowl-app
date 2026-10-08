@@ -2392,6 +2392,7 @@ dependencies = [
 [[package]]
 name = "owllet-core"
 version = "0.1.0"
+source = "git+https://github.com/Philip-857-bit/owllet-core.git?rev=bd26eb9603c56d3ec012a5e11ad7b8558a2a2e9e#bd26eb9603c56d3ec012a5e11ad7b8558a2a2e9e"
 dependencies = [
  "aes-gcm",
  "alloy",

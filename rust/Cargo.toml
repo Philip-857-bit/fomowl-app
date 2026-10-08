@@ -18,7 +18,7 @@ ethereum-types = "0.16.0"
 flutter_rust_bridge = "=2.11.1"
 hex = "0.4.3"
 hmac = "0.12.1"
-owllet-core = { path = "owllet-core", features = ["signing-session", "vault"] }
+owllet-core = { git = "https://github.com/Philip-857-bit/owllet-core.git", rev = "bd26eb9603c56d3ec012a5e11ad7b8558a2a2e9e", version = "=0.1.0", features = ["signing-session", "vault"] }
 pbkdf2 = "0.12.2"
 rand = "0.10.0"
 secp256k1 = { version = "0.31.1", features = ["recovery"] }
