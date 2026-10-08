@@ -347,4 +347,54 @@ impl SigningSession {
             _ => Err(SessionError::WrongFamily),
         }
     }
+    #[cfg(feature = "solana")]
+    pub fn sign_solana_transaction_message(
+        &self,
+        handle: &AccountHandle,
+        message: &[u8],
+    ) -> Result<String, SessionError> {
+        let account = self.resolve(handle)?;
+        match &account.key {
+            KeyMaterial::Solana(key) => {
+                crate::transactions::solana_wire::sign_solana_transaction_message(
+                    &account.info.address,
+                    message,
+                    key,
+                )
+                .map_err(SessionError::Signing)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(SessionError::WrongFamily),
+        }
+    }
+    #[cfg(feature = "tron")]
+    pub fn sign_tron_transaction(
+        &self,
+        handle: &AccountHandle,
+        raw_data_hex: &str,
+    ) -> Result<String, SessionError> {
+        match &self.resolve(handle)?.key {
+            KeyMaterial::Tron(key) => {
+                crate::transactions::tron::sign_tron_transaction(key, raw_data_hex)
+                    .map_err(SessionError::Signing)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(SessionError::WrongFamily),
+        }
+    }
+    #[cfg(feature = "tron")]
+    pub fn sign_tron_personal_message(
+        &self,
+        handle: &AccountHandle,
+        message: &str,
+    ) -> Result<String, SessionError> {
+        match &self.resolve(handle)?.key {
+            KeyMaterial::Tron(key) => {
+                crate::signing::tron::sign_tron_personal_message(key, message)
+                    .map_err(SessionError::Signing)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(SessionError::WrongFamily),
+        }
+    }
 }

@@ -174,3 +174,14 @@ The implementation is complete for currently managed native Flutter families.
 Real-device records migrate on the next unlocked shell opening; no real wallet
 records were accessed by these fixture tests. New host products/adapters remain
 separate work described above.
+
+## Shared chain-rule completion
+
+Previous native migration: `26c6a47`. Standard EVM token/NFT calldata and
+allowance result decoding now live in a separate core module. TRON personal-
+message prefixes/UTF-8 length, transaction hashing, and single-signer Solana
+message-to-wire serialization also belong to the core. Solana wire signing checks
+account identity, required signer count, and exact canonical message bytes.
+Validation includes fixed ABI selectors/words, uint256 boundaries, dynamic bytes,
+known digest vectors, signature/wire roundtrip and malformed message rejection.
+Commit: `feat(wallet-core): centralize token calldata and chain wire rules`.
