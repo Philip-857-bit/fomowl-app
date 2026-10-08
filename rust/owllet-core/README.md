@@ -14,7 +14,10 @@ product supplies its own storage, authentication, RPC, and UI adapter.
 | `accounts::{evm,solana,tron}` | Chain-specific paths and address derivation |
 | `signing::{evm,secp256k1,solana,tron}` | Message, typed-data, and digest signing |
 | `transactions::evm` | Offline legacy/EIP-1559 signing and contract creation with Alloy |
+| `transactions::evm_calldata` | Standard ERC-20/ERC-721/ERC-1155 encoding and allowance result decoding |
 | `transactions::solana` | v0 instruction compilation and required-signer-slot signing of serialized legacy/v0 transactions |
+| `transactions::solana_wire` | Exact message serialization and external signer-slot attachment/message extraction |
+| `transactions::tron` | Canonical raw-data hashing and transaction signatures |
 | `session` (optional) | Rust-owned transient keys, opaque scoped account handles, lock/removal lifecycle |
 | `vault` (optional) | Authenticated encrypted account records, opaque custody on open, explicit recovery export |
 
@@ -157,3 +160,12 @@ No existing Flutter wallet storage is migrated by this module alone.
 EVM, Solana, and TRON records share the vault format with authenticated family
 binding. `export_account_key` is the explicit recovery boundary; ordinary open
 never returns key material. Hosts own user authentication for recovery exports.
+
+## Internal distribution
+
+The core is proprietary and `publish = false` blocks registry publication.
+See [RELEASE.md](RELEASE.md) for verified internal `.crate` artifacts, checksum
+verification and pinned private-Git/path consumption. The independent native
+consumer at `../consumers/owllet-core-smoke` exercises public APIs without Flutter
+or FRB; CI is configured for Windows and Linux. Third-party dependency license
+metadata is recorded in `DEPENDENCY_LICENSES.json`.

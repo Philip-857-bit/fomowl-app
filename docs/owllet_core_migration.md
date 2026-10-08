@@ -217,3 +217,15 @@ It uses no Flutter, FRB, RPC, backend or platform keystore. Windows execution
 passed; CI is configured to run the same proof on Windows and Linux. The complete
 Flutter suite passed 664 tests with one existing skip after shared-rule changes.
 Commit: `test(wallet-core): prove reuse from an independent native consumer`.
+
+## Proprietary internal release preparation
+
+Independent-consumer step: `af293f3`. The user selected proprietary internal
+distribution. The core now has a proprietary notice, explicit package contents,
+release/changelog documentation and `publish = false`. The packaging helper
+requires a clean repository and current dependency inventory, compiles the
+extracted all-feature crate via Cargo, records source/compiler/checksum metadata,
+and rejects overwriting an existing version with different content. It performs
+no uploads. Private Git/pinned commits or unpacked verified packages are supported;
+no registry endpoint or account has been configured.
+Commit: `build(wallet-core): prepare proprietary internal source releases`.

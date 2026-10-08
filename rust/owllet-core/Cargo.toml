@@ -2,6 +2,15 @@
 name = "owllet-core"
 version = "0.1.0"
 edition = "2021"
+description = "Owllet's reusable offline wallet engine for EVM, Solana, TRON and authenticated key custody"
+license-file = "PROPRIETARY.md"
+readme = "README.md"
+repository = "https://github.com/Philip-857-bit/fomowl-app.git"
+publish = false
+include = ["Cargo.toml", "Cargo.lock", "README.md", "PROPRIETARY.md", "CHANGELOG.md", "RELEASE.md", "DEPENDENCY_LICENSES.json", "src/**", "tests/**"]
+
+[package.metadata.owllet]
+distribution = "proprietary-internal"
 
 [features]
 # Preserve the existing Flutter adapter API. Other hosts can opt into less.

@@ -4032,8 +4032,8 @@
       "file_type": "rationale",
       "source_file": "scripts\\package_internal_core.py",
       "source_location": "L1",
-      "id": "package_internal_core_rationale_1",
-      "community": 31
+      "community": 31,
+      "id": "package_internal_core_rationale_1"
     },
     {
       "label": "shorebird_ci_common.py",
