@@ -13,12 +13,11 @@ pub fn tron_personal_message_digest(message: &str) -> [u8; 32] {
 }
 
 pub fn sign_tron_personal_message(private_key_hex: &str, message: &str) -> Result<String, String> {
-    let signature = sign_digest_with_recovery_id(
+    sign_digest_with_recovery_id(
         private_key_hex,
         tron_personal_message_digest(message),
         false,
-    )?;
-    Ok(format!("0x{signature}"))
+    )
 }
 
 pub fn sign_tron_raw_hash(private_key_hex: &str, raw_hash_hex: &str) -> Result<String, String> {
@@ -41,6 +40,16 @@ mod tests {
             <[u8; 32]>::from(Keccak256::digest(
                 b"\x19TRON Signed Message:\n4\xf0\x9f\xa6\x89"
             ))
+        );
+    }
+    #[test]
+    fn personal_signature_preserves_one_hex_prefix_and_raw_recovery_id() {
+        let key = "46".repeat(32);
+        let signature = sign_tron_personal_message(&key, "hello").unwrap();
+        assert_eq!(signature.len(), 132);
+        assert_eq!(
+            signature,
+            sign_tron_raw_hash(&key, &hex::encode(tron_personal_message_digest("hello"))).unwrap()
         );
     }
 }

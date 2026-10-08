@@ -185,3 +185,11 @@ account identity, required signer count, and exact canonical message bytes.
 Validation includes fixed ABI selectors/words, uint256 boundaries, dynamic bytes,
 known digest vectors, signature/wire roundtrip and malformed message rejection.
 Commit: `feat(wallet-core): centralize token calldata and chain wire rules`.
+
+Chain-rule compatibility follow-up: `4054f55` introduced the shared rules.
+The TRON personal signer retains exactly one hex prefix, with a regression test
+against its existing raw-hash primitive. WalletConnect signature-slot attachment
+and serialized-message extraction also move into the Solana wire module, keeping
+other signatures and message bytes and rejecting malformed/cross-account input.
+Validation: 57 core tests plus separate Solana/TRON feature builds and Clippy.
+Commit: `fix(wallet-core): preserve TRON prefixes and share Solana signer slots`.
