@@ -40,11 +40,14 @@ class RelaySwapExecutionService {
     BridgeService? bridgeService,
     RpcService? rpcService,
     HttpClientService? httpClientService,
+    Web3Client Function(String rpcUrl)? web3ClientFactory,
   }) : _bridgeService = bridgeService ?? BridgeService(),
-       _http = httpClientService ?? HttpClientService();
+       _http = httpClientService ?? HttpClientService(),
+       _web3ClientFactory = web3ClientFactory;
 
   final BridgeService _bridgeService;
   final HttpClientService _http;
+  final Web3Client Function(String rpcUrl)? _web3ClientFactory;
 
   Future<RelaySwapExecutionResult> execute({
     required BridgeQuote quote,
@@ -80,8 +83,14 @@ class RelaySwapExecutionService {
     }
 
     try {
-      final credentials = await walletService.getCredentials();
-      final client = Web3Client(blockchain.activeChain.rpcUrl, _http.client);
+      final activeAddress = await walletService.getCurrentWalletAddress();
+      if (activeAddress == null || activeAddress.trim().isEmpty) {
+        throw Exception('No wallet found');
+      }
+      final sender = EthereumAddress.fromHex(activeAddress);
+      final client =
+          _web3ClientFactory?.call(blockchain.activeChain.rpcUrl) ??
+          Web3Client(blockchain.activeChain.rpcUrl, _http.client);
       String? firstHash;
 
       for (final step in quote.steps) {
@@ -90,13 +99,8 @@ class RelaySwapExecutionService {
         final value = EtherAmount.inWei(step.value);
         final preflight = await Future.wait<Object>([
           client.getGasPrice(),
-          client.estimateGas(
-            sender: credentials.address,
-            to: to,
-            value: value,
-            data: data,
-          ),
-          client.getBalance(credentials.address),
+          client.estimateGas(sender: sender, to: to, value: value, data: data),
+          client.getBalance(sender),
         ]);
         final gasPrice = preflight[0] as EtherAmount;
         final estimated = preflight[1] as BigInt;
@@ -111,17 +115,14 @@ class RelaySwapExecutionService {
                 'Not enough ${blockchain.activeChain.symbol} for the swap and network fee.',
           );
         }
-        final hash = await client.sendTransaction(
-          credentials,
-          Transaction(
-            to: to,
-            data: data,
-            value: value,
-            gasPrice: gasPrice,
-            maxGas: bufferedGas.toInt(),
-          ),
+        final hash = await walletService.sendRawTransactionRequest(
+          rpcUrl: blockchain.activeChain.rpcUrl,
           chainId: chainId,
-          fetchChainIdFromNetworkId: false,
+          toAddress: step.to,
+          dataHex: step.data,
+          valueInWei: step.value,
+          gasPriceWei: gasPrice.getInWei,
+          gasLimit: bufferedGas.toInt(),
         );
         firstHash ??= hash;
       }
