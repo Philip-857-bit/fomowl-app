@@ -4,29 +4,37 @@ import 'package:fomowl_wallet/services/native_crypto.dart';
 void main() {
   group('NativeCrypto FFI Wrapper', () {
     test(
-      'generateMnemonic falls back to Dart when Rust FFI is unavailable',
+      'generateMnemonic fails closed when Rust FFI is unavailable',
       () async {
-        final mnemonic = await NativeCrypto.generateMnemonic();
-
-        expect(await NativeCrypto.validateMnemonic(mnemonic), isTrue);
+        await expectLater(
+          NativeCrypto.generateMnemonic().then((_) => true),
+          throwsA(anything),
+        );
       },
     );
 
-    test(
-      'mnemonicToSeed falls back to Dart when Rust FFI is unavailable',
-      () async {
-        const mnemonic =
-            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    test('mnemonicToSeed fails closed when Rust FFI is unavailable', () async {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
-        final seed = await NativeCrypto.mnemonicToSeed(mnemonic);
+      await expectLater(
+        NativeCrypto.mnemonicToSeed(mnemonic).then((_) => true),
+        throwsA(anything),
+      );
+    });
 
-        expect(seed.length, 64);
-      },
-    );
+    test('validateMnemonic fails closed when Rust FFI is unavailable', () async {
+      const mnemonic =
+          'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      await expectLater(
+        NativeCrypto.validateMnemonic(mnemonic).then((_) => true),
+        throwsA(anything),
+      );
+    });
 
     test('signTypedData surfaces FFI absence in Dart-only tests', () async {
-      // flutter_test runs without the compiled host Rust binary here, so the
-      // FFI call still throws even though the Rust implementation exists.
+      // This test deliberately does not initialize RustLib. A missing engine
+      // must never silently select a different cryptographic implementation.
       expect(
         () async => await NativeCrypto.signTypedData(
           privateKeyHex: '0x123',

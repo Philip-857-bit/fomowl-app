@@ -164,6 +164,18 @@ void main() {
     );
   });
 
+  test('invalid mnemonic checksum cannot silently produce a seed', () async {
+    final invalid = List.filled(12, 'abandon').join(' ');
+    await expectLater(
+      NativeCrypto.mnemonicToSeed(invalid).then((_) => true),
+      throwsA(
+        predicate<Object>(
+          (error) => error.toString().contains('Invalid mnemonic'),
+        ),
+      ),
+    );
+  });
+
   test(
     'Rust public-key metadata preserves web3dart unprefixed XY bytes',
     () async {

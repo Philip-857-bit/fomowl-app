@@ -1,12 +1,11 @@
 /// Native cryptographic operations powered by Rust via flutter_rust_bridge.
 ///
 /// This module provides a clean Dart API over the Rust FFI functions for
-/// performance-critical crypto operations. Each function falls back to a
-/// Dart-only implementation if the Rust library is unavailable (e.g. tests).
+/// crypto operations. Rust failures propagate; production never silently
+/// selects a different mnemonic, derivation, or signing implementation.
 library;
 
 import 'package:flutter/foundation.dart';
-import 'package:bip39/bip39.dart' as dart_bip39;
 
 import '../src/rust/api/argon2.dart' as rust_argon2;
 import '../src/rust/api/bip32.dart' as rust_bip32;
@@ -38,34 +37,18 @@ class NativeCrypto {
 
   /// Generate a new 12-word BIP-39 mnemonic (128-bit entropy).
   static Future<String> generateMnemonic() async {
-    try {
-      return await rust_bip39.generateMnemonic();
-    } catch (e) {
-      debugPrint('[NativeCrypto] generateMnemonic Rust error, using Dart: $e');
-      return dart_bip39.generateMnemonic();
-    }
+    return await rust_bip39.generateMnemonic();
   }
 
-  /// Validate a BIP-39 mnemonic phrase.
+  /// Validate a BIP-39 mnemonic phrase using the shared Rust engine.
   static Future<bool> validateMnemonic(String phrase) async {
-    try {
-      final isValid = await rust_bip39.validateMnemonic(phrase: phrase);
-      return isValid;
-    } catch (e) {
-      debugPrint('[NativeCrypto] validateMnemonic Rust error, using Dart: $e');
-      return dart_bip39.validateMnemonic(phrase);
-    }
+    return await rust_bip39.validateMnemonic(phrase: phrase);
   }
 
-  /// Convert a BIP-39 mnemonic phrase to a 64-byte seed.
+  /// Derive a seed only after Rust validates the mnemonic and its checksum.
   static Future<Uint8List> mnemonicToSeed(String phrase) async {
-    try {
-      final seed = await rust_bip39.mnemonicToSeed(phrase: phrase);
-      return Uint8List.fromList(seed);
-    } catch (e) {
-      debugPrint('[NativeCrypto] mnemonicToSeed Rust error, using Dart: $e');
-      return dart_bip39.mnemonicToSeed(phrase);
-    }
+    final seed = await rust_bip39.mnemonicToSeed(phrase: phrase);
+    return Uint8List.fromList(seed);
   }
 
   // ---------- HD Key Derivation -------------------------------------------
