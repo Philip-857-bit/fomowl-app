@@ -11,6 +11,7 @@ import '../models/chain.dart';
 import '../models/wallet_account.dart';
 import '../utils/language_utils.dart';
 import 'secure_store.dart';
+import 'bitcoin/bitcoin_account_store.dart';
 import 'wallet_vault_service.dart';
 import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
@@ -23,6 +24,7 @@ class StorageService implements WalletVaultStore {
        _sharedPreferences = sharedPreferences;
 
   final SecureStore _secureStore;
+  BitcoinAccountStore get bitcoinAccounts => BitcoinAccountStore(_secureStore);
   static final Expando<WalletVaultService> _vaults = Expando();
   WalletVaultService get _vault =>
       _vaults[_secureStore] ??= WalletVaultService(this);
@@ -468,6 +470,29 @@ class StorageService implements WalletVaultStore {
     await _secureStore.delete(key: _keyWalletName);
   }
 
+  Future<void> setWalletBitcoinSupport(String address, bool supported) async {
+    final accounts = await getWalletAccounts();
+    final index = accounts.indexWhere(
+      (account) => account.address.toLowerCase() == address.toLowerCase(),
+    );
+    if (index < 0) throw StateError('Wallet not found');
+    final account = accounts[index];
+    if (supported && account.origin != WalletOrigin.derived) {
+      throw StateError('Bitcoin requires a seed wallet');
+    }
+    accounts[index] = WalletAccount(
+      address: account.address,
+      name: account.name,
+      origin: account.origin,
+      derivationIndex: account.derivationIndex,
+      seedGroupId: account.seedGroupId,
+      createdAt: account.createdAt,
+      addressesByFamily: account.addressesByFamily,
+      supportsBitcoin: supported,
+    );
+    await _saveWalletAccounts(accounts);
+  }
+
   Future<void> renameWallet(String address, String newName) async {
     final accounts = await getWalletAccounts();
     final index = accounts.indexWhere(
@@ -478,6 +503,7 @@ class StorageService implements WalletVaultStore {
     accounts[index] = WalletAccount(
       address: account.address,
       name: newName,
+      supportsBitcoin: account.supportsBitcoin,
       origin: account.origin,
       derivationIndex: account.derivationIndex,
       seedGroupId: account.seedGroupId,
@@ -514,6 +540,8 @@ class StorageService implements WalletVaultStore {
     if (authorityWallet == normalized) {
       await clearTwoFactorAuthorityWallet();
     }
+
+    await bitcoinAccounts.deleteWallet(normalized);
 
     final wasActive = (await getWalletAddress())?.toLowerCase() == normalized;
 
@@ -668,6 +696,7 @@ class StorageService implements WalletVaultStore {
       return WalletAccount(
         address: account.address,
         name: account.name,
+        supportsBitcoin: account.supportsBitcoin,
         origin: account.origin,
         derivationIndex: account.derivationIndex,
         seedGroupId: _legacySeedGroupId,
@@ -960,6 +989,7 @@ class StorageService implements WalletVaultStore {
   }
 
   Future<void> clearAll() async {
+    bitcoinAccounts.invalidateAll();
     await _secureStore.deleteAll();
     final prefs = await _prefs;
     await prefs.clear();
