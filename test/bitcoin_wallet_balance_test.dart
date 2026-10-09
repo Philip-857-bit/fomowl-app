@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
@@ -65,6 +66,27 @@ class BalanceRepository extends Fake implements BitcoinWalletApi {
   }
 }
 
+class OutOfOrderBalances extends Fake implements BitcoinWalletApi {
+  final requests = <Completer<BitcoinWalletSnapshot>>[];
+  int invalidations = 0;
+  @override
+  void invalidate(String identity, BitcoinProductNetwork network) {
+    invalidations++;
+  }
+
+  @override
+  Future<BitcoinWalletSnapshot> refresh(
+    String identity,
+    BitcoinProductNetwork network, {
+    bool force = false,
+    bool Function()? isCurrent,
+  }) {
+    final reply = Completer<BitcoinWalletSnapshot>();
+    requests.add(reply);
+    return reply.future;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -95,6 +117,42 @@ void main() {
       expect(tokens.single.networkKey, 'bitcoin:mainnet');
       expect(tokens.single.balance, closeTo(0.000036, 1e-12));
       expect(tokens.single.valueUsd, closeTo(3.6, 1e-9));
+      service.dispose();
+    },
+  );
+  test(
+    'late pre-transaction response cannot replace refreshed portfolio balance',
+    () async {
+      final repository = OutOfOrderBalances();
+      final service = BlockchainService(
+        bitcoinWallet: repository,
+        priceFetcher: (_) async => {},
+      );
+      service.setActiveWalletContext(
+        address: '0xwallet',
+        supportedFamilies: {ChainFamily.evm, ChainFamily.bitcoin},
+      );
+      await service.setEnabledFamilies({ChainFamily.evm, ChainFamily.bitcoin});
+      service.configureBitcoinAvailability(available: true);
+      service.setActiveNetworkKey('bitcoin:mainnet');
+      final previous = service.fetchWalletTokens(
+        '0xwallet',
+        forceRefresh: true,
+      );
+      final newer = service.refreshBitcoinAccountAfterTransaction(
+        '0xwallet',
+        BitcoinProductNetwork.mainnet,
+        isCurrent: () => true,
+      );
+      expect(repository.requests, hasLength(2));
+      repository.requests[1].complete(
+        BitcoinWalletSnapshot(fixture(pending84: 100)),
+      );
+      await newer;
+      repository.requests[0].complete(BitcoinWalletSnapshot(fixture()));
+      await previous;
+      expect(repository.invalidations, 1);
+      expect(service.tokens.single.balance, closeTo(0.000039, 1e-12));
       service.dispose();
     },
   );

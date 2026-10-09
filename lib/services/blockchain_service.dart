@@ -103,6 +103,7 @@ class BlockchainService extends ChangeNotifier {
   final Map<String, _WalletTokensCacheEntry> _walletTokensCache = {};
   final Map<String, WalletTokenState> _walletTokenStates = {};
   final Map<String, Future<List<Token>>> _walletTokensInFlight = {};
+  final Map<String, int> _bitcoinRefreshEpochs = {};
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
   Timer? _livePriceTimer;
   final Map<String, Set<String>> _trackedPriceIdsByScope = {};
@@ -1741,12 +1742,39 @@ class BlockchainService extends ChangeNotifier {
       applyGuard: applyGuard,
     );
     _walletTokensInFlight[cacheKey] = future;
-    future.whenComplete(() {
+    void clearInFlight() {
       if (identical(_walletTokensInFlight[cacheKey], future)) {
         _walletTokensInFlight.remove(cacheKey);
       }
-    });
+    }
+
+    unawaited(
+      future.then<void>(
+        (_) => clearInFlight(),
+        onError: (Object _, StackTrace _) => clearInFlight(),
+      ),
+    );
     return future;
+  }
+
+  Future<void> refreshBitcoinAccountAfterTransaction(
+    String identity,
+    BitcoinProductNetwork network, {
+    required bool Function() isCurrent,
+  }) async {
+    if (!isCurrent()) return;
+    final key = _walletTokenStateKeyForNetwork(network.networkKey, identity);
+    _bitcoinRefreshEpochs[key] = (_bitcoinRefreshEpochs[key] ?? 0) + 1;
+    _bitcoinWallet.invalidate(identity, network);
+    _walletTokensCache.remove(key);
+    await fetchWalletTokens(
+      identity,
+      chainId: network == BitcoinProductNetwork.mainnet
+          ? BitcoinLegacyUiIds.mainnet
+          : BitcoinLegacyUiIds.testnet4,
+      forceRefresh: true,
+      applyGuard: isCurrent,
+    );
   }
 
   Future<List<Token>> refreshWalletTokens(
@@ -1892,6 +1920,10 @@ class BlockchainService extends ChangeNotifier {
     String networkKey,
     bool Function()? applyGuard,
   ) async {
+    final epoch = _bitcoinRefreshEpochs[cacheKey] ?? 0;
+    bool current() =>
+        (_bitcoinRefreshEpochs[cacheKey] ?? 0) == epoch &&
+        (applyGuard?.call() ?? true);
     final previous =
         _walletTokenStates[cacheKey]?.tokens ??
         _walletTokensCache[cacheKey]?.tokens ??
@@ -1904,9 +1936,9 @@ class BlockchainService extends ChangeNotifier {
         identity,
         network,
         force: true,
-        isCurrent: applyGuard,
+        isCurrent: current,
       );
-      if (applyGuard?.call() == false) return previous;
+      if (!current()) return previous;
       final chain = network == BitcoinProductNetwork.mainnet
           ? BitcoinCatalog.mainnet
           : BitcoinCatalog.testnet4;
@@ -1926,7 +1958,7 @@ class BlockchainService extends ChangeNotifier {
       final enriched = await _tokenPortfolioModule.enrichTokensWithPrices([
         token,
       ], nativeCoinGeckoId: chain.coinGeckoId);
-      if (applyGuard?.call() == false) return previous;
+      if (!current()) return previous;
       final fetched = DateTime.now().toUtc();
       _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
         tokens: enriched,
@@ -1947,7 +1979,7 @@ class BlockchainService extends ChangeNotifier {
       );
       return enriched;
     } catch (_) {
-      if (applyGuard?.call() == false) return previous;
+      if (!current()) return previous;
       _setWalletTokenState(
         cacheKey,
         WalletTokenState(

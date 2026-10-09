@@ -3,6 +3,7 @@ import 'bitcoin_transfer_confirmation_screen.dart';
 import '../../services/bitcoin/bitcoin_send_service.dart';
 import '../../services/bitcoin/bitcoin_signing_service.dart';
 import '../../services/bitcoin/bitcoin_broadcast_service.dart';
+import '../../services/bitcoin/bitcoin_post_transaction_refresh.dart';
 import '../../services/blockchain/bitcoin_catalog.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../services/wallet_vault_service.dart';
@@ -59,6 +60,12 @@ class _TransferConfirmationScreenState
   String? _fromAddress;
   bool _isConfirming = false;
   BitcoinSignedTransfer? _signedBitcoin;
+  final _bitcoinRefresh = BitcoinPostTransactionRefresh();
+  @override
+  void dispose() {
+    _bitcoinRefresh.dispose();
+    super.dispose();
+  }
 
   double _gasPriceGwei = 0;
   double _gasFeeEth = 0;
@@ -815,6 +822,15 @@ class _TransferConfirmationScreenState
             ? 'Submission status is unknown. Checking this transaction before any retry.'
             : null,
       );
+      void refreshBitcoin() => _bitcoinRefresh.schedule(
+        isCurrent: current,
+        refresh: () => blockchain.refreshBitcoinAccountAfterTransaction(
+          transfer.walletIdentity,
+          transfer.network,
+          isCurrent: current,
+        ),
+      );
+      refreshBitcoin();
       final status = await _transactionMonitor.waitForConfirmation(
         txHash: outcome.txid,
         blockchain: blockchain,
@@ -822,6 +838,7 @@ class _TransferConfirmationScreenState
         isCurrent: current,
       );
       if (current() && status == TransactionConfirmationStatus.confirmed) {
+        refreshBitcoin();
         progress.setSuccess(
           reference: outcome.txid,
           detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
