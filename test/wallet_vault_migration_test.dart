@@ -96,8 +96,17 @@ void main() {
         ),
         isEmpty,
       );
+      expect(account.getWalletAddressForFamily(ChainFamily.bitcoin), isNull);
+      await expectLater(
+        wallet.exportPrivateKeyForFamily(account, ChainFamily.bitcoin),
+        throwsException,
+      );
       final exports = <ChainFamily, String>{};
-      for (final family in ChainFamily.values) {
+      for (final family in const [
+        ChainFamily.evm,
+        ChainFamily.solana,
+        ChainFamily.tron,
+      ]) {
         exports[family] = await wallet.exportPrivateKeyForFamily(
           account,
           family,
@@ -212,7 +221,11 @@ void main() {
       expect(store.values.containsKey('wallet_private_key'), isFalse);
       await reopened.removeWalletAccount(first['address']!);
       expect(await reopened.getCurrentWalletAddress(), second['address']);
-      for (final family in ChainFamily.values) {
+      for (final family in const [
+        ChainFamily.evm,
+        ChainFamily.solana,
+        ChainFamily.tron,
+      ]) {
         expect(
           await storage.readVaultRecord(
             family,

@@ -329,9 +329,7 @@ class WalletHistoryService {
           .timeout(const Duration(seconds: 8));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint(
-          'Wallet history creation failed: ${response.statusCode}',
-        );
+        debugPrint('Wallet history creation failed: ${response.statusCode}');
       }
     } catch (error, stackTrace) {
       debugPrint('Wallet history creation failed: $error');

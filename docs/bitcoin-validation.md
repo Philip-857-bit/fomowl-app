@@ -45,3 +45,11 @@ replacement construction. The journal has a 1024-entry / 512 KiB bound and fails
 closed at capacity; a future explicit chain-confirmed reconciliation/replacement
 flow is required for pruning. Wallet deletion/reset removes this public journal
 alongside custody. This is host concurrency protection, not an SPV proof of UTXOs.
+
+## Native build compatibility
+
+The unsigned review builds retain Android API 37 and install Google's
+`platforms;android-37.0` package. iOS deployment metadata is aligned to 15.0,
+the minimum required by the existing Firebase core/messaging plugins. This
+binary therefore does not support iOS 13 or 14. No signing certificates or
+production Firebase credentials are required by the review builds.

@@ -119,7 +119,9 @@ class BitcoinRolloutService {
   ) async {
     final wallet = WalletService();
     final account = await wallet.getActiveWalletAccount();
-    if (!current() || account == null || account.origin != WalletOrigin.derived) {
+    if (!current() ||
+        account == null ||
+        account.origin != WalletOrigin.derived) {
       return;
     }
     final state = await wallet.ensureBitcoinAccount(account.address);
