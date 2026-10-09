@@ -880,8 +880,17 @@ class BlockchainService extends ChangeNotifier {
       // Load enabled families; default to evm-only for existing users.
       final saved = await _storageService.getEnabledChainFamilies();
       _enabledFamilies = saved ?? {ChainFamily.evm};
-      // Ensure the active family is always in the enabled set.
-      _enabledFamilies.add(NetworkKey.familyOf(activeNetworkKey));
+      // A stale saved active network must not restore a disabled Bitcoin preference.
+      if (activeFamily == ChainFamily.bitcoin &&
+          !_enabledFamilies.contains(ChainFamily.bitcoin)) {
+        final fallback = _fallbackFamilyForActiveWallet();
+        if (fallback != null) {
+          _activateDefaultNetworkForFamily(fallback);
+          await _saveActiveChain();
+        }
+      } else {
+        _enabledFamilies.add(NetworkKey.familyOf(activeNetworkKey));
+      }
     } catch (e) {
       debugPrint('Error loading active chain: $e');
     }

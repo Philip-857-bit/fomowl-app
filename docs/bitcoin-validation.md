@@ -70,11 +70,25 @@ frees unused tools on the disposable runner. Those resource changes do not alter
 wallet protocol behavior. The final branch head must still pass its own checks.
 
 [Backend PR #47](https://github.com/Philip-857-bit/Fomowl-Backend/pull/47) at
-`f72f1eb7699c65c0f173dd58a2d79563d2f2ba6d` passed 614 tests, strict Clippy and
-GitHub CI. Merge the stable backend contract before the mobile product.
+`b53db805cdee8664ccece846269be5577cdaed63` passed its full locked Rust test suite, strict Clippy, dependency audit
+and GitHub CI. Merge the stable backend contract before the mobile product.
 
 The immutable SDK currently accepts P2WPKH and P2TR recipient scripts.
 Legacy P2PKH/P2SH recipients, mixed input policies, WIF/XPRV import UI, Lightning,
 multisig, tapscript, Bitcoin swaps and Bitcoin WalletConnect are outside this
 milestone. Funded Testnet4 and physical phone validation remain paused; automated
 fixtures and compile checks do not replace those production rollout gates.
+
+## Network preference semantics
+
+Runtime policy and backend capabilities admit Bitcoin availability. Seed-wallet
+provisioning adds wallet support and custody independently of the user’s enabled
+network families. Settings → Manage Networks provides the Bitcoin switch only
+for an admitted, provisioned seed wallet. Enabling verifies provisioning;
+disabling preserves custody and selects an enabled supported fallback. Runtime
+refresh and restart respect the saved preference, including an outdated saved
+active network. Private-key-only imports cannot opt in.
+
+The locked Firebase core 4.12.1 and messaging 16.4.3 Swift packages both declare
+minimum iOS 15.0. The binary minimum changed from iOS 13 to iOS 15; this cleanup
+retains that dependency requirement without downgrading Firebase.

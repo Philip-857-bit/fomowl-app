@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import '../../models/bitcoin_account_state.dart';
-import '../../models/chain.dart';
 import '../../models/wallet_account.dart';
 import '../blockchain_service.dart';
 import '../runtime_config_service.dart';
@@ -115,9 +114,10 @@ class BitcoinRolloutService {
 
   static Future<void> provisionSeedWallet(
     BlockchainService blockchain,
-    bool Function() current,
-  ) async {
-    final wallet = WalletService();
+    bool Function() current, {
+    WalletService? walletService,
+  }) async {
+    final wallet = walletService ?? WalletService();
     final account = await wallet.getActiveWalletAccount();
     if (!current() ||
         account == null ||
@@ -135,12 +135,6 @@ class BitcoinRolloutService {
       address: refreshed!.address,
       supportedFamilies: refreshed.supportedFamilies,
     );
-    if (!blockchain.enabledFamilies.contains(ChainFamily.bitcoin)) {
-      await blockchain.setEnabledFamilies({
-        ...blockchain.enabledFamilies,
-        ChainFamily.bitcoin,
-      });
-    }
   }
 
   void dispose() {
