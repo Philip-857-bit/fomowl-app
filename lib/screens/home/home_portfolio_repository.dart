@@ -164,9 +164,7 @@ class HomePortfolioRepository {
 
   String _sectionNetworkKey(EvmChain chain) {
     return switch (chain.family) {
-      ChainFamily.bitcoin => throw UnsupportedError(
-        'Bitcoin is unavailable for this operation.',
-      ),
+      ChainFamily.bitcoin => chain.networkKey,
       ChainFamily.solana => NetworkKey.solana('mainnet'),
       ChainFamily.tron => NetworkKey.tron('mainnet'),
       ChainFamily.evm => NetworkKey.evm(chain.chainId),

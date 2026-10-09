@@ -68,6 +68,22 @@ class NetworkKey {
   }
 }
 
+/// Dedicated compatibility IDs for legacy UI token buckets only; never EVM chain IDs.
+class BitcoinLegacyUiIds {
+  static const mainnet = -840;
+  static const testnet4 = -841;
+  static int forNetworkKey(String key) => switch (key) {
+    'bitcoin:mainnet' => mainnet,
+    'bitcoin:testnet4' => testnet4,
+    _ => throw const FormatException('Invalid Bitcoin network'),
+  };
+  static String networkKey(int id) => switch (id) {
+    mainnet => NetworkKey.bitcoin('mainnet'),
+    testnet4 => NetworkKey.bitcoin('testnet4'),
+    _ => throw const FormatException('Invalid Bitcoin compatibility ID'),
+  };
+}
+
 /// EVM Chain configuration
 class EvmChain {
   final String name;
@@ -96,9 +112,7 @@ class EvmChain {
     ChainFamily.solana => NetworkKey.solana('mainnet'),
     ChainFamily.tron => NetworkKey.tron('mainnet'),
     ChainFamily.evm => NetworkKey.evm(chainId),
-    ChainFamily.bitcoin => throw UnsupportedError(
-      "Bitcoin requires HD network metadata",
-    ),
+    ChainFamily.bitcoin => BitcoinLegacyUiIds.networkKey(chainId),
   };
 
   Map<String, dynamic> toJson() => {

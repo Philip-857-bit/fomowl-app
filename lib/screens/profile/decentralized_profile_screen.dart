@@ -156,8 +156,7 @@ class _DecentralizedProfileScreenState
     // Determine which network families this wallet actually supports.
     // Private-key imports are EVM-only. Seed-phrase wallets have all 3 families.
     final origin = activeAccount?.origin ?? WalletOrigin.derived;
-    final supported =
-        activeAccount?.addressesByFamily.keys.toSet() ?? {ChainFamily.evm};
+    final supported = activeAccount?.supportedFamilies ?? {ChainFamily.evm};
 
     setState(() {
       _walletName = walletName ?? 'Main Wallet';

@@ -252,8 +252,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
         break;
       }
     }
-    final supported =
-        active?.addressesByFamily.keys.toSet() ?? const {ChainFamily.evm};
+    final supported = active?.supportedFamilies ?? const {ChainFamily.evm};
     blockchain.setActiveWalletContext(
       address: activeAddress ?? '',
       supportedFamilies: supported,
@@ -282,7 +281,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
         // on refresh see the up-to-date address and supported families.
         blockchain.setActiveWalletContext(
           address: account.address,
-          supportedFamilies: account.addressesByFamily.keys.toSet(),
+          supportedFamilies: account.supportedFamilies,
         );
         blockchain.refresh();
       }

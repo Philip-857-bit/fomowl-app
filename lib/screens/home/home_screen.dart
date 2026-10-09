@@ -958,8 +958,7 @@ class _HomeScreenState extends State<HomeScreen> {
       blockchain.setActiveWalletContext(
         address: address ?? '',
         supportedFamilies:
-            activeAccount?.addressesByFamily.keys.toSet() ??
-            const {ChainFamily.evm},
+            activeAccount?.supportedFamilies ?? const {ChainFamily.evm},
       );
       final l = AppLocalizations.of(context);
       final activeAccountName = activeAccount?.name.trim();
@@ -1444,7 +1443,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _effectiveVisibilityChainId(BlockchainService blockchain) {
     switch (blockchain.activeFamily) {
       case ChainFamily.bitcoin:
-        throw UnsupportedError('Bitcoin is unavailable for this operation.');
+        return blockchain.activeTokenStorageChainId;
       case ChainFamily.solana:
         return -501;
       case ChainFamily.tron:

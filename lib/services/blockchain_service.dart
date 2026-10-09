@@ -1,4 +1,5 @@
 import 'blockchain/bitcoin_catalog.dart';
+import 'bitcoin/bitcoin_wallet_vault_service.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -80,7 +81,9 @@ class BlockchainService extends ChangeNotifier {
   // State
   List<EvmChain> _customChains = [];
   EvmChain _activeChain = builtInChains[0];
-  String _activeNetworkKeyOverride = ''; // non-empty only for Solana/Tron
+  String _activeNetworkKeyOverride = ''; // non-empty for non-EVM families
+  bool _bitcoinAvailable = false;
+  bool _bitcoinTestnetEnabled = false;
   Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
   // Tracks the active wallet's supported chain families. Imported private-key
   // wallets only support a single family (e.g. EVM-only), so the network
@@ -251,8 +254,32 @@ class BlockchainService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Runtime/provider availability is supplied by the rollout coordinator.
+  void configureBitcoinAvailability({
+    required bool available,
+    bool testnetEnabled = false,
+  }) {
+    _bitcoinAvailable = available;
+    _bitcoinTestnetEnabled = available && testnetEnabled;
+    if (activeFamily == ChainFamily.bitcoin &&
+        !isBitcoinNetworkAvailable(activeNetworkKey)) {
+      _ensureActiveNetworkSupportedByWallet();
+      unawaited(BitcoinWalletVaultService.invalidateOpenAccounts());
+    }
+    notifyListeners();
+  }
+
+  bool isBitcoinNetworkAvailable(String key) =>
+      _bitcoinAvailable &&
+      (key == 'bitcoin:mainnet' ||
+          key == 'bitcoin:testnet4' && _bitcoinTestnetEnabled);
+  bool _familyAvailable(ChainFamily family) =>
+      family != ChainFamily.bitcoin || _bitcoinAvailable;
+
   bool _ensureActiveNetworkSupportedByWallet() {
-    if (_activeWalletSupportedFamilies.contains(activeFamily)) {
+    if (_activeWalletSupportedFamilies.contains(activeFamily) &&
+        (activeFamily != ChainFamily.bitcoin ||
+            isBitcoinNetworkAvailable(activeNetworkKey))) {
       return false;
     }
     final fallbackFamily = _fallbackFamilyForActiveWallet();
@@ -267,15 +294,18 @@ class BlockchainService extends ChangeNotifier {
       ChainFamily.evm,
       ChainFamily.solana,
       ChainFamily.tron,
+      ChainFamily.bitcoin,
     ];
     for (final family in preferredOrder) {
       if (_activeWalletSupportedFamilies.contains(family) &&
+          _familyAvailable(family) &&
           _enabledFamilies.contains(family)) {
         return family;
       }
     }
     for (final family in preferredOrder) {
-      if (_activeWalletSupportedFamilies.contains(family)) {
+      if (_activeWalletSupportedFamilies.contains(family) &&
+          _familyAvailable(family)) {
         _enabledFamilies.add(family);
         unawaited(_storageService.setEnabledChainFamilies(_enabledFamilies));
         return family;
@@ -288,7 +318,9 @@ class BlockchainService extends ChangeNotifier {
     final before = activeNetworkKey;
     switch (family) {
       case ChainFamily.bitcoin:
-        throw UnsupportedError('Bitcoin is unavailable for this operation.');
+        if (!_bitcoinAvailable) return false;
+        _activeNetworkKeyOverride = NetworkKey.bitcoin('mainnet');
+        break;
       case ChainFamily.evm:
         _activeNetworkKeyOverride = '';
         break;
@@ -314,7 +346,9 @@ class BlockchainService extends ChangeNotifier {
   /// both globally enabled AND supported by the active wallet are shown.
   Set<ChainFamily> get _selectorFamilies => {
     for (final family in _enabledFamilies)
-      if (_activeWalletSupportedFamilies.contains(family)) family,
+      if (_activeWalletSupportedFamilies.contains(family) &&
+          _familyAvailable(family))
+        family,
   };
 
   /// Ordered network entries for the selector, filtered by enabled families.
@@ -344,6 +378,12 @@ class BlockchainService extends ChangeNotifier {
 
     if (selectorFamilies.contains(ChainFamily.tron)) {
       entries.add(TronNetworkEntry(TronCatalog.mainnet));
+    }
+    if (selectorFamilies.contains(ChainFamily.bitcoin)) {
+      entries.add(BitcoinNetworkEntry(BitcoinCatalog.mainnet));
+      if (_bitcoinTestnetEnabled) {
+        entries.add(BitcoinNetworkEntry(BitcoinCatalog.testnet4));
+      }
     }
 
     if (selectorFamilies.contains(ChainFamily.evm)) {
@@ -400,7 +440,7 @@ class BlockchainService extends ChangeNotifier {
   ) {
     switch (NetworkKey.familyOf(networkKey)) {
       case ChainFamily.bitcoin:
-        throw UnsupportedError('Bitcoin is unavailable for this operation.');
+        return BitcoinLegacyUiIds.forNetworkKey(networkKey);
       case ChainFamily.solana:
         return -501;
       case ChainFamily.tron:
@@ -411,11 +451,13 @@ class BlockchainService extends ChangeNotifier {
   }
 
   List<CustomTokenDefinition> get customTokensForActiveChain =>
-      List.unmodifiable(
-        (_customTokens[_customTokenChainKey] ?? const []).where(
-          _customTokenMatchesActiveNetwork,
-        ),
-      );
+      activeFamily == ChainFamily.bitcoin
+      ? const []
+      : List.unmodifiable(
+          (_customTokens[_customTokenChainKey] ?? const []).where(
+            _customTokenMatchesActiveNetwork,
+          ),
+        );
 
   List<CustomTokenDefinition> customTokensForChain(int chainId) =>
       List.unmodifiable(_customTokens[chainId] ?? const []);
@@ -795,7 +837,15 @@ class BlockchainService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final networkKey = prefs.getString(_keyActiveNetworkKey);
       final family = NetworkKey.familyOf(networkKey);
-      if (family == ChainFamily.solana || family == ChainFamily.tron) {
+      if (family == ChainFamily.bitcoin) {
+        if (networkKey != null &&
+            isBitcoinNetworkAvailable(networkKey) &&
+            _activeWalletSupportedFamilies.contains(ChainFamily.bitcoin)) {
+          _activeNetworkKeyOverride = networkKey;
+        } else {
+          _activeNetworkKeyOverride = '';
+        }
+      } else if (family == ChainFamily.solana || family == ChainFamily.tron) {
         _activeNetworkKeyOverride = networkKey!;
       } else {
         _activeNetworkKeyOverride = '';
@@ -861,6 +911,20 @@ class BlockchainService extends ChangeNotifier {
 
   void setActiveNetworkKey(String networkKey) {
     final family = NetworkKey.familyOf(networkKey);
+    if (family == ChainFamily.bitcoin) {
+      if (!isBitcoinNetworkAvailable(networkKey) ||
+          !_activeWalletSupportedFamilies.contains(ChainFamily.bitcoin)) {
+        return;
+      }
+      unawaited(BitcoinWalletVaultService.invalidateOpenAccounts());
+      _activeNetworkKeyOverride = networkKey;
+      refresh();
+      unawaited(_saveActiveChain());
+      return;
+    }
+    if (activeFamily == ChainFamily.bitcoin) {
+      unawaited(BitcoinWalletVaultService.invalidateOpenAccounts());
+    }
     if (_activeWalletAddress.isNotEmpty &&
         !_activeWalletSupportedFamilies.contains(family)) {
       final fallbackFamily = _fallbackFamilyForActiveWallet();
@@ -1237,11 +1301,17 @@ class BlockchainService extends ChangeNotifier {
   // ─── BALANCE FETCHING ────────────────────────────
 
   Future<double> getNativeBalance(String address) async {
+    if (activeFamily == ChainFamily.bitcoin) {
+      throw UnsupportedError('Bitcoin balance requires HD account state');
+    }
     final balanceWei = await getNativeBalanceBaseUnits(address);
     return _scaledBigIntToDouble(balanceWei, 18);
   }
 
   Future<BigInt> getNativeBalanceBaseUnits(String address) async {
+    if (activeFamily == ChainFamily.bitcoin) {
+      throw UnsupportedError('Bitcoin balance requires HD account state');
+    }
     final result = await _rpcCall('eth_getBalance', [address, 'latest']);
     if (result != null) {
       return BigInt.parse((result as String).substring(2), radix: 16);
@@ -2563,9 +2633,12 @@ class BlockchainService extends ChangeNotifier {
         final isActiveNativeToken =
             contractAddress == null && entryNetworkKey == activeNetworkKey;
         final defaultStandard = switch (NetworkKey.familyOf(entryNetworkKey)) {
-          ChainFamily.bitcoin => throw UnsupportedError(
-            'Bitcoin is unavailable for this operation.',
-          ),
+          ChainFamily.bitcoin =>
+            contractAddress == null
+                ? 'native'
+                : throw UnsupportedError(
+                    'Bitcoin custom tokens are unavailable.',
+                  ),
           ChainFamily.solana => contractAddress == null ? 'native' : 'spl',
           ChainFamily.tron => contractAddress == null ? 'native' : 'trc20',
           ChainFamily.evm => contractAddress == null ? 'native' : 'erc20',
@@ -2852,6 +2925,10 @@ class BlockchainService extends ChangeNotifier {
   }
 
   String _networkKeyForTokenStorageChainId(int chainId) {
+    if (chainId == BitcoinLegacyUiIds.mainnet ||
+        chainId == BitcoinLegacyUiIds.testnet4) {
+      return BitcoinLegacyUiIds.networkKey(chainId);
+    }
     return switch (chainId) {
       -501 => NetworkKey.solana('mainnet'),
       -195 => NetworkKey.tron('mainnet'),

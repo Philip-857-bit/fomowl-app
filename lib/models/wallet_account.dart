@@ -51,6 +51,11 @@ class WalletAccount {
     );
   }
 
+  Set<ChainFamily> get supportedFamilies => Set.unmodifiable({
+    for (final family in ChainFamily.values)
+      if (supportsFamily(family)) family,
+  });
+
   bool supportsFamily(ChainFamily family) => family == ChainFamily.bitcoin
       ? supportsBitcoin && origin == WalletOrigin.derived
       : getWalletAddressForFamily(family) != null;
