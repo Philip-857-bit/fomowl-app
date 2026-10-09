@@ -119,13 +119,18 @@ class TransactionProgressController extends ChangeNotifier {
     );
   }
 
-  void setSwapPending({String? reference, String? detailsUrl}) {
+  void setSwapPending({
+    String? reference,
+    String? detailsUrl,
+    String? message,
+  }) {
     _update(
       _state.copyWith(
         stage: TransactionProgressStage.swapPending,
         reference: reference,
         detailsUrl: detailsUrl,
-        clearMessage: true,
+        message: message,
+        clearMessage: message == null,
       ),
     );
   }

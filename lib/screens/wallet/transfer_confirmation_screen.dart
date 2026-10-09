@@ -2,6 +2,9 @@ import 'dart:async';
 import 'bitcoin_transfer_confirmation_screen.dart';
 import '../../services/bitcoin/bitcoin_send_service.dart';
 import '../../services/bitcoin/bitcoin_signing_service.dart';
+import '../../services/bitcoin/bitcoin_broadcast_service.dart';
+import '../../services/blockchain/bitcoin_catalog.dart';
+import '../../models/bitcoin_account_state.dart';
 import '../../services/wallet_vault_service.dart';
 import 'dart:convert';
 
@@ -444,7 +447,11 @@ class _TransferConfirmationScreenState
 
     switch (family) {
       case ChainFamily.bitcoin:
-        throw UnsupportedError('Bitcoin is unavailable for this operation.');
+        if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
+        final chain = networkKey == 'bitcoin:mainnet'
+            ? BitcoinCatalog.mainnet
+            : BitcoinCatalog.testnet4;
+        return '${chain.explorerUrl}/tx/$hash';
       case ChainFamily.solana:
         // Solana signatures are 87-88 base58 chars.
         if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {
@@ -789,7 +796,32 @@ class _TransferConfirmationScreenState
         return result == true && current();
       },
     );
-    if (current()) setState(() => _signedBitcoin = signed);
+    if (!current()) return;
+    setState(() => _signedBitcoin = signed);
+    final progress = _openProgressFlow();
+    progress.setSwapSubmitting();
+    try {
+      final outcome = await BitcoinBroadcastService().broadcast(
+        signed,
+        isCurrent: current,
+      );
+      final chain = transfer.network == BitcoinProductNetwork.mainnet
+          ? BitcoinCatalog.mainnet
+          : BitcoinCatalog.testnet4;
+      progress.setSwapPending(
+        reference: outcome.txid,
+        detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
+        message: outcome.status == BitcoinSubmissionStatus.unknown
+            ? 'Submission status is unknown. Checking this transaction before any retry.'
+            : null,
+      );
+    } on BitcoinBroadcastMismatch {
+      progress.setError(
+        'Bitcoin provider returned an unexpected transaction ID.',
+      );
+    } catch (_) {
+      progress.setError('Bitcoin transaction could not be submitted.');
+    }
   }
 
   @override
