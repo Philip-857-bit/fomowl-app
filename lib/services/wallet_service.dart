@@ -13,6 +13,7 @@ import '../models/chain.dart';
 import '../models/wallet_account.dart';
 import '../models/bitcoin_account_state.dart';
 import 'bitcoin/bitcoin_provisioning_service.dart';
+import 'bitcoin/bitcoin_seed_wallet_initializer.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
@@ -105,7 +106,12 @@ class WalletService {
     }
 
     final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
-    final material = await _deriveWalletMaterialFromSeed(seed, derivationIndex);
+    late final _DerivedWalletMaterial material;
+    try {
+      material = await _deriveWalletMaterialFromSeed(seed, derivationIndex);
+    } finally {
+      seed.fillRange(0, seed.length, 0);
+    }
     final resolvedSeedGroupId =
         seedGroupId ?? _seedGroupIdFromMnemonic(normalizedMnemonic);
 
@@ -139,51 +145,55 @@ class WalletService {
     }
 
     final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
-    final seedGroupId = _seedGroupIdFromMnemonic(normalizedMnemonic);
-    final imported = <Map<String, String>>[];
-    var consecutiveUnused = 0;
+    try {
+      final seedGroupId = _seedGroupIdFromMnemonic(normalizedMnemonic);
+      final imported = <Map<String, String>>[];
+      var consecutiveUnused = 0;
 
-    for (var index = 0; index < 20; index++) {
-      final material = await _deriveWalletMaterialFromSeed(seed, index);
-      var shouldSave = index == 0;
+      for (var index = 0; index < 20; index++) {
+        final material = await _deriveWalletMaterialFromSeed(seed, index);
+        var shouldSave = index == 0;
 
-      if (index > 0) {
-        try {
-          shouldSave = await _hasSeedAccountActivity(
-            evmAddress: material.evmAddress,
-            solanaAddress: material.solanaAddress,
-            tronAddress: material.tronAddress,
-            derivationIndex: index,
-          );
-        } catch (error) {
-          debugPrint(
-            '[WalletService] Seed account discovery stopped at index $index: $error',
-          );
-          break;
+        if (index > 0) {
+          try {
+            shouldSave = await _hasSeedAccountActivity(
+              evmAddress: material.evmAddress,
+              solanaAddress: material.solanaAddress,
+              tronAddress: material.tronAddress,
+              derivationIndex: index,
+            );
+          } catch (error) {
+            debugPrint(
+              '[WalletService] Seed account discovery stopped at index $index: $error',
+            );
+            break;
+          }
+
+          if (!shouldSave) {
+            consecutiveUnused++;
+            if (consecutiveUnused >= 5) break;
+            continue;
+          }
+          consecutiveUnused = 0;
         }
 
-        if (!shouldSave) {
-          consecutiveUnused++;
-          if (consecutiveUnused >= 5) break;
-          continue;
-        }
-        consecutiveUnused = 0;
+        await _saveDerivedWalletMaterial(
+          material,
+          mnemonic: normalizedMnemonic,
+          walletName: index == 0
+              ? (walletName?.trim().isNotEmpty == true
+                    ? walletName!.trim()
+                    : 'Wallet 1')
+              : 'Wallet ${index + 1}',
+          seedGroupId: seedGroupId,
+        );
+        imported.add(material.toResult());
       }
 
-      await _saveDerivedWalletMaterial(
-        material,
-        mnemonic: normalizedMnemonic,
-        walletName: index == 0
-            ? (walletName?.trim().isNotEmpty == true
-                  ? walletName!.trim()
-                  : 'Wallet 1')
-            : 'Wallet ${index + 1}',
-        seedGroupId: seedGroupId,
-      );
-      imported.add(material.toResult());
+      return imported;
+    } finally {
+      seed.fillRange(0, seed.length, 0);
     }
-
-    return imported;
   }
 
   Future<_DerivedWalletMaterial> _deriveWalletMaterialFromSeed(
@@ -251,6 +261,9 @@ class WalletService {
       },
     );
     await migrateWalletVaults();
+    await BitcoinSeedWalletInitializer(
+      storage: _storage,
+    ).initializeSavedSeedWallet(material.evmAddress);
   }
 
   String _seedGroupIdFromMnemonic(String normalizedMnemonic) {
