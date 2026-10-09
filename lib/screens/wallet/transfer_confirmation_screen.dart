@@ -815,6 +815,18 @@ class _TransferConfirmationScreenState
             ? 'Submission status is unknown. Checking this transaction before any retry.'
             : null,
       );
+      final status = await _transactionMonitor.waitForConfirmation(
+        txHash: outcome.txid,
+        blockchain: blockchain,
+        networkKey: transfer.network.networkKey,
+        isCurrent: current,
+      );
+      if (current() && status == TransactionConfirmationStatus.confirmed) {
+        progress.setSuccess(
+          reference: outcome.txid,
+          detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
+        );
+      }
     } on BitcoinBroadcastMismatch {
       progress.setError(
         'Bitcoin provider returned an unexpected transaction ID.',
