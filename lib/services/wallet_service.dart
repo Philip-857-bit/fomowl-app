@@ -14,6 +14,8 @@ import '../models/wallet_account.dart';
 import '../models/bitcoin_account_state.dart';
 import 'bitcoin/bitcoin_provisioning_service.dart';
 import 'bitcoin/bitcoin_seed_wallet_initializer.dart';
+import 'bitcoin/bitcoin_seed_account_discovery.dart';
+import 'bitcoin/bitcoin_host_availability.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
@@ -42,10 +44,15 @@ class WalletService {
   WalletService({
     StorageService? storageService,
     SeedAccountActivityChecker? seedAccountActivityChecker,
+    BitcoinSeedDiscoveryApi? bitcoinSeedDiscovery,
+    bool Function()? bitcoinDiscoveryEnabled,
     Web3Client Function(String rpcUrl)? web3ClientFactory,
     EvmTypedDataSigner? typedDataSigner,
   }) : _storage = storageService ?? StorageService(),
        _seedAccountActivityChecker = seedAccountActivityChecker,
+       _bitcoinSeedDiscoveryOverride = bitcoinSeedDiscovery,
+       _bitcoinDiscoveryEnabled =
+           bitcoinDiscoveryEnabled ?? (() => BitcoinHostAvailability.mainnet),
        _web3ClientFactory = web3ClientFactory,
        _typedDataSigner =
            typedDataSigner ??
@@ -54,6 +61,10 @@ class WalletService {
 
   final StorageService _storage;
   final SeedAccountActivityChecker? _seedAccountActivityChecker;
+  final BitcoinSeedDiscoveryApi? _bitcoinSeedDiscoveryOverride;
+  late final BitcoinSeedDiscoveryApi _bitcoinSeedDiscovery =
+      _bitcoinSeedDiscoveryOverride ?? BitcoinSeedAccountDiscovery();
+  final bool Function() _bitcoinDiscoveryEnabled;
   final Web3Client Function(String rpcUrl)? _web3ClientFactory;
   final EvmTypedDataSigner _typedDataSigner;
   final HttpClientService _httpClientService = HttpClientService();
@@ -149,6 +160,8 @@ class WalletService {
       final seedGroupId = _seedGroupIdFromMnemonic(normalizedMnemonic);
       final imported = <Map<String, String>>[];
       var consecutiveUnused = 0;
+      String? discoveryIdentity;
+      var discoveryPartial = false;
 
       for (var index = 0; index < 20; index++) {
         final material = await _deriveWalletMaterialFromSeed(seed, index);
@@ -162,7 +175,17 @@ class WalletService {
               tronAddress: material.tronAddress,
               derivationIndex: index,
             );
+            if (!shouldSave &&
+                _bitcoinDiscoveryEnabled() &&
+                discoveryIdentity != null) {
+              shouldSave = await _bitcoinSeedDiscovery.hasActivity(
+                seed,
+                discoveryIdentity,
+                index,
+              );
+            }
           } catch (error) {
+            discoveryPartial = true;
             debugPrint(
               '[WalletService] Seed account discovery stopped at index $index: $error',
             );
@@ -188,8 +211,12 @@ class WalletService {
           seedGroupId: seedGroupId,
         );
         imported.add(material.toResult());
+        discoveryIdentity ??= material.evmAddress;
       }
 
+      if (discoveryPartial && imported.isNotEmpty) {
+        imported.first['discoveryPartial'] = 'true';
+      }
       return imported;
     } finally {
       seed.fillRange(0, seed.length, 0);

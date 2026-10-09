@@ -1,6 +1,7 @@
 import 'blockchain/bitcoin_catalog.dart';
 import 'bitcoin/bitcoin_wallet_vault_service.dart';
 import 'bitcoin/bitcoin_wallet_service.dart';
+import 'bitcoin/bitcoin_host_availability.dart';
 import '../models/bitcoin_account_state.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
@@ -268,6 +269,7 @@ class BlockchainService extends ChangeNotifier {
     bool testnetEnabled = false,
   }) {
     _bitcoinAvailable = available;
+    BitcoinHostAvailability.configure(mainnet: available);
     _bitcoinTestnetEnabled = available && testnetEnabled;
     if (activeFamily == ChainFamily.bitcoin &&
         !isBitcoinNetworkAvailable(activeNetworkKey)) {
