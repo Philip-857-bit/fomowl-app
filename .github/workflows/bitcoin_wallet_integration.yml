@@ -51,8 +51,16 @@ jobs:
     env:
       CARGO_BUILD_JOBS: 2
       CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG: 0
     steps:
       - uses: actions/checkout@v4
+      - name: Reserve space on the disposable Android runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/local/.ghcup /opt/ghc /usr/share/dotnet /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: ./.github/actions/setup-owllet-core
         with:
           ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
