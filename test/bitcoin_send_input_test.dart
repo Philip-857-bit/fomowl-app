@@ -2,6 +2,10 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_account_store.dart';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_protected_record.dart';
+import 'helpers/bitcoin_memory_store.dart';
 import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
 import 'package:fomowl_wallet/models/bitcoin_discovery.dart';
 import 'package:fomowl_wallet/models/bitcoin_network_data.dart';
@@ -146,10 +150,56 @@ void main() {
           scannedAt: DateTime.now().toUtc(),
         ),
       );
+      final store = BitcoinAccountStore(MemoryStore());
+      final slot = BitcoinAccountSlot(
+        walletIdentity: '0xwallet',
+        network: account.network,
+        accountIndex: 0,
+        purpose: BitcoinPurpose.bip84,
+      );
+      final record = ProtectedBitcoinRecord(
+        walletIdentity: '0xwallet',
+        state: BitcoinPurposeAccountState(metadata: account),
+        encryptedVault: 'public-fixture',
+        wrappingKey: Uint8List(32),
+      );
+      await store.createIfAbsent(slot, record);
+      record.dispose();
       final service = BitcoinSendService(
+        store: store,
         wallet: SnapshotWallet(snapshot),
         network: FixedFees(),
       );
+      final prepared = await service.prepareTransfer(
+        '0xwallet',
+        account.network,
+        address,
+        BigInt.from(350),
+      );
+      expect(prepared.plan.recipientTotalSat, BigInt.from(350));
+      expect(prepared.plan.changeIndex, 0);
+      expect(prepared.plan.rbf, isTrue);
+      expect((await store.readState(slot))!.nextInternal, 1);
+      await expectLater(
+        service.prepareTransfer(
+          '0xwallet',
+          account.network,
+          address,
+          BigInt.from(501),
+        ),
+        throwsA('Insufficient Bitcoin funds'),
+      );
+      expect((await store.readState(slot))!.nextInternal, 2);
+      await expectLater(
+        service.prepareTransfer(
+          'other-wallet',
+          account.network,
+          address,
+          BigInt.from(350),
+        ),
+        throwsStateError,
+      );
+      expect((await store.readState(slot))!.nextInternal, 2);
       final maximum = await service.maximumAmount(
         '0xwallet',
         account.network,

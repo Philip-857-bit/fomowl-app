@@ -47,6 +47,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   AmountInputMode _inputMode = AmountInputMode.token;
   bool _syncingDisplay = false;
   bool _isCalculatingMax = false;
+  bool _isPreparingBitcoin = false;
   int? _selectedPercentage;
 
   double _availableBalance = 0.0;
@@ -504,7 +505,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     setState(() => _selectedPercentage = percentage);
   }
 
-  void _onSend() {
+  Future<void> _onSend() async {
+    if (_isPreparingBitcoin) return;
     if (_nonEvmAddressMissing) {
       _showError(
         'This wallet was imported via private key and does not have a Solana or Tron address. '
@@ -571,11 +573,45 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       return;
     }
 
+    BitcoinPreparedTransfer? bitcoinTransfer;
+    if (family == ChainFamily.bitcoin) {
+      setState(() => _isPreparingBitcoin = true);
+      try {
+        final identity = await _walletService.getCurrentWalletAddress();
+        if (!mounted || identity == null) return;
+        bitcoinTransfer = await BitcoinSendService().prepareTransfer(
+          identity,
+          BitcoinProductNetwork.fromId(
+            NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
+          ),
+          destination,
+          amountInBaseUnits,
+          isCurrent: () =>
+              mounted &&
+              blockchain.activeNetworkKey == activeNetworkKey &&
+              blockchain.activeWalletAddress.toLowerCase() ==
+                  identity.toLowerCase(),
+        );
+        if (!mounted) return;
+      } catch (_) {
+        if (mounted) {
+          _showError(
+            'Unable to prepare Bitcoin transfer. Check funds, address and network connection.',
+          );
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _isPreparingBitcoin = false);
+      }
+    }
+    if (!mounted) return;
+
     Navigator.pushNamed(
       context,
       '/transfer-confirmation',
       arguments: {
         'token': _selectedToken,
+        'bitcoinTransfer': ?bitcoinTransfer,
         'toAddress': destination,
         'recipientLabel': _recipientLabel,
         'recipientBookWalletScope': blockchain.activeWalletAddress,

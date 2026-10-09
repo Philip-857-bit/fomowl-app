@@ -3,20 +3,40 @@ import '../../models/bitcoin_network_data.dart';
 import '../../models/bitcoin_wallet_balance.dart';
 import '../../src/rust/api/bitcoin_transaction.dart';
 import 'bitcoin_native_crypto.dart';
+import 'bitcoin_account_store.dart';
+import 'bitcoin_address_allocator.dart';
+import 'bitcoin_protected_record.dart';
+import '../storage_service.dart';
 import 'bitcoin_network_service.dart';
 import 'bitcoin_wallet_service.dart';
+
+class BitcoinPreparedTransfer {
+  final String walletIdentity;
+  final BitcoinProductNetwork network;
+  final BitcoinPurpose purpose;
+  final BitcoinTransactionPlanDto plan;
+  const BitcoinPreparedTransfer({
+    required this.walletIdentity,
+    required this.network,
+    required this.purpose,
+    required this.plan,
+  });
+}
 
 class BitcoinSendService {
   final BitcoinWalletApi wallet;
   final BitcoinNetworkApi network;
   final BitcoinCryptoApi crypto;
+  final BitcoinAccountStore store;
   BitcoinSendService({
     BitcoinWalletApi? wallet,
     BitcoinNetworkApi? network,
     BitcoinCryptoApi? crypto,
+    BitcoinAccountStore? store,
   }) : wallet = wallet ?? BitcoinWalletService(),
        network = network ?? BitcoinNetworkService(),
-       crypto = crypto ?? const NativeBitcoinCrypto();
+       crypto = crypto ?? const NativeBitcoinCrypto(),
+       store = store ?? StorageService().bitcoinAccounts;
 
   Future<List<BitcoinUtxoDto>> ownedInputs(
     BitcoinWalletSnapshot snapshot,
@@ -30,6 +50,10 @@ class BitcoinSendService {
       }
       final owner = snapshot.discovery.ownership[utxo.address];
       if (owner == null) throw StateError('Unknown Bitcoin UTXO ownership');
+      if (snapshot.discovery.state.accounts[owner.account.purpose]?.metadata !=
+          owner.account) {
+        throw StateError('Bitcoin UTXO account identity mismatch');
+      }
       if (owner.account.purpose != purpose) continue;
       final script = await crypto.deriveScript(
         owner.account,
@@ -51,6 +75,72 @@ class BitcoinSendService {
       );
     }
     return inputs;
+  }
+
+  Future<BitcoinPreparedTransfer> prepareTransfer(
+    String identity,
+    BitcoinProductNetwork productNetwork,
+    String recipient,
+    BigInt amount, {
+    BitcoinPurpose purpose = BitcoinPurpose.bip84,
+    BitcoinFeeTier feeTier = BitcoinFeeTier.normal,
+    bool rbf = true,
+    bool Function()? isCurrent,
+  }) async {
+    void check() {
+      if (isCurrent?.call() == false) {
+        throw StateError('Bitcoin wallet context changed');
+      }
+    }
+
+    check();
+    final snapshot = await wallet.refresh(
+      identity,
+      productNetwork,
+      force: true,
+      isCurrent: isCurrent,
+    );
+    final state = snapshot.discovery.state;
+    if (state.walletIdentity.toLowerCase() != identity.toLowerCase() ||
+        state.network != productNetwork) {
+      throw StateError('Bitcoin account identity mismatch');
+    }
+    final account = state.accounts[purpose]?.metadata;
+    if (account == null) {
+      throw StateError('Bitcoin address format is unavailable');
+    }
+    final fees = await network.fetchFeeRates(productNetwork);
+    check();
+    final inputs = await ownedInputs(snapshot, purpose);
+    check();
+    final change = await BitcoinAddressAllocator(store: store, crypto: crypto)
+        .reserveChange(
+          BitcoinAccountSlot(
+            walletIdentity: identity,
+            network: productNetwork,
+            accountIndex: state.accountIndex,
+            purpose: purpose,
+          ),
+        );
+    if (change.account != account) {
+      throw StateError('Bitcoin change account identity mismatch');
+    }
+    check();
+    final plan = await crypto.plan(
+      account,
+      inputs,
+      [BitcoinRecipientDto(address: recipient, amountSat: amount)],
+      fees.rate(feeTier),
+      change.addressIndex,
+      rbf,
+    );
+    check();
+    return BitcoinPreparedTransfer(
+      walletIdentity: identity,
+      network: productNetwork,
+      purpose: purpose,
+      plan: plan,
+    );
   }
 
   /// Ask the SDK for fundable amounts. This does not implement fees, dust or weight rules.
