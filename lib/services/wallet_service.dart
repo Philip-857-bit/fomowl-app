@@ -11,6 +11,8 @@ import 'package:hex/hex.dart' as pkg_hex;
 import '../config/app_environment.dart';
 import '../models/chain.dart';
 import '../models/wallet_account.dart';
+import '../models/bitcoin_account_state.dart';
+import 'bitcoin/bitcoin_provisioning_service.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
@@ -116,6 +118,16 @@ class WalletService {
 
     return material.toResult();
   }
+
+  Future<BitcoinWalletAccountState?> ensureBitcoinAccount(
+    String walletIdentity, {
+    BitcoinProductNetwork network = BitcoinProductNetwork.mainnet,
+    bool restoreRemovedWallet = false,
+  }) => BitcoinProvisioningService(storage: _storage).ensureWallet(
+    walletIdentity,
+    network: network,
+    restoreRemovedWallet: restoreRemovedWallet,
+  );
 
   Future<List<Map<String, String>>> importWalletsFromMnemonic(
     String mnemonic, {

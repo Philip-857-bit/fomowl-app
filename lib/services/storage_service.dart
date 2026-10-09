@@ -284,6 +284,26 @@ class StorageService implements WalletVaultStore {
     return _secureStore.read(key: _keyMnemonic);
   }
 
+  /// Bitcoin provisioning must not assign an unrelated legacy seed to a new seed group.
+  /// The caller also verifies the derived public wallet identity before sealing custody.
+  Future<String?> getMnemonicForSeedWallet(String address) async {
+    final wallet = await _findWallet(address);
+    if (wallet == null || wallet.origin != WalletOrigin.derived) return null;
+    final group = _normalizeSeedGroupId(wallet.seedGroupId);
+    if (group != null) {
+      final grouped = await getMnemonicForSeedGroup(group);
+      if (grouped != null && grouped.isNotEmpty) return grouped;
+    }
+    final specific = await _secureStore.read(
+      key: _walletMnemonicKey(wallet.address),
+    );
+    if (specific != null && specific.isNotEmpty) return specific;
+    if (group == null || group == _legacySeedGroupId) {
+      return _secureStore.read(key: _keyMnemonic);
+    }
+    return null;
+  }
+
   Future<String?> getMnemonicForSeedGroup(String seedGroupId) {
     return _secureStore.read(key: _seedGroupMnemonicKey(seedGroupId));
   }

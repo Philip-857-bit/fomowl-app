@@ -6,32 +6,8 @@ import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
 import 'package:fomowl_wallet/models/wallet_account.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_account_store.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_protected_record.dart';
-import 'package:fomowl_wallet/services/secure_store.dart';
+import 'helpers/bitcoin_memory_store.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
-
-class MemoryStore implements SecureStore {
-  final values = <String, String>{};
-  final writes = <String>[];
-  bool dropWrites = false;
-  bool dropDeletes = false;
-  bool failWrites = false;
-  @override
-  Future<String?> read({required String key}) async => values[key];
-  @override
-  Future<void> write({required String key, required String value}) async {
-    if (failWrites) throw StateError('secret-wrapping-data');
-    writes.add(key);
-    if (!dropWrites) values[key] = value;
-  }
-
-  @override
-  Future<void> delete({required String key}) async {
-    if (!dropDeletes) values.remove(key);
-  }
-
-  @override
-  Future<void> deleteAll() async => values.clear();
-}
 
 BitcoinAccountSlot slot({
   String identity = '0xabc',
