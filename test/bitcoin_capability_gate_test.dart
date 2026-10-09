@@ -7,9 +7,47 @@ import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/features/shell/app_shell_controller.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/widgets/bitcoin_capability_gate.dart';
+import 'package:fomowl_wallet/l10n/app_localizations.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  for (final brightness in Brightness.values) {
+    testWidgets('Bitcoin guard is localized in the $brightness theme', (
+      tester,
+    ) async {
+      final service = BlockchainService();
+      service.setActiveWalletContext(
+        address: '0xwallet',
+        supportedFamilies: {ChainFamily.bitcoin},
+      );
+      await service.setEnabledFamilies({ChainFamily.bitcoin});
+      service.configureBitcoinAvailability(available: true);
+      service.setActiveNetworkKey('bitcoin:mainnet');
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: service,
+          child: MaterialApp(
+            locale: const Locale('es'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: ThemeData(brightness: brightness),
+            home: BitcoinCapabilityGate(
+              feature: 'Swaps',
+              builder: (_) =>
+                  throw StateError('Unsupported screen initialized'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Esta función todavía no está disponible para Bitcoin.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      service.dispose();
+    });
+  }
   testWidgets(
     'unsupported screen construction is deferred for Bitcoin and resumes on EVM',
     (tester) async {

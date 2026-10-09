@@ -1,3 +1,5 @@
+import '../l10n/app_localizations.dart';
+import '../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/chain.dart';
@@ -14,14 +16,17 @@ class BitcoinCapabilityGate extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) {
+    final l =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+        AppLocalizationsEn();
     final family = context.watch<BlockchainService>().activeFamily;
     if (family == ChainFamily.bitcoin) {
       return Scaffold(
         appBar: AppBar(title: Text(feature)),
-        body: const Center(
+        body: Center(
           child: Padding(
             padding: EdgeInsets.all(24),
-            child: Text('This feature is not available for Bitcoin yet.'),
+            child: Text(l.bitcoinCapabilityUnavailable),
           ),
         ),
       );

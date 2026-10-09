@@ -44,6 +44,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
       widget.bitcoinReceive ?? BitcoinReceiveService();
   int _addressGeneration = 0;
   String? _receiveError;
+  BitcoinPurpose _bitcoinPurpose = BitcoinPurpose.bip84;
 
   @override
   void initState() {
@@ -113,6 +114,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
           BitcoinProductNetwork.fromId(
             NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
           ),
+          purpose: _bitcoinPurpose,
         );
         address = derived.address;
         if (await _walletService.getCurrentWalletAddress() != identity) return;
@@ -297,11 +299,36 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
               ),
               const SizedBox(height: 24),
 
+              if (blockchain.activeFamily == ChainFamily.bitcoin)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: DropdownButtonFormField<BitcoinPurpose>(
+                    initialValue: _bitcoinPurpose,
+                    decoration: InputDecoration(
+                      labelText: l.bitcoinAddressType,
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: BitcoinPurpose.bip84,
+                        child: Text(l.bitcoinNativeSegwit),
+                      ),
+                      DropdownMenuItem(
+                        value: BitcoinPurpose.bip86,
+                        child: Text(l.bitcoinTaproot),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null || value == _bitcoinPurpose) return;
+                      setState(() => _bitcoinPurpose = value);
+                      _initForFamily();
+                    },
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: ReceiveWarningBanner(
                   message: blockchain.activeFamily == ChainFamily.bitcoin
-                      ? 'Send Bitcoin (BTC) only to this address. Native SegWit.'
+                      ? l.bitcoinReceiveWarning
                       : l.receiveExternalWarning,
                 ),
               ),

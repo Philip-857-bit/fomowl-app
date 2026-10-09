@@ -1866,4 +1866,103 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get doneLabel => 'تم';
+
+  @override
+  String get bitcoinConfirmTransfer => 'تأكيد تحويل Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'خطة Bitcoin غير صالحة. ارجع إلى الإرسال وأعد إعدادها.';
+
+  @override
+  String get bitcoinTransferFailed => 'تعذر إكمال تحويل Bitcoin.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'جارٍ إعداد التحويل…';
+
+  @override
+  String get bitcoinAmount => 'المبلغ';
+
+  @override
+  String get bitcoinDestination => 'الوجهة';
+
+  @override
+  String get bitcoinFeeRate => 'معدل الرسوم';
+
+  @override
+  String get bitcoinNetworkFee => 'رسوم الشبكة';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'الحجم الافتراضي المقدر';
+
+  @override
+  String get bitcoinTotalDebit => 'إجمالي الخصم';
+
+  @override
+  String get bitcoinAddressType => 'نوع العنوان';
+
+  @override
+  String get bitcoinNativeSegwit => 'SegWit الأصلي';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'مفعّل';
+
+  @override
+  String get bitcoinDisabled => 'معطّل';
+
+  @override
+  String get bitcoinTransaction => 'معاملة Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'الحالة';
+
+  @override
+  String get bitcoinConfirmed => 'مؤكدة';
+
+  @override
+  String get bitcoinPending => 'قيد الانتظار';
+
+  @override
+  String get bitcoinConfirmations => 'التأكيدات';
+
+  @override
+  String get bitcoinBlockHeight => 'ارتفاع الكتلة';
+
+  @override
+  String get bitcoinTransactionId => 'معرّف المعاملة';
+
+  @override
+  String get bitcoinWalletChange => 'تغيّر رصيد المحفظة';
+
+  @override
+  String get bitcoinTimestamp => 'التاريخ والوقت';
+
+  @override
+  String get bitcoinStatusUnavailable => 'حالة المعاملة الحالية غير متاحة.';
+
+  @override
+  String get bitcoinViewExplorer => 'عرض في المستكشف';
+
+  @override
+  String get bitcoinReceiveWarning => 'أرسل Bitcoin (BTC) فقط إلى هذا العنوان.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'هذه الميزة غير متاحة لـ Bitcoin بعد.';
+
+  @override
+  String get bitcoinEconomy => 'اقتصادي';
+
+  @override
+  String get bitcoinNormal => 'عادي';
+
+  @override
+  String get bitcoinPriority => 'أولوية';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'الأموال موزعة بين SegWit الأصلي وTaproot. يجب أن يغطي نوع عنوان واحد المبلغ ورسوم الشبكة.';
 }

@@ -1868,4 +1868,105 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get doneLabel => 'An gama';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Tabbatar da tura Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Wannan tsarin Bitcoin bai inganta ba. Koma zuwa Tura ka sake shirya shi.';
+
+  @override
+  String get bitcoinTransferFailed => 'Ba a iya kammala tura Bitcoin ba.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'Ana shirya turawa…';
+
+  @override
+  String get bitcoinAmount => 'Adadi';
+
+  @override
+  String get bitcoinDestination => 'Adireshin karɓa';
+
+  @override
+  String get bitcoinFeeRate => 'Ƙimar kuɗin aiki';
+
+  @override
+  String get bitcoinNetworkFee => 'Kuɗin hanyar sadarwa';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes da aka ƙiyasta';
+
+  @override
+  String get bitcoinTotalDebit => 'Jimillar cirewa';
+
+  @override
+  String get bitcoinAddressType => 'Nau\'in adireshi';
+
+  @override
+  String get bitcoinNativeSegwit => 'Native SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'An kunna';
+
+  @override
+  String get bitcoinDisabled => 'An kashe';
+
+  @override
+  String get bitcoinTransaction => 'Mu\'amalar Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Matsayi';
+
+  @override
+  String get bitcoinConfirmed => 'An tabbatar';
+
+  @override
+  String get bitcoinPending => 'Ana jira';
+
+  @override
+  String get bitcoinConfirmations => 'Tabbatarwa';
+
+  @override
+  String get bitcoinBlockHeight => 'Tsayin block';
+
+  @override
+  String get bitcoinTransactionId => 'ID na mu\'amala';
+
+  @override
+  String get bitcoinWalletChange => 'Canjin kuɗin walat';
+
+  @override
+  String get bitcoinTimestamp => 'Lokaci';
+
+  @override
+  String get bitcoinStatusUnavailable =>
+      'Ba a samun sabon matsayin mu\'amalar yanzu.';
+
+  @override
+  String get bitcoinViewExplorer => 'Duba a mai bincike';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Aika Bitcoin (BTC) kawai zuwa wannan adireshi.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'Wannan fasalin bai samu ga Bitcoin ba tukuna.';
+
+  @override
+  String get bitcoinEconomy => 'Mai rahusa';
+
+  @override
+  String get bitcoinNormal => 'Na yau da kullum';
+
+  @override
+  String get bitcoinPriority => 'Fifiko';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'An raba kuɗin tsakanin Native SegWit da Taproot. Nau\'in adireshi ɗaya dole ya biya adadi da kuɗin hanyar sadarwa.';
 }

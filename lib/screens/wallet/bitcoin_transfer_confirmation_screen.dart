@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+import '../../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../services/bitcoin/bitcoin_native_crypto.dart';
@@ -45,7 +47,9 @@ class _BitcoinTransferConfirmationScreenState
       if (mounted) {
         setState(
           () => _error =
-              'This Bitcoin plan is invalid. Return to Send and prepare it again.',
+              (Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+                      AppLocalizationsEn())
+                  .bitcoinInvalidPlan,
         );
       }
     }
@@ -58,7 +62,12 @@ class _BitcoinTransferConfirmationScreenState
       await widget.onConfirm!(widget.transfer);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Bitcoin transfer could not be completed.');
+        setState(
+          () => _error =
+              (Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+                      AppLocalizationsEn())
+                  .bitcoinTransferFailed,
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -67,11 +76,14 @@ class _BitcoinTransferConfirmationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+        AppLocalizationsEn();
     final transfer = widget.transfer;
     final plan = transfer.plan;
     if (!_verified) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Confirm Bitcoin transfer')),
+        appBar: AppBar(title: Text(l.bitcoinConfirmTransfer)),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -81,7 +93,7 @@ class _BitcoinTransferConfirmationScreenState
                   Text(_error!, key: const Key('bitcoin-confirmation-error'))
                 else
                   const CircularProgressIndicator(),
-                const FilledButton(
+                FilledButton(
                   key: Key('bitcoin-confirm-transfer'),
                   onPressed: null,
                   child: Text('Confirm'),
@@ -105,39 +117,39 @@ class _BitcoinTransferConfirmationScreenState
       ),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirm Bitcoin transfer')),
+      appBar: AppBar(title: Text(l.bitcoinConfirmTransfer)),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             detail(
-              'Amount',
+              l.bitcoinAmount,
               '${BitcoinAmountUtils.format(plan.recipientTotalSat)} BTC',
             ),
-            detail('Destination', recipient?.address ?? ''),
+            detail(l.bitcoinDestination, recipient?.address ?? ''),
             detail(
               'Network',
               transfer.network == BitcoinProductNetwork.mainnet
                   ? 'Bitcoin'
                   : 'Bitcoin Testnet4',
             ),
-            detail('Fee rate', '${plan.feeRateSatVb} sat/vB'),
+            detail(l.bitcoinFeeRate, '${plan.feeRateSatVb} sat/vB'),
             detail(
-              'Network fee',
+              l.bitcoinNetworkFee,
               '${BitcoinAmountUtils.format(plan.feeSat)} BTC (${plan.feeSat} sats)',
             ),
-            detail('Estimated vbytes', plan.estimatedVbytes.toString()),
+            detail(l.bitcoinEstimatedVbytes, plan.estimatedVbytes.toString()),
             detail(
-              'Total debit',
+              l.bitcoinTotalDebit,
               '${BitcoinAmountUtils.format(plan.recipientTotalSat + plan.feeSat)} BTC',
             ),
             detail(
-              'Address type',
+              l.bitcoinAddressType,
               transfer.purpose == BitcoinPurpose.bip84
-                  ? 'Native SegWit'
-                  : 'Taproot',
+                  ? l.bitcoinNativeSegwit
+                  : l.bitcoinTaproot,
             ),
-            detail('RBF', plan.rbf ? 'Enabled' : 'Disabled'),
+            detail('RBF', plan.rbf ? l.bitcoinEnabled : l.bitcoinDisabled),
             if (_error != null)
               Text(_error!, key: const Key('bitcoin-confirmation-error')),
             if (!_verified && _error == null)
@@ -148,7 +160,7 @@ class _BitcoinTransferConfirmationScreenState
               onPressed: _verified && !_busy && widget.onConfirm != null
                   ? _confirm
                   : null,
-              child: Text(_busy ? 'Preparing transfer…' : 'Confirm'),
+              child: Text(_busy ? l.bitcoinPreparingTransfer : 'Confirm'),
             ),
           ],
         ),

@@ -1787,4 +1787,101 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get doneLabel => '完成';
+
+  @override
+  String get bitcoinConfirmTransfer => '确认 Bitcoin 转账';
+
+  @override
+  String get bitcoinInvalidPlan => '此 Bitcoin 交易方案无效。请返回发送页面重新准备。';
+
+  @override
+  String get bitcoinTransferFailed => '无法完成 Bitcoin 转账。';
+
+  @override
+  String get bitcoinPreparingTransfer => '正在准备转账…';
+
+  @override
+  String get bitcoinAmount => '金额';
+
+  @override
+  String get bitcoinDestination => '收款地址';
+
+  @override
+  String get bitcoinFeeRate => '费率';
+
+  @override
+  String get bitcoinNetworkFee => '网络费用';
+
+  @override
+  String get bitcoinEstimatedVbytes => '预计虚拟字节数';
+
+  @override
+  String get bitcoinTotalDebit => '总支出';
+
+  @override
+  String get bitcoinAddressType => '地址类型';
+
+  @override
+  String get bitcoinNativeSegwit => '原生 SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => '已启用';
+
+  @override
+  String get bitcoinDisabled => '已禁用';
+
+  @override
+  String get bitcoinTransaction => 'Bitcoin 交易';
+
+  @override
+  String get bitcoinStatus => '状态';
+
+  @override
+  String get bitcoinConfirmed => '已确认';
+
+  @override
+  String get bitcoinPending => '待确认';
+
+  @override
+  String get bitcoinConfirmations => '确认数';
+
+  @override
+  String get bitcoinBlockHeight => '区块高度';
+
+  @override
+  String get bitcoinTransactionId => '交易 ID';
+
+  @override
+  String get bitcoinWalletChange => '钱包余额变动';
+
+  @override
+  String get bitcoinTimestamp => '时间';
+
+  @override
+  String get bitcoinStatusUnavailable => '暂时无法获取最新交易状态。';
+
+  @override
+  String get bitcoinViewExplorer => '在区块浏览器中查看';
+
+  @override
+  String get bitcoinReceiveWarning => '仅向此地址发送 Bitcoin (BTC)。';
+
+  @override
+  String get bitcoinCapabilityUnavailable => 'Bitcoin 暂不支持此功能。';
+
+  @override
+  String get bitcoinEconomy => '经济';
+
+  @override
+  String get bitcoinNormal => '普通';
+
+  @override
+  String get bitcoinPriority => '优先';
+
+  @override
+  String get bitcoinSplitFunds =>
+      '资金分布于原生 SegWit 和 Taproot。单一地址类型的资金必须足以支付金额和网络费用。';
 }

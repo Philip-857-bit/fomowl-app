@@ -1859,4 +1859,103 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get doneLabel => 'Ti parí';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Jẹ́rìí sí ìfiránṣẹ́ Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Ètò Bitcoin yìí kò tọ́. Padà sí Firanṣẹ́ kí o tún ṣètò rẹ̀.';
+
+  @override
+  String get bitcoinTransferFailed => 'A kò lè parí ìfiránṣẹ́ Bitcoin.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'A ń ṣètò ìfiránṣẹ́…';
+
+  @override
+  String get bitcoinAmount => 'Iye owó';
+
+  @override
+  String get bitcoinDestination => 'Àdírẹ́sì olùgbà';
+
+  @override
+  String get bitcoinFeeRate => 'Ìwọ̀n ọ̀ya';
+
+  @override
+  String get bitcoinNetworkFee => 'Ọ̀ya nẹ́tíwọ́ọ̀kì';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes tí a fojú díwọ̀n';
+
+  @override
+  String get bitcoinTotalDebit => 'Àpapọ̀ owó tí a ó yọ';
+
+  @override
+  String get bitcoinAddressType => 'Irú àdírẹ́sì';
+
+  @override
+  String get bitcoinNativeSegwit => 'Native SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'Ti ṣiṣẹ́';
+
+  @override
+  String get bitcoinDisabled => 'Ti pa';
+
+  @override
+  String get bitcoinTransaction => 'Ìṣòwò Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Ipò';
+
+  @override
+  String get bitcoinConfirmed => 'Ti jẹ́rìí';
+
+  @override
+  String get bitcoinPending => 'Ń dúró';
+
+  @override
+  String get bitcoinConfirmations => 'Àwọn ìjẹ́rìí';
+
+  @override
+  String get bitcoinBlockHeight => 'Gíga block';
+
+  @override
+  String get bitcoinTransactionId => 'ID ìṣòwò';
+
+  @override
+  String get bitcoinWalletChange => 'Ìyípadà owó àpamọ́wọ́';
+
+  @override
+  String get bitcoinTimestamp => 'Àkókò';
+
+  @override
+  String get bitcoinStatusUnavailable => 'Ipò ìṣòwò tuntun kò sí ní báyìí.';
+
+  @override
+  String get bitcoinViewExplorer => 'Wo nínú aṣàwárí';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Firanṣẹ́ Bitcoin (BTC) nìkan sí àdírẹ́sì yìí.';
+
+  @override
+  String get bitcoinCapabilityUnavailable => 'Ẹ̀yà yìí kò tíì sí fún Bitcoin.';
+
+  @override
+  String get bitcoinEconomy => 'Ọ̀ya kékeré';
+
+  @override
+  String get bitcoinNormal => 'Déédéé';
+
+  @override
+  String get bitcoinPriority => 'Àkọ́kọ́';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'Owó pín sí Native SegWit àti Taproot. Irú àdírẹ́sì kan gbọ́dọ̀ tó fún iye owó àti ọ̀ya nẹ́tíwọ́ọ̀kì.';
 }

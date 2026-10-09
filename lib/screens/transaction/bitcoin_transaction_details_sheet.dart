@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+import '../../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/bitcoin_network_data.dart';
@@ -49,6 +51,9 @@ class _BitcoinTransactionDetailsSheetState
 
   @override
   Widget build(BuildContext context) {
+    final l =
+        Localizations.of<AppLocalizations>(context, AppLocalizations) ??
+        AppLocalizationsEn();
     final known = widget.entry.bitcoin?.transaction;
     final chain = widget.network == BitcoinProductNetwork.mainnet
         ? BitcoinCatalog.mainnet
@@ -87,40 +92,44 @@ class _BitcoinTransactionDetailsSheetState
               padding: const EdgeInsets.all(24),
               children: [
                 Text(
-                  'Bitcoin transaction',
+                  l.bitcoinTransaction,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                detail('Status', confirmations >= 1 ? 'Confirmed' : 'Pending'),
-                detail('Confirmations', confirmations.toString()),
-                detail('Block height', blockHeight?.toString() ?? '-'),
-                detail('Transaction ID', _txid ?? '-'),
                 detail(
-                  widget.entry.bitcoin == null ? 'Amount' : 'Wallet change',
+                  l.bitcoinStatus,
+                  confirmations >= 1 ? l.bitcoinConfirmed : l.bitcoinPending,
+                ),
+                detail(l.bitcoinConfirmations, confirmations.toString()),
+                detail(l.bitcoinBlockHeight, blockHeight?.toString() ?? '-'),
+                detail(l.bitcoinTransactionId, _txid ?? '-'),
+                detail(
+                  widget.entry.bitcoin == null
+                      ? l.bitcoinAmount
+                      : l.bitcoinWalletChange,
                   '${_amount()} BTC',
                 ),
                 detail(
-                  'Network fee',
+                  l.bitcoinNetworkFee,
                   known == null
                       ? '-'
                       : '${BitcoinAmountUtils.format(known.feeSats)} BTC (${known.feeSats} sats)',
                 ),
                 detail('Network', chain.name),
                 detail(
-                  'Timestamp',
+                  l.bitcoinTimestamp,
                   timestamp == null
-                      ? 'Pending'
+                      ? l.bitcoinPending
                       : DateTime.fromMillisecondsSinceEpoch(
                           timestamp * 1000,
                           isUtc: true,
                         ).toLocal().toString(),
                 ),
-                if (snapshot.hasError)
-                  const Text('Latest transaction status is unavailable.'),
+                if (snapshot.hasError) Text(l.bitcoinStatusUnavailable),
                 if (_txid != null)
                   TextButton(
                     onPressed: () =>
                         widget.onOpenExplorer('${chain.explorerUrl}/tx/$_txid'),
-                    child: const Text('View in explorer'),
+                    child: Text(l.bitcoinViewExplorer),
                   ),
               ],
             );

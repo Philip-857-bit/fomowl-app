@@ -220,6 +220,7 @@ class BitcoinSendService {
     String identity,
     BitcoinProductNetwork productNetwork,
     String recipient, {
+    BitcoinFeeTier feeTier = BitcoinFeeTier.normal,
     bool Function()? isCurrent,
   }) async {
     final snapshot = await wallet.refresh(
@@ -247,7 +248,7 @@ class BitcoinSendService {
             state.metadata,
             inputs,
             [BitcoinRecipientDto(address: recipient, amountSat: amount)],
-            fees.rate(BitcoinFeeTier.normal),
+            fees.rate(feeTier),
             state.nextInternal,
             true,
           );

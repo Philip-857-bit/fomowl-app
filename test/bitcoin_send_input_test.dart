@@ -341,6 +341,32 @@ void main() {
         account.network,
         address,
       );
+      await expectLater(
+        service.maximumAmount(
+          '0xwallet',
+          account.network,
+          address,
+          feeTier: BitcoinFeeTier.priority,
+        ),
+        throwsStateError,
+      );
+      final larger = BitcoinSendService(
+        wallet: SnapshotWallet(await twoFormats(2000, 2000)),
+        network: FixedFees(),
+        store: store,
+      );
+      final normalMaximum = await larger.maximumAmount(
+        '0xwallet',
+        account.network,
+        address,
+      );
+      final priorityMaximum = await larger.maximumAmount(
+        '0xwallet',
+        account.network,
+        address,
+        feeTier: BitcoinFeeTier.priority,
+      );
+      expect(priorityMaximum, lessThan(normalMaximum));
       final inputs = await service.ownedInputs(snapshot, BitcoinPurpose.bip84);
       final plan = await crypto.plan(
         account,

@@ -1861,4 +1861,104 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get doneLabel => 'Emela';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Kwenye nnyefe Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Atụmatụ Bitcoin a adịghị mma. Laghachi na Ziga ma hazie ya ọzọ.';
+
+  @override
+  String get bitcoinTransferFailed => 'Enweghị ike imecha nnyefe Bitcoin.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'A na-akwadebe nnyefe…';
+
+  @override
+  String get bitcoinAmount => 'Ọnụ ego';
+
+  @override
+  String get bitcoinDestination => 'Adreesị nnata';
+
+  @override
+  String get bitcoinFeeRate => 'Ọnụ ụgwọ';
+
+  @override
+  String get bitcoinNetworkFee => 'Ụgwọ netwọk';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes a tụrụ anya';
+
+  @override
+  String get bitcoinTotalDebit => 'Mkpokọta ego a ga-ewepụ';
+
+  @override
+  String get bitcoinAddressType => 'Ụdị adreesị';
+
+  @override
+  String get bitcoinNativeSegwit => 'Native SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'Agbanyeere';
+
+  @override
+  String get bitcoinDisabled => 'Agbanyụọla';
+
+  @override
+  String get bitcoinTransaction => 'Azụmahịa Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Ọnọdụ';
+
+  @override
+  String get bitcoinConfirmed => 'Ekwenyela';
+
+  @override
+  String get bitcoinPending => 'Na-eche';
+
+  @override
+  String get bitcoinConfirmations => 'Nkwenye';
+
+  @override
+  String get bitcoinBlockHeight => 'Ogologo block';
+
+  @override
+  String get bitcoinTransactionId => 'ID azụmahịa';
+
+  @override
+  String get bitcoinWalletChange => 'Mgbanwe ego walet';
+
+  @override
+  String get bitcoinTimestamp => 'Oge';
+
+  @override
+  String get bitcoinStatusUnavailable =>
+      'Ọnọdụ azụmahịa kacha ọhụrụ adịghị ugbu a.';
+
+  @override
+  String get bitcoinViewExplorer => 'Lelee n\'ime ihe nchọgharị';
+
+  @override
+  String get bitcoinReceiveWarning => 'Ziga naanị Bitcoin (BTC) na adreesị a.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'Njirimara a adịghị maka Bitcoin ugbu a.';
+
+  @override
+  String get bitcoinEconomy => 'Ụgwọ dị ala';
+
+  @override
+  String get bitcoinNormal => 'Nkịtị';
+
+  @override
+  String get bitcoinPriority => 'Ibu ụzọ';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'Ego dị iche n\'etiti Native SegWit na Taproot. Otu ụdị adreesị ga-ezuru ego na ụgwọ netwọk.';
 }

@@ -1907,4 +1907,106 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get doneLabel => 'Terminé';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Confirmer le transfert Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Ce plan Bitcoin est invalide. Revenez à l’envoi et préparez-le à nouveau.';
+
+  @override
+  String get bitcoinTransferFailed =>
+      'Le transfert Bitcoin n’a pas pu être effectué.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'Préparation du transfert…';
+
+  @override
+  String get bitcoinAmount => 'Montant';
+
+  @override
+  String get bitcoinDestination => 'Destination';
+
+  @override
+  String get bitcoinFeeRate => 'Taux de frais';
+
+  @override
+  String get bitcoinNetworkFee => 'Frais de réseau';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes estimés';
+
+  @override
+  String get bitcoinTotalDebit => 'Débit total';
+
+  @override
+  String get bitcoinAddressType => 'Type d’adresse';
+
+  @override
+  String get bitcoinNativeSegwit => 'SegWit natif';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'Activé';
+
+  @override
+  String get bitcoinDisabled => 'Désactivé';
+
+  @override
+  String get bitcoinTransaction => 'Transaction Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Statut';
+
+  @override
+  String get bitcoinConfirmed => 'Confirmée';
+
+  @override
+  String get bitcoinPending => 'En attente';
+
+  @override
+  String get bitcoinConfirmations => 'Confirmations';
+
+  @override
+  String get bitcoinBlockHeight => 'Hauteur du bloc';
+
+  @override
+  String get bitcoinTransactionId => 'Identifiant de transaction';
+
+  @override
+  String get bitcoinWalletChange => 'Variation du portefeuille';
+
+  @override
+  String get bitcoinTimestamp => 'Horodatage';
+
+  @override
+  String get bitcoinStatusUnavailable =>
+      'Le statut actuel de la transaction est indisponible.';
+
+  @override
+  String get bitcoinViewExplorer => 'Voir dans l’explorateur';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Envoyez uniquement du Bitcoin (BTC) à cette adresse.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'Cette fonctionnalité n’est pas encore disponible pour Bitcoin.';
+
+  @override
+  String get bitcoinEconomy => 'Économique';
+
+  @override
+  String get bitcoinNormal => 'Normal';
+
+  @override
+  String get bitcoinPriority => 'Prioritaire';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'Les fonds sont répartis entre SegWit natif et Taproot. Un seul format d’adresse doit couvrir le montant et les frais de réseau.';
 }

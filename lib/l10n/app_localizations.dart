@@ -3493,6 +3493,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get doneLabel;
+
+  /// No description provided for @bitcoinConfirmTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Bitcoin transfer'**
+  String get bitcoinConfirmTransfer;
+
+  /// No description provided for @bitcoinInvalidPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'This Bitcoin plan is invalid. Return to Send and prepare it again.'**
+  String get bitcoinInvalidPlan;
+
+  /// No description provided for @bitcoinTransferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin transfer could not be completed.'**
+  String get bitcoinTransferFailed;
+
+  /// No description provided for @bitcoinPreparingTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing transfer…'**
+  String get bitcoinPreparingTransfer;
+
+  /// No description provided for @bitcoinAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get bitcoinAmount;
+
+  /// No description provided for @bitcoinDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get bitcoinDestination;
+
+  /// No description provided for @bitcoinFeeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee rate'**
+  String get bitcoinFeeRate;
+
+  /// No description provided for @bitcoinNetworkFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get bitcoinNetworkFee;
+
+  /// No description provided for @bitcoinEstimatedVbytes.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated vbytes'**
+  String get bitcoinEstimatedVbytes;
+
+  /// No description provided for @bitcoinTotalDebit.
+  ///
+  /// In en, this message translates to:
+  /// **'Total debit'**
+  String get bitcoinTotalDebit;
+
+  /// No description provided for @bitcoinAddressType.
+  ///
+  /// In en, this message translates to:
+  /// **'Address type'**
+  String get bitcoinAddressType;
+
+  /// No description provided for @bitcoinNativeSegwit.
+  ///
+  /// In en, this message translates to:
+  /// **'Native SegWit'**
+  String get bitcoinNativeSegwit;
+
+  /// No description provided for @bitcoinTaproot.
+  ///
+  /// In en, this message translates to:
+  /// **'Taproot'**
+  String get bitcoinTaproot;
+
+  /// No description provided for @bitcoinEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get bitcoinEnabled;
+
+  /// No description provided for @bitcoinDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get bitcoinDisabled;
+
+  /// No description provided for @bitcoinTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin transaction'**
+  String get bitcoinTransaction;
+
+  /// No description provided for @bitcoinStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get bitcoinStatus;
+
+  /// No description provided for @bitcoinConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get bitcoinConfirmed;
+
+  /// No description provided for @bitcoinPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bitcoinPending;
+
+  /// No description provided for @bitcoinConfirmations.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmations'**
+  String get bitcoinConfirmations;
+
+  /// No description provided for @bitcoinBlockHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Block height'**
+  String get bitcoinBlockHeight;
+
+  /// No description provided for @bitcoinTransactionId.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get bitcoinTransactionId;
+
+  /// No description provided for @bitcoinWalletChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet change'**
+  String get bitcoinWalletChange;
+
+  /// No description provided for @bitcoinTimestamp.
+  ///
+  /// In en, this message translates to:
+  /// **'Timestamp'**
+  String get bitcoinTimestamp;
+
+  /// No description provided for @bitcoinStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest transaction status is unavailable.'**
+  String get bitcoinStatusUnavailable;
+
+  /// No description provided for @bitcoinViewExplorer.
+  ///
+  /// In en, this message translates to:
+  /// **'View in explorer'**
+  String get bitcoinViewExplorer;
+
+  /// No description provided for @bitcoinReceiveWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Bitcoin (BTC) only to this address.'**
+  String get bitcoinReceiveWarning;
+
+  /// No description provided for @bitcoinCapabilityUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is not available for Bitcoin yet.'**
+  String get bitcoinCapabilityUnavailable;
+
+  /// No description provided for @bitcoinEconomy.
+  ///
+  /// In en, this message translates to:
+  /// **'Economy'**
+  String get bitcoinEconomy;
+
+  /// No description provided for @bitcoinNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get bitcoinNormal;
+
+  /// No description provided for @bitcoinPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get bitcoinPriority;
+
+  /// No description provided for @bitcoinSplitFunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.'**
+  String get bitcoinSplitFunds;
 }
 
 class _AppLocalizationsDelegate

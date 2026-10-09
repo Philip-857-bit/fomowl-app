@@ -1872,4 +1872,106 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get doneLabel => 'Done';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Confirm Bitcoin transfer';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'This Bitcoin plan is invalid. Return to Send and prepare it again.';
+
+  @override
+  String get bitcoinTransferFailed =>
+      'Bitcoin transfer could not be completed.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'Preparing transfer…';
+
+  @override
+  String get bitcoinAmount => 'Amount';
+
+  @override
+  String get bitcoinDestination => 'Destination';
+
+  @override
+  String get bitcoinFeeRate => 'Fee rate';
+
+  @override
+  String get bitcoinNetworkFee => 'Network fee';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'Estimated vbytes';
+
+  @override
+  String get bitcoinTotalDebit => 'Total debit';
+
+  @override
+  String get bitcoinAddressType => 'Address type';
+
+  @override
+  String get bitcoinNativeSegwit => 'Native SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'Enabled';
+
+  @override
+  String get bitcoinDisabled => 'Disabled';
+
+  @override
+  String get bitcoinTransaction => 'Bitcoin transaction';
+
+  @override
+  String get bitcoinStatus => 'Status';
+
+  @override
+  String get bitcoinConfirmed => 'Confirmed';
+
+  @override
+  String get bitcoinPending => 'Pending';
+
+  @override
+  String get bitcoinConfirmations => 'Confirmations';
+
+  @override
+  String get bitcoinBlockHeight => 'Block height';
+
+  @override
+  String get bitcoinTransactionId => 'Transaction ID';
+
+  @override
+  String get bitcoinWalletChange => 'Wallet change';
+
+  @override
+  String get bitcoinTimestamp => 'Timestamp';
+
+  @override
+  String get bitcoinStatusUnavailable =>
+      'Latest transaction status is unavailable.';
+
+  @override
+  String get bitcoinViewExplorer => 'View in explorer';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Send Bitcoin (BTC) only to this address.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'This feature is not available for Bitcoin yet.';
+
+  @override
+  String get bitcoinEconomy => 'Economy';
+
+  @override
+  String get bitcoinNormal => 'Normal';
+
+  @override
+  String get bitcoinPriority => 'Priority';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.';
 }
