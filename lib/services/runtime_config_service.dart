@@ -64,6 +64,10 @@ class RuntimePolicySnapshot {
     this.billsEnabled = true,
     this.shopEnabled = true,
     this.legacySystemEnabled = true,
+    this.bitcoinEnabled = false,
+    this.bitcoinTestnetEnabled = false,
+    this.bitcoinRolloutStage = 'off',
+    this.bitcoinRolloutPercent = 0,
   });
 
   final int revision;
@@ -87,6 +91,10 @@ class RuntimePolicySnapshot {
   final bool billsEnabled;
   final bool shopEnabled;
   final bool legacySystemEnabled;
+  final bool bitcoinEnabled;
+  final bool bitcoinTestnetEnabled;
+  final String bitcoinRolloutStage;
+  final int bitcoinRolloutPercent;
 
   bool get fullMaintenance => maintenanceMode == 'full';
   bool get readOnly => maintenanceMode == 'read_only';
@@ -169,7 +177,11 @@ class RuntimePolicySnapshot {
       other.cashOutEnabled == cashOutEnabled &&
       other.billsEnabled == billsEnabled &&
       other.shopEnabled == shopEnabled &&
-      other.legacySystemEnabled == legacySystemEnabled;
+      other.legacySystemEnabled == legacySystemEnabled &&
+      other.bitcoinEnabled == bitcoinEnabled &&
+      other.bitcoinTestnetEnabled == bitcoinTestnetEnabled &&
+      other.bitcoinRolloutStage == bitcoinRolloutStage &&
+      other.bitcoinRolloutPercent == bitcoinRolloutPercent;
 
   @override
   int get hashCode => Object.hashAll([
@@ -194,6 +206,10 @@ class RuntimePolicySnapshot {
     billsEnabled,
     shopEnabled,
     legacySystemEnabled,
+    bitcoinEnabled,
+    bitcoinTestnetEnabled,
+    bitcoinRolloutStage,
+    bitcoinRolloutPercent,
   ]);
 
   Map<String, dynamic> toJson() => {
@@ -221,6 +237,10 @@ class RuntimePolicySnapshot {
         'billsEnabled': billsEnabled,
         'shopEnabled': shopEnabled,
         'legacySystemEnabled': legacySystemEnabled,
+        'bitcoinEnabled': bitcoinEnabled,
+        'bitcoinTestnetEnabled': bitcoinTestnetEnabled,
+        'bitcoinRolloutStage': bitcoinRolloutStage,
+        'bitcoinRolloutPercent': bitcoinRolloutPercent,
       },
     },
   };
@@ -252,6 +272,17 @@ class RuntimePolicySnapshot {
     }
 
     return RuntimePolicySnapshot(
+      bitcoinEnabled: features['bitcoinEnabled'] == true,
+      bitcoinTestnetEnabled: features['bitcoinTestnetEnabled'] == true,
+      bitcoinRolloutStage: features['bitcoinRolloutStage'] is String
+          ? features['bitcoinRolloutStage'] as String
+          : 'off',
+      bitcoinRolloutPercent:
+          features['bitcoinRolloutPercent'] is int &&
+              (features['bitcoinRolloutPercent'] as int) >= 0 &&
+              (features['bitcoinRolloutPercent'] as int) <= 100
+          ? features['bitcoinRolloutPercent'] as int
+          : 0,
       revision: revision is int
           ? revision
           : int.tryParse(revision?.toString() ?? '') ?? 0,

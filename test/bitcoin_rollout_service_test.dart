@@ -1,0 +1,157 @@
+import 'dart:async';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
+import 'package:fomowl_wallet/models/chain.dart';
+import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:fomowl_wallet/services/runtime_config_service.dart';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_network_service.dart';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_rollout_service.dart';
+
+class Availability extends Fake implements BitcoinNetworkApi {
+  bool availableValue = true;
+  bool outage = false;
+  Completer<bool>? delayed;
+  int calls = 0;
+  @override
+  Future<bool> available(BitcoinProductNetwork network) async {
+    calls++;
+    if (outage) throw const BitcoinNetworkException(503);
+    if (delayed != null) return delayed!.future;
+    return availableValue;
+  }
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+  test(
+    'missing/malformed policy stays disabled and audience stages remain explicit',
+    () {
+      expect(RuntimePolicySnapshot.fromJson({}).bitcoinEnabled, isFalse);
+      final malformed = RuntimePolicySnapshot.fromJson({
+        'policy': {
+          'features': {
+            'bitcoinEnabled': 'true',
+            'bitcoinRolloutStage': 'default',
+          },
+        },
+      });
+      expect(malformed.bitcoinEnabled, isFalse);
+      const internal = RuntimePolicySnapshot(
+        bitcoinEnabled: true,
+        bitcoinRolloutStage: 'internal',
+      );
+      expect(
+        BitcoinRolloutPolicy.admits(
+          internal,
+          BitcoinBuildAudience.internal,
+          '',
+        ),
+        isTrue,
+      );
+      expect(
+        BitcoinRolloutPolicy.admits(
+          internal,
+          BitcoinBuildAudience.production,
+          '0xwallet',
+        ),
+        isFalse,
+      );
+      const all = RuntimePolicySnapshot(
+        bitcoinEnabled: true,
+        bitcoinRolloutStage: 'default',
+        bitcoinTestnetEnabled: true,
+      );
+      expect(
+        BitcoinRolloutPolicy.admits(
+          all,
+          BitcoinBuildAudience.production,
+          '0xwallet',
+        ),
+        isTrue,
+      );
+      expect(all, RuntimePolicySnapshot.fromJson(all.toJson()));
+      expect(const RuntimePolicySnapshot(), isNot(all));
+    },
+  );
+  test(
+    'controlled cohorts are stable, bounded and do not admit an unknown identity',
+    () {
+      const cohort = RuntimePolicySnapshot(
+        bitcoinEnabled: true,
+        bitcoinRolloutStage: 'controlled-production',
+        bitcoinRolloutPercent: 50,
+      );
+      expect(
+        BitcoinRolloutPolicy.admits(
+          cohort,
+          BitcoinBuildAudience.production,
+          '',
+        ),
+        isFalse,
+      );
+      expect(
+        BitcoinRolloutPolicy.admits(
+          cohort,
+          BitcoinBuildAudience.production,
+          '0xABC',
+        ),
+        BitcoinRolloutPolicy.admits(
+          cohort,
+          BitcoinBuildAudience.production,
+          '0xabc',
+        ),
+      );
+      const none = RuntimePolicySnapshot(
+        bitcoinEnabled: true,
+        bitcoinRolloutStage: 'controlled-production',
+      );
+      expect(
+        BitcoinRolloutPolicy.admits(
+          none,
+          BitcoinBuildAudience.production,
+          '0xwallet',
+        ),
+        isFalse,
+      );
+    },
+  );
+  test(
+    'backend unavailable/outage disables admission and stale enabling responses cannot override off',
+    () async {
+      final blockchain = BlockchainService();
+      blockchain.setActiveWalletContext(
+        address: '0xwallet',
+        supportedFamilies: {ChainFamily.evm, ChainFamily.bitcoin},
+      );
+      final network = Availability();
+      final service = BitcoinRolloutService(
+        blockchain: blockchain,
+        network: network,
+        provision: null,
+      );
+      const on = RuntimePolicySnapshot(
+        bitcoinEnabled: true,
+        bitcoinRolloutStage: 'default',
+        bitcoinTestnetEnabled: true,
+      );
+      await service.refresh(on);
+      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isTrue);
+      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:testnet4'), isFalse);
+      network.outage = true;
+      await service.refresh(on);
+      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isFalse);
+      network.outage = false;
+      network.delayed = Completer<bool>();
+      final late = service.refresh(on);
+      await Future<void>.delayed(Duration.zero);
+      await service.refresh(const RuntimePolicySnapshot());
+      network.delayed!.complete(true);
+      await late;
+      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isFalse);
+      service.dispose();
+      blockchain.dispose();
+    },
+  );
+}

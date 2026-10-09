@@ -14,6 +14,7 @@ import '../services/app_release_checker.dart';
 import '../services/language_controller.dart';
 import '../services/affiliate_attribution_service.dart';
 import '../services/runtime_config_service.dart';
+import '../services/bitcoin/bitcoin_rollout_service.dart';
 import '../services/blockchain_service.dart';
 import '../services/storage_service.dart';
 import '../services/system_picker_guard.dart';
@@ -41,6 +42,22 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   final AppReleaseChecker _releaseChecker = AppReleaseChecker();
   final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
 
+  late final BitcoinRolloutService _bitcoinRollout;
+  String _bitcoinWalletContext = '';
+  void _refreshBitcoinAdmission() {
+    if (mounted) unawaited(_bitcoinRollout.refresh(_runtimeConfig.snapshot));
+  }
+
+  void _bitcoinWalletChanged() {
+    final identity = context
+        .read<BlockchainService>()
+        .activeWalletAddress
+        .toLowerCase();
+    if (identity == _bitcoinWalletContext) return;
+    _bitcoinWalletContext = identity;
+    _refreshBitcoinAdmission();
+  }
+
   bool _unlockInFlight = false;
   bool _wasBackgrounded = false;
   DateTime _lastInteractionAt = DateTime.now();
@@ -55,6 +72,10 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final blockchain = context.read<BlockchainService>();
+    _bitcoinRollout = BitcoinRolloutService(blockchain: blockchain);
+    blockchain.addListener(_bitcoinWalletChanged);
+    _runtimeConfig.addListener(_refreshBitcoinAdmission);
     AppPatchService.instance.addListener(_showVisiblePatchStatus);
     _runtimeConfig.addListener(_releaseSplashForFullMaintenance);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,12 +99,17 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     );
     _runtimeConfigTimer = Timer.periodic(
       const Duration(minutes: 1),
-      (_) => unawaited(_runtimeConfig.refresh()),
+      (_) => unawaited(
+        _runtimeConfig.refresh().then((_) => _refreshBitcoinAdmission()),
+      ),
     );
   }
 
   @override
   void dispose() {
+    _bitcoinRollout.dispose();
+    _bitcoinRollout.blockchain.removeListener(_bitcoinWalletChanged);
+    _runtimeConfig.removeListener(_refreshBitcoinAdmission);
     DeepLinkService.instance.dispose();
     _foregroundLockTimer?.cancel();
     _runtimeConfigTimer?.cancel();
