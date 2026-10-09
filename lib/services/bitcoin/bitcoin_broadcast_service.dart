@@ -50,6 +50,20 @@ class BitcoinBroadcastService {
     }
     signed.checkAuthorization();
     if (!isCurrent()) throw StateError('Bitcoin wallet context changed');
+    final firstAttempt = await signed.submissionJournal.reserve(
+      transfer.walletIdentity,
+      transfer.network,
+      transaction.txid,
+      transfer.plan.selectedUtxos,
+    );
+    if (!firstAttempt) {
+      return BitcoinBroadcastOutcome(
+        transaction.txid,
+        BitcoinSubmissionStatus.unknown,
+      );
+    }
+    signed.checkAuthorization();
+    if (!isCurrent()) throw StateError('Bitcoin wallet context changed');
     String txid;
     try {
       txid = await network.broadcast(

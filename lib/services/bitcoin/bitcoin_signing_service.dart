@@ -5,6 +5,7 @@ import 'bitcoin_native_crypto.dart';
 import 'bitcoin_protected_record.dart';
 import 'bitcoin_send_service.dart';
 import 'bitcoin_wallet_vault_service.dart';
+import 'bitcoin_submission_journal.dart';
 
 /// A public signed transaction plus non-serializable, live authentication scope.
 /// Only the signing coordinator can create this authorization.
@@ -12,10 +13,12 @@ class BitcoinSignedTransfer {
   final BitcoinPreparedTransfer transfer;
   final SignedBitcoinTransactionDto transaction;
   final int _authenticationGeneration;
+  final BitcoinSubmissionJournal submissionJournal;
   BitcoinSignedTransfer._(
     this.transfer,
     this.transaction,
     this._authenticationGeneration,
+    this.submissionJournal,
   );
   void checkAuthorization() =>
       BitcoinWalletVaultService.checkOperation(_authenticationGeneration);
@@ -52,6 +55,13 @@ class BitcoinSigningService {
         throw StateError('Bitcoin signing account identity mismatch');
       }
       await validateBitcoinTransferPlan(plan: transfer.plan);
+      final journal = BitcoinSubmissionJournal(store);
+      final reserved = await journal.reserved(identity, transfer.network);
+      if (transfer.plan.selectedUtxos.any(
+        (input) => reserved.contains('${input.txid}:${input.vout}'),
+      )) {
+        throw StateError('Bitcoin inputs already have a pending submission');
+      }
       check();
       if (!await authenticate()) {
         throw StateError('Bitcoin authentication was cancelled');
@@ -88,7 +98,7 @@ class BitcoinSigningService {
       }
       check();
       BitcoinWalletVaultService.checkOperation(generation);
-      return BitcoinSignedTransfer._(transfer, verified, generation);
+      return BitcoinSignedTransfer._(transfer, verified, generation, journal);
     } finally {
       identities.remove(identity);
     }

@@ -49,6 +49,22 @@ class BitcoinAccountStore {
       _walletQueues.putIfAbsent(_identity(identity), _WalletQueue.new);
   String _manifestKey(String identity) =>
       'bitcoin_hd_manifest_v1_${Uri.encodeComponent(_identity(identity))}';
+  String _submissionKey(String identity) =>
+      'bitcoin_submission_v1_${Uri.encodeComponent(_identity(identity))}';
+
+  /// Serialized public submission metadata, sharing custody deletion/reset revocation.
+  Future<T> updateSubmissionState<T>(
+    String identity,
+    (T, String?) Function(String?) update,
+  ) => _queue(identity).run(() async {
+    if ((await _manifest(identity)).removed) {
+      throw StateError('Bitcoin wallet context was removed');
+    }
+    final key = _submissionKey(identity);
+    final (result, encoded) = update(await _read(key));
+    if (encoded != null) await _write(key, encoded);
+    return result;
+  });
   Future<String?> _read(String key) async {
     try {
       return await secureStore.read(key: key);
@@ -143,6 +159,7 @@ class BitcoinAccountStore {
     return queue.run(() async {
       final manifest = await _manifest(walletIdentity);
       if (manifest.removed) {
+        await _delete(_submissionKey(walletIdentity));
         for (final slot in manifest.slots) {
           await _delete(slot.storageKey);
         }
@@ -286,6 +303,7 @@ class BitcoinAccountStore {
     queue.removed = true;
     return queue.run(() async {
       final manifest = await _manifest(walletIdentity);
+      await _delete(_submissionKey(walletIdentity));
       // An account that never provisioned Bitcoin has no custody to journal.
       if (manifest.slots.isEmpty && !manifest.removed) {
         return;

@@ -123,6 +123,63 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async => RustLib.init());
   test(
+    'native integer boundary rejects overflow before FRB narrowing',
+    () async {
+      final snapshot = await twoFormats(10000, 10000);
+      final account =
+          snapshot.discovery.state.accounts[BitcoinPurpose.bip84]!.metadata;
+      const crypto = NativeBitcoinCrypto();
+      final recipient = await crypto.deriveAddress(
+        account,
+        BitcoinKeychain.receive,
+        1,
+      );
+      for (final rate in [BigInt.from(-1), BigInt.one << 64]) {
+        await expectLater(
+          crypto.plan(
+            account,
+            [],
+            [
+              BitcoinRecipientDto(
+                address: recipient,
+                amountSat: BigInt.from(1000),
+              ),
+            ],
+            rate,
+            0,
+            true,
+          ),
+          throwsFormatException,
+        );
+      }
+      await expectLater(
+        crypto.plan(
+          account,
+          [],
+          [
+            BitcoinRecipientDto(
+              address: recipient,
+              amountSat: BigInt.one << 64,
+            ),
+          ],
+          BigInt.one,
+          0,
+          true,
+        ),
+        throwsFormatException,
+      );
+      await expectLater(
+        crypto.plan(account, [], [], BigInt.one, 0x100000000, true),
+        throwsFormatException,
+      );
+      expect(
+        () =>
+            crypto.deriveAddress(account, BitcoinKeychain.receive, 0x100000000),
+        throwsFormatException,
+      );
+    },
+  );
+  test(
     'purpose selection prefers BIP84, falls back to BIP86 and rejects split funds',
     () async {
       final snapshot = await twoFormats(500, 1200);

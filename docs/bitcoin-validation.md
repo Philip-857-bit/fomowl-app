@@ -33,3 +33,15 @@ Never commit the live wallet's mnemonic or any funded private material.
 Bitcoin must remain disabled by default until backend availability, native builds,
 review and the intended rollout stage are approved. This native SDK change requires
 a normal binary release, not a Shorebird-only patch.
+
+## Pending submission journal
+
+Before broadcasting, the host atomically persists the txid and selected outpoints
+in protected storage. Subsequent sends exclude these outpoints, including after
+restart. Separate signed objects cannot submit competing spends. Even a rejected
+or timed-out provider response retains the reservation: transport errors do not
+prove the transaction was never accepted. There is no timer-based release or RBF
+replacement construction. The journal has a 1024-entry / 512 KiB bound and fails
+closed at capacity; a future explicit chain-confirmed reconciliation/replacement
+flow is required for pruning. Wallet deletion/reset removes this public journal
+alongside custody. This is host concurrency protection, not an SPV proof of UTXOs.

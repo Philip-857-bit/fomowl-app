@@ -66,6 +66,21 @@ abstract interface class BitcoinCryptoApi {
 /// Platform transport only. Every derivation, script, planner and signature is an SDK operation.
 class NativeBitcoinCrypto implements BitcoinCryptoApi {
   const NativeBitcoinCrypto();
+  static int _index(int value) {
+    if (value < 0 || value >= 0x80000000) {
+      throw const FormatException('Invalid Bitcoin derivation index');
+    }
+    return value;
+  }
+
+  static void _u64(BigInt value) {
+    if (value.isNegative || value > (BigInt.one << 64) - BigInt.one) {
+      throw const FormatException(
+        'Bitcoin integer is outside the native range',
+      );
+    }
+  }
+
   static accounts.BitcoinNetworkDto networkDto(BitcoinProductNetwork network) =>
       switch (network) {
         BitcoinProductNetwork.mainnet => accounts.BitcoinNetworkDto.mainnet,
@@ -86,7 +101,7 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
   ) => accounts.BitcoinAccountDto(
     network: networkDto(account.network),
     purpose: purposeDto(account.purpose),
-    accountIndex: account.accountIndex,
+    accountIndex: _index(account.accountIndex),
     masterFingerprint: account.masterFingerprint,
     accountXpub: account.accountXpub,
   );
@@ -110,7 +125,7 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
       NativeCrypto.mnemonicToSeed(mnemonic);
   @override
   Future<String> seedWalletIdentity(Uint8List seed, int accountIndex) =>
-      NativeCrypto.deriveEvmAddressFromSeed(seed, accountIndex);
+      NativeCrypto.deriveEvmAddressFromSeed(seed, _index(accountIndex));
   @override
   Future<Uint8List> wrappingKey() => NativeCrypto.generateVaultWrappingKey();
   @override
@@ -123,7 +138,7 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
     await accounts.deriveBitcoinAccountMetadata(
       seed: seed,
       network: networkDto(network),
-      accountIndex: accountIndex,
+      accountIndex: _index(accountIndex),
       purpose: purposeDto(purpose),
     ),
   );
@@ -136,7 +151,7 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
     account: accountDto(account),
     network: networkDto(account.network),
     keychain: keychainDto(keychain),
-    addressIndex: index,
+    addressIndex: _index(index),
   );
   @override
   Future<String> deriveScript(
@@ -147,7 +162,7 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
     account: accountDto(account),
     network: networkDto(account.network),
     keychain: keychainDto(keychain),
-    addressIndex: index,
+    addressIndex: _index(index),
   );
   @override
   Future<SealedBitcoinAccount> sealSeedAccount(
@@ -160,7 +175,7 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
     final sealed = await vault.sealBitcoinSeedAccount(
       seed: seed,
       network: networkDto(network),
-      accountIndex: accountIndex,
+      accountIndex: _index(accountIndex),
       purpose: purposeDto(purpose),
       wrappingKey: wrappingKey,
     );
@@ -190,15 +205,29 @@ class NativeBitcoinCrypto implements BitcoinCryptoApi {
     BigInt feeRateSatVb,
     int changeIndex,
     bool rbf,
-  ) => transactions.planBitcoinTransfer(
-    network: networkDto(account.network),
-    account: accountDto(account),
-    candidateUtxos: utxos,
-    recipients: recipients,
-    feeRateSatVb: feeRateSatVb,
-    changeIndex: changeIndex,
-    rbf: rbf,
-  );
+  ) async {
+    _index(changeIndex);
+    _u64(feeRateSatVb);
+    for (final input in utxos) {
+      _index(input.addressIndex);
+      _u64(input.valueSat);
+      if (input.vout < 0 || input.vout > 0xffffffff) {
+        throw const FormatException('Invalid Bitcoin output index');
+      }
+    }
+    for (final recipient in recipients) {
+      _u64(recipient.amountSat);
+    }
+    return transactions.planBitcoinTransfer(
+      network: networkDto(account.network),
+      account: accountDto(account),
+      candidateUtxos: utxos,
+      recipients: recipients,
+      feeRateSatVb: feeRateSatVb,
+      changeIndex: changeIndex,
+      rbf: rbf,
+    );
+  }
 }
 
 class _NativeBitcoinSigner implements BitcoinSigningAccount {

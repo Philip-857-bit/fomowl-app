@@ -9,6 +9,7 @@ import 'bitcoin_protected_record.dart';
 import '../storage_service.dart';
 import 'bitcoin_network_service.dart';
 import 'bitcoin_wallet_service.dart';
+import 'bitcoin_submission_journal.dart';
 
 class BitcoinSplitFundsException implements Exception {
   const BitcoinSplitFundsException();
@@ -59,14 +60,16 @@ class BitcoinSendService {
 
   Future<List<BitcoinUtxoDto>> ownedInputs(
     BitcoinWalletSnapshot snapshot,
-    BitcoinPurpose purpose,
-  ) async {
+    BitcoinPurpose purpose, {
+    Set<String> reserved = const {},
+  }) async {
     final inputs = <BitcoinUtxoDto>[];
     final outpoints = <String>{};
     for (final utxo in snapshot.discovery.utxos) {
       if (!outpoints.add(utxo.outpoint)) {
         throw StateError('Duplicate Bitcoin outpoint');
       }
+      if (reserved.contains(utxo.outpoint)) continue;
       final owner = snapshot.discovery.ownership[utxo.address];
       if (owner == null) throw StateError('Unknown Bitcoin UTXO ownership');
       if (snapshot.discovery.state.accounts[owner.account.purpose]?.metadata !=
@@ -103,13 +106,14 @@ class BitcoinSendService {
     BigInt feeRate, {
     bool rbf = true,
     bool Function()? isCurrent,
+    Set<String> reserved = const {},
   }) async {
     var fundedFormats = 0;
     var total = BigInt.zero;
     for (final purpose in BitcoinPurpose.values) {
       final state = snapshot.discovery.state.accounts[purpose];
       if (state == null) continue;
-      final inputs = await ownedInputs(snapshot, purpose);
+      final inputs = await ownedInputs(snapshot, purpose, reserved: reserved);
       if (inputs.isEmpty) continue;
       fundedFormats++;
       total += inputs.fold(BigInt.zero, (sum, input) => sum + input.valueSat);
@@ -168,6 +172,9 @@ class BitcoinSendService {
       throw StateError('Bitcoin account identity mismatch');
     }
     final fees = await network.fetchFeeRates(productNetwork);
+    final reserved = await BitcoinSubmissionJournal(
+      store,
+    ).reserved(identity, productNetwork);
     check();
     final selectedPurpose =
         purpose ??
@@ -178,12 +185,17 @@ class BitcoinSendService {
           fees.rate(feeTier),
           rbf: rbf,
           isCurrent: isCurrent,
+          reserved: reserved,
         );
     final account = state.accounts[selectedPurpose]?.metadata;
     if (account == null) {
       throw StateError('Bitcoin address format is unavailable');
     }
-    final inputs = await ownedInputs(snapshot, selectedPurpose);
+    final inputs = await ownedInputs(
+      snapshot,
+      selectedPurpose,
+      reserved: reserved,
+    );
     check();
     final change = await BitcoinAddressAllocator(store: store, crypto: crypto)
         .reserveChange(
@@ -230,10 +242,13 @@ class BitcoinSendService {
       isCurrent: isCurrent,
     );
     final fees = await network.fetchFeeRates(productNetwork);
+    final reserved = await BitcoinSubmissionJournal(
+      store,
+    ).reserved(identity, productNetwork);
     for (final purpose in BitcoinPurpose.values) {
       final state = snapshot.discovery.state.accounts[purpose];
       if (state == null) continue;
-      final inputs = await ownedInputs(snapshot, purpose);
+      final inputs = await ownedInputs(snapshot, purpose, reserved: reserved);
       final available = inputs.fold(
         BigInt.zero,
         (sum, input) => sum + input.valueSat,
