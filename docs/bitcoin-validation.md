@@ -53,3 +53,28 @@ The unsigned review builds retain Android API 37 and install Google's
 the minimum required by the existing Firebase core/messaging plugins. This
 binary therefore does not support iOS 13 or 14. No signing certificates or
 production Firebase credentials are required by the review builds.
+
+## Final automated gate coverage
+
+The `Bitcoin wallet integration` PR workflow enforces Rust format, strict Clippy,
+all-target/all-feature tests, the independent public SDK consumer, consumer lint,
+full Flutter analysis/tests, an ARM64 Android debug APK and an unsigned iOS
+simulator build. Review the checks on the current head of
+[mobile PR #96](https://github.com/Philip-857-bit/fomowl-app/pull/96) before merge.
+
+The tested application source baseline at `dea609d` passed 37 Rust adapter tests,
+767 Flutter tests (one existing skipped test), strict lint/analysis, the native
+consumer for all four families and the unsigned iOS build. Android CI exposed
+runner disk exhaustion, so its review workflow disables Rust debug symbols and
+frees unused tools on the disposable runner. Those resource changes do not alter
+wallet protocol behavior. The final branch head must still pass its own checks.
+
+[Backend PR #47](https://github.com/Philip-857-bit/Fomowl-Backend/pull/47) at
+`f72f1eb7699c65c0f173dd58a2d79563d2f2ba6d` passed 614 tests, strict Clippy and
+GitHub CI. Merge the stable backend contract before the mobile product.
+
+The immutable SDK currently accepts P2WPKH and P2TR recipient scripts.
+Legacy P2PKH/P2SH recipients, mixed input policies, WIF/XPRV import UI, Lightning,
+multisig, tapscript, Bitcoin swaps and Bitcoin WalletConnect are outside this
+milestone. Funded Testnet4 and physical phone validation remain paused; automated
+fixtures and compile checks do not replace those production rollout gates.
