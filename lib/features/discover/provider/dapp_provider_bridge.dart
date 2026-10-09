@@ -554,6 +554,10 @@ class DappProviderBridge {
     required Future<void> Function(String source) evaluateJavaScript,
   }) async {
     try {
+      if (context.read<BlockchainService>().activeFamily ==
+          ChainFamily.bitcoin) {
+        return _error(4200, 'Bitcoin DApp connections are not supported yet.');
+      }
       final originUri = Uri.tryParse(origin);
       if (originUri == null ||
           !sessionController.canInjectProviderFor(originUri)) {

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:provider/provider.dart';
+import '../blockchain_service.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -41,6 +43,12 @@ class WalletConnectService extends ChangeNotifier {
 
   bool get isInitialized => _isInitialized;
   ReownWalletKit? get client => _walletKit;
+
+  bool get _bitcoinSelected {
+    final context = appNavigatorKey.currentContext;
+    return context != null &&
+        context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin;
+  }
 
   /// EVM namespaces advertised to WalletConnect DApps.
   static Set<String> get supportedEip155Chains => BlockchainCatalog
@@ -101,6 +109,10 @@ class WalletConnectService extends ChangeNotifier {
 
   /// Pair with a WalletConnect URI (e.g. wc:...)
   Future<bool> pair(String rawUri) async {
+    if (_bitcoinSelected) {
+      ToastUtils.showInfo('Bitcoin WalletConnect is not supported yet.');
+      return false;
+    }
     if (!_isInitialized) {
       await initialize();
     }
@@ -124,7 +136,7 @@ class WalletConnectService extends ChangeNotifier {
       await kit.pair(uri: uri);
       return true;
     } catch (error) {
-      debugPrint('[WalletConnect] Pairing failed: $error');
+      debugPrint('[WalletConnect] Pairing failed.');
       ToastUtils.showError('Failed to connect: Invalid QR or pairing link.');
       return false;
     }
@@ -136,6 +148,13 @@ class WalletConnectService extends ChangeNotifier {
     final kit = _walletKit;
     if (kit == null) return;
 
+    if (_bitcoinSelected) {
+      await kit.rejectSession(
+        id: event.id,
+        reason: Errors.getSdkError(Errors.UNSUPPORTED_CHAINS).toSignError(),
+      );
+      return;
+    }
     final proposal = event.params;
     final proposer = proposal.proposer;
     final dappName = proposer.metadata.name;
@@ -401,6 +420,16 @@ class WalletConnectService extends ChangeNotifier {
     if (kit == null) return;
 
     final topic = event.topic;
+    if (_bitcoinSelected) {
+      await _respondError(
+        kit,
+        topic: topic,
+        id: event.id,
+        code: 4200,
+        message: 'Bitcoin WalletConnect is not supported yet.',
+      );
+      return;
+    }
     final session = kit.getActiveSessions()[topic];
     if (session == null) {
       await _respondError(
@@ -602,6 +631,9 @@ class WalletConnectService extends ChangeNotifier {
     required String chainId,
     required String approvedAddress,
   }) async {
+    if (_bitcoinSelected) {
+      throw UnsupportedError('Bitcoin WalletConnect is not supported yet.');
+    }
     switch (method) {
       case 'personal_sign':
         final rawData = WalletConnectPolicy.extractEvmSigningPayload(

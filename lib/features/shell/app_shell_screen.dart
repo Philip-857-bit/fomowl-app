@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../widgets/bitcoin_capability_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -64,6 +65,15 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   void _selectTab(AppShellTab tab) {
+    if (tab == AppShellTab.swap &&
+        context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitcoin swaps and bridges are not available yet.'),
+        ),
+      );
+      return;
+    }
     if (tab == AppShellTab.swap && !_canOpenTradingScreen()) {
       _showUnavailable(RuntimeFeature.swaps);
       return;
@@ -73,6 +83,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
 
   bool _canOpenTradingScreen() {
     final family = context.read<BlockchainService>().activeFamily;
+    if (family == ChainFamily.bitcoin) return false;
     return _runtimeConfig.snapshot.allowsTradingScreen(
       limitSupported: family == ChainFamily.evm || family == ChainFamily.solana,
     );
@@ -87,6 +98,14 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   Future<void> _openOwlletPay() async {
+    if (context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitcoin payments are not available yet.'),
+        ),
+      );
+      return;
+    }
     if (_openingOwlletPay) {
       return;
     }
@@ -194,8 +213,14 @@ class _AppShellScreenState extends State<AppShellScreen> {
               showBottomNavigation: false,
               refreshRevision: _walletRefreshRevision,
             ),
-            const SwapScreen(showBottomNavigation: false),
-            const DiscoverScreen(),
+            BitcoinCapabilityGate(
+              feature: 'Swaps and bridges',
+              builder: (_) => const SwapScreen(showBottomNavigation: false),
+            ),
+            BitcoinCapabilityGate(
+              feature: 'DApps',
+              builder: (_) => const DiscoverScreen(),
+            ),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(

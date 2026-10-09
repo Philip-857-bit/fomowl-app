@@ -1734,6 +1734,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openOwlletPayDeposit() async {
+    if (context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
+      ToastUtils.showInfo('Bitcoin payments are not available yet.');
+      return;
+    }
     final base = OwlletMiniApps.owlletPay.configuredLaunchUri;
     final depositUrl = base?.replace(path: '/deposit').toString();
     await Navigator.pushNamed(
@@ -1768,6 +1772,10 @@ class _HomeScreenState extends State<HomeScreen> {
   /// point the host at the withdraw URL here. Falls back to the mini app's base
   /// launch URL when the deep link can't be built.
   void _openCashInWithdraw() {
+    if (context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
+      ToastUtils.showInfo('Bitcoin payments are not available yet.');
+      return;
+    }
     final base = OwlletMiniApps.owlletPay.configuredLaunchUri;
     final withdrawUrl = base?.replace(path: '/withdraw').toString();
     Navigator.pushNamed(

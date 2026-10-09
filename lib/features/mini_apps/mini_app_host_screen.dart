@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../widgets/bitcoin_capability_gate.dart';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
@@ -150,7 +151,7 @@ class MiniAppHostArguments {
   final String? initialUrl;
 }
 
-class MiniAppHostScreen extends StatefulWidget {
+class MiniAppHostScreen extends StatelessWidget {
   const MiniAppHostScreen({
     super.key,
     required this.definition,
@@ -184,7 +185,27 @@ class MiniAppHostScreen extends StatefulWidget {
   }
 
   @override
-  State<MiniAppHostScreen> createState() => _MiniAppHostScreenState();
+  Widget build(BuildContext context) => BitcoinCapabilityGate(
+    feature: 'Mini apps and payments',
+    builder: (_) => _SupportedMiniAppHostScreen(
+      definition: definition,
+      launchSource: launchSource,
+      initialUrl: initialUrl,
+    ),
+  );
+}
+
+class _SupportedMiniAppHostScreen extends StatefulWidget {
+  final MiniAppDefinition definition;
+  final String launchSource;
+  final String? initialUrl;
+  const _SupportedMiniAppHostScreen({
+    required this.definition,
+    required this.launchSource,
+    this.initialUrl,
+  });
+  @override
+  State<_SupportedMiniAppHostScreen> createState() => _MiniAppHostScreenState();
 }
 
 /// Build-time opt-in to expose the mini-app webview to remote inspectors on a
@@ -195,7 +216,7 @@ const bool _webviewInspectable = bool.fromEnvironment(
   'OWLLET_WEBVIEW_INSPECTABLE',
 );
 
-class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
+class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   static const String _handlerName = 'owlletMiniAppBridge';
   static const String _scriptGroup = 'owllet-mini-app';
   static const MethodChannel _cameraPermissionChannel = MethodChannel(
@@ -822,6 +843,14 @@ class _MiniAppHostScreenState extends State<MiniAppHostScreen> {
         ? (args.first as Map).cast<String, dynamic>()
         : <String, dynamic>{};
     final type = raw['type']?.toString().trim() ?? '';
+    if (type != 'close' &&
+        (_blockchain?.activeFamily == ChainFamily.bitcoin ||
+            raw['networkKey']?.toString().startsWith('bitcoin:') == true)) {
+      return const {
+        'ok': false,
+        'error': 'Bitcoin mini app operations are not supported yet.',
+      };
+    }
     switch (type) {
       case 'close':
         if (mounted) {
