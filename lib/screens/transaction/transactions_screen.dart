@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'bitcoin_transaction_details_sheet.dart';
+import '../../utils/bitcoin_amount_utils.dart';
+import '../../services/blockchain/bitcoin_catalog.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -565,6 +568,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     required String walletAddress,
   }) async {
     final family = blockchain.activeFamily;
+    if (family == ChainFamily.bitcoin) return const [];
     if (family == ChainFamily.solana) {
       return _loadSolanaHistory(walletAddress);
     }
@@ -974,6 +978,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final txHash = entry.txHash;
     if (txHash == null || txHash.isEmpty) return null;
 
+    if (entry.networkKey == 'bitcoin:mainnet' ||
+        entry.networkKey == 'bitcoin:testnet4') {
+      if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(txHash)) return null;
+      final chain = entry.networkKey == 'bitcoin:mainnet'
+          ? BitcoinCatalog.mainnet
+          : BitcoinCatalog.testnet4;
+      return '${chain.explorerUrl}/tx/$txHash';
+    }
     // Solana
     final networkKey = entry.networkKey;
     if (networkKey == 'solana:mainnet') {
@@ -1082,6 +1094,22 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     WalletHistoryEntry entry,
     BlockchainService blockchain,
   ) async {
+    if (entry.networkKey == 'bitcoin:mainnet' ||
+        entry.networkKey == 'bitcoin:testnet4') {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => BitcoinTransactionDetailsSheet(
+          entry: entry,
+          network: BitcoinProductNetwork.fromId(
+            NetworkKey.bitcoinNetworkIdOf(entry.networkKey!),
+          ),
+          onOpenExplorer: _openExplorer,
+        ),
+      );
+      return;
+    }
     final chain = _historyChain(blockchain, entry);
     final explorerUrl = _txExplorerUrl(entry, blockchain);
     await showModalBottomSheet<void>(
@@ -1136,6 +1164,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _formattedAmount(WalletHistoryEntry entry) {
+    if (entry.bitcoin != null) {
+      return '${BitcoinAmountUtils.format(entry.bitcoin!.deltaSats.abs())} BTC';
+    }
+    if (entry.networkKey == 'bitcoin:mainnet' ||
+        entry.networkKey == 'bitcoin:testnet4') {
+      return '${BitcoinAmountUtils.formatLegacyDisplay(entry.amount)} BTC';
+    }
+
     final amount = entry.amount;
     final tokenSymbol = entry.tokenSymbol;
     if (amount == null || tokenSymbol == null || tokenSymbol.isEmpty) {

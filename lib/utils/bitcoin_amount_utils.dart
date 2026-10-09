@@ -24,6 +24,14 @@ class BitcoinAmountUtils {
     return AmountUtils.formatBaseUnits(sats, 8, maxFractionDigits: 8);
   }
 
+  /// Legacy history metadata is presentation-only and never funds a transaction.
+  static String formatLegacyDisplay(double? amount) {
+    if (amount == null || !amount.isFinite || amount < 0 || amount > 21000000) {
+      return '-';
+    }
+    return amount.toStringAsFixed(8).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
   /// Input guidance only. The SDK validates checksum, network and script support.
   static bool recipientLooksCompatible(
     String text,
