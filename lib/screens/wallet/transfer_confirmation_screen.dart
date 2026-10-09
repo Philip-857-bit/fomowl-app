@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'bitcoin_transfer_confirmation_screen.dart';
 import '../../services/bitcoin/bitcoin_send_service.dart';
+import '../../services/bitcoin/bitcoin_signing_service.dart';
+import '../../services/wallet_vault_service.dart';
 import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
@@ -53,6 +55,7 @@ class _TransferConfirmationScreenState
   Map<String, dynamic>? _args;
   String? _fromAddress;
   bool _isConfirming = false;
+  BitcoinSignedTransfer? _signedBitcoin;
 
   double _gasPriceGwei = 0;
   double _gasFeeEth = 0;
@@ -764,11 +767,39 @@ class _TransferConfirmationScreenState
     }
   }
 
+  Future<void> _confirmBitcoin(BitcoinPreparedTransfer transfer) async {
+    if (_signedBitcoin != null) return;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    bool current() =>
+        mounted &&
+        blockchain.activeNetworkKey == transfer.network.networkKey &&
+        blockchain.activeWalletAddress.toLowerCase() ==
+            transfer.walletIdentity.toLowerCase();
+    final signed = await BitcoinSigningService().sign(
+      transfer,
+      isCurrent: current,
+      authenticate: () async {
+        await WalletVaultService.lockAll();
+        if (!mounted || !current()) return false;
+        final result = await Navigator.pushNamed<bool>(
+          context,
+          '/unlock',
+          arguments: {'returnToPrevious': true},
+        );
+        return result == true && current();
+      },
+    );
+    if (current()) setState(() => _signedBitcoin = signed);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bitcoinTransfer = _args?['bitcoinTransfer'];
     if (bitcoinTransfer is BitcoinPreparedTransfer) {
-      return BitcoinTransferConfirmationScreen(transfer: bitcoinTransfer);
+      return BitcoinTransferConfirmationScreen(
+        transfer: bitcoinTransfer,
+        onConfirm: _signedBitcoin == null ? _confirmBitcoin : null,
+      );
     }
     if (_args?['chainFamily'] == 'bitcoin' ||
         _args?['networkKey']?.toString().startsWith('bitcoin:') == true) {
