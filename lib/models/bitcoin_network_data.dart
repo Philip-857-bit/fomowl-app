@@ -189,6 +189,36 @@ class BitcoinOwnedAmount {
       valueSats = bitcoinJsonSats(json['valueSats']);
 }
 
+class BitcoinHistoryObservation {
+  final int position;
+  final String? address;
+  final BigInt valueSats;
+  BitcoinHistoryObservation.fromJson(Map<String, dynamic> json)
+    : position = bitcoinJsonInt(json['position'], maximum: 9999),
+      address = json['address'] == null
+          ? null
+          : bitcoinJsonString(json['address'], maxLength: 90),
+      valueSats = bitcoinJsonSats(json['valueSats']);
+  bool sameAs(BitcoinHistoryObservation other) =>
+      position == other.position &&
+      address == other.address &&
+      valueSats == other.valueSats;
+}
+
+List<BitcoinHistoryObservation> _observations(Object? raw) {
+  final values = _list(raw, 10000)
+      .map(
+        (value) => BitcoinHistoryObservation.fromJson(bitcoinJsonObject(value)),
+      )
+      .toList();
+  for (var index = 0; index < values.length; index++) {
+    if (values[index].position != index) {
+      throw const FormatException('Invalid Bitcoin history positions');
+    }
+  }
+  return List.unmodifiable(values);
+}
+
 class BitcoinHistoryTransaction {
   final String txid;
   final int? timestamp;
@@ -197,6 +227,8 @@ class BitcoinHistoryTransaction {
   final String? blockHash;
   final List<BitcoinOwnedAmount> ownedInputs;
   final List<BitcoinOwnedAmount> ownedOutputs;
+  final List<BitcoinHistoryObservation> inputs;
+  final List<BitcoinHistoryObservation> outputs;
   final BigInt netWalletDeltaSats;
   final BigInt feeSats;
   final String direction;
@@ -224,6 +256,8 @@ class BitcoinHistoryTransaction {
           10000,
         ).map((value) => BitcoinOwnedAmount.fromJson(bitcoinJsonObject(value))),
       ),
+      inputs = _observations(json['inputs']),
+      outputs = _observations(json['outputs']),
       netWalletDeltaSats = bitcoinJsonSats(
         json['netWalletDeltaSats'],
         signed: true,
@@ -238,6 +272,21 @@ class BitcoinHistoryTransaction {
       BigInt.zero,
       (sum, input) => sum + input.valueSats,
     );
+    final inputTotal = inputs.fold(
+      BigInt.zero,
+      (sum, input) => sum + input.valueSats,
+    );
+    final outputTotal = outputs.fold(
+      BigInt.zero,
+      (sum, output) => sum + output.valueSats,
+    );
+    if (outputs.isEmpty ||
+        inputTotal > bitcoinMaxMoneySats ||
+        outputTotal > bitcoinMaxMoneySats ||
+        inputs.isNotEmpty && inputTotal - outputTotal != feeSats ||
+        inputs.isEmpty && feeSats != BigInt.zero) {
+      throw const FormatException('Inconsistent Bitcoin history observations');
+    }
     final expectedDirection = netWalletDeltaSats.isNegative
         ? 'outgoing'
         : netWalletDeltaSats > BigInt.zero

@@ -229,6 +229,12 @@ void main() {
         'ownedOutputs': [
           {'address': address, 'valueSats': 90},
         ],
+        'inputs': [
+          {'position': 0, 'address': address, 'valueSats': 100},
+        ],
+        'outputs': [
+          {'position': 0, 'address': address, 'valueSats': 90},
+        ],
         'netWalletDeltaSats': -10,
         'feeSats': 10,
         'direction': 'outgoing',

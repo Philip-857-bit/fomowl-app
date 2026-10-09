@@ -16,6 +16,8 @@ import '../../services/blockchain_service.dart';
 import '../../services/etherscan_v2_service.dart';
 import '../../services/http_client_service.dart';
 import '../../services/wallet_history_service.dart';
+import '../../services/bitcoin/bitcoin_history_service.dart';
+import '../../models/bitcoin_account_state.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/in_app_link_router.dart';
 
@@ -455,6 +457,41 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final l = AppLocalizations.of(context);
     try {
       final family = blockchain.activeFamily;
+      if (family == ChainFamily.bitcoin) {
+        final networkKey = blockchain.activeNetworkKey;
+        final identity = await _walletService.getCurrentWalletAddress();
+        if (!mounted) return;
+        if (identity == null) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = l.noActiveWalletFound;
+            _allHistory = [];
+          });
+          return;
+        }
+        bool current() =>
+            mounted &&
+            blockchain.activeNetworkKey == networkKey &&
+            blockchain.activeWalletAddress.toLowerCase() ==
+                identity.toLowerCase();
+        final response = await BitcoinHistoryService().fetch(
+          identity,
+          BitcoinProductNetwork.fromId(
+            NetworkKey.bitcoinNetworkIdOf(networkKey),
+          ),
+          isCurrent: current,
+        );
+        if (!current()) return;
+        setState(() {
+          _allHistory = response.history;
+          _isPartial = response.partial;
+          _partialMessage = response.message;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        return;
+      }
+
       final String? address;
       if (family == ChainFamily.evm) {
         address = await _walletService.getCurrentWalletAddress();

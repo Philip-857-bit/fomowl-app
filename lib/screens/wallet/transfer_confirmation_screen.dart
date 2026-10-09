@@ -822,6 +822,17 @@ class _TransferConfirmationScreenState
             ? 'Submission status is unknown. Checking this transaction before any retry.'
             : null,
       );
+      unawaited(
+        _walletHistoryService
+            .recordBitcoinSend(
+              walletIdentity: transfer.walletIdentity,
+              txid: outcome.txid,
+              network: transfer.network,
+              amountSats: transfer.plan.recipientTotalSat,
+              recipient: transfer.plan.recipients.single.address,
+            )
+            .catchError((Object _) {}),
+      );
       void refreshBitcoin() => _bitcoinRefresh.schedule(
         isCurrent: current,
         refresh: () => blockchain.refreshBitcoinAccountAfterTransaction(
