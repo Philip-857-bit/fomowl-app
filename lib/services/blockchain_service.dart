@@ -1,5 +1,7 @@
 import 'blockchain/bitcoin_catalog.dart';
 import 'bitcoin/bitcoin_wallet_vault_service.dart';
+import 'bitcoin/bitcoin_wallet_service.dart';
+import '../models/bitcoin_account_state.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -119,9 +121,14 @@ class BlockchainService extends ChangeNotifier {
   int _lastDiscoveryTokenCount = 0;
   String? _lastDiscoveryMessage;
 
-  BlockchainService() {
+  late final BitcoinWalletApi _bitcoinWallet;
+  BlockchainService({
+    BitcoinWalletApi? bitcoinWallet,
+    PriceFetcher? priceFetcher,
+  }) {
+    _bitcoinWallet = bitcoinWallet ?? BitcoinWalletService();
     _tokenPortfolioModule = TokenPortfolioModule(
-      getTokenPrices: getTokenPrices,
+      getTokenPrices: priceFetcher ?? getTokenPrices,
       getTokenBalance: getTokenBalance,
       resolveIconUrl: BlockchainCatalog.iconUrlForSymbol,
     );
@@ -622,6 +629,13 @@ class BlockchainService extends ChangeNotifier {
   }
 
   String _walletTokenCacheKeyForRequest(String walletAddress, int? chainId) {
+    if (chainId == BitcoinLegacyUiIds.mainnet ||
+        chainId == BitcoinLegacyUiIds.testnet4) {
+      return _walletTokenStateKeyForNetwork(
+        BitcoinLegacyUiIds.networkKey(chainId!),
+        walletAddress,
+      );
+    }
     if (_isActiveNonEvmTokenRequest(chainId)) {
       return _walletTokenStateKeyForNetwork(activeNetworkKey, walletAddress);
     }
@@ -1302,7 +1316,8 @@ class BlockchainService extends ChangeNotifier {
 
   Future<double> getNativeBalance(String address) async {
     if (activeFamily == ChainFamily.bitcoin) {
-      throw UnsupportedError('Bitcoin balance requires HD account state');
+      final sats = await getNativeBalanceBaseUnits(address);
+      return _scaledBigIntToDouble(sats, 8);
     }
     final balanceWei = await getNativeBalanceBaseUnits(address);
     return _scaledBigIntToDouble(balanceWei, 18);
@@ -1310,7 +1325,10 @@ class BlockchainService extends ChangeNotifier {
 
   Future<BigInt> getNativeBalanceBaseUnits(String address) async {
     if (activeFamily == ChainFamily.bitcoin) {
-      throw UnsupportedError('Bitcoin balance requires HD account state');
+      final network = BitcoinProductNetwork.fromId(
+        NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
+      );
+      return (await _bitcoinWallet.refresh(address, network)).totalSats;
     }
     final result = await _rpcCall('eth_getBalance', [address, 'latest']);
     if (result != null) {
@@ -1634,14 +1652,19 @@ class BlockchainService extends ChangeNotifier {
     bool Function()? applyGuard,
   }) async {
     // For non-EVM families, use the full activeNetworkKey; chainId is irrelevant.
-    final effectiveNetworkKey = _isActiveNonEvmTokenRequest(chainId)
+    final effectiveNetworkKey =
+        chainId == BitcoinLegacyUiIds.mainnet ||
+            chainId == BitcoinLegacyUiIds.testnet4
+        ? BitcoinLegacyUiIds.networkKey(chainId!)
+        : _isActiveNonEvmTokenRequest(chainId)
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
     final requestedChainId = _walletTokenChainIdForRequest(chainId);
-    if (!walletAddressLooksValidForNetwork(
-      walletAddress,
-      effectiveNetworkKey,
-    )) {
+    if (NetworkKey.familyOf(effectiveNetworkKey) != ChainFamily.bitcoin &&
+        !walletAddressLooksValidForNetwork(
+          walletAddress,
+          effectiveNetworkKey,
+        )) {
       debugPrint(
         'Skipping wallet token fetch for invalid ${NetworkKey.familyOf(effectiveNetworkKey).wireValue} address: $walletAddress',
       );
@@ -1649,7 +1672,9 @@ class BlockchainService extends ChangeNotifier {
     }
     // Non-EVM chains must use a network-key-based cache key to avoid colliding
     // with an EVM chain that happens to share the same numeric chainId slot.
-    final cacheKey = _isActiveNonEvmTokenRequest(chainId)
+    final cacheKey =
+        NetworkKey.familyOf(effectiveNetworkKey) == ChainFamily.bitcoin ||
+            _isActiveNonEvmTokenRequest(chainId)
         ? _walletTokenStateKeyForNetwork(effectiveNetworkKey, walletAddress)
         : _walletTokenStateKey(requestedChainId, walletAddress);
     final now = DateTime.now();
@@ -1860,6 +1885,85 @@ class BlockchainService extends ChangeNotifier {
     return double.tryParse(normalized) ?? 0.0;
   }
 
+  Future<List<Token>> _fetchBitcoinWalletTokens(
+    String identity,
+    String cacheKey,
+    int chainId,
+    String networkKey,
+    bool Function()? applyGuard,
+  ) async {
+    final previous =
+        _walletTokenStates[cacheKey]?.tokens ??
+        _walletTokensCache[cacheKey]?.tokens ??
+        const <Token>[];
+    try {
+      final network = BitcoinProductNetwork.fromId(
+        NetworkKey.bitcoinNetworkIdOf(networkKey),
+      );
+      final snapshot = await _bitcoinWallet.refresh(
+        identity,
+        network,
+        force: true,
+        isCurrent: applyGuard,
+      );
+      if (applyGuard?.call() == false) return previous;
+      final chain = network == BitcoinProductNetwork.mainnet
+          ? BitcoinCatalog.mainnet
+          : BitcoinCatalog.testnet4;
+      // Presentation conversion only. Send amounts and fees use the snapshot's BigInt sats.
+      final token = Token(
+        symbol: 'BTC',
+        name: chain.name,
+        balance: _scaledBigIntToDouble(snapshot.totalSats, 8),
+        valueUsd: 0,
+        changePercent24h: 0,
+        decimals: 8,
+        imageUrl: chain.logoUrl,
+        coinGeckoId: chain.coinGeckoId,
+        networkKey: networkKey,
+        tokenStandard: TokenStandard.native,
+      );
+      final enriched = await _tokenPortfolioModule.enrichTokensWithPrices([
+        token,
+      ], nativeCoinGeckoId: chain.coinGeckoId);
+      if (applyGuard?.call() == false) return previous;
+      final fetched = DateTime.now().toUtc();
+      _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+        tokens: enriched,
+        fetchedAt: fetched,
+        source: 'bitcoin-hd',
+      );
+      _setWalletTokenState(
+        cacheKey,
+        WalletTokenState(
+          tokens: enriched,
+          source: 'bitcoin-hd',
+          isLoading: false,
+          isStale: false,
+          lastUpdatedAt: fetched,
+        ),
+        chainId: chainId,
+        notify: true,
+      );
+      return enriched;
+    } catch (_) {
+      if (applyGuard?.call() == false) return previous;
+      _setWalletTokenState(
+        cacheKey,
+        WalletTokenState(
+          tokens: previous,
+          source: 'bitcoin-hd',
+          isLoading: false,
+          isStale: true,
+          message: 'Bitcoin network data is unavailable',
+        ),
+        chainId: chainId,
+        notify: true,
+      );
+      rethrow;
+    }
+  }
+
   Future<List<Token>> _fetchWalletTokensFresh(
     String walletAddress,
     String cacheKey,
@@ -1870,6 +1974,15 @@ class BlockchainService extends ChangeNotifier {
     final effectiveNetworkKey =
         requestedNetworkKey ?? NetworkKey.evm(requestedChainId);
     final effectiveFamily = NetworkKey.familyOf(effectiveNetworkKey);
+    if (effectiveFamily == ChainFamily.bitcoin) {
+      return _fetchBitcoinWalletTokens(
+        walletAddress,
+        cacheKey,
+        requestedChainId,
+        effectiveNetworkKey,
+        applyGuard,
+      );
+    }
     final isNonEvm =
         effectiveFamily == ChainFamily.solana ||
         effectiveFamily == ChainFamily.tron;

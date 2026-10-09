@@ -81,12 +81,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<String?> _networkDataWalletIdentity(ChainFamily family) =>
+      family == ChainFamily.bitcoin
+      ? _walletService.getCurrentWalletAddress()
+      : _walletService.getActiveAddressForFamily(family);
+
   Future<void> _refreshBalancesAfterMiniApp() async {
     final blockchain = _blockchain;
     if (!mounted || blockchain == null) return;
-    final address = await _walletService.getActiveAddressForFamily(
-      blockchain.activeFamily,
-    );
+    final address = await _networkDataWalletIdentity(blockchain.activeFamily);
     if (!mounted || address == null || address.isEmpty) return;
     await _fetchRealBalances(address, forceRefresh: true);
     if (mounted && _portfolioRuntimeEnabled) {
@@ -398,6 +401,18 @@ class _HomeScreenState extends State<HomeScreen> {
   EvmChain _portfolioChainForId(BlockchainService blockchain, int chainId) {
     if (chainId == _activePortfolioChainId(blockchain)) {
       return _activePortfolioChain(blockchain);
+    }
+    if (chainId == BitcoinLegacyUiIds.mainnet ||
+        chainId == BitcoinLegacyUiIds.testnet4) {
+      final testnet = chainId == BitcoinLegacyUiIds.testnet4;
+      return EvmChain(
+        name: testnet ? 'Bitcoin Testnet4' : 'Bitcoin',
+        symbol: 'BTC',
+        chainId: chainId,
+        rpcUrl: '',
+        coinGeckoId: testnet ? null : 'bitcoin',
+        family: ChainFamily.bitcoin,
+      );
     }
     if (chainId == -501) {
       return const EvmChain(
@@ -896,9 +911,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadWalletData(forcePortfolioSync: true);
       if (!mounted) return;
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
-      final address = await _walletService.getActiveAddressForFamily(
-        blockchain.activeFamily,
-      );
+      final address = await _networkDataWalletIdentity(blockchain.activeFamily);
       if (!mounted) return;
       balanceRefreshSucceeded =
           address == null ||
@@ -1033,7 +1046,7 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint('[OWLLET] Active Chain ID: $_lastChainId');
         await _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
         if (!mounted || loadGeneration != _walletLoadGeneration) return;
-        final balanceAddress = await _walletService.getActiveAddressForFamily(
+        final balanceAddress = await _networkDataWalletIdentity(
           blockchain.activeFamily,
         );
         if (!mounted || loadGeneration != _walletLoadGeneration) return;
@@ -1126,7 +1139,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (blockchain == null || blockchain.activeNetworkKey != networkKey) {
       return false;
     }
-    final currentAddress = await _walletService.getActiveAddressForFamily(
+    final currentAddress = await _networkDataWalletIdentity(
       blockchain.activeFamily,
     );
     return mounted && _sameWalletAddress(currentAddress, walletAddress);
@@ -1392,9 +1405,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _lastChainId = chainId;
     _lastNetworkKey = currentNetworkKey;
     _loadHiddenTokens(_effectiveVisibilityChainId(blockchain));
-    _walletService.getActiveAddressForFamily(blockchain.activeFamily).then((
-      address,
-    ) async {
+    _networkDataWalletIdentity(blockchain.activeFamily).then((address) async {
       if (!mounted) return;
       if (address == null || address.isEmpty) {
         setState(() {
@@ -1783,9 +1794,7 @@ class _HomeScreenState extends State<HomeScreen> {
       });
       blockchain.setLivePriceTrackingForTokens(_tokens, scope: _livePriceScope);
 
-      final address = await _walletService.getActiveAddressForFamily(
-        blockchain.activeFamily,
-      );
+      final address = await _networkDataWalletIdentity(blockchain.activeFamily);
       if (address != null && address.isNotEmpty) {
         unawaited(_fetchRealBalances(address));
         unawaited(_fetchPortfolioData(address, sync: true));
