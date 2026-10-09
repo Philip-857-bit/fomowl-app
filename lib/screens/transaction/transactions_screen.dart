@@ -444,12 +444,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   List<WalletHistoryEntry> _allHistory = [];
   String _selectedType = 'all';
   int? _selectedChainId;
+  String? _historyContext;
+  int _historyGeneration = 0;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = context.watch<BlockchainService>();
+    final nextContext =
+        '${blockchain.activeWalletAddress.toLowerCase()}|${blockchain.activeNetworkKey}';
+    if (_historyContext == nextContext) return;
+    _historyContext = nextContext;
+    final generation = ++_historyGeneration;
+    _allHistory = [];
+    _isLoading = true;
+    _isPartial = false;
+    _errorMessage = null;
+    _partialMessage = null;
+    _selectedChainId = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && generation == _historyGeneration) {
         _fetchHistory();
       }
     });
@@ -458,12 +472,20 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Future<void> _fetchHistory() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final l = AppLocalizations.of(context);
+    final generation = ++_historyGeneration;
+    final networkKey = blockchain.activeNetworkKey;
+    final walletIdentity = blockchain.activeWalletAddress.toLowerCase();
+    bool currentRequest() =>
+        mounted &&
+        generation == _historyGeneration &&
+        blockchain.activeNetworkKey == networkKey &&
+        blockchain.activeWalletAddress.toLowerCase() == walletIdentity;
     try {
       final family = blockchain.activeFamily;
       if (family == ChainFamily.bitcoin) {
         final networkKey = blockchain.activeNetworkKey;
         final identity = await _walletService.getCurrentWalletAddress();
-        if (!mounted) return;
+        if (!currentRequest()) return;
         if (identity == null) {
           setState(() {
             _isLoading = false;
@@ -473,7 +495,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           return;
         }
         bool current() =>
-            mounted &&
+            currentRequest() &&
             blockchain.activeNetworkKey == networkKey &&
             blockchain.activeWalletAddress.toLowerCase() ==
                 identity.toLowerCase();
@@ -501,7 +523,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       } else {
         address = await _walletService.getWalletAddressForFamily(family);
       }
-      if (!mounted) return;
+      if (!currentRequest()) return;
       if (address == null || address.trim().isEmpty) {
         setState(() {
           _isLoading = false;
@@ -543,7 +565,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         throw Exception('Unable to load wallet history');
       }
 
-      if (!mounted) return;
+      if (!currentRequest()) return;
       setState(() {
         _allHistory = mergedHistory;
         _isPartial = (response?.partial ?? false) || fallbackWarning != null;
@@ -555,7 +577,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         _errorMessage = null;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!currentRequest()) return;
       setState(() {
         _isLoading = false;
         _errorMessage = l.walletHistoryLoadError;

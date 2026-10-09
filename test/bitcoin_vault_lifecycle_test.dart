@@ -13,6 +13,7 @@ import 'package:fomowl_wallet/services/bitcoin/bitcoin_provisioning_service.dart
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_wallet_vault_service.dart';
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/services/wallet_vault_service.dart';
+import 'package:fomowl_wallet/services/wallet_service.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 import 'helpers/bitcoin_memory_store.dart';
 
@@ -73,6 +74,53 @@ void main() {
     vault = BitcoinWalletVaultService(store: storage.bitcoinAccounts);
   });
   tearDown(WalletVaultService.lockAll);
+  test(
+    'wallet switch closes custody while preserving encrypted HD records',
+    () async {
+      final signer = await vault.open(slot, metadata);
+      await storage.saveWallet(
+        address: '0xother',
+        privateKey: 'public-fixture',
+        origin: WalletOrigin.imported,
+      );
+      await WalletService(storageService: storage).setActiveWallet('0xother');
+      await expectLater(signer.accountInfo(), throwsStateError);
+      expect(await storage.bitcoinAccounts.readState(slot), isNotNull);
+      expect(
+        (await storage.getWalletAccounts())
+            .firstWhere((account) => account.address == '0xother')
+            .supportsBitcoin,
+        isFalse,
+      );
+    },
+  );
+  test(
+    'wallet removal deletes both purpose vaults and reset leaves no custody',
+    () async {
+      final signer = await vault.open(slot, metadata);
+      final otherSlot = BitcoinAccountSlot(
+        walletIdentity: slot.walletIdentity,
+        network: slot.network,
+        accountIndex: slot.accountIndex,
+        purpose: BitcoinPurpose.bip86,
+      );
+      expect(await storage.bitcoinAccounts.readState(otherSlot), isNotNull);
+      await storage.saveWallet(
+        address: '0xother',
+        privateKey: 'public-fixture',
+        origin: WalletOrigin.imported,
+      );
+      await WalletService(
+        storageService: storage,
+      ).removeWalletAccount(slot.walletIdentity);
+      await expectLater(signer.accountInfo(), throwsStateError);
+      expect(await storage.bitcoinAccounts.readState(slot), isNull);
+      expect(await storage.bitcoinAccounts.readState(otherSlot), isNull);
+      await storage.clearAll();
+      await expectLater(vault.open(slot, metadata), throwsStateError);
+      expect(await storage.getWalletAccounts(), isEmpty);
+    },
+  );
   test(
     'shared lock closes HD custody and rejects reopening until authenticated unlock',
     () async {
