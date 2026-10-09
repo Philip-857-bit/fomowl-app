@@ -13,6 +13,7 @@ import 'package:fomowl_wallet/services/bitcoin/bitcoin_provisioning_service.dart
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 import 'helpers/bitcoin_memory_store.dart';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_receive_service.dart';
 import 'package:fomowl_wallet/services/wallet_vault_service.dart';
 
 const mnemonic =
@@ -94,6 +95,42 @@ void main() {
       seedGroupId: 'seed_fixture',
     );
   });
+  test(
+    'receive uses native HD addresses without reopening custody or consuming indices',
+    () async {
+      await BitcoinProvisioningService(
+        storage: storage,
+        crypto: crypto,
+      ).ensureWallet(identity);
+      final opens = crypto.opens;
+      final receive = BitcoinReceiveService(storage: storage, crypto: crypto);
+      final first = await receive.currentAddress(
+        identity,
+        BitcoinProductNetwork.mainnet,
+      );
+      final second = await receive.currentAddress(
+        identity,
+        BitcoinProductNetwork.mainnet,
+      );
+      expect(first.address, 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu');
+      expect(second.address, first.address);
+      expect(second.addressIndex, 0);
+      final taproot = await receive.currentAddress(
+        identity,
+        BitcoinProductNetwork.mainnet,
+        purpose: BitcoinPurpose.bip86,
+      );
+      expect(
+        taproot.address,
+        'bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr',
+      );
+      expect(crypto.opens, opens);
+      await expectLater(
+        receive.currentAddress(identity, BitcoinProductNetwork.testnet4),
+        throwsStateError,
+      );
+    },
+  );
   test(
     'real seed provisioning seals both purposes and reopens idempotently without reloading seed',
     () async {

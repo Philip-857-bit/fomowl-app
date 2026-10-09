@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../models/bitcoin_account_state.dart';
+import '../../services/bitcoin/bitcoin_receive_service.dart';
 import 'package:flutter/services.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/token_selector_modal.dart';
@@ -18,7 +21,13 @@ import 'widgets/receive/address_display_card.dart';
 import 'widgets/receive/receive_action_buttons.dart';
 
 class ReceiveTokenScreen extends StatefulWidget {
-  const ReceiveTokenScreen({super.key});
+  final BitcoinReceiveApi? bitcoinReceive;
+  final WalletService? walletService;
+  const ReceiveTokenScreen({
+    super.key,
+    this.bitcoinReceive,
+    this.walletService,
+  });
 
   @override
   State<ReceiveTokenScreen> createState() => _ReceiveTokenScreenState();
@@ -27,8 +36,14 @@ class ReceiveTokenScreen extends StatefulWidget {
 class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   Token? _selectedToken;
   ChainFamily? _lastFamily;
+  String? _lastWalletIdentity;
   String _walletAddress = '';
-  final WalletService _walletService = WalletService();
+  late final WalletService _walletService =
+      widget.walletService ?? WalletService();
+  late final BitcoinReceiveApi _bitcoinReceive =
+      widget.bitcoinReceive ?? BitcoinReceiveService();
+  int _addressGeneration = 0;
+  String? _receiveError;
 
   @override
   void initState() {
@@ -47,7 +62,10 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
     final tokenIsStale =
         _selectedToken != null &&
         _selectedToken!.networkKey != blockchain.activeNetworkKey;
-    if (_lastFamily != currentFamily || tokenIsStale) {
+    if (_lastFamily != currentFamily ||
+        tokenIsStale ||
+        _lastWalletIdentity != blockchain.activeWalletAddress) {
+      _lastWalletIdentity = blockchain.activeWalletAddress;
       _lastFamily = currentFamily;
       _initForFamily();
     }
@@ -58,6 +76,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   Future<void> _initForFamily() async {
     if (!mounted) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final generation = ++_addressGeneration;
     final family = blockchain.activeFamily;
     final activeNetworkKey = blockchain.activeNetworkKey;
 
@@ -77,8 +96,42 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
       nativeToken = blockchain.activeNativeToken;
     }
 
-    final address = await _walletService.getWalletAddressForFamily(family);
-    if (mounted) {
+    // Clear the old address before an asynchronous wallet/network transition.
+    setState(() {
+      _walletAddress = '';
+      _receiveError = null;
+      _selectedToken = nativeToken;
+    });
+    String? address;
+    String? identity;
+    try {
+      if (family == ChainFamily.bitcoin) {
+        identity = await _walletService.getCurrentWalletAddress();
+        if (identity == null) throw StateError('No active wallet');
+        final derived = await _bitcoinReceive.currentAddress(
+          identity,
+          BitcoinProductNetwork.fromId(
+            NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
+          ),
+        );
+        address = derived.address;
+        if (await _walletService.getCurrentWalletAddress() != identity) return;
+      } else {
+        address = await _walletService.getWalletAddressForFamily(family);
+      }
+    } catch (_) {
+      if (mounted && generation == _addressGeneration) {
+        setState(
+          () => _receiveError = family == ChainFamily.bitcoin
+              ? 'Bitcoin receive address is unavailable. Refresh your account and try again.'
+              : 'Receive address is unavailable. Try again.',
+        );
+      }
+      return;
+    }
+    if (mounted &&
+        generation == _addressGeneration &&
+        blockchain.activeNetworkKey == activeNetworkKey) {
       setState(() {
         _selectedToken = nativeToken;
         _walletAddress = address ?? '';
@@ -88,6 +141,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
 
   void _showTokenSelector() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    if (blockchain.activeFamily == ChainFamily.bitcoin) return;
     final familyTokens = await _loadSelectableTokens(blockchain);
     if (!mounted) {
       return;
@@ -235,7 +289,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: TokenSelectorCard(
                   token: _selectedToken,
-                  onTap: _showTokenSelector,
+                  onTap: blockchain.activeFamily == ChainFamily.bitcoin
+                      ? () {}
+                      : _showTokenSelector,
                   blockchain: blockchain,
                 ),
               ),
@@ -243,10 +299,15 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: ReceiveWarningBanner(message: l.receiveExternalWarning),
+                child: ReceiveWarningBanner(
+                  message: blockchain.activeFamily == ChainFamily.bitcoin
+                      ? 'Send Bitcoin (BTC) only to this address. Native SegWit.'
+                      : l.receiveExternalWarning,
+                ),
               ),
               if (_walletAddress.isEmpty &&
-                  blockchain.activeFamily != ChainFamily.evm) ...[
+                  blockchain.activeFamily != ChainFamily.evm &&
+                  blockchain.activeFamily != ChainFamily.bitcoin) ...[
                 const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -262,7 +323,12 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
               ],
               const SizedBox(height: 32),
 
-              QrCodeCard(data: _walletAddress),
+              if (_receiveError != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: ReceiveWarningBanner(message: _receiveError!),
+                ),
+              if (_walletAddress.isNotEmpty) QrCodeCard(data: _walletAddress),
               const SizedBox(height: 32),
 
               Padding(
@@ -271,6 +337,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                   value: _walletAddress,
                   isInterTransfer: false,
                   onCopy: () {
+                    if (_walletAddress.isEmpty) return;
                     Clipboard.setData(ClipboardData(text: _walletAddress));
                     ToastUtils.showSuccess(l.addressCopied);
                   },
@@ -285,8 +352,18 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
                   vertical: 24,
                 ),
                 child: ReceiveActionButtons(
-                  onShare: () => Navigator.pop(context),
+                  onShare: () {
+                    if (_walletAddress.isEmpty) return;
+                    if (blockchain.activeFamily == ChainFamily.bitcoin) {
+                      SharePlus.instance.share(
+                        ShareParams(text: _walletAddress),
+                      );
+                    } else {
+                      Navigator.pop(context);
+                    }
+                  },
                   onCopy: () {
+                    if (_walletAddress.isEmpty) return;
                     Clipboard.setData(ClipboardData(text: _walletAddress));
                     ToastUtils.showSuccess(l.addressCopied);
                   },
