@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/chain.dart';
+import '../../models/wallet_account.dart';
+import '../../utils/toast_utils.dart';
 import '../../services/affiliate_attribution_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/referral_service.dart';
@@ -10,7 +12,8 @@ import '../../services/wallet_service.dart';
 import '../../widgets/mobile_scaffold.dart';
 
 class BlockchainSelectionScreen extends StatefulWidget {
-  const BlockchainSelectionScreen({super.key});
+  final WalletService? walletService;
+  const BlockchainSelectionScreen({super.key, this.walletService});
 
   @override
   State<BlockchainSelectionScreen> createState() =>
@@ -33,7 +36,10 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
   ];
 
   final TextEditingController _referralController = TextEditingController();
-  final WalletService _walletService = WalletService();
+  late final WalletService _walletService =
+      widget.walletService ?? WalletService();
+  bool _seedBacked = false;
+  bool _continuing = false;
   final ReferralService _referralService = ReferralService();
 
   static const _chains = [
@@ -64,7 +70,39 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
           'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
       logoSize: 28,
     ),
+    _ChainOption(
+      family: ChainFamily.bitcoin,
+      label: 'Bitcoin',
+      subtitle: 'Native SegWit and Taproot HD accounts',
+      iconBgColor: Color(0xFFF7931A),
+      logoUrl:
+          'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png',
+      logoSize: 32,
+    ),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWalletEligibility();
+  }
+
+  Future<void> _loadWalletEligibility() async {
+    try {
+      final identity = await _walletService.getCurrentWalletAddress();
+      final wallets = await _walletService.getWalletAccounts();
+      final wallet = wallets
+          .where(
+            (wallet) => wallet.address.toLowerCase() == identity?.toLowerCase(),
+          )
+          .firstOrNull;
+      if (mounted) {
+        setState(() => _seedBacked = wallet?.origin == WalletOrigin.derived);
+      }
+    } catch (_) {
+      /* Protected metadata may be unavailable while locked. */
+    }
+  }
 
   @override
   void dispose() {
@@ -73,6 +111,14 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
   }
 
   void _toggle(ChainFamily family) {
+    if (_continuing) return;
+    if (family == ChainFamily.bitcoin &&
+        (!_seedBacked ||
+            !context.read<BlockchainService>().isBitcoinNetworkAvailable(
+              'bitcoin:mainnet',
+            ))) {
+      return;
+    }
     setState(() {
       if (_enabled.contains(family)) {
         if (_enabled.length == 1) return; // keep at least one
@@ -96,7 +142,39 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
   }
 
   Future<void> _continue() async {
+    if (_continuing) return;
+    setState(() => _continuing = true);
     final blockchain = context.read<BlockchainService>();
+    try {
+      if (_enabled.contains(ChainFamily.bitcoin)) {
+        if (!blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet')) {
+          throw StateError('Bitcoin is unavailable');
+        }
+        final identity = await _walletService.getCurrentWalletAddress();
+        if (identity == null) throw StateError('No active wallet');
+        final account = await _walletService.ensureBitcoinAccount(identity);
+        if (account == null) throw StateError('Bitcoin requires a seed wallet');
+        final wallet = (await _walletService.getWalletAccounts())
+            .where(
+              (wallet) =>
+                  wallet.address.toLowerCase() == identity.toLowerCase(),
+            )
+            .firstOrNull;
+        if (wallet == null || !wallet.supportsBitcoin) {
+          throw StateError('Bitcoin account is unavailable');
+        }
+        blockchain.setActiveWalletContext(
+          address: identity,
+          supportedFamilies: wallet.supportedFamilies,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _continuing = false);
+        ToastUtils.showError('Unable to enable Bitcoin for this wallet.');
+      }
+      return;
+    }
     await blockchain.setEnabledFamilies(Set.of(_enabled));
     blockchain.setActiveNetworkKey(_defaultNetworkKey());
 
@@ -136,6 +214,9 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bitcoinAvailable = context
+        .watch<BlockchainService>()
+        .isBitcoinNetworkAvailable('bitcoin:mainnet');
     return MobileScaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -219,13 +300,19 @@ class _BlockchainSelectionScreenState extends State<BlockchainSelectionScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        ..._chains.map(
-                          (opt) => _ChainToggleTile(
-                            option: opt,
-                            enabled: _enabled.contains(opt.family),
-                            onToggle: () => _toggle(opt.family),
-                          ),
-                        ),
+                        ..._chains
+                            .where(
+                              (option) =>
+                                  option.family != ChainFamily.bitcoin ||
+                                  _seedBacked && bitcoinAvailable,
+                            )
+                            .map(
+                              (opt) => _ChainToggleTile(
+                                option: opt,
+                                enabled: _enabled.contains(opt.family),
+                                onToggle: () => _toggle(opt.family),
+                              ),
+                            ),
                         const SizedBox(height: 28),
                         Align(
                           alignment: Alignment.centerLeft,
