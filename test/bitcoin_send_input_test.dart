@@ -42,9 +42,144 @@ class FixedFees extends Fake implements BitcoinNetworkApi {
       });
 }
 
+Future<BitcoinWalletSnapshot> twoFormats(
+  int nativeSats,
+  int taprootSats,
+) async {
+  const crypto = NativeBitcoinCrypto();
+  final seed = await crypto.mnemonicToSeed(
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+  );
+  final accounts = <BitcoinPurpose, BitcoinPurposeAccountState>{};
+  final ownership = <String, BitcoinDerivedAddress>{};
+  final activity = <String, BitcoinAddressActivity>{};
+  try {
+    for (final purpose in BitcoinPurpose.values) {
+      final account = await crypto.deriveAccount(
+        seed,
+        BitcoinProductNetwork.mainnet,
+        0,
+        purpose,
+      );
+      final address = await crypto.deriveAddress(
+        account,
+        BitcoinKeychain.receive,
+        0,
+      );
+      final script = await crypto.deriveScript(
+        account,
+        BitcoinKeychain.receive,
+        0,
+      );
+      final value = purpose == BitcoinPurpose.bip84 ? nativeSats : taprootSats;
+      accounts[purpose] = BitcoinPurposeAccountState(metadata: account);
+      ownership[address] = BitcoinDerivedAddress(
+        account: account,
+        keychain: BitcoinKeychain.receive,
+        addressIndex: 0,
+        address: address,
+      );
+      activity[address] = BitcoinAddressActivity.fromJson({
+        'address': address,
+        'used': true,
+        'confirmedBalanceSats': value,
+        'mempoolBalanceSats': 0,
+        'txCount': 1,
+        'utxos': [
+          {
+            'txid': List.filled(
+              64,
+              purpose == BitcoinPurpose.bip84 ? '1' : '2',
+            ).join(),
+            'vout': 0,
+            'valueSats': value,
+            'address': address,
+            'scriptPubkeyHex': script,
+            'confirmed': true,
+            'blockHeight': 1,
+          },
+        ],
+      });
+    }
+  } finally {
+    seed.fillRange(0, seed.length, 0);
+  }
+  return BitcoinWalletSnapshot(
+    BitcoinDiscoverySnapshot(
+      state: BitcoinWalletAccountState(
+        walletIdentity: '0xwallet',
+        network: BitcoinProductNetwork.mainnet,
+        accountIndex: 0,
+        accounts: accounts,
+      ),
+      ownership: ownership,
+      activity: activity,
+      scannedAt: DateTime.now().toUtc(),
+    ),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async => RustLib.init());
+  test(
+    'purpose selection prefers BIP84, falls back to BIP86 and rejects split funds',
+    () async {
+      final snapshot = await twoFormats(500, 1200);
+      final service = BitcoinSendService(
+        wallet: SnapshotWallet(snapshot),
+        network: FixedFees(),
+        store: BitcoinAccountStore(MemoryStore()),
+      );
+      final recipient = snapshot.discovery.ownership.keys.first;
+      expect(
+        await service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(350),
+          BigInt.one,
+        ),
+        BitcoinPurpose.bip84,
+      );
+      expect(
+        await service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(700),
+          BigInt.one,
+        ),
+        BitcoinPurpose.bip86,
+      );
+      await expectLater(
+        service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(1500),
+          BigInt.one,
+        ),
+        throwsA(isA<BitcoinSplitFundsException>()),
+      );
+      await expectLater(
+        service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(2000),
+          BigInt.one,
+        ),
+        throwsStateError,
+      );
+      await expectLater(
+        service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(350),
+          BigInt.one,
+          isCurrent: () => false,
+        ),
+        throwsStateError,
+      );
+    },
+  );
   test(
     'BTC parsing preserves satoshis and rejects excess precision and ambiguous input',
     () {
@@ -186,6 +321,7 @@ void main() {
           account.network,
           address,
           BigInt.from(501),
+          purpose: BitcoinPurpose.bip84,
         ),
         throwsA('Insufficient Bitcoin funds'),
       );

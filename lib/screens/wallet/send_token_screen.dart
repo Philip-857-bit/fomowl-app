@@ -593,6 +593,9 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                   identity.toLowerCase(),
         );
         if (!mounted) return;
+      } on BitcoinSplitFundsException catch (error) {
+        if (mounted) _showError(error.toString());
+        return;
       } catch (_) {
         if (mounted) {
           _showError(

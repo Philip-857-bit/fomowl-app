@@ -10,6 +10,13 @@ import '../storage_service.dart';
 import 'bitcoin_network_service.dart';
 import 'bitcoin_wallet_service.dart';
 
+class BitcoinSplitFundsException implements Exception {
+  const BitcoinSplitFundsException();
+  @override
+  String toString() =>
+      'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.';
+}
+
 class BitcoinPreparedTransfer {
   final String walletIdentity;
   final BitcoinProductNetwork network;
@@ -77,12 +84,55 @@ class BitcoinSendService {
     return inputs;
   }
 
+  Future<BitcoinPurpose> selectPurpose(
+    BitcoinWalletSnapshot snapshot,
+    String recipient,
+    BigInt amount,
+    BigInt feeRate, {
+    bool rbf = true,
+    bool Function()? isCurrent,
+  }) async {
+    var fundedFormats = 0;
+    var total = BigInt.zero;
+    for (final purpose in BitcoinPurpose.values) {
+      final state = snapshot.discovery.state.accounts[purpose];
+      if (state == null) continue;
+      final inputs = await ownedInputs(snapshot, purpose);
+      if (inputs.isEmpty) continue;
+      fundedFormats++;
+      total += inputs.fold(BigInt.zero, (sum, input) => sum + input.valueSat);
+      if (isCurrent?.call() == false) {
+        throw StateError('Bitcoin wallet context changed');
+      }
+      try {
+        await crypto.plan(
+          state.metadata,
+          inputs,
+          [BitcoinRecipientDto(address: recipient, amountSat: amount)],
+          feeRate,
+          state.nextInternal,
+          rbf,
+        );
+        if (isCurrent?.call() == false) {
+          throw StateError('Bitcoin wallet context changed');
+        }
+        return purpose;
+      } catch (error) {
+        if (error != 'Insufficient Bitcoin funds') rethrow;
+      }
+    }
+    if (fundedFormats > 1 && total >= amount) {
+      throw const BitcoinSplitFundsException();
+    }
+    throw StateError('Insufficient Bitcoin funds including network fee');
+  }
+
   Future<BitcoinPreparedTransfer> prepareTransfer(
     String identity,
     BitcoinProductNetwork productNetwork,
     String recipient,
     BigInt amount, {
-    BitcoinPurpose purpose = BitcoinPurpose.bip84,
+    BitcoinPurpose? purpose,
     BitcoinFeeTier feeTier = BitcoinFeeTier.normal,
     bool rbf = true,
     bool Function()? isCurrent,
@@ -105,13 +155,23 @@ class BitcoinSendService {
         state.network != productNetwork) {
       throw StateError('Bitcoin account identity mismatch');
     }
-    final account = state.accounts[purpose]?.metadata;
+    final fees = await network.fetchFeeRates(productNetwork);
+    check();
+    final selectedPurpose =
+        purpose ??
+        await selectPurpose(
+          snapshot,
+          recipient,
+          amount,
+          fees.rate(feeTier),
+          rbf: rbf,
+          isCurrent: isCurrent,
+        );
+    final account = state.accounts[selectedPurpose]?.metadata;
     if (account == null) {
       throw StateError('Bitcoin address format is unavailable');
     }
-    final fees = await network.fetchFeeRates(productNetwork);
-    check();
-    final inputs = await ownedInputs(snapshot, purpose);
+    final inputs = await ownedInputs(snapshot, selectedPurpose);
     check();
     final change = await BitcoinAddressAllocator(store: store, crypto: crypto)
         .reserveChange(
@@ -119,7 +179,7 @@ class BitcoinSendService {
             walletIdentity: identity,
             network: productNetwork,
             accountIndex: state.accountIndex,
-            purpose: purpose,
+            purpose: selectedPurpose,
           ),
         );
     if (change.account != account) {
@@ -138,7 +198,7 @@ class BitcoinSendService {
     return BitcoinPreparedTransfer(
       walletIdentity: identity,
       network: productNetwork,
-      purpose: purpose,
+      purpose: selectedPurpose,
       plan: plan,
     );
   }
