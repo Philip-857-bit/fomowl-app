@@ -22,12 +22,24 @@ class BitcoinPreparedTransfer {
   final BitcoinProductNetwork network;
   final BitcoinPurpose purpose;
   final BitcoinTransactionPlanDto plan;
-  const BitcoinPreparedTransfer({
+  BitcoinPreparedTransfer({
     required this.walletIdentity,
     required this.network,
     required this.purpose,
-    required this.plan,
-  });
+    required BitcoinTransactionPlanDto plan,
+  }) : plan = BitcoinTransactionPlanDto(
+         account: plan.account,
+         unsignedTxHex: plan.unsignedTxHex,
+         selectedUtxos: List.unmodifiable(plan.selectedUtxos),
+         recipients: List.unmodifiable(plan.recipients),
+         changeIndex: plan.changeIndex,
+         rbf: plan.rbf,
+         feeRateSatVb: plan.feeRateSatVb,
+         recipientTotalSat: plan.recipientTotalSat,
+         changeSat: plan.changeSat,
+         feeSat: plan.feeSat,
+         estimatedVbytes: plan.estimatedVbytes,
+       );
 }
 
 class BitcoinSendService {

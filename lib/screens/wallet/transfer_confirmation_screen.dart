@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'bitcoin_transfer_confirmation_screen.dart';
+import '../../services/bitcoin/bitcoin_send_service.dart';
 import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
@@ -66,6 +68,11 @@ class _TransferConfirmationScreenState
   void didChangeDependencies() {
     super.didChangeDependencies();
     _args ??= _routeArgumentsAsMap(ModalRoute.of(context)?.settings.arguments);
+    if (_args?['bitcoinTransfer'] is BitcoinPreparedTransfer ||
+        _args?['chainFamily'] == 'bitcoin' ||
+        _args?['networkKey']?.toString().startsWith('bitcoin:') == true) {
+      return;
+    }
     if (_fromAddress == null) {
       _loadFromAddress();
     }
@@ -759,6 +766,19 @@ class _TransferConfirmationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final bitcoinTransfer = _args?['bitcoinTransfer'];
+    if (bitcoinTransfer is BitcoinPreparedTransfer) {
+      return BitcoinTransferConfirmationScreen(transfer: bitcoinTransfer);
+    }
+    if (_args?['chainFamily'] == 'bitcoin' ||
+        _args?['networkKey']?.toString().startsWith('bitcoin:') == true) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Confirm Bitcoin transfer')),
+        body: const Center(
+          child: Text('Return to Send and prepare a Bitcoin transaction plan.'),
+        ),
+      );
+    }
     context.select<CurrencyController, String>(
       (controller) => controller.currencyCode,
     );
