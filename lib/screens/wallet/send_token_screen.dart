@@ -13,6 +13,9 @@ import '../../services/recipient_book_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/send_amount_utils.dart';
+import '../../utils/bitcoin_amount_utils.dart';
+import '../../models/bitcoin_account_state.dart';
+import '../../services/bitcoin/bitcoin_send_service.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'widgets/send/amount_font_fit.dart';
@@ -122,6 +125,11 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   void _handleDisplayChanged() {
     if (_syncingDisplay) return;
     final raw = _displayController.text.replaceAll(',', '');
+    if (_selectedToken?.networkKey?.startsWith('bitcoin:') == true) {
+      _amountController.text = _displayController.text;
+      if (mounted) setState(() => _selectedPercentage = null);
+      return;
+    }
     final entered = double.tryParse(raw) ?? 0.0;
     final tokenUsdPrice = _currentTokenUsdPrice();
     String tokenAmountText;
@@ -201,7 +209,9 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final String nativeName = blockchain.activeNetworkName;
     final String? nativeCoinGeckoId = blockchain.activeNetworkCoinGeckoId;
 
-    final address = await _walletService.getWalletAddressForFamily(family);
+    final address = family == ChainFamily.bitcoin
+        ? await _walletService.getCurrentWalletAddress()
+        : await _walletService.getWalletAddressForFamily(family);
     if (!mounted) return;
 
     if (address == null || address.isEmpty) {
@@ -233,7 +243,11 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
       // Only EVM has a local RPC path; Solana/Tron balances come from the
       // backend token list that BlockchainService already fetched.
-      if (family == ChainFamily.evm) {
+      if (family == ChainFamily.bitcoin) {
+        balanceBaseUnits = await blockchain.getNativeBalanceBaseUnits(address);
+        balance = double.parse(BitcoinAmountUtils.format(balanceBaseUnits));
+        _inputMode = AmountInputMode.token;
+      } else if (family == ChainFamily.evm) {
         balance = await blockchain.getEthBalance(address);
         balanceBaseUnits = await blockchain.getNativeBalanceBaseUnits(address);
       } else {
@@ -292,6 +306,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   }
 
   Future<void> _openTokenSelector() async {
+    if (Provider.of<BlockchainService>(context, listen: false).activeFamily ==
+        ChainFamily.bitcoin) {
+      return;
+    }
     final token = await Navigator.pushNamed(context, '/select-token');
     if (token is Token && mounted) {
       _applySelectedToken(token);
@@ -337,6 +355,50 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final decimals = _selectedToken?.decimals ?? 18;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final selectedToken = _selectedToken;
+    if (blockchain.activeFamily == ChainFamily.bitcoin) {
+      final networkKey = blockchain.activeNetworkKey;
+      final identity = await _walletService.getCurrentWalletAddress();
+      if (!mounted || identity == null) return;
+      final recipient = _addressController.text.trim();
+      final productNetwork = BitcoinProductNetwork.fromId(
+        NetworkKey.bitcoinNetworkIdOf(networkKey),
+      );
+      if (!BitcoinAmountUtils.recipientLooksCompatible(
+        recipient,
+        productNetwork,
+      )) {
+        ToastUtils.showError('Enter the recipient before calculating Max.');
+        return;
+      }
+      setState(() => _isCalculatingMax = true);
+      try {
+        final max = await BitcoinSendService().maximumAmount(
+          identity,
+          productNetwork,
+          recipient,
+          isCurrent: () =>
+              mounted &&
+              blockchain.activeNetworkKey == networkKey &&
+              blockchain.activeWalletAddress.toLowerCase() ==
+                  identity.toLowerCase(),
+        );
+        if (!mounted ||
+            blockchain.activeNetworkKey != networkKey ||
+            !identical(_selectedToken, selectedToken)) {
+          return;
+        }
+        _amountController.text = BitcoinAmountUtils.format(max);
+        _setDisplayFromTokenAmount(_amountController.text);
+        setState(() => _selectedPercentage = 100);
+      } catch (_) {
+        ToastUtils.showError(
+          'Unable to calculate Bitcoin amount and network fee.',
+        );
+      } finally {
+        if (mounted) setState(() => _isCalculatingMax = false);
+      }
+      return;
+    }
     final isNative =
         selectedToken?.contractAddress == null ||
         (selectedToken?.contractAddress?.isEmpty ?? true);
@@ -463,16 +525,22 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final family = blockchain.activeFamily;
     final isValidAddress = _isValidAddressForFamily(destination, family);
     if (!isValidAddress) {
-      _showError(l.invalidEthereumAddress);
+      _showError(
+        family == ChainFamily.bitcoin
+            ? 'Enter a Bitcoin address for the selected network.'
+            : l.invalidEthereumAddress,
+      );
       return;
     }
 
     BigInt amountInBaseUnits;
     try {
-      amountInBaseUnits = _walletService.parseAmountToBaseUnits(
-        amountText,
-        decimals: _selectedToken?.decimals ?? 18,
-      );
+      amountInBaseUnits = family == ChainFamily.bitcoin
+          ? BitcoinAmountUtils.parse(amountText)
+          : _walletService.parseAmountToBaseUnits(
+              amountText,
+              decimals: _selectedToken?.decimals ?? 18,
+            );
     } on FormatException catch (e) {
       _showError(e.message.isEmpty ? l.enterValidAmount : e.message);
       return;
@@ -528,7 +596,14 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   bool _isValidAddressForFamily(String address, ChainFamily family) {
     switch (family) {
       case ChainFamily.bitcoin:
-        return false;
+        final network = Provider.of<BlockchainService>(
+          context,
+          listen: false,
+        ).activeNetworkKey;
+        return BitcoinAmountUtils.recipientLooksCompatible(
+          address,
+          BitcoinProductNetwork.fromId(NetworkKey.bitcoinNetworkIdOf(network)),
+        );
       case ChainFamily.evm:
         return RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address);
       case ChainFamily.solana:
