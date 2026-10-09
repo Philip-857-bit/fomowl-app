@@ -4,6 +4,7 @@ import '../storage_service.dart';
 import 'bitcoin_account_store.dart';
 import 'bitcoin_native_crypto.dart';
 import 'bitcoin_protected_record.dart';
+import 'bitcoin_wallet_vault_service.dart';
 
 /// Restart-safe seed provisioning. Existing ciphertext is authoritative; corrupt records never trigger resealing.
 class BitcoinProvisioningService {
@@ -20,12 +21,14 @@ class BitcoinProvisioningService {
     BitcoinProductNetwork network = BitcoinProductNetwork.mainnet,
     bool restoreRemovedWallet = false,
   }) async {
+    final generation = BitcoinWalletVaultService.beginOperation();
     final wallet = (await storage.getWalletAccounts())
         .where(
           (account) =>
               account.address.toLowerCase() == walletIdentity.toLowerCase(),
         )
         .firstOrNull;
+    BitcoinWalletVaultService.checkOperation(generation);
     if (wallet == null) throw StateError('Wallet not found');
     if (wallet.origin != WalletOrigin.derived) return null;
     final index = wallet.derivationIndex ?? 0;
@@ -33,10 +36,16 @@ class BitcoinProvisioningService {
       throw StateError('Invalid Bitcoin account index');
     }
     final pending = _pending[storage.bitcoinAccounts.secureStore] ??= {};
-    final key = '${wallet.address.toLowerCase()}:${network.id}:$index';
+    final key =
+        '${wallet.address.toLowerCase()}:${network.id}:$index:$generation';
     final existing = pending[key];
     if (existing != null) return existing;
-    final operation = _provision(wallet, network, restoreRemovedWallet);
+    final operation = _provision(
+      wallet,
+      network,
+      restoreRemovedWallet,
+      generation,
+    );
     pending[key] = operation;
     try {
       return await operation;
@@ -49,7 +58,9 @@ class BitcoinProvisioningService {
     WalletAccount wallet,
     BitcoinProductNetwork network,
     bool restoreRemovedWallet,
+    int generation,
   ) async {
+    BitcoinWalletVaultService.checkOperation(generation);
     final store = storage.bitcoinAccounts;
     if (restoreRemovedWallet) await store.activateWallet(wallet.address);
     final index = wallet.derivationIndex ?? 0;
@@ -60,8 +71,10 @@ class BitcoinProvisioningService {
           store,
           _slot(wallet, network, purpose),
           current.accounts[purpose]!.metadata,
+          generation,
         );
       }
+      BitcoinWalletVaultService.checkOperation(generation);
       await storage.setWalletBitcoinSupport(wallet.address, true);
       return current;
     }
@@ -76,6 +89,7 @@ class BitcoinProvisioningService {
         throw StateError('Seed does not match this wallet');
       }
       for (final purpose in BitcoinPurpose.values) {
+        BitcoinWalletVaultService.checkOperation(generation);
         final location = _slot(wallet, network, purpose);
         final expected = await crypto.deriveAccount(
           seed,
@@ -88,7 +102,7 @@ class BitcoinProvisioningService {
           if (state.metadata != expected) {
             throw StateError('Bitcoin account identity mismatch');
           }
-          await _verifyStored(store, location, expected);
+          await _verifyStored(store, location, expected, generation);
           continue;
         }
         final wrappingKey = await crypto.wrappingKey();
@@ -110,8 +124,9 @@ class BitcoinProvisioningService {
             encryptedVault: sealed.encryptedVault,
             wrappingKey: wrappingKey,
           );
+          BitcoinWalletVaultService.checkOperation(generation);
           await store.createIfAbsent(location, candidate);
-          await _verifyStored(store, location, expected);
+          await _verifyStored(store, location, expected, generation);
         } finally {
           if (candidate != null) {
             candidate.dispose();
@@ -128,6 +143,7 @@ class BitcoinProvisioningService {
       if (result == null || result.accounts.length != 2) {
         throw StateError('Bitcoin custody provisioning was not retained');
       }
+      BitcoinWalletVaultService.checkOperation(generation);
       await storage.setWalletBitcoinSupport(wallet.address, true);
       return result;
     } finally {
@@ -149,16 +165,19 @@ class BitcoinProvisioningService {
     BitcoinAccountStore store,
     BitcoinAccountSlot location,
     BitcoinHdAccountMetadata expected,
+    int generation,
   ) => store.withRecord(location, (record) async {
     if (record.state.metadata != expected) {
       throw StateError('Bitcoin account identity mismatch');
     }
+    BitcoinWalletVaultService.checkOperation(generation);
     final signer = await crypto.openAccount(
       expected,
       record.encryptedVault,
       record.wrappingKey,
     );
     try {
+      BitcoinWalletVaultService.checkOperation(generation);
       if (await signer.accountInfo() != expected) {
         throw StateError('Bitcoin account identity mismatch');
       }

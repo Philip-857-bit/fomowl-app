@@ -13,6 +13,7 @@ import 'package:fomowl_wallet/services/bitcoin/bitcoin_provisioning_service.dart
 import 'package:fomowl_wallet/services/storage_service.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 import 'helpers/bitcoin_memory_store.dart';
+import 'package:fomowl_wallet/services/wallet_vault_service.dart';
 
 const mnemonic =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -66,11 +67,13 @@ class TrackingCrypto extends NativeBitcoinCrypto {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async => RustLib.init());
+  tearDown(WalletVaultService.lockAll);
   late StorageService storage;
   late MemoryStore memory;
   late TrackingCrypto crypto;
   late String identity;
   setUp(() async {
+    WalletVaultService.unlock();
     SharedPreferences.setMockInitialValues({});
     memory = MemoryStore();
     crypto = TrackingCrypto();
