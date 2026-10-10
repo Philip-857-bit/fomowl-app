@@ -146,6 +146,7 @@ class BitcoinFeeRates {
     BitcoinFeeTier.normal => normal,
     BitcoinFeeTier.priority => priority,
   });
+  bool get hasDistinctTiers => economy != normal || normal != priority;
 }
 
 class BitcoinTransactionStatus {

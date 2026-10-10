@@ -5,8 +5,13 @@ import '../../../../constants/app_colors.dart';
 
 class WarningBanner extends StatelessWidget {
   final String message;
+  final Color accentColor;
 
-  const WarningBanner({super.key, required this.message});
+  const WarningBanner({
+    super.key,
+    required this.message,
+    this.accentColor = AppColors.accentRed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,14 +21,10 @@ class WarningBanner extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppColors.accentRed.withValues(alpha: 0.15),
+            color: accentColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.shield_outlined,
-            color: AppColors.accentRed,
-            size: 16,
-          ),
+          child: Icon(Icons.shield_outlined, color: accentColor, size: 16),
         ),
         const SizedBox(width: 10),
         Expanded(

@@ -22,6 +22,7 @@ import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 import 'bitcoin_confirmation_test.dart' show transfer;
 import 'bitcoin_network_preference_test.dart' show fixture;
 import 'helpers/bitcoin_memory_store.dart';
+import 'helpers/test_fonts.dart';
 
 class BitcoinThemeChain extends BlockchainService {
   @override
@@ -55,7 +56,8 @@ Widget host(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async => RustLib.init());
-  setUp(() {
+  setUp(() async {
+    await installTestFonts();
     SharedPreferences.setMockInitialValues({});
     WalletVaultService.unlock();
   });

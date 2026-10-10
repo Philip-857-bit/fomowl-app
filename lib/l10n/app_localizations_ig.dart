@@ -1961,4 +1961,31 @@ class AppLocalizationsIg extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       'Ego dị iche n\'etiti Native SegWit na Taproot. Otu ụdị adreesị ga-ezuru ego na ụgwọ netwọk.';
+
+  @override
+  String get advancedTransactionDetails => 'Nkọwa ndị ọzọ';
+
+  @override
+  String get bitcoinNetworkSpeed => 'ỌSỌ NETWỌK';
+
+  @override
+  String get bitcoinEqualFeeTiers => 'Nhọrọ ọsọ niile na-eji otu ụgwọ ugbu a.';
+
+  @override
+  String get bitcoinInputType => 'Ụdị adreesị / ntinye';
+
+  @override
+  String get bitcoinEstimatedSize => 'Nha azụmahịa a tụrụ anya';
+
+  @override
+  String get bitcoinReplaceByFee => 'Dochie site na ụgwọ';
+
+  @override
+  String get bitcoinSpeed => 'Ọsọ';
+
+  @override
+  String get transactionAmountToSend => 'ỌNỤ EGO A GA-EZIGA';
+
+  @override
+  String get transactionTotal => 'Ngụkọta';
 }

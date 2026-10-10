@@ -21,6 +21,7 @@ import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'widgets/send/amount_font_fit.dart';
 import 'widgets/send/send_header.dart';
+import 'widgets/send/bitcoin_fee_tier_selector.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/send_primary_button.dart';
 import 'widgets/send/send_receiver_step.dart';
@@ -28,7 +29,13 @@ import 'widgets/send/send_receiver_step.dart';
 /// Send Token Screen
 /// Select token, enter recipient address and amount, then proceed to confirmation
 class SendTokenScreen extends StatefulWidget {
-  const SendTokenScreen({super.key});
+  final WalletService? walletService;
+  final BitcoinSendService? bitcoinSendService;
+  const SendTokenScreen({
+    super.key,
+    this.walletService,
+    this.bitcoinSendService,
+  });
 
   @override
   State<SendTokenScreen> createState() => _SendTokenScreenState();
@@ -42,7 +49,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   final TextEditingController _amountController = TextEditingController();
   // What the user is physically typing; may be in fiat or token units.
   final TextEditingController _displayController = TextEditingController();
-  final WalletService _walletService = WalletService();
+  late final WalletService _walletService =
+      widget.walletService ?? WalletService();
+  late final BitcoinSendService _bitcoinSendService =
+      widget.bitcoinSendService ?? BitcoinSendService();
 
   Token? _selectedToken;
   AmountInputMode _inputMode = AmountInputMode.token;
@@ -50,6 +60,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   bool _isCalculatingMax = false;
   bool _isPreparingBitcoin = false;
   BitcoinFeeTier _bitcoinFeeTier = BitcoinFeeTier.normal;
+  bool _bitcoinFeeTierWasSelected = false;
   int? _selectedPercentage;
 
   double _availableBalance = 0.0;
@@ -375,7 +386,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       }
       setState(() => _isCalculatingMax = true);
       try {
-        final max = await BitcoinSendService().maximumAmount(
+        final max = await _bitcoinSendService.maximumAmount(
           identity,
           productNetwork,
           recipient,
@@ -582,7 +593,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       try {
         final identity = await _walletService.getCurrentWalletAddress();
         if (!mounted || identity == null) return;
-        bitcoinTransfer = await BitcoinSendService().prepareTransfer(
+        bitcoinTransfer = await _bitcoinSendService.prepareTransfer(
           identity,
           BitcoinProductNetwork.fromId(
             NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
@@ -590,6 +601,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           destination,
           amountInBaseUnits,
           feeTier: _bitcoinFeeTier,
+          feeTierWasSelected: _bitcoinFeeTierWasSelected,
           isCurrent: () =>
               mounted &&
               blockchain.activeNetworkKey == activeNetworkKey &&
@@ -703,7 +715,6 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     context.select<CurrencyController, String>(
       (controller) => controller.currencyCode,
     );
@@ -1006,32 +1017,20 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
             if (blockchain.activeFamily == ChainFamily.bitcoin)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: DropdownButtonFormField<BitcoinFeeTier>(
-                  initialValue: _bitcoinFeeTier,
-                  decoration: InputDecoration(labelText: l.bitcoinNetworkFee),
-                  items: [
-                    DropdownMenuItem(
-                      value: BitcoinFeeTier.economy,
-                      child: Text(l.bitcoinEconomy),
-                    ),
-                    DropdownMenuItem(
-                      value: BitcoinFeeTier.normal,
-                      child: Text(l.bitcoinNormal),
-                    ),
-                    DropdownMenuItem(
-                      value: BitcoinFeeTier.priority,
-                      child: Text(l.bitcoinPriority),
-                    ),
-                  ],
-                  onChanged: _isPreparingBitcoin || _isCalculatingMax
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          setState(() {
-                            _bitcoinFeeTier = value;
-                            _selectedPercentage = null;
-                          });
-                        },
+                child: BitcoinFeeTierSelector(
+                  api: _bitcoinSendService.network,
+                  network: BitcoinProductNetwork.fromId(
+                    NetworkKey.bitcoinNetworkIdOf(blockchain.activeNetworkKey),
+                  ),
+                  selected: _bitcoinFeeTier,
+                  enabled: !_isPreparingBitcoin && !_isCalculatingMax,
+                  onChanged: (value) {
+                    setState(() {
+                      _bitcoinFeeTier = value;
+                      _bitcoinFeeTierWasSelected = true;
+                      _selectedPercentage = null;
+                    });
+                  },
                 ),
               ),
             // Send button

@@ -2005,4 +2005,32 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       'Los fondos están divididos entre SegWit nativo y Taproot. Un solo formato de dirección debe cubrir el importe y la comisión de red.';
+
+  @override
+  String get advancedTransactionDetails => 'Detalles avanzados';
+
+  @override
+  String get bitcoinNetworkSpeed => 'VELOCIDAD DE RED';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'Todas las opciones de velocidad usan actualmente la misma comisión.';
+
+  @override
+  String get bitcoinInputType => 'Tipo de dirección / entrada';
+
+  @override
+  String get bitcoinEstimatedSize => 'Tamaño estimado de la transacción';
+
+  @override
+  String get bitcoinReplaceByFee => 'Reemplazo por comisión';
+
+  @override
+  String get bitcoinSpeed => 'Velocidad';
+
+  @override
+  String get transactionAmountToSend => 'CANTIDAD A ENVIAR';
+
+  @override
+  String get transactionTotal => 'Total';
 }

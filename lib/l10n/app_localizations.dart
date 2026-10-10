@@ -3685,6 +3685,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.'**
   String get bitcoinSplitFunds;
+
+  /// No description provided for @advancedTransactionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced details'**
+  String get advancedTransactionDetails;
+
+  /// No description provided for @bitcoinNetworkSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'NETWORK SPEED'**
+  String get bitcoinNetworkSpeed;
+
+  /// No description provided for @bitcoinEqualFeeTiers.
+  ///
+  /// In en, this message translates to:
+  /// **'All speed options currently use the same fee.'**
+  String get bitcoinEqualFeeTiers;
+
+  /// No description provided for @bitcoinInputType.
+  ///
+  /// In en, this message translates to:
+  /// **'Address / input type'**
+  String get bitcoinInputType;
+
+  /// No description provided for @bitcoinEstimatedSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated transaction size'**
+  String get bitcoinEstimatedSize;
+
+  /// No description provided for @bitcoinReplaceByFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace-by-fee'**
+  String get bitcoinReplaceByFee;
+
+  /// No description provided for @bitcoinSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get bitcoinSpeed;
+
+  /// No description provided for @transactionAmountToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'AMOUNT TO SEND'**
+  String get transactionAmountToSend;
+
+  /// No description provided for @transactionTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get transactionTotal;
 }
 
 class _AppLocalizationsDelegate

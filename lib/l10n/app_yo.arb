@@ -659,5 +659,14 @@
   "bitcoinEconomy": "Ọ̀ya kékeré",
   "bitcoinNormal": "Déédéé",
   "bitcoinPriority": "Àkọ́kọ́",
-  "bitcoinSplitFunds": "Owó pín sí Native SegWit àti Taproot. Irú àdírẹ́sì kan gbọ́dọ̀ tó fún iye owó àti ọ̀ya nẹ́tíwọ́ọ̀kì."
+  "bitcoinSplitFunds": "Owó pín sí Native SegWit àti Taproot. Irú àdírẹ́sì kan gbọ́dọ̀ tó fún iye owó àti ọ̀ya nẹ́tíwọ́ọ̀kì.",
+  "advancedTransactionDetails": "Àwọn àlàyé síwájú",
+  "bitcoinNetworkSpeed": "ÌYÁRÁ NẸ́TÍWỌ́Ọ̀KÌ",
+  "bitcoinEqualFeeTiers": "Gbogbo àṣàyàn ìyára ń lo owó kan náà lọ́wọ́lọ́wọ́.",
+  "bitcoinInputType": "Irú àdírẹ́sì / ìwọlé",
+  "bitcoinEstimatedSize": "Ìwọ̀n ìṣòwò tí a fojú díwọ̀n",
+  "bitcoinReplaceByFee": "Rọ́pò pẹ̀lú owó",
+  "bitcoinSpeed": "Ìyára",
+  "transactionAmountToSend": "IYE LÁTI FI RÁNṢẸ́",
+  "transactionTotal": "Àpapọ̀"
 }

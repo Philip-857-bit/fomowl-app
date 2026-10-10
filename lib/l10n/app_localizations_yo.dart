@@ -1958,4 +1958,32 @@ class AppLocalizationsYo extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       'Owó pín sí Native SegWit àti Taproot. Irú àdírẹ́sì kan gbọ́dọ̀ tó fún iye owó àti ọ̀ya nẹ́tíwọ́ọ̀kì.';
+
+  @override
+  String get advancedTransactionDetails => 'Àwọn àlàyé síwájú';
+
+  @override
+  String get bitcoinNetworkSpeed => 'ÌYÁRÁ NẸ́TÍWỌ́Ọ̀KÌ';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'Gbogbo àṣàyàn ìyára ń lo owó kan náà lọ́wọ́lọ́wọ́.';
+
+  @override
+  String get bitcoinInputType => 'Irú àdírẹ́sì / ìwọlé';
+
+  @override
+  String get bitcoinEstimatedSize => 'Ìwọ̀n ìṣòwò tí a fojú díwọ̀n';
+
+  @override
+  String get bitcoinReplaceByFee => 'Rọ́pò pẹ̀lú owó';
+
+  @override
+  String get bitcoinSpeed => 'Ìyára';
+
+  @override
+  String get transactionAmountToSend => 'IYE LÁTI FI RÁNṢẸ́';
+
+  @override
+  String get transactionTotal => 'Àpapọ̀';
 }

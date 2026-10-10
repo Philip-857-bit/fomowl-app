@@ -1,3 +1,9 @@
+import '../../constants/app_colors.dart';
+import '../../models/bitcoin_network_data.dart';
+import '../../widgets/advanced_transaction_details.dart';
+import 'widgets/transfer_confirmation/amount_summary.dart';
+import 'widgets/transfer_confirmation/transfer_header.dart';
+import 'widgets/transfer_confirmation/warning_banner.dart';
 import '../../theme/app_chain_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_en.dart';
@@ -75,104 +81,266 @@ class _BitcoinTransferConfirmationScreenState
     }
   }
 
+  String _btc(BigInt sats) {
+    final parts = BitcoinAmountUtils.format(sats).split('.');
+    return '${parts.first}.${(parts.length == 2 ? parts.last : '').padRight(8, '0')} BTC';
+  }
+
+  Widget _detail(
+    String label,
+    String value, {
+    String? secondary,
+    bool total = false,
+  }) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 3,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: total ? Colors.white : Colors.white60,
+              fontWeight: total ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 5,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SelectableText(
+                value,
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: total ? 16 : 14,
+                  color: Colors.white,
+                  fontWeight: total ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+              if (secondary != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  secondary,
+                  style: const TextStyle(fontSize: 12, color: Colors.white60),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final l =
         Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         AppLocalizationsEn();
     final chain = context.chainTheme;
+    final transfer = widget.transfer;
+    final plan = transfer.plan;
     final actionStyle = FilledButton.styleFrom(
       backgroundColor: chain.accentColor,
       foregroundColor: chain.accentColor.computeLuminance() > 0.35
           ? Colors.black
           : Colors.white,
+      minimumSize: const Size(double.infinity, 56),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
     );
-    final transfer = widget.transfer;
-    final plan = transfer.plan;
-    if (!_verified) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l.bitcoinConfirmTransfer)),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                if (_error != null)
-                  Text(_error!, key: const Key('bitcoin-confirmation-error'))
-                else
-                  CircularProgressIndicator(color: chain.accentColor),
-                FilledButton(
-                  key: const Key('bitcoin-confirm-transfer'),
-                  style: actionStyle,
-                  onPressed: null,
-                  child: Text('Confirm'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    final recipient = plan.recipients.singleOrNull;
-    Widget detail(String label, String value) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 4),
-          SelectableText(value),
-        ],
-      ),
-    );
+    final speed = switch (transfer.requestedFeeTier) {
+      BitcoinFeeTier.economy => l.bitcoinEconomy,
+      BitcoinFeeTier.normal => l.bitcoinNormal,
+      BitcoinFeeTier.priority => l.bitcoinPriority,
+    };
     return Scaffold(
-      appBar: AppBar(title: Text(l.bitcoinConfirmTransfer)),
+      backgroundColor: AppColors.background,
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
+        child: Column(
           children: [
-            detail(
-              l.bitcoinAmount,
-              '${BitcoinAmountUtils.format(plan.recipientTotalSat)} BTC',
+            TransferHeader(
+              onBack: () => Navigator.pop(context),
+              accentColor: chain.accentColor,
             ),
-            detail(l.bitcoinDestination, recipient?.address ?? ''),
-            detail(
-              'Network',
-              transfer.network == BitcoinProductNetwork.mainnet
-                  ? 'Bitcoin'
-                  : 'Bitcoin Testnet4',
-            ),
-            detail(l.bitcoinFeeRate, '${plan.feeRateSatVb} sat/vB'),
-            detail(
-              l.bitcoinNetworkFee,
-              '${BitcoinAmountUtils.format(plan.feeSat)} BTC (${plan.feeSat} sats)',
-            ),
-            detail(l.bitcoinEstimatedVbytes, plan.estimatedVbytes.toString()),
-            detail(
-              l.bitcoinTotalDebit,
-              '${BitcoinAmountUtils.format(plan.recipientTotalSat + plan.feeSat)} BTC',
-            ),
-            detail(
-              l.bitcoinAddressType,
-              transfer.purpose == BitcoinPurpose.bip84
-                  ? l.bitcoinNativeSegwit
-                  : l.bitcoinTaproot,
-            ),
-            detail('RBF', plan.rbf ? l.bitcoinEnabled : l.bitcoinDisabled),
-            if (_error != null)
-              Text(_error!, key: const Key('bitcoin-confirmation-error')),
-            if (!_verified && _error == null)
-              Center(
-                child: CircularProgressIndicator(color: chain.accentColor),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardDark,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l.confirmTransfer,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                        if (!_verified && _error == null)
+                          Center(
+                            child: CircularProgressIndicator(
+                              color: chain.accentColor,
+                            ),
+                          ),
+                        if (_verified) ...[
+                          AmountSummary(
+                            amountText: _btc(
+                              plan.recipientTotalSat,
+                            ).replaceFirst(' BTC', ''),
+                            symbol: 'BTC',
+                            fitAmount: true,
+                            title: l.transactionAmountToSend,
+                            accentColor: chain.accentColor,
+                          ),
+                          const SizedBox(height: 28),
+                          Text(
+                            l.transactionDetails,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white60,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Column(
+                              children: [
+                                _detail(
+                                  l.swapToLabel,
+                                  plan.recipients.single.address,
+                                ),
+                                const Divider(
+                                  color: AppColors.divider,
+                                  height: 1,
+                                ),
+                                _detail(
+                                  l.network,
+                                  transfer.network ==
+                                          BitcoinProductNetwork.mainnet
+                                      ? 'Bitcoin'
+                                      : 'Bitcoin Testnet4',
+                                ),
+                                const Divider(
+                                  color: AppColors.divider,
+                                  height: 1,
+                                ),
+                                _detail(
+                                  l.bitcoinNetworkFee,
+                                  _btc(plan.feeSat),
+                                  secondary: '${plan.feeSat} sats',
+                                ),
+                                if (transfer.showFeeTier)
+                                  _detail(l.bitcoinSpeed, speed),
+                                const Divider(
+                                  color: AppColors.divider,
+                                  height: 1,
+                                ),
+                                _detail(
+                                  l.transactionTotal,
+                                  _btc(plan.recipientTotalSat + plan.feeSat),
+                                  total: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          AdvancedTransactionDetails(
+                            title: l.advancedTransactionDetails,
+                            items: [
+                              AdvancedTransactionDetail(
+                                label: l.bitcoinInputType,
+                                value: transfer.purpose == BitcoinPurpose.bip84
+                                    ? l.bitcoinNativeSegwit
+                                    : l.bitcoinTaproot,
+                              ),
+                              AdvancedTransactionDetail(
+                                label: l.bitcoinFeeRate,
+                                value: '${plan.feeRateSatVb} sat/vB',
+                              ),
+                              AdvancedTransactionDetail(
+                                label: l.bitcoinEstimatedSize,
+                                value: '${plan.estimatedVbytes} vB',
+                              ),
+                              AdvancedTransactionDetail(
+                                label: l.bitcoinReplaceByFee,
+                                value: plan.rbf
+                                    ? l.bitcoinEnabled
+                                    : l.bitcoinDisabled,
+                              ),
+                            ],
+                          ),
+                        ],
+                        if (_error != null) ...[
+                          const SizedBox(height: 20),
+                          Text(
+                            _error!,
+                            key: const Key('bitcoin-confirmation-error'),
+                            style: const TextStyle(color: AppColors.error),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: WarningBanner(
+                      message: l.transferWarningMessage,
+                      accentColor: chain.accentColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
-            const SizedBox(height: 24),
-            FilledButton(
-              key: const Key('bitcoin-confirm-transfer'),
-              style: actionStyle,
-              onPressed: _verified && !_busy && widget.onConfirm != null
-                  ? _confirm
-                  : null,
-              child: Text(_busy ? l.bitcoinPreparingTransfer : 'Confirm'),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: FilledButton(
+                key: const Key('bitcoin-confirm-transfer'),
+                style: actionStyle,
+                onPressed: _verified && !_busy && widget.onConfirm != null
+                    ? _confirm
+                    : null,
+                child: _busy
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Flexible(child: Text(l.bitcoinPreparingTransfer)),
+                        ],
+                      )
+                    : Text(l.confirmTransfer),
+              ),
             ),
           ],
         ),

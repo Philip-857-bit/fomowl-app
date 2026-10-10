@@ -16,6 +16,7 @@ import '../../utils/toast_utils.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/receive/receive_warning_banner.dart';
+import 'widgets/receive/bitcoin_receive_format_selector.dart';
 import 'widgets/receive/qr_code_card.dart';
 import 'widgets/receive/address_display_card.dart';
 import 'widgets/receive/receive_action_buttons.dart';
@@ -302,26 +303,16 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
               if (blockchain.activeFamily == ChainFamily.bitcoin)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: DropdownButtonFormField<BitcoinPurpose>(
-                    initialValue: _bitcoinPurpose,
-                    decoration: InputDecoration(
-                      labelText: l.bitcoinAddressType,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: BitcoinReceiveFormatSelector(
+                      selected: _bitcoinPurpose,
+                      onChanged: (value) {
+                        if (value == _bitcoinPurpose) return;
+                        setState(() => _bitcoinPurpose = value);
+                        _initForFamily();
+                      },
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        value: BitcoinPurpose.bip84,
-                        child: Text(l.bitcoinNativeSegwit),
-                      ),
-                      DropdownMenuItem(
-                        value: BitcoinPurpose.bip86,
-                        child: Text(l.bitcoinTaproot),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value == null || value == _bitcoinPurpose) return;
-                      setState(() => _bitcoinPurpose = value);
-                      _initForFamily();
-                    },
                   ),
                 ),
               Padding(

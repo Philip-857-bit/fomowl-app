@@ -659,5 +659,14 @@
   "bitcoinEconomy": "Economy",
   "bitcoinNormal": "Normal",
   "bitcoinPriority": "Priority",
-  "bitcoinSplitFunds": "Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee."
+  "bitcoinSplitFunds": "Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.",
+  "advancedTransactionDetails": "Advanced details",
+  "bitcoinNetworkSpeed": "NETWORK SPEED",
+  "bitcoinEqualFeeTiers": "All speed options currently use the same fee.",
+  "bitcoinInputType": "Address / input type",
+  "bitcoinEstimatedSize": "Estimated transaction size",
+  "bitcoinReplaceByFee": "Replace-by-fee",
+  "bitcoinSpeed": "Speed",
+  "transactionAmountToSend": "AMOUNT TO SEND",
+  "transactionTotal": "Total"
 }

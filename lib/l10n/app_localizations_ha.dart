@@ -1969,4 +1969,32 @@ class AppLocalizationsHa extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       'An raba kuɗin tsakanin Native SegWit da Taproot. Nau\'in adireshi ɗaya dole ya biya adadi da kuɗin hanyar sadarwa.';
+
+  @override
+  String get advancedTransactionDetails => 'Ƙarin bayani';
+
+  @override
+  String get bitcoinNetworkSpeed => 'SAURIN HANYAR SADARWA';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'Duk zaɓuɓɓukan sauri suna amfani da kuɗi iri ɗaya a yanzu.';
+
+  @override
+  String get bitcoinInputType => 'Nau’in adireshi / shigarwa';
+
+  @override
+  String get bitcoinEstimatedSize => 'Girman ciniki da aka kiyasta';
+
+  @override
+  String get bitcoinReplaceByFee => 'Sauyawa da kuɗi';
+
+  @override
+  String get bitcoinSpeed => 'Sauri';
+
+  @override
+  String get transactionAmountToSend => 'ADADIN DA ZA A AIKA';
+
+  @override
+  String get transactionTotal => 'Jimilla';
 }

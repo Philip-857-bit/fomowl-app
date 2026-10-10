@@ -659,5 +659,14 @@
   "bitcoinEconomy": "Económica",
   "bitcoinNormal": "Normal",
   "bitcoinPriority": "Prioritaria",
-  "bitcoinSplitFunds": "Los fondos están divididos entre SegWit nativo y Taproot. Un solo formato de dirección debe cubrir el importe y la comisión de red."
+  "bitcoinSplitFunds": "Los fondos están divididos entre SegWit nativo y Taproot. Un solo formato de dirección debe cubrir el importe y la comisión de red.",
+  "advancedTransactionDetails": "Detalles avanzados",
+  "bitcoinNetworkSpeed": "VELOCIDAD DE RED",
+  "bitcoinEqualFeeTiers": "Todas las opciones de velocidad usan actualmente la misma comisión.",
+  "bitcoinInputType": "Tipo de dirección / entrada",
+  "bitcoinEstimatedSize": "Tamaño estimado de la transacción",
+  "bitcoinReplaceByFee": "Reemplazo por comisión",
+  "bitcoinSpeed": "Velocidad",
+  "transactionAmountToSend": "CANTIDAD A ENVIAR",
+  "transactionTotal": "Total"
 }

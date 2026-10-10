@@ -659,5 +659,14 @@
   "bitcoinEconomy": "Mai rahusa",
   "bitcoinNormal": "Na yau da kullum",
   "bitcoinPriority": "Fifiko",
-  "bitcoinSplitFunds": "An raba kuɗin tsakanin Native SegWit da Taproot. Nau'in adireshi ɗaya dole ya biya adadi da kuɗin hanyar sadarwa."
+  "bitcoinSplitFunds": "An raba kuɗin tsakanin Native SegWit da Taproot. Nau'in adireshi ɗaya dole ya biya adadi da kuɗin hanyar sadarwa.",
+  "advancedTransactionDetails": "Ƙarin bayani",
+  "bitcoinNetworkSpeed": "SAURIN HANYAR SADARWA",
+  "bitcoinEqualFeeTiers": "Duk zaɓuɓɓukan sauri suna amfani da kuɗi iri ɗaya a yanzu.",
+  "bitcoinInputType": "Nau’in adireshi / shigarwa",
+  "bitcoinEstimatedSize": "Girman ciniki da aka kiyasta",
+  "bitcoinReplaceByFee": "Sauyawa da kuɗi",
+  "bitcoinSpeed": "Sauri",
+  "transactionAmountToSend": "ADADIN DA ZA A AIKA",
+  "transactionTotal": "Jimilla"
 }

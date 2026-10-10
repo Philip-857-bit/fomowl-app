@@ -1884,4 +1884,31 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       '资金分布于原生 SegWit 和 Taproot。单一地址类型的资金必须足以支付金额和网络费用。';
+
+  @override
+  String get advancedTransactionDetails => '高级详情';
+
+  @override
+  String get bitcoinNetworkSpeed => '网络速度';
+
+  @override
+  String get bitcoinEqualFeeTiers => '目前所有速度选项的手续费相同。';
+
+  @override
+  String get bitcoinInputType => '地址 / 输入类型';
+
+  @override
+  String get bitcoinEstimatedSize => '预计交易大小';
+
+  @override
+  String get bitcoinReplaceByFee => '手续费替换';
+
+  @override
+  String get bitcoinSpeed => '速度';
+
+  @override
+  String get transactionAmountToSend => '发送金额';
+
+  @override
+  String get transactionTotal => '总计';
 }

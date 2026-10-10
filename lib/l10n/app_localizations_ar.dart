@@ -1965,4 +1965,32 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       'الأموال موزعة بين SegWit الأصلي وTaproot. يجب أن يغطي نوع عنوان واحد المبلغ ورسوم الشبكة.';
+
+  @override
+  String get advancedTransactionDetails => 'تفاصيل متقدمة';
+
+  @override
+  String get bitcoinNetworkSpeed => 'سرعة الشبكة';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'تستخدم جميع خيارات السرعة الرسوم نفسها حاليًا.';
+
+  @override
+  String get bitcoinInputType => 'نوع العنوان / المدخل';
+
+  @override
+  String get bitcoinEstimatedSize => 'حجم المعاملة التقديري';
+
+  @override
+  String get bitcoinReplaceByFee => 'الاستبدال بالرسوم';
+
+  @override
+  String get bitcoinSpeed => 'السرعة';
+
+  @override
+  String get transactionAmountToSend => 'المبلغ المراد إرساله';
+
+  @override
+  String get transactionTotal => 'الإجمالي';
 }

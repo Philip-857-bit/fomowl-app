@@ -23,11 +23,17 @@ class BitcoinPreparedTransfer {
   final BitcoinProductNetwork network;
   final BitcoinPurpose purpose;
   final BitcoinTransactionPlanDto plan;
+
+  /// Friendly presentation only; neither field overrides the verified plan.
+  final BitcoinFeeTier requestedFeeTier;
+  final bool showFeeTier;
   BitcoinPreparedTransfer({
     required this.walletIdentity,
     required this.network,
     required this.purpose,
     required BitcoinTransactionPlanDto plan,
+    this.requestedFeeTier = BitcoinFeeTier.normal,
+    this.showFeeTier = false,
   }) : plan = BitcoinTransactionPlanDto(
          account: plan.account,
          unsignedTxHex: plan.unsignedTxHex,
@@ -150,6 +156,7 @@ class BitcoinSendService {
     BigInt amount, {
     BitcoinPurpose? purpose,
     BitcoinFeeTier feeTier = BitcoinFeeTier.normal,
+    bool feeTierWasSelected = false,
     bool rbf = true,
     bool Function()? isCurrent,
   }) async {
@@ -224,6 +231,8 @@ class BitcoinSendService {
       network: productNetwork,
       purpose: selectedPurpose,
       plan: plan,
+      requestedFeeTier: feeTier,
+      showFeeTier: feeTierWasSelected && fees.hasDistinctTiers,
     );
   }
 

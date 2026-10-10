@@ -662,5 +662,14 @@
   "bitcoinEconomy": "经济",
   "bitcoinNormal": "普通",
   "bitcoinPriority": "优先",
-  "bitcoinSplitFunds": "资金分布于原生 SegWit 和 Taproot。单一地址类型的资金必须足以支付金额和网络费用。"
+  "bitcoinSplitFunds": "资金分布于原生 SegWit 和 Taproot。单一地址类型的资金必须足以支付金额和网络费用。",
+  "advancedTransactionDetails": "高级详情",
+  "bitcoinNetworkSpeed": "网络速度",
+  "bitcoinEqualFeeTiers": "目前所有速度选项的手续费相同。",
+  "bitcoinInputType": "地址 / 输入类型",
+  "bitcoinEstimatedSize": "预计交易大小",
+  "bitcoinReplaceByFee": "手续费替换",
+  "bitcoinSpeed": "速度",
+  "transactionAmountToSend": "发送金额",
+  "transactionTotal": "总计"
 }

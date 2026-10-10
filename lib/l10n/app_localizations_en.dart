@@ -1974,4 +1974,32 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get bitcoinSplitFunds =>
       'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.';
+
+  @override
+  String get advancedTransactionDetails => 'Advanced details';
+
+  @override
+  String get bitcoinNetworkSpeed => 'NETWORK SPEED';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'All speed options currently use the same fee.';
+
+  @override
+  String get bitcoinInputType => 'Address / input type';
+
+  @override
+  String get bitcoinEstimatedSize => 'Estimated transaction size';
+
+  @override
+  String get bitcoinReplaceByFee => 'Replace-by-fee';
+
+  @override
+  String get bitcoinSpeed => 'Speed';
+
+  @override
+  String get transactionAmountToSend => 'AMOUNT TO SEND';
+
+  @override
+  String get transactionTotal => 'Total';
 }

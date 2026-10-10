@@ -659,5 +659,14 @@
   "bitcoinEconomy": "اقتصادي",
   "bitcoinNormal": "عادي",
   "bitcoinPriority": "أولوية",
-  "bitcoinSplitFunds": "الأموال موزعة بين SegWit الأصلي وTaproot. يجب أن يغطي نوع عنوان واحد المبلغ ورسوم الشبكة."
+  "bitcoinSplitFunds": "الأموال موزعة بين SegWit الأصلي وTaproot. يجب أن يغطي نوع عنوان واحد المبلغ ورسوم الشبكة.",
+  "advancedTransactionDetails": "تفاصيل متقدمة",
+  "bitcoinNetworkSpeed": "سرعة الشبكة",
+  "bitcoinEqualFeeTiers": "تستخدم جميع خيارات السرعة الرسوم نفسها حاليًا.",
+  "bitcoinInputType": "نوع العنوان / المدخل",
+  "bitcoinEstimatedSize": "حجم المعاملة التقديري",
+  "bitcoinReplaceByFee": "الاستبدال بالرسوم",
+  "bitcoinSpeed": "السرعة",
+  "transactionAmountToSend": "المبلغ المراد إرساله",
+  "transactionTotal": "الإجمالي"
 }

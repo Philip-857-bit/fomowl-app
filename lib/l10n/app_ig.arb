@@ -659,5 +659,14 @@
   "bitcoinEconomy": "Ụgwọ dị ala",
   "bitcoinNormal": "Nkịtị",
   "bitcoinPriority": "Ibu ụzọ",
-  "bitcoinSplitFunds": "Ego dị iche n'etiti Native SegWit na Taproot. Otu ụdị adreesị ga-ezuru ego na ụgwọ netwọk."
+  "bitcoinSplitFunds": "Ego dị iche n'etiti Native SegWit na Taproot. Otu ụdị adreesị ga-ezuru ego na ụgwọ netwọk.",
+  "advancedTransactionDetails": "Nkọwa ndị ọzọ",
+  "bitcoinNetworkSpeed": "ỌSỌ NETWỌK",
+  "bitcoinEqualFeeTiers": "Nhọrọ ọsọ niile na-eji otu ụgwọ ugbu a.",
+  "bitcoinInputType": "Ụdị adreesị / ntinye",
+  "bitcoinEstimatedSize": "Nha azụmahịa a tụrụ anya",
+  "bitcoinReplaceByFee": "Dochie site na ụgwọ",
+  "bitcoinSpeed": "Ọsọ",
+  "transactionAmountToSend": "ỌNỤ EGO A GA-EZIGA",
+  "transactionTotal": "Ngụkọta"
 }
