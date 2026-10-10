@@ -52,8 +52,6 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
 
   @override
   void dispose() {
-    _walletNameController.text = '';
-    _secretPhraseController.text = '';
     _walletNameController.dispose();
     _secretPhraseController.removeListener(_onPhraseChanged);
     _secretPhraseController.dispose();
