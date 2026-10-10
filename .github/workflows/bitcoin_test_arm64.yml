@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      CARGO_BUILD_JOBS: 2
+      CARGO_BUILD_JOBS: 1
       CARGO_INCREMENTAL: 0
       CARGO_PROFILE_DEV_DEBUG: 0
       CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG: 0
@@ -64,6 +64,34 @@ jobs:
         run: cargo build --locked --manifest-path rust/Cargo.toml
       - name: Verify Bitcoin adaptive theme and user preferences
         run: flutter test --no-pub --concurrency=2 test/bitcoin_adaptive_theme_test.dart test/bitcoin_rollout_service_test.dart test/bitcoin_network_preference_test.dart
+      - name: Release host-test build cache before Android packaging
+        run: cargo clean --manifest-path rust/Cargo.toml --profile dev
+      - name: Bound release compiler memory on the disposable runner
+        shell: python
+        run: |
+          from pathlib import Path
+          properties = Path("android/gradle.properties")
+          overrides = {
+              "org.gradle.jvmargs": "-Xmx3G -XX:MaxMetaspaceSize=768m -XX:ReservedCodeCacheSize=256m -Dfile.encoding=UTF-8",
+              "org.gradle.workers.max": "1",
+              "org.gradle.parallel": "false",
+              "kotlin.daemon.jvmargs": "-Xmx512m",
+          }
+          lines = [line for line in properties.read_text().splitlines()
+                   if line.split("=", 1)[0].strip() not in overrides]
+          properties.write_text("\n".join(lines + [f"{key}={value}" for key, value in overrides.items()]) + "\n")
+      - name: Reserve compiler swap headroom on the disposable runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          swap_file=/mnt/owllet-bitcoin-build.swap
+          test ! -e "$swap_file"
+          sudo fallocate -l 4G "$swap_file"
+          sudo chmod 600 "$swap_file"
+          sudo mkswap "$swap_file"
+          sudo swapon "$swap_file"
+          free -m
+          df -h /
       - name: Create build-only Firebase placeholder
         shell: python
         run: |
@@ -112,6 +140,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Resource telemetry contains process names/RSS only, never command arguments or environment.
+          (
+            while true; do
+              date -u
+              free -m
+              df -h /
+              ps -eo comm,rss --sort=-rss | head -n 8 || true
+              sleep 60
+            done
+          ) &
+          monitor_pid=$!
+          trap 'kill "$monitor_pid" 2>/dev/null || true; free -m; df -h /; grep "^oom_kill " /proc/vmstat || true' EXIT
           flutter build apk --release --target-platform android-arm64 --split-per-abi --no-tree-shake-icons \
             --dart-define=BACKEND_BASE_URL=https://corestaging.owlletapp.com \
             --dart-define=BACKEND_CERT_SHA256_PINS= \
