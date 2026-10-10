@@ -1,3 +1,4 @@
+import '../../theme/app_chain_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
@@ -79,6 +80,13 @@ class _BitcoinTransferConfirmationScreenState
     final l =
         Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         AppLocalizationsEn();
+    final chain = context.chainTheme;
+    final actionStyle = FilledButton.styleFrom(
+      backgroundColor: chain.accentColor,
+      foregroundColor: chain.accentColor.computeLuminance() > 0.35
+          ? Colors.black
+          : Colors.white,
+    );
     final transfer = widget.transfer;
     final plan = transfer.plan;
     if (!_verified) {
@@ -92,9 +100,10 @@ class _BitcoinTransferConfirmationScreenState
                 if (_error != null)
                   Text(_error!, key: const Key('bitcoin-confirmation-error'))
                 else
-                  const CircularProgressIndicator(),
+                  CircularProgressIndicator(color: chain.accentColor),
                 FilledButton(
-                  key: Key('bitcoin-confirm-transfer'),
+                  key: const Key('bitcoin-confirm-transfer'),
+                  style: actionStyle,
                   onPressed: null,
                   child: Text('Confirm'),
                 ),
@@ -153,10 +162,13 @@ class _BitcoinTransferConfirmationScreenState
             if (_error != null)
               Text(_error!, key: const Key('bitcoin-confirmation-error')),
             if (!_verified && _error == null)
-              const Center(child: CircularProgressIndicator()),
+              Center(
+                child: CircularProgressIndicator(color: chain.accentColor),
+              ),
             const SizedBox(height: 24),
             FilledButton(
               key: const Key('bitcoin-confirm-transfer'),
+              style: actionStyle,
               onPressed: _verified && !_busy && widget.onConfirm != null
                   ? _confirm
                   : null,

@@ -43,6 +43,30 @@ class AppChainTheme {
   // Tier 1: Explicit Figma Hero Themes (100% Pixel Match with Figma 35 Designs)
   // --------------------------------------------------------------------------
 
+  /// Bitcoin native orange accents within the existing dark visual system.
+  static const AppChainTheme bitcoin = AppChainTheme(
+    id: 'bitcoin',
+    displayName: 'Bitcoin',
+    primaryColor: Color(0xFFF7931A),
+    accentColor: Color(0xFFF7931A),
+    secondaryAccent: Color(0xFFFFB347),
+    balanceCardGradient: LinearGradient(
+      colors: [Color(0xFF321B05), Color(0xFF1C1005), Color(0xFF0A0A0A)],
+      stops: [0.0, 0.55, 1.0],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    buttonGradient: LinearGradient(
+      colors: [Color(0xFFF7931A), Color(0xFFA95500)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    glassTint: Color(0xFFF7931A),
+    badgeColor: Color(0xFFF7931A),
+    surfaceOverlay: Color(0x22F7931A),
+    activeIndicatorColor: Color(0xFFF7931A),
+  );
+
   /// Ethereum (ETH) Theme — Figma #315:7033, #315:2130, #315:3825, #315:5116
   static const AppChainTheme ethereum = AppChainTheme(
     id: 'ethereum',
@@ -728,6 +752,7 @@ class AppChainTheme {
       return fomowlSignature; // Original FOMOwl app theme fallback
     }
 
+    if (entry is BitcoinNetworkEntry) return bitcoin;
     if (entry is SolanaNetworkEntry) return solana;
     if (entry is TronNetworkEntry) return tron;
     if (entry is EvmNetworkEntry) {
@@ -754,6 +779,7 @@ class AppChainTheme {
     }
 
     final trimmed = networkKey.trim().toLowerCase();
+    if (trimmed.startsWith('bitcoin:')) return bitcoin;
     if (trimmed.startsWith('solana')) return solana;
     if (trimmed.startsWith('tron')) return tron;
 

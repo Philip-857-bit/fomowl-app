@@ -1,3 +1,4 @@
+import '../../../theme/app_chain_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -58,6 +59,7 @@ class _BitcoinNetworkPreferenceTileState
       return const SizedBox.shrink();
     }
     final l = AppLocalizations.of(context);
+    final chain = context.chainTheme;
     final enabled = blockchain.enabledFamilies.contains(ChainFamily.bitcoin);
     return SettingsItemTile(
       icon: Icons.currency_bitcoin,
@@ -67,6 +69,8 @@ class _BitcoinNetworkPreferenceTileState
       trailing: Switch(
         key: const Key('bitcoin-network-preference'),
         value: enabled,
+        activeThumbColor: chain.accentColor,
+        activeTrackColor: chain.accentColor.withValues(alpha: 0.3),
         onChanged: _busy ? null : (value) => _toggle(blockchain, value),
       ),
     );

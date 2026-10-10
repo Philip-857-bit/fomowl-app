@@ -1,3 +1,4 @@
+import '../../theme/app_chain_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
@@ -51,6 +52,7 @@ class _BitcoinTransactionDetailsSheetState
 
   @override
   Widget build(BuildContext context) {
+    final chainTheme = context.chainTheme;
     final l =
         Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         AppLocalizationsEn();
@@ -93,7 +95,9 @@ class _BitcoinTransactionDetailsSheetState
               children: [
                 Text(
                   l.bitcoinTransaction,
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: chainTheme.accentColor,
+                  ),
                 ),
                 detail(
                   l.bitcoinStatus,
@@ -127,6 +131,9 @@ class _BitcoinTransactionDetailsSheetState
                 if (snapshot.hasError) Text(l.bitcoinStatusUnavailable),
                 if (_txid != null)
                   TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: chainTheme.accentColor,
+                    ),
                     onPressed: () =>
                         widget.onOpenExplorer('${chain.explorerUrl}/tx/$_txid'),
                     child: Text(l.bitcoinViewExplorer),
