@@ -7,6 +7,7 @@ import '../../services/bitcoin/bitcoin_post_transaction_refresh.dart';
 import '../../services/blockchain/bitcoin_catalog.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../services/wallet_vault_service.dart';
+import '../../utils/wallet_unlock_navigation.dart';
 import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
@@ -795,12 +796,8 @@ class _TransferConfirmationScreenState
       authenticate: () async {
         await WalletVaultService.lockAll();
         if (!mounted || !current()) return false;
-        final result = await Navigator.pushNamed<bool>(
-          context,
-          '/unlock',
-          arguments: {'returnToPrevious': true},
-        );
-        return result == true && current();
+        final authenticated = await requestWalletUnlock(context);
+        return authenticated && current();
       },
     );
     if (!current()) return;
