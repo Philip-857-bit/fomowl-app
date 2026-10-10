@@ -637,6 +637,11 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       } on BitcoinSplitFundsException {
         showPreparationError(l.bitcoinSplitFunds);
         return;
+      } on BitcoinPendingInputsException {
+        showPreparationError(
+          'These Bitcoin funds are reserved by an earlier submission. Check its outcome before spending them again.',
+        );
+        return;
       } catch (_) {
         showPreparationError(
           'Unable to prepare Bitcoin transfer. Check funds, address and network connection.',

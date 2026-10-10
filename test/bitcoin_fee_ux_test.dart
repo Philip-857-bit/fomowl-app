@@ -317,9 +317,10 @@ void main() {
       expect(priorChoice.showFeeTier, isFalse);
     },
   );
-  for (final timeout in [false, true]) {
+  for (final failure in ['error', 'timeout', 'reserved']) {
     testWidgets('preparation failure clears loading and allows a fresh attempt '
-        '(timeout=$timeout)', (tester) async {
+        '(failure=$failure)', (tester) async {
+      final timeout = failure == 'timeout';
       final prepared = (await tester.runAsync(transfer))!;
       final service = RecordingPreparation(prepared, MutableFees(1, 1, 1))
         ..pending = Completer<BitcoinPreparedTransfer>();
@@ -362,7 +363,11 @@ void main() {
       if (timeout) {
         await tester.pump(const Duration(seconds: 91));
       } else {
-        service.pending!.completeError(StateError('private-error-marker'));
+        service.pending!.completeError(
+          failure == 'reserved'
+              ? const BitcoinPendingInputsException()
+              : StateError('private-error-marker'),
+        );
       }
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('send-preparing-indicator')), findsNothing);
@@ -371,6 +376,12 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('private-error-marker'), findsNothing);
+      if (failure == 'reserved') {
+        expect(
+          find.textContaining('reserved by an earlier submission'),
+          findsOneWidget,
+        );
+      }
       expect(service.current!(), isFalse);
       expect(find.text('Prepared confirmation'), findsNothing);
       if (timeout) {

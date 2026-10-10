@@ -123,6 +123,47 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async => RustLib.init());
   test(
+    'reserved inputs report their real funding blocker without releasing them',
+    () async {
+      final snapshot = await twoFormats(10000, 1);
+      final service = BitcoinSendService(
+        store: BitcoinAccountStore(MemoryStore()),
+      );
+      final recipient = snapshot.discovery.ownership.keys.first;
+      final reserved = {'${'1' * 64}:0'};
+      await expectLater(
+        service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(1000),
+          BigInt.one,
+          reserved: reserved,
+        ),
+        throwsA(isA<BitcoinPendingInputsException>()),
+      );
+      await expectLater(
+        service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(20000),
+          BigInt.one,
+          reserved: reserved,
+        ),
+        throwsStateError,
+      );
+      expect(reserved, {'${'1' * 64}:0'});
+      expect(
+        await service.selectPurpose(
+          snapshot,
+          recipient,
+          BigInt.from(1000),
+          BigInt.one,
+        ),
+        BitcoinPurpose.bip84,
+      );
+    },
+  );
+  test(
     'native integer boundary rejects overflow before FRB narrowing',
     () async {
       final snapshot = await twoFormats(10000, 10000);

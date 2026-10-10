@@ -18,6 +18,13 @@ class BitcoinSplitFundsException implements Exception {
       'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.';
 }
 
+/// The SDK can fund this transfer only with inputs excluded by the journal.
+class BitcoinPendingInputsException implements Exception {
+  const BitcoinPendingInputsException();
+  @override
+  String toString() => 'Bitcoin funds have an unresolved submission';
+}
+
 class BitcoinPreparedTransfer {
   final String walletIdentity;
   final BitcoinProductNetwork network;
@@ -141,6 +148,32 @@ class BitcoinSendService {
         return purpose;
       } catch (error) {
         if (error != 'Insufficient Bitcoin funds') rethrow;
+      }
+    }
+    if (reserved.isNotEmpty) {
+      // Ask the same SDK planner whether the reservation, rather than balance or
+      // fees, is the blocker. Never use the diagnostic plan for signing.
+      var fundableWithoutReservations = false;
+      try {
+        await selectPurpose(
+          snapshot,
+          recipient,
+          amount,
+          feeRate,
+          rbf: rbf,
+          isCurrent: isCurrent,
+        );
+        fundableWithoutReservations = true;
+      } on BitcoinSplitFundsException {
+        // Even unrestricted funds cannot be combined across purposes.
+      } on StateError catch (error) {
+        if (error.message !=
+            'Insufficient Bitcoin funds including network fee') {
+          rethrow;
+        }
+      }
+      if (fundableWithoutReservations) {
+        throw const BitcoinPendingInputsException();
       }
     }
     if (fundedFormats > 1 && total >= amount) {
