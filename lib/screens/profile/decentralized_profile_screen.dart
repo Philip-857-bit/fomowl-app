@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -18,6 +19,7 @@ import '../../services/currency_controller.dart';
 import '../../services/storage_service.dart';
 import '../../services/wallet_service.dart';
 import '../../services/language_controller.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/language_utils.dart';
 import '../../utils/sensitive_access_guard.dart';
@@ -296,7 +298,9 @@ class _DecentralizedProfileScreenState
   Future<void> _handleAdminTrigger() async {
     final l = AppLocalizations.of(context);
     final secretController = TextEditingController();
+    final screenCaptureGuard = ScreenCaptureGuard();
     try {
+      await screenCaptureGuard.enableProtection();
       if (!mounted) return;
       final secret = await showDialog<String>(
         context: context,
@@ -407,6 +411,7 @@ class _DecentralizedProfileScreenState
       );
     } finally {
       secretController.dispose();
+      unawaited(screenCaptureGuard.disableProtection());
     }
   }
 
