@@ -1,3 +1,4 @@
+import 'widgets/history_detail_components.dart';
 import 'dart:convert';
 import 'bitcoin_transaction_details_sheet.dart';
 import '../../utils/bitcoin_amount_utils.dart';
@@ -168,29 +169,29 @@ class _HistoryTransactionDetailsSheetState
                       ),
                     ),
                     const SizedBox(height: 18),
-                    _HistoryDetailSection(
+                    HistoryDetailSection(
                       children: [
-                        _HistoryDetailRow(
+                        HistoryDetailRow(
                           label: l.network,
                           value: widget.networkText,
                         ),
-                        _HistoryDetailRow(
+                        HistoryDetailRow(
                           label: l.historyTimestampLabel,
                           value: widget.timestampText,
                         ),
                         if (widget.amountText.isNotEmpty)
-                          _HistoryDetailRow(
+                          HistoryDetailRow(
                             label: l.amount,
                             value: widget.amountText,
                           ),
                         if (widget.entry.tokenName?.trim().isNotEmpty == true)
-                          _HistoryDetailRow(
+                          HistoryDetailRow(
                             label: l.tokenLabel,
                             value:
                                 '${widget.entry.tokenName} (${widget.entry.tokenSymbol ?? '-'})',
                           ),
                         if (widget.entry.txHash?.trim().isNotEmpty == true)
-                          _HistoryDetailRow(
+                          HistoryDetailRow(
                             label: l.historyTransactionHashLabel,
                             value: widget.entry.txHash!,
                             monospace: true,
@@ -199,33 +200,33 @@ class _HistoryTransactionDetailsSheetState
                     ),
                     const SizedBox(height: 14),
                     if (_receiptFuture == null)
-                      _HistoryInfoBanner(message: l.historyReceiptUnavailable)
+                      HistoryInfoBanner(message: l.historyReceiptUnavailable)
                     else
                       FutureBuilder<TransactionReceipt?>(
                         future: _receiptFuture,
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return _HistoryInfoBanner(
+                            return HistoryInfoBanner(
                               message: l.historyLoadingReceipt,
                               loading: true,
                             );
                           }
                           if (snapshot.hasError) {
-                            return _HistoryInfoBanner(
+                            return HistoryInfoBanner(
                               message: l.historyReceiptLoadError,
                             );
                           }
                           final receipt = snapshot.data;
                           if (receipt == null) {
-                            return _HistoryInfoBanner(
+                            return HistoryInfoBanner(
                               message: l.historyReceiptPending,
                             );
                           }
 
-                          return _HistoryDetailSection(
+                          return HistoryDetailSection(
                             children: [
-                              _HistoryDetailRow(
+                              HistoryDetailRow(
                                 label: l.historyStatusLabel,
                                 value: _statusLabel(l, receipt.status),
                                 valueColor: receipt.status == null
@@ -234,38 +235,38 @@ class _HistoryTransactionDetailsSheetState
                                           ? AppColors.success
                                           : AppColors.accentRed),
                               ),
-                              _HistoryDetailRow(
+                              HistoryDetailRow(
                                 label: l.historyBlockNumberLabel,
                                 value: receipt.blockNumber.isPending
                                     ? l.pendingLabel
                                     : receipt.blockNumber.blockNum.toString(),
                               ),
-                              _HistoryDetailRow(
+                              HistoryDetailRow(
                                 label: l.historyFromLabel,
                                 value: receipt.from?.hexEip55 ?? '-',
                                 monospace: true,
                               ),
-                              _HistoryDetailRow(
+                              HistoryDetailRow(
                                 label: l.historyToLabel,
                                 value: receipt.to?.hexEip55 ?? '-',
                                 monospace: true,
                               ),
                               if (receipt.gasUsed != null)
-                                _HistoryDetailRow(
+                                HistoryDetailRow(
                                   label: l.historyGasUsedLabel,
                                   value: receipt.gasUsed.toString(),
                                 ),
-                              _HistoryDetailRow(
+                              HistoryDetailRow(
                                 label: l.historyGasPriceLabel,
                                 value: _formatGasPrice(receipt),
                               ),
                               if (receipt.contractAddress != null)
-                                _HistoryDetailRow(
+                                HistoryDetailRow(
                                   label: l.historyContractAddressLabel,
                                   value: receipt.contractAddress!.hexEip55,
                                   monospace: true,
                                 ),
-                              _HistoryDetailRow(
+                              HistoryDetailRow(
                                 label: l.historyLogCountLabel,
                                 value: receipt.logs.length.toString(),
                               ),
@@ -303,126 +304,6 @@ class _HistoryTransactionDetailsSheetState
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _HistoryDetailSection extends StatelessWidget {
-  const _HistoryDetailSection({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(children: children),
-    );
-  }
-}
-
-class _HistoryDetailRow extends StatelessWidget {
-  const _HistoryDetailRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.monospace = false,
-  });
-
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final bool monospace;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            flex: 2,
-            child: SelectableText(
-              value,
-              style:
-                  (monospace ? GoogleFonts.robotoMono() : GoogleFonts.outfit())
-                      .copyWith(
-                        fontSize: monospace ? 12.5 : 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: valueColor ?? Colors.white,
-                      ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryInfoBanner extends StatelessWidget {
-  const _HistoryInfoBanner({required this.message, this.loading = false});
-
-  final String message;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          if (loading)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.accentRed,
-              ),
-            )
-          else
-            Icon(
-              Icons.receipt_long_rounded,
-              color: Colors.white.withValues(alpha: 0.75),
-              size: 18,
-            ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                height: 1.4,
-                color: Colors.white.withValues(alpha: 0.74),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

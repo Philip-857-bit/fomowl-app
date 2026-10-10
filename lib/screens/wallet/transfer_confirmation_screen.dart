@@ -817,7 +817,7 @@ class _TransferConfirmationScreenState
         detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
         message: outcome.status == BitcoinSubmissionStatus.unknown
             ? 'Submission status is unknown. Checking this transaction before any retry.'
-            : null,
+            : 'Bitcoin transaction submitted. Waiting for its first confirmation.',
       );
       unawaited(
         _walletHistoryService

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'helpers/test_fonts.dart';
 import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
 import 'package:fomowl_wallet/models/bitcoin_account_history.dart';
 import 'package:fomowl_wallet/models/bitcoin_network_data.dart';
@@ -9,7 +11,8 @@ import 'package:fomowl_wallet/services/wallet_history_service.dart';
 import 'bitcoin_history_service_test.dart' show row, address, hash;
 
 class DetailsNetwork extends Fake implements BitcoinNetworkApi {
-  final bool confirmed;
+  bool confirmed;
+  int calls = 0;
   bool outage = false;
   DetailsNetwork(this.confirmed);
   @override
@@ -17,6 +20,7 @@ class DetailsNetwork extends Fake implements BitcoinNetworkApi {
     BitcoinProductNetwork network,
     String txid,
   ) async {
+    calls++;
     expect(txid, hash);
     if (outage) throw const BitcoinNetworkException(500);
     return BitcoinTransactionStatus.fromJson({
@@ -53,6 +57,38 @@ WalletHistoryEntry entry({bool chainData = true}) => WalletHistoryEntry(
       : null,
 );
 void main() {
+  setUp(installTestFonts);
+  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  testWidgets(
+    'pending receipt refreshes to confirmed without reopening; stops polling',
+    (tester) async {
+      final api = DetailsNetwork(false);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BitcoinTransactionDetailsSheet(
+              entry: entry(),
+              network: BitcoinProductNetwork.mainnet,
+              api: api,
+              onOpenExplorer: (_) async {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('TRANSACTION DETAILS'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(find.text('Confirmed'), findsNothing);
+      api.confirmed = true;
+      await tester.pump(const Duration(seconds: 15));
+      await tester.pumpAndSettle();
+      expect(find.text('Confirmed'), findsOneWidget);
+      expect(api.calls, 2);
+      await tester.pump(const Duration(seconds: 30));
+      expect(api.calls, 2);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
   testWidgets(
     'Bitcoin details show live confirmations, exact wallet delta and no gas fields',
     (tester) async {
