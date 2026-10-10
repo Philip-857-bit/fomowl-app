@@ -1,8 +1,9 @@
 @Tags(['ffi'])
 library;
 
-import 'dart:typed_data';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'helpers/test_fonts.dart';
@@ -66,6 +67,9 @@ class RecordingPreparation extends BitcoinSendService {
   final BitcoinPreparedTransfer fixture;
   BitcoinFeeTier? receivedTier;
   bool? receivedSelection;
+  Completer<BitcoinPreparedTransfer>? pending;
+  int calls = 0;
+  bool Function()? current;
   RecordingPreparation(this.fixture, BitcoinNetworkApi api)
     : super(network: api);
   @override
@@ -80,10 +84,12 @@ class RecordingPreparation extends BitcoinSendService {
     bool rbf = true,
     bool Function()? isCurrent,
   }) async {
+    calls++;
+    current = isCurrent;
     receivedTier = feeTier;
     receivedSelection = feeTierWasSelected;
     expect(isCurrent?.call(), isTrue);
-    return fixture;
+    return pending == null ? fixture : pending!.future;
   }
 }
 
@@ -102,6 +108,20 @@ void main() {
     await RustLib.init();
   });
   setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('PonnamKarthik/fluttertoast'),
+          (_) async => true,
+        );
+  });
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('PonnamKarthik/fluttertoast'),
+          null,
+        );
+  });
   testWidgets(
     'distinct provider rates show each tier; Normal is initially selected',
     (tester) async {
@@ -297,13 +317,91 @@ void main() {
       expect(priorChoice.showFeeTier, isFalse);
     },
   );
+  for (final timeout in [false, true]) {
+    testWidgets('preparation failure clears loading and allows a fresh attempt '
+        '(timeout=$timeout)', (tester) async {
+      final prepared = (await tester.runAsync(transfer))!;
+      final service = RecordingPreparation(prepared, MutableFees(1, 1, 1))
+        ..pending = Completer<BitcoinPreparedTransfer>();
+      final blockchain = BitcoinSendChain();
+      final currency = CurrencyController();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<BlockchainService>.value(value: blockchain),
+            ChangeNotifierProvider<CurrencyController>.value(value: currency),
+          ],
+          child: MaterialApp(
+            theme: ThemeData.dark(),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routes: {
+              '/transfer-confirmation': (_) =>
+                  const Scaffold(body: Text('Prepared confirmation')),
+            },
+            home: SendTokenScreen(
+              walletService: ActiveSendWallet(),
+              bitcoinSendService: service,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextField).first,
+        'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, '0.00001000');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Send').last);
+      await tester.pump();
+      expect(find.byKey(const Key('send-preparing-indicator')), findsOneWidget);
+      if (timeout) {
+        await tester.pump(const Duration(seconds: 91));
+      } else {
+        service.pending!.completeError(StateError('private-error-marker'));
+      }
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('send-preparing-indicator')), findsNothing);
+      expect(
+        find.byKey(const Key('bitcoin-preparation-error')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('private-error-marker'), findsNothing);
+      expect(service.current!(), isFalse);
+      expect(find.text('Prepared confirmation'), findsNothing);
+      if (timeout) {
+        service.pending!.complete(prepared);
+        await tester.pumpAndSettle();
+        expect(find.text('Prepared confirmation'), findsNothing);
+      }
+      service.pending = Completer<BitcoinPreparedTransfer>();
+      await tester.tap(find.text('Send').last);
+      await tester.pump();
+      expect(service.calls, 2);
+      expect(find.byKey(const Key('bitcoin-preparation-error')), findsNothing);
+      expect(find.byKey(const Key('send-preparing-indicator')), findsOneWidget);
+      service.pending!.complete(prepared);
+      await tester.pumpAndSettle();
+      expect(find.text('Prepared confirmation'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      // Fluttertoast schedules a one-second platform cooldown after an error.
+      await tester.pump(const Duration(seconds: 1));
+      blockchain.dispose();
+      currency.dispose();
+    });
+  }
   for (final distinct in [true, false]) {
     testWidgets(
       'Send forwards the friendly choice to preparation (distinct=$distinct)',
       (tester) async {
         final prepared = (await tester.runAsync(transfer))!;
         final api = distinct ? MutableFees(1, 3, 7) : MutableFees(1, 1, 1);
-        final service = RecordingPreparation(prepared, api);
+        final service = RecordingPreparation(prepared, api)
+          ..pending = Completer<BitcoinPreparedTransfer>();
         final blockchain = BitcoinSendChain();
         final currency = CurrencyController();
         await tester.pumpWidget(
@@ -349,6 +447,16 @@ void main() {
         await tester.enterText(find.byType(TextField).first, '0.00001000');
         await tester.pumpAndSettle();
         await tester.tap(find.text('Send').last);
+        await tester.pump();
+        expect(
+          find.byKey(const Key('send-preparing-indicator')),
+          findsOneWidget,
+        );
+        expect(find.text('Prepared confirmation'), findsNothing);
+        await tester.tap(find.byKey(const Key('send-preparing-indicator')));
+        await tester.pump();
+        expect(service.calls, 1);
+        service.pending!.complete(prepared);
         await tester.pumpAndSettle();
         expect(
           service.receivedTier,

@@ -59,6 +59,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   bool _syncingDisplay = false;
   bool _isCalculatingMax = false;
   bool _isPreparingBitcoin = false;
+  Object? _bitcoinPreparationAttempt;
+  String? _bitcoinPreparationError;
   BitcoinFeeTier _bitcoinFeeTier = BitcoinFeeTier.normal;
   bool _bitcoinFeeTierWasSelected = false;
   int? _selectedPercentage;
@@ -589,37 +591,62 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
     BitcoinPreparedTransfer? bitcoinTransfer;
     if (family == ChainFamily.bitcoin) {
-      setState(() => _isPreparingBitcoin = true);
-      try {
-        final identity = await _walletService.getCurrentWalletAddress();
-        if (!mounted || identity == null) return;
-        bitcoinTransfer = await _bitcoinSendService.prepareTransfer(
-          identity,
-          BitcoinProductNetwork.fromId(
-            NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
-          ),
-          destination,
-          amountInBaseUnits,
-          feeTier: _bitcoinFeeTier,
-          feeTierWasSelected: _bitcoinFeeTierWasSelected,
-          isCurrent: () =>
-              mounted &&
-              blockchain.activeNetworkKey == activeNetworkKey &&
-              blockchain.activeWalletAddress.toLowerCase() ==
-                  identity.toLowerCase(),
-        );
+      final attempt = Object();
+      _bitcoinPreparationAttempt = attempt;
+      setState(() {
+        _isPreparingBitcoin = true;
+        _bitcoinPreparationError = null;
+      });
+      void showPreparationError(String message) {
         if (!mounted) return;
+        setState(() => _bitcoinPreparationError = message);
+        _showError(message);
+      }
+
+      try {
+        bitcoinTransfer = await (() async {
+          final identity = await _walletService.getCurrentWalletAddress();
+          if (!mounted ||
+              !identical(_bitcoinPreparationAttempt, attempt) ||
+              identity == null) {
+            throw StateError('Bitcoin wallet is unavailable');
+          }
+          return _bitcoinSendService.prepareTransfer(
+            identity,
+            BitcoinProductNetwork.fromId(
+              NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
+            ),
+            destination,
+            amountInBaseUnits,
+            feeTier: _bitcoinFeeTier,
+            feeTierWasSelected: _bitcoinFeeTierWasSelected,
+            isCurrent: () =>
+                mounted &&
+                identical(_bitcoinPreparationAttempt, attempt) &&
+                blockchain.activeNetworkKey == activeNetworkKey &&
+                blockchain.activeWalletAddress.toLowerCase() ==
+                    identity.toLowerCase(),
+          );
+        })().timeout(const Duration(seconds: 90));
+        if (!mounted) return;
+        if (blockchain.activeNetworkKey != activeNetworkKey ||
+            blockchain.activeWalletAddress.toLowerCase() !=
+                bitcoinTransfer.walletIdentity.toLowerCase()) {
+          throw StateError('Bitcoin wallet context changed');
+        }
       } on BitcoinSplitFundsException {
-        if (mounted) _showError(AppLocalizations.of(context).bitcoinSplitFunds);
+        showPreparationError(l.bitcoinSplitFunds);
         return;
       } catch (_) {
-        if (mounted) {
-          _showError(
-            'Unable to prepare Bitcoin transfer. Check funds, address and network connection.',
-          );
-        }
+        showPreparationError(
+          'Unable to prepare Bitcoin transfer. Check funds, address and network connection.',
+        );
         return;
       } finally {
+        // A timed-out preparation cannot later navigate or finish as a new attempt.
+        if (identical(_bitcoinPreparationAttempt, attempt)) {
+          _bitcoinPreparationAttempt = null;
+        }
         if (mounted) setState(() => _isPreparingBitcoin = false);
       }
     }
@@ -1034,9 +1061,22 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                 ),
               ),
             // Send button
+            if (blockchain.activeFamily == ChainFamily.bitcoin &&
+                _bitcoinPreparationError != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  _bitcoinPreparationError!,
+                  key: const Key('bitcoin-preparation-error'),
+                  style: const TextStyle(color: AppColors.error),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-              child: SendPrimaryButton(onPressed: _onSend),
+              child: SendPrimaryButton(
+                onPressed: _onSend,
+                isLoading: _isPreparingBitcoin,
+              ),
             ),
           ],
         ),
