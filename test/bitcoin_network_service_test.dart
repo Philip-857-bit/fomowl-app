@@ -11,6 +11,12 @@ class PublicFixtureAuth extends WalletBackendAuthService {
   final String? sessionIdentity;
   PublicFixtureAuth({this.sessionIdentity});
   String? authenticatedIdentity;
+  final invalidated = <String>[];
+  @override
+  Future<void> invalidateSession(String identity) async {
+    invalidated.add(identity);
+  }
+
   @override
   Future<http.Response> sendAuthorized(
     String identity,
@@ -19,6 +25,31 @@ class PublicFixtureAuth extends WalletBackendAuthService {
   ) {
     authenticatedIdentity = sessionIdentity ?? identity.trim().toLowerCase();
     return send({...headers, 'Authorization': 'Bearer public-fixture-token'});
+  }
+}
+
+class FailingSetupAuth extends PublicFixtureAuth {
+  @override
+  Future<http.Response> sendAuthorized(
+    String identity,
+    Future<http.Response> Function(Map<String, String>) send,
+    Map<String, String> headers,
+  ) async {
+    throw StateError('Private fixture exception that must not escape');
+  }
+}
+
+class RetryingFixtureAuth extends PublicFixtureAuth {
+  @override
+  Future<http.Response> sendAuthorized(
+    String identity,
+    Future<http.Response> Function(Map<String, String>) send,
+    Map<String, String> headers,
+  ) async {
+    authenticatedIdentity = identity;
+    final response = await send(headers);
+    if (response.statusCode == 401) return send(headers);
+    return response;
   }
 }
 
@@ -192,6 +223,7 @@ void main() {
     'broadcast transmits exact signed bytes and returns a typed transaction ID',
     () async {
       final client = MockClient((request) async {
+        expect(request.followRedirects, isFalse);
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         expect(body, {
           'walletAddress': '0xstable',
@@ -411,6 +443,113 @@ void main() {
         ),
       );
       expect(calls, 1);
+    },
+  );
+  test('only exact known backend pre-provider responses establish rejection', () {
+    for (final sample in [
+      (400, {'error': 'Invalid Bitcoin transaction encoding'}),
+      (401, {'error': 'Wallet authentication required'}),
+      (
+        401,
+        {
+          'error': 'Authentication required',
+          'message': 'The wallet session has expired.',
+        },
+      ),
+      (
+        403,
+        {
+          'error': 'Forbidden',
+          'message': 'The wallet session does not match the requested wallet.',
+        },
+      ),
+    ]) {
+      expect(
+        BitcoinPreProviderRejection.fromBackendResponse(
+          sample.$1,
+          jsonEncode(sample.$2),
+        ),
+        isA<BitcoinPreProviderRejection>(),
+      );
+    }
+    for (final sample in [
+      (400, '{"error":"provider rejected"}'),
+      (401, '<html>Proxy authentication error</html>'),
+      (403, '{"error":"Forbidden","message":"Unknown rejection"}'),
+      (
+        403,
+        '{"error":"Forbidden","message":"The wallet session does not match the requested wallet.","success":true}',
+      ),
+      (429, '{"error":"Wallet authentication required"}'),
+      (500, '{"error":"Wallet authentication required"}'),
+      (200, '{"error":"Wallet authentication required"}'),
+    ]) {
+      expect(
+        BitcoinPreProviderRejection.fromBackendResponse(sample.$1, sample.$2),
+        isNull,
+      );
+    }
+  });
+  for (final known in [true, false]) {
+    test(
+      'broadcast 401 cannot trigger a hidden auth retry (known=$known)',
+      () async {
+        var calls = 0;
+        final auth = RetryingFixtureAuth();
+        final api = BitcoinNetworkService(
+          auth: auth,
+          client: MockClient((request) async {
+            calls++;
+            return http.Response(
+              known
+                  ? jsonEncode({
+                      'error': 'Authentication required',
+                      'message': 'The wallet session has expired.',
+                    })
+                  : '<html>Unknown proxy error</html>',
+              401,
+            );
+          }),
+        );
+        await expectLater(
+          api.broadcast('0xstable', BitcoinProductNetwork.mainnet, 'aa11'),
+          known
+              ? throwsA(isA<BitcoinPreProviderRejection>())
+              : throwsA(
+                  isA<BitcoinNetworkException>().having(
+                    (e) => e is BitcoinPreProviderRejection,
+                    'proven rejection',
+                    isFalse,
+                  ),
+                ),
+        );
+        expect(calls, 1);
+        expect(auth.invalidated, known ? ['0xstable'] : isEmpty);
+      },
+    );
+  }
+  test(
+    'session setup failure proves no Bitcoin POST occurred and hides private errors',
+    () async {
+      var calls = 0;
+      final api = BitcoinNetworkService(
+        auth: FailingSetupAuth(),
+        client: MockClient((_) async {
+          calls++;
+          return http.Response('{}', 500);
+        }),
+      );
+      await expectLater(
+        api.broadcast('0xstable', BitcoinProductNetwork.mainnet, 'aa11'),
+        throwsA(
+          isA<BitcoinPreProviderRejection>().having(
+            (e) => e.toString(),
+            'safe error',
+            isNot(contains('Private fixture')),
+          ),
+        ),
+      );
+      expect(calls, 0);
     },
   );
 }

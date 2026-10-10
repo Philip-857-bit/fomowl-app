@@ -50,55 +50,59 @@ class BitcoinBroadcastService {
     }
     signed.checkAuthorization();
     if (!isCurrent()) throw StateError('Bitcoin wallet context changed');
-    final firstAttempt = await signed.submissionJournal.reserve(
+    final reservation = await signed.submissionJournal.reserveAttempt(
       transfer.walletIdentity,
       transfer.network,
       transaction.txid,
       transfer.plan.selectedUtxos,
     );
-    if (!firstAttempt) {
+    if (reservation == null) {
       return BitcoinBroadcastOutcome(
         transaction.txid,
         BitcoinSubmissionStatus.unknown,
       );
     }
-    signed.checkAuthorization();
-    if (!isCurrent()) throw StateError('Bitcoin wallet context changed');
-    String txid;
+    var submissionStarted = false;
     try {
-      txid = await network.broadcast(
+      signed.checkAuthorization();
+      if (!isCurrent()) throw StateError('Bitcoin wallet context changed');
+      submissionStarted = true;
+      final txid = await network.broadcast(
         transfer.walletIdentity,
         transfer.network,
         transaction.rawTransactionHex,
       );
-    } on BitcoinNetworkException catch (error) {
-      if (error.statusCode != null &&
-          error.statusCode! >= 400 &&
-          error.statusCode! < 500 &&
-          error.statusCode != 429) {
-        rethrow;
+      if (txid.toLowerCase() != transaction.txid) {
+        throw const BitcoinBroadcastMismatch();
       }
       return BitcoinBroadcastOutcome(
         transaction.txid,
-        BitcoinSubmissionStatus.unknown,
+        BitcoinSubmissionStatus.accepted,
       );
-    } on FormatException {
-      return BitcoinBroadcastOutcome(
-        transaction.txid,
-        BitcoinSubmissionStatus.unknown,
-      );
-    } on TimeoutException {
-      return BitcoinBroadcastOutcome(
-        transaction.txid,
-        BitcoinSubmissionStatus.unknown,
-      );
+    } catch (error) {
+      if (!submissionStarted || error is BitcoinPreProviderRejection) {
+        await signed.submissionJournal.releaseRejected(
+          reservation: reservation,
+          identity: transfer.walletIdentity,
+          network: transfer.network,
+          txid: transaction.txid,
+          expectedInputs: transfer.plan.selectedUtxos,
+        );
+        rethrow;
+      }
+      if (error is BitcoinNetworkException ||
+          error is FormatException ||
+          error is TimeoutException) {
+        return BitcoinBroadcastOutcome(
+          transaction.txid,
+          BitcoinSubmissionStatus.unknown,
+        );
+      }
+      rethrow;
+    } finally {
+      // Success, ambiguity, mismatch or failed persistence never expose a later
+      // release capability. A new submission still requires fresh approval.
+      signed.submissionJournal.retainPending(reservation);
     }
-    if (txid.toLowerCase() != transaction.txid) {
-      throw const BitcoinBroadcastMismatch();
-    }
-    return BitcoinBroadcastOutcome(
-      transaction.txid,
-      BitcoinSubmissionStatus.accepted,
-    );
   }
 }

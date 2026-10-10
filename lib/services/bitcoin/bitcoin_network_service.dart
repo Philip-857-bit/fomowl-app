@@ -40,6 +40,61 @@ class BitcoinNetworkException implements Exception {
   String toString() => 'Bitcoin network data is unavailable';
 }
 
+/// Proven zero-submit failures or recognized backend pre-provider responses.
+/// A status code, proxy error or provider response alone is not rejection proof.
+class BitcoinPreProviderRejection extends BitcoinNetworkException {
+  const BitcoinPreProviderRejection._(super.statusCode);
+  const BitcoinPreProviderRejection._notSubmitted() : super();
+
+  static BitcoinPreProviderRejection? fromBackendResponse(
+    int status,
+    String body,
+  ) {
+    if (!{400, 401, 403}.contains(status) || body.length > 4096) return null;
+    try {
+      final data = jsonDecode(body);
+      if (data is! Map<String, dynamic>) return null;
+      if (data.keys.any((key) => key != 'error' && key != 'message') ||
+          data['error'] is! String ||
+          (data.containsKey('message') && data['message'] is! String)) {
+        return null;
+      }
+      final error = data['error'];
+      final message = data['message'];
+      final recognized = switch (status) {
+        400 =>
+          message == null &&
+              {
+                'Invalid Bitcoin raw transaction',
+                'Invalid Bitcoin transaction hex',
+                'Invalid Bitcoin transaction encoding',
+                'Bitcoin transaction must already be signed',
+              }.contains(error),
+        401 =>
+          (error == 'Wallet authentication required' && message == null) ||
+              (error == 'Authentication required' &&
+                  {
+                    'A valid wallet session token is required.',
+                    'The wallet session is missing or expired.',
+                    'The wallet session is invalid.',
+                    'The wallet session has expired.',
+                  }.contains(message)),
+        403 =>
+          error == 'Forbidden' &&
+              message ==
+                  'The wallet session does not match the requested wallet.',
+        _ => false,
+      };
+      return recognized ? BitcoinPreProviderRejection._(status) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  String toString() => 'Bitcoin request was rejected before broadcast';
+}
+
 /// Chain facts only. Fixed request schemas transmit public addresses, never XPUB/seed/private data.
 class BitcoinNetworkService implements BitcoinNetworkApi {
   final http.Client client;
@@ -64,6 +119,7 @@ class BitcoinNetworkService implements BitcoinNetworkApi {
     Uri uri, {
     Map<String, String> headers = const {},
     String? body,
+    bool followRedirects = true,
   }) async {
     final abort = Completer<void>();
     final timer = Timer(timeout, () {
@@ -75,6 +131,7 @@ class BitcoinNetworkService implements BitcoinNetworkApi {
       abortTrigger: abort.future,
     );
     request.headers.addAll(headers);
+    request.followRedirects = followRedirects;
     if (body != null) request.body = body;
     try {
       final response = await client.send(request).timeout(timeout);
@@ -160,23 +217,51 @@ class BitcoinNetworkService implements BitcoinNetworkApi {
     if (canonicalIdentity.isEmpty || canonicalIdentity.length > 128) {
       throw ArgumentError('Invalid wallet identity');
     }
+    var callbackEntered = false;
     try {
-      final response = await auth.sendAuthorized(
-        canonicalIdentity,
-        (headers) => _send(
+      final response = await auth.sendAuthorized(canonicalIdentity, (
+        headers,
+      ) async {
+        callbackEntered = true;
+        final response = await _send(
           'POST',
           _uri(network, path, query),
           headers: headers,
           body: jsonEncode({...body, 'walletAddress': canonicalIdentity}),
-        ),
-        {'Content-Type': 'application/json'},
-      );
+          followRedirects: path != 'broadcast',
+        );
+        if (path == 'broadcast') {
+          final rejection = BitcoinPreProviderRejection.fromBackendResponse(
+            response.statusCode,
+            response.body,
+          );
+          if (rejection != null) {
+            if (response.statusCode == 401 || response.statusCode == 403) {
+              // A fresh manual approval may acquire a new scoped session.
+              // Cache cleanup cannot turn a known rejection into a resend.
+              try {
+                await auth.invalidateSession(canonicalIdentity);
+              } catch (_) {}
+            }
+            throw rejection;
+          }
+          if (response.statusCode == 401) {
+            // Do not let the shared auth helper retry an unclassified
+            // broadcast response. Its submission outcome remains unknown.
+            throw const BitcoinNetworkException(401);
+          }
+        }
+        return response;
+      }, {'Content-Type': 'application/json'});
       return _decode(response);
-    } on BitcoinNetworkException {
-      rethrow;
-    } on FormatException {
-      rethrow;
-    } catch (_) {
+    } catch (error) {
+      if (path == 'broadcast' && !callbackEntered) {
+        // Session setup failed before the transaction send callback ran.
+        throw const BitcoinPreProviderRejection._notSubmitted();
+      }
+      if (error is BitcoinNetworkException || error is FormatException) {
+        rethrow;
+      }
       throw const BitcoinNetworkException();
     }
   }
