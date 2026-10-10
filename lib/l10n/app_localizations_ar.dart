@@ -1993,4 +1993,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get transactionTotal => 'الإجمالي';
+
+  @override
+  String get transactionSubmittedTitle => 'تم الإرسال';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'قبلت الشبكة معاملتك لنشرها. في انتظار التأكيد الأول.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'حالة الإرسال غير مؤكدة';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'تعذر التأكد من قبول الشبكة لهذه المعاملة. تحقق من حالتها قبل الإرسال مرة أخرى.';
+
+  @override
+  String get transactionConfirmedSubtitle => 'تم تضمين معاملتك في كتلة.';
 }

@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "Sauyawa da kuɗi",
   "bitcoinSpeed": "Sauri",
   "transactionAmountToSend": "ADADIN DA ZA A AIKA",
-  "transactionTotal": "Jimilla"
+  "transactionTotal": "Jimilla",
+  "transactionSubmittedTitle": "An aika",
+  "transactionSubmittedSubtitle": "Cibiyar sadarwa ta karɓi ma’amalarka don yaɗawa. Ana jiran tabbatarwa ta farko.",
+  "transactionSubmissionUnknownTitle": "Ba a tabbatar da aikawa ba",
+  "transactionSubmissionUnknownSubtitle": "Ba mu iya tabbatar ko cibiyar sadarwa ta karɓi wannan ma’amala ba. Duba matsayinta kafin sake aikawa.",
+  "transactionConfirmedSubtitle": "An haɗa ma’amalarka cikin wani bulok."
 }

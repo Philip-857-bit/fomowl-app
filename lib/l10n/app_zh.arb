@@ -671,5 +671,10 @@
   "bitcoinReplaceByFee": "手续费替换",
   "bitcoinSpeed": "速度",
   "transactionAmountToSend": "发送金额",
-  "transactionTotal": "总计"
+  "transactionTotal": "总计",
+  "transactionSubmittedTitle": "已提交",
+  "transactionSubmittedSubtitle": "网络已接受并传播您的交易，正在等待首次确认。",
+  "transactionSubmissionUnknownTitle": "提交状态不确定",
+  "transactionSubmissionUnknownSubtitle": "无法确认网络是否已接受此交易。再次发送前请检查其状态。",
+  "transactionConfirmedSubtitle": "您的交易已被纳入区块。"
 }

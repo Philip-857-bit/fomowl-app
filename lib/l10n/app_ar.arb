@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "الاستبدال بالرسوم",
   "bitcoinSpeed": "السرعة",
   "transactionAmountToSend": "المبلغ المراد إرساله",
-  "transactionTotal": "الإجمالي"
+  "transactionTotal": "الإجمالي",
+  "transactionSubmittedTitle": "تم الإرسال",
+  "transactionSubmittedSubtitle": "قبلت الشبكة معاملتك لنشرها. في انتظار التأكيد الأول.",
+  "transactionSubmissionUnknownTitle": "حالة الإرسال غير مؤكدة",
+  "transactionSubmissionUnknownSubtitle": "تعذر التأكد من قبول الشبكة لهذه المعاملة. تحقق من حالتها قبل الإرسال مرة أخرى.",
+  "transactionConfirmedSubtitle": "تم تضمين معاملتك في كتلة."
 }

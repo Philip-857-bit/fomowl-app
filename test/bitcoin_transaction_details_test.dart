@@ -12,6 +12,7 @@ import 'bitcoin_history_service_test.dart' show row, address, hash;
 
 class DetailsNetwork extends Fake implements BitcoinNetworkApi {
   bool confirmed;
+  bool found = true;
   int calls = 0;
   bool outage = false;
   DetailsNetwork(this.confirmed);
@@ -26,7 +27,7 @@ class DetailsNetwork extends Fake implements BitcoinNetworkApi {
     return BitcoinTransactionStatus.fromJson({
       'status': confirmed ? 'confirmed' : 'pending',
       'confirmed': confirmed,
-      'found': confirmed,
+      'found': confirmed || found,
       'confirmations': confirmed ? 2 : 0,
       'blockHeight': confirmed ? 100 : null,
       'blockHash': confirmed ? '22' * 32 : null,
@@ -59,6 +60,29 @@ WalletHistoryEntry entry({bool chainData = true}) => WalletHistoryEntry(
 void main() {
   setUp(installTestFonts);
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  for (final found in [false, true]) {
+    testWidgets(
+      'receipt shows Submitted only with acceptance evidence (found=$found)',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: BitcoinTransactionDetailsSheet(
+                entry: entry(chainData: false),
+                network: BitcoinProductNetwork.testnet4,
+                api: DetailsNetwork(false)..found = found,
+                onOpenExplorer: (_) async {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Submitted'), found ? findsOneWidget : findsNothing);
+        expect(find.text('Confirmed'), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+  }
   testWidgets(
     'pending receipt refreshes to confirmed without reopening; stops polling',
     (tester) async {

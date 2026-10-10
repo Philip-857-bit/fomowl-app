@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "Reemplazo por comisión",
   "bitcoinSpeed": "Velocidad",
   "transactionAmountToSend": "CANTIDAD A ENVIAR",
-  "transactionTotal": "Total"
+  "transactionTotal": "Total",
+  "transactionSubmittedTitle": "Enviada",
+  "transactionSubmittedSubtitle": "La red aceptó tu transacción para su difusión. Esperando su primera confirmación.",
+  "transactionSubmissionUnknownTitle": "Envío incierto",
+  "transactionSubmissionUnknownSubtitle": "No pudimos confirmar si la red aceptó esta transacción. Consulta su estado antes de volver a enviar.",
+  "transactionConfirmedSubtitle": "Tu transacción se ha incluido en un bloque."
 }

@@ -1986,4 +1986,21 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get transactionTotal => 'Àpapọ̀';
+
+  @override
+  String get transactionSubmittedTitle => 'A ti fi ránṣẹ́';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'Nẹ́tíwọ́ọ̀kì ti gba ìṣòwò rẹ fún ìtànkálẹ̀. A ń dúró de ìmúdájú àkọ́kọ́ rẹ.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Ipò ìfiránṣẹ́ kò dájú';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'A kò lè jẹ́rìí pé nẹ́tíwọ́ọ̀kì gba ìṣòwò yìí. Ṣàyẹ̀wò ipò rẹ kí o tó tún fi ránṣẹ́.';
+
+  @override
+  String get transactionConfirmedSubtitle => 'A ti fi ìṣòwò rẹ sínú bulọọki.';
 }

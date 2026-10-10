@@ -1911,4 +1911,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transactionTotal => '总计';
+
+  @override
+  String get transactionSubmittedTitle => '已提交';
+
+  @override
+  String get transactionSubmittedSubtitle => '网络已接受并传播您的交易，正在等待首次确认。';
+
+  @override
+  String get transactionSubmissionUnknownTitle => '提交状态不确定';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      '无法确认网络是否已接受此交易。再次发送前请检查其状态。';
+
+  @override
+  String get transactionConfirmedSubtitle => '您的交易已被纳入区块。';
 }

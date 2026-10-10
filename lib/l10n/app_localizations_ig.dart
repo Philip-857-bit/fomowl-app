@@ -1988,4 +1988,21 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get transactionTotal => 'Ngụkọta';
+
+  @override
+  String get transactionSubmittedTitle => 'Ezigara ya';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'Netwọkụ anabatala azụmahịa gị ka e kesaa ya. A na-eche nkwenye mbụ ya.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Amaghị ọnọdụ izipu';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'Anyị enweghị ike ịkwado ma netwọkụ anabatala azụmahịa a. Lelee ọnọdụ ya tupu izipu ọzọ.';
+
+  @override
+  String get transactionConfirmedSubtitle => 'Etinyela azụmahịa gị n’ime blọk.';
 }

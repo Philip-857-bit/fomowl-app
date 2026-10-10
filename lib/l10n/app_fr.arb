@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "Remplacement par frais",
   "bitcoinSpeed": "Vitesse",
   "transactionAmountToSend": "MONTANT À ENVOYER",
-  "transactionTotal": "Total"
+  "transactionTotal": "Total",
+  "transactionSubmittedTitle": "Envoyée",
+  "transactionSubmittedSubtitle": "Le réseau a accepté votre transaction pour sa diffusion. En attente de sa première confirmation.",
+  "transactionSubmissionUnknownTitle": "Envoi incertain",
+  "transactionSubmissionUnknownSubtitle": "Nous ne pouvons pas confirmer si le réseau a accepté cette transaction. Vérifiez son statut avant de renvoyer.",
+  "transactionConfirmedSubtitle": "Votre transaction a été incluse dans un bloc."
 }

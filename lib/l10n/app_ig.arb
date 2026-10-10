@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "Dochie site na ụgwọ",
   "bitcoinSpeed": "Ọsọ",
   "transactionAmountToSend": "ỌNỤ EGO A GA-EZIGA",
-  "transactionTotal": "Ngụkọta"
+  "transactionTotal": "Ngụkọta",
+  "transactionSubmittedTitle": "Ezigara ya",
+  "transactionSubmittedSubtitle": "Netwọkụ anabatala azụmahịa gị ka e kesaa ya. A na-eche nkwenye mbụ ya.",
+  "transactionSubmissionUnknownTitle": "Amaghị ọnọdụ izipu",
+  "transactionSubmissionUnknownSubtitle": "Anyị enweghị ike ịkwado ma netwọkụ anabatala azụmahịa a. Lelee ọnọdụ ya tupu izipu ọzọ.",
+  "transactionConfirmedSubtitle": "Etinyela azụmahịa gị n’ime blọk."
 }

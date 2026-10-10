@@ -812,13 +812,15 @@ class _TransferConfirmationScreenState
       final chain = transfer.network == BitcoinProductNetwork.mainnet
           ? BitcoinCatalog.mainnet
           : BitcoinCatalog.testnet4;
-      progress.setSwapPending(
-        reference: outcome.txid,
-        detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
-        message: outcome.status == BitcoinSubmissionStatus.unknown
-            ? 'Submission status is unknown. Checking this transaction before any retry.'
-            : 'Bitcoin transaction submitted. Waiting for its first confirmation.',
-      );
+      final detailsUrl = '${chain.explorerUrl}/tx/${outcome.txid}';
+      if (outcome.status == BitcoinSubmissionStatus.accepted) {
+        progress.setSubmitted(reference: outcome.txid, detailsUrl: detailsUrl);
+      } else {
+        progress.setSubmissionUnknown(
+          reference: outcome.txid,
+          detailsUrl: detailsUrl,
+        );
+      }
       unawaited(
         _walletHistoryService
             .recordBitcoinSend(
@@ -847,7 +849,7 @@ class _TransferConfirmationScreenState
       );
       if (current() && status == TransactionConfirmationStatus.confirmed) {
         refreshBitcoin();
-        progress.setSuccess(
+        progress.setConfirmed(
           reference: outcome.txid,
           detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
         );

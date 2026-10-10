@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "Replace-by-fee",
   "bitcoinSpeed": "Speed",
   "transactionAmountToSend": "AMOUNT TO SEND",
-  "transactionTotal": "Total"
+  "transactionTotal": "Total",
+  "transactionSubmittedTitle": "Submitted",
+  "transactionSubmittedSubtitle": "The network accepted your transaction for relay. Waiting for its first confirmation.",
+  "transactionSubmissionUnknownTitle": "Submission uncertain",
+  "transactionSubmissionUnknownSubtitle": "We could not confirm whether the network accepted this transaction. Check its status before sending again.",
+  "transactionConfirmedSubtitle": "Your transaction has been included in a block."
 }

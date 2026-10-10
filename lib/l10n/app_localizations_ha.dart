@@ -1997,4 +1997,22 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get transactionTotal => 'Jimilla';
+
+  @override
+  String get transactionSubmittedTitle => 'An aika';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'Cibiyar sadarwa ta karɓi ma’amalarka don yaɗawa. Ana jiran tabbatarwa ta farko.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Ba a tabbatar da aikawa ba';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'Ba mu iya tabbatar ko cibiyar sadarwa ta karɓi wannan ma’amala ba. Duba matsayinta kafin sake aikawa.';
+
+  @override
+  String get transactionConfirmedSubtitle =>
+      'An haɗa ma’amalarka cikin wani bulok.';
 }

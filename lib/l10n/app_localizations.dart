@@ -3739,6 +3739,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total'**
   String get transactionTotal;
+
+  /// No description provided for @transactionSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get transactionSubmittedTitle;
+
+  /// No description provided for @transactionSubmittedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The network accepted your transaction for relay. Waiting for its first confirmation.'**
+  String get transactionSubmittedSubtitle;
+
+  /// No description provided for @transactionSubmissionUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission uncertain'**
+  String get transactionSubmissionUnknownTitle;
+
+  /// No description provided for @transactionSubmissionUnknownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm whether the network accepted this transaction. Check its status before sending again.'**
+  String get transactionSubmissionUnknownSubtitle;
+
+  /// No description provided for @transactionConfirmedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transaction has been included in a block.'**
+  String get transactionConfirmedSubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -17,6 +17,9 @@ enum TransactionProgressStage {
   swapSubmitting,
   swapPending,
   gaslessPending,
+  submitted,
+  submissionUnknown,
+  confirmed,
   success,
   error,
 }
@@ -45,13 +48,16 @@ class TransactionProgressState {
   final String? reference;
   final String? detailsUrl;
 
+  bool get isConfirmed => stage == TransactionProgressStage.confirmed;
+  bool get isSuccessful =>
+      isConfirmed || stage == TransactionProgressStage.success;
   bool get isTerminal =>
-      stage == TransactionProgressStage.success ||
-      stage == TransactionProgressStage.error;
+      isSuccessful || stage == TransactionProgressStage.error;
+  bool get hasSubmissionResult =>
+      stage == TransactionProgressStage.submitted ||
+      stage == TransactionProgressStage.submissionUnknown;
 
-  bool get hasProcessingState =>
-      stage != TransactionProgressStage.success &&
-      stage != TransactionProgressStage.error;
+  bool get hasProcessingState => !isTerminal && !hasSubmissionResult;
 
   TransactionProgressState copyWith({
     TransactionProgressStage? stage,
@@ -139,6 +145,48 @@ class TransactionProgressController extends ChangeNotifier {
     _update(
       _state.copyWith(
         stage: TransactionProgressStage.gaslessPending,
+        reference: reference,
+        detailsUrl: detailsUrl,
+        clearMessage: true,
+      ),
+    );
+  }
+
+  void setSubmitted({required String reference, required String detailsUrl}) {
+    _setSubmissionStage(
+      TransactionProgressStage.submitted,
+      reference,
+      detailsUrl,
+    );
+  }
+
+  void setSubmissionUnknown({
+    required String reference,
+    required String detailsUrl,
+  }) {
+    _setSubmissionStage(
+      TransactionProgressStage.submissionUnknown,
+      reference,
+      detailsUrl,
+    );
+  }
+
+  void setConfirmed({required String reference, required String detailsUrl}) {
+    _setSubmissionStage(
+      TransactionProgressStage.confirmed,
+      reference,
+      detailsUrl,
+    );
+  }
+
+  void _setSubmissionStage(
+    TransactionProgressStage stage,
+    String reference,
+    String detailsUrl,
+  ) {
+    _update(
+      _state.copyWith(
+        stage: stage,
         reference: reference,
         detailsUrl: detailsUrl,
         clearMessage: true,
@@ -258,7 +306,7 @@ class _RateUsPromptSuccessListenerState
 
   void _maybeSchedulePrompt() {
     if (_scheduled ||
-        widget.state.stage != TransactionProgressStage.success ||
+        !widget.state.isSuccessful ||
         widget.state.flow == TransactionProgressFlow.generic) {
       return;
     }
@@ -292,10 +340,13 @@ class _ProcessingScaffold extends StatelessWidget {
         return Icons.hourglass_top_rounded;
       case TransactionProgressStage.swapSubmitting:
         return Icons.send_rounded;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
         return Icons.schedule_rounded;
       case TransactionProgressStage.gaslessPending:
         return Icons.flash_on_rounded;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return Icons.check_rounded;
       case TransactionProgressStage.error:
@@ -305,6 +356,7 @@ class _ProcessingScaffold extends StatelessWidget {
 
   Color get _iconColor {
     switch (state.stage) {
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return Colors.white;
       case TransactionProgressStage.error:
@@ -312,6 +364,8 @@ class _ProcessingScaffold extends StatelessWidget {
       case TransactionProgressStage.preparing:
       case TransactionProgressStage.approvalPending:
       case TransactionProgressStage.swapSubmitting:
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
         return AppColors.accentRed;
@@ -320,6 +374,7 @@ class _ProcessingScaffold extends StatelessWidget {
 
   Color get _orbColor {
     switch (state.stage) {
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return AppColors.success;
       case TransactionProgressStage.error:
@@ -327,6 +382,8 @@ class _ProcessingScaffold extends StatelessWidget {
       case TransactionProgressStage.preparing:
       case TransactionProgressStage.approvalPending:
       case TransactionProgressStage.swapSubmitting:
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
         return AppColors.accentRed;
@@ -334,6 +391,15 @@ class _ProcessingScaffold extends StatelessWidget {
   }
 
   String _title(AppLocalizations l) {
+    if (state.stage == TransactionProgressStage.submitted) {
+      return l.transactionSubmittedTitle;
+    }
+    if (state.stage == TransactionProgressStage.submissionUnknown) {
+      return l.transactionSubmissionUnknownTitle;
+    }
+    if (state.stage == TransactionProgressStage.confirmed) {
+      return l.bitcoinConfirmed;
+    }
     switch (state.flow) {
       case TransactionProgressFlow.swap:
         return _swapTitle(l);
@@ -345,6 +411,15 @@ class _ProcessingScaffold extends StatelessWidget {
   }
 
   String _subtitle(AppLocalizations l) {
+    if (state.stage == TransactionProgressStage.submitted) {
+      return l.transactionSubmittedSubtitle;
+    }
+    if (state.stage == TransactionProgressStage.submissionUnknown) {
+      return l.transactionSubmissionUnknownSubtitle;
+    }
+    if (state.stage == TransactionProgressStage.confirmed) {
+      return l.transactionConfirmedSubtitle;
+    }
     switch (state.flow) {
       case TransactionProgressFlow.swap:
         return _swapSubtitle(l);
@@ -363,12 +438,15 @@ class _ProcessingScaffold extends StatelessWidget {
         return l.swapApprovalProcessingTitle;
       case TransactionProgressStage.swapSubmitting:
         return l.swapSubmittingTitle;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
         return l.swapProcessingTitle;
       case TransactionProgressStage.gaslessPending:
         return state.reference == null
             ? l.swapGaslessSubmittingTitle
             : l.swapProcessingTitle;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return l.swapCompletedTitle;
       case TransactionProgressStage.error:
@@ -384,12 +462,15 @@ class _ProcessingScaffold extends StatelessWidget {
         return l.swapApprovalProcessingSubtitle;
       case TransactionProgressStage.swapSubmitting:
         return l.swapSubmittingSubtitle;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
         return l.swapProcessingSubtitle;
       case TransactionProgressStage.gaslessPending:
         return state.reference == null
             ? l.swapGaslessSubmittingSubtitle
             : l.swapGaslessProcessingSubtitle;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return l.swapCompletedSubtitle;
       case TransactionProgressStage.error:
@@ -405,9 +486,12 @@ class _ProcessingScaffold extends StatelessWidget {
         return l.transferApprovalPendingTitle;
       case TransactionProgressStage.swapSubmitting:
         return l.transferSubmittingTitle;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
         return l.transferInProgressTitle;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return l.transferCompletedTitle;
       case TransactionProgressStage.error:
@@ -423,10 +507,13 @@ class _ProcessingScaffold extends StatelessWidget {
         return l.transferApprovalPendingSubtitle;
       case TransactionProgressStage.swapSubmitting:
         return l.transferSubmittingSubtitle;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
         return l.transferInProgressSubtitle;
       case TransactionProgressStage.gaslessPending:
         return l.transferInProgressSubtitle;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return l.transferCompletedSubtitle;
       case TransactionProgressStage.error:
@@ -442,9 +529,12 @@ class _ProcessingScaffold extends StatelessWidget {
         return l.genericTransactionApprovalPendingTitle;
       case TransactionProgressStage.swapSubmitting:
         return l.genericTransactionSubmittingTitle;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
         return l.genericTransactionInProgressTitle;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return l.genericTransactionCompletedTitle;
       case TransactionProgressStage.error:
@@ -460,9 +550,12 @@ class _ProcessingScaffold extends StatelessWidget {
         return l.genericTransactionApprovalPendingSubtitle;
       case TransactionProgressStage.swapSubmitting:
         return l.genericTransactionSubmittingSubtitle;
+      case TransactionProgressStage.submitted:
+      case TransactionProgressStage.submissionUnknown:
       case TransactionProgressStage.swapPending:
       case TransactionProgressStage.gaslessPending:
         return l.genericTransactionInProgressSubtitle;
+      case TransactionProgressStage.confirmed:
       case TransactionProgressStage.success:
         return l.genericTransactionCompletedSubtitle;
       case TransactionProgressStage.error:
@@ -494,7 +587,7 @@ class _ProcessingScaffold extends StatelessWidget {
     if (!context.mounted) {
       return;
     }
-    if (state.isTerminal &&
+    if ((state.isTerminal || state.hasSubmissionResult) &&
         terminalRouteName != null &&
         terminalRouteName!.isNotEmpty) {
       if (clearStackOnTerminalRoute) {
@@ -567,7 +660,9 @@ class _ProcessingScaffold extends StatelessWidget {
                   primaryActionLabel: _primaryActionLabel(l),
                   onOpenDetails: () => _openDetails(context),
                   onClose: () => _close(context),
-                  closeLabel: l.closeLabel,
+                  closeLabel: state.hasSubmissionResult
+                      ? l.doneLabel
+                      : l.closeLabel,
                 ),
               ),
             ),
@@ -674,7 +769,8 @@ class _ProcessingStageView extends StatelessWidget {
                   ),
                 ),
               ),
-              if (state.isTerminal && _hasDetailsUrl) ...[
+              if ((state.isTerminal || state.hasSubmissionResult) &&
+                  _hasDetailsUrl) ...[
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: onClose,
@@ -741,13 +837,18 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
 
+    if (widget.state.hasSubmissionResult ||
+        widget.state.stage == TransactionProgressStage.confirmed) {
+      _spinController.stop();
+      _pulseController.stop();
+    }
     // One-shot scale-up for the success tick
     _successController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
 
-    if (widget.state.stage == TransactionProgressStage.success) {
+    if (widget.state.isSuccessful) {
       _successController.forward();
     }
   }
@@ -755,8 +856,7 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
   @override
   void didUpdateWidget(covariant _ProcessingStatusContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.state.stage == TransactionProgressStage.success &&
-        oldWidget.state.stage != TransactionProgressStage.success) {
+    if (widget.state.isSuccessful && !oldWidget.state.isSuccessful) {
       _successController.forward(from: 0);
     }
   }
@@ -772,8 +872,9 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
   @override
   Widget build(BuildContext context) {
     final isProcessing = widget.state.hasProcessingState;
-    final isSuccess = widget.state.stage == TransactionProgressStage.success;
+    final isSuccess = widget.state.isSuccessful;
     final isError = widget.state.stage == TransactionProgressStage.error;
+    final isSubmitted = widget.state.hasSubmissionResult;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -861,6 +962,21 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
                     ),
                   ),
 
+                if (isSubmitted)
+                  Container(
+                    key: const Key('transaction-submission-result'),
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.accentRed.withValues(alpha: 0.12),
+                    ),
+                    child: const Icon(
+                      Icons.schedule_rounded,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
                 // Success checkmark with pop animation
                 if (isSuccess)
                   ScaleTransition(
@@ -947,7 +1063,7 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
           const SizedBox(height: 40),
 
           // Title — only show for terminal states
-          if (isSuccess || isError)
+          if (isSuccess || isError || isSubmitted)
             Text(
               widget.title,
               style: GoogleFonts.outfit(
@@ -971,7 +1087,7 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
           const SizedBox(height: 14),
 
           // Subtitle — only for terminal states
-          if (isSuccess || isError)
+          if (isSuccess || isError || isSubmitted)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Text(

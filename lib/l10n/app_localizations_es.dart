@@ -2033,4 +2033,22 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get transactionTotal => 'Total';
+
+  @override
+  String get transactionSubmittedTitle => 'Enviada';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'La red aceptó tu transacción para su difusión. Esperando su primera confirmación.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Envío incierto';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'No pudimos confirmar si la red aceptó esta transacción. Consulta su estado antes de volver a enviar.';
+
+  @override
+  String get transactionConfirmedSubtitle =>
+      'Tu transacción se ha incluido en un bloque.';
 }

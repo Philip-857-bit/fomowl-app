@@ -668,5 +668,10 @@
   "bitcoinReplaceByFee": "Rọ́pò pẹ̀lú owó",
   "bitcoinSpeed": "Ìyára",
   "transactionAmountToSend": "IYE LÁTI FI RÁNṢẸ́",
-  "transactionTotal": "Àpapọ̀"
+  "transactionTotal": "Àpapọ̀",
+  "transactionSubmittedTitle": "A ti fi ránṣẹ́",
+  "transactionSubmittedSubtitle": "Nẹ́tíwọ́ọ̀kì ti gba ìṣòwò rẹ fún ìtànkálẹ̀. A ń dúró de ìmúdájú àkọ́kọ́ rẹ.",
+  "transactionSubmissionUnknownTitle": "Ipò ìfiránṣẹ́ kò dájú",
+  "transactionSubmissionUnknownSubtitle": "A kò lè jẹ́rìí pé nẹ́tíwọ́ọ̀kì gba ìṣòwò yìí. Ṣàyẹ̀wò ipò rẹ kí o tó tún fi ránṣẹ́.",
+  "transactionConfirmedSubtitle": "A ti fi ìṣòwò rẹ sínú bulọọki."
 }

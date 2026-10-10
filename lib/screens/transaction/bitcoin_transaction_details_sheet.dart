@@ -150,6 +150,7 @@ class _BitcoinTransactionDetailsSheetState
                   final timestamp = current != null
                       ? current.timestamp
                       : known?.timestamp;
+                  final submitted = current?.found ?? known != null;
                   Widget detail(
                     String label,
                     String text, {
@@ -186,6 +187,8 @@ class _BitcoinTransactionDetailsSheetState
                             l.bitcoinStatus,
                             confirmations >= 1
                                 ? l.bitcoinConfirmed
+                                : submitted
+                                ? l.transactionSubmittedTitle
                                 : l.bitcoinPending,
                             color: confirmations >= 1
                                 ? AppColors.success

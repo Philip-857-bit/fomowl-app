@@ -2002,4 +2002,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get transactionTotal => 'Total';
+
+  @override
+  String get transactionSubmittedTitle => 'Submitted';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'The network accepted your transaction for relay. Waiting for its first confirmation.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Submission uncertain';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'We could not confirm whether the network accepted this transaction. Check its status before sending again.';
+
+  @override
+  String get transactionConfirmedSubtitle =>
+      'Your transaction has been included in a block.';
 }
