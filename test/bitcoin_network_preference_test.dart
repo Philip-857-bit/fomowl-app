@@ -244,6 +244,118 @@ void main() {
       },
     );
   }
+  for (final runtimeFirst in [false, true]) {
+    test('restart restores Testnet4 after delayed wallet/runtime admission: '
+        'runtimeFirst=$runtimeFirst', () async {
+      final value = await fixture();
+      await value.preference.setEnabled(true);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('active_network_key', 'bitcoin:testnet4');
+      final restarted = BlockchainService();
+      await restarted.loadActiveNetworkForTest();
+      expect(restarted.activeFamily, ChainFamily.evm);
+      await restarted.saveActiveNetworkForTest();
+      expect(prefs.getString('active_network_key'), 'bitcoin:testnet4');
+      void walletReady() => restarted.setActiveWalletContext(
+        address: value.identity,
+        supportedFamilies: value.blockchain.activeWalletSupportedFamilies,
+      );
+      void runtimeReady() => restarted.configureBitcoinAvailability(
+        available: true,
+        testnetEnabled: true,
+      );
+      if (runtimeFirst) {
+        runtimeReady();
+        expect(restarted.activeFamily, ChainFamily.evm);
+        walletReady();
+      } else {
+        walletReady();
+        expect(restarted.activeFamily, ChainFamily.evm);
+        runtimeReady();
+      }
+      expect(restarted.activeNetworkKey, 'bitcoin:testnet4');
+      expect(restarted.enabledFamilies, {ChainFamily.evm, ChainFamily.bitcoin});
+      // Wallet context starts a best-effort custom-network reload.
+      await Future<void>.delayed(Duration.zero);
+      restarted.dispose();
+      value.blockchain.dispose();
+    });
+  }
+  test(
+    'Testnet4 restoration stays gated by network and wallet support',
+    () async {
+      final value = await fixture();
+      await value.preference.setEnabled(true);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('active_network_key', 'bitcoin:testnet4');
+      final restarted = BlockchainService();
+      restarted.setActiveWalletContext(
+        address: value.identity,
+        supportedFamilies: {ChainFamily.evm},
+      );
+      await restarted.loadActiveNetworkForTest();
+      restarted.configureBitcoinAvailability(available: false);
+      expect(restarted.activeFamily, ChainFamily.evm);
+      restarted.configureBitcoinAvailability(
+        available: true,
+        testnetEnabled: true,
+      );
+      expect(restarted.activeFamily, ChainFamily.evm);
+      restarted.configureBitcoinAvailability(available: true);
+      restarted.setActiveWalletContext(
+        address: value.identity,
+        supportedFamilies: value.blockchain.activeWalletSupportedFamilies,
+      );
+      expect(restarted.activeFamily, ChainFamily.evm);
+      restarted.configureBitcoinAvailability(
+        available: true,
+        testnetEnabled: true,
+      );
+      expect(restarted.activeNetworkKey, 'bitcoin:testnet4');
+      restarted.dispose();
+      value.blockchain.dispose();
+    },
+  );
+  for (final action in ['disable', 'select', 'switch']) {
+    test(
+      'pending Testnet4 restoration respects later user action: $action',
+      () async {
+        final value = await fixture();
+        await value.preference.setEnabled(true);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('active_network_key', 'bitcoin:testnet4');
+        final restarted = BlockchainService();
+        restarted.setActiveWalletContext(
+          address: value.identity,
+          supportedFamilies: value.blockchain.activeWalletSupportedFamilies,
+        );
+        await restarted.loadActiveNetworkForTest();
+        switch (action) {
+          case 'disable':
+            await restarted.setEnabledFamilies({ChainFamily.evm});
+          case 'select':
+            restarted.setActiveNetworkKey('eip155:1');
+          case 'switch':
+            restarted.setActiveWalletContext(
+              address: '0xother-wallet',
+              supportedFamilies: value.blockchain.activeWalletSupportedFamilies,
+            );
+        }
+        restarted.configureBitcoinAvailability(
+          available: true,
+          testnetEnabled: true,
+        );
+        expect(restarted.activeFamily, ChainFamily.evm);
+        await restarted.saveActiveNetworkForTest();
+        expect(
+          prefs.getString('active_network_key'),
+          isNot('bitcoin:testnet4'),
+        );
+        restarted.dispose();
+        value.blockchain.dispose();
+      },
+    );
+  }
   testWidgets(
     'Manage Networks Bitcoin switch opts in/out and hides unavailable or imported wallets',
     (tester) async {
