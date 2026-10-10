@@ -154,17 +154,20 @@ class BitcoinNetworkService implements BitcoinNetworkApi {
     Map<String, Object?> body, [
     Map<String, String>? query,
   ]) async {
-    if (identity.isEmpty || identity.length > 128) {
+    // Owllet's stable wallet identity uses the same canonical form as backend
+    // session creation. Bitcoin receive addresses and signed bytes stay intact.
+    final canonicalIdentity = identity.trim().toLowerCase();
+    if (canonicalIdentity.isEmpty || canonicalIdentity.length > 128) {
       throw ArgumentError('Invalid wallet identity');
     }
     try {
       final response = await auth.sendAuthorized(
-        identity,
+        canonicalIdentity,
         (headers) => _send(
           'POST',
           _uri(network, path, query),
           headers: headers,
-          body: jsonEncode(body),
+          body: jsonEncode({...body, 'walletAddress': canonicalIdentity}),
         ),
         {'Content-Type': 'application/json'},
       );

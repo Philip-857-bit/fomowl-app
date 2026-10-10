@@ -8,12 +8,18 @@ import 'package:fomowl_wallet/services/bitcoin/bitcoin_network_service.dart';
 import 'package:fomowl_wallet/services/wallet_backend_auth_service.dart';
 
 class PublicFixtureAuth extends WalletBackendAuthService {
+  final String? sessionIdentity;
+  PublicFixtureAuth({this.sessionIdentity});
+  String? authenticatedIdentity;
   @override
   Future<http.Response> sendAuthorized(
     String identity,
     Future<http.Response> Function(Map<String, String>) send,
     Map<String, String> headers,
-  ) => send({...headers, 'Authorization': 'Bearer public-fixture-token'});
+  ) {
+    authenticatedIdentity = sessionIdentity ?? identity.trim().toLowerCase();
+    return send({...headers, 'Authorization': 'Bearer public-fixture-token'});
+  }
 }
 
 class OversizedClient extends http.BaseClient {
@@ -331,6 +337,80 @@ void main() {
         throwsA(isA<BitcoinNetworkException>()),
       );
       expect(requests, 1);
+    },
+  );
+  test(
+    'broadcast body uses the same canonical identity as the wallet session',
+    () async {
+      const mixed = '0x9858EfFD232B4033E47d90003D41EC34EcaEda94';
+      final auth = PublicFixtureAuth();
+      final client = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        // Model the backend's literal comparison to its lowercase session row.
+        if (body['walletAddress'] != auth.authenticatedIdentity) {
+          return http.Response(
+            jsonEncode({
+              'error': 'Forbidden',
+              'message':
+                  'The wallet session does not match the requested wallet.',
+            }),
+            403,
+          );
+        }
+        expect(body['signedTransaction'], 'aa11');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'transactionHash': '11' * 32,
+            'networkKey': 'bitcoin:testnet4',
+          }),
+          200,
+        );
+      });
+      final api = BitcoinNetworkService(client: client, auth: auth);
+      expect(
+        await api.broadcast(mixed, BitcoinProductNetwork.testnet4, 'aa11'),
+        '11' * 32,
+      );
+      expect(auth.authenticatedIdentity, mixed.toLowerCase());
+    },
+  );
+  test(
+    'canonicalization does not authorize a different wallet or retry a 403',
+    () async {
+      var calls = 0;
+      const requested = '0x2222222222222222222222222222222222222222';
+      final auth = PublicFixtureAuth(
+        sessionIdentity: '0x1111111111111111111111111111111111111111',
+      );
+      final api = BitcoinNetworkService(
+        auth: auth,
+        client: MockClient((request) async {
+          calls++;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['walletAddress'], requested);
+          expect(body['walletAddress'], isNot(auth.authenticatedIdentity));
+          return http.Response(
+            jsonEncode({
+              'error': 'Forbidden',
+              'message':
+                  'The wallet session does not match the requested wallet.',
+            }),
+            403,
+          );
+        }),
+      );
+      await expectLater(
+        api.broadcast(requested, BitcoinProductNetwork.testnet4, 'aa11'),
+        throwsA(
+          isA<BitcoinNetworkException>().having(
+            (error) => error.statusCode,
+            'status code',
+            403,
+          ),
+        ),
+      );
+      expect(calls, 1);
     },
   );
 }
