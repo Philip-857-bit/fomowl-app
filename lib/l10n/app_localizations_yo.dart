@@ -2003,4 +2003,40 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get transactionConfirmedSubtitle => 'A ti fi ìṣòwò rẹ sínú bulọọki.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Ṣàyẹ̀wò àwọn ìgbìyànjú tí a fipamọ́';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Gba ìgbìyànjú padà tí o mọ̀ pé a kọ̀ ṣáájú ìtànkálẹ̀ nìkan. Àìrí ìṣòwò kì í ṣe ẹ̀rí.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge =>
+      'A kọ ìgbìyànjú yìí ṣáájú ìtànkálẹ̀.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Gba ìpamọ́ Testnet4 padà';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'Ìgbàpadà kò sí. Ìgbìyànjú yìí ṣì wà ní ìpamọ́.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'A kò lè jẹ́rìí ìgbàpadà. A kò fi ìṣòwò tuntun ránṣẹ́.';
+
+  @override
+  String get bitcoinRecoveryEmpty =>
+      'Kò sí ìgbìyànjú tí a fipamọ́ fún nẹ́tíwọ́ọ̀kì yìí.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'A ti gba ìpamọ́ padà. O lè ṣètò ìfiránṣẹ́ tuntun.';
+
+  @override
+  String get bitcoinReservedInputs => 'Àwọn ìwọlé tí a fipamọ́';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Ṣàyẹ̀wò ipò ìṣòwò';
 }

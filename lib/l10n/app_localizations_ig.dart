@@ -2005,4 +2005,38 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get transactionConfirmedSubtitle => 'Etinyela azụmahịa gị n’ime blọk.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Lelee mbọ echekwara';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Weghachite naanị mbọ ị maara na ajụrụ tupu mgbasa. Ịhụghị azụmahịa abụghị ihe akaebe.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => 'Ajụrụ mbọ a tupu mgbasa.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Weghachite ndoputa Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'Nweghachi adịghị. A ka debere mbọ a.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'Enweghị ike ịkwado nweghachi. E zipụghị azụmahịa ọhụrụ.';
+
+  @override
+  String get bitcoinRecoveryEmpty => 'Enweghị mbọ echekwara maka netwọkụ a.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'Eweghachila ndoputa. Ị nwere ike ịkwadebe mbufe ọhụrụ.';
+
+  @override
+  String get bitcoinReservedInputs => 'Ntinye echekwara';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Lelee ọnọdụ azụmahịa';
 }

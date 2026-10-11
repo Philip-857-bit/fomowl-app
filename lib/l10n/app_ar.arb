@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "قبلت الشبكة معاملتك لنشرها. في انتظار التأكيد الأول.",
   "transactionSubmissionUnknownTitle": "حالة الإرسال غير مؤكدة",
   "transactionSubmissionUnknownSubtitle": "تعذر التأكد من قبول الشبكة لهذه المعاملة. تحقق من حالتها قبل الإرسال مرة أخرى.",
-  "transactionConfirmedSubtitle": "تم تضمين معاملتك في كتلة."
+  "transactionConfirmedSubtitle": "تم تضمين معاملتك في كتلة.",
+  "bitcoinRecoveryTitle": "مراجعة المحاولات المحفوظة",
+  "bitcoinRecoveryWarning": "استرد فقط محاولة تعلم أنها رُفضت قبل البث. عدم العثور على المعاملة وحده ليس دليلاً.",
+  "bitcoinRecoveryAcknowledge": "رُفضت هذه المحاولة قبل البث.",
+  "bitcoinRecoveryAction": "استرداد حجز Testnet4",
+  "bitcoinRecoveryUnavailable": "الاسترداد غير متاح. تظل هذه المحاولة محجوزة.",
+  "bitcoinRecoveryError": "تعذر التحقق من الاسترداد. لم يتم إرسال معاملة جديدة.",
+  "bitcoinRecoveryEmpty": "لا توجد محاولات محفوظة لهذه الشبكة.",
+  "bitcoinRecoverySuccess": "تم استرداد الحجز. يمكنك إعداد تحويل جديد.",
+  "bitcoinReservedInputs": "المدخلات المحجوزة",
+  "bitcoinRecoveryCheck": "التحقق من حالة المعاملة"
 }

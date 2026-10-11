@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "Le réseau a accepté votre transaction pour sa diffusion. En attente de sa première confirmation.",
   "transactionSubmissionUnknownTitle": "Envoi incertain",
   "transactionSubmissionUnknownSubtitle": "Nous ne pouvons pas confirmer si le réseau a accepté cette transaction. Vérifiez son statut avant de renvoyer.",
-  "transactionConfirmedSubtitle": "Votre transaction a été incluse dans un bloc."
+  "transactionConfirmedSubtitle": "Votre transaction a été incluse dans un bloc.",
+  "bitcoinRecoveryTitle": "Examiner les tentatives enregistrées",
+  "bitcoinRecoveryWarning": "Ne récupérez que les tentatives rejetées avant diffusion. Une transaction introuvable ne constitue pas une preuve.",
+  "bitcoinRecoveryAcknowledge": "Cette tentative a été rejetée avant diffusion.",
+  "bitcoinRecoveryAction": "Récupérer la réservation Testnet4",
+  "bitcoinRecoveryUnavailable": "La récupération est indisponible. Cette tentative reste réservée.",
+  "bitcoinRecoveryError": "Impossible de vérifier la récupération. Aucune nouvelle transaction envoyée.",
+  "bitcoinRecoveryEmpty": "Aucune tentative enregistrée pour ce réseau.",
+  "bitcoinRecoverySuccess": "Réservation récupérée. Vous pouvez préparer un nouveau transfert.",
+  "bitcoinReservedInputs": "Entrées réservées",
+  "bitcoinRecoveryCheck": "Vérifier le statut"
 }

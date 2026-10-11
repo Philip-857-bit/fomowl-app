@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "The network accepted your transaction for relay. Waiting for its first confirmation.",
   "transactionSubmissionUnknownTitle": "Submission uncertain",
   "transactionSubmissionUnknownSubtitle": "We could not confirm whether the network accepted this transaction. Check its status before sending again.",
-  "transactionConfirmedSubtitle": "Your transaction has been included in a block."
+  "transactionConfirmedSubtitle": "Your transaction has been included in a block.",
+  "bitcoinRecoveryTitle": "Review saved attempts",
+  "bitcoinRecoveryWarning": "Only recover an attempt you know was rejected before broadcast. A missing transaction alone is not proof.",
+  "bitcoinRecoveryAcknowledge": "This attempt was rejected before broadcast.",
+  "bitcoinRecoveryAction": "Recover Testnet4 reservation",
+  "bitcoinRecoveryUnavailable": "Recovery is unavailable. This attempt remains reserved.",
+  "bitcoinRecoveryError": "Could not verify recovery. No new transaction has been sent.",
+  "bitcoinRecoveryEmpty": "No saved attempts for this network.",
+  "bitcoinRecoverySuccess": "Reservation recovered. You can prepare a new transfer.",
+  "bitcoinReservedInputs": "Reserved inputs",
+  "bitcoinRecoveryCheck": "Check transaction status"
 }

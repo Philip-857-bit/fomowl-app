@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "La red aceptó tu transacción para su difusión. Esperando su primera confirmación.",
   "transactionSubmissionUnknownTitle": "Envío incierto",
   "transactionSubmissionUnknownSubtitle": "No pudimos confirmar si la red aceptó esta transacción. Consulta su estado antes de volver a enviar.",
-  "transactionConfirmedSubtitle": "Tu transacción se ha incluido en un bloque."
+  "transactionConfirmedSubtitle": "Tu transacción se ha incluido en un bloque.",
+  "bitcoinRecoveryTitle": "Revisar intentos guardados",
+  "bitcoinRecoveryWarning": "Recupera solo un intento rechazado antes de su difusión. Que una transacción no aparezca no lo demuestra.",
+  "bitcoinRecoveryAcknowledge": "Este intento fue rechazado antes de difundirse.",
+  "bitcoinRecoveryAction": "Recuperar reserva de Testnet4",
+  "bitcoinRecoveryUnavailable": "La recuperación no está disponible. El intento sigue reservado.",
+  "bitcoinRecoveryError": "No se pudo verificar la recuperación. No se ha enviado otra transacción.",
+  "bitcoinRecoveryEmpty": "No hay intentos guardados para esta red.",
+  "bitcoinRecoverySuccess": "Reserva recuperada. Puedes preparar otra transferencia.",
+  "bitcoinReservedInputs": "Entradas reservadas",
+  "bitcoinRecoveryCheck": "Consultar estado"
 }

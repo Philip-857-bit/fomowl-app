@@ -3,6 +3,26 @@ import '../../models/bitcoin_account_state.dart';
 import '../../src/rust/api/bitcoin_transaction.dart';
 import 'bitcoin_account_store.dart';
 
+/// Public metadata for one persisted entry; its storage scope is opaque.
+class BitcoinPendingSubmission {
+  final Object _store;
+  final String walletIdentity;
+  final BitcoinProductNetwork network;
+  final String txid;
+  final List<String> inputs;
+  final bool legacy;
+  BitcoinPendingSubmission._(
+    this._store,
+    this.walletIdentity,
+    this.network,
+    this.txid,
+    List<String> inputs,
+    this.legacy,
+  ) : inputs = List.unmodifiable(inputs);
+  @override
+  String toString() => 'BitcoinPendingSubmission';
+}
+
 /// A non-serializable capability for one live submission attempt. No secrets.
 class BitcoinSubmissionReservation {
   final Object _store;
@@ -27,7 +47,17 @@ class BitcoinSubmissionReservation {
 /// No elapsed-time release: a timeout is not evidence that a transaction failed.
 class BitcoinSubmissionJournal {
   final BitcoinAccountStore store;
-  const BitcoinSubmissionJournal(this.store);
+  final bool internalTestnetRecovery;
+  static const internalBuild =
+      String.fromEnvironment(
+        'BITCOIN_BUILD_AUDIENCE',
+        defaultValue: 'production',
+      ) ==
+      'internal';
+  const BitcoinSubmissionJournal(
+    this.store, {
+    this.internalTestnetRecovery = internalBuild,
+  });
   static final Expando<Map<String, Object>> _owners = Expando();
   Map<String, Object> get _liveOwners => _owners[store.secureStore] ??= {};
   String _ownerKey(
@@ -40,9 +70,10 @@ class BitcoinSubmissionJournal {
   Map<String, dynamic> _decode(String? raw, String identity) {
     if (raw == null) {
       return {
-        'version': 1,
+        'version': 2,
         'identity': identity.toLowerCase(),
         'entries': <String, dynamic>{},
+        'legacyEntries': <String>[],
       };
     }
     if (raw.length > 524288) {
@@ -50,8 +81,8 @@ class BitcoinSubmissionJournal {
     }
     final value = jsonDecode(raw);
     if (value is! Map<String, dynamic> ||
-        value.length != 3 ||
-        value['version'] != 1 ||
+        ![1, 2].contains(value['version']) ||
+        value.length != (value['version'] == 1 ? 3 : 4) ||
         value['identity'] != identity.toLowerCase() ||
         value['entries'] is! Map<String, dynamic>) {
       throw const FormatException('Invalid Bitcoin submission journal');
@@ -80,7 +111,81 @@ class BitcoinSubmissionJournal {
         }
       }
     }
+    if (value['version'] == 1) {
+      // Existing uncertain entries remain reserved. All newly created entries
+      // use v2 and are never eligible for this legacy-only manual override.
+      value['version'] = 2;
+      value['legacyEntries'] = entries.keys.toList();
+    }
+    final legacy = value['legacyEntries'];
+    if (legacy is! List ||
+        legacy.length > 1024 ||
+        legacy.toSet().length != legacy.length ||
+        legacy.any((key) => key is! String || !entries.containsKey(key))) {
+      throw const FormatException('Invalid Bitcoin submission journal');
+    }
     return value;
+  }
+
+  Future<List<BitcoinPendingSubmission>> pending(
+    String identity,
+    BitcoinProductNetwork network,
+  ) => store.updateSubmissionState(identity, (raw) {
+    final value = _decode(raw, identity);
+    final entries = value['entries'] as Map<String, dynamic>;
+    final legacy = value['legacyEntries'] as List;
+    return (
+      List.unmodifiable([
+        for (final entry in entries.entries)
+          if (entry.key.startsWith('${network.id}|'))
+            BitcoinPendingSubmission._(
+              store.secureStore,
+              identity.toLowerCase(),
+              network,
+              entry.key.split('|').last,
+              List<String>.from(entry.value),
+              legacy.contains(entry.key),
+            ),
+      ]),
+      null,
+    );
+  });
+
+  /// Explicit authenticated manual override, confined to old internal Testnet4
+  /// entries. The recovery coordinator must check chain facts first.
+  Future<bool> recoverLegacyTestnet4(
+    BitcoinPendingSubmission snapshot, {
+    required void Function() checkAuthorization,
+  }) async {
+    if (!internalTestnetRecovery ||
+        snapshot.network != BitcoinProductNetwork.testnet4 ||
+        !snapshot.legacy ||
+        !identical(snapshot._store, store.secureStore)) {
+      throw StateError('Legacy recovery is unavailable for this submission');
+    }
+    return store.updateSubmissionState(snapshot.walletIdentity, (raw) {
+      checkAuthorization();
+      final value = _decode(raw, snapshot.walletIdentity);
+      final entries = value['entries'] as Map<String, dynamic>;
+      final legacy = value['legacyEntries'] as List;
+      final key = '${snapshot.network.id}|${snapshot.txid}';
+      final actual = entries[key];
+      if (actual == null) return (false, null);
+      if (!legacy.contains(key) ||
+          actual is! List ||
+          actual.length != snapshot.inputs.length ||
+          !actual.toSet().containsAll(snapshot.inputs) ||
+          _liveOwners.containsKey(
+            _ownerKey(snapshot.walletIdentity, snapshot.network, snapshot.txid),
+          )) {
+        throw StateError('Bitcoin recovery snapshot changed');
+      }
+      entries.remove(key);
+      legacy.remove(key);
+      final encoded = jsonEncode(value);
+      _decode(encoded, snapshot.walletIdentity);
+      return (true, encoded);
+    });
   }
 
   Future<Set<String>> reserved(
@@ -228,6 +333,7 @@ class BitcoinSubmissionJournal {
         throw StateError('Bitcoin reservation input mismatch');
       }
       entries.remove(key);
+      (value['legacyEntries'] as List).remove(key);
       final encoded = jsonEncode(value);
       _decode(encoded, identity);
       return (true, encoded);

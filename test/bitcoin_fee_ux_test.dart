@@ -378,6 +378,10 @@ void main() {
       expect(find.textContaining('private-error-marker'), findsNothing);
       if (failure == 'reserved') {
         expect(
+          find.byKey(const Key('bitcoin-review-reservations')),
+          findsOneWidget,
+        );
+        expect(
           find.textContaining('reserved by an earlier submission'),
           findsOneWidget,
         );

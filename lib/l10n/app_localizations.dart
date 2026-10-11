@@ -3769,6 +3769,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your transaction has been included in a block.'**
   String get transactionConfirmedSubtitle;
+
+  /// No description provided for @bitcoinRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review saved attempts'**
+  String get bitcoinRecoveryTitle;
+
+  /// No description provided for @bitcoinRecoveryWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Only recover an attempt you know was rejected before broadcast. A missing transaction alone is not proof.'**
+  String get bitcoinRecoveryWarning;
+
+  /// No description provided for @bitcoinRecoveryAcknowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'This attempt was rejected before broadcast.'**
+  String get bitcoinRecoveryAcknowledge;
+
+  /// No description provided for @bitcoinRecoveryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Recover Testnet4 reservation'**
+  String get bitcoinRecoveryAction;
+
+  /// No description provided for @bitcoinRecoveryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery is unavailable. This attempt remains reserved.'**
+  String get bitcoinRecoveryUnavailable;
+
+  /// No description provided for @bitcoinRecoveryError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not verify recovery. No new transaction has been sent.'**
+  String get bitcoinRecoveryError;
+
+  /// No description provided for @bitcoinRecoveryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved attempts for this network.'**
+  String get bitcoinRecoveryEmpty;
+
+  /// No description provided for @bitcoinRecoverySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation recovered. You can prepare a new transfer.'**
+  String get bitcoinRecoverySuccess;
+
+  /// No description provided for @bitcoinReservedInputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved inputs'**
+  String get bitcoinReservedInputs;
+
+  /// No description provided for @bitcoinRecoveryCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check transaction status'**
+  String get bitcoinRecoveryCheck;
 }
 
 class _AppLocalizationsDelegate

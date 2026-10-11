@@ -2020,4 +2020,39 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transactionConfirmedSubtitle =>
       'Your transaction has been included in a block.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Review saved attempts';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Only recover an attempt you know was rejected before broadcast. A missing transaction alone is not proof.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge =>
+      'This attempt was rejected before broadcast.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Recover Testnet4 reservation';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'Recovery is unavailable. This attempt remains reserved.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'Could not verify recovery. No new transaction has been sent.';
+
+  @override
+  String get bitcoinRecoveryEmpty => 'No saved attempts for this network.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'Reservation recovered. You can prepare a new transfer.';
+
+  @override
+  String get bitcoinReservedInputs => 'Reserved inputs';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Check transaction status';
 }

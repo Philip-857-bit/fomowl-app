@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "Nẹ́tíwọ́ọ̀kì ti gba ìṣòwò rẹ fún ìtànkálẹ̀. A ń dúró de ìmúdájú àkọ́kọ́ rẹ.",
   "transactionSubmissionUnknownTitle": "Ipò ìfiránṣẹ́ kò dájú",
   "transactionSubmissionUnknownSubtitle": "A kò lè jẹ́rìí pé nẹ́tíwọ́ọ̀kì gba ìṣòwò yìí. Ṣàyẹ̀wò ipò rẹ kí o tó tún fi ránṣẹ́.",
-  "transactionConfirmedSubtitle": "A ti fi ìṣòwò rẹ sínú bulọọki."
+  "transactionConfirmedSubtitle": "A ti fi ìṣòwò rẹ sínú bulọọki.",
+  "bitcoinRecoveryTitle": "Ṣàyẹ̀wò àwọn ìgbìyànjú tí a fipamọ́",
+  "bitcoinRecoveryWarning": "Gba ìgbìyànjú padà tí o mọ̀ pé a kọ̀ ṣáájú ìtànkálẹ̀ nìkan. Àìrí ìṣòwò kì í ṣe ẹ̀rí.",
+  "bitcoinRecoveryAcknowledge": "A kọ ìgbìyànjú yìí ṣáájú ìtànkálẹ̀.",
+  "bitcoinRecoveryAction": "Gba ìpamọ́ Testnet4 padà",
+  "bitcoinRecoveryUnavailable": "Ìgbàpadà kò sí. Ìgbìyànjú yìí ṣì wà ní ìpamọ́.",
+  "bitcoinRecoveryError": "A kò lè jẹ́rìí ìgbàpadà. A kò fi ìṣòwò tuntun ránṣẹ́.",
+  "bitcoinRecoveryEmpty": "Kò sí ìgbìyànjú tí a fipamọ́ fún nẹ́tíwọ́ọ̀kì yìí.",
+  "bitcoinRecoverySuccess": "A ti gba ìpamọ́ padà. O lè ṣètò ìfiránṣẹ́ tuntun.",
+  "bitcoinReservedInputs": "Àwọn ìwọlé tí a fipamọ́",
+  "bitcoinRecoveryCheck": "Ṣàyẹ̀wò ipò ìṣòwò"
 }

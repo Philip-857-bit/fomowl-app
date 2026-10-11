@@ -2051,4 +2051,39 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get transactionConfirmedSubtitle =>
       'Tu transacción se ha incluido en un bloque.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Revisar intentos guardados';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Recupera solo un intento rechazado antes de su difusión. Que una transacción no aparezca no lo demuestra.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge =>
+      'Este intento fue rechazado antes de difundirse.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Recuperar reserva de Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'La recuperación no está disponible. El intento sigue reservado.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'No se pudo verificar la recuperación. No se ha enviado otra transacción.';
+
+  @override
+  String get bitcoinRecoveryEmpty => 'No hay intentos guardados para esta red.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'Reserva recuperada. Puedes preparar otra transferencia.';
+
+  @override
+  String get bitcoinReservedInputs => 'Entradas reservadas';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Consultar estado';
 }

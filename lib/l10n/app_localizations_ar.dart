@@ -2010,4 +2010,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get transactionConfirmedSubtitle => 'تم تضمين معاملتك في كتلة.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'مراجعة المحاولات المحفوظة';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'استرد فقط محاولة تعلم أنها رُفضت قبل البث. عدم العثور على المعاملة وحده ليس دليلاً.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => 'رُفضت هذه المحاولة قبل البث.';
+
+  @override
+  String get bitcoinRecoveryAction => 'استرداد حجز Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'الاسترداد غير متاح. تظل هذه المحاولة محجوزة.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'تعذر التحقق من الاسترداد. لم يتم إرسال معاملة جديدة.';
+
+  @override
+  String get bitcoinRecoveryEmpty => 'لا توجد محاولات محفوظة لهذه الشبكة.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'تم استرداد الحجز. يمكنك إعداد تحويل جديد.';
+
+  @override
+  String get bitcoinReservedInputs => 'المدخلات المحجوزة';
+
+  @override
+  String get bitcoinRecoveryCheck => 'التحقق من حالة المعاملة';
 }

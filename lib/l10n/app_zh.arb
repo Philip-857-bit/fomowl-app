@@ -676,5 +676,15 @@
   "transactionSubmittedSubtitle": "网络已接受并传播您的交易，正在等待首次确认。",
   "transactionSubmissionUnknownTitle": "提交状态不确定",
   "transactionSubmissionUnknownSubtitle": "无法确认网络是否已接受此交易。再次发送前请检查其状态。",
-  "transactionConfirmedSubtitle": "您的交易已被纳入区块。"
+  "transactionConfirmedSubtitle": "您的交易已被纳入区块。",
+  "bitcoinRecoveryTitle": "查看已保存的尝试",
+  "bitcoinRecoveryWarning": "仅恢复您确定在广播前被拒绝的尝试。找不到交易本身不能证明这一点。",
+  "bitcoinRecoveryAcknowledge": "此尝试在广播前已被拒绝。",
+  "bitcoinRecoveryAction": "恢复 Testnet4 预留",
+  "bitcoinRecoveryUnavailable": "无法恢复，此尝试仍保持预留。",
+  "bitcoinRecoveryError": "无法验证恢复。未发送新交易。",
+  "bitcoinRecoveryEmpty": "此网络没有已保存的尝试。",
+  "bitcoinRecoverySuccess": "已恢复预留，您可以准备新转账。",
+  "bitcoinReservedInputs": "预留输入",
+  "bitcoinRecoveryCheck": "检查交易状态"
 }

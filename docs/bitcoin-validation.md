@@ -76,8 +76,9 @@ and GitHub CI. Merge the stable backend contract before the mobile product.
 The immutable SDK currently accepts P2WPKH and P2TR recipient scripts.
 Legacy P2PKH/P2SH recipients, mixed input policies, WIF/XPRV import UI, Lightning,
 multisig, tapscript, Bitcoin swaps and Bitcoin WalletConnect are outside this
-milestone. Funded Testnet4 and physical phone validation remain paused; automated
-fixtures and compile checks do not replace those production rollout gates.
+milestone. Funded Testnet4 broadcasts have been observed during physical phone
+testing. Confirmation, recovery and lifecycle checks remain production rollout
+gates; automated fixtures and compile checks do not replace them.
 
 ## Network preference semantics
 
@@ -92,3 +93,23 @@ active network. Private-key-only imports cannot opt in.
 The locked Firebase core 4.12.1 and messaging 16.4.3 Swift packages both declare
 minimum iOS 15.0. The binary minimum changed from iOS 13 to iOS 15; this cleanup
 retains that dependency requirement without downgrading Firebase.
+
+## Legacy submission recovery
+
+Send provides a saved-attempt inspector showing the exact transaction ID and
+reserved outpoints. Mainnet and production builds are read-only. Internal
+Testnet4 builds permit an explicit manual override only for legacy entries,
+after the user acknowledges a known pre-broadcast rejection and authenticates.
+The coordinator checks the transaction twice, refreshes discovery, and verifies
+every expected input is confirmed, unspent and owned using SDK-derived scripts.
+Authentication expiry, wallet changes, known transactions, provider errors and
+changed snapshots prevent release. A missing transaction alone never releases
+an entry, and recovery never signs or broadcasts a transaction.
+
+Journal schema v2 preserves existing reservations and marks only pre-upgrade
+entries as legacy. New uncertain submissions cannot use this override. Removal
+compares the exact storage scope, transaction and input set atomically; stale
+snapshots cannot remove later attempts. The protected storage key is unchanged.
+After v2 is written, older builds with a v1-only parser cannot read the journal
+and fail closed; reinstalling an older APK is not a recovery method. SDK vault
+records, derivation, signing and the immutable Owllet Core pin are unchanged.

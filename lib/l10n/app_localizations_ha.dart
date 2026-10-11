@@ -2015,4 +2015,39 @@ class AppLocalizationsHa extends AppLocalizations {
   @override
   String get transactionConfirmedSubtitle =>
       'An haɗa ma’amalarka cikin wani bulok.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Duba ƙoƙarin da aka ajiye';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Ka dawo da ƙoƙarin da ka san an ƙi kafin yaɗawa kawai. Rashin ganin ma’amala kaɗai ba hujja ba ne.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => 'An ƙi wannan ƙoƙari kafin yaɗawa.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Dawo da ajiyar Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'Ba za a iya dawo da ita ba. Wannan ƙoƙarin yana nan a ajiye.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'Ba a iya tabbatar da dawowa ba. Ba a aika sabuwar ma’amala ba.';
+
+  @override
+  String get bitcoinRecoveryEmpty =>
+      'Babu ƙoƙarin da aka ajiye ga wannan cibiyar sadarwa.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'An dawo da ajiyar. Za ka iya shirya sabon canja wuri.';
+
+  @override
+  String get bitcoinReservedInputs => 'Abubuwan shiga da aka ajiye';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Duba matsayin ma’amala';
 }

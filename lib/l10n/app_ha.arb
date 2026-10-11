@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "Cibiyar sadarwa ta karɓi ma’amalarka don yaɗawa. Ana jiran tabbatarwa ta farko.",
   "transactionSubmissionUnknownTitle": "Ba a tabbatar da aikawa ba",
   "transactionSubmissionUnknownSubtitle": "Ba mu iya tabbatar ko cibiyar sadarwa ta karɓi wannan ma’amala ba. Duba matsayinta kafin sake aikawa.",
-  "transactionConfirmedSubtitle": "An haɗa ma’amalarka cikin wani bulok."
+  "transactionConfirmedSubtitle": "An haɗa ma’amalarka cikin wani bulok.",
+  "bitcoinRecoveryTitle": "Duba ƙoƙarin da aka ajiye",
+  "bitcoinRecoveryWarning": "Ka dawo da ƙoƙarin da ka san an ƙi kafin yaɗawa kawai. Rashin ganin ma’amala kaɗai ba hujja ba ne.",
+  "bitcoinRecoveryAcknowledge": "An ƙi wannan ƙoƙari kafin yaɗawa.",
+  "bitcoinRecoveryAction": "Dawo da ajiyar Testnet4",
+  "bitcoinRecoveryUnavailable": "Ba za a iya dawo da ita ba. Wannan ƙoƙarin yana nan a ajiye.",
+  "bitcoinRecoveryError": "Ba a iya tabbatar da dawowa ba. Ba a aika sabuwar ma’amala ba.",
+  "bitcoinRecoveryEmpty": "Babu ƙoƙarin da aka ajiye ga wannan cibiyar sadarwa.",
+  "bitcoinRecoverySuccess": "An dawo da ajiyar. Za ka iya shirya sabon canja wuri.",
+  "bitcoinReservedInputs": "Abubuwan shiga da aka ajiye",
+  "bitcoinRecoveryCheck": "Duba matsayin ma’amala"
 }

@@ -17,11 +17,16 @@ import '../../utils/bitcoin_amount_utils.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/bitcoin_network_data.dart';
 import '../../services/bitcoin/bitcoin_send_service.dart';
+import '../../services/bitcoin/bitcoin_submission_journal.dart';
+import '../../services/bitcoin/bitcoin_submission_recovery_service.dart';
+import '../../services/wallet_vault_service.dart';
+import '../../utils/wallet_unlock_navigation.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import 'widgets/send/amount_font_fit.dart';
 import 'widgets/send/send_header.dart';
 import 'widgets/send/bitcoin_fee_tier_selector.dart';
+import 'widgets/send/bitcoin_submission_recovery_sheet.dart';
 import 'widgets/send/token_selector_card.dart';
 import 'widgets/send/send_primary_button.dart';
 import 'widgets/send/send_receiver_step.dart';
@@ -61,6 +66,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   bool _isPreparingBitcoin = false;
   Object? _bitcoinPreparationAttempt;
   String? _bitcoinPreparationError;
+  bool _bitcoinReservationBlocked = false;
   BitcoinFeeTier _bitcoinFeeTier = BitcoinFeeTier.normal;
   bool _bitcoinFeeTierWasSelected = false;
   int? _selectedPercentage;
@@ -596,6 +602,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       setState(() {
         _isPreparingBitcoin = true;
         _bitcoinPreparationError = null;
+        _bitcoinReservationBlocked = false;
       });
       void showPreparationError(String message) {
         if (!mounted) return;
@@ -638,6 +645,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         showPreparationError(l.bitcoinSplitFunds);
         return;
       } on BitcoinPendingInputsException {
+        if (mounted) setState(() => _bitcoinReservationBlocked = true);
         showPreparationError(
           'These Bitcoin funds are reserved by an earlier submission. Check its outcome before spending them again.',
         );
@@ -704,6 +712,61 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   void _showError(String message) {
     ToastUtils.showError(message);
+  }
+
+  Future<void> _reviewBitcoinReservations() async {
+    if (_isPreparingBitcoin) return;
+    final blockchain = context.read<BlockchainService>();
+    final identity = await _walletService.getCurrentWalletAddress();
+    if (!mounted ||
+        identity == null ||
+        blockchain.activeFamily != ChainFamily.bitcoin) {
+      return;
+    }
+    final key = blockchain.activeNetworkKey;
+    final network = BitcoinProductNetwork.fromId(
+      NetworkKey.bitcoinNetworkIdOf(key),
+    );
+    bool current() =>
+        mounted &&
+        blockchain.activeNetworkKey == key &&
+        blockchain.activeWalletAddress.toLowerCase() == identity.toLowerCase();
+    if (!current()) return;
+    FocusScope.of(context).unfocus();
+    final service = BitcoinSubmissionRecoveryService(
+      journal: BitcoinSubmissionJournal(_bitcoinSendService.store),
+      network: _bitcoinSendService.network,
+      wallet: _bitcoinSendService.wallet,
+      crypto: _bitcoinSendService.crypto,
+    );
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BitcoinSubmissionRecoverySheet(
+        identity: identity,
+        network: network,
+        service: service,
+        isCurrent: current,
+        authenticate: () async {
+          await WalletVaultService.lockAll();
+          if (!mounted || !current()) return false;
+          return await requestWalletUnlock(context) && current();
+        },
+      ),
+    );
+    if (!current()) return;
+    try {
+      final remaining = await service.journal.reserved(identity, network);
+      if (current() && remaining.isEmpty) {
+        setState(() {
+          _bitcoinPreparationError = null;
+          _bitcoinReservationBlocked = false;
+        });
+      }
+    } catch (_) {
+      // Failed inspection must not suggest that a protected reservation vanished.
+    }
   }
 
   double _selectedTokenUsdPrice(BlockchainService blockchain) {
@@ -1066,6 +1129,15 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                 ),
               ),
             // Send button
+            if (blockchain.activeFamily == ChainFamily.bitcoin &&
+                _bitcoinReservationBlocked)
+              TextButton(
+                key: const Key('bitcoin-review-reservations'),
+                onPressed: _isPreparingBitcoin
+                    ? null
+                    : _reviewBitcoinReservations,
+                child: Text(AppLocalizations.of(context).bitcoinRecoveryTitle),
+              ),
             if (blockchain.activeFamily == ChainFamily.bitcoin &&
                 _bitcoinPreparationError != null)
               Padding(

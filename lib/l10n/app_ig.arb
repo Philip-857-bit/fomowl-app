@@ -673,5 +673,15 @@
   "transactionSubmittedSubtitle": "Netwọkụ anabatala azụmahịa gị ka e kesaa ya. A na-eche nkwenye mbụ ya.",
   "transactionSubmissionUnknownTitle": "Amaghị ọnọdụ izipu",
   "transactionSubmissionUnknownSubtitle": "Anyị enweghị ike ịkwado ma netwọkụ anabatala azụmahịa a. Lelee ọnọdụ ya tupu izipu ọzọ.",
-  "transactionConfirmedSubtitle": "Etinyela azụmahịa gị n’ime blọk."
+  "transactionConfirmedSubtitle": "Etinyela azụmahịa gị n’ime blọk.",
+  "bitcoinRecoveryTitle": "Lelee mbọ echekwara",
+  "bitcoinRecoveryWarning": "Weghachite naanị mbọ ị maara na ajụrụ tupu mgbasa. Ịhụghị azụmahịa abụghị ihe akaebe.",
+  "bitcoinRecoveryAcknowledge": "Ajụrụ mbọ a tupu mgbasa.",
+  "bitcoinRecoveryAction": "Weghachite ndoputa Testnet4",
+  "bitcoinRecoveryUnavailable": "Nweghachi adịghị. A ka debere mbọ a.",
+  "bitcoinRecoveryError": "Enweghị ike ịkwado nweghachi. E zipụghị azụmahịa ọhụrụ.",
+  "bitcoinRecoveryEmpty": "Enweghị mbọ echekwara maka netwọkụ a.",
+  "bitcoinRecoverySuccess": "Eweghachila ndoputa. Ị nwere ike ịkwadebe mbufe ọhụrụ.",
+  "bitcoinReservedInputs": "Ntinye echekwara",
+  "bitcoinRecoveryCheck": "Lelee ọnọdụ azụmahịa"
 }

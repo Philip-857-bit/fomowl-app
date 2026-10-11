@@ -1927,4 +1927,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get transactionConfirmedSubtitle => '您的交易已被纳入区块。';
+
+  @override
+  String get bitcoinRecoveryTitle => '查看已保存的尝试';
+
+  @override
+  String get bitcoinRecoveryWarning => '仅恢复您确定在广播前被拒绝的尝试。找不到交易本身不能证明这一点。';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => '此尝试在广播前已被拒绝。';
+
+  @override
+  String get bitcoinRecoveryAction => '恢复 Testnet4 预留';
+
+  @override
+  String get bitcoinRecoveryUnavailable => '无法恢复，此尝试仍保持预留。';
+
+  @override
+  String get bitcoinRecoveryError => '无法验证恢复。未发送新交易。';
+
+  @override
+  String get bitcoinRecoveryEmpty => '此网络没有已保存的尝试。';
+
+  @override
+  String get bitcoinRecoverySuccess => '已恢复预留，您可以准备新转账。';
+
+  @override
+  String get bitcoinReservedInputs => '预留输入';
+
+  @override
+  String get bitcoinRecoveryCheck => '检查交易状态';
 }
