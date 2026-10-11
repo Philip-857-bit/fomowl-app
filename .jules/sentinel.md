@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2024-12-05 - [Fix Seed Phrase Challenge Visibility]
+**Vulnerability:** The verify seed phrase challenge screen presented text inputs for the seed phrase words in plain text by default, risking shoulder surfing.
+**Learning:** Even though `keyboardType: TextInputType.visiblePassword` was used, `obscureText: true` with `maxLines: 1` needs to be explicitly enabled to obscure sensitive text inputs.
+**Prevention:** Verify all text inputs accepting sensitive material (like seed phrases and passwords) use `obscureText: true` combined with a visibility toggle button.
