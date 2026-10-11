@@ -31,6 +31,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   List<String>? _originalPhrase;
   List<int> _verificationIndexes = const [];
   bool _isLoading = false;
+  bool _obscureText = true;
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
@@ -283,15 +284,32 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 enableSuggestions: false,
                                 keyboardType: TextInputType.visiblePassword,
                                 textCapitalization: TextCapitalization.none,
+                                maxLines: 1,
+                                obscureText: _obscureText,
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureText
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureText = !_obscureText;
+                                      });
+                                    },
+                                  ),
                                 ),
                                 textInputAction:
                                     index < _verificationIndexes.length - 1
