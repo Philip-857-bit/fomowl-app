@@ -5,7 +5,8 @@ Specification: user roadmap attached as `pasted-text-1.txt`, 12 October 2026.
 Baselines:
 
 - Mobile `feat/bitcoin-wallet`: `f592740f753899ec5cd080fd8d5ed1f306e436c4`.
-- Backend `develop`: `3ed44778bf2d032e62f26fff94bddf50bbfc160f`.
+- Backend `develop`: `8ac22294a30d2b53abfc6df7fae6696a446e0546` (adopted from the original
+  `3ed44778bf2d032e62f26fff94bddf50bbfc160f` baseline after user review).
 - Immutable Owllet Core v0.2.0: `930eca151035eec9432d7f41b1b221bd5d27e829`.
 
 The companion `owllet-transaction-infrastructure-progress.json` report in the parent workspace directory
@@ -13,6 +14,10 @@ records exact commit SHAs after each commit exists, without amending that commit
 
 No automatic PR merges, deployments, SDK tags/releases or production rollout changes.
 Each step must pass its validation and GitHub CI before the next implementation begins.
+
+Newer fast-forward baselines may be adopted when intervening changes do not materially
+overlap the current step or its contracts/security assumptions. Before backend changes,
+refresh develop and inspect all changes since the last recorded backend baseline.
 
 ## Step 1 — Bitcoin submission journal reconciliation
 
@@ -44,7 +49,7 @@ status/storage, bounded rotation/coalescing and automatic non-blocking refresh.
 Validation and exact final SHA are recorded in the companion report after execution.
 Pending steps remain pending; this document does not claim mainnet rollout readiness.
 
-## Step 2 � Runtime EVM fee quotes
+## Step 2 — Runtime EVM fee quotes
 
 Ordinary native/ERC20 sends use a reusable immutable integer-wei fee quote.
 A validated latest-block base-fee field selects EIP-1559/type 2, including a
@@ -68,8 +73,55 @@ integer cap cost is also used for native MAX reservation. These standard EVM
 gas fields do not include rollup data fees separately charged outside those
 fields, and this step does not claim a universal full L2 fee estimate.
 
-Validation and exact SHA are recorded in the companion report after execution.
+Local validation: 105 focused tests and the full Flutter suite (994 passed, one
+existing skip) passed; formatting passed with no changes. Exact SHA and CI results
+are recorded in the companion report after execution.
 No SDK/FRB API, backend contract, deployment or production rollout change.
+
+## Step 3 — EVM pending transaction replacement
+
+Forward-created ordinary native/ERC20 sends persist the exact public Rust-signed
+sender, chain, nonce, destination, value, calldata, gas limit, fee fields and local
+transaction hash before provider broadcast. Metadata lives in platform-protected
+storage with serialized mutation, storage read-back, bounded records and wallet
+lifecycle invalidation. Previous history rows are never signing authority.
+Existing NFT, swap, bridge and WalletConnect execution paths remain unchanged;
+transactions without this trusted record do not expose replacement controls.
+
+Speed Up preserves the original intent, gas limit, sender, chain and nonce.
+Cancel is a zero-value, empty-calldata self-transfer, offered only after proving
+that the sender has no deployed/delegated code. Both use the opaque Rust signer.
+A 12.5% integer-rounded-up bump floor applies to legacy price or both type-2
+fee cap and priority cap, with current network Priority observations as a floor.
+This exceeds Geth's usual 10% default but does not claim every provider has the
+same policy: https://geth.ethereum.org/docs/fundamentals/command-line-options
+
+The device checks full pending transaction fields, chain identity, receipt,
+confirmed nonce, wallet context and fresh fees before approval/signing. Changed
+gas requirements, insufficient balance and infeasible block gas limits fail
+closed. Approvals bind their producing service and protected snapshot;
+intervening writes, removals and wallet/network switches invalidate them.
+
+Review shows old/new estimated fees, additional estimated cost, maximum execution
+fee and original transaction identity. Explicit approval and authentication are
+required; cancel/back never submits. Cancel warns the original may confirm first.
+Replacement does not guarantee inclusion time or successful cancellation.
+Controls recheck status and disappear after confirmed observations.
+
+Provider sends seal a one-use reservation capability. A proven no-provider abort
+may reject only its live reservation before that seal. Once send begins, timeout,
+error or mismatched txid retains the exact attempt and blocks blind replacement
+retry. Submitted requires the provider txid to match the local signed-transaction
+hash. Local pending entries join history before backend indexing. Normal-send
+ambiguity uses Unknown presentation and disables reuse of that confirmation screen.
+No timer or missing hash releases funds. Confirmed nonce progression settles earlier
+same-chain nonce reservations without asserting which transaction succeeded;
+receipt/explorer data remains authoritative.
+
+Local validation: 105 focused tests and the full Flutter suite (994 passed, one
+existing skip) passed; formatting passed with no changes. Exact SHA and CI results
+are recorded in the companion report after execution.
+No SDK/FRB, backend contract, release, deployment or production rollout change.
 
 ## Remaining roadmap
 

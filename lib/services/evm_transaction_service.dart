@@ -6,6 +6,7 @@ import 'package:web3dart/web3dart.dart';
 
 import '../src/rust/api/wallet_vault.dart' as rust_account;
 import 'wallet_vault_service.dart';
+import '../models/evm_outbound_transaction.dart';
 
 /// A sender whose address has been checked against its key by the Rust core.
 ///
@@ -48,6 +49,12 @@ class EvmSigningAccount {
 /// Callers own ABI encoding, approved transaction fields, gas estimation,
 /// client lifecycle, and UI permission checks. This adapter verifies the signer,
 /// resolves the pending nonce when omitted, and broadcasts canonical Rust bytes.
+class EvmSignedTransaction {
+  final EvmTransactionFields fields;
+  final String hash;
+  EvmSignedTransaction._(this.fields, this.hash);
+}
+
 class EvmTransactionService {
   static Future<EvmSigningAccount> fromVault({
     required EthereumAddress sender,
@@ -99,6 +106,10 @@ class EvmTransactionService {
     BigInt? maxFeePerGasWei,
     BigInt? maxPriorityFeePerGasWei,
     void Function()? validateBeforeSigning,
+    Future<void> Function(EvmSignedTransaction transaction)? beforeBroadcast,
+    Future<void> Function()? abortedBeforeBroadcast,
+    Duration? broadcastTimeout,
+    void Function()? beforeProviderSend,
   }) async {
     if (account.isClosed) {
       throw StateError('EVM signing account is closed');
@@ -123,12 +134,17 @@ class EvmTransactionService {
     if (typed && maxPriorityFeePerGasWei! > maxFeePerGasWei!) {
       throw ArgumentError('Priority fee exceeds maximum fee per gas');
     }
-    final resolvedNonce =
-        nonce ??
-        await client.getTransactionCount(
-          account.address,
-          atBlock: const BlockNum.pending(),
-        );
+    Future<int> pendingNonce() {
+      final request = client.getTransactionCount(
+        account.address,
+        atBlock: const BlockNum.pending(),
+      );
+      return beforeBroadcast == null
+          ? request
+          : request.timeout(const Duration(seconds: 12));
+    }
+
+    final resolvedNonce = nonce ?? await pendingNonce();
     if (account.isClosed) {
       throw StateError('EVM signing account is closed');
     }
@@ -147,6 +163,42 @@ class EvmTransactionService {
     if (account.isClosed) {
       throw StateError('EVM signing account is closed');
     }
-    return client.sendRawTransaction(web3_crypto.hexToBytes(rawHex));
+    final bytes = web3_crypto.hexToBytes(rawHex);
+    if (beforeBroadcast != null) {
+      final fields = EvmTransactionFields(
+        chainId: chainId,
+        sender: account.address.hex,
+        nonce: resolvedNonce,
+        destination: to?.hex ?? '',
+        valueWei: valueWei,
+        dataHex: data == null || data.isEmpty ? '0x' : '0x${HEX.encode(data)}',
+        gasLimit: gasLimit,
+        gasPriceWei: gasPriceWei,
+        maxFeePerGasWei: maxFeePerGasWei,
+        maxPriorityFeePerGasWei: maxPriorityFeePerGasWei,
+      );
+      final hash = '0x${HEX.encode(web3_crypto.keccak256(bytes))}';
+      try {
+        await beforeBroadcast(EvmSignedTransaction._(fields, hash));
+      } catch (_) {
+        try {
+          await abortedBeforeBroadcast?.call();
+        } catch (_) {
+          /* Preserve uncertain storage. */
+        }
+        rethrow;
+      }
+      if (account.isClosed) {
+        try {
+          await abortedBeforeBroadcast?.call();
+        } catch (_) {
+          /* Keep the reservation when storage is uncertain. */
+        }
+        throw StateError('EVM signing account is closed');
+      }
+    }
+    beforeProviderSend?.call();
+    final result = client.sendRawTransaction(bytes);
+    return broadcastTimeout == null ? result : result.timeout(broadcastTimeout);
   }
 }

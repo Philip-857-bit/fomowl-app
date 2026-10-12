@@ -707,5 +707,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "Yára sí i",
+  "evmCancelTransaction": "Fagilé ìṣòwò",
+  "evmOldFee": "Owó àfojúsùn àtijọ́",
+  "evmNewFee": "Owó àfojúsùn tuntun",
+  "evmAdditionalFee": "Àfikún owó àfojúsùn",
+  "evmMaximumFee": "Owó ìmúṣẹ tó pọ̀ jù",
+  "evmCancelWarning": "Ìṣòwò àkọ́kọ́ lè gba ìmúdájú ṣáájú. Ìfagilé ń fi iye òdo ránṣẹ́ sí àdírẹ́sì rẹ ó sì ní owó nẹ́tíwọ́ọ̀kì.",
+  "evmSpeedUpWarning": "Olùgbà àti iye kò yí padà. Owó tó ga kò ṣe ìlérí àkókò ìmúdájú.",
+  "evmReplacementSubmitted": "A ti fi ìṣòwò àropò ránṣẹ́. A ṣì ń dúró de ìmúdájú.",
+  "evmReplacementCheckOutcome": "Ṣàyẹ̀wò ipò ìṣòwò tí a fipamọ́ ṣáájú kí o tún gbìyànjú. Àbájáde àìmọ̀ kò túmọ̀ sí ìkùnà.",
+  "evmSubmissionUnknown": "A kò mọ àbájáde fífiránṣẹ́",
+  "evmTransactionSubmitted": "A ti fi ìṣòwò ránṣẹ́"
 }

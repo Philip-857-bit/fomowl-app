@@ -3925,6 +3925,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Up to {fee}'**
   String transactionFeeUpTo(String fee);
+
+  /// No description provided for @evmSpeedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Up'**
+  String get evmSpeedUp;
+
+  /// No description provided for @evmCancelTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel transaction'**
+  String get evmCancelTransaction;
+
+  /// No description provided for @evmOldFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Old estimated fee'**
+  String get evmOldFee;
+
+  /// No description provided for @evmNewFee.
+  ///
+  /// In en, this message translates to:
+  /// **'New estimated fee'**
+  String get evmNewFee;
+
+  /// No description provided for @evmAdditionalFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional estimated cost'**
+  String get evmAdditionalFee;
+
+  /// No description provided for @evmMaximumFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum execution fee'**
+  String get evmMaximumFee;
+
+  /// No description provided for @evmCancelWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The original transaction may confirm first. Cancellation sends zero value to your own address and costs a network fee.'**
+  String get evmCancelWarning;
+
+  /// No description provided for @evmSpeedUpWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The recipient and amount stay the same. A higher fee does not guarantee an inclusion time.'**
+  String get evmSpeedUpWarning;
+
+  /// No description provided for @evmReplacementSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement submitted. Confirmation is still pending.'**
+  String get evmReplacementSubmitted;
+
+  /// No description provided for @evmReplacementCheckOutcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the saved transaction status before trying again. An unknown outcome is not a failed transaction.'**
+  String get evmReplacementCheckOutcome;
+
+  /// No description provided for @evmSubmissionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission outcome unknown'**
+  String get evmSubmissionUnknown;
+
+  /// No description provided for @evmTransactionSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction submitted'**
+  String get evmTransactionSubmitted;
 }
 
 class _AppLocalizationsDelegate

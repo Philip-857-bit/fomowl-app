@@ -707,5 +707,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "Mee ngwa ngwa",
+  "evmCancelTransaction": "Kagbuo azụmahịa",
+  "evmOldFee": "Ụgwọ gara aga a tụrụ anya",
+  "evmNewFee": "Ụgwọ ọhụrụ a tụrụ anya",
+  "evmAdditionalFee": "Ụgwọ ọzọ a tụrụ anya",
+  "evmMaximumFee": "Ụgwọ mmezu kachasị",
+  "evmCancelWarning": "Azụmahịa mbụ nwere ike nweta nkwenye na mbụ. Nkagbu na-eziga uru efu n’adreesị gị ma na-achọ ụgwọ netwọkụ.",
+  "evmSpeedUpWarning": "Onye nnata na ego anaghị agbanwe. Ụgwọ ka elu anaghị ekwe nkwa oge nkwenye.",
+  "evmReplacementSubmitted": "E zigala azụmahịa nnọchi. A ka na-eche nkwenye.",
+  "evmReplacementCheckOutcome": "Lelee ọnọdụ azụmahịa echekwara tupu ịnwale ọzọ. Nsonaazụ amaghị apụtaghị ọdịda.",
+  "evmSubmissionUnknown": "A maghị nsonaazụ iziga",
+  "evmTransactionSubmitted": "E zigala azụmahịa"
 }

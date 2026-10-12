@@ -707,5 +707,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "Acelerar",
+  "evmCancelTransaction": "Cancelar transacción",
+  "evmOldFee": "Comisión estimada anterior",
+  "evmNewFee": "Nueva comisión estimada",
+  "evmAdditionalFee": "Coste estimado adicional",
+  "evmMaximumFee": "Comisión máxima de ejecución",
+  "evmCancelWarning": "La transacción original puede confirmarse primero. La cancelación envía valor cero a tu dirección y tiene una comisión de red.",
+  "evmSpeedUpWarning": "El destinatario y el importe no cambian. Una comisión mayor no garantiza un plazo de confirmación.",
+  "evmReplacementSubmitted": "Transacción de reemplazo enviada. La confirmación sigue pendiente.",
+  "evmReplacementCheckOutcome": "Comprueba el estado guardado antes de volver a intentarlo. Un resultado desconocido no significa que haya fallado.",
+  "evmSubmissionUnknown": "Resultado del envío desconocido",
+  "evmTransactionSubmitted": "Transacción enviada"
 }

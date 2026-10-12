@@ -13,6 +13,7 @@ import '../utils/language_utils.dart';
 import 'secure_store.dart';
 import 'bitcoin/bitcoin_account_store.dart';
 import 'wallet_vault_service.dart';
+import 'evm_outbound_store.dart';
 import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
 /// Handles secure storage of sensitive data and preferences.
@@ -25,6 +26,7 @@ class StorageService implements WalletVaultStore {
 
   final SecureStore _secureStore;
   BitcoinAccountStore get bitcoinAccounts => BitcoinAccountStore(_secureStore);
+  EvmOutboundStore get evmOutbound => EvmOutboundStore(_secureStore);
   static final Expando<WalletVaultService> _vaults = Expando();
   WalletVaultService get _vault =>
       _vaults[_secureStore] ??= WalletVaultService(this);
@@ -229,6 +231,10 @@ class StorageService implements WalletVaultStore {
     for (final family in ChainFamily.values) {
       final address = account.getWalletAddressForFamily(family);
       if (address == null) continue;
+      if (family == ChainFamily.evm &&
+          RegExp(r'^0x[0-9a-fA-F]{40}$').hasMatch(address)) {
+        await evmOutbound.deleteWallet(address);
+      }
       await _secureStore.delete(key: _vaultKey(family, address));
       await _secureStore.delete(key: _familyPrivateKeyKey(family, address));
     }
@@ -1010,6 +1016,7 @@ class StorageService implements WalletVaultStore {
 
   Future<void> clearAll() async {
     bitcoinAccounts.invalidateAll();
+    await evmOutbound.invalidateAllAndDrain();
     await _secureStore.deleteAll();
     final prefs = await _prefs;
     await prefs.clear();

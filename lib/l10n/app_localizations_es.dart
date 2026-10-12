@@ -2138,4 +2138,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String transactionFeeUpTo(String fee) {
     return 'Hasta $fee';
   }
+
+  @override
+  String get evmSpeedUp => 'Acelerar';
+
+  @override
+  String get evmCancelTransaction => 'Cancelar transacción';
+
+  @override
+  String get evmOldFee => 'Comisión estimada anterior';
+
+  @override
+  String get evmNewFee => 'Nueva comisión estimada';
+
+  @override
+  String get evmAdditionalFee => 'Coste estimado adicional';
+
+  @override
+  String get evmMaximumFee => 'Comisión máxima de ejecución';
+
+  @override
+  String get evmCancelWarning =>
+      'La transacción original puede confirmarse primero. La cancelación envía valor cero a tu dirección y tiene una comisión de red.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'El destinatario y el importe no cambian. Una comisión mayor no garantiza un plazo de confirmación.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'Transacción de reemplazo enviada. La confirmación sigue pendiente.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Comprueba el estado guardado antes de volver a intentarlo. Un resultado desconocido no significa que haya fallado.';
+
+  @override
+  String get evmSubmissionUnknown => 'Resultado del envío desconocido';
+
+  @override
+  String get evmTransactionSubmitted => 'Transacción enviada';
 }

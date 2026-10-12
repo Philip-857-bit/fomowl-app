@@ -2096,4 +2096,44 @@ class AppLocalizationsAr extends AppLocalizations {
   String transactionFeeUpTo(String fee) {
     return 'حتى $fee';
   }
+
+  @override
+  String get evmSpeedUp => 'تسريع';
+
+  @override
+  String get evmCancelTransaction => 'إلغاء المعاملة';
+
+  @override
+  String get evmOldFee => 'الرسوم التقديرية السابقة';
+
+  @override
+  String get evmNewFee => 'الرسوم التقديرية الجديدة';
+
+  @override
+  String get evmAdditionalFee => 'التكلفة التقديرية الإضافية';
+
+  @override
+  String get evmMaximumFee => 'الحد الأقصى لرسوم التنفيذ';
+
+  @override
+  String get evmCancelWarning =>
+      'قد يتم تأكيد المعاملة الأصلية أولاً. يرسل الإلغاء معاملة بقيمة صفر إلى عنوانك ويترتب عليه رسوم شبكة.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'يبقى المستلم والمبلغ كما هما. الرسوم الأعلى لا تضمن وقت التأكيد.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'تم إرسال المعاملة البديلة. ما زال التأكيد قيد الانتظار.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'تحقق من حالة المعاملة المحفوظة قبل المحاولة مجدداً. النتيجة غير المعروفة لا تعني الفشل.';
+
+  @override
+  String get evmSubmissionUnknown => 'نتيجة الإرسال غير معروفة';
+
+  @override
+  String get evmTransactionSubmitted => 'تم إرسال المعاملة';
 }

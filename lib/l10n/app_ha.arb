@@ -707,5 +707,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "Gaggauta",
+  "evmCancelTransaction": "Soke ma’amala",
+  "evmOldFee": "Tsohon kuɗin da aka kiyasta",
+  "evmNewFee": "Sabon kuɗin da aka kiyasta",
+  "evmAdditionalFee": "Ƙarin kuɗin da aka kiyasta",
+  "evmMaximumFee": "Mafi girman kuɗin aiwatarwa",
+  "evmCancelWarning": "Ma’amalar asali na iya samun tabbaci da farko. Sokewa tana aika ƙimar sifili zuwa adireshinka kuma tana buƙatar kuɗin hanyar sadarwa.",
+  "evmSpeedUpWarning": "Mai karɓa da adadin ba su canza ba. Ƙarin kuɗi ba ya tabbatar da lokacin tabbaci.",
+  "evmReplacementSubmitted": "An aika ma’amalar maye gurbi. Ana jiran tabbaci.",
+  "evmReplacementCheckOutcome": "Duba matsayin ma’amalar da aka adana kafin sake gwadawa. Sakamakon da ba a sani ba ba yana nufin gazawa ba.",
+  "evmSubmissionUnknown": "Ba a san sakamakon aikawa ba",
+  "evmTransactionSubmitted": "An aika ma’amala"
 }

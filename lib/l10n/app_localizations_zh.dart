@@ -2007,4 +2007,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String transactionFeeUpTo(String fee) {
     return '最高 $fee';
   }
+
+  @override
+  String get evmSpeedUp => '加速';
+
+  @override
+  String get evmCancelTransaction => '取消交易';
+
+  @override
+  String get evmOldFee => '原预计手续费';
+
+  @override
+  String get evmNewFee => '新预计手续费';
+
+  @override
+  String get evmAdditionalFee => '额外预计费用';
+
+  @override
+  String get evmMaximumFee => '最高执行手续费';
+
+  @override
+  String get evmCancelWarning => '原交易可能先被确认。取消会向您自己的地址发送零金额交易，并产生网络手续费。';
+
+  @override
+  String get evmSpeedUpWarning => '收款地址和金额保持不变。提高手续费不保证确认时间。';
+
+  @override
+  String get evmReplacementSubmitted => '替换交易已提交，仍待确认。';
+
+  @override
+  String get evmReplacementCheckOutcome => '请先检查已保存交易的状态再重试。结果未知不代表交易失败。';
+
+  @override
+  String get evmSubmissionUnknown => '提交结果未知';
+
+  @override
+  String get evmTransactionSubmitted => '交易已提交';
 }

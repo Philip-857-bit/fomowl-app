@@ -710,5 +710,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "加速",
+  "evmCancelTransaction": "取消交易",
+  "evmOldFee": "原预计手续费",
+  "evmNewFee": "新预计手续费",
+  "evmAdditionalFee": "额外预计费用",
+  "evmMaximumFee": "最高执行手续费",
+  "evmCancelWarning": "原交易可能先被确认。取消会向您自己的地址发送零金额交易，并产生网络手续费。",
+  "evmSpeedUpWarning": "收款地址和金额保持不变。提高手续费不保证确认时间。",
+  "evmReplacementSubmitted": "替换交易已提交，仍待确认。",
+  "evmReplacementCheckOutcome": "请先检查已保存交易的状态再重试。结果未知不代表交易失败。",
+  "evmSubmissionUnknown": "提交结果未知",
+  "evmTransactionSubmitted": "交易已提交"
 }

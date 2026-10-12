@@ -2091,4 +2091,44 @@ class AppLocalizationsIg extends AppLocalizations {
   String transactionFeeUpTo(String fee) {
     return 'Ruo $fee';
   }
+
+  @override
+  String get evmSpeedUp => 'Mee ngwa ngwa';
+
+  @override
+  String get evmCancelTransaction => 'Kagbuo azụmahịa';
+
+  @override
+  String get evmOldFee => 'Ụgwọ gara aga a tụrụ anya';
+
+  @override
+  String get evmNewFee => 'Ụgwọ ọhụrụ a tụrụ anya';
+
+  @override
+  String get evmAdditionalFee => 'Ụgwọ ọzọ a tụrụ anya';
+
+  @override
+  String get evmMaximumFee => 'Ụgwọ mmezu kachasị';
+
+  @override
+  String get evmCancelWarning =>
+      'Azụmahịa mbụ nwere ike nweta nkwenye na mbụ. Nkagbu na-eziga uru efu n’adreesị gị ma na-achọ ụgwọ netwọkụ.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'Onye nnata na ego anaghị agbanwe. Ụgwọ ka elu anaghị ekwe nkwa oge nkwenye.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'E zigala azụmahịa nnọchi. A ka na-eche nkwenye.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Lelee ọnọdụ azụmahịa echekwara tupu ịnwale ọzọ. Nsonaazụ amaghị apụtaghị ọdịda.';
+
+  @override
+  String get evmSubmissionUnknown => 'A maghị nsonaazụ iziga';
+
+  @override
+  String get evmTransactionSubmitted => 'E zigala azụmahịa';
 }

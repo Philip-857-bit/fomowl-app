@@ -1,5 +1,8 @@
 import 'widgets/history_detail_components.dart';
+import 'widgets/evm_replacement_actions.dart';
+import '../../models/evm_outbound_transaction.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'bitcoin_transaction_details_sheet.dart';
 import '../../utils/bitcoin_amount_utils.dart';
 import '../../services/blockchain/bitcoin_catalog.dart';
@@ -219,8 +222,23 @@ class _HistoryTransactionDetailsSheetState
                           }
                           final receipt = snapshot.data;
                           if (receipt == null) {
-                            return HistoryInfoBanner(
-                              message: l.historyReceiptPending,
+                            return Column(
+                              children: [
+                                HistoryInfoBanner(
+                                  message: l.historyReceiptPending,
+                                ),
+                                if (widget.chain != null &&
+                                    !widget.entry.isIncoming)
+                                  EvmReplacementActions(
+                                    wallet: widget.walletService,
+                                    chain: widget.chain!,
+                                    sender: widget.entry.walletAddress,
+                                    hash: widget.entry.txHash!,
+                                    onSubmitted: (hash) async {
+                                      /* Protected local history is refreshed when this sheet closes. */
+                                    },
+                                  ),
+                              ],
                             );
                           }
 
@@ -436,9 +454,39 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ? l.walletHistoryFallbackWarning
           : null;
 
+      final localOutbound = <WalletHistoryEntry>[];
+      if (family == ChainFamily.evm) {
+        for (final entry in await _walletService.evmOutbound.list(address)) {
+          if (!entry.unresolved) continue;
+          final chain = blockchain.allChains
+              .where((chain) => chain.chainId == entry.fields.chainId)
+              .firstOrNull;
+          if (chain == null) continue;
+          localOutbound.add(
+            WalletHistoryEntry(
+              id: 'evm_outbound_${entry.hash}',
+              walletAddress: address,
+              chainId: entry.fields.chainId,
+              networkKey: chain.networkKey,
+              networkName: chain.name,
+              txHash: entry.hash,
+              eventType: 'send',
+              title: entry.state == EvmOutboundState.submitted
+                  ? l.evmTransactionSubmitted
+                  : l.evmSubmissionUnknown,
+              message: entry.state == EvmOutboundState.submitted
+                  ? l.historyReceiptPending
+                  : l.evmReplacementCheckOutcome,
+              isIncoming: false,
+              createdAt: entry.createdAt,
+              source: 'evm_outbound',
+            ),
+          );
+        }
+      }
       final mergedHistory = _mergeHistory(
         preferred: response?.history ?? const [],
-        fallback: explorerHistory,
+        fallback: [...explorerHistory, ...localOutbound],
         limit: 120,
       );
 
@@ -940,6 +988,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _entryTitle(WalletHistoryEntry entry, AppLocalizations l) {
+    if (entry.source == 'evm_outbound') return entry.title;
     switch (entry.eventType) {
       case 'receive':
         return l.historyTransferReceived;
@@ -957,6 +1006,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _entryDescription(WalletHistoryEntry entry, AppLocalizations l) {
+    if (entry.source == 'evm_outbound') return entry.message;
     final networkName = _networkLabel(entry, l);
     final amount = entry.amount;
     final tokenSymbol = entry.tokenSymbol?.trim();
@@ -1034,6 +1084,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         onOpenExplorer: _openExplorer,
       ),
     );
+    if (mounted && blockchain.activeFamily == ChainFamily.evm) {
+      unawaited(_fetchHistory());
+    }
   }
 
   IconData _entryIcon(WalletHistoryEntry entry) {

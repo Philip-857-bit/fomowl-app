@@ -2091,4 +2091,44 @@ class AppLocalizationsYo extends AppLocalizations {
   String transactionFeeUpTo(String fee) {
     return 'Títí dé $fee';
   }
+
+  @override
+  String get evmSpeedUp => 'Yára sí i';
+
+  @override
+  String get evmCancelTransaction => 'Fagilé ìṣòwò';
+
+  @override
+  String get evmOldFee => 'Owó àfojúsùn àtijọ́';
+
+  @override
+  String get evmNewFee => 'Owó àfojúsùn tuntun';
+
+  @override
+  String get evmAdditionalFee => 'Àfikún owó àfojúsùn';
+
+  @override
+  String get evmMaximumFee => 'Owó ìmúṣẹ tó pọ̀ jù';
+
+  @override
+  String get evmCancelWarning =>
+      'Ìṣòwò àkọ́kọ́ lè gba ìmúdájú ṣáájú. Ìfagilé ń fi iye òdo ránṣẹ́ sí àdírẹ́sì rẹ ó sì ní owó nẹ́tíwọ́ọ̀kì.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'Olùgbà àti iye kò yí padà. Owó tó ga kò ṣe ìlérí àkókò ìmúdájú.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'A ti fi ìṣòwò àropò ránṣẹ́. A ṣì ń dúró de ìmúdájú.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Ṣàyẹ̀wò ipò ìṣòwò tí a fipamọ́ ṣáájú kí o tún gbìyànjú. Àbájáde àìmọ̀ kò túmọ̀ sí ìkùnà.';
+
+  @override
+  String get evmSubmissionUnknown => 'A kò mọ àbájáde fífiránṣẹ́';
+
+  @override
+  String get evmTransactionSubmitted => 'A ti fi ìṣòwò ránṣẹ́';
 }

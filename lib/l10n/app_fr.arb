@@ -707,5 +707,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "Accélérer",
+  "evmCancelTransaction": "Annuler la transaction",
+  "evmOldFee": "Anciens frais estimés",
+  "evmNewFee": "Nouveaux frais estimés",
+  "evmAdditionalFee": "Coût estimé supplémentaire",
+  "evmMaximumFee": "Frais d’exécution maximum",
+  "evmCancelWarning": "La transaction initiale peut être confirmée en premier. L’annulation envoie une valeur nulle à votre adresse et entraîne des frais réseau.",
+  "evmSpeedUpWarning": "Le destinataire et le montant restent identiques. Des frais plus élevés ne garantissent pas un délai de confirmation.",
+  "evmReplacementSubmitted": "Transaction de remplacement envoyée. La confirmation est en attente.",
+  "evmReplacementCheckOutcome": "Vérifiez le statut de la transaction enregistrée avant de réessayer. Un résultat inconnu ne signifie pas un échec.",
+  "evmSubmissionUnknown": "Résultat de l’envoi inconnu",
+  "evmTransactionSubmitted": "Transaction envoyée"
 }

@@ -23,6 +23,9 @@ import 'native_crypto.dart';
 import 'evm_transaction_service.dart';
 import 'evm_fee_service.dart';
 import '../models/evm_fee_quote.dart';
+import '../models/evm_outbound_transaction.dart';
+import 'evm_outbound_store.dart';
+import 'evm_replacement_service.dart';
 import 'wallet_vault_service.dart';
 import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
@@ -1025,6 +1028,14 @@ class WalletService {
     }
   }
 
+  EvmOutboundStore get evmOutbound => _storage.evmOutbound;
+  EvmReplacementService evmReplacements(String rpcUrl) => EvmReplacementService(
+    journal: evmOutbound,
+    client: _clientForRpc(rpcUrl),
+    currentSender: getCurrentWalletAddress,
+    openSigner: getEvmSigningAccount,
+  );
+
   EvmFeeService _feeService(Web3Client client) => EvmFeeService(
     rpcScope: client,
     rpc: (method, params) => client.makeRPCCall<Object?>(method, params),
@@ -1080,19 +1091,66 @@ class WalletService {
       );
     }
     quote.requireFresh(DateTime.now());
-    return EvmTransactionService.broadcastTransaction(
-      client: client,
-      account: account,
-      chainId: chainId,
-      to: to,
-      valueWei: valueWei,
-      data: data,
-      gasLimit: quote.gasLimit,
-      gasPriceWei: quote.gasPriceWei,
-      maxFeePerGasWei: quote.maxFeePerGasWei,
-      maxPriorityFeePerGasWei: quote.maxPriorityFeePerGasWei,
-      validateBeforeSigning: () => quote.requireFresh(DateTime.now()),
-    );
+    final journal = _storage.evmOutbound;
+    await journal.activate(account.address.hex);
+    EvmOutboundReservation? reservation;
+    var abortedLocally = false;
+    try {
+      final hash = await EvmTransactionService.broadcastTransaction(
+        client: client,
+        account: account,
+        chainId: chainId,
+        to: to,
+        valueWei: valueWei,
+        data: data,
+        gasLimit: quote.gasLimit,
+        gasPriceWei: quote.gasPriceWei,
+        maxFeePerGasWei: quote.maxFeePerGasWei,
+        maxPriorityFeePerGasWei: quote.maxPriorityFeePerGasWei,
+        broadcastTimeout: const Duration(seconds: 20),
+        beforeProviderSend: () => journal.beginProviderSend(reservation!),
+        validateBeforeSigning: () => quote.requireFresh(DateTime.now()),
+        beforeBroadcast: (signed) async {
+          final current = await getCurrentWalletAddress();
+          if (current?.toLowerCase() != account.address.hex.toLowerCase()) {
+            throw const EvmReplacementException('Wallet context changed');
+          }
+          final confirmedNonce = await client
+              .getTransactionCount(
+                account.address,
+                atBlock: const BlockNum.current(),
+              )
+              .timeout(const Duration(seconds: 12));
+          quote.requireFresh(DateTime.now());
+          reservation = await journal.reserve(
+            EvmOutboundTransaction(
+              fields: signed.fields,
+              hash: signed.hash,
+              state: EvmOutboundState.unknown,
+              createdAt: DateTime.now(),
+            ),
+            confirmedNonce: confirmedNonce,
+          );
+          if ((await getCurrentWalletAddress())?.toLowerCase() !=
+              account.address.hex.toLowerCase()) {
+            throw const EvmReplacementException('Wallet context changed');
+          }
+        },
+        abortedBeforeBroadcast: () async {
+          abortedLocally = true;
+          if (reservation != null) {
+            await journal.rejectedBeforeProvider(reservation!);
+          }
+        },
+      );
+      await journal.submitted(reservation!, hash);
+      return hash;
+    } catch (_) {
+      if (reservation != null && !abortedLocally) {
+        throw EvmSubmissionUnknown(reservation!.transaction.hash);
+      }
+      rethrow;
+    }
   }
 
   Future<EvmFeeQuotes> quoteTransferFees({

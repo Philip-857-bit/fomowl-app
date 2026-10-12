@@ -2102,4 +2102,44 @@ class AppLocalizationsHa extends AppLocalizations {
   String transactionFeeUpTo(String fee) {
     return 'Har zuwa $fee';
   }
+
+  @override
+  String get evmSpeedUp => 'Gaggauta';
+
+  @override
+  String get evmCancelTransaction => 'Soke ma’amala';
+
+  @override
+  String get evmOldFee => 'Tsohon kuɗin da aka kiyasta';
+
+  @override
+  String get evmNewFee => 'Sabon kuɗin da aka kiyasta';
+
+  @override
+  String get evmAdditionalFee => 'Ƙarin kuɗin da aka kiyasta';
+
+  @override
+  String get evmMaximumFee => 'Mafi girman kuɗin aiwatarwa';
+
+  @override
+  String get evmCancelWarning =>
+      'Ma’amalar asali na iya samun tabbaci da farko. Sokewa tana aika ƙimar sifili zuwa adireshinka kuma tana buƙatar kuɗin hanyar sadarwa.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'Mai karɓa da adadin ba su canza ba. Ƙarin kuɗi ba ya tabbatar da lokacin tabbaci.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'An aika ma’amalar maye gurbi. Ana jiran tabbaci.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Duba matsayin ma’amalar da aka adana kafin sake gwadawa. Sakamakon da ba a sani ba ba yana nufin gazawa ba.';
+
+  @override
+  String get evmSubmissionUnknown => 'Ba a san sakamakon aikawa ba';
+
+  @override
+  String get evmTransactionSubmitted => 'An aika ma’amala';
 }

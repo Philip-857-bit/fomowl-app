@@ -27,6 +27,7 @@ import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../models/evm_fee_quote.dart';
+import '../../models/evm_outbound_transaction.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/entrance_motion.dart';
@@ -82,6 +83,7 @@ class _TransferConfirmationScreenState
   EvmFeeQuote? get _selectedEvmFee => _evmFees?.forTier(_evmFeeTier);
   bool _isLoadingGas = true;
   bool _gasEstimationFailed = false;
+  bool _evmOutcomeUnknown = false;
 
   @override
   void didChangeDependencies() {
@@ -556,7 +558,8 @@ class _TransferConfirmationScreenState
     final selectedBlockchain = context.read<BlockchainService>();
     final approvedEvmFee = _selectedEvmFee;
     if (_transferFamily(selectedBlockchain) == ChainFamily.evm) {
-      if (_isLoadingGas ||
+      if (_evmOutcomeUnknown ||
+          _isLoadingGas ||
           _gasEstimationFailed ||
           approvedEvmFee == null ||
           _evmFeeNetworkKey != _transferNetworkKey(selectedBlockchain)) {
@@ -784,6 +787,14 @@ class _TransferConfirmationScreenState
       }
     } catch (e) {
       if (!mounted) {
+        return;
+      }
+      if (e is EvmSubmissionUnknown) {
+        setState(() => _evmOutcomeUnknown = true);
+        progressController.setSubmissionUnknown(
+          reference: _shortHash(e.hash),
+          detailsUrl: _transactionDetailsUrl(e.hash, selectedBlockchain) ?? '',
+        );
         return;
       }
       final l = AppLocalizations.of(context);
@@ -1073,7 +1084,11 @@ class _TransferConfirmationScreenState
                       delay: const Duration(milliseconds: 140),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: WarningBanner(message: l.transferWarningMessage),
+                        child: WarningBanner(
+                          message: isEvmTransfer && _evmOutcomeUnknown
+                              ? l.evmReplacementCheckOutcome
+                              : l.transferWarningMessage,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -1091,7 +1106,8 @@ class _TransferConfirmationScreenState
                   label: l.confirmTransfer,
                   enabled:
                       !isEvmTransfer ||
-                      (!_isLoadingGas &&
+                      (!_evmOutcomeUnknown &&
+                          !_isLoadingGas &&
                           !_gasEstimationFailed &&
                           _selectedEvmFee != null),
                 ),

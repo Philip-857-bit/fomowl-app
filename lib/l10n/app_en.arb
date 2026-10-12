@@ -707,5 +707,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "evmSpeedUp": "Speed Up",
+  "evmCancelTransaction": "Cancel transaction",
+  "evmOldFee": "Old estimated fee",
+  "evmNewFee": "New estimated fee",
+  "evmAdditionalFee": "Additional estimated cost",
+  "evmMaximumFee": "Maximum execution fee",
+  "evmCancelWarning": "The original transaction may confirm first. Cancellation sends zero value to your own address and costs a network fee.",
+  "evmSpeedUpWarning": "The recipient and amount stay the same. A higher fee does not guarantee an inclusion time.",
+  "evmReplacementSubmitted": "Replacement submitted. Confirmation is still pending.",
+  "evmReplacementCheckOutcome": "Check the saved transaction status before trying again. An unknown outcome is not a failed transaction.",
+  "evmSubmissionUnknown": "Submission outcome unknown",
+  "evmTransactionSubmitted": "Transaction submitted"
 }
