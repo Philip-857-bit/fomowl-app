@@ -683,5 +683,29 @@
   "bitcoinRecoveryEmpty": "Kò sí ìgbìyànjú tí a fipamọ́ fún nẹ́tíwọ́ọ̀kì yìí.",
   "bitcoinRecoverySuccess": "A ti gba ìpamọ́ padà. O lè ṣètò ìfiránṣẹ́ tuntun.",
   "bitcoinReservedInputs": "Àwọn ìwọlé tí a fipamọ́",
-  "bitcoinRecoveryCheck": "Ṣàyẹ̀wò ipò ìṣòwò"
+  "bitcoinRecoveryCheck": "Ṣàyẹ̀wò ipò ìṣòwò",
+  "transactionEconomy": "Ọ̀ya kékeré",
+  "transactionNormal": "Déédéé",
+  "transactionPriority": "Àkọ́kọ́",
+  "transactionNetworkSpeed": "ÌYÁRÁ NẸ́TÍWỌ́Ọ̀KÌ",
+  "transactionSpeed": "Ìyára",
+  "transactionEqualFeeTiers": "Gbogbo àṣàyàn ìyára ń lo owó kan náà lọ́wọ́lọ́wọ́.",
+  "evmTransactionType": "Irú ìṣòwò",
+  "evmGasLimit": "Ààlà gas",
+  "evmGasPrice": "Iye gas",
+  "evmBaseFee": "Owó ìpìlẹ̀",
+  "evmPriorityFee": "Owó ìṣáájú",
+  "evmMaxFee": "Owó tó pọ̀jù",
+  "evmLegacyTransaction": "Àtijọ́ (irú 0)",
+  "evmDynamicTransaction": "EIP-1559 (irú 2)",
+  "evmFeeQuoteUpdated": "Owó nẹ́tíwọ́ọ̀kì ti yí padà. Ṣàyẹ̀wò owó tuntun kí o sì jẹ́rìí lẹ́ẹ̀kan sí i.",
+  "transactionFeeUpTo": "Títí dé {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

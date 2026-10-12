@@ -19,6 +19,8 @@ class TransactionDetailsCard extends StatelessWidget {
   final String gasValueUsd;
   final String totalLabel;
   final String maxTotalDisplay;
+  final String? speedLabel;
+  final String? speedValue;
 
   const TransactionDetailsCard({
     super.key,
@@ -34,6 +36,8 @@ class TransactionDetailsCard extends StatelessWidget {
     required this.gasValueUsd,
     required this.totalLabel,
     required this.maxTotalDisplay,
+    this.speedLabel,
+    this.speedValue,
   });
 
   @override
@@ -52,6 +56,10 @@ class TransactionDetailsCard extends StatelessWidget {
           _buildDetailRow(l.swapToLabel, toAddress),
           _buildDivider(),
           _buildNetworkRow(l.network, network),
+          if (speedLabel != null && speedValue != null) ...[
+            _buildDivider(),
+            _buildDetailRow(speedLabel!, speedValue!),
+          ],
           _buildDivider(),
           const SizedBox(height: 8),
           isLoadingGas

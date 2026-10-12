@@ -2050,4 +2050,56 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get bitcoinRecoveryCheck => 'Duba matsayin ma’amala';
+
+  @override
+  String get transactionEconomy => 'Mai rahusa';
+
+  @override
+  String get transactionNormal => 'Na yau da kullum';
+
+  @override
+  String get transactionPriority => 'Fifiko';
+
+  @override
+  String get transactionNetworkSpeed => 'SAURIN HANYAR SADARWA';
+
+  @override
+  String get transactionSpeed => 'Sauri';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Duk zaɓuɓɓukan sauri suna amfani da kuɗi iri ɗaya a yanzu.';
+
+  @override
+  String get evmTransactionType => 'Nau’in ma’amala';
+
+  @override
+  String get evmGasLimit => 'Iyakar gas';
+
+  @override
+  String get evmGasPrice => 'Farashin gas';
+
+  @override
+  String get evmBaseFee => 'Kuɗin tushe';
+
+  @override
+  String get evmPriorityFee => 'Kuɗin fifiko';
+
+  @override
+  String get evmMaxFee => 'Mafi yawan kuɗi';
+
+  @override
+  String get evmLegacyTransaction => 'Na gargajiya (nau’i 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (nau’i 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Kuɗin hanyar sadarwa sun canza. Duba sabbin kuɗin sannan ka sake tabbatarwa.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Har zuwa $fee';
+  }
 }

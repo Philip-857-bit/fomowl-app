@@ -683,5 +683,29 @@
   "bitcoinRecoveryEmpty": "لا توجد محاولات محفوظة لهذه الشبكة.",
   "bitcoinRecoverySuccess": "تم استرداد الحجز. يمكنك إعداد تحويل جديد.",
   "bitcoinReservedInputs": "المدخلات المحجوزة",
-  "bitcoinRecoveryCheck": "التحقق من حالة المعاملة"
+  "bitcoinRecoveryCheck": "التحقق من حالة المعاملة",
+  "transactionEconomy": "اقتصادي",
+  "transactionNormal": "عادي",
+  "transactionPriority": "أولوية",
+  "transactionNetworkSpeed": "سرعة الشبكة",
+  "transactionSpeed": "السرعة",
+  "transactionEqualFeeTiers": "تستخدم جميع خيارات السرعة الرسوم نفسها حاليًا.",
+  "evmTransactionType": "نوع المعاملة",
+  "evmGasLimit": "حد الغاز",
+  "evmGasPrice": "سعر الغاز",
+  "evmBaseFee": "الرسوم الأساسية",
+  "evmPriorityFee": "رسوم الأولوية",
+  "evmMaxFee": "الحد الأقصى للرسوم",
+  "evmLegacyTransaction": "تقليدية (النوع 0)",
+  "evmDynamicTransaction": "EIP-1559 (النوع 2)",
+  "evmFeeQuoteUpdated": "تغيرت رسوم الشبكة. راجع الرسوم المحدثة ثم أكد مرة أخرى.",
+  "transactionFeeUpTo": "حتى {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

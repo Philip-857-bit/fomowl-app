@@ -683,5 +683,29 @@
   "bitcoinRecoveryEmpty": "Babu ƙoƙarin da aka ajiye ga wannan cibiyar sadarwa.",
   "bitcoinRecoverySuccess": "An dawo da ajiyar. Za ka iya shirya sabon canja wuri.",
   "bitcoinReservedInputs": "Abubuwan shiga da aka ajiye",
-  "bitcoinRecoveryCheck": "Duba matsayin ma’amala"
+  "bitcoinRecoveryCheck": "Duba matsayin ma’amala",
+  "transactionEconomy": "Mai rahusa",
+  "transactionNormal": "Na yau da kullum",
+  "transactionPriority": "Fifiko",
+  "transactionNetworkSpeed": "SAURIN HANYAR SADARWA",
+  "transactionSpeed": "Sauri",
+  "transactionEqualFeeTiers": "Duk zaɓuɓɓukan sauri suna amfani da kuɗi iri ɗaya a yanzu.",
+  "evmTransactionType": "Nau’in ma’amala",
+  "evmGasLimit": "Iyakar gas",
+  "evmGasPrice": "Farashin gas",
+  "evmBaseFee": "Kuɗin tushe",
+  "evmPriorityFee": "Kuɗin fifiko",
+  "evmMaxFee": "Mafi yawan kuɗi",
+  "evmLegacyTransaction": "Na gargajiya (nau’i 0)",
+  "evmDynamicTransaction": "EIP-1559 (nau’i 2)",
+  "evmFeeQuoteUpdated": "Kuɗin hanyar sadarwa sun canza. Duba sabbin kuɗin sannan ka sake tabbatarwa.",
+  "transactionFeeUpTo": "Har zuwa {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -352,6 +352,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           toAddress: toAddress,
           amountInBaseUnits: BigInt.one,
           rpcUrl: blockchain.activeChain.rpcUrl,
+          chainId: blockchain.activeChain.chainId,
         );
         final fee = gasData['totalFeeWei'];
         if (fee is BigInt && fee > BigInt.zero) {

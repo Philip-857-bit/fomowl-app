@@ -686,5 +686,29 @@
   "bitcoinRecoveryEmpty": "此网络没有已保存的尝试。",
   "bitcoinRecoverySuccess": "已恢复预留，您可以准备新转账。",
   "bitcoinReservedInputs": "预留输入",
-  "bitcoinRecoveryCheck": "检查交易状态"
+  "bitcoinRecoveryCheck": "检查交易状态",
+  "transactionEconomy": "经济",
+  "transactionNormal": "普通",
+  "transactionPriority": "优先",
+  "transactionNetworkSpeed": "网络速度",
+  "transactionSpeed": "速度",
+  "transactionEqualFeeTiers": "目前所有速度选项的手续费相同。",
+  "evmTransactionType": "交易类型",
+  "evmGasLimit": "Gas 上限",
+  "evmGasPrice": "Gas 价格",
+  "evmBaseFee": "基础费用",
+  "evmPriorityFee": "优先费用",
+  "evmMaxFee": "最高费用",
+  "evmLegacyTransaction": "传统交易（类型 0）",
+  "evmDynamicTransaction": "EIP-1559（类型 2）",
+  "evmFeeQuoteUpdated": "网络费用已变化。请检查更新后的费用并再次确认。",
+  "transactionFeeUpTo": "最高 {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

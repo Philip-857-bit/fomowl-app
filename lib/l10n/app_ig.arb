@@ -683,5 +683,29 @@
   "bitcoinRecoveryEmpty": "Enweghị mbọ echekwara maka netwọkụ a.",
   "bitcoinRecoverySuccess": "Eweghachila ndoputa. Ị nwere ike ịkwadebe mbufe ọhụrụ.",
   "bitcoinReservedInputs": "Ntinye echekwara",
-  "bitcoinRecoveryCheck": "Lelee ọnọdụ azụmahịa"
+  "bitcoinRecoveryCheck": "Lelee ọnọdụ azụmahịa",
+  "transactionEconomy": "Ụgwọ dị ala",
+  "transactionNormal": "Nkịtị",
+  "transactionPriority": "Ibu ụzọ",
+  "transactionNetworkSpeed": "ỌSỌ NETWỌK",
+  "transactionSpeed": "Ọsọ",
+  "transactionEqualFeeTiers": "Nhọrọ ọsọ niile na-eji otu ụgwọ ugbu a.",
+  "evmTransactionType": "Ụdị azụmahịa",
+  "evmGasLimit": "Oke gas",
+  "evmGasPrice": "Ọnụ gas",
+  "evmBaseFee": "Ụgwọ isi",
+  "evmPriorityFee": "Ụgwọ mkpa mbụ",
+  "evmMaxFee": "Ụgwọ kachasị",
+  "evmLegacyTransaction": "Ụdị ochie (ụdị 0)",
+  "evmDynamicTransaction": "EIP-1559 (ụdị 2)",
+  "evmFeeQuoteUpdated": "Ụgwọ netwọkụ agbanweela. Lelee ụgwọ ọhụrụ ma kwado ọzọ.",
+  "transactionFeeUpTo": "Ruo {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

@@ -21,6 +21,8 @@ import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
 import 'native_crypto.dart';
 import 'evm_transaction_service.dart';
+import 'evm_fee_service.dart';
+import '../models/evm_fee_quote.dart';
 import 'wallet_vault_service.dart';
 import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
@@ -950,8 +952,10 @@ class WalletService {
     required int chainId,
     BigInt? gasPriceWei,
     int? gasLimit,
+    EvmFeeQuote? feeQuote,
   }) async {
-    if ((gasPriceWei == null) != (gasLimit == null)) {
+    if ((gasPriceWei == null) != (gasLimit == null) ||
+        feeQuote != null && (gasPriceWei != null || gasLimit != null)) {
       throw ArgumentError(
         'gasPriceWei and gasLimit must either both be supplied or both omitted',
       );
@@ -959,34 +963,19 @@ class WalletService {
 
     final account = await _activeEvmSigningAccount();
     try {
-      final sender = account.address;
-
       final client = _clientForRpc(rpcUrl);
       final recipient = EthereumAddress.fromHex(toAddress);
 
-      final resolvedGasPriceWei =
-          gasPriceWei ?? (await client.getGasPrice()).getInWei;
-
-      final resolvedGasLimit =
-          gasLimit ??
-          BigInt.from(
-            ((await client.estimateGas(
-                      sender: sender,
-                      to: recipient,
-                      value: EtherAmount.inWei(amountInBaseUnits),
-                    )).toInt() *
-                    1.1)
-                .ceil(),
-          ).toInt();
-
-      return await EvmTransactionService.broadcastLegacy(
+      return await _broadcastQuotedEvmTransfer(
         client: client,
         account: account,
         chainId: chainId,
         to: recipient,
         valueWei: amountInBaseUnits,
-        gasPriceWei: resolvedGasPriceWei,
-        gasLimit: resolvedGasLimit,
+        data: Uint8List(0),
+        feeQuote: feeQuote,
+        gasPriceWei: gasPriceWei,
+        gasLimit: gasLimit,
       );
     } finally {
       await account.close();
@@ -1001,8 +990,10 @@ class WalletService {
     required int chainId,
     BigInt? gasPriceWei,
     int? gasLimit,
+    EvmFeeQuote? feeQuote,
   }) async {
-    if ((gasPriceWei == null) != (gasLimit == null)) {
+    if ((gasPriceWei == null) != (gasLimit == null) ||
+        feeQuote != null && (gasPriceWei != null || gasLimit != null)) {
       throw ArgumentError(
         'gasPriceWei and gasLimit must either both be supplied or both omitted',
       );
@@ -1010,8 +1001,6 @@ class WalletService {
 
     final account = await _activeEvmSigningAccount();
     try {
-      final sender = account.address;
-
       final client = _clientForRpc(rpcUrl);
       final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
       final recipient = EthereumAddress.fromHex(toAddress);
@@ -1020,34 +1009,119 @@ class WalletService {
         amount: amountInBaseUnits,
       );
 
-      final resolvedGasPriceWei =
-          gasPriceWei ?? (await client.getGasPrice()).getInWei;
-
-      final resolvedGasLimit =
-          gasLimit ??
-          BigInt.from(
-            ((await client.estimateGas(
-                      sender: sender,
-                      to: tokenContractAddress,
-                      data: data,
-                    )).toInt() *
-                    1.1)
-                .ceil(),
-          ).toInt();
-
-      return await EvmTransactionService.broadcastLegacy(
+      return await _broadcastQuotedEvmTransfer(
         client: client,
         account: account,
         chainId: chainId,
         to: tokenContractAddress,
         valueWei: BigInt.zero,
-        gasPriceWei: resolvedGasPriceWei,
-        gasLimit: resolvedGasLimit,
+        gasPriceWei: gasPriceWei,
+        gasLimit: gasLimit,
+        feeQuote: feeQuote,
         data: data,
       );
     } finally {
       await account.close();
     }
+  }
+
+  EvmFeeService _feeService(Web3Client client) => EvmFeeService(
+    rpcScope: client,
+    rpc: (method, params) => client.makeRPCCall<Object?>(method, params),
+  );
+
+  Future<String> _broadcastQuotedEvmTransfer({
+    required Web3Client client,
+    required EvmSigningAccount account,
+    required int chainId,
+    required EthereumAddress to,
+    required BigInt valueWei,
+    required Uint8List data,
+    EvmFeeQuote? feeQuote,
+    BigInt? gasPriceWei,
+    int? gasLimit,
+  }) async {
+    final intent = EvmFeeIntent(
+      chainId: chainId,
+      sender: account.address.hex,
+      destination: to.hex,
+      valueWei: valueWei,
+      data: data,
+      rpcScope: client,
+    );
+    final quote =
+        feeQuote ??
+        (gasPriceWei != null
+            ? EvmFeeQuote(
+                intent: intent,
+                tier: EvmFeeTier.normal,
+                type: EvmTransactionType.legacy,
+                gasLimit: gasLimit!,
+                gasPriceWei: gasPriceWei,
+                quotedAt: DateTime.now(),
+              )
+            : (await _feeService(client).quote(
+                chainId: chainId,
+                sender: account.address.hex,
+                destination: to.hex,
+                valueWei: valueWei,
+                data: data,
+              )).forTier(EvmFeeTier.normal));
+    if (!quote.intent.matches(
+      chainId: chainId,
+      sender: account.address.hex,
+      destination: to.hex,
+      valueWei: valueWei,
+      data: data,
+      rpcScope: client,
+    )) {
+      throw const EvmFeeQuoteException(
+        'Transaction does not match the approved fee quote',
+      );
+    }
+    quote.requireFresh(DateTime.now());
+    return EvmTransactionService.broadcastTransaction(
+      client: client,
+      account: account,
+      chainId: chainId,
+      to: to,
+      valueWei: valueWei,
+      data: data,
+      gasLimit: quote.gasLimit,
+      gasPriceWei: quote.gasPriceWei,
+      maxFeePerGasWei: quote.maxFeePerGasWei,
+      maxPriorityFeePerGasWei: quote.maxPriorityFeePerGasWei,
+      validateBeforeSigning: () => quote.requireFresh(DateTime.now()),
+    );
+  }
+
+  Future<EvmFeeQuotes> quoteTransferFees({
+    required int chainId,
+    required String fromAddress,
+    required String toAddress,
+    required BigInt amountInBaseUnits,
+    required String rpcUrl,
+    String? tokenAddress,
+  }) async {
+    final client = _clientForRpc(rpcUrl);
+    final sender = EthereumAddress.fromHex(fromAddress);
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final native = tokenAddress == null || tokenAddress.isEmpty;
+    final data = native
+        ? Uint8List(0)
+        : await NativeCrypto.encodeErc20Transfer(
+            toAddress: recipient.hex,
+            amount: amountInBaseUnits,
+          );
+    return _feeService(client).quote(
+      chainId: chainId,
+      sender: sender.hex,
+      destination: native
+          ? recipient.hex
+          : EthereumAddress.fromHex(tokenAddress).hex,
+      valueWei: native ? amountInBaseUnits : BigInt.zero,
+      data: data,
+    );
   }
 
   Future<String> sendNftTransaction({
@@ -1191,49 +1265,34 @@ class WalletService {
     required String rpcUrl,
     String? tokenAddress,
     double nativePriceUsd = 0,
+    int? chainId,
   }) async {
     final client = _clientForRpc(rpcUrl);
-    final sender = EthereumAddress.fromHex(fromAddress);
-    final recipient = EthereumAddress.fromHex(toAddress);
-    late final Future<BigInt> estimatedGasFuture;
-    if (tokenAddress == null || tokenAddress.isEmpty) {
-      estimatedGasFuture = client.estimateGas(
-        sender: sender,
-        to: recipient,
-        value: EtherAmount.inWei(amountInBaseUnits),
-      );
-    } else {
-      final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
-      final data = await NativeCrypto.encodeErc20Transfer(
-        toAddress: recipient.hex,
-        amount: amountInBaseUnits,
-      );
-      estimatedGasFuture = client.estimateGas(
-        sender: sender,
-        to: tokenContractAddress,
-        data: data,
-      );
-    }
-
-    final estimates = await Future.wait<Object>([
-      client.getGasPrice(),
-      estimatedGasFuture,
-    ]);
-    final gasPrice = estimates[0] as EtherAmount;
-    final estimatedGas = estimates[1] as BigInt;
-    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
-    final totalFeeWei = gasPrice.getInWei * bufferedGas;
+    final quotes = await quoteTransferFees(
+      chainId: chainId ?? (await client.getChainId()).toInt(),
+      fromAddress: fromAddress,
+      toAddress: toAddress,
+      amountInBaseUnits: amountInBaseUnits,
+      rpcUrl: rpcUrl,
+      tokenAddress: tokenAddress,
+    );
+    final quote = quotes.forTier(EvmFeeTier.normal);
+    final totalFeeWei = quote.maximumTotalFeeWei;
     final totalFeeNativeDouble = EtherAmount.inWei(
       totalFeeWei,
     ).getValueInUnit(EtherUnit.ether).toDouble();
 
     return {
-      'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
-      'gasPriceWei': gasPrice.getInWei,
-      'gasLimitUnits': bufferedGas.toDouble(),
+      'gasGwei': EtherAmount.inWei(
+        quote.effectivePriceWei,
+      ).getValueInUnit(EtherUnit.gwei),
+      'gasPriceWei': quote.gasPriceWei,
+      'gasLimitUnits': quote.gasLimit,
       'totalFeeEth': totalFeeNativeDouble,
       'totalFeeUsd': totalFeeNativeDouble * nativePriceUsd,
       'totalFeeWei': totalFeeWei,
+      'feeQuote': quote,
+      'feeQuotes': quotes,
     };
   }
 

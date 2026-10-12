@@ -98,6 +98,7 @@ class EvmTransactionService {
     BigInt? gasPriceWei,
     BigInt? maxFeePerGasWei,
     BigInt? maxPriorityFeePerGasWei,
+    void Function()? validateBeforeSigning,
   }) async {
     if (account.isClosed) {
       throw StateError('EVM signing account is closed');
@@ -131,6 +132,7 @@ class EvmTransactionService {
     if (account.isClosed) {
       throw StateError('EVM signing account is closed');
     }
+    validateBeforeSigning?.call();
     final rawHex = await account._rustSigner.signTransaction(
       chainId: BigInt.from(chainId),
       nonce: BigInt.from(resolvedNonce),

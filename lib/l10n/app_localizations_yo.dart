@@ -2039,4 +2039,56 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get bitcoinRecoveryCheck => 'Ṣàyẹ̀wò ipò ìṣòwò';
+
+  @override
+  String get transactionEconomy => 'Ọ̀ya kékeré';
+
+  @override
+  String get transactionNormal => 'Déédéé';
+
+  @override
+  String get transactionPriority => 'Àkọ́kọ́';
+
+  @override
+  String get transactionNetworkSpeed => 'ÌYÁRÁ NẸ́TÍWỌ́Ọ̀KÌ';
+
+  @override
+  String get transactionSpeed => 'Ìyára';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Gbogbo àṣàyàn ìyára ń lo owó kan náà lọ́wọ́lọ́wọ́.';
+
+  @override
+  String get evmTransactionType => 'Irú ìṣòwò';
+
+  @override
+  String get evmGasLimit => 'Ààlà gas';
+
+  @override
+  String get evmGasPrice => 'Iye gas';
+
+  @override
+  String get evmBaseFee => 'Owó ìpìlẹ̀';
+
+  @override
+  String get evmPriorityFee => 'Owó ìṣáájú';
+
+  @override
+  String get evmMaxFee => 'Owó tó pọ̀jù';
+
+  @override
+  String get evmLegacyTransaction => 'Àtijọ́ (irú 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (irú 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Owó nẹ́tíwọ́ọ̀kì ti yí padà. Ṣàyẹ̀wò owó tuntun kí o sì jẹ́rìí lẹ́ẹ̀kan sí i.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Títí dé $fee';
+  }
 }

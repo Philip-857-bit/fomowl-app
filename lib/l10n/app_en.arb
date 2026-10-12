@@ -683,5 +683,29 @@
   "bitcoinRecoveryEmpty": "No saved attempts for this network.",
   "bitcoinRecoverySuccess": "Reservation recovered. You can prepare a new transfer.",
   "bitcoinReservedInputs": "Reserved inputs",
-  "bitcoinRecoveryCheck": "Check transaction status"
+  "bitcoinRecoveryCheck": "Check transaction status",
+  "transactionEconomy": "Economy",
+  "transactionNormal": "Normal",
+  "transactionPriority": "Priority",
+  "transactionNetworkSpeed": "NETWORK SPEED",
+  "transactionSpeed": "Speed",
+  "transactionEqualFeeTiers": "All speed options currently use the same fee.",
+  "evmTransactionType": "Transaction type",
+  "evmGasLimit": "Gas limit",
+  "evmGasPrice": "Gas price",
+  "evmBaseFee": "Base fee",
+  "evmPriorityFee": "Priority fee",
+  "evmMaxFee": "Max fee",
+  "evmLegacyTransaction": "Legacy (type 0)",
+  "evmDynamicTransaction": "EIP-1559 (type 2)",
+  "evmFeeQuoteUpdated": "Network fees changed. Review the updated fee and confirm again.",
+  "transactionFeeUpTo": "Up to {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

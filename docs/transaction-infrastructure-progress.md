@@ -44,9 +44,35 @@ status/storage, bounded rotation/coalescing and automatic non-blocking refresh.
 Validation and exact final SHA are recorded in the companion report after execution.
 Pending steps remain pending; this document does not claim mainnet rollout readiness.
 
+## Step 2 — Runtime EVM fee quotes
+
+Ordinary native/ERC20 sends use a reusable immutable integer-wei fee quote.
+A validated latest-block base-fee field selects EIP-1559/type 2, including a
+valid zero base fee. Its absence retains legacy/type 0. RPC chain identity is
+verified; malformed observations and transport failures do not invent support
+or fees. Optional fee-history/priority methods fall back only when explicitly
+unsupported. Recent reward percentiles provide Economy/Normal/Priority; Normal
+is the default and identical effective prices hide redundant choices.
+
+Quotes bind sender, chain, destination, value, calldata and the exact RPC client.
+They expire after thirty seconds. Confirmation refreshes expired fees and asks
+for another review; approved fee fields reach the existing opaque Rust signer
+without a silent refresh. A second freshness check runs after nonce discovery.
+Explicit legacy fee parameters remain supported. NFT, swap, bridge and
+WalletConnect execution paths remain unchanged.
+
+The primary card shows Network fee and meaningful Speed. Collapsed Advanced
+details contain transaction type, gas limit, and legacy gas price or dynamic
+base/priority/max fees. The primary execution-gas fee is an "Up to" cap;
+integer cap cost is also used for native MAX reservation. These standard EVM
+gas fields do not include rollup data fees separately charged outside those
+fields, and this step does not claim a universal full L2 fee estimate.
+
+Validation and exact SHA are recorded in the companion report after execution.
+No SDK/FRB API, backend contract, deployment or production rollout change.
+
 ## Remaining roadmap
 
-2. EVM EIP-1559/type-2 fee engine with legacy fallback.
 3. EVM Speed Up/Cancel with authoritative outbound metadata.
 4. Separate Owllet Core v0.2.1 Bitcoin RBF candidate and release preparation.
 5. Verified new SDK pin and Bitcoin Speed Up integration.

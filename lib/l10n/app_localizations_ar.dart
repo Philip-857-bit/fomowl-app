@@ -2044,4 +2044,56 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get bitcoinRecoveryCheck => 'التحقق من حالة المعاملة';
+
+  @override
+  String get transactionEconomy => 'اقتصادي';
+
+  @override
+  String get transactionNormal => 'عادي';
+
+  @override
+  String get transactionPriority => 'أولوية';
+
+  @override
+  String get transactionNetworkSpeed => 'سرعة الشبكة';
+
+  @override
+  String get transactionSpeed => 'السرعة';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'تستخدم جميع خيارات السرعة الرسوم نفسها حاليًا.';
+
+  @override
+  String get evmTransactionType => 'نوع المعاملة';
+
+  @override
+  String get evmGasLimit => 'حد الغاز';
+
+  @override
+  String get evmGasPrice => 'سعر الغاز';
+
+  @override
+  String get evmBaseFee => 'الرسوم الأساسية';
+
+  @override
+  String get evmPriorityFee => 'رسوم الأولوية';
+
+  @override
+  String get evmMaxFee => 'الحد الأقصى للرسوم';
+
+  @override
+  String get evmLegacyTransaction => 'تقليدية (النوع 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (النوع 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'تغيرت رسوم الشبكة. راجع الرسوم المحدثة ثم أكد مرة أخرى.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'حتى $fee';
+  }
 }

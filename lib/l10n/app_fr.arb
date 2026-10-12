@@ -683,5 +683,29 @@
   "bitcoinRecoveryEmpty": "Aucune tentative enregistrée pour ce réseau.",
   "bitcoinRecoverySuccess": "Réservation récupérée. Vous pouvez préparer un nouveau transfert.",
   "bitcoinReservedInputs": "Entrées réservées",
-  "bitcoinRecoveryCheck": "Vérifier le statut"
+  "bitcoinRecoveryCheck": "Vérifier le statut",
+  "transactionEconomy": "Économique",
+  "transactionNormal": "Normal",
+  "transactionPriority": "Prioritaire",
+  "transactionNetworkSpeed": "VITESSE DU RÉSEAU",
+  "transactionSpeed": "Vitesse",
+  "transactionEqualFeeTiers": "Toutes les options de vitesse utilisent actuellement les mêmes frais.",
+  "evmTransactionType": "Type de transaction",
+  "evmGasLimit": "Limite de gas",
+  "evmGasPrice": "Prix du gas",
+  "evmBaseFee": "Frais de base",
+  "evmPriorityFee": "Frais de priorité",
+  "evmMaxFee": "Frais maximum",
+  "evmLegacyTransaction": "Classique (type 0)",
+  "evmDynamicTransaction": "EIP-1559 (type 2)",
+  "evmFeeQuoteUpdated": "Les frais du réseau ont changé. Vérifiez les nouveaux frais puis confirmez à nouveau.",
+  "transactionFeeUpTo": "Jusqu’à {fee}",
+  "@transactionFeeUpTo": {
+    "description": "Maximum approved network fee ceiling",
+    "placeholders": {
+      "fee": {
+        "type": "String"
+      }
+    }
+  }
 }

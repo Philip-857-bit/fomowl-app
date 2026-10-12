@@ -1957,4 +1957,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bitcoinRecoveryCheck => '检查交易状态';
+
+  @override
+  String get transactionEconomy => '经济';
+
+  @override
+  String get transactionNormal => '普通';
+
+  @override
+  String get transactionPriority => '优先';
+
+  @override
+  String get transactionNetworkSpeed => '网络速度';
+
+  @override
+  String get transactionSpeed => '速度';
+
+  @override
+  String get transactionEqualFeeTiers => '目前所有速度选项的手续费相同。';
+
+  @override
+  String get evmTransactionType => '交易类型';
+
+  @override
+  String get evmGasLimit => 'Gas 上限';
+
+  @override
+  String get evmGasPrice => 'Gas 价格';
+
+  @override
+  String get evmBaseFee => '基础费用';
+
+  @override
+  String get evmPriorityFee => '优先费用';
+
+  @override
+  String get evmMaxFee => '最高费用';
+
+  @override
+  String get evmLegacyTransaction => '传统交易（类型 0）';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559（类型 2）';
+
+  @override
+  String get evmFeeQuoteUpdated => '网络费用已变化。请检查更新后的费用并再次确认。';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return '最高 $fee';
+  }
 }

@@ -2091,4 +2091,56 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get bitcoinRecoveryCheck => 'Vérifier le statut';
+
+  @override
+  String get transactionEconomy => 'Économique';
+
+  @override
+  String get transactionNormal => 'Normal';
+
+  @override
+  String get transactionPriority => 'Prioritaire';
+
+  @override
+  String get transactionNetworkSpeed => 'VITESSE DU RÉSEAU';
+
+  @override
+  String get transactionSpeed => 'Vitesse';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Toutes les options de vitesse utilisent actuellement les mêmes frais.';
+
+  @override
+  String get evmTransactionType => 'Type de transaction';
+
+  @override
+  String get evmGasLimit => 'Limite de gas';
+
+  @override
+  String get evmGasPrice => 'Prix du gas';
+
+  @override
+  String get evmBaseFee => 'Frais de base';
+
+  @override
+  String get evmPriorityFee => 'Frais de priorité';
+
+  @override
+  String get evmMaxFee => 'Frais maximum';
+
+  @override
+  String get evmLegacyTransaction => 'Classique (type 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (type 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Les frais du réseau ont changé. Vérifiez les nouveaux frais puis confirmez à nouveau.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Jusqu’à $fee';
+  }
 }

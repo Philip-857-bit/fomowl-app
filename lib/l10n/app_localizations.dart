@@ -3829,6 +3829,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Check transaction status'**
   String get bitcoinRecoveryCheck;
+
+  /// No description provided for @transactionEconomy.
+  ///
+  /// In en, this message translates to:
+  /// **'Economy'**
+  String get transactionEconomy;
+
+  /// No description provided for @transactionNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get transactionNormal;
+
+  /// No description provided for @transactionPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get transactionPriority;
+
+  /// No description provided for @transactionNetworkSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'NETWORK SPEED'**
+  String get transactionNetworkSpeed;
+
+  /// No description provided for @transactionSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get transactionSpeed;
+
+  /// No description provided for @transactionEqualFeeTiers.
+  ///
+  /// In en, this message translates to:
+  /// **'All speed options currently use the same fee.'**
+  String get transactionEqualFeeTiers;
+
+  /// No description provided for @evmTransactionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction type'**
+  String get evmTransactionType;
+
+  /// No description provided for @evmGasLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas limit'**
+  String get evmGasLimit;
+
+  /// No description provided for @evmGasPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas price'**
+  String get evmGasPrice;
+
+  /// No description provided for @evmBaseFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Base fee'**
+  String get evmBaseFee;
+
+  /// No description provided for @evmPriorityFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority fee'**
+  String get evmPriorityFee;
+
+  /// No description provided for @evmMaxFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Max fee'**
+  String get evmMaxFee;
+
+  /// No description provided for @evmLegacyTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy (type 0)'**
+  String get evmLegacyTransaction;
+
+  /// No description provided for @evmDynamicTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'EIP-1559 (type 2)'**
+  String get evmDynamicTransaction;
+
+  /// No description provided for @evmFeeQuoteUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fees changed. Review the updated fee and confirm again.'**
+  String get evmFeeQuoteUpdated;
+
+  /// Maximum approved network fee ceiling
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {fee}'**
+  String transactionFeeUpTo(String fee);
 }
 
 class _AppLocalizationsDelegate

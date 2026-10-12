@@ -2039,4 +2039,56 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get bitcoinRecoveryCheck => 'Lelee ọnọdụ azụmahịa';
+
+  @override
+  String get transactionEconomy => 'Ụgwọ dị ala';
+
+  @override
+  String get transactionNormal => 'Nkịtị';
+
+  @override
+  String get transactionPriority => 'Ibu ụzọ';
+
+  @override
+  String get transactionNetworkSpeed => 'ỌSỌ NETWỌK';
+
+  @override
+  String get transactionSpeed => 'Ọsọ';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Nhọrọ ọsọ niile na-eji otu ụgwọ ugbu a.';
+
+  @override
+  String get evmTransactionType => 'Ụdị azụmahịa';
+
+  @override
+  String get evmGasLimit => 'Oke gas';
+
+  @override
+  String get evmGasPrice => 'Ọnụ gas';
+
+  @override
+  String get evmBaseFee => 'Ụgwọ isi';
+
+  @override
+  String get evmPriorityFee => 'Ụgwọ mkpa mbụ';
+
+  @override
+  String get evmMaxFee => 'Ụgwọ kachasị';
+
+  @override
+  String get evmLegacyTransaction => 'Ụdị ochie (ụdị 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (ụdị 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Ụgwọ netwọkụ agbanweela. Lelee ụgwọ ọhụrụ ma kwado ọzọ.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Ruo $fee';
+  }
 }
