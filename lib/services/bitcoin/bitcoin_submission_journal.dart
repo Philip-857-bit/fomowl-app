@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../models/bitcoin_account_state.dart';
+import '../../models/bitcoin_network_data.dart';
 import '../../src/rust/api/bitcoin_transaction.dart';
 import 'bitcoin_account_store.dart';
 
@@ -11,6 +12,7 @@ class BitcoinPendingSubmission {
   final String txid;
   final List<String> inputs;
   final bool legacy;
+  final Object _revision;
   BitcoinPendingSubmission._(
     this._store,
     this.walletIdentity,
@@ -18,6 +20,7 @@ class BitcoinPendingSubmission {
     this.txid,
     List<String> inputs,
     this.legacy,
+    this._revision,
   ) : inputs = List.unmodifiable(inputs);
   @override
   String toString() => 'BitcoinPendingSubmission';
@@ -145,11 +148,56 @@ class BitcoinSubmissionJournal {
               entry.key.split('|').last,
               List<String>.from(entry.value),
               legacy.contains(entry.key),
+              store.submissionRevision(identity),
             ),
       ]),
       null,
     );
   });
+
+  /// Remove only the exact persisted entry observed before a verified status
+  /// lookup. Any intervening protected mutation invalidates that observation,
+  /// including deleting and recreating the same txid/input set.
+  Future<bool> reconcileConfirmed(
+    BitcoinPendingSubmission snapshot,
+    BitcoinTransactionStatus status, {
+    required bool Function() isCurrent,
+  }) async {
+    if (!identical(snapshot._store, store.secureStore)) {
+      throw StateError('Bitcoin submission storage scope mismatch');
+    }
+    if (!status.found || !status.confirmed || status.confirmations < 1) {
+      return false;
+    }
+    return store.updateSubmissionState(snapshot.walletIdentity, (raw) {
+      if (!isCurrent() ||
+          !identical(
+            snapshot._revision,
+            store.submissionRevision(snapshot.walletIdentity),
+          )) {
+        return (false, null);
+      }
+      final value = _decode(raw, snapshot.walletIdentity);
+      final entries = value['entries'] as Map<String, dynamic>;
+      final legacy = value['legacyEntries'] as List;
+      final key = '${snapshot.network.id}|${snapshot.txid}';
+      final actual = entries[key];
+      if (actual is! List ||
+          actual.length != snapshot.inputs.length ||
+          !actual.toSet().containsAll(snapshot.inputs) ||
+          legacy.contains(key) != snapshot.legacy ||
+          _liveOwners.containsKey(
+            _ownerKey(snapshot.walletIdentity, snapshot.network, snapshot.txid),
+          )) {
+        return (false, null);
+      }
+      entries.remove(key);
+      legacy.remove(key);
+      final encoded = jsonEncode(value);
+      _decode(encoded, snapshot.walletIdentity);
+      return (true, encoded);
+    });
+  }
 
   /// Explicit authenticated manual override, confined to old internal Testnet4
   /// entries. The recovery coordinator must check chain facts first.

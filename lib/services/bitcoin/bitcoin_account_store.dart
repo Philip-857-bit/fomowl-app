@@ -8,6 +8,7 @@ class _WalletQueue {
   Future<void> tail = Future.value();
   int generation = 0;
   bool removed = false;
+  Object submissionRevision = Object();
   Future<T> run<T>(
     Future<T> Function() operation, {
     bool allowRemoved = false,
@@ -52,6 +53,12 @@ class BitcoinAccountStore {
   String _submissionKey(String identity) =>
       'bitcoin_submission_v1_${Uri.encodeComponent(_identity(identity))}';
 
+  /// Opaque, process-local revision shared by wrappers over one protected store.
+  /// Async observers cannot survive process restart; durable records remain
+  /// authoritative and are never released merely because this token changes.
+  Object submissionRevision(String identity) =>
+      _queue(identity).submissionRevision;
+
   /// Serialized public submission metadata, sharing custody deletion/reset revocation.
   Future<T> updateSubmissionState<T>(
     String identity,
@@ -62,7 +69,11 @@ class BitcoinAccountStore {
     }
     final key = _submissionKey(identity);
     final (result, encoded) = update(await _read(key));
-    if (encoded != null) await _write(key, encoded);
+    if (encoded != null) {
+      // Invalidate observers even if the write's outcome becomes uncertain.
+      _queue(identity).submissionRevision = Object();
+      await _write(key, encoded);
+    }
     return result;
   });
   Future<String?> _read(String key) async {
@@ -299,6 +310,7 @@ class BitcoinAccountStore {
 
   Future<void> deleteWallet(String walletIdentity) {
     final queue = _queue(walletIdentity);
+    queue.submissionRevision = Object();
     queue.generation++;
     queue.removed = true;
     return queue.run(() async {
@@ -320,6 +332,7 @@ class BitcoinAccountStore {
   /// StorageService reset subsequently clears platform storage; old queued writes stay revoked.
   void invalidateAll() {
     for (final queue in _walletQueues.values) {
+      queue.submissionRevision = Object();
       queue.generation++;
       queue.removed = true;
     }

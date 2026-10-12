@@ -1,3 +1,4 @@
+import 'dart:async';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/bitcoin_wallet_balance.dart';
 import '../../models/chain.dart';
@@ -6,6 +7,8 @@ import 'bitcoin_discovery_service.dart';
 import 'bitcoin_native_crypto.dart';
 import 'bitcoin_network_service.dart';
 import 'bitcoin_provisioning_service.dart';
+import 'bitcoin_submission_journal.dart';
+import 'bitcoin_submission_reconciliation_service.dart';
 
 abstract interface class BitcoinWalletApi {
   Future<BitcoinWalletSnapshot> refresh(
@@ -90,6 +93,15 @@ class BitcoinWalletService implements BitcoinWalletApi {
       final result = await operation;
       if (!current()) throw StateError('Bitcoin wallet context changed');
       _cache.snapshots[key] = result;
+      // Pruning is independent of UTXO discovery and never delays wallet UI.
+      unawaited(
+        BitcoinSubmissionReconciliationService(
+              journal: BitcoinSubmissionJournal(storage.bitcoinAccounts),
+              network: this.network,
+            )
+            .reconcile(walletIdentity, network, isCurrent: current)
+            .catchError((Object _) => 0),
+      );
       return result;
     } finally {
       if (identical(_cache.inFlight[key], operation)) {
