@@ -103,6 +103,11 @@ jobs:
       # Compile the Rust bridge and Android application before QEMU starts.
       # Keeping the emulator alive during the cold native build starves QEMU on
       # hosted runners and caused repeated hanging-thread/runner-eviction errors.
+      - name: Set up Android SDK and native tooling
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;28.2.13676358
+
       - name: Prebuild Android debug application
         run: flutter build apk --debug --target-platform android-x64
 
