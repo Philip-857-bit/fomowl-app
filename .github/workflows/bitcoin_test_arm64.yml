@@ -23,6 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Reserve space on the disposable build runner
+        if: runner.environment == 'github-hosted'
         shell: bash
         run: |
           set -euo pipefail
@@ -81,6 +82,7 @@ jobs:
                    if line.split("=", 1)[0].strip() not in overrides]
           properties.write_text("\n".join(lines + [f"{key}={value}" for key, value in overrides.items()]) + "\n")
       - name: Reserve compiler swap headroom on the disposable runner
+        if: runner.environment == 'github-hosted'
         shell: bash
         run: |
           set -euo pipefail

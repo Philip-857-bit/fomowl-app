@@ -74,6 +74,7 @@ jobs:
           ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
 
       - name: Free up disk space
+        if: runner.environment == 'github-hosted'
         run: |
           set -euo pipefail
           echo "Disk space before cleanup:"
