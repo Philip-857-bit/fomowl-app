@@ -180,7 +180,7 @@ fn main() -> ExitCode {
 fn bitcoin_self_test() -> Result<(), String> {
     use owllet_core::{
         bitcoin_vault::*,
-        transactions::{bitcoin::*, bitcoin_psbt::*, bitcoin_signing::*},
+        transactions::{bitcoin::*, bitcoin_psbt::*, bitcoin_rbf::*, bitcoin_signing::*},
         *,
     };
     let seed=mnemonic_to_seed("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")?;
@@ -238,6 +238,22 @@ fn bitcoin_self_test() -> Result<(), String> {
             signed == verify_signed_bitcoin_transaction(&plan, &signed.raw_transaction_hex)?,
             "Bitcoin signature verification mismatch",
         )?;
+        let replacement = plan_bitcoin_rbf_replacement(
+            &plan,
+            &signed.raw_transaction_hex,
+            &BitcoinRbfContext {
+                original_txid: signed.txid.clone(),
+                original_unconfirmed: true, // Offline fixture observation only.
+                has_descendants: false,
+                incremental_relay_fee_sat_vb: 1,
+            },
+            4,
+        )?;
+        check(
+            replacement.recipients == plan.recipients
+                && replacement.selected_utxos == plan.selected_utxos,
+            "Bitcoin RBF intent mismatch",
+        )?;
         let psbt = create_bitcoin_psbt(&plan)?;
         let final_psbt = finalize_bitcoin_psbt(&sign_bitcoin_psbt(&account, &secret, &psbt)?)?;
         check(
@@ -260,13 +276,22 @@ fn bitcoin_self_test() -> Result<(), String> {
             finalize_bitcoin_psbt(&session.sign_psbt(&handle, &psbt)?)?.complete,
             "Bitcoin custody PSBT incomplete",
         )?;
+        let replacement_signed = session.sign_transaction(&handle, &replacement)?;
+        check(
+            replacement_signed
+                == verify_signed_bitcoin_transaction(
+                    &replacement,
+                    &replacement_signed.raw_transaction_hex,
+                )?,
+            "Bitcoin RBF custody verification mismatch",
+        )?;
         session.lock();
         check(
             session.sign_transaction(&handle, &plan).is_err(),
             "Bitcoin locked session signed",
         )?;
         println!(
-            "PASS Bitcoin {:?}: XPUB receive/change, plan, verified signing, PSBT, vault and lock",
+            "PASS Bitcoin {:?}: XPUB receive/change, plan, RBF replacement, verified signing, PSBT, vault and lock",
             purpose
         );
     }

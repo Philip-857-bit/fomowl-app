@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import 'widgets/history_detail_components.dart';
+import 'widgets/bitcoin_replacement_actions.dart';
+import '../../services/bitcoin/bitcoin_broadcast_service.dart';
+import '../../services/bitcoin/bitcoin_rbf_service.dart';
+import '../../services/bitcoin/bitcoin_submission_journal.dart';
 import '../../theme/app_chain_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_en.dart';
@@ -17,6 +21,10 @@ class BitcoinTransactionDetailsSheet extends StatefulWidget {
   final WalletHistoryEntry entry;
   final BitcoinProductNetwork network;
   final BitcoinNetworkApi? api;
+  final bool enableSpeedUp;
+  final BitcoinRbfService? replacementService;
+  final bool Function()? isCurrent;
+  final Future<void> Function()? onReplacement;
   final Future<void> Function(String url) onOpenExplorer;
   const BitcoinTransactionDetailsSheet({
     super.key,
@@ -24,6 +32,10 @@ class BitcoinTransactionDetailsSheet extends StatefulWidget {
     required this.network,
     required this.onOpenExplorer,
     this.api,
+    this.enableSpeedUp = false,
+    this.replacementService,
+    this.isCurrent,
+    this.onReplacement,
   });
   @override
   State<BitcoinTransactionDetailsSheet> createState() =>
@@ -34,8 +46,16 @@ class _BitcoinTransactionDetailsSheetState
     extends State<BitcoinTransactionDetailsSheet> {
   Future<BitcoinTransactionStatus>? _status;
   String? _txid;
+  String? _initialTxid;
   Timer? _refreshTimer;
   bool _fetching = false;
+  int _statusEpoch = 0;
+  BitcoinPreparedReplacement? _replacement;
+  BitcoinBroadcastOutcome? _replacementOutcome;
+  BitcoinResolvedSubmission? _resolvedSubmission;
+  late final BitcoinRbfService? _rbf = widget.enableSpeedUp
+      ? widget.replacementService ?? BitcoinRbfService()
+      : null;
   late final BitcoinNetworkApi _api =
       widget.api ?? BitcoinNetworkService(timeout: const Duration(seconds: 8));
   @override
@@ -43,6 +63,7 @@ class _BitcoinTransactionDetailsSheetState
     super.initState();
     try {
       _txid = bitcoinTxid(widget.entry.txHash);
+      _initialTxid = _txid;
       _status = _fetchStatus();
       _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
         if (mounted && !_fetching) {
@@ -58,17 +79,45 @@ class _BitcoinTransactionDetailsSheetState
   }
 
   Future<BitcoinTransactionStatus> _fetchStatus() async {
+    var hash = _txid!;
+    final epoch = ++_statusEpoch;
     _fetching = true;
     try {
+      if (_rbf != null) {
+        try {
+          final receipts = await _rbf.journal
+              .resolvedAliases(widget.entry.walletAddress, widget.network)
+              .timeout(const Duration(seconds: 2));
+          final winner = receipts[hash];
+          if (winner != null &&
+              mounted &&
+              epoch == _statusEpoch &&
+              hash == _txid &&
+              widget.isCurrent?.call() != false) {
+            hash = winner.txid;
+            setState(() {
+              _txid = winner.txid;
+              _resolvedSubmission = winner;
+              _replacement = null;
+              _replacementOutcome = null;
+            });
+          }
+        } catch (_) {
+          // Optional receipt metadata cannot suppress the actual status lookup.
+        }
+      }
       final status = await _api
-          .fetchTransactionStatus(widget.network, _txid!)
+          .fetchTransactionStatus(widget.network, hash)
           .timeout(const Duration(seconds: 8));
-      if (status.confirmed && status.confirmations >= 1) {
+      if (hash == _txid &&
+          epoch == _statusEpoch &&
+          status.confirmed &&
+          status.confirmations >= 1) {
         _refreshTimer?.cancel();
       }
       return status;
     } finally {
-      _fetching = false;
+      if (epoch == _statusEpoch) _fetching = false;
     }
   }
 
@@ -79,6 +128,14 @@ class _BitcoinTransactionDetailsSheetState
   }
 
   String _amount() {
+    if (_resolvedSubmission != null) {
+      return BitcoinAmountUtils.format(_resolvedSubmission!.recipientTotalSat);
+    }
+    if (_replacement != null) {
+      return BitcoinAmountUtils.format(
+        _replacement!.transfer.plan.recipientTotalSat,
+      );
+    }
     final exact = widget.entry.bitcoin?.deltaSats.abs();
     if (exact != null) return BitcoinAmountUtils.format(exact);
     return BitcoinAmountUtils.formatLegacyDisplay(widget.entry.amount);
@@ -90,7 +147,9 @@ class _BitcoinTransactionDetailsSheetState
     final l =
         Localizations.of<AppLocalizations>(context, AppLocalizations) ??
         AppLocalizationsEn();
-    final known = widget.entry.bitcoin?.transaction;
+    final known = _replacement == null && _txid == _initialTxid
+        ? widget.entry.bitcoin?.transaction
+        : null;
     final chain = widget.network == BitcoinProductNetwork.mainnet
         ? BitcoinCatalog.mainnet
         : BitcoinCatalog.testnet4;
@@ -150,7 +209,11 @@ class _BitcoinTransactionDetailsSheetState
                   final timestamp = current != null
                       ? current.timestamp
                       : known?.timestamp;
-                  final submitted = current?.found ?? known != null;
+                  final submitted = _replacement == null
+                      ? current?.found ?? known != null
+                      : current?.found == true ||
+                            _replacementOutcome?.status ==
+                                BitcoinSubmissionStatus.accepted;
                   Widget detail(
                     String label,
                     String text, {
@@ -177,7 +240,9 @@ class _BitcoinTransactionDetailsSheetState
                       HistoryDetailSection(
                         children: [
                           detail(
-                            widget.entry.bitcoin == null
+                            _resolvedSubmission != null ||
+                                    _replacement != null ||
+                                    widget.entry.bitcoin == null
                                 ? l.bitcoinAmount
                                 : l.bitcoinWalletChange,
                             '${_amount()} BTC',
@@ -214,7 +279,11 @@ class _BitcoinTransactionDetailsSheetState
                           ),
                           detail(
                             l.bitcoinNetworkFee,
-                            known == null
+                            _resolvedSubmission != null
+                                ? '${BitcoinAmountUtils.format(_resolvedSubmission!.feeSat)} BTC (${_resolvedSubmission!.feeSat} sats)'
+                                : _replacement != null
+                                ? '${BitcoinAmountUtils.format(_replacement!.replacementFeeSat)} BTC (${_replacement!.replacementFeeSat} sats)'
+                                : known == null
                                 ? '-'
                                 : '${BitcoinAmountUtils.format(known.feeSats)} BTC (${known.feeSats} sats)',
                           ),
@@ -233,6 +302,36 @@ class _BitcoinTransactionDetailsSheetState
                         const SizedBox(height: 14),
                         HistoryInfoBanner(message: l.bitcoinStatusUnavailable),
                       ],
+                      if (_replacementOutcome != null && confirmations < 1) ...[
+                        const SizedBox(height: 14),
+                        HistoryInfoBanner(
+                          message: submitted
+                              ? l.bitcoinRbfSubmitted
+                              : l.bitcoinRbfUnknown,
+                        ),
+                      ],
+                      if (widget.enableSpeedUp &&
+                          !widget.entry.isIncoming &&
+                          _txid != null &&
+                          confirmations < 1)
+                        BitcoinReplacementActions(
+                          key: ValueKey('bitcoin-replacement-$_txid'),
+                          walletIdentity: widget.entry.walletAddress,
+                          network: widget.network,
+                          txid: _txid!,
+                          service: _rbf,
+                          isCurrent: widget.isCurrent,
+                          onSubmitted: (replacement, outcome) async {
+                            if (!mounted) return;
+                            setState(() {
+                              _replacement = replacement;
+                              _replacementOutcome = outcome;
+                              _txid = outcome.txid;
+                              _status = _fetchStatus();
+                            });
+                            await widget.onReplacement?.call();
+                          },
+                        ),
                       if (_txid != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 18),

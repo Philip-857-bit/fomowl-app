@@ -2131,4 +2131,39 @@ class AppLocalizationsIg extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => 'E zigala azụmahịa';
+
+  @override
+  String get bitcoinSpeedUp => 'Mee ngwa ngwa';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Ụgwọ netwọk mbụ';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Ụgwọ netwọk nnọchi';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Ụgwọ ọzọ';
+
+  @override
+  String get bitcoinRbfNewRate => 'Ọnụego ụgwọ ọhụrụ';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'Adreesị nnata na ego ahụ anaghị agbanwe. Ụgwọ ka elu anaghị ekwe nkwa oge nkwenye.';
+
+  @override
+  String get bitcoinRbfHigherFee =>
+      'Tinye ọnụego ụgwọ ka elu n’ọnụọgụ zuru ezu.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'Enweghị ike ime ya ngwa ngwa. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'E zigara azụmahịa nnọchi. A ka na-eche nkwenye.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'Amaghị nsonaazụ izipu. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ.';
 }

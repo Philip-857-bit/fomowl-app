@@ -36,12 +36,12 @@ jobs:
           from pathlib import Path
           for name in ["rust/Cargo.toml", "rust/consumers/owllet-core-smoke/Cargo.toml"]:
               dependency = tomllib.loads(Path(name).read_text())["dependencies"]["owllet-core"]
-              assert dependency["version"] == "=0.2.0", f"Unexpected SDK version in {name}"
-              assert dependency["rev"] == "930eca151035eec9432d7f41b1b221bd5d27e829", f"Unexpected SDK revision in {name}"
+              assert dependency["version"] == "=0.2.1", f"Unexpected SDK version in {name}"
+              assert dependency["rev"] == "9918187371812e059bb4a6a07b8550c33318f43c", f"Unexpected SDK revision in {name}"
               assert dependency["git"] == "https://github.com/Philip-857-bit/owllet-core.git"
               assert "path" not in dependency
               assert {"bitcoin", "signing-session", "vault"}.issubset(dependency["features"])
-          print("Both SDK manifests pin owllet-core 0.2.0 at 930eca151035eec9432d7f41b1b221bd5d27e829")
+          print("Both SDK manifests pin owllet-core 0.2.1 at 9918187371812e059bb4a6a07b8550c33318f43c")
       - uses: ./.github/actions/setup-owllet-core
         with:
           ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}

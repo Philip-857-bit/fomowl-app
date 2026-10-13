@@ -2043,4 +2043,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => '交易已提交';
+
+  @override
+  String get bitcoinSpeedUp => '加速';
+
+  @override
+  String get bitcoinRbfOriginalFee => '原网络手续费';
+
+  @override
+  String get bitcoinRbfReplacementFee => '替换交易网络手续费';
+
+  @override
+  String get bitcoinRbfAdditionalFee => '额外手续费';
+
+  @override
+  String get bitcoinRbfNewRate => '新费率';
+
+  @override
+  String get bitcoinRbfWarning => '收款地址和金额保持不变。更高的手续费并不保证确认时间。';
+
+  @override
+  String get bitcoinRbfHigherFee => '请输入更高的整数费率。';
+
+  @override
+  String get bitcoinRbfUnavailable => '无法完成加速。请先检查交易状态，再重试。';
+
+  @override
+  String get bitcoinRbfSubmitted => '替换交易已提交，仍在等待确认。';
+
+  @override
+  String get bitcoinRbfUnknown => '提交结果未知。请先检查交易状态，再重试。';
 }

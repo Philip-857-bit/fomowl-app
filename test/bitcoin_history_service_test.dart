@@ -4,6 +4,7 @@ import 'package:fomowl_wallet/models/bitcoin_discovery.dart';
 import 'package:fomowl_wallet/models/bitcoin_network_data.dart';
 import 'package:fomowl_wallet/models/bitcoin_wallet_balance.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_history_service.dart';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_submission_journal.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_network_service.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_wallet_service.dart';
 import 'package:fomowl_wallet/services/wallet_history_service.dart';
@@ -129,6 +130,27 @@ class HistoryNetwork extends Fake implements BitcoinNetworkApi {
   }
 }
 
+class ResolvedReceipt extends Fake implements BitcoinResolvedSubmission {
+  @override
+  final String txid;
+  ResolvedReceipt(this.txid);
+}
+
+class ResolvedJournal extends Fake implements BitcoinSubmissionJournal {
+  final Map<String, BitcoinResolvedSubmission> aliases;
+  ResolvedJournal(this.aliases);
+  @override
+  Future<Map<String, BitcoinResolvedSubmission>> resolvedAliases(
+    String identity,
+    BitcoinProductNetwork network,
+  ) async => aliases;
+  @override
+  Future<List<BitcoinPendingSubmission>> pending(
+    String identity,
+    BitcoinProductNetwork network,
+  ) async => [];
+}
+
 void main() {
   test(
     'full local ownership includes change outside the batch that returned the transaction',
@@ -221,4 +243,38 @@ void main() {
       throwsFormatException,
     );
   });
+  for (final providerStillReportsOriginal in [false, true]) {
+    test(
+      'confirmed replacement archive filters only local stale events; fresh provider original=$providerStillReportsOriginal',
+      () async {
+        final old = providerStillReportsOriginal ? hash : '22' * 32;
+        final local = LocalHistory()
+          ..entries = [
+            WalletHistoryEntry(
+              id: 'old-submission',
+              walletAddress: owner,
+              networkName: 'Bitcoin',
+              eventType: 'send',
+              title: 'Submitted',
+              message: '',
+              isIncoming: false,
+              createdAt: DateTime.utc(2026),
+              source: 'local_history',
+              txHash: old,
+              networkKey: 'bitcoin:mainnet',
+            ),
+          ];
+        final result = await BitcoinHistoryService(
+          wallet: HistoryWallet(),
+          network: HistoryNetwork(),
+          local: local,
+          journal: ResolvedJournal({old: ResolvedReceipt('33' * 32)}),
+        ).fetch(owner, BitcoinProductNetwork.mainnet);
+        expect(result.history, hasLength(1));
+        expect(result.history.single.txHash, hash);
+        expect(result.history.single.source, 'bitcoin-chain');
+        expect(result.partial, isFalse);
+      },
+    );
+  }
 }

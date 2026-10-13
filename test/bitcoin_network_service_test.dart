@@ -552,4 +552,131 @@ void main() {
       expect(calls, 0);
     },
   );
+  group('Bitcoin replacement observations', () {
+    final txid = '22' * 32;
+    Map<String, dynamic> context() => {
+      'networkKey': 'bitcoin:mainnet',
+      'txid': txid,
+      'originalUnconfirmed': true,
+      'hasDescendants': false,
+      'outputCount': 2,
+      'incrementalRelayFeeSatVb': 1,
+    };
+    test('requires explicit compatible replacement capability', () async {
+      for (final flag in [null, false, true]) {
+        final api = service(
+          MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'networkKey': 'bitcoin:mainnet',
+                'maxAddresses': 40,
+                'available': true,
+                'rbfContext': ?flag,
+              }),
+              200,
+            ),
+          ),
+        );
+        expect(
+          await api.replacementAvailable(BitcoinProductNetwork.mainnet),
+          flag == true,
+        );
+      }
+    });
+    test('fetches only exact public transaction identity', () async {
+      final api = service(
+        MockClient((request) async {
+          expect(request.method, 'GET');
+          expect(
+            request.url.path,
+            endsWith('/bitcoin:mainnet/transaction/$txid/replacement-context'),
+          );
+          expect(request.body, isEmpty);
+          return http.Response(jsonEncode(context()), 200);
+        }),
+      );
+      final observation = await api.fetchReplacementContext(
+        BitcoinProductNetwork.mainnet,
+        txid,
+      );
+      observation.requireOriginal(BitcoinProductNetwork.mainnet, txid, 2);
+      expect(observation.incrementalRelayFeeSatVb, BigInt.one);
+    });
+    test(
+      'rejects malformed and cross-network or cross-transaction observations',
+      () async {
+        for (final mutation in <Map<String, dynamic>>[
+          {'networkKey': 'bitcoin:testnet4'},
+          {'txid': '33' * 32},
+          {'originalUnconfirmed': 'true'},
+          {'hasDescendants': 0},
+          {'outputCount': 0},
+          {'outputCount': 10001},
+          {'incrementalRelayFeeSatVb': 0},
+          {'incrementalRelayFeeSatVb': 10001},
+          {'incrementalRelayFeeSatVb': 1.5},
+          {'unexpected': true},
+        ]) {
+          final api = service(
+            MockClient(
+              (_) async =>
+                  http.Response(jsonEncode({...context(), ...mutation}), 200),
+            ),
+          );
+          await expectLater(
+            api.fetchReplacementContext(BitcoinProductNetwork.mainnet, txid),
+            throwsFormatException,
+          );
+        }
+      },
+    );
+    test(
+      'confirmed or descendant observations never authorize replacement',
+      () async {
+        for (final mutation in [
+          {'originalUnconfirmed': false},
+          {'hasDescendants': true},
+        ]) {
+          final api = service(
+            MockClient(
+              (_) async =>
+                  http.Response(jsonEncode({...context(), ...mutation}), 200),
+            ),
+          );
+          final observation = await api.fetchReplacementContext(
+            BitcoinProductNetwork.mainnet,
+            txid,
+          );
+          expect(
+            () => observation.requireOriginal(
+              BitcoinProductNetwork.mainnet,
+              txid,
+              2,
+            ),
+            throwsStateError,
+          );
+        }
+      },
+    );
+    test(
+      'provider failure does not become positive mempool evidence',
+      () async {
+        var calls = 0;
+        final api = service(
+          MockClient((_) async {
+            calls++;
+            return http.Response(
+              '{"error":"Bitcoin provider unavailable"}',
+              503,
+            );
+          }),
+        );
+        await expectLater(
+          api.fetchReplacementContext(BitcoinProductNetwork.mainnet, txid),
+          throwsA(isA<BitcoinNetworkException>()),
+        );
+        expect(calls, 1);
+      },
+    );
+  });
 }

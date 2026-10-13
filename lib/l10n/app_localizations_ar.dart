@@ -2136,4 +2136,38 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => 'تم إرسال المعاملة';
+
+  @override
+  String get bitcoinSpeedUp => 'تسريع';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'رسوم الشبكة الأصلية';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'رسوم شبكة المعاملة البديلة';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'الرسوم الإضافية';
+
+  @override
+  String get bitcoinRbfNewRate => 'معدل الرسوم الجديد';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'تبقى الوجهة والمبلغ كما هما. الرسوم الأعلى لا تضمن وقتًا محددًا للتأكيد.';
+
+  @override
+  String get bitcoinRbfHigherFee => 'أدخل معدل رسوم أعلى بعدد صحيح.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'تعذر إكمال التسريع. تحقق من حالة المعاملة قبل المحاولة مجددًا.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'تم إرسال المعاملة البديلة. لا يزال التأكيد قيد الانتظار.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'نتيجة الإرسال غير معروفة. تحقق من حالة المعاملة قبل المحاولة مجددًا.';
 }

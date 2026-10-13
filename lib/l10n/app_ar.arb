@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "تم إرسال المعاملة البديلة. ما زال التأكيد قيد الانتظار.",
   "evmReplacementCheckOutcome": "تحقق من حالة المعاملة المحفوظة قبل المحاولة مجدداً. النتيجة غير المعروفة لا تعني الفشل.",
   "evmSubmissionUnknown": "نتيجة الإرسال غير معروفة",
-  "evmTransactionSubmitted": "تم إرسال المعاملة"
+  "evmTransactionSubmitted": "تم إرسال المعاملة",
+  "bitcoinSpeedUp": "تسريع",
+  "bitcoinRbfOriginalFee": "رسوم الشبكة الأصلية",
+  "bitcoinRbfReplacementFee": "رسوم شبكة المعاملة البديلة",
+  "bitcoinRbfAdditionalFee": "الرسوم الإضافية",
+  "bitcoinRbfNewRate": "معدل الرسوم الجديد",
+  "bitcoinRbfWarning": "تبقى الوجهة والمبلغ كما هما. الرسوم الأعلى لا تضمن وقتًا محددًا للتأكيد.",
+  "bitcoinRbfHigherFee": "أدخل معدل رسوم أعلى بعدد صحيح.",
+  "bitcoinRbfUnavailable": "تعذر إكمال التسريع. تحقق من حالة المعاملة قبل المحاولة مجددًا.",
+  "bitcoinRbfSubmitted": "تم إرسال المعاملة البديلة. لا يزال التأكيد قيد الانتظار.",
+  "bitcoinRbfUnknown": "نتيجة الإرسال غير معروفة. تحقق من حالة المعاملة قبل المحاولة مجددًا."
 }

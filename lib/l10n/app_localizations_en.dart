@@ -2147,4 +2147,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => 'Transaction submitted';
+
+  @override
+  String get bitcoinSpeedUp => 'Speed Up';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Original network fee';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Replacement network fee';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Additional fee';
+
+  @override
+  String get bitcoinRbfNewRate => 'New fee rate';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'The destination and amount stay the same. A higher fee does not guarantee a confirmation time.';
+
+  @override
+  String get bitcoinRbfHigherFee => 'Enter a higher whole-number fee rate.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'Speed up could not be completed. Check the transaction status before trying again.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'Replacement submitted. Confirmation is still pending.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'The submission outcome is unknown. Check the transaction status before trying again.';
 }

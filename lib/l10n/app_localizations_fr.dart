@@ -2183,4 +2183,39 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => 'Transaction envoyée';
+
+  @override
+  String get bitcoinSpeedUp => 'Accélérer';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Frais réseau initiaux';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Frais réseau de remplacement';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Frais supplémentaires';
+
+  @override
+  String get bitcoinRbfNewRate => 'Nouveau taux de frais';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'La destination et le montant restent identiques. Des frais plus élevés ne garantissent pas un délai de confirmation.';
+
+  @override
+  String get bitcoinRbfHigherFee =>
+      'Saisissez un taux de frais entier plus élevé.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'L’accélération n’a pas pu être effectuée. Vérifiez le statut de la transaction avant de réessayer.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'Transaction de remplacement soumise. La confirmation est encore en attente.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'Le résultat de l’envoi est inconnu. Vérifiez le statut de la transaction avant de réessayer.';
 }

@@ -3997,6 +3997,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Transaction submitted'**
   String get evmTransactionSubmitted;
+
+  /// No description provided for @bitcoinSpeedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Up'**
+  String get bitcoinSpeedUp;
+
+  /// No description provided for @bitcoinRbfOriginalFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Original network fee'**
+  String get bitcoinRbfOriginalFee;
+
+  /// No description provided for @bitcoinRbfReplacementFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement network fee'**
+  String get bitcoinRbfReplacementFee;
+
+  /// No description provided for @bitcoinRbfAdditionalFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional fee'**
+  String get bitcoinRbfAdditionalFee;
+
+  /// No description provided for @bitcoinRbfNewRate.
+  ///
+  /// In en, this message translates to:
+  /// **'New fee rate'**
+  String get bitcoinRbfNewRate;
+
+  /// No description provided for @bitcoinRbfWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination and amount stay the same. A higher fee does not guarantee a confirmation time.'**
+  String get bitcoinRbfWarning;
+
+  /// No description provided for @bitcoinRbfHigherFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a higher whole-number fee rate.'**
+  String get bitcoinRbfHigherFee;
+
+  /// No description provided for @bitcoinRbfUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed up could not be completed. Check the transaction status before trying again.'**
+  String get bitcoinRbfUnavailable;
+
+  /// No description provided for @bitcoinRbfSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement submitted. Confirmation is still pending.'**
+  String get bitcoinRbfSubmitted;
+
+  /// No description provided for @bitcoinRbfUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The submission outcome is unknown. Check the transaction status before trying again.'**
+  String get bitcoinRbfUnknown;
 }
 
 class _AppLocalizationsDelegate

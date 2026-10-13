@@ -2,6 +2,7 @@ import 'dart:async';
 import '../../src/rust/api/bitcoin_transaction.dart';
 import 'bitcoin_network_service.dart';
 import 'bitcoin_signing_service.dart';
+import 'bitcoin_saved_transaction.dart';
 
 enum BitcoinSubmissionStatus { accepted, unknown }
 
@@ -50,12 +51,19 @@ class BitcoinBroadcastService {
     }
     signed.checkAuthorization();
     if (!isCurrent()) throw StateError('Bitcoin wallet context changed');
-    final reservation = await signed.submissionJournal.reserveAttempt(
-      transfer.walletIdentity,
-      transfer.network,
-      transaction.txid,
-      transfer.plan.selectedUtxos,
-    );
+    final saved = BitcoinSavedTransaction(transfer.plan, transaction);
+    final reservation = signed.replacing == null
+        ? await signed.submissionJournal.reserveAttempt(
+            transfer.walletIdentity,
+            transfer.network,
+            transaction.txid,
+            transfer.plan.selectedUtxos,
+            transaction: saved,
+          )
+        : await signed.submissionJournal.reserveReplacementAttempt(
+            signed.replacing!,
+            saved,
+          );
     if (reservation == null) {
       return BitcoinBroadcastOutcome(
         transaction.txid,

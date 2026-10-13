@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "E zigala azụmahịa nnọchi. A ka na-eche nkwenye.",
   "evmReplacementCheckOutcome": "Lelee ọnọdụ azụmahịa echekwara tupu ịnwale ọzọ. Nsonaazụ amaghị apụtaghị ọdịda.",
   "evmSubmissionUnknown": "A maghị nsonaazụ iziga",
-  "evmTransactionSubmitted": "E zigala azụmahịa"
+  "evmTransactionSubmitted": "E zigala azụmahịa",
+  "bitcoinSpeedUp": "Mee ngwa ngwa",
+  "bitcoinRbfOriginalFee": "Ụgwọ netwọk mbụ",
+  "bitcoinRbfReplacementFee": "Ụgwọ netwọk nnọchi",
+  "bitcoinRbfAdditionalFee": "Ụgwọ ọzọ",
+  "bitcoinRbfNewRate": "Ọnụego ụgwọ ọhụrụ",
+  "bitcoinRbfWarning": "Adreesị nnata na ego ahụ anaghị agbanwe. Ụgwọ ka elu anaghị ekwe nkwa oge nkwenye.",
+  "bitcoinRbfHigherFee": "Tinye ọnụego ụgwọ ka elu n’ọnụọgụ zuru ezu.",
+  "bitcoinRbfUnavailable": "Enweghị ike ime ya ngwa ngwa. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ.",
+  "bitcoinRbfSubmitted": "E zigara azụmahịa nnọchi. A ka na-eche nkwenye.",
+  "bitcoinRbfUnknown": "Amaghị nsonaazụ izipu. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ."
 }

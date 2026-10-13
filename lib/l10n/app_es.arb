@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "Transacción de reemplazo enviada. La confirmación sigue pendiente.",
   "evmReplacementCheckOutcome": "Comprueba el estado guardado antes de volver a intentarlo. Un resultado desconocido no significa que haya fallado.",
   "evmSubmissionUnknown": "Resultado del envío desconocido",
-  "evmTransactionSubmitted": "Transacción enviada"
+  "evmTransactionSubmitted": "Transacción enviada",
+  "bitcoinSpeedUp": "Acelerar",
+  "bitcoinRbfOriginalFee": "Comisión de red original",
+  "bitcoinRbfReplacementFee": "Comisión de red de reemplazo",
+  "bitcoinRbfAdditionalFee": "Comisión adicional",
+  "bitcoinRbfNewRate": "Nueva tarifa de comisión",
+  "bitcoinRbfWarning": "El destino y el importe no cambian. Una comisión mayor no garantiza un plazo de confirmación.",
+  "bitcoinRbfHigherFee": "Introduce una tarifa entera más alta.",
+  "bitcoinRbfUnavailable": "No se pudo acelerar. Comprueba el estado de la transacción antes de intentarlo de nuevo.",
+  "bitcoinRbfSubmitted": "Transacción de reemplazo enviada. La confirmación sigue pendiente.",
+  "bitcoinRbfUnknown": "El resultado del envío es desconocido. Comprueba el estado de la transacción antes de intentarlo de nuevo."
 }

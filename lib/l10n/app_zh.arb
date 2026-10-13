@@ -722,5 +722,15 @@
   "evmReplacementSubmitted": "替换交易已提交，仍待确认。",
   "evmReplacementCheckOutcome": "请先检查已保存交易的状态再重试。结果未知不代表交易失败。",
   "evmSubmissionUnknown": "提交结果未知",
-  "evmTransactionSubmitted": "交易已提交"
+  "evmTransactionSubmitted": "交易已提交",
+  "bitcoinSpeedUp": "加速",
+  "bitcoinRbfOriginalFee": "原网络手续费",
+  "bitcoinRbfReplacementFee": "替换交易网络手续费",
+  "bitcoinRbfAdditionalFee": "额外手续费",
+  "bitcoinRbfNewRate": "新费率",
+  "bitcoinRbfWarning": "收款地址和金额保持不变。更高的手续费并不保证确认时间。",
+  "bitcoinRbfHigherFee": "请输入更高的整数费率。",
+  "bitcoinRbfUnavailable": "无法完成加速。请先检查交易状态，再重试。",
+  "bitcoinRbfSubmitted": "替换交易已提交，仍在等待确认。",
+  "bitcoinRbfUnknown": "提交结果未知。请先检查交易状态，再重试。"
 }

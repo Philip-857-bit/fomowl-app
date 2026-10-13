@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "A ti fi ìṣòwò àropò ránṣẹ́. A ṣì ń dúró de ìmúdájú.",
   "evmReplacementCheckOutcome": "Ṣàyẹ̀wò ipò ìṣòwò tí a fipamọ́ ṣáájú kí o tún gbìyànjú. Àbájáde àìmọ̀ kò túmọ̀ sí ìkùnà.",
   "evmSubmissionUnknown": "A kò mọ àbájáde fífiránṣẹ́",
-  "evmTransactionSubmitted": "A ti fi ìṣòwò ránṣẹ́"
+  "evmTransactionSubmitted": "A ti fi ìṣòwò ránṣẹ́",
+  "bitcoinSpeedUp": "Mú un yára",
+  "bitcoinRbfOriginalFee": "Owó nẹ́tíwọ́ọ̀kì ìpilẹ̀ṣẹ̀",
+  "bitcoinRbfReplacementFee": "Owó nẹ́tíwọ́ọ̀kì ìrọ́pò",
+  "bitcoinRbfAdditionalFee": "Owó àfikún",
+  "bitcoinRbfNewRate": "Òṣùwọ̀n owó tuntun",
+  "bitcoinRbfWarning": "Àdírẹ́sì olùgbà àti iye owó kò yí padà. Owó tó ga jù kò ṣe ìlérí àkókò ìmúdájú.",
+  "bitcoinRbfHigherFee": "Tẹ òṣùwọ̀n owó odidi tó ga jù sílẹ̀.",
+  "bitcoinRbfUnavailable": "A kò lè mú un yára. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.",
+  "bitcoinRbfSubmitted": "A ti fi ìṣòwò ìrọ́pò ránṣẹ́. Ìmúdájú ṣì ń dúró.",
+  "bitcoinRbfUnknown": "A kò mọ àbájáde fífi ránṣẹ́. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú."
 }

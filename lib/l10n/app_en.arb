@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "Replacement submitted. Confirmation is still pending.",
   "evmReplacementCheckOutcome": "Check the saved transaction status before trying again. An unknown outcome is not a failed transaction.",
   "evmSubmissionUnknown": "Submission outcome unknown",
-  "evmTransactionSubmitted": "Transaction submitted"
+  "evmTransactionSubmitted": "Transaction submitted",
+  "bitcoinSpeedUp": "Speed Up",
+  "bitcoinRbfOriginalFee": "Original network fee",
+  "bitcoinRbfReplacementFee": "Replacement network fee",
+  "bitcoinRbfAdditionalFee": "Additional fee",
+  "bitcoinRbfNewRate": "New fee rate",
+  "bitcoinRbfWarning": "The destination and amount stay the same. A higher fee does not guarantee a confirmation time.",
+  "bitcoinRbfHigherFee": "Enter a higher whole-number fee rate.",
+  "bitcoinRbfUnavailable": "Speed up could not be completed. Check the transaction status before trying again.",
+  "bitcoinRbfSubmitted": "Replacement submitted. Confirmation is still pending.",
+  "bitcoinRbfUnknown": "The submission outcome is unknown. Check the transaction status before trying again."
 }

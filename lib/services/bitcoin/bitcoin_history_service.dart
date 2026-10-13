@@ -5,20 +5,31 @@ import '../../utils/bitcoin_amount_utils.dart';
 import '../wallet_history_service.dart';
 import 'bitcoin_network_service.dart';
 import 'bitcoin_wallet_service.dart';
+import 'bitcoin_submission_journal.dart';
+import '../storage_service.dart';
 
 class BitcoinHistoryService {
   final BitcoinWalletApi wallet;
   final BitcoinNetworkApi network;
   final WalletHistoryService local;
   final int maximumQueriedAddresses;
+  final BitcoinSubmissionJournal? journal;
   BitcoinHistoryService({
     BitcoinWalletApi? wallet,
     BitcoinNetworkApi? network,
     WalletHistoryService? local,
+    BitcoinSubmissionJournal? journal,
     this.maximumQueriedAddresses = 1024,
   }) : wallet = wallet ?? BitcoinWalletService(),
        network = network ?? BitcoinNetworkService(),
-       local = local ?? WalletHistoryService();
+       local = local ?? WalletHistoryService(),
+       journal =
+           journal ??
+           (wallet == null
+               ? BitcoinSubmissionJournal(StorageService().bitcoinAccounts)
+               : wallet is BitcoinWalletService
+               ? BitcoinSubmissionJournal(wallet.storage.bitcoinAccounts)
+               : null);
   Future<WalletHistoryResponse> fetch(
     String identity,
     BitcoinProductNetwork productNetwork, {
@@ -116,6 +127,27 @@ class BitcoinHistoryService {
     final localResult = await localFuture;
     check();
     partial |= localResult == null || localResult.partial;
+    final superseded = <String>{};
+    if (journal != null) {
+      try {
+        superseded.addAll(
+          (await journal!.resolvedAliases(identity, productNetwork)).keys,
+        );
+        final attempts = await journal!.pending(identity, productNetwork);
+        for (final candidate in attempts.where((entry) => !entry.active)) {
+          final active = attempts.where(
+            (entry) => entry.rootTxid == candidate.rootTxid && entry.active,
+          );
+          if (active.length == 1 &&
+              transactions.containsKey(active.single.txid)) {
+            superseded.add(candidate.txid);
+          }
+        }
+      } catch (_) {
+        partial = true;
+      }
+    }
+    check();
     final entries = <String, WalletHistoryEntry>{};
     for (final entry in localResult?.history ?? const <WalletHistoryEntry>[]) {
       if (entry.networkKey != productNetwork.networkKey ||
@@ -124,7 +156,8 @@ class BitcoinHistoryService {
         continue;
       }
       try {
-        entries[bitcoinTxid(entry.txHash)] = entry;
+        final txid = bitcoinTxid(entry.txHash);
+        if (!superseded.contains(txid)) entries[txid] = entry;
       } on FormatException {
         partial = true;
       }

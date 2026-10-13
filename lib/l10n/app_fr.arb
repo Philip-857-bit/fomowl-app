@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "Transaction de remplacement envoyée. La confirmation est en attente.",
   "evmReplacementCheckOutcome": "Vérifiez le statut de la transaction enregistrée avant de réessayer. Un résultat inconnu ne signifie pas un échec.",
   "evmSubmissionUnknown": "Résultat de l’envoi inconnu",
-  "evmTransactionSubmitted": "Transaction envoyée"
+  "evmTransactionSubmitted": "Transaction envoyée",
+  "bitcoinSpeedUp": "Accélérer",
+  "bitcoinRbfOriginalFee": "Frais réseau initiaux",
+  "bitcoinRbfReplacementFee": "Frais réseau de remplacement",
+  "bitcoinRbfAdditionalFee": "Frais supplémentaires",
+  "bitcoinRbfNewRate": "Nouveau taux de frais",
+  "bitcoinRbfWarning": "La destination et le montant restent identiques. Des frais plus élevés ne garantissent pas un délai de confirmation.",
+  "bitcoinRbfHigherFee": "Saisissez un taux de frais entier plus élevé.",
+  "bitcoinRbfUnavailable": "L’accélération n’a pas pu être effectuée. Vérifiez le statut de la transaction avant de réessayer.",
+  "bitcoinRbfSubmitted": "Transaction de remplacement soumise. La confirmation est encore en attente.",
+  "bitcoinRbfUnknown": "Le résultat de l’envoi est inconnu. Vérifiez le statut de la transaction avant de réessayer."
 }

@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-10-12)
+# Graph Report - .  (2026-10-13)
 
 ## Corpus Check
-- 57 files · ~481,459 words
+- 57 files · ~482,295 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 521 nodes · 759 edges · 64 communities detected
+- 524 nodes · 771 edges · 64 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -76,16 +76,16 @@
 - [[_COMMUNITY_Community 63|Community 63]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `pde_ffi_dispatcher_primary_impl()` - 73 edges
+1. `pde_ffi_dispatcher_primary_impl()` - 74 edges
 2. `RustWalletSigningAccount` - 13 edges
 3. `MainActivity` - 10 edges
 4. `RustBitcoinSigningAccount` - 8 edges
 5. `fixture_seed()` - 6 edges
-6. `both_purposes_plan_exact_integer_amounts_and_reject_tampering()` - 6 edges
-7. `Create()` - 6 edges
-8. `Destroy()` - 6 edges
-9. `AppDelegate` - 5 edges
-10. `solana_message_signature_verifies()` - 5 edges
+6. `rbf_adapter_preserves_both_purposes_and_requires_pending_observations()` - 6 edges
+7. `both_purposes_plan_exact_integer_amounts_and_reject_tampering()` - 6 edges
+8. `Create()` - 6 edges
+9. `Destroy()` - 6 edges
+10. `AppDelegate` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
 - None detected - all connections are within the same source files.
@@ -94,23 +94,23 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.06
-Nodes (75): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+67 more)
+Nodes (76): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), wire__crate__api__argon2__derive_passcode_hash_argon2_impl(), wire__crate__api__bip32__derive_evm_address_from_private_key_impl(), wire__crate__api__bip32__derive_evm_address_from_seed_impl(), wire__crate__api__bip32__derive_evm_private_key_from_seed_impl(), wire__crate__api__bip32__derive_evm_public_key_from_private_key_impl(), wire__crate__api__bip32__derive_solana_address_from_private_key_impl() (+68 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
-Nodes (18): crate::api::bitcoin_account::BitcoinAccountDto, crate::api::bitcoin_transaction::BitcoinRecipientDto, crate::api::bitcoin_transaction::BitcoinTransactionPlanDto, crate::api::bitcoin_transaction::SignedBitcoinTransactionDto, Option<String>, Option<u64>, RustBitcoinSigningAccount, RustEvmSigningAccount (+10 more)
+Nodes (18): crate::api::bitcoin_account::BitcoinKeychainDto, crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto, crate::api::bitcoin_transaction::BitcoinUtxoDto, crate::api::bitcoin_vault::SealedBitcoinAccountDto, Option<String>, Option<u64>, RustBitcoinSigningAccount, RustEvmSigningAccount (+10 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (12): crate::api::bip32::SolanaPrivateKeyImport, crate::api::bitcoin_account::BitcoinKeychainDto, crate::api::bitcoin_account::BitcoinNetworkDto, crate::api::bitcoin_account::BitcoinPurposeDto, crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto, crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto, crate::api::bitcoin_transaction::BitcoinPsbtOutputDto, crate::api::bitcoin_transaction::BitcoinUtxoDto (+4 more)
+Nodes (12): crate::api::bip32::SolanaPrivateKeyImport, crate::api::bitcoin_account::BitcoinAccountDto, crate::api::bitcoin_account::BitcoinNetworkDto, crate::api::bitcoin_account::BitcoinPurposeDto, crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto, crate::api::bitcoin_transaction::BitcoinPsbtOutputDto, crate::api::bitcoin_transaction::BitcoinRecipientDto, crate::api::bitcoin_transaction::BitcoinTransactionPlanDto (+4 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.13
 Nodes (18): derive_evm_private_key_from_seed(), derive_solana_address_from_seed(), derive_solana_private_key_from_seed(), derive_tron_private_key_from_seed(), derive_wallet_from_seed(), derives_known_family_addresses_from_seed(), fixture_seed(), normalize_solana_private_key() (+10 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.13
-Nodes (14): BitcoinPsbtFinalizationDto, BitcoinPsbtInspectionDto, BitcoinPsbtOutputDto, BitcoinRecipientDto, BitcoinTransactionPlanDto, BitcoinUtxoDto, both_purposes_plan_exact_integer_amounts_and_reject_tampering(), create_bitcoin_transfer_psbt() (+6 more)
+Cohesion: 0.14
+Nodes (16): BitcoinPsbtFinalizationDto, BitcoinPsbtInspectionDto, BitcoinPsbtOutputDto, BitcoinRecipientDto, BitcoinTransactionPlanDto, BitcoinUtxoDto, both_purposes_plan_exact_integer_amounts_and_reject_tampering(), create_bitcoin_transfer_psbt() (+8 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.17
@@ -142,7 +142,7 @@ Nodes (3): hd_signers_keep_purpose_scope_and_close_is_terminal(), open_bitcoin_s
 
 ### Community 12 - "Community 12"
 Cohesion: 0.2
-Nodes (0):
+Nodes (0): 
 
 ### Community 13 - "Community 13"
 Cohesion: 0.36
@@ -198,7 +198,7 @@ Nodes (4): export_bitcoin_vault_xprv(), seal_bitcoin_seed_account(), SealedBitco
 
 ### Community 26 - "Community 26"
 Cohesion: 0.5
-Nodes (0):
+Nodes (0): 
 
 ### Community 27 - "Community 27"
 Cohesion: 0.5
@@ -210,7 +210,7 @@ Nodes (2): RunnerTests, XCTestCase
 
 ### Community 29 - "Community 29"
 Cohesion: 0.5
-Nodes (0):
+Nodes (0): 
 
 ### Community 30 - "Community 30"
 Cohesion: 0.67
@@ -242,107 +242,107 @@ Nodes (1): ()
 
 ### Community 37 - "Community 37"
 Cohesion: 0.67
-Nodes (0):
+Nodes (0): 
 
 ### Community 38 - "Community 38"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 39 - "Community 39"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 40 - "Community 40"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 41 - "Community 41"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 42 - "Community 42"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 43 - "Community 43"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 44 - "Community 44"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 45 - "Community 45"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 46 - "Community 46"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 47 - "Community 47"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 48 - "Community 48"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 49 - "Community 49"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 50 - "Community 50"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 51 - "Community 51"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 52 - "Community 52"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 53 - "Community 53"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 54 - "Community 54"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 55 - "Community 55"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 56 - "Community 56"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 57 - "Community 57"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 58 - "Community 58"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 60 - "Community 60"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 61 - "Community 61"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 62 - "Community 62"
 Cohesion: 1.0
-Nodes (0):
+Nodes (0): 
 
 ### Community 63 - "Community 63"
 Cohesion: 1.0

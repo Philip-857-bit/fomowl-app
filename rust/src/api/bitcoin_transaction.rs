@@ -170,6 +170,30 @@ pub fn plan_bitcoin_transfer(
 pub fn validate_bitcoin_transfer_plan(plan: BitcoinTransactionPlanDto) -> Result<(), String> {
     core::validate_bitcoin_transaction_plan(&plan.core())
 }
+/// Public host observations only; replacement construction stays in Owllet Core.
+pub fn plan_bitcoin_transfer_replacement(
+    original_plan: BitcoinTransactionPlanDto,
+    original_signed_tx_hex: String,
+    original_txid: String,
+    original_unconfirmed: bool,
+    has_descendants: bool,
+    incremental_relay_fee_sat_vb: u64,
+    fee_rate_sat_vb: u64,
+) -> Result<BitcoinTransactionPlanDto, String> {
+    BitcoinTransactionPlanDto::from_core(
+        owllet_core::transactions::bitcoin_rbf::plan_bitcoin_rbf_replacement(
+            &original_plan.core(),
+            &original_signed_tx_hex,
+            &owllet_core::transactions::bitcoin_rbf::BitcoinRbfContext {
+                original_txid,
+                original_unconfirmed,
+                has_descendants,
+                incremental_relay_fee_sat_vb,
+            },
+            fee_rate_sat_vb,
+        )?,
+    )
+}
 pub fn create_bitcoin_transfer_psbt(plan: BitcoinTransactionPlanDto) -> Result<String, String> {
     owllet_core::transactions::bitcoin_psbt::create_bitcoin_psbt(&plan.core())
 }
@@ -266,6 +290,88 @@ mod tests {
         };
         (account, utxo, recipient)
     }
+    #[test]
+    fn rbf_adapter_preserves_both_purposes_and_requires_pending_observations() {
+        for purpose in [BitcoinPurposeDto::Bip84, BitcoinPurposeDto::Bip86] {
+            let (account, utxo, recipient) = inputs(purpose);
+            let plan = plan_bitcoin_transfer(
+                account.network,
+                account.clone(),
+                vec![utxo],
+                vec![recipient],
+                2,
+                0,
+                true,
+            )
+            .unwrap();
+            let seed = owllet_core::mnemonic_to_seed(MNEMONIC).unwrap();
+            let core_account = account.core();
+            let secret = zeroize::Zeroizing::new(
+                owllet_core::derive_bitcoin_account_xprv_from_seed(
+                    &seed,
+                    core_account.network,
+                    0,
+                    core_account.purpose,
+                )
+                .unwrap(),
+            );
+            let signed =
+                bitcoin_signing::sign_bitcoin_transaction(&plan.clone().core(), &secret).unwrap();
+            let replacement = plan_bitcoin_transfer_replacement(
+                plan.clone(),
+                signed.raw_transaction_hex.clone(),
+                signed.txid.clone(),
+                true,
+                false,
+                1,
+                4,
+            )
+            .unwrap();
+            assert_eq!(replacement.recipients, plan.recipients);
+            assert_eq!(replacement.selected_utxos, plan.selected_utxos);
+            assert_eq!(replacement.account, plan.account);
+            assert!(replacement.fee_sat > plan.fee_sat);
+            validate_bitcoin_transfer_plan(replacement.clone()).unwrap();
+            let newer =
+                bitcoin_signing::sign_bitcoin_transaction(&replacement.clone().core(), &secret)
+                    .unwrap();
+            assert_eq!(
+                verify_bitcoin_transfer(replacement, newer.raw_transaction_hex)
+                    .unwrap()
+                    .txid,
+                newer.txid
+            );
+            for (pending, descendants, relay, rate) in [
+                (false, false, 1, 4),
+                (true, true, 1, 4),
+                (true, false, 0, 4),
+                (true, false, 1, 2),
+                (true, false, u64::MAX, 4),
+            ] {
+                assert!(plan_bitcoin_transfer_replacement(
+                    plan.clone(),
+                    signed.raw_transaction_hex.clone(),
+                    signed.txid.clone(),
+                    pending,
+                    descendants,
+                    relay,
+                    rate
+                )
+                .is_err());
+            }
+            assert!(plan_bitcoin_transfer_replacement(
+                plan,
+                "invalid".into(),
+                signed.txid,
+                true,
+                false,
+                1,
+                4
+            )
+            .is_err());
+        }
+    }
+
     #[test]
     fn both_purposes_plan_exact_integer_amounts_and_reject_tampering() {
         for purpose in [BitcoinPurposeDto::Bip84, BitcoinPurposeDto::Bip86] {

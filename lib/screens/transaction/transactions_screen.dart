@@ -1059,6 +1059,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             NetworkKey.bitcoinNetworkIdOf(entry.networkKey!),
           ),
           onOpenExplorer: _openExplorer,
+          enableSpeedUp: !entry.isIncoming,
+          isCurrent: () =>
+              mounted &&
+              blockchain.activeNetworkKey == entry.networkKey &&
+              blockchain.activeWalletAddress.trim().toLowerCase() ==
+                  entry.walletAddress.trim().toLowerCase(),
+          onReplacement: _fetchHistory,
         ),
       );
       return;

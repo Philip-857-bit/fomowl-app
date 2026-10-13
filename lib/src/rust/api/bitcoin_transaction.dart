@@ -33,6 +33,26 @@ Future<void> validateBitcoinTransferPlan({
 }) => RustLib.instance.api
     .crateApiBitcoinTransactionValidateBitcoinTransferPlan(plan: plan);
 
+/// Public host observations only; replacement construction stays in Owllet Core.
+Future<BitcoinTransactionPlanDto> planBitcoinTransferReplacement({
+  required BitcoinTransactionPlanDto originalPlan,
+  required String originalSignedTxHex,
+  required String originalTxid,
+  required bool originalUnconfirmed,
+  required bool hasDescendants,
+  required BigInt incrementalRelayFeeSatVb,
+  required BigInt feeRateSatVb,
+}) => RustLib.instance.api
+    .crateApiBitcoinTransactionPlanBitcoinTransferReplacement(
+      originalPlan: originalPlan,
+      originalSignedTxHex: originalSignedTxHex,
+      originalTxid: originalTxid,
+      originalUnconfirmed: originalUnconfirmed,
+      hasDescendants: hasDescendants,
+      incrementalRelayFeeSatVb: incrementalRelayFeeSatVb,
+      feeRateSatVb: feeRateSatVb,
+    );
+
 Future<String> createBitcoinTransferPsbt({
   required BitcoinTransactionPlanDto plan,
 }) => RustLib.instance.api.crateApiBitcoinTransactionCreateBitcoinTransferPsbt(

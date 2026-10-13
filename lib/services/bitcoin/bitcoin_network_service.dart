@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../config/app_environment.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/bitcoin_network_data.dart';
+import '../../models/bitcoin_replacement_observation.dart';
 import '../http_client_service.dart';
 import '../wallet_backend_auth_service.dart';
 
@@ -31,6 +32,14 @@ abstract interface class BitcoinNetworkApi {
     List<String> addresses, {
     int limit = 100,
   });
+}
+
+abstract interface class BitcoinReplacementNetworkApi {
+  Future<bool> replacementAvailable(BitcoinProductNetwork network);
+  Future<BitcoinReplacementObservation> fetchReplacementContext(
+    BitcoinProductNetwork network,
+    String txid,
+  );
 }
 
 class BitcoinNetworkException implements Exception {
@@ -96,7 +105,8 @@ class BitcoinPreProviderRejection extends BitcoinNetworkException {
 }
 
 /// Chain facts only. Fixed request schemas transmit public addresses, never XPUB/seed/private data.
-class BitcoinNetworkService implements BitcoinNetworkApi {
+class BitcoinNetworkService
+    implements BitcoinNetworkApi, BitcoinReplacementNetworkApi {
   final http.Client client;
   final WalletBackendAuthService auth;
   final Duration timeout;
@@ -274,6 +284,37 @@ class BitcoinNetworkService implements BitcoinNetworkApi {
       throw const FormatException('Incompatible Bitcoin backend');
     }
     return bitcoinJsonBool(data['available']);
+  }
+
+  @override
+  Future<bool> replacementAvailable(BitcoinProductNetwork network) async {
+    final data = await _get(network, 'capabilities');
+    if (data['networkKey'] != network.networkKey ||
+        data['maxAddresses'] != 40) {
+      throw const FormatException('Incompatible Bitcoin backend');
+    }
+    return bitcoinJsonBool(data['available']) &&
+        (data['rbfContext'] == null
+            ? false
+            : bitcoinJsonBool(data['rbfContext']));
+  }
+
+  @override
+  Future<BitcoinReplacementObservation> fetchReplacementContext(
+    BitcoinProductNetwork network,
+    String txid,
+  ) async {
+    final hash = bitcoinTxid(txid);
+    final observation = BitcoinReplacementObservation.fromJson(
+      await _get(network, 'transaction/$hash/replacement-context'),
+    );
+    if (observation.networkKey != network.networkKey ||
+        observation.txid != hash) {
+      throw const FormatException(
+        'Bitcoin replacement lookup identity mismatch',
+      );
+    }
+    return observation;
   }
 
   @override

@@ -193,7 +193,7 @@ void main() {
         await value.journal.reserved(identity, BitcoinProductNetwork.testnet4),
         isEmpty,
       );
-      expect(jsonDecode(value.memory.values.values.single)['version'], 2);
+      expect(jsonDecode(value.memory.values.values.single)['version'], 3);
       await value.journal.reserve(
         identity,
         BitcoinProductNetwork.testnet4,

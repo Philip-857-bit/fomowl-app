@@ -1,8 +1,10 @@
 # Shared SDK dependency
 
 The canonical proprietary SDK is https://github.com/Philip-857-bit/owllet-core.
-Release v0.2.0 uses commit 930eca151035eec9432d7f41b1b221bd5d27e829.
-The adapter and independent consumer pin both this revision and version =0.2.0.
+The verified v0.2.1 candidate uses commit 9918187371812e059bb4a6a07b8550c33318f43c.
+It is prepared on feat/bitcoin-rbf-speed-up; no v0.2.1 tag/release has been created.
+The immutable v0.2.0 remains 930eca151035eec9432d7f41b1b221bd5d27e829.
+The adapter and independent consumer pin both this revision and version =0.2.1.
 Core source, capability checks, packaging and releases are maintained in that
 repository. There is no embedded source copy in this app.
 

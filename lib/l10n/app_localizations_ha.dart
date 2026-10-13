@@ -2142,4 +2142,39 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => 'An aika ma’amala';
+
+  @override
+  String get bitcoinSpeedUp => 'Ƙara sauri';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Kuɗin cibiyar sadarwa na asali';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Kuɗin cibiyar sadarwa na musanya';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Ƙarin kuɗi';
+
+  @override
+  String get bitcoinRbfNewRate => 'Sabon ƙimar kuɗi';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'Adireshin karɓa da adadin ba su canza ba. Ƙarin kuɗi ba ya tabbatar da lokacin tabbatarwa.';
+
+  @override
+  String get bitcoinRbfHigherFee =>
+      'Shigar da ƙimar kuɗi mafi girma a cikakken lamba.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'Ba a iya ƙara sauri ba. Duba matsayin mu’amalar kafin sake gwadawa.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'An aika mu’amalar musanya. Ana jiran tabbatarwa.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'Ba a san sakamakon aikawa ba. Duba matsayin mu’amalar kafin sake gwadawa.';
 }

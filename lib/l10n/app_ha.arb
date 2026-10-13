@@ -719,5 +719,15 @@
   "evmReplacementSubmitted": "An aika ma’amalar maye gurbi. Ana jiran tabbaci.",
   "evmReplacementCheckOutcome": "Duba matsayin ma’amalar da aka adana kafin sake gwadawa. Sakamakon da ba a sani ba ba yana nufin gazawa ba.",
   "evmSubmissionUnknown": "Ba a san sakamakon aikawa ba",
-  "evmTransactionSubmitted": "An aika ma’amala"
+  "evmTransactionSubmitted": "An aika ma’amala",
+  "bitcoinSpeedUp": "Ƙara sauri",
+  "bitcoinRbfOriginalFee": "Kuɗin cibiyar sadarwa na asali",
+  "bitcoinRbfReplacementFee": "Kuɗin cibiyar sadarwa na musanya",
+  "bitcoinRbfAdditionalFee": "Ƙarin kuɗi",
+  "bitcoinRbfNewRate": "Sabon ƙimar kuɗi",
+  "bitcoinRbfWarning": "Adireshin karɓa da adadin ba su canza ba. Ƙarin kuɗi ba ya tabbatar da lokacin tabbatarwa.",
+  "bitcoinRbfHigherFee": "Shigar da ƙimar kuɗi mafi girma a cikakken lamba.",
+  "bitcoinRbfUnavailable": "Ba a iya ƙara sauri ba. Duba matsayin mu’amalar kafin sake gwadawa.",
+  "bitcoinRbfSubmitted": "An aika mu’amalar musanya. Ana jiran tabbatarwa.",
+  "bitcoinRbfUnknown": "Ba a san sakamakon aikawa ba. Duba matsayin mu’amalar kafin sake gwadawa."
 }

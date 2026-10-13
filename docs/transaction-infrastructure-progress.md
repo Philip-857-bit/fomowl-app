@@ -123,10 +123,50 @@ existing skip) passed; formatting passed with no changes. Exact SHA and CI resul
 are recorded in the companion report after execution.
 No SDK/FRB, backend contract, release, deployment or production rollout change.
 
+## Step 4 — Owllet Core Bitcoin RBF candidate
+
+Implementation: `8126e4dfcefe735b2634636fef48329d2a7ccda4`.
+Version preparation: `9918187371812e059bb4a6a07b8550c33318f43c`.
+The v0.2.1 candidate preserves recipient intent, homogeneous purpose, original
+inputs and internal change. It increases absolute fee and fee rate using core
+rules and fails closed on invalid originals or unsupported descendant context.
+Core tests, strict Clippy, independent consumer and Linux/Windows capability CI
+passed. No tag, release or merge was created; v0.2.0 remains immutable.
+
+## Step 5 — Bitcoin Speed Up (validation in progress)
+
+Both native manifests pin `=0.2.1` at the exact candidate above. FRB files were
+regenerated with the official generator. Protected public outbound metadata
+supports SDK reconstruction; it carries no private signing material.
+
+Speed Up requires an Owllet-created RBF transaction, the exact active persisted
+attempt, verified signed transaction metadata and fresh positive backend context.
+Review shows original fee, replacement fee, additional fee and new rate. Approval
+is single-use and expires after 30 seconds. Opaque custody and safe unlock
+navigation remain authoritative. Context and SDK intent are rechecked around
+authentication and before submission. Bitcoin Cancel is not implemented.
+
+Replacement candidates share one input reservation. Definitive pre-provider
+rejection restores the prior candidate; ambiguous outcomes retain the reservation
+and block blind retries. Exact positive confirmation of either original or
+replacement reconciles the chain once. Display-only receipt aliases suppress
+stale local history; fresh provider observations remain authoritative.
+
+Local evidence so far: 38 native Rust tests and the independent consumer passed;
+33 RBF coordinator/widget tests, 19 network-service tests, 81 lifecycle regressions
+and seven history tests passed. The full Flutter suite passed 1,034 tests with one existing skip. Final
+analysis and native revalidation passed. Exact-head CI gates are pending, so
+this step is not marked complete.
+
+Linux CI migration is isolated in separate infrastructure commits and worktrees.
+UpCloud runners execute existing checks serially under a shared worker-lifetime
+lock. Backend build/tests, audit, Discover and Actions job-container smoke passed;
+production container passed after installing Buildx. Updated app gates are
+still pending. macOS remains
+hosted. Optional Discover software-emulator performance remains unverified.
+
 ## Remaining roadmap
 
-3. EVM Speed Up/Cancel with authoritative outbound metadata.
-4. Separate Owllet Core v0.2.1 Bitcoin RBF candidate and release preparation.
 5. Verified new SDK pin and Bitcoin Speed Up integration.
 6. Gas sponsorship policy/accounting foundation.
 7. Live-catalog-gated Bitcoin Breet off-ramp.

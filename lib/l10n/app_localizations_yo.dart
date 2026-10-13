@@ -2131,4 +2131,38 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get evmTransactionSubmitted => 'A ti fi ìṣòwò ránṣẹ́';
+
+  @override
+  String get bitcoinSpeedUp => 'Mú un yára';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Owó nẹ́tíwọ́ọ̀kì ìpilẹ̀ṣẹ̀';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Owó nẹ́tíwọ́ọ̀kì ìrọ́pò';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Owó àfikún';
+
+  @override
+  String get bitcoinRbfNewRate => 'Òṣùwọ̀n owó tuntun';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'Àdírẹ́sì olùgbà àti iye owó kò yí padà. Owó tó ga jù kò ṣe ìlérí àkókò ìmúdájú.';
+
+  @override
+  String get bitcoinRbfHigherFee => 'Tẹ òṣùwọ̀n owó odidi tó ga jù sílẹ̀.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'A kò lè mú un yára. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'A ti fi ìṣòwò ìrọ́pò ránṣẹ́. Ìmúdájú ṣì ń dúró.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'A kò mọ àbájáde fífi ránṣẹ́. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.';
 }
