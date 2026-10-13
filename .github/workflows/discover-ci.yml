@@ -9,7 +9,7 @@ on:
 
 jobs:
   flutter-discover:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     steps:
       - uses: actions/checkout@v5
 
@@ -57,7 +57,7 @@ jobs:
     # The emulator suite is intentionally opt-in. The focused Discover tests
     # above remain the required, fast signal on every pull request and push.
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5

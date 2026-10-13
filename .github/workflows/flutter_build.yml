@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     env:
       GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
       BACKEND_BASE_URL: ${{ vars.BACKEND_BASE_URL || 'https://core.owlletapp.com' }}

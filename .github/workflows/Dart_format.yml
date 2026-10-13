@@ -16,7 +16,7 @@ permissions:
 jobs:
   format:
     name: Check Dart formatting
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
 
     steps:
       - name: Checkout repository

@@ -22,7 +22,7 @@ permissions:
 jobs:
   patch_android:
     if: inputs.platform == 'android'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     defaults:
       run:
         shell: bash
