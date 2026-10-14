@@ -36,6 +36,75 @@ ProtectedBitcoinRecord record(BitcoinAccountSlot slot) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
+    'cash-out state is wallet scoped and serializes across wrappers',
+    () async {
+      final memory = MemoryStore();
+      final first = BitcoinAccountStore(memory);
+      final second = BitcoinAccountStore(memory);
+      await Future.wait(
+        List.generate(
+          20,
+          (index) => (index.isEven ? first : second).updateOfframpState<int>(
+            index.isEven ? '0xABC' : '0xabc',
+            (encoded) {
+              final value = int.parse(encoded ?? '0') + 1;
+              return (value, value.toString());
+            },
+          ),
+        ),
+      );
+      expect(
+        await second.updateOfframpState<String?>(
+          '0xabc',
+          (encoded) => (encoded, null),
+        ),
+        '20',
+      );
+      expect(
+        await first.updateOfframpState<String?>(
+          '0xother',
+          (encoded) => (encoded, null),
+        ),
+        isNull,
+      );
+      expect(
+        await first.updateSubmissionState<String?>(
+          '0xabc',
+          (encoded) => (encoded, null),
+        ),
+        isNull,
+      );
+    },
+  );
+
+  test(
+    'wallet deletion clears cash-out state and rejects later writes',
+    () async {
+      final memory = MemoryStore();
+      final store = BitcoinAccountStore(memory);
+      final location = slot();
+      final candidate = record(location);
+      await store.createIfAbsent(location, candidate);
+      candidate.dispose();
+      await store.updateOfframpState<void>(
+        location.walletIdentity,
+        (_) => (null, 'public-reference-and-txid'),
+      );
+      await store.deleteWallet(location.walletIdentity);
+      expect(
+        memory.values.keys.any((key) => key.startsWith('bitcoin_offramp_')),
+        isFalse,
+      );
+      await expectLater(
+        store.updateOfframpState<void>(
+          location.walletIdentity,
+          (_) => (null, 'stale'),
+        ),
+        throwsStateError,
+      );
+    },
+  );
+  test(
     'record state/cipher/key write is atomic and manifest precedes custody',
     () async {
       final memory = MemoryStore();

@@ -52,6 +52,28 @@ class BitcoinAccountStore {
       'bitcoin_hd_manifest_v1_${Uri.encodeComponent(_identity(identity))}';
   String _submissionKey(String identity) =>
       'bitcoin_submission_v1_${Uri.encodeComponent(_identity(identity))}';
+  String _offrampKey(String identity) =>
+      'bitcoin_offramp_v1_${Uri.encodeComponent(_identity(identity))}';
+
+  /// Public operation-reference/txid bindings, isolated from the UTXO journal.
+  /// Uses the same custody lifecycle queue so deletion/reset revoke old writes.
+  Future<T> updateOfframpState<T>(
+    String identity,
+    (T, String?) Function(String?) update,
+  ) => _queue(identity).run(() async {
+    if ((await _manifest(identity)).removed) {
+      throw StateError('Bitcoin wallet context was removed');
+    }
+    final key = _offrampKey(identity);
+    final (result, encoded) = update(await _read(key));
+    if (encoded != null) {
+      if (encoded.length > 131072) {
+        throw const FormatException('Invalid Bitcoin cash-out state');
+      }
+      await _write(key, encoded);
+    }
+    return result;
+  });
 
   /// Opaque, process-local revision shared by wrappers over one protected store.
   /// Async observers cannot survive process restart; durable records remain
@@ -171,6 +193,7 @@ class BitcoinAccountStore {
       final manifest = await _manifest(walletIdentity);
       if (manifest.removed) {
         await _delete(_submissionKey(walletIdentity));
+        await _delete(_offrampKey(walletIdentity));
         for (final slot in manifest.slots) {
           await _delete(slot.storageKey);
         }
@@ -316,6 +339,7 @@ class BitcoinAccountStore {
     return queue.run(() async {
       final manifest = await _manifest(walletIdentity);
       await _delete(_submissionKey(walletIdentity));
+      await _delete(_offrampKey(walletIdentity));
       // An account that never provisioned Bitcoin has no custody to journal.
       if (manifest.slots.isEmpty && !manifest.removed) {
         return;

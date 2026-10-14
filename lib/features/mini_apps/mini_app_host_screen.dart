@@ -22,6 +22,15 @@ import '../../services/app_store_service.dart';
 import '../../services/cashin_profile_auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/bitcoin/bitcoin_offramp_api.dart';
+import '../../services/bitcoin/bitcoin_offramp_service.dart';
+import '../../services/bitcoin/bitcoin_broadcast_service.dart';
+import '../../services/bitcoin/bitcoin_post_transaction_refresh.dart';
+import '../../models/bitcoin_account_state.dart';
+import '../../utils/bitcoin_amount_utils.dart';
+import '../../services/wallet_vault_service.dart';
+import '../../screens/wallet/bitcoin_transfer_confirmation_screen.dart';
+import '../../utils/wallet_unlock_navigation.dart';
 import '../../services/bridge_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/http_client_service.dart';
@@ -40,6 +49,17 @@ import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
 import 'widgets/mini_app_identity_title.dart';
+
+@visibleForTesting
+bool bitcoinCashoutBridgeActionAllowed(String miniAppId, String type) =>
+    OwlletMiniApps.isOwlletPayId(miniAppId) &&
+    const {
+      'close',
+      'ready',
+      'request_wallet_transfer',
+      'get_balances',
+      'get_network_balances',
+    }.contains(type);
 
 @visibleForTesting
 bool cashinExecutionPlanIsUsable(
@@ -185,14 +205,30 @@ class MiniAppHostScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => BitcoinCapabilityGate(
-    feature: 'Mini apps and payments',
-    builder: (_) => _SupportedMiniAppHostScreen(
-      definition: definition,
-      launchSource: launchSource,
-      initialUrl: initialUrl,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final blockchain = context.watch<BlockchainService>();
+    if (OwlletMiniApps.isOwlletPayId(definition.id) &&
+        blockchain.activeNetworkKey == 'bitcoin:mainnet' &&
+        blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet') &&
+        blockchain.enabledFamilies.contains(ChainFamily.bitcoin) &&
+        blockchain.activeWalletSupportedFamilies.contains(
+          ChainFamily.bitcoin,
+        )) {
+      return _SupportedMiniAppHostScreen(
+        definition: definition,
+        launchSource: launchSource,
+        initialUrl: initialUrl,
+      );
+    }
+    return BitcoinCapabilityGate(
+      feature: 'Mini apps and payments',
+      builder: (_) => _SupportedMiniAppHostScreen(
+        definition: definition,
+        launchSource: launchSource,
+        initialUrl: initialUrl,
+      ),
+    );
+  }
 }
 
 class _SupportedMiniAppHostScreen extends StatefulWidget {
@@ -238,6 +274,14 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   bool _canGoBack = false;
   bool _loadingContext = true;
   bool _switchNetworkRequestInFlight = false;
+  bool _bitcoinCashoutInFlight = false;
+  final BitcoinPostTransactionRefresh _bitcoinCashoutRefresh =
+      BitcoinPostTransactionRefresh();
+  late final BitcoinOfframpApi _bitcoinOfframpApi = BitcoinOfframpApi();
+  late final BitcoinOfframpService _bitcoinOfframp = BitcoinOfframpService(
+    fetchIntent: _bitcoinOfframpApi.fetchIntent,
+    acknowledge: _bitcoinOfframpApi.acknowledge,
+  );
   Map<String, dynamic> _bridgeContext = const <String, dynamic>{};
   BlockchainService? _blockchain;
   String _publishedWalletAddress = '';
@@ -280,6 +324,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
 
   @override
   void dispose() {
+    _bitcoinCashoutRefresh.dispose();
     _blockchain?.removeListener(_handleActiveWalletChange);
     _runtimeConfig.removeListener(_handleRuntimeConfigChanged);
     // Don't leave the lock-on-background suppressed once the user leaves the
@@ -534,6 +579,19 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
         },
         'capabilities': <String, dynamic>{
+          'requestBitcoinCashout':
+              OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+              activeNetworkKey == 'bitcoin:mainnet' &&
+              _blockchain?.isBitcoinNetworkAvailable('bitcoin:mainnet') ==
+                  true &&
+              _blockchain?.activeWalletSupportedFamilies.contains(
+                    ChainFamily.bitcoin,
+                  ) ==
+                  true &&
+              _blockchain?.enabledFamilies.contains(ChainFamily.bitcoin) ==
+                  true &&
+              _runtimeConfig.snapshot.miniAppsEnabled &&
+              _runtimeConfig.snapshot.transfersEnabled,
           'ready': true,
           'close': true,
           'openExternal': true,
@@ -543,6 +601,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               _runtimeConfig.snapshot.transfersEnabled,
           'requestSwapThenTransfer': false,
           'requestCrossChainSwap':
+              activeChainFamily != 'bitcoin' &&
               _runtimeConfig.snapshot.miniAppsEnabled &&
               _runtimeConfig.snapshot.swapsEnabled &&
               _runtimeConfig.snapshot.bridgesEnabled,
@@ -550,7 +609,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               _runtimeConfig.snapshot.miniAppsEnabled &&
               _runtimeConfig.snapshot.transfersEnabled &&
               widget.definition.id == 'burst',
-          'requestSignMessage': true,
+          'requestSignMessage': activeChainFamily != 'bitcoin',
           'notify': true,
           'getBalances':
               _runtimeConfig.snapshot.portfolioEnabled &&
@@ -843,7 +902,12 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         ? (args.first as Map).cast<String, dynamic>()
         : <String, dynamic>{};
     final type = raw['type']?.toString().trim() ?? '';
-    if (type != 'close' &&
+    final bitcoinCashoutAction = bitcoinCashoutBridgeActionAllowed(
+      widget.definition.id,
+      type,
+    );
+    if (!bitcoinCashoutAction &&
+        type != 'close' &&
         (_blockchain?.activeFamily == ChainFamily.bitcoin ||
             raw['networkKey']?.toString().startsWith('bitcoin:') == true)) {
       return const {
@@ -1305,6 +1369,71 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     })
   >
   _fetchNetworkBridgeBalances(ChainFamily family, String networkKey) async {
+    if (family == ChainFamily.bitcoin) {
+      final blockchain = _blockchain;
+      final identity =
+          blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
+      bool current() =>
+          mounted &&
+          blockchain != null &&
+          identity.isNotEmpty &&
+          OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+          networkKey == 'bitcoin:mainnet' &&
+          blockchain.activeNetworkKey == networkKey &&
+          blockchain.activeWalletAddress.trim().toLowerCase() == identity &&
+          blockchain.isBitcoinNetworkAvailable(networkKey) &&
+          blockchain.enabledFamilies.contains(ChainFamily.bitcoin) &&
+          blockchain.activeWalletSupportedFamilies.contains(
+            ChainFamily.bitcoin,
+          ) &&
+          _runtimeConfig.snapshot.miniAppsEnabled &&
+          _runtimeConfig.snapshot.portfolioEnabled &&
+          _runtimeConfig.snapshot.scopedBalancesEnabled;
+      try {
+        if (!current()) throw StateError('Bitcoin context unavailable');
+        final snapshot = await _bitcoinOfframp.planner.wallet.refresh(
+          identity,
+          BitcoinProductNetwork.mainnet,
+          isCurrent: current,
+        );
+        if (!current()) throw StateError('Bitcoin context changed');
+        // SDK-compatible floating display value; exact sats remain authoritative.
+        final balance = double.parse(
+          BitcoinAmountUtils.format(snapshot.totalSats),
+        );
+        var price = 0.0;
+        for (final token in blockchain!.tokens) {
+          if (token.symbol == 'BTC' && token.unitPriceUsd > 0) {
+            price = token.unitPriceUsd;
+            break;
+          }
+        }
+        return (
+          walletAddress: identity,
+          complete: true,
+          balances: <Map<String, dynamic>>[
+            {
+              'networkKey': networkKey,
+              'chainFamily': 'bitcoin',
+              'symbol': 'BTC',
+              'name': 'Bitcoin',
+              'decimals': 8,
+              'contractAddress': null,
+              'balance': balance,
+              'balanceBaseUnits': snapshot.totalSats.toString(),
+              'priceUsd': price,
+              'valueUsd': balance * price,
+            },
+          ],
+        );
+      } catch (_) {
+        return (
+          walletAddress: identity,
+          complete: false,
+          balances: const <Map<String, dynamic>>[],
+        );
+      }
+    }
     final address = await _walletService.getWalletAddressForFamily(family);
     if (address == null || address.trim().isEmpty) {
       return (
@@ -1778,6 +1907,10 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   Future<Map<String, dynamic>> _handleWalletTransferRequest(
     Map<String, dynamic> payload,
   ) async {
+    if (_blockchain?.activeFamily == ChainFamily.bitcoin ||
+        payload['networkKey']?.toString().startsWith('bitcoin:') == true) {
+      return _handleBitcoinOfframpRequest(payload);
+    }
     final requestedReference = payload['reference']?.toString().trim() ?? '';
     Map<String, dynamic> request = payload;
     if ((payload['toAddress']?.toString().trim() ?? '').isEmpty &&
@@ -1990,6 +2123,151 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       );
       controller.setError(message);
       return <String, dynamic>{'ok': false, 'error': message};
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleBitcoinOfframpRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final blockchain = _blockchain;
+    final identity = blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
+    bool current() =>
+        mounted &&
+        blockchain != null &&
+        OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+        blockchain.activeNetworkKey == 'bitcoin:mainnet' &&
+        blockchain.activeWalletAddress.trim().toLowerCase() == identity &&
+        identity.isNotEmpty &&
+        _runtimeConfig.snapshot.miniAppsEnabled &&
+        _runtimeConfig.snapshot.transfersEnabled &&
+        !_runtimeConfig.snapshot.fullMaintenance &&
+        !_runtimeConfig.snapshot.readOnly &&
+        blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet') &&
+        blockchain.enabledFamilies.contains(ChainFamily.bitcoin) &&
+        blockchain.activeWalletSupportedFamilies.contains(ChainFamily.bitcoin);
+    if (!current() || _bitcoinCashoutInFlight) {
+      return const {
+        'ok': false,
+        'error': 'Bitcoin cash-out is unavailable or already being reviewed.',
+      };
+    }
+    _bitcoinCashoutInFlight = true;
+    try {
+      // Mini-app supplied destination, amount and network are never used to sign.
+      final reference = payload['reference'] is String
+          ? payload['reference'] as String
+          : '';
+      final prepared = await _bitcoinOfframp.prepare(
+        identity,
+        reference,
+        isCurrent: current,
+      );
+      if (!mounted || !current()) {
+        throw StateError('Bitcoin wallet context changed');
+      }
+      final result = await Navigator.of(context).push<Map<String, dynamic>>(
+        MaterialPageRoute(
+          builder: (confirmationContext) => BitcoinTransferConfirmationScreen(
+            transfer: prepared.transfer,
+            onConfirm: (_) async {
+              final payment = await _bitcoinOfframp.execute(
+                prepared,
+                isCurrent: current,
+                authenticate: () async {
+                  await WalletVaultService.lockAll();
+                  if (!current() || !confirmationContext.mounted) return false;
+                  return await requestWalletUnlock(confirmationContext) &&
+                      current();
+                },
+              );
+              if (!confirmationContext.mounted) return;
+              if (payment.outcome.status == BitcoinSubmissionStatus.accepted &&
+                  current()) {
+                _bitcoinCashoutRefresh.schedule(
+                  isCurrent: current,
+                  refresh: () =>
+                      blockchain!.refreshBitcoinAccountAfterTransaction(
+                        identity,
+                        prepared.intent.network,
+                        isCurrent: current,
+                      ),
+                );
+                try {
+                  await _walletHistoryService.recordBitcoinSend(
+                    walletIdentity: identity,
+                    txid: payment.outcome.txid,
+                    network: prepared.intent.network,
+                    amountSats: prepared.intent.amountSat,
+                    recipient: prepared.intent.destination,
+                  );
+                } catch (_) {
+                  // An optional history write never retries a submitted payment.
+                }
+              }
+              if (!confirmationContext.mounted) return;
+              Navigator.of(confirmationContext).pop(<String, dynamic>{
+                'ok': true,
+                'transactionHash': payment.outcome.txid,
+                'submitted':
+                    payment.outcome.status == BitcoinSubmissionStatus.accepted,
+                'pending': true,
+                'confirmed': false,
+                'submissionUnknown':
+                    payment.outcome.status == BitcoinSubmissionStatus.unknown,
+                'backendAcknowledged': payment.backendAcknowledged,
+                'fiatPayoutConfirmed': false,
+              });
+            },
+          ),
+        ),
+      );
+      return result ??
+          const {
+            'ok': false,
+            'cancelled': true,
+            'error': 'Transfer cancelled.',
+          };
+    } on BitcoinOfframpAlreadySubmitted catch (existing) {
+      try {
+        final recovery = await _bitcoinOfframp.recover(
+          identity,
+          existing.submission.intent.reference,
+          isCurrent: current,
+        );
+        return {
+          'ok': true,
+          'transactionHash': recovery.submission.txid,
+          'resolvedTransactionHash': recovery.observedTxid,
+          'submitted': recovery.submission.accepted || recovery.status.found,
+          'pending': !recovery.status.confirmed,
+          'confirmed': recovery.status.confirmed,
+          'submissionUnknown':
+              !recovery.submission.accepted && !recovery.status.found,
+          'backendAcknowledged': recovery.backendAcknowledged,
+          'alreadySubmitted': true,
+          'fiatPayoutConfirmed': false,
+        };
+      } catch (_) {
+        // Observation failure cannot authorize another payment or erase its guard.
+      }
+      return {
+        'ok': true,
+        'transactionHash': existing.submission.txid,
+        'submitted': existing.submission.accepted,
+        'pending': true,
+        'confirmed': false,
+        'submissionUnknown': !existing.submission.accepted,
+        'alreadySubmitted': true,
+        'fiatPayoutConfirmed': false,
+      };
+    } catch (_) {
+      return const {
+        'ok': false,
+        'error':
+            'Unable to prepare Bitcoin cash-out. Check its saved payment status before trying again.',
+      };
+    } finally {
+      _bitcoinCashoutInFlight = false;
     }
   }
 

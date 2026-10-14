@@ -11,10 +11,17 @@ class BitcoinResolvedSubmission {
   final String txid;
   final BigInt feeSat;
   final BigInt recipientTotalSat;
-  BitcoinResolvedSubmission._(this.txid, this.feeSat, this.recipientTotalSat);
+  final BitcoinSavedTransaction? _transaction;
+  BitcoinResolvedSubmission._(
+    this.txid,
+    this.feeSat,
+    this.recipientTotalSat, {
+    BitcoinSavedTransaction? transaction,
+  }) : _transaction = transaction;
   factory BitcoinResolvedSubmission._fromJson(Object? value) {
     if (value is! Map<String, dynamic> ||
-        value.length != 3 ||
+        !(value.length == 3 ||
+            value.length == 4 && value.containsKey('paymentTransaction')) ||
         !value.keys.toSet().containsAll([
           'txid',
           'feeSat',
@@ -38,13 +45,44 @@ class BitcoinResolvedSubmission {
       bitcoinTxid(value['txid']),
       number(value['feeSat']),
       number(value['recipientTotalSat']),
+      transaction: value['paymentTransaction'] == null
+          ? null
+          : BitcoinSavedTransaction.fromJson(value['paymentTransaction']),
     );
   }
-  Map<String, String> _toJson() => {
+  Map<String, Object?> _toJson() => {
     'txid': txid,
     'feeSat': feeSat.toString(),
     'recipientTotalSat': recipientTotalSat.toString(),
+    if (_transaction != null) 'paymentTransaction': _transaction.toJson(),
   };
+}
+
+/// An independently Rust-verified, protected replacement receipt. This does
+/// not authorize signing or clearing UTXO reservations.
+class BitcoinVerifiedResolvedPayment {
+  final Object _store;
+  final String _identity;
+  final BitcoinProductNetwork _network;
+  final String _originalTxid;
+  final BitcoinSavedTransaction transaction;
+  BitcoinVerifiedResolvedPayment._(
+    this._store,
+    this._identity,
+    this._network,
+    this._originalTxid,
+    this.transaction,
+  );
+  bool belongsTo(
+    Object store,
+    String identity,
+    BitcoinProductNetwork network,
+    String originalTxid,
+  ) =>
+      identical(store, _store) &&
+      identity.toLowerCase() == _identity &&
+      network == _network &&
+      originalTxid == _originalTxid;
 }
 
 /// Public metadata for one persisted entry; its storage scope is opaque.
@@ -296,6 +334,49 @@ class BitcoinSubmissionJournal {
     );
   });
 
+  Future<BitcoinVerifiedResolvedPayment?> resolvedPayment(
+    String identity,
+    BitcoinProductNetwork network,
+    String originalTxid,
+  ) async {
+    final wallet = identity.trim().toLowerCase();
+    final original = bitcoinTxid(originalTxid);
+    final receipt = await store.updateSubmissionState(wallet, (raw) {
+      final value =
+          (_decode(raw, wallet)['resolved']
+              as Map<String, dynamic>)['${network.id}|$original'];
+      return (
+        value == null ? null : BitcoinResolvedSubmission._fromJson(value),
+        null,
+      );
+    });
+    final saved = receipt?._transaction;
+    if (saved == null) return null;
+    if (saved.account.network != network ||
+        saved.signed.txid != receipt!.txid ||
+        saved.signed.feeSat != receipt.feeSat ||
+        saved.plan.recipientTotalSat != receipt.recipientTotalSat) {
+      throw const FormatException('Invalid Bitcoin payment receipt');
+    }
+    final verified = await verifyBitcoinTransfer(
+      plan: saved.plan,
+      rawTransactionHex: saved.signed.rawTransactionHex,
+    );
+    if (verified.txid != saved.signed.txid ||
+        verified.wtxid != saved.signed.wtxid ||
+        verified.feeSat != saved.signed.feeSat ||
+        verified.vbytes != saved.signed.vbytes) {
+      throw const FormatException('Invalid Bitcoin payment transaction');
+    }
+    return BitcoinVerifiedResolvedPayment._(
+      store.secureStore,
+      wallet,
+      network,
+      original,
+      saved,
+    );
+  }
+
   Future<List<BitcoinPendingSubmission>> pending(
     String identity,
     BitcoinProductNetwork network,
@@ -386,6 +467,7 @@ class BitcoinSubmissionJournal {
           snapshot.txid,
           snapshot.transaction!.signed.feeSat,
           snapshot.transaction!.plan.recipientTotalSat,
+          transaction: snapshot.transaction,
         );
         for (final candidate in chain) {
           if (candidate != snapshot.txid) {
@@ -393,7 +475,8 @@ class BitcoinSubmissionJournal {
           }
         }
         // Bound display-only history; pending input reservations are never evicted.
-        while (receipts.length > 4096) {
+        while (receipts.length > 4096 ||
+            jsonEncode(receipts).length > 2 * 1024 * 1024) {
           receipts.remove(receipts.keys.first);
         }
       }

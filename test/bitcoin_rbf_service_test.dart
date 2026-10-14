@@ -11,6 +11,8 @@ import 'package:fomowl_wallet/services/bitcoin/bitcoin_network_service.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_rbf_service.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_saved_transaction.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_submission_journal.dart';
+import 'package:fomowl_wallet/models/bitcoin_offramp_intent.dart';
+import 'package:fomowl_wallet/services/bitcoin/bitcoin_offramp_journal.dart';
 import 'package:fomowl_wallet/services/wallet_vault_service.dart';
 import 'package:fomowl_wallet/src/rust/frb_generated.dart';
 import 'helpers/bitcoin_memory_store.dart';
@@ -43,6 +45,132 @@ Future<bool> unlock() async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async => RustLib.init());
+  test(
+    'verified mainnet RBF winner reconciles only its exact cash-out intent',
+    () async {
+      final f = await rbfFixture(network: BitcoinProductNetwork.mainnet);
+      const reference = 'OWL-PAY-rbf-test';
+      final recipient = f.original.transfer.plan.recipients.single;
+      final intent = BitcoinOfframpIntent.fromWithdrawalPlan(reference, {
+        'reference': reference,
+        'action': 'transfer',
+        'networkKey': 'bitcoin:mainnet',
+        'chainFamily': 'bitcoin',
+        'assetSymbol': 'BTC',
+        'nativeSymbol': 'BTC',
+        'decimals': 8,
+        'toAddress': recipient.address,
+        'amountBaseUnits': recipient.amountSat.toString(),
+        'fundingExpiresAt': '2099-01-01T00:00:00Z',
+      });
+      final payments = BitcoinOfframpJournal(f.store);
+      final attempt = await payments.reserve(
+        RbfFixture.identity,
+        intent,
+        f.original.transaction.txid,
+      );
+      payments.retainPending(attempt);
+      final saved = (await payments.read(RbfFixture.identity, reference))!;
+      final coordinator = service(f);
+      final approval = await prepare(coordinator, f);
+      f.network.accept = (raw) => f.acceptPlan(approval.transfer.plan, raw);
+      final outcome = await coordinator.submit(
+        approval,
+        authenticate: unlock,
+        isCurrent: current,
+      );
+      final winner = (await f.journal.pending(
+        RbfFixture.identity,
+        BitcoinProductNetwork.mainnet,
+      )).singleWhere((entry) => entry.txid == outcome.txid);
+      final confirmed = BitcoinTransactionStatus.fromJson({
+        'status': 'confirmed',
+        'found': true,
+        'confirmed': true,
+        'confirmations': 1,
+        'blockHeight': 10,
+        'blockHash': 'aa' * 32,
+      });
+      expect(
+        await f.journal.reconcileConfirmed(
+          winner,
+          confirmed,
+          isCurrent: current,
+        ),
+        isTrue,
+      );
+      final proof = (await f.journal.resolvedPayment(
+        RbfFixture.identity,
+        BitcoinProductNetwork.mainnet,
+        saved.txid,
+      ))!;
+      final journalKey = f.memory.values.keys.singleWhere(
+        (key) => key.startsWith('bitcoin_submission_'),
+      );
+      final originalJournal = f.memory.values[journalKey]!;
+      final corrupt = jsonDecode(originalJournal) as Map<String, dynamic>;
+      final receipt =
+          (corrupt['resolved'] as Map)['mainnet|${saved.txid}'] as Map;
+      final signedReceipt =
+          (receipt['paymentTransaction'] as Map)['signed'] as Map;
+      signedReceipt['wtxid'] = 'ff' * 32;
+      f.memory.values[journalKey] = jsonEncode(corrupt);
+      await expectLater(
+        f.journal.resolvedPayment(
+          RbfFixture.identity,
+          BitcoinProductNetwork.mainnet,
+          saved.txid,
+        ),
+        throwsA(anything),
+      );
+      expect(await payments.read(RbfFixture.identity, reference), isNotNull);
+      f.memory.values[journalKey] = originalJournal;
+      expect(
+        await payments.reconcileConfirmed(
+          saved,
+          network: BitcoinProductNetwork.mainnet,
+          observedTxid: outcome.txid,
+          status: confirmed,
+          backendAcknowledged: true,
+        ),
+        isFalse,
+      );
+      expect(
+        await payments.reconcileConfirmed(
+          saved,
+          network: BitcoinProductNetwork.mainnet,
+          observedTxid: outcome.txid,
+          status: confirmed,
+          backendAcknowledged: false,
+          replacementProof: proof,
+        ),
+        isFalse,
+      );
+      expect(
+        await payments.reconcileConfirmed(
+          saved,
+          network: BitcoinProductNetwork.testnet4,
+          observedTxid: outcome.txid,
+          status: confirmed,
+          backendAcknowledged: true,
+          replacementProof: proof,
+        ),
+        isFalse,
+      );
+      expect(
+        await payments.reconcileConfirmed(
+          saved,
+          network: BitcoinProductNetwork.mainnet,
+          observedTxid: outcome.txid,
+          status: confirmed,
+          backendAcknowledged: true,
+          replacementProof: proof,
+        ),
+        isTrue,
+      );
+      expect(await payments.read(RbfFixture.identity, reference), isNull);
+    },
+  );
   tearDown(() => WalletVaultService.lockAll());
   for (final purpose in BitcoinPurpose.values) {
     for (final network in BitcoinProductNetwork.values) {
@@ -489,6 +617,31 @@ void main() {
           snapshot.transaction!.signed.feeSat,
         );
         expect(receipts.containsKey(snapshot.txid), isFalse);
+        final proof = await f.journal.resolvedPayment(
+          RbfFixture.identity,
+          f.original.transfer.network,
+          losingHash,
+        );
+        expect(proof, isNotNull);
+        expect(proof!.transaction.signed.txid, snapshot.txid);
+        expect(
+          proof.belongsTo(
+            f.memory,
+            RbfFixture.identity,
+            f.original.transfer.network,
+            losingHash,
+          ),
+          isTrue,
+        );
+        expect(
+          proof.belongsTo(
+            f.memory,
+            'other-wallet',
+            f.original.transfer.network,
+            losingHash,
+          ),
+          isFalse,
+        );
       },
     );
   }
