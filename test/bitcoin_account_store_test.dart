@@ -36,6 +36,34 @@ ProtectedBitcoinRecord record(BitcoinAccountSlot slot) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
+    'bill funding guards are isolated from cash-out and revoked on deletion',
+    () async {
+      final memory = MemoryStore();
+      final first = BitcoinAccountStore(memory);
+      final second = BitcoinAccountStore(memory);
+      await first.updateOfframpState('wallet', (_) => (null, 'withdrawal'));
+      await first.updateBillState('wallet', (_) => (null, 'bill'));
+      expect(
+        await second.updateBillState('WALLET', (value) => (value, null)),
+        'bill',
+      );
+      expect(
+        await second.updateOfframpState('wallet', (value) => (value, null)),
+        'withdrawal',
+      );
+      await first.deleteWallet('wallet');
+      await expectLater(
+        second.updateBillState('wallet', (_) => (null, 'stale')),
+        throwsStateError,
+      );
+      await first.activateWallet('wallet');
+      expect(
+        await second.updateBillState('wallet', (value) => (value, null)),
+        isNull,
+      );
+    },
+  );
+  test(
     'cash-out state is wallet scoped and serializes across wrappers',
     () async {
       final memory = MemoryStore();

@@ -8,6 +8,8 @@ void main() {
         'ready',
         'close',
         'request_wallet_transfer',
+        'request_bitcoin_bill_payment',
+        'get_bitcoin_bill_payment_status',
         'get_balances',
         'get_network_balances',
       ]) {
@@ -27,6 +29,20 @@ void main() {
       isFalse,
     );
     expect(bitcoinCashoutBridgeActionAllowed('untrusted', 'ready'), isFalse);
+    expect(
+      bitcoinCashoutBridgeActionAllowed(
+        'untrusted',
+        'request_bitcoin_bill_payment',
+      ),
+      isFalse,
+    );
+    expect(
+      bitcoinCashoutBridgeActionAllowed(
+        'untrusted',
+        'get_bitcoin_bill_payment_status',
+      ),
+      isFalse,
+    );
   });
   test('swap preflight checks CROSS input rather than stablecoin output', () {
     final spend = cashinPreflightTokenSpend({

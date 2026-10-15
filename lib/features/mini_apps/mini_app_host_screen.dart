@@ -24,6 +24,8 @@ import '../../services/wallet_backend_auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/bitcoin/bitcoin_offramp_api.dart';
 import '../../services/bitcoin/bitcoin_offramp_service.dart';
+import '../../services/bitcoin/bitcoin_bill_api.dart';
+import '../../services/bitcoin/bitcoin_bill_funding_service.dart';
 import '../../services/bitcoin/bitcoin_broadcast_service.dart';
 import '../../services/bitcoin/bitcoin_post_transaction_refresh.dart';
 import '../../models/bitcoin_account_state.dart';
@@ -57,6 +59,8 @@ bool bitcoinCashoutBridgeActionAllowed(String miniAppId, String type) =>
       'close',
       'ready',
       'request_wallet_transfer',
+      'request_bitcoin_bill_payment',
+      'get_bitcoin_bill_payment_status',
       'get_balances',
       'get_network_balances',
     }.contains(type);
@@ -282,6 +286,13 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     fetchIntent: _bitcoinOfframpApi.fetchIntent,
     acknowledge: _bitcoinOfframpApi.acknowledge,
   );
+  late final BitcoinBillApi _bitcoinBillApi = BitcoinBillApi();
+  late final BitcoinBillFundingService _bitcoinBillFunding =
+      BitcoinBillFundingService(
+        fetchIntent: _bitcoinBillApi.fetchIntent,
+        acknowledge: _bitcoinBillApi.acknowledge,
+        acknowledgeReadOnly: _bitcoinBillApi.acknowledgeReadOnly,
+      );
   Map<String, dynamic> _bridgeContext = const <String, dynamic>{};
   BlockchainService? _blockchain;
   String _publishedWalletAddress = '';
@@ -378,7 +389,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     final profile = await _authService.getCachedProfile();
     final isLoggedIn = await _authService.isLoggedIn();
 
-    // Resolve the EVM wallet address from the wallet itself first — the most
+    // Resolve the EVM wallet address from the wallet itself first â€” the most
     // reliable source. The cached backend profile does not always carry
     // `primary_wallet_address`, which previously left mini-apps with no wallet
     // context at all. Fall back to the profile field when the wallet lookup is
@@ -398,7 +409,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         : null;
     final hasWallet = walletAddress != null;
 
-    // The user's Solana address — needed by cross-chain flows (e.g. cash-in's
+    // The user's Solana address â€” needed by cross-chain flows (e.g. cash-in's
     // sell-any-token saga uses it as the USDC refund address). Best-effort.
     String? solanaWalletAddress;
     try {
@@ -466,7 +477,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
             },
           )
           .toList(growable: false);
-      // networkKey is "<family>:<rest>" — e.g. "evm:56", "tron:mainnet".
+      // networkKey is "<family>:<rest>" â€” e.g. "evm:56", "tron:mainnet".
       if (activeNetworkKey.contains(':')) {
         final parts = activeNetworkKey.split(':');
         activeChainFamily = parts.first;
@@ -579,6 +590,23 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/avalanchec/info/logo.png',
         },
         'capabilities': <String, dynamic>{
+          'getBitcoinBillPaymentStatus':
+              OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+              activeNetworkKey == 'bitcoin:mainnet',
+          'requestBitcoinBillPayment':
+              OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+              activeNetworkKey == 'bitcoin:mainnet' &&
+              _blockchain?.isBitcoinNetworkAvailable('bitcoin:mainnet') ==
+                  true &&
+              _blockchain?.enabledFamilies.contains(ChainFamily.bitcoin) ==
+                  true &&
+              _blockchain?.activeWalletSupportedFamilies.contains(
+                    ChainFamily.bitcoin,
+                  ) ==
+                  true &&
+              _runtimeConfig.snapshot.billsEnabled &&
+              _runtimeConfig.snapshot.miniAppsEnabled &&
+              _runtimeConfig.snapshot.transfersEnabled,
           'requestBitcoinCashout':
               OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
               activeNetworkKey == 'bitcoin:mainnet' &&
@@ -679,7 +707,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
                   // an empty/null permission-request origin, which previously
                   // tripped the trust check and silently denied getUserMedia
                   // (NotAllowedError) even with the OS camera permission granted.
-                  // Fall back to the CURRENTLY-LOADED page origin — that URL is
+                  // Fall back to the CURRENTLY-LOADED page origin â€” that URL is
                   // already origin-guarded by shouldOverrideUrlLoading, so only a
                   // trusted page can ever be the top-level document here.
                   final pageTrusted =
@@ -856,6 +884,12 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     requestWalletTransfer: function(payload) {
       return callHost({ type: 'request_wallet_transfer', payload: payload || {} });
     },
+    requestBitcoinBillPayment: function(payload) {
+      return callHost({ type: 'request_bitcoin_bill_payment', payload: payload || {} });
+    },
+    getBitcoinBillPaymentStatus: function(payload) {
+      return callHost({ type: 'get_bitcoin_bill_payment_status', payload: payload || {} });
+    },
     requestCrossChainSwap: function(payload) {
       return callHost({ type: 'request_cross_chain_swap', payload: payload || {} });
     },
@@ -963,6 +997,38 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           };
         }
         return _handleWalletTransferRequest(payload.cast<String, dynamic>());
+      case 'request_bitcoin_bill_payment':
+        if (!OwlletMiniApps.isOwlletPayId(widget.definition.id) ||
+            !_runtimeConfig.snapshot.billsEnabled ||
+            !await _runtimeFeatureEnabled('transfer')) {
+          return _runtimeFeatureDisabledResponse();
+        }
+        final billPayload = raw['payload'];
+        if (billPayload is! Map ||
+            billPayload.length != 1 ||
+            billPayload['reference'] is! String) {
+          return const {
+            'ok': false,
+            'error': 'Invalid Bitcoin bill reference.',
+          };
+        }
+        return _handleBitcoinBillPaymentRequest(
+          billPayload.cast<String, dynamic>(),
+        );
+      case 'get_bitcoin_bill_payment_status':
+        final statusPayload = raw['payload'];
+        if (!OwlletMiniApps.isOwlletPayId(widget.definition.id) ||
+            statusPayload is! Map ||
+            statusPayload.length != 1 ||
+            statusPayload['reference'] is! String) {
+          return const {
+            'ok': false,
+            'error': 'Invalid Bitcoin bill reference.',
+          };
+        }
+        return _handleBitcoinBillPaymentStatus(
+          statusPayload['reference'] as String,
+        );
       case 'request_cross_chain_swap':
         if (!await _runtimeFeatureEnabled('bridge')) {
           return _runtimeFeatureDisabledResponse();
@@ -1119,7 +1185,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
 
     _switchNetworkRequestInFlight = true;
     try {
-      // Show a native confirmation dialog — the user must explicitly approve.
+      // Show a native confirmation dialog â€” the user must explicitly approve.
       final approved = await showModalBottomSheet<bool>(
         context: context,
         backgroundColor: Colors.transparent,
@@ -1884,7 +1950,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           ),
         ),
         content: Text(
-          '$campaignTitle${assetSymbol.isEmpty ? '' : ' · $assetSymbol'}\nEVM network: $chainId$valueLine\n\nOwllet verified this transaction with the Burst backend. Review it before signing.',
+          '$campaignTitle${assetSymbol.isEmpty ? '' : ' Â· $assetSymbol'}\nEVM network: $chainId$valueLine\n\nOwllet verified this transaction with the Burst backend. Review it before signing.',
           style: GoogleFonts.outfit(
             color: Colors.white.withValues(alpha: 0.72),
             height: 1.4,
@@ -2271,6 +2337,191 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     }
   }
 
+  Future<Map<String, dynamic>> _handleBitcoinBillPaymentStatus(
+    String reference,
+  ) async {
+    final blockchain = _blockchain;
+    final identity = blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
+    bool current() =>
+        mounted &&
+        blockchain != null &&
+        identity.isNotEmpty &&
+        OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+        blockchain.activeNetworkKey == 'bitcoin:mainnet' &&
+        blockchain.activeWalletAddress.trim().toLowerCase() == identity;
+    if (!current()) {
+      return const {'ok': false, 'error': 'Bitcoin wallet context changed.'};
+    }
+    try {
+      // Observation and idempotent acknowledgement only. This never plans,
+      // authenticates a signer, broadcasts, or releases an uncertain payment.
+      final result = await _bitcoinBillFunding.recover(
+        identity,
+        reference,
+        isCurrent: current,
+      );
+      return {
+        'ok': true,
+        'transactionHash': result.observedTxid,
+        'confirmed': result.status.confirmed,
+        'backendAcknowledged': result.backendAcknowledged,
+      };
+    } catch (_) {
+      return const {
+        'ok': false,
+        'error': 'No confirmed saved bill payment is available.',
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleBitcoinBillPaymentRequest(
+    Map<String, dynamic> payload,
+  ) async {
+    final blockchain = _blockchain;
+    final identity = blockchain?.activeWalletAddress.trim().toLowerCase() ?? '';
+    bool current() =>
+        mounted &&
+        blockchain != null &&
+        OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+        blockchain.activeNetworkKey == 'bitcoin:mainnet' &&
+        blockchain.activeWalletAddress.trim().toLowerCase() == identity &&
+        identity.isNotEmpty &&
+        _runtimeConfig.snapshot.billsEnabled &&
+        _runtimeConfig.snapshot.miniAppsEnabled &&
+        _runtimeConfig.snapshot.transfersEnabled &&
+        !_runtimeConfig.snapshot.fullMaintenance &&
+        !_runtimeConfig.snapshot.readOnly &&
+        blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet') &&
+        blockchain.enabledFamilies.contains(ChainFamily.bitcoin) &&
+        blockchain.activeWalletSupportedFamilies.contains(ChainFamily.bitcoin);
+    if (!current() || _bitcoinCashoutInFlight) {
+      return const {
+        'ok': false,
+        'error':
+            'Bitcoin bill payment is unavailable or already being reviewed.',
+      };
+    }
+    _bitcoinCashoutInFlight = true;
+    try {
+      // Mini-app supplied destination, amount and network are never used to sign.
+      final reference = payload['reference'] is String
+          ? payload['reference'] as String
+          : '';
+      final prepared = await _bitcoinBillFunding.prepare(
+        identity,
+        reference,
+        isCurrent: current,
+      );
+      if (!mounted || !current()) {
+        throw StateError('Bitcoin wallet context changed');
+      }
+      final result = await Navigator.of(context).push<Map<String, dynamic>>(
+        MaterialPageRoute(
+          builder: (confirmationContext) => BitcoinTransferConfirmationScreen(
+            transfer: prepared.transfer,
+            billInvoice: prepared.intent,
+            onConfirm: (_) async {
+              final payment = await _bitcoinBillFunding.execute(
+                prepared,
+                isCurrent: current,
+                authenticate: () async {
+                  await WalletVaultService.lockAll();
+                  if (!current() || !confirmationContext.mounted) return false;
+                  return await requestWalletUnlock(confirmationContext) &&
+                      current();
+                },
+              );
+              if (!confirmationContext.mounted) return;
+              if (payment.outcome.status == BitcoinSubmissionStatus.accepted &&
+                  current()) {
+                _bitcoinCashoutRefresh.schedule(
+                  isCurrent: current,
+                  refresh: () =>
+                      blockchain!.refreshBitcoinAccountAfterTransaction(
+                        identity,
+                        prepared.intent.network,
+                        isCurrent: current,
+                      ),
+                );
+                try {
+                  await _walletHistoryService.recordBitcoinSend(
+                    walletIdentity: identity,
+                    txid: payment.outcome.txid,
+                    network: prepared.intent.network,
+                    amountSats: prepared.intent.amountSat,
+                    recipient: prepared.intent.destination,
+                  );
+                } catch (_) {
+                  // An optional history write never retries a submitted payment.
+                }
+              }
+              if (!confirmationContext.mounted) return;
+              Navigator.of(confirmationContext).pop(<String, dynamic>{
+                'ok': true,
+                'transactionHash': payment.outcome.txid,
+                'submitted':
+                    payment.outcome.status == BitcoinSubmissionStatus.accepted,
+                'pending': true,
+                'confirmed': false,
+                'submissionUnknown':
+                    payment.outcome.status == BitcoinSubmissionStatus.unknown,
+                'backendAcknowledged': payment.backendAcknowledged,
+                'billDelivered': false,
+              });
+            },
+          ),
+        ),
+      );
+      return result ??
+          const {
+            'ok': false,
+            'cancelled': true,
+            'error': 'Transfer cancelled.',
+          };
+    } on BitcoinBillFundingAlreadySubmitted catch (existing) {
+      try {
+        final recovery = await _bitcoinBillFunding.recover(
+          identity,
+          existing.submission.intent.reference,
+          isCurrent: current,
+        );
+        return {
+          'ok': true,
+          'transactionHash': recovery.submission.txid,
+          'resolvedTransactionHash': recovery.observedTxid,
+          'submitted': recovery.submission.accepted || recovery.status.found,
+          'pending': !recovery.status.confirmed,
+          'confirmed': recovery.status.confirmed,
+          'submissionUnknown':
+              !recovery.submission.accepted && !recovery.status.found,
+          'backendAcknowledged': recovery.backendAcknowledged,
+          'alreadySubmitted': true,
+          'billDelivered': false,
+        };
+      } catch (_) {
+        // Observation failure cannot authorize another payment or erase its guard.
+      }
+      return {
+        'ok': true,
+        'transactionHash': existing.submission.txid,
+        'submitted': existing.submission.accepted,
+        'pending': true,
+        'confirmed': false,
+        'submissionUnknown': !existing.submission.accepted,
+        'alreadySubmitted': true,
+        'billDelivered': false,
+      };
+    } catch (_) {
+      return const {
+        'ok': false,
+        'error':
+            'Unable to prepare Bitcoin bill payment. Check its saved payment status before trying again.',
+      };
+    } finally {
+      _bitcoinCashoutInFlight = false;
+    }
+  }
+
   Future<Map<String, dynamic>> _fetchWithdrawalTransferPlan(
     String reference,
   ) async {
@@ -2325,7 +2576,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     };
   }
 
-  /// Surface a host (system) notification for the mini app — e.g. "your
+  /// Surface a host (system) notification for the mini app â€” e.g. "your
   /// electricity token has arrived". Title is prefixed with the mini-app name
   /// so users always know the source.
   Future<Map<String, dynamic>> _handleNotifyRequest(
@@ -3215,8 +3466,8 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }) {
     final txLabel = stepCount == 1 ? 'transaction' : 'transactions';
     final refText = reference.trim().isEmpty ? '' : '\n\nReference: $reference';
-    // When the sold asset already settles as-is (e.g. USDC → USDC), nothing is
-    // swapped on-chain — it is a plain transfer to the settlement address.
+    // When the sold asset already settles as-is (e.g. USDC â†’ USDC), nothing is
+    // swapped on-chain â€” it is a plain transfer to the settlement address.
     final title = isTransfer ? 'Confirm transfer' : 'Sign swap transaction';
     final body = isTransfer
         ? 'Send $fromLabel to OwlletPay.\n\nOwllet will sign and submit '
@@ -3439,7 +3690,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   /// The crypto leg pays gas in the chain's native coin (e.g. BNB on BNB Smart
   /// Chain), so a wallet that holds the stablecoin but no native coin fails to
   /// broadcast. web3dart surfaces that as an `RPCError`, which the generic
-  /// mapper collapses to "Wallet transfer failed" — hiding the real cause. Map
+  /// mapper collapses to "Wallet transfer failed" â€” hiding the real cause. Map
   /// the common gas/revert signatures explicitly before falling back.
   String _bridgeTransferErrorMessage(
     Object error, {
@@ -3571,7 +3822,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
 
   /// Whether the webview's currently-loaded top-level URL is a trusted mini-app
   /// origin. Used as a fallback for camera permission when the permission
-  /// request's own origin is empty/unreliable on some Android WebView builds —
+  /// request's own origin is empty/unreliable on some Android WebView builds â€”
   /// safe because shouldOverrideUrlLoading already guarantees only a trusted
   /// origin can be the top-level document.
   Future<bool> _isCurrentPageTrusted() async {
@@ -3689,7 +3940,7 @@ class _MiniAppUnavailableScreen extends StatelessWidget {
 
 /// Native confirmation bottom sheet shown when a mini-app requests a network
 /// switch via `OwlletMiniApp.switchNetwork()`. The user must explicitly approve
-/// — rejection returns `{ ok: false }` to the caller without any chain change.
+/// â€” rejection returns `{ ok: false }` to the caller without any chain change.
 class _SwitchNetworkSheet extends StatelessWidget {
   const _SwitchNetworkSheet({
     required this.networkLabel,

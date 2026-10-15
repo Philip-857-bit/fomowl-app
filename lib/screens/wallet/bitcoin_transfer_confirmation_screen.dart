@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import '../../models/bitcoin_account_state.dart';
+import '../../models/bitcoin_bill_funding_plan.dart';
 import '../../services/bitcoin/bitcoin_native_crypto.dart';
 import '../../services/bitcoin/bitcoin_send_service.dart';
 import '../../src/rust/api/bitcoin_transaction.dart';
@@ -17,10 +18,12 @@ import '../../utils/bitcoin_amount_utils.dart';
 /// Displays and approves one immutable SDK plan. It never estimates EVM gas.
 class BitcoinTransferConfirmationScreen extends StatefulWidget {
   final BitcoinPreparedTransfer transfer;
+  final BitcoinBillFundingPlan? billInvoice;
   final Future<void> Function(BitcoinPreparedTransfer)? onConfirm;
   const BitcoinTransferConfirmationScreen({
     super.key,
     required this.transfer,
+    this.billInvoice,
     this.onConfirm,
   });
   @override
@@ -43,6 +46,19 @@ class _BitcoinTransferConfirmationScreenState
     try {
       final transfer = widget.transfer;
       final account = NativeBitcoinCrypto.metadata(transfer.plan.account);
+      final invoice = widget.billInvoice;
+      if (invoice != null &&
+          (transfer.walletIdentity.trim().toLowerCase() !=
+                  invoice.walletIdentity ||
+              transfer.network != invoice.network ||
+              transfer.plan.recipients.length != 1 ||
+              transfer.plan.recipients.single.address != invoice.destination ||
+              transfer.plan.recipientTotalSat != invoice.amountSat ||
+              transfer.plan.recipients.single.amountSat != invoice.amountSat)) {
+        throw StateError(
+          'Bitcoin bill invoice does not match the approved plan',
+        );
+      }
       if (account.network != transfer.network ||
           account.purpose != transfer.purpose ||
           transfer.plan.recipients.length != 1) {
@@ -206,6 +222,33 @@ class _BitcoinTransferConfirmationScreenState
                             accentColor: chain.accentColor,
                           ),
                           const SizedBox(height: 28),
+                          if (widget.billInvoice case final invoice?) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Column(
+                                children: [
+                                  _detail(
+                                    'Bill',
+                                    '${invoice.serviceType} · ${invoice.serviceId}',
+                                  ),
+                                  _detail('Beneficiary', invoice.beneficiary),
+                                  _detail(
+                                    'Bill amount',
+                                    'NGN ${invoice.amountKobo ~/ BigInt.from(100)}.${(invoice.amountKobo % BigInt.from(100)).toString().padLeft(2, '0')}',
+                                  ),
+                                  _detail('Reference', invoice.reference),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
                           Text(
                             l.transactionDetails,
                             style: const TextStyle(
