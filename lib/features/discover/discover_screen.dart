@@ -28,17 +28,19 @@ import 'catalog/widgets/discover_landing_view.dart';
 import 'permissions/dapp_permission_service.dart';
 
 class DiscoverScreen extends StatefulWidget {
-  const DiscoverScreen({super.key});
+  const DiscoverScreen({super.key, this.tabManager, this.walletService});
+
+  /// The screen owns and disposes the supplied tab manager, when provided.
+  final DiscoverTabManager? tabManager;
+  final WalletService? walletService;
 
   @override
   State<DiscoverScreen> createState() => _DiscoverScreenState();
 }
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
-  late final DiscoverCatalogService _catalogService;
   late final DiscoverTabManager _tabManager;
-  late final DappPermissionService _permissionService;
-  final WalletService _walletService = WalletService();
+  late final WalletService _walletService;
   AppShellController? _shellController;
   final TextEditingController _searchController = TextEditingController();
   bool _showTabOverview = false;
@@ -49,12 +51,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
-    _catalogService = DiscoverCatalogService();
-    _permissionService = DappPermissionService();
-    _tabManager = DiscoverTabManager(
-      catalogService: _catalogService,
-      permissionService: _permissionService,
-    );
+    _walletService = widget.walletService ?? WalletService();
+    _tabManager =
+        widget.tabManager ??
+        DiscoverTabManager(
+          catalogService: DiscoverCatalogService(),
+          permissionService: DappPermissionService(),
+        );
     _tabManager.addListener(_syncSearchField);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeDiscover();

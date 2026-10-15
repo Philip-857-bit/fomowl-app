@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../../widgets/bitcoin_capability_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +15,11 @@ import 'app_shell_bottom_navigation.dart';
 import 'app_shell_controller.dart';
 
 class AppShellScreen extends StatefulWidget {
-  const AppShellScreen({super.key});
+  const AppShellScreen({super.key, this.walletPage});
+
+  /// Optional wallet presentation; shell navigation and lifecycle remain owned
+  /// here, independently of the wallet dashboard's data loading.
+  final Widget? walletPage;
 
   @override
   State<AppShellScreen> createState() => _AppShellScreenState();
@@ -202,15 +205,13 @@ class _AppShellScreenState extends State<AppShellScreen> {
         body: IndexedStack(
           index: controller.currentIndex,
           children: [
-            HomeScreen(
-              showBottomNavigation: false,
-              refreshRevision: _walletRefreshRevision,
-            ),
+            widget.walletPage ??
+                HomeScreen(
+                  showBottomNavigation: false,
+                  refreshRevision: _walletRefreshRevision,
+                ),
             const SwapScreen(showBottomNavigation: false),
-            BitcoinCapabilityGate(
-              feature: 'DApps',
-              builder: (_) => const DiscoverScreen(),
-            ),
+            const DiscoverScreen(),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(

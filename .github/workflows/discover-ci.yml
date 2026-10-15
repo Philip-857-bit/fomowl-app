@@ -39,6 +39,7 @@ jobs:
           test/discover_landing_view_test.dart
           test/admin_dashboard_screen_test.dart
           test/dapp_provider_bridge_test.dart
+          test/discover_network_access_test.dart
           integration_test/discover_browser_flow_test.dart
           integration_test/discover_smoke_test.dart
 
@@ -52,6 +53,7 @@ jobs:
           test/discover_landing_view_test.dart
           test/admin_dashboard_screen_test.dart
           test/dapp_provider_bridge_test.dart
+          test/discover_network_access_test.dart
 
   android-discover-integration:
     # The emulator suite is intentionally opt-in. The focused Discover tests
