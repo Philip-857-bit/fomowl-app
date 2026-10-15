@@ -56,6 +56,28 @@ class BitcoinAccountStore {
       'bitcoin_offramp_v1_${Uri.encodeComponent(_identity(identity))}';
   String _billKey(String identity) =>
       'bitcoin_bill_funding_v1_${Uri.encodeComponent(_identity(identity))}';
+  String _bridgeKey(String identity) =>
+      'bitcoin_bridge_funding_v1_${Uri.encodeComponent(_identity(identity))}';
+
+  /// Bridge guards are isolated from bills, off-ramp and input reservations.
+  /// The shared wallet queue also revokes these writes on deletion/reset.
+  Future<T> updateBridgeState<T>(
+    String identity,
+    (T, String?) Function(String?) update,
+  ) => _queue(identity).run(() async {
+    if ((await _manifest(identity)).removed) {
+      throw StateError('Bitcoin wallet context was removed');
+    }
+    final key = _bridgeKey(identity);
+    final (result, encoded) = update(await _read(key));
+    if (encoded != null) {
+      if (encoded.length > 131072) {
+        throw const FormatException('Invalid Bitcoin bridge funding state');
+      }
+      await _write(key, encoded);
+    }
+    return result;
+  });
 
   /// Invoice payment guards use a separate namespace from Breet withdrawals.
   Future<T> updateBillState<T>(
@@ -216,6 +238,7 @@ class BitcoinAccountStore {
         await _delete(_submissionKey(walletIdentity));
         await _delete(_offrampKey(walletIdentity));
         await _delete(_billKey(walletIdentity));
+        await _delete(_bridgeKey(walletIdentity));
         for (final slot in manifest.slots) {
           await _delete(slot.storageKey);
         }
@@ -363,6 +386,7 @@ class BitcoinAccountStore {
       await _delete(_submissionKey(walletIdentity));
       await _delete(_offrampKey(walletIdentity));
       await _delete(_billKey(walletIdentity));
+      await _delete(_bridgeKey(walletIdentity));
       // An account that never provisioned Bitcoin has no custody to journal.
       if (manifest.slots.isEmpty && !manifest.removed) {
         return;

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../config/app_environment.dart';
+import '../models/bitcoin_bridge_quote.dart' as bitcoin;
 import '../utils/app_error_utils.dart';
 import 'http_client_service.dart';
 import 'wallet_backend_auth_service.dart';
@@ -103,6 +104,7 @@ class BridgeQuote {
   final List<BridgeStepTx> steps;
   final bool committed;
   final DateTime? deadline;
+  final bitcoin.BitcoinBridgeQuote? bitcoinQuote;
 
   const BridgeQuote({
     required this.originChainId,
@@ -121,14 +123,21 @@ class BridgeQuote {
     required this.steps,
     required this.committed,
     required this.deadline,
+    this.bitcoinQuote,
   });
 
   /// Dry previews can begin execution because the wallet commits them after
   /// the user taps Bridge. Committed quotes must already contain signable
   /// steps.
-  bool get canBeginExecution => !committed || steps.isNotEmpty;
+  bool get canBeginExecution =>
+      !committed ||
+      steps.isNotEmpty ||
+      (bitcoinQuote?.committed == true && bitcoinQuote?.depositAddress != null);
 
   String get arrivalLabel {
+    if (bitcoinQuote != null) {
+      return 'Depends on Bitcoin confirmations';
+    }
     final seconds = timeEstimateSeconds;
     if (seconds == null || seconds <= 0) return '~minutes';
     if (seconds < 60) return '~$seconds sec';
@@ -270,6 +279,8 @@ class BridgeService {
 
   /// Relay's chain id for Solana mainnet.
   static const int relaySolanaChainId = 792703809;
+  static const int relayBitcoinChainId = bitcoin.relayBitcoinChainId;
+  static const String bitcoinNativeCurrency = bitcoin.relayBitcoinCurrency;
 
   /// Internal bridge identifier for TRON mainnet. Kept separate from the
   /// 0x Cross Chain provider-specific id (999999999993).
@@ -297,6 +308,13 @@ class BridgeService {
   }) async {
     _lastError = null;
     final isSameChain = originChainId == destinationChainId;
+    final hasBitcoin =
+        originChainId == relayBitcoinChainId ||
+        destinationChainId == relayBitcoinChainId;
+    if (hasBitcoin && isSameChain) {
+      _lastError = 'Bitcoin is supported in Bridge only.';
+      return null;
+    }
     final useSameChainEvmSwap =
         isSameChain &&
         originChainId != tronBridgeChainId &&
@@ -337,7 +355,11 @@ class BridgeService {
               if (commit) 'commit': 'true',
             };
       final url = AppEnvironment.swap(
-        useSameChainEvmSwap ? '/quote' : '/cross-chain/quote',
+        hasBitcoin
+            ? '/cross-chain/bitcoin/quote'
+            : useSameChainEvmSwap
+            ? '/quote'
+            : '/cross-chain/quote',
         params,
       );
 
@@ -360,6 +382,49 @@ class BridgeService {
         return null;
       }
       final data = Map<String, dynamic>.from(raw);
+      if (hasBitcoin) {
+        final quote = bitcoin.BitcoinBridgeQuote.fromJson(
+          data,
+          expected: bitcoin.BitcoinBridgeRequest(
+            originChainId: originChainId,
+            destinationChainId: destinationChainId,
+            originCurrency: normalizedOrigin,
+            destinationCurrency: normalizedDestination,
+            sender: walletAddress,
+            recipient: recipientAddress ?? walletAddress,
+            amount: BigInt.parse(amountWei),
+          ),
+          now: DateTime.now().toUtc(),
+        );
+        if (quote.committed != commit) {
+          throw const FormatException('Bridge commitment changed');
+        }
+        final steps = _parseSteps(quote.originSteps);
+        if (commit && !quote.request.bitcoinOrigin && steps.isEmpty) {
+          throw const FormatException('Bridge origin steps unavailable');
+        }
+        double? displayUsd(String field) =>
+            double.tryParse(quote.display[field]?.toString() ?? '');
+        return BridgeQuote(
+          originChainId: originChainId,
+          destinationChainId: destinationChainId,
+          amountIn: amountWei,
+          amountOut: quote.amountOut.toString(),
+          amountOutUsd: displayUsd('amountOutUsd') ?? 0,
+          bridgeFeeUsd: displayUsd('bridgeFeeUsd'),
+          gasFeeUsd: null,
+          routeProvider: 'relay',
+          platformFeeBps: null,
+          platformFeeUsd: displayUsd('platformFeeUsd'),
+          effectiveSlippageBps: slippageBps,
+          timeEstimateSeconds: null,
+          requestId: quote.requestId,
+          steps: steps,
+          committed: quote.committed,
+          deadline: quote.approvalExpiresAt,
+          bitcoinQuote: quote,
+        );
+      }
       final amountOut =
           (useSameChainEvmSwap ? data['buyAmount'] : data['amountOut'])
               ?.toString() ??

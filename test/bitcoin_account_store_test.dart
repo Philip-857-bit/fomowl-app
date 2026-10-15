@@ -36,6 +36,42 @@ ProtectedBitcoinRecord record(BitcoinAccountSlot slot) =>
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   test(
+    'bridge funding state is isolated, serialized and revoked by wallet deletion',
+    () async {
+      final memory = MemoryStore();
+      final first = BitcoinAccountStore(memory);
+      final second = BitcoinAccountStore(memory);
+      await first.updateBillState('wallet', (_) => (null, 'bill'));
+      await Future.wait(
+        List.generate(
+          20,
+          (index) => (index.isEven ? first : second).updateBridgeState(
+            'WALLET',
+            (encoded) => (null, (int.parse(encoded ?? '0') + 1).toString()),
+          ),
+        ),
+      );
+      expect(
+        await first.updateBridgeState('wallet', (value) => (value, null)),
+        '20',
+      );
+      expect(
+        await first.updateBillState('wallet', (value) => (value, null)),
+        'bill',
+      );
+      await first.deleteWallet('wallet');
+      await expectLater(
+        second.updateBridgeState('wallet', (_) => (null, 'stale')),
+        throwsStateError,
+      );
+      await first.activateWallet('wallet');
+      expect(
+        await first.updateBridgeState('wallet', (value) => (value, null)),
+        isNull,
+      );
+    },
+  );
+  test(
     'bill funding guards are isolated from cash-out and revoked on deletion',
     () async {
       final memory = MemoryStore();

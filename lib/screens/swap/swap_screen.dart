@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../widgets/bitcoin_capability_gate.dart';
+import 'bitcoin_bridge_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
@@ -63,11 +63,13 @@ class SwapScreen extends StatelessWidget {
   final bool showBottomNavigation;
   const SwapScreen({super.key, this.showBottomNavigation = true});
   @override
-  Widget build(BuildContext context) => BitcoinCapabilityGate(
-    feature: 'Swaps and bridges',
-    builder: (_) =>
-        _SupportedSwapScreen(showBottomNavigation: showBottomNavigation),
-  );
+  Widget build(BuildContext context) {
+    if (context.watch<BlockchainService>().activeFamily ==
+        ChainFamily.bitcoin) {
+      return BitcoinBridgeScreen(showBottomNavigation: showBottomNavigation);
+    }
+    return _SupportedSwapScreen(showBottomNavigation: showBottomNavigation);
+  }
 }
 
 class _SupportedSwapScreen extends StatefulWidget {

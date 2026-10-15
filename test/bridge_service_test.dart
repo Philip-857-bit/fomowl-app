@@ -26,6 +26,54 @@ class _HttpClientServiceMock extends HttpClientService {
 }
 
 void main() {
+  test('Bitcoin bridge requests use the strict dedicated route', () async {
+    Uri? requested;
+    final service = BridgeService(
+      httpClientService: _HttpClientServiceMock(
+        MockClient((request) async {
+          requested = request.url;
+          return http.Response('{"message":"No route available."}', 409);
+        }),
+      ),
+    );
+    await service.getQuote(
+      originChainId: BridgeService.relayBitcoinChainId,
+      destinationChainId: 8453,
+      originCurrency: BridgeService.bitcoinNativeCurrency,
+      destinationCurrency: BridgeService.nativeCurrency,
+      amountWei: '100000',
+      walletAddress: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+      recipientAddress: '0x03508bb71268bba25ecacc8f620e01866650532c',
+      commit: true,
+    );
+    expect(requested?.path, endsWith('/api/swap/cross-chain/bitcoin/quote'));
+    expect(requested?.queryParameters['amount'], '100000');
+    expect(requested?.queryParameters['commit'], 'true');
+  });
+  test(
+    'Bitcoin cannot fall through to the ordinary same-chain swap endpoint',
+    () async {
+      var called = false;
+      final service = BridgeService(
+        httpClientService: _HttpClientServiceMock(
+          MockClient((request) async {
+            called = true;
+            return http.Response('{}', 200);
+          }),
+        ),
+      );
+      final quote = await service.getQuote(
+        originChainId: BridgeService.relayBitcoinChainId,
+        destinationChainId: BridgeService.relayBitcoinChainId,
+        originCurrency: BridgeService.bitcoinNativeCurrency,
+        destinationCurrency: BridgeService.bitcoinNativeCurrency,
+        amountWei: '100000',
+        walletAddress: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+      );
+      expect(quote, isNull);
+      expect(called, isFalse);
+    },
+  );
   test('maps an amount-too-low quote error to actionable bridge guidance', () {
     const body =
         '{"code":"AMOUNT_TOO_LOW","message":"Amount is too low for this route."}';

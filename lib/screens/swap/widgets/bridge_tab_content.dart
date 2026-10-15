@@ -6,8 +6,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:web3dart/web3dart.dart';
 
 import '../../../models/chain.dart';
+import '../../../models/bitcoin_account_state.dart';
+import '../../../models/bitcoin_discovery.dart';
+import '../../../services/bitcoin/bitcoin_address_allocator.dart';
+import '../../../services/bitcoin/bitcoin_bridge_funding_service.dart';
+import '../../../services/bitcoin/bitcoin_broadcast_service.dart';
+import '../../../services/bitcoin/bitcoin_protected_record.dart';
+import '../../../services/bitcoin/bitcoin_send_service.dart'
+    show BitcoinSplitFundsException, BitcoinPendingInputsException;
+import '../../../services/storage_service.dart';
+import '../../../services/runtime_config_service.dart';
+import '../../../services/wallet_vault_service.dart';
+import '../../../utils/wallet_unlock_navigation.dart';
+import '../../../utils/bitcoin_amount_utils.dart';
+import '../../wallet/bitcoin_transfer_confirmation_screen.dart';
 import '../../../models/token.dart';
 import '../../../services/blockchain/solana_catalog.dart';
+import '../../../services/blockchain/bitcoin_catalog.dart';
 import '../../../services/blockchain/tron_catalog.dart';
 import '../../../services/blockchain_service.dart';
 import '../../../services/bridge_service.dart';
@@ -75,7 +90,7 @@ Widget buildBridgeOriginTokenDialog({
 }
 
 String? bridgeFamilyLogoUrl(ChainFamily family) => switch (family) {
-  ChainFamily.bitcoin => null,
+  ChainFamily.bitcoin => BitcoinCatalog.mainnet.logoUrl,
   ChainFamily.solana => SolanaCatalog.mainnet.logoUrl,
   ChainFamily.tron => TronCatalog.mainnet.logoUrl,
   ChainFamily.evm => null,
@@ -222,6 +237,14 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   String? _lastNetworkKey;
   PendingBridgeOperation? _pendingOperation;
   bool _isCheckingPending = false;
+  final BitcoinBridgeFundingService _bitcoinFunding =
+      BitcoinBridgeFundingService();
+  BitcoinDerivedAddress? _bitcoinReceive;
+  BitcoinBridgeFundingRecovery? _bitcoinRecovery;
+  bool _bitcoinHasPending = false;
+  bool _bitcoinRecoveryLoaded = false;
+  bool _isCheckingBitcoin = false;
+  Timer? _bitcoinPoll;
 
   /// Relay-supported chain ids; null until loaded (or when unavailable, in
   /// which case filtering is skipped).
@@ -247,6 +270,25 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     family: ChainFamily.tron,
     logoUrl: bridgeFamilyLogoUrl(ChainFamily.tron),
   );
+  static final EvmChain _bitcoinChain = EvmChain(
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    chainId: BridgeService.relayBitcoinChainId,
+    rpcUrl: '',
+    family: ChainFamily.bitcoin,
+  );
+
+  bool get _isBitcoinOrigin =>
+      widget.blockchain.activeFamily == ChainFamily.bitcoin;
+  bool get _bitcoinAllowed {
+    final chain = widget.blockchain;
+    final runtime = RuntimeConfigService.instance.snapshot;
+    return chain.activeWalletSupportedFamilies.contains(ChainFamily.bitcoin) &&
+        chain.enabledFamilies.contains(ChainFamily.bitcoin) &&
+        chain.isBitcoinNetworkAvailable('bitcoin:mainnet') &&
+        runtime.allows(RuntimeFeature.bridges) &&
+        runtime.allows(RuntimeFeature.transfers);
+  }
 
   bool get _isSolanaOrigin =>
       widget.blockchain.activeFamily == ChainFamily.solana;
@@ -273,22 +315,119 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   Future<void> _loadFamilyAddresses() async {
-    final solana = await widget.walletService.getWalletAddressForFamily(
-      ChainFamily.solana,
-    );
-    final evm = await widget.walletService.getWalletAddressForFamily(
-      ChainFamily.evm,
-    );
-    final tron = await widget.walletService.getWalletAddressForFamily(
-      ChainFamily.tron,
-    );
-    if (!mounted) return;
+    final originalWallet = widget.walletAddress;
+    Future<String?> address(ChainFamily family) async {
+      try {
+        return await widget.walletService.getWalletAddressForFamily(family);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final solana = await address(ChainFamily.solana);
+    final evm = await address(ChainFamily.evm);
+    final tron = await address(ChainFamily.tron);
+    if (!mounted || widget.walletAddress != originalWallet) return;
     setState(() {
       if (solana != null && solana.isNotEmpty) _solanaAddress = solana;
       if (evm != null && evm.isNotEmpty) _evmAddress = evm;
       if (tron != null && tron.isNotEmpty) _tronAddress = tron;
     });
+    await _loadBitcoinAddress();
     await _loadPendingBridge();
+  }
+
+  Future<void> _loadBitcoinAddress() async {
+    final identity = widget.blockchain.activeWalletAddress.trim().toLowerCase();
+    if (!_bitcoinAllowed || identity.isEmpty) return;
+    bool current() =>
+        mounted &&
+        _bitcoinAllowed &&
+        widget.blockchain.activeWalletAddress.trim().toLowerCase() == identity;
+    try {
+      final storage = StorageService();
+      final accounts = await storage.getWalletAccounts();
+      if (!current()) return;
+      final account = accounts
+          .where((value) => value.address.toLowerCase() == identity)
+          .firstOrNull;
+      if (account == null || !account.supportsFamily(ChainFamily.bitcoin)) {
+        return;
+      }
+      final receive =
+          await BitcoinAddressAllocator(
+            store: storage.bitcoinAccounts,
+          ).currentReceive(
+            BitcoinAccountSlot(
+              walletIdentity: identity,
+              network: BitcoinProductNetwork.mainnet,
+              accountIndex: account.derivationIndex ?? 0,
+              purpose: BitcoinPurpose.bip84,
+            ),
+          );
+      final pending = await _bitcoinFunding.journal.pending(identity);
+      if (!current()) return;
+      setState(() {
+        _bitcoinReceive = receive;
+        _bitcoinHasPending = pending != null;
+        _bitcoinRecoveryLoaded = true;
+        _syncToChain();
+      });
+      if (pending != null) unawaited(_checkBitcoinBridge());
+      if (_isBitcoinOrigin) _requestQuote();
+    } catch (_) {
+      if (current() && _isBitcoinOrigin) {
+        setState(
+          () => _quoteError = 'Unable to load the Bitcoin bridge account.',
+        );
+      }
+    }
+  }
+
+  Future<void> _checkBitcoinBridge() async {
+    if (_isCheckingBitcoin) return;
+    final identity = widget.blockchain.activeWalletAddress.trim().toLowerCase();
+    bool current() =>
+        mounted &&
+        widget.blockchain.activeWalletAddress.trim().toLowerCase() == identity;
+    setState(() => _isCheckingBitcoin = true);
+    try {
+      final result = await _bitcoinFunding.recover(
+        identity,
+        isCurrent: current,
+      );
+      final pending = await _bitcoinFunding.journal.pending(identity);
+      if (!current()) return;
+      setState(() {
+        _bitcoinRecovery = result;
+        _bitcoinHasPending = pending != null;
+      });
+      final refresh = widget.onBridgeCompleted;
+      if ((result.delivered || result.refunded) && refresh != null) {
+        unawaited(Future<void>.sync(refresh).catchError((Object _) {}));
+      }
+    } catch (_) {
+      if (current()) {
+        ToastUtils.showInfo(
+          'Unable to verify the saved bridge yet. Do not pay it again.',
+        );
+      }
+    } finally {
+      if (current()) {
+        setState(() => _isCheckingBitcoin = false);
+        _scheduleBitcoinObservation();
+      }
+    }
+  }
+
+  void _scheduleBitcoinObservation() {
+    _bitcoinPoll?.cancel();
+    if (!mounted || !_bitcoinHasPending) return;
+    _bitcoinPoll = Timer(const Duration(seconds: 15), () {
+      if (mounted && _bitcoinHasPending && !_isCheckingBitcoin) {
+        unawaited(_checkBitcoinBridge());
+      }
+    });
   }
 
   Future<void> _loadPendingBridge() async {
@@ -359,6 +498,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   String _bridgeChainName(int chainId) {
+    if (chainId == BridgeService.relayBitcoinChainId) return 'Bitcoin';
     if (chainId == BridgeService.relaySolanaChainId) return 'Solana';
     if (chainId == BridgeService.tronBridgeChainId) return 'TRON';
     for (final chain in widget.blockchain.allChains) {
@@ -368,6 +508,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   String _bridgeNetworkKey(int chainId) {
+    if (chainId == BridgeService.relayBitcoinChainId) return 'bitcoin:mainnet';
     if (chainId == BridgeService.relaySolanaChainId) return 'solana:mainnet';
     if (chainId == BridgeService.tronBridgeChainId) return 'tron:mainnet';
     return 'evm:$chainId';
@@ -442,10 +583,21 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _requestQuote();
       }
     }
+    if (oldWidget.walletAddress != widget.walletAddress) {
+      _bitcoinPoll?.cancel();
+      _isCheckingBitcoin = false;
+      _bitcoinReceive = null;
+      _bitcoinRecovery = null;
+      _bitcoinHasPending = false;
+      _bitcoinRecoveryLoaded = false;
+      _resetQuote();
+      unawaited(_loadFamilyAddresses());
+    }
   }
 
   @override
   void dispose() {
+    _bitcoinPoll?.cancel();
     _debounce?.cancel();
     _amountController.dispose();
     super.dispose();
@@ -494,9 +646,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   /// Relay chain list is unavailable, no filtering is applied.
   List<EvmChain> _destinationChains() {
     final relayIds = _relayChainIds;
+    if (_isBitcoinOrigin && relayIds == null) return [];
     final evmChains = widget.blockchain.allChains.where((chain) {
       if (chain.family != ChainFamily.evm) return false;
-      if (!_isSolanaOrigin &&
+      if (!_isBitcoinOrigin &&
+          !_isSolanaOrigin &&
           chain.chainId == widget.blockchain.activeChain.chainId) {
         return false;
       }
@@ -506,7 +660,14 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       ...evmChains,
       // Solana destination requires the wallet to have a Solana address.
       if (!_isSolanaOrigin && _solanaAddress != null) _solanaChain,
-      if (!_isTronOrigin && _tronAddress != null) _tronChain,
+      if (!_isTronOrigin && !_isBitcoinOrigin && _tronAddress != null)
+        _tronChain,
+      if (!_isBitcoinOrigin &&
+          !_isTronOrigin &&
+          _bitcoinAllowed &&
+          _bitcoinReceive != null &&
+          relayIds?.contains(BridgeService.relayBitcoinChainId) == true)
+        _bitcoinChain,
     ];
   }
 
@@ -524,6 +685,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
   void _requestQuote() {
     _debounce?.cancel();
+    if (_isBitcoinOrigin) {
+      _quoteSeq++;
+      _quote = null;
+    }
     _debounce = Timer(const Duration(milliseconds: 600), _fetchQuote);
     setState(() {});
   }
@@ -536,6 +701,19 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final toChain = _toChain;
     final wallet = widget.walletAddress;
     if (from == null || toChain == null || wallet == null || wallet.isEmpty) {
+      return;
+    }
+    if (_isBitcoinOrigin &&
+        (!_bitcoinAllowed ||
+            widget.blockchain.activeNetworkKey != 'bitcoin:mainnet' ||
+            _bitcoinReceive == null)) {
+      if (mounted) {
+        setState(() {
+          _resetQuote();
+          _quoteError =
+              'Bitcoin bridges require an available Mainnet seed account.';
+        });
+      }
       return;
     }
     if (_isTronOrigin && widget.blockchain.activeNetworkKey != 'tron:mainnet') {
@@ -573,7 +751,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
     final isSolanaOrigin = _isSolanaOrigin;
     final isTronOrigin = _isTronOrigin;
-    final originChainId = isSolanaOrigin
+    final originChainId = _isBitcoinOrigin
+        ? BridgeService.relayBitcoinChainId
+        : isSolanaOrigin
         ? BridgeService.relaySolanaChainId
         : isTronOrigin
         ? BridgeService.tronBridgeChainId
@@ -596,11 +776,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
     final isSolanaDestination = toChain.family == ChainFamily.solana;
     final isTronDestination = toChain.family == ChainFamily.tron;
-    final recipient = isSolanaDestination
+    final recipient = toChain.family == ChainFamily.bitcoin
+        ? _bitcoinReceive?.address
+        : isSolanaDestination
         ? _solanaAddress
         : isTronDestination
         ? _tronAddress
-        : (isSolanaOrigin || isTronOrigin ? _evmAddress : wallet);
+        : (isSolanaOrigin || isTronOrigin || _isBitcoinOrigin
+              ? _evmAddress
+              : wallet);
     if (recipient == null || recipient.isEmpty) {
       setState(() {
         _resetQuote();
@@ -613,7 +797,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       return;
     }
 
-    final originCurrency = isSolanaOrigin
+    final originCurrency = _isBitcoinOrigin
+        ? BridgeService.bitcoinNativeCurrency
+        : isSolanaOrigin
         ? (from.contractAddress?.isNotEmpty == true
               ? from.contractAddress!
               : BridgeService.solanaNativeCurrency)
@@ -633,7 +819,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     // chain's native coin. Relay accepts any output token, not only native.
     final destinationCurrency =
         _toCurrency?.address ??
-        (isSolanaDestination
+        (toChain.family == ChainFamily.bitcoin
+            ? BridgeService.bitcoinNativeCurrency
+            : isSolanaDestination
             ? BridgeService.solanaNativeCurrency
             : isTronDestination
             ? BridgeService.tronNativeCurrency
@@ -645,7 +833,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       originCurrency: originCurrency,
       destinationCurrency: destinationCurrency,
       amountWei: amountWei,
-      walletAddress: wallet,
+      walletAddress: _isBitcoinOrigin ? _bitcoinReceive!.address : wallet,
       recipientAddress: recipient,
       amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
       slippageBps: _slippageBps,
@@ -662,6 +850,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   // ── Interactions ────────────────────────────────────────────────────────
 
   void _setPercentage(int percent) {
+    if (_isBitcoinOrigin) {
+      unawaited(_setBitcoinPercentage(percent));
+      return;
+    }
     final token = _fromToken;
     if (token == null || token.balance <= 0) return;
     var amount = token.balance * percent / 100;
@@ -676,6 +868,90 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _amountController.text = amount.toStringAsFixed(6);
     });
     _requestQuote();
+  }
+
+  Future<void> _setBitcoinPercentage(int percent) async {
+    if (_isBridging ||
+        _isQuoting ||
+        _bitcoinHasPending ||
+        percent <= 0 ||
+        percent > 100) {
+      return;
+    }
+    final identity = widget.blockchain.activeWalletAddress.trim().toLowerCase();
+    final preview = _quote?.bitcoinQuote;
+    if (percent == 100 && preview == null) {
+      ToastUtils.showInfo(
+        'Enter an amount to find a bridge route before using Max.',
+      );
+      return;
+    }
+    final originalText = _amountController.text;
+    final sequence = _quoteSeq;
+    final destination = _toChain?.chainId;
+    bool current() =>
+        mounted &&
+        _isBitcoinOrigin &&
+        _bitcoinAllowed &&
+        widget.blockchain.activeNetworkKey == 'bitcoin:mainnet' &&
+        widget.blockchain.activeWalletAddress.trim().toLowerCase() ==
+            identity &&
+        _quoteSeq == sequence &&
+        _amountController.text == originalText &&
+        _toChain?.chainId == destination;
+    if (!current()) return;
+    setState(() => _isQuoting = true);
+    var changed = false;
+    try {
+      BigInt amount;
+      if (percent == 100) {
+        final request = preview!.request;
+        final committed = await _bridgeService.commitQuote(
+          originChainId: request.originChainId,
+          destinationChainId: request.destinationChainId,
+          originCurrency: request.originCurrency,
+          destinationCurrency: request.destinationCurrency,
+          amountWei: request.amount.toString(),
+          walletAddress: request.sender,
+          recipientAddress: request.recipient,
+          slippageBps: _slippageBps,
+        );
+        if (!current() || committed?.bitcoinQuote?.depositAddress == null) {
+          return;
+        }
+        // Rust calculates the maximum against an actual provider destination;
+        // no percentage gas buffer or transaction-weight formula lives here.
+        amount = await _bitcoinFunding.planner.maximumAmount(
+          identity,
+          BitcoinProductNetwork.mainnet,
+          committed!.bitcoinQuote!.depositAddress!,
+          isCurrent: current,
+        );
+      } else {
+        final snapshot = await _bitcoinFunding.planner.wallet.refresh(
+          identity,
+          BitcoinProductNetwork.mainnet,
+          isCurrent: current,
+        );
+        amount =
+            snapshot.spendableSats * BigInt.from(percent) ~/ BigInt.from(100);
+      }
+      if (!current() || amount <= BigInt.zero) return;
+      setState(() {
+        _selectedPercentage = percent;
+        _amountController.text = BitcoinAmountUtils.format(amount);
+      });
+      changed = true;
+    } catch (_) {
+      if (mounted) {
+        ToastUtils.showInfo(
+          'Unable to calculate the Bitcoin amount. Refresh the bridge route.',
+        );
+      }
+    } finally {
+      if (mounted && _quoteSeq == sequence) setState(() => _isQuoting = false);
+      if (mounted && changed) _requestQuote();
+    }
   }
 
   Future<void> _selectFromToken() async {
@@ -727,6 +1003,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   Future<void> _selectToCurrency() async {
     final toChain = _toChain;
     if (toChain == null) return;
+    if (toChain.family == ChainFamily.bitcoin) return;
     final selected = await showModalBottomSheet<BridgeCurrency>(
       context: context,
       backgroundColor: const Color(0xFF0E0E0E),
@@ -755,6 +1032,26 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   void _flipChains() {
     final toChain = _toChain;
     if (toChain == null) return;
+    if (toChain.family == ChainFamily.bitcoin) {
+      if (!_bitcoinAllowed || _bitcoinReceive == null) return;
+      final oldOrigin = _isSolanaOrigin
+          ? _solanaChain
+          : widget.blockchain.activeChain;
+      widget.blockchain.setActiveNetworkKey(NetworkKey.bitcoin('mainnet'));
+      _afterFlip(oldOrigin);
+      return;
+    }
+    if (_isBitcoinOrigin) {
+      if (toChain.family == ChainFamily.solana) {
+        widget.blockchain.setActiveNetworkKey(NetworkKey.solana('mainnet'));
+      } else if (toChain.family == ChainFamily.evm) {
+        widget.blockchain.setActiveChainByChainId(toChain.chainId);
+      } else {
+        return;
+      }
+      _afterFlip(_bitcoinChain);
+      return;
+    }
 
     if (_isSolanaOrigin && toChain.family == ChainFamily.evm) {
       // Solana → EVM becomes EVM → Solana.
@@ -810,7 +1107,35 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   bool get _hasSufficientBalance {
     final token = _fromToken;
     if (token == null) return false;
+    if (_isBitcoinOrigin) {
+      try {
+        final amount = AmountUtils.parseDecimalToBaseUnits(
+          _amountController.text.replaceAll(',', ''),
+          8,
+        );
+        final snapshot = _bitcoinFunding.planner.wallet.cached(
+          widget.blockchain.activeWalletAddress,
+          BitcoinProductNetwork.mainnet,
+        );
+        // An unavailable snapshot is resolved by the authoritative core planner,
+        // never by converting a token UI double back into satoshis.
+        return amount > BigInt.zero &&
+            (snapshot == null || amount <= snapshot.spendableSats);
+      } catch (_) {
+        return false;
+      }
+    }
     return _amountValue > 0 && _amountValue <= token.balance;
+  }
+
+  String get _bitcoinBalanceText {
+    final snapshot = _bitcoinFunding.planner.wallet.cached(
+      widget.blockchain.activeWalletAddress,
+      BitcoinProductNetwork.mainnet,
+    );
+    return snapshot == null
+        ? '— BTC'
+        : '${BitcoinAmountUtils.format(snapshot.totalSats)} BTC';
   }
 
   String? get _buttonLabel {
@@ -828,11 +1153,151 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       !_isBridging &&
       !_isQuoting &&
       _pendingOperation == null &&
+      !_bitcoinHasPending &&
+      (_toChain?.family != ChainFamily.bitcoin || _bitcoinAllowed) &&
+      (!_isBitcoinOrigin ||
+          _bitcoinRecoveryLoaded &&
+              _bitcoinAllowed &&
+              widget.blockchain.activeNetworkKey == 'bitcoin:mainnet') &&
       _quote != null &&
       _hasSufficientBalance &&
       widget.walletAddress != null &&
       (_toCurrency == null || !_bridgeCurrencyBlocked(_toCurrency!)) &&
       _quote!.canBeginExecution;
+
+  bool _bitcoinDestinationCurrent(BridgeQuote quote) {
+    final bitcoin = quote.bitcoinQuote;
+    if (bitcoin == null) return true;
+    final from = _fromToken;
+    if (from == null || from.decimals != bitcoin.originDecimals) return false;
+    final currency = from.contractAddress?.isNotEmpty == true
+        ? from.contractAddress!
+        : _isSolanaOrigin
+        ? BridgeService.solanaNativeCurrency
+        : BridgeService.nativeCurrency;
+    if (_isSolanaOrigin
+        ? currency != bitcoin.request.originCurrency
+        : currency.toLowerCase() !=
+              bitcoin.request.originCurrency.toLowerCase()) {
+      return false;
+    }
+    try {
+      if (AmountUtils.parseDecimalToBaseUnits(
+            _amountController.text.replaceAll(',', ''),
+            from.decimals,
+          ) !=
+          bitcoin.request.amount) {
+        return false;
+      }
+    } catch (_) {
+      return false;
+    }
+    if (!_bitcoinAllowed ||
+        bitcoin.request.bitcoinOrigin ||
+        !bitcoin.committed ||
+        !DateTime.now().isBefore(bitcoin.approvalExpiresAt) ||
+        _toChain?.chainId != bitcoin.request.destinationChainId ||
+        _bitcoinReceive?.address != bitcoin.request.recipient) {
+      return false;
+    }
+    if (_isSolanaOrigin) {
+      return widget.blockchain.activeNetworkKey == 'solana:mainnet' &&
+          widget.walletAddress == bitcoin.request.sender;
+    }
+    return widget.blockchain.activeFamily == ChainFamily.evm &&
+        widget.blockchain.activeChain.chainId ==
+            bitcoin.request.originChainId &&
+        widget.walletAddress?.toLowerCase() ==
+            bitcoin.request.sender.toLowerCase();
+  }
+
+  Future<bool> _confirmBitcoinDestination(BridgeQuote quote) async {
+    final bitcoin = quote.bitcoinQuote;
+    if (bitcoin == null) return true;
+    if (!_bitcoinDestinationCurrent(quote)) return false;
+    final from = _fromToken!;
+    final accepted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF101010),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheet) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Confirm bridge',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '${AmountUtils.formatBaseUnits(BigInt.parse(quote.amountIn), from.decimals, maxFractionDigits: from.decimals)} ${from.symbol}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Minimum received on Bitcoin Mainnet',
+                style: TextStyle(color: Colors.white70),
+              ),
+              Text(
+                '${BitcoinAmountUtils.format(bitcoin.minimumAmountOut)} BTC',
+                style: const TextStyle(color: Colors.white, fontSize: 20),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Receive address',
+                style: TextStyle(color: Colors.white70),
+              ),
+              SelectableText(
+                bitcoin.request.recipient,
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Refund address on the origin network',
+                style: TextStyle(color: Colors.white70),
+              ),
+              SelectableText(
+                bitcoin.request.sender,
+                style: const TextStyle(color: Colors.white),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Provider: Relay · Approve before ${TimeOfDay.fromDateTime(bitcoin.approvalExpiresAt.toLocal()).format(sheet)}',
+                style: const TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Origin submission and Bitcoin delivery are tracked separately.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: () => Navigator.pop(sheet, true),
+                child: const Text('Confirm bridge'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return accepted == true && mounted && _bitcoinDestinationCurrent(quote);
+  }
 
   Future<void> _executeBridge() async {
     var quote = _quote;
@@ -843,11 +1308,21 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _pendingOperation != null) {
       return;
     }
+    if (quote.bitcoinQuote != null && !_bitcoinAllowed) {
+      setState(
+        () => _quoteError = 'Bitcoin bridging is unavailable right now.',
+      );
+      return;
+    }
     if (_toCurrency != null && _bridgeCurrencyBlocked(_toCurrency!)) {
       setState(() {
         _quoteError =
             'This destination token is not verified. Select a verified token and check its contract address.';
       });
+      return;
+    }
+    if (_isBitcoinOrigin) {
+      await _executeBitcoinBridge(quote);
       return;
     }
 
@@ -859,7 +1334,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       if (toChain == null || wallet == null || wallet.isEmpty) return;
       final isSolanaDestination = toChain.family == ChainFamily.solana;
       final isTronDestination = toChain.family == ChainFamily.tron;
-      final recipient = isSolanaDestination
+      final recipient = toChain.family == ChainFamily.bitcoin
+          ? _bitcoinReceive?.address
+          : isSolanaDestination
           ? _solanaAddress
           : isTronDestination
           ? _tronAddress
@@ -876,7 +1353,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           : (from.contractAddress ?? '');
       final destinationCurrency =
           _toCurrency?.address ??
-          (isSolanaDestination
+          (toChain.family == ChainFamily.bitcoin
+              ? BridgeService.bitcoinNativeCurrency
+              : isSolanaDestination
               ? BridgeService.solanaNativeCurrency
               : isTronDestination
               ? BridgeService.tronNativeCurrency
@@ -920,6 +1399,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       });
     }
 
+    if (!await _confirmBitcoinDestination(quote)) return;
+    if (!mounted) return;
+
     // SECURITY: bound what the relay-crafted EVM transactions can move. When
     // bridging the native token the total native value across steps must not
     // exceed the quoted input; for ERC-20 bridges no step may carry native
@@ -960,6 +1442,12 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       String? latestTxHash;
 
       for (var stepIndex = 0; stepIndex < quote.steps.length; stepIndex++) {
+        if (!_bitcoinDestinationCurrent(quote)) {
+          controller.setError(
+            'The Bitcoin bridge quote expired or the wallet changed. Refresh before continuing.',
+          );
+          return;
+        }
         final step = quote.steps[stepIndex];
         final isFinalStep = stepIndex == quote.steps.length - 1;
         if (step.isSolanaTransfer) {
@@ -1231,6 +1719,152 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
   }
 
+  Future<void> _executeBitcoinBridge(BridgeQuote preview) async {
+    final identity = widget.blockchain.activeWalletAddress.trim().toLowerCase();
+    final refund = _bitcoinReceive;
+    final request = preview.bitcoinQuote?.request;
+    final text = _amountController.text;
+    final destinationCurrency = _toCurrency?.address;
+    bool current() =>
+        mounted &&
+        _bitcoinAllowed &&
+        _isBitcoinOrigin &&
+        widget.blockchain.activeNetworkKey == 'bitcoin:mainnet' &&
+        widget.blockchain.activeWalletAddress.trim().toLowerCase() ==
+            identity &&
+        _amountController.text == text &&
+        _toChain?.chainId == request?.destinationChainId &&
+        _toCurrency?.address == destinationCurrency &&
+        _bitcoinReceive?.address == refund?.address;
+    if (refund == null || request == null || !current()) return;
+    setState(() => _isBridging = true);
+    try {
+      if (AmountUtils.parseDecimalToBaseUnits(text.replaceAll(',', ''), 8) !=
+              request.amount ||
+          _fromToken?.symbol != 'BTC' ||
+          _fromToken?.decimals != 8 ||
+          _fromToken?.contractAddress?.isNotEmpty == true) {
+        throw StateError('Bitcoin bridge input changed');
+      }
+      final committed = await _bridgeService.commitQuote(
+        originChainId: request.originChainId,
+        destinationChainId: request.destinationChainId,
+        originCurrency: request.originCurrency,
+        destinationCurrency: request.destinationCurrency,
+        amountWei: request.amount.toString(),
+        walletAddress: request.sender,
+        recipientAddress: request.recipient,
+        slippageBps: _slippageBps,
+        amountUsd: _fromToken!.priceUsd > 0
+            ? _amountValue * _fromToken!.priceUsd
+            : null,
+      );
+      if (!current() ||
+          committed?.bitcoinQuote == null ||
+          !committed!.committed) {
+        throw StateError('Bitcoin bridge commitment unavailable');
+      }
+      final prepared = await _bitcoinFunding.prepare(
+        identity,
+        committed.bitcoinQuote!,
+        refundAddress: refund,
+        isCurrent: current,
+      );
+      if (!mounted || !current()) return;
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (confirmationContext) => BitcoinTransferConfirmationScreen(
+            transfer: prepared.transfer,
+            bridgeQuote: prepared.quote,
+            bridgeDestinationName: _toChain?.name,
+            bridgeDestinationSymbol: _toCurrency?.symbol ?? _toChain?.symbol,
+            onConfirm: (_) async {
+              final result = await _bitcoinFunding.execute(
+                prepared,
+                isCurrent: current,
+                authenticate: () async {
+                  await WalletVaultService.lockAll();
+                  if (!current() || !confirmationContext.mounted) return false;
+                  return await requestWalletUnlock(confirmationContext) &&
+                      current();
+                },
+              );
+              if (mounted) {
+                setState(() {
+                  _bitcoinHasPending = true;
+                  _bitcoinRecovery = null;
+                  _quote = null;
+                });
+                unawaited(
+                  widget.blockchain
+                      .refreshBitcoinAccountAfterTransaction(
+                        identity,
+                        BitcoinProductNetwork.mainnet,
+                        isCurrent: () =>
+                            mounted &&
+                            widget.blockchain.activeWalletAddress
+                                    .trim()
+                                    .toLowerCase() ==
+                                identity,
+                      )
+                      .catchError((Object _) {}),
+                );
+                unawaited(
+                  _walletHistoryService
+                      .recordBridgeSubmitted(
+                        walletAddress: identity,
+                        txHash: result.txid,
+                        chainId: BridgeService.relayBitcoinChainId,
+                        networkName: 'Bitcoin',
+                        networkKey: 'bitcoin:mainnet',
+                        fromTokenSymbol: 'BTC',
+                        fromAmount: BitcoinAmountUtils.format(request.amount),
+                        toTokenSymbol:
+                            _toCurrency?.symbol ?? _toChain?.symbol ?? 'Token',
+                        destinationNetworkName: _toChain?.name ?? 'Destination',
+                      )
+                      .catchError((Object _) {}),
+                );
+              }
+              if (confirmationContext.mounted) {
+                Navigator.of(confirmationContext).pop();
+              }
+              ToastUtils.showInfo(
+                result.status == BitcoinSubmissionStatus.accepted
+                    ? 'Bitcoin submitted. Bridge delivery is still processing.'
+                    : 'Checking the Bitcoin submission. Do not pay this bridge again.',
+              );
+              if (mounted) unawaited(_checkBitcoinBridge());
+            },
+          ),
+        ),
+      );
+    } on BitcoinSplitFundsException {
+      if (mounted) {
+        setState(
+          () => _quoteError =
+              'BTC is split across address formats. One format must cover the bridge amount and network fee.',
+        );
+      }
+    } on BitcoinPendingInputsException {
+      if (mounted) {
+        setState(
+          () => _quoteError =
+              'These Bitcoin funds are reserved by an earlier submission. Check its outcome before paying again.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _quoteError =
+              'Unable to prepare this Bitcoin bridge. Review any saved attempt before retrying.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isBridging = false);
+    }
+  }
+
   // ── Build ───────────────────────────────────────────────────────────────
 
   @override
@@ -1242,7 +1876,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     // active network is Solana, the active EVM chain otherwise.
     final fromChainName = widget.blockchain.activeNetworkName;
     final fromChainLogo = widget.blockchain.activeNetworkLogoUrl;
-    final fromTokenIconChainId = _isSolanaOrigin || _isTronOrigin
+    final fromTokenIconChainId =
+        _isBitcoinOrigin || _isSolanaOrigin || _isTronOrigin
         ? null
         : widget.blockchain.activeChain.chainId;
 
@@ -1256,8 +1891,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       // Use the selected token's decimals; otherwise the chain's native
       // decimals (SOL uses 9, EVM gas tokens 18).
       final outDecimals =
+          quote.bitcoinQuote?.destinationDecimals ??
           _toCurrency?.decimals ??
-          (toChain?.family == ChainFamily.solana
+          (toChain?.family == ChainFamily.bitcoin
+              ? 8
+              : toChain?.family == ChainFamily.solana
               ? 9
               : toChain?.family == ChainFamily.tron
               ? 6
@@ -1265,7 +1903,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       toAmountText = AmountUtils.formatBaseUnits(
         outWei,
         outDecimals,
-        maxFractionDigits: 6,
+        maxFractionDigits: toChain?.family == ChainFamily.bitcoin ? 8 : 6,
       );
     }
     final destinationUsd = quote == null
@@ -1280,6 +1918,42 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_bitcoinHasPending || _bitcoinRecovery != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF171717),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(switch (_bitcoinRecovery?.phase) {
+                    BitcoinBridgePhase.bitcoinSubmitted =>
+                      'Bitcoin submitted · awaiting confirmation',
+                    BitcoinBridgePhase.bitcoinConfirmed =>
+                      'Bitcoin confirmed · checking bridge delivery',
+                    BitcoinBridgePhase.bridgeProcessing => 'Bridge processing',
+                    BitcoinBridgePhase.delivered => 'Destination delivered',
+                    BitcoinBridgePhase.refundReported =>
+                      'Refund reported · verification required. Do not pay again.',
+                    BitcoinBridgePhase.refunded =>
+                      'Relay reports the refund completed. Check your network balances.',
+                    BitcoinBridgePhase.reviewRequired =>
+                      'Bridge needs review. Your payment remains recorded.',
+                    _ => 'Checking the saved Bitcoin bridge. Do not pay again.',
+                  }, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ),
+                TextButton(
+                  onPressed: _isCheckingBitcoin ? null : _checkBitcoinBridge,
+                  child: Text(_isCheckingBitcoin ? 'Checking…' : 'Check'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         if (_pendingOperation != null) ...[
           Container(
             margin: const EdgeInsets.only(bottom: 12),
@@ -1393,7 +2067,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${(from?.balance ?? 0).toStringAsFixed(4)} ${from?.symbol ?? ''}',
+                    _isBitcoinOrigin
+                        ? _bitcoinBalanceText
+                        : '${(from?.balance ?? 0).toStringAsFixed(4)} ${from?.symbol ?? ''}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(

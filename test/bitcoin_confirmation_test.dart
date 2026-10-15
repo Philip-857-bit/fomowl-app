@@ -9,6 +9,8 @@ import 'package:fomowl_wallet/widgets/advanced_transaction_details.dart';
 import 'package:fomowl_wallet/utils/bitcoin_amount_utils.dart';
 import 'package:fomowl_wallet/models/bitcoin_network_data.dart';
 import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
+import 'package:fomowl_wallet/models/bitcoin_bridge_quote.dart';
+import 'bitcoin_bridge_journal_test.dart' as bridge_fixtures;
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_native_crypto.dart';
 import 'package:fomowl_wallet/services/bitcoin/bitcoin_send_service.dart';
 import 'package:fomowl_wallet/screens/wallet/bitcoin_transfer_confirmation_screen.dart';
@@ -50,6 +52,27 @@ Future<BitcoinPreparedTransfer> transfer({
   );
 }
 
+BitcoinBridgeQuote bridgeFor(
+  BitcoinPreparedTransfer prepared, {
+  int extraSats = 0,
+}) {
+  final now = DateTime.now().toUtc();
+  final base = bridge_fixtures.quote(now);
+  final request = BitcoinBridgeRequest(
+    originChainId: base.request.originChainId,
+    destinationChainId: base.request.destinationChainId,
+    originCurrency: base.request.originCurrency,
+    destinationCurrency: base.request.destinationCurrency,
+    sender: base.request.sender,
+    recipient: base.request.recipient,
+    amount: prepared.plan.recipientTotalSat + BigInt.from(extraSats),
+  );
+  final wire = base.toJson();
+  (wire['intent'] as Map)['amount'] = request.amount.toString();
+  wire['bitcoinDepositAddress'] = prepared.plan.recipients.single.address;
+  return BitcoinBridgeQuote.fromJson(wire, expected: request, now: now);
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(installTestFonts);
@@ -57,6 +80,107 @@ void main() {
     GoogleFonts.config.allowRuntimeFetching = false;
     await RustLib.init();
   });
+  testWidgets(
+    'Bitcoin bridge confirmation shows destination minimum and refund from the bound quote',
+    (tester) async {
+      final prepared = (await tester.runAsync(transfer))!;
+      final bridge = bridgeFor(prepared);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BitcoinTransferConfirmationScreen(
+            transfer: prepared,
+            bridgeQuote: bridge,
+            bridgeDestinationName: 'Base',
+            bridgeDestinationSymbol: 'USDC',
+            onConfirm: (_) async {},
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () => validateBitcoinTransferPlan(plan: prepared.plan),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Bridge destination'), findsOneWidget);
+      expect(find.text('Base'), findsOneWidget);
+      expect(find.text('Minimum received'), findsOneWidget);
+      expect(find.text(bridge.request.recipient), findsOneWidget);
+      expect(find.text('Refund address'), findsOneWidget);
+      expect(find.text('Relay'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('bitcoin-confirm-transfer')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+  testWidgets(
+    'a different Bitcoin bridge funding amount cannot enable confirmation',
+    (tester) async {
+      final prepared = (await tester.runAsync(transfer))!;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: BitcoinTransferConfirmationScreen(
+            transfer: prepared,
+            bridgeQuote: bridgeFor(prepared, extraSats: 1),
+            onConfirm: (_) async {
+              fail('Changed bridge was approved');
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('bitcoin-confirm-transfer')),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+  testWidgets(
+    'replacing a displayed bridge quote invalidates its previous approval',
+    (tester) async {
+      final prepared = (await tester.runAsync(transfer))!;
+      Future<void> show(BitcoinBridgeQuote quote) => tester.pumpWidget(
+        MaterialApp(
+          home: BitcoinTransferConfirmationScreen(
+            transfer: prepared,
+            bridgeQuote: quote,
+            onConfirm: (_) async {},
+          ),
+        ),
+      );
+      await show(bridgeFor(prepared));
+      await tester.runAsync(
+        () => validateBitcoinTransferPlan(plan: prepared.plan),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('bitcoin-confirm-transfer')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      await show(bridgeFor(prepared, extraSats: 1));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const Key('bitcoin-confirm-transfer')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'confirmation presents the immutable native plan and approves that exact object',
     (tester) async {

@@ -10,6 +10,8 @@ import '../../l10n/app_localizations_en.dart';
 import 'package:flutter/material.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/bitcoin_bill_funding_plan.dart';
+import '../../models/bitcoin_bridge_quote.dart';
+import '../../utils/amount_utils.dart';
 import '../../services/bitcoin/bitcoin_native_crypto.dart';
 import '../../services/bitcoin/bitcoin_send_service.dart';
 import '../../src/rust/api/bitcoin_transaction.dart';
@@ -19,11 +21,17 @@ import '../../utils/bitcoin_amount_utils.dart';
 class BitcoinTransferConfirmationScreen extends StatefulWidget {
   final BitcoinPreparedTransfer transfer;
   final BitcoinBillFundingPlan? billInvoice;
+  final BitcoinBridgeQuote? bridgeQuote;
+  final String? bridgeDestinationName;
+  final String? bridgeDestinationSymbol;
   final Future<void> Function(BitcoinPreparedTransfer)? onConfirm;
   const BitcoinTransferConfirmationScreen({
     super.key,
     required this.transfer,
     this.billInvoice,
+    this.bridgeQuote,
+    this.bridgeDestinationName,
+    this.bridgeDestinationSymbol,
     this.onConfirm,
   });
   @override
@@ -35,18 +43,53 @@ class _BitcoinTransferConfirmationScreenState
     extends State<BitcoinTransferConfirmationScreen> {
   bool _verified = false;
   bool _busy = false;
+  bool _validationStarted = false;
+  int _validationGeneration = 0;
   String? _error;
   @override
-  void initState() {
-    super.initState();
-    _validate();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_validationStarted) {
+      _validationStarted = true;
+      _validate();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant BitcoinTransferConfirmationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.transfer, widget.transfer) ||
+        !identical(oldWidget.billInvoice, widget.billInvoice) ||
+        !identical(oldWidget.bridgeQuote, widget.bridgeQuote)) {
+      _verified = false;
+      _error = null;
+      _validate();
+    }
   }
 
   Future<void> _validate() async {
+    final generation = ++_validationGeneration;
     try {
       final transfer = widget.transfer;
       final account = NativeBitcoinCrypto.metadata(transfer.plan.account);
       final invoice = widget.billInvoice;
+      final bridge = widget.bridgeQuote;
+      if (bridge != null &&
+          (invoice != null ||
+              !bridge.committed ||
+              !bridge.request.bitcoinOrigin ||
+              transfer.network != BitcoinProductNetwork.mainnet ||
+              transfer.plan.recipients.length != 1 ||
+              transfer.plan.recipients.single.address !=
+                  bridge.depositAddress ||
+              transfer.plan.recipientTotalSat != bridge.request.amount ||
+              transfer.plan.recipients.single.amountSat !=
+                  bridge.request.amount ||
+              !DateTime.now().isBefore(bridge.approvalExpiresAt))) {
+        throw StateError(
+          'Bitcoin bridge quote does not match the approved plan',
+        );
+      }
       if (invoice != null &&
           (transfer.walletIdentity.trim().toLowerCase() !=
                   invoice.walletIdentity ||
@@ -65,9 +108,11 @@ class _BitcoinTransferConfirmationScreenState
         throw StateError('Bitcoin confirmation identity mismatch');
       }
       await validateBitcoinTransferPlan(plan: transfer.plan);
-      if (mounted) setState(() => _verified = true);
+      if (mounted && generation == _validationGeneration) {
+        setState(() => _verified = true);
+      }
     } catch (_) {
-      if (mounted) {
+      if (mounted && generation == _validationGeneration) {
         setState(
           () => _error =
               (Localizations.of<AppLocalizations>(context, AppLocalizations) ??
@@ -82,6 +127,11 @@ class _BitcoinTransferConfirmationScreenState
     if (!_verified || _busy || widget.onConfirm == null) return;
     setState(() => _busy = true);
     try {
+      if (widget.bridgeQuote case final bridge?) {
+        if (!DateTime.now().isBefore(bridge.approvalExpiresAt)) {
+          throw StateError('Bitcoin bridge quote expired');
+        }
+      }
       await widget.onConfirm!(widget.transfer);
     } catch (_) {
       if (mounted) {
@@ -222,6 +272,47 @@ class _BitcoinTransferConfirmationScreenState
                             accentColor: chain.accentColor,
                           ),
                           const SizedBox(height: 28),
+                          if (widget.bridgeQuote case final bridge?) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Column(
+                                children: [
+                                  _detail(
+                                    'Bridge destination',
+                                    widget.bridgeDestinationName ??
+                                        'Chain ${bridge.request.destinationChainId}',
+                                  ),
+                                  _detail(
+                                    'Receive address',
+                                    bridge.request.recipient,
+                                  ),
+                                  _detail(
+                                    'Minimum received',
+                                    '${AmountUtils.formatBaseUnits(bridge.minimumAmountOut, bridge.destinationDecimals, maxFractionDigits: bridge.destinationDecimals)} ${widget.bridgeDestinationSymbol ?? bridge.request.destinationCurrency}',
+                                  ),
+                                  _detail('Provider', 'Relay'),
+                                  _detail(
+                                    'Refund address',
+                                    bridge.request.sender,
+                                  ),
+                                  _detail(
+                                    'Approve before',
+                                    TimeOfDay.fromDateTime(
+                                      bridge.approvalExpiresAt.toLocal(),
+                                    ).format(context),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
                           if (widget.billInvoice case final invoice?) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
