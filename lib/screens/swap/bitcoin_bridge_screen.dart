@@ -59,7 +59,10 @@ class _BitcoinBridgeScreenState extends State<BitcoinBridgeScreen> {
         return Scaffold(
           backgroundColor: AppColors.background,
           bottomNavigationBar: widget.showBottomNavigation
-              ? const BottomNavBar(currentTab: AppShellTab.swap)
+              ? const BottomNavBar(
+                  currentTab: AppShellTab.swap,
+                  bitcoinBridgeOnly: true,
+                )
               : null,
           body: SafeArea(
             child: SingleChildScrollView(

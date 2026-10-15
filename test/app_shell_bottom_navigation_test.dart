@@ -6,6 +6,32 @@ import 'package:fomowl_wallet/features/shell/app_shell_controller.dart';
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 
 void main() {
+  testWidgets(
+    'Bitcoin exposes Bridge rather than ordinary Swap in navigation',
+    (tester) async {
+      AppShellTab? tapped;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            bottomNavigationBar: AppShellBottomNavigation(
+              currentTab: AppShellTab.wallet,
+              bitcoinBridgeOnly: true,
+              onTabTap: (tab) => tapped = tab,
+              onPayTap: () {},
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Bridge'), findsOneWidget);
+      expect(find.text('Swap'), findsNothing);
+      await tester.tap(find.text('Bridge'));
+      await tester.pump();
+      expect(tapped, AppShellTab.swap);
+      expect(find.text('Discover'), findsOneWidget);
+    },
+  );
   testWidgets('shell navigation keeps Pay separate from tab selection', (
     tester,
   ) async {

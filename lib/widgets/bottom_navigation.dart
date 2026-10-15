@@ -10,9 +10,14 @@ import 'floating_navigation_pill.dart';
 /// Wallet, Swap, and Discover are destinations. Pay is an action that opens a
 /// full-screen mini app and therefore never has a selected state.
 class BottomNavBar extends StatefulWidget {
-  const BottomNavBar({super.key, required this.currentTab});
+  const BottomNavBar({
+    super.key,
+    required this.currentTab,
+    this.bitcoinBridgeOnly = false,
+  });
 
   final AppShellTab? currentTab;
+  final bool bitcoinBridgeOnly;
 
   @override
   State<BottomNavBar> createState() => _BottomNavBarState();
@@ -66,7 +71,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
         FloatingNavigationDestinationData(
           icon: Icons.swap_horiz_outlined,
           selectedIcon: Icons.swap_horiz_rounded,
-          label: l.swap,
+          label: widget.bitcoinBridgeOnly ? 'Bridge' : l.swap,
           selected: widget.currentTab == AppShellTab.swap,
           onTap: () => _openTab(AppShellTab.swap),
         ),

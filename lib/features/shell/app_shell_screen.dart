@@ -65,15 +65,6 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   void _selectTab(AppShellTab tab) {
-    if (tab == AppShellTab.swap &&
-        context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bitcoin swaps and bridges are not available yet.'),
-        ),
-      );
-      return;
-    }
     if (tab == AppShellTab.swap && !_canOpenTradingScreen()) {
       _showUnavailable(RuntimeFeature.swaps);
       return;
@@ -83,7 +74,9 @@ class _AppShellScreenState extends State<AppShellScreen> {
 
   bool _canOpenTradingScreen() {
     final family = context.read<BlockchainService>().activeFamily;
-    if (family == ChainFamily.bitcoin) return false;
+    // Bitcoin's destination exposes Bridge only and enforces route/runtime
+    // availability itself. Keep it reachable for network selection and review.
+    if (family == ChainFamily.bitcoin) return true;
     return _runtimeConfig.snapshot.allowsTradingScreen(
       limitSupported: family == ChainFamily.evm || family == ChainFamily.solana,
     );
@@ -213,10 +206,7 @@ class _AppShellScreenState extends State<AppShellScreen> {
               showBottomNavigation: false,
               refreshRevision: _walletRefreshRevision,
             ),
-            BitcoinCapabilityGate(
-              feature: 'Swaps and bridges',
-              builder: (_) => const SwapScreen(showBottomNavigation: false),
-            ),
+            const SwapScreen(showBottomNavigation: false),
             BitcoinCapabilityGate(
               feature: 'DApps',
               builder: (_) => const DiscoverScreen(),
@@ -224,6 +214,9 @@ class _AppShellScreenState extends State<AppShellScreen> {
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(
+          bitcoinBridgeOnly:
+              context.watch<BlockchainService>().activeFamily ==
+              ChainFamily.bitcoin,
           currentTab: controller.currentTab,
           onTabTap: _selectTab,
           onPayTap: _openOwlletPay,
