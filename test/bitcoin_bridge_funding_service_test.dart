@@ -73,6 +73,52 @@ Future<BitcoinDerivedAddress> provision(Planner planner) async {
 
 void main() {
   test(
+    'provider failure is distinct and keeps the funding guard across restart',
+    () async {
+      final planner = Planner(Crypto());
+      final refund = await provision(planner);
+      final executor = execution.Executor();
+      BitcoinBridgeFundingService service() => BitcoinBridgeFundingService(
+        planner: planner,
+        executor: executor,
+        now: () => initial,
+        chainStatus: (_, _) async => facts.chain(),
+        providerStatus: (_) async =>
+            const BridgeStatus(status: 'failure', txHashes: []),
+      );
+      final first = service();
+      final prepared = await first.prepare(
+        execution.identity,
+        facts.quote(initial),
+        refundAddress: refund,
+        isCurrent: () => true,
+      );
+      await first.execute(
+        prepared,
+        authenticate: () async => true,
+        isCurrent: () => true,
+      );
+      final restarted = service();
+      expect(
+        (await restarted.recover(
+          execution.identity,
+          isCurrent: () => true,
+        )).phase,
+        BitcoinBridgePhase.failed,
+      );
+      expect(await restarted.journal.pending(execution.identity), isNotNull);
+      await expectLater(
+        restarted.prepare(
+          execution.identity,
+          facts.quote(initial, marker: '2'),
+          refundAddress: refund,
+          isCurrent: () => true,
+        ),
+        throwsStateError,
+      );
+    },
+  );
+  test(
     'refund completion persists separately and never retries a payment',
     () async {
       var confirmed = false;

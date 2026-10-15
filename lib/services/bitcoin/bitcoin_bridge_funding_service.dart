@@ -36,6 +36,7 @@ enum BitcoinBridgePhase {
   delivered,
   refundReported,
   refunded,
+  failed,
   reviewRequired,
 }
 
@@ -66,7 +67,7 @@ class BitcoinBridgeFundingRecovery {
       return BitcoinBridgePhase.refundReported;
     }
     if (providerStatus?.isFailure == true) {
-      return BitcoinBridgePhase.reviewRequired;
+      return BitcoinBridgePhase.failed;
     }
     if (delivered) {
       return BitcoinBridgePhase.delivered;

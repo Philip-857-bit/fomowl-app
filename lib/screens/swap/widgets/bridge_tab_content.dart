@@ -1940,6 +1940,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                       'Refund reported · verification required. Do not pay again.',
                     BitcoinBridgePhase.refunded =>
                       'Relay reports the refund completed. Check your network balances.',
+                    BitcoinBridgePhase.failed =>
+                      'Bridge failed · review required. Do not pay again.',
                     BitcoinBridgePhase.reviewRequired =>
                       'Bridge needs review. Your payment remains recorded.',
                     _ => 'Checking the saved Bitcoin bridge. Do not pay again.',

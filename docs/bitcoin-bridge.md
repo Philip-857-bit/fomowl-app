@@ -39,6 +39,10 @@ Common Bitcoin input reservations are reconciled separately and never cleared
 by bridge-provider status. Completed request IDs remain protected throughout
 the provider order window.
 
+A provider-declared failure is shown separately from an inconsistent state
+requiring review. Both retain the funding guard. Neither authorizes retrying the
+deposit, including after restarting the app.
+
 ## Limits and validation evidence
 
 No production policy is enabled by this change. No seed, XPUB, private key or
