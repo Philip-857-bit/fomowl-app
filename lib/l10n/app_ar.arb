@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "أدخل معدل رسوم أعلى بعدد صحيح.",
   "bitcoinRbfUnavailable": "تعذر إكمال التسريع. تحقق من حالة المعاملة قبل المحاولة مجددًا.",
   "bitcoinRbfSubmitted": "تم إرسال المعاملة البديلة. لا يزال التأكيد قيد الانتظار.",
-  "bitcoinRbfUnknown": "نتيجة الإرسال غير معروفة. تحقق من حالة المعاملة قبل المحاولة مجددًا."
+  "bitcoinRbfUnknown": "نتيجة الإرسال غير معروفة. تحقق من حالة المعاملة قبل المحاولة مجددًا.",
+  "transactionNonce": "الرقم التسلسلي للمعاملة",
+  "transactionExecutionFee": "رسوم التنفيذ",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "وحدات الحوسبة المستخدمة",
+  "transactionEnergyUsed": "الطاقة المستخدمة",
+  "transactionBandwidthUsed": "عرض النطاق المستخدم",
+  "transactionEnergyFee": "رسوم الطاقة",
+  "transactionBandwidthFee": "رسوم عرض النطاق",
+  "transactionEnergyFeeLimit": "حد رسوم الطاقة",
+  "transactionEstimatedFee": "رسوم الشبكة المقدرة",
+  "transactionUnavailable": "غير متاح",
+  "transactionResources": "موارد الشبكة",
+  "transactionAfterConfirmation": "بعد التأكيد",
+  "transactionCalculatedByNetwork": "تحسبها الشبكة",
+  "transactionEstimatedTotal": "الإجمالي المقدر"
 }

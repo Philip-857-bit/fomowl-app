@@ -16,6 +16,7 @@ import '../../services/bitcoin/bitcoin_network_service.dart';
 import '../../services/blockchain/bitcoin_catalog.dart';
 import '../../services/wallet_history_service.dart';
 import '../../utils/bitcoin_amount_utils.dart';
+import '../../widgets/advanced_transaction_details.dart';
 
 class BitcoinTransactionDetailsSheet extends StatefulWidget {
   final WalletHistoryEntry entry;
@@ -259,24 +260,11 @@ class _BitcoinTransactionDetailsSheetState
                                 ? AppColors.success
                                 : chainTheme.accentColor,
                           ),
-                          detail(
-                            l.bitcoinConfirmations,
-                            confirmations.toString(),
-                          ),
-                          detail(
-                            l.bitcoinBlockHeight,
-                            blockHeight?.toString() ?? '-',
-                          ),
                         ],
                       ),
                       const SizedBox(height: 14),
                       HistoryDetailSection(
                         children: [
-                          detail(
-                            l.bitcoinTransactionId,
-                            _txid ?? '-',
-                            monospace: true,
-                          ),
                           detail(
                             l.bitcoinNetworkFee,
                             _resolvedSubmission != null
@@ -296,6 +284,53 @@ class _BitcoinTransactionDetailsSheetState
                                     isUtc: true,
                                   ).toLocal().toString(),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      AdvancedTransactionDetails(
+                        key: ValueKey('receipt-advanced-$_txid'),
+                        title: l.advancedTransactionDetails,
+                        items: [
+                          AdvancedTransactionDetail(
+                            label: l.bitcoinTransactionId,
+                            value: _txid ?? l.transactionUnavailable,
+                            selectable: true,
+                          ),
+                          AdvancedTransactionDetail(
+                            label: l.bitcoinConfirmations,
+                            value: confirmations.toString(),
+                          ),
+                          if (blockHeight != null)
+                            AdvancedTransactionDetail(
+                              label: l.bitcoinBlockHeight,
+                              value: blockHeight.toString(),
+                            ),
+                          if (_replacement != null) ...[
+                            AdvancedTransactionDetail(
+                              label: l.bitcoinInputType,
+                              value:
+                                  _replacement!.transfer.purpose ==
+                                      BitcoinPurpose.bip84
+                                  ? l.bitcoinNativeSegwit
+                                  : l.bitcoinTaproot,
+                            ),
+                            AdvancedTransactionDetail(
+                              label: l.bitcoinFeeRate,
+                              value:
+                                  '${_replacement!.transfer.plan.feeRateSatVb} sat/vB',
+                            ),
+                            AdvancedTransactionDetail(
+                              label: l.bitcoinEstimatedSize,
+                              value:
+                                  '${_replacement!.transfer.plan.estimatedVbytes} vB',
+                            ),
+                            AdvancedTransactionDetail(
+                              label: l.bitcoinReplaceByFee,
+                              value: _replacement!.transfer.plan.rbf
+                                  ? l.bitcoinEnabled
+                                  : l.bitcoinDisabled,
+                            ),
+                          ],
                         ],
                       ),
                       if (snapshot.hasError) ...[

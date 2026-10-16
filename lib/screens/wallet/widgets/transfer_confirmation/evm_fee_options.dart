@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../models/evm_fee_quote.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../theme/app_chain_theme.dart';
-import '../../../../utils/amount_utils.dart';
+import '../../../../widgets/transaction_protocol_details.dart';
 import '../../../../widgets/advanced_transaction_details.dart';
 
 String evmFeeTierLabel(AppLocalizations l, EvmFeeTier tier) => switch (tier) {
@@ -23,8 +23,6 @@ class EvmFeeOptions extends StatelessWidget {
     required this.onChanged,
     this.enabled = true,
   });
-  String _gwei(BigInt value) =>
-      '${AmountUtils.formatBaseUnits(value, 9, maxFractionDigits: 9)} Gwei';
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -97,37 +95,7 @@ class EvmFeeOptions extends StatelessWidget {
         const SizedBox(height: 12),
         AdvancedTransactionDetails(
           title: l.advancedTransactionDetails,
-          items: [
-            AdvancedTransactionDetail(
-              label: l.evmTransactionType,
-              value: quote.type == EvmTransactionType.dynamicFee
-                  ? l.evmDynamicTransaction
-                  : l.evmLegacyTransaction,
-            ),
-            AdvancedTransactionDetail(
-              label: l.evmGasLimit,
-              value: quote.gasLimit.toString(),
-            ),
-            if (quote.type == EvmTransactionType.legacy)
-              AdvancedTransactionDetail(
-                label: l.evmGasPrice,
-                value: _gwei(quote.gasPriceWei!),
-              )
-            else ...[
-              AdvancedTransactionDetail(
-                label: l.evmBaseFee,
-                value: _gwei(quote.baseFeePerGasWei!),
-              ),
-              AdvancedTransactionDetail(
-                label: l.evmPriorityFee,
-                value: _gwei(quote.maxPriorityFeePerGasWei!),
-              ),
-              AdvancedTransactionDetail(
-                label: l.evmMaxFee,
-                value: _gwei(quote.maxFeePerGasWei!),
-              ),
-            ],
-          ],
+          items: TransactionProtocolDetails.evmQuote(l, quote),
         ),
       ],
     );

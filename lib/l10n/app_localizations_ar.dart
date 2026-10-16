@@ -2170,4 +2170,49 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get bitcoinRbfUnknown =>
       'نتيجة الإرسال غير معروفة. تحقق من حالة المعاملة قبل المحاولة مجددًا.';
+
+  @override
+  String get transactionNonce => 'الرقم التسلسلي للمعاملة';
+
+  @override
+  String get transactionExecutionFee => 'رسوم التنفيذ';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'وحدات الحوسبة المستخدمة';
+
+  @override
+  String get transactionEnergyUsed => 'الطاقة المستخدمة';
+
+  @override
+  String get transactionBandwidthUsed => 'عرض النطاق المستخدم';
+
+  @override
+  String get transactionEnergyFee => 'رسوم الطاقة';
+
+  @override
+  String get transactionBandwidthFee => 'رسوم عرض النطاق';
+
+  @override
+  String get transactionEnergyFeeLimit => 'حد رسوم الطاقة';
+
+  @override
+  String get transactionEstimatedFee => 'رسوم الشبكة المقدرة';
+
+  @override
+  String get transactionUnavailable => 'غير متاح';
+
+  @override
+  String get transactionResources => 'موارد الشبكة';
+
+  @override
+  String get transactionAfterConfirmation => 'بعد التأكيد';
+
+  @override
+  String get transactionCalculatedByNetwork => 'تحسبها الشبكة';
+
+  @override
+  String get transactionEstimatedTotal => 'الإجمالي المقدر';
 }

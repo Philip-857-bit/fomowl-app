@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 import 'package:fomowl_wallet/models/evm_fee_quote.dart';
 import 'package:fomowl_wallet/models/chain.dart';
+import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/services/currency_controller.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
@@ -45,7 +46,7 @@ class Wallet extends WalletService {
   }
 }
 
-Future<void> mount(WidgetTester tester, Wallet wallet) async {
+Future<void> mount(WidgetTester tester, Wallet wallet, {Token? token}) async {
   tester.view.physicalSize = const Size(480, 1000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -67,8 +68,11 @@ Future<void> mount(WidgetTester tester, Wallet wallet) async {
             arguments: {
               'networkKey': 'evm:1',
               'toAddress': '0x2222222222222222222222222222222222222222',
-              'amountBaseUnits': BigInt.one,
-              'amount': '0.000000000000000001',
+              'amountBaseUnits': token == null
+                  ? BigInt.one
+                  : BigInt.from(1000000),
+              'amount': token == null ? '0.000000000000000001' : '999',
+              'token': ?token,
             },
           ),
           builder: (_) => TransferConfirmationScreen(walletService: wallet),
@@ -82,6 +86,34 @@ Future<void> mount(WidgetTester tester, Wallet wallet) async {
 void main() {
   setUp(installTestFonts);
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  testWidgets(
+    'ERC20 maximum total retains separate token and native fee units',
+    (tester) async {
+      final wallet = Wallet();
+      await mount(
+        tester,
+        wallet,
+        token: const Token(
+          symbol: 'USDC',
+          name: 'USD Coin',
+          balance: 1,
+          valueUsd: 0,
+          changePercent24h: 0,
+          decimals: 6,
+          contractAddress: '0x3333333333333333333333333333333333333333',
+          networkKey: 'evm:1',
+        ),
+      );
+      wallet.response.complete(fixtures.quotes());
+      await tester.pumpAndSettle();
+      final card = tester.widget<TransactionDetailsCard>(
+        find.byType(TransactionDetailsCard),
+      );
+      expect(card.maxTotalDisplay, '1 USDC + 0.0000462000000462 ETH');
+      expect(card.maxTotalDisplay, isNot(contains('999')));
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'confirmation waits for quote and changes primary fee with selected tier',
     (tester) async {

@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "Introduce una tarifa entera más alta.",
   "bitcoinRbfUnavailable": "No se pudo acelerar. Comprueba el estado de la transacción antes de intentarlo de nuevo.",
   "bitcoinRbfSubmitted": "Transacción de reemplazo enviada. La confirmación sigue pendiente.",
-  "bitcoinRbfUnknown": "El resultado del envío es desconocido. Comprueba el estado de la transacción antes de intentarlo de nuevo."
+  "bitcoinRbfUnknown": "El resultado del envío es desconocido. Comprueba el estado de la transacción antes de intentarlo de nuevo.",
+  "transactionNonce": "Nonce de la transacción",
+  "transactionExecutionFee": "Comisión de ejecución",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "Unidades de cómputo usadas",
+  "transactionEnergyUsed": "Energía utilizada",
+  "transactionBandwidthUsed": "Ancho de banda utilizado",
+  "transactionEnergyFee": "Comisión de energía",
+  "transactionBandwidthFee": "Comisión de ancho de banda",
+  "transactionEnergyFeeLimit": "Límite de comisión de energía",
+  "transactionEstimatedFee": "Comisión de red estimada",
+  "transactionUnavailable": "No disponible",
+  "transactionResources": "Recursos de red",
+  "transactionAfterConfirmation": "Después de la confirmación",
+  "transactionCalculatedByNetwork": "Calculada por la red",
+  "transactionEstimatedTotal": "Total estimado"
 }

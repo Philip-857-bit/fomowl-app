@@ -732,5 +732,20 @@
   "bitcoinRbfHigherFee": "请输入更高的整数费率。",
   "bitcoinRbfUnavailable": "无法完成加速。请先检查交易状态，再重试。",
   "bitcoinRbfSubmitted": "替换交易已提交，仍在等待确认。",
-  "bitcoinRbfUnknown": "提交结果未知。请先检查交易状态，再重试。"
+  "bitcoinRbfUnknown": "提交结果未知。请先检查交易状态，再重试。",
+  "transactionNonce": "交易序号",
+  "transactionExecutionFee": "执行费用",
+  "transactionSlot": "时隙",
+  "transactionComputeUnits": "已使用计算单元",
+  "transactionEnergyUsed": "已使用能量",
+  "transactionBandwidthUsed": "已使用带宽",
+  "transactionEnergyFee": "能量费用",
+  "transactionBandwidthFee": "带宽费用",
+  "transactionEnergyFeeLimit": "能量费用上限",
+  "transactionEstimatedFee": "预估网络费用",
+  "transactionUnavailable": "暂不可用",
+  "transactionResources": "网络资源",
+  "transactionAfterConfirmation": "确认后",
+  "transactionCalculatedByNetwork": "由网络计算",
+  "transactionEstimatedTotal": "预估总计"
 }

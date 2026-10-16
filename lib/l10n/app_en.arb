@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "Enter a higher whole-number fee rate.",
   "bitcoinRbfUnavailable": "Speed up could not be completed. Check the transaction status before trying again.",
   "bitcoinRbfSubmitted": "Replacement submitted. Confirmation is still pending.",
-  "bitcoinRbfUnknown": "The submission outcome is unknown. Check the transaction status before trying again."
+  "bitcoinRbfUnknown": "The submission outcome is unknown. Check the transaction status before trying again.",
+  "transactionNonce": "Transaction nonce",
+  "transactionExecutionFee": "Execution fee",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "Compute units used",
+  "transactionEnergyUsed": "Energy used",
+  "transactionBandwidthUsed": "Bandwidth used",
+  "transactionEnergyFee": "Energy fee",
+  "transactionBandwidthFee": "Bandwidth fee",
+  "transactionEnergyFeeLimit": "Energy fee limit",
+  "transactionEstimatedFee": "Estimated network fee",
+  "transactionUnavailable": "Unavailable",
+  "transactionResources": "Network resources",
+  "transactionAfterConfirmation": "After confirmation",
+  "transactionCalculatedByNetwork": "Calculated by network",
+  "transactionEstimatedTotal": "Estimated total"
 }

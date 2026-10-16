@@ -2177,4 +2177,50 @@ class AppLocalizationsHa extends AppLocalizations {
   @override
   String get bitcoinRbfUnknown =>
       'Ba a san sakamakon aikawa ba. Duba matsayin mu’amalar kafin sake gwadawa.';
+
+  @override
+  String get transactionNonce => 'Lambar mu’amala';
+
+  @override
+  String get transactionExecutionFee => 'Kuɗin aiwatarwa';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits =>
+      'Rukunin lissafi da aka yi amfani da su';
+
+  @override
+  String get transactionEnergyUsed => 'Energy da aka yi amfani da shi';
+
+  @override
+  String get transactionBandwidthUsed => 'Bandwidth da aka yi amfani da shi';
+
+  @override
+  String get transactionEnergyFee => 'Kuɗin Energy';
+
+  @override
+  String get transactionBandwidthFee => 'Kuɗin Bandwidth';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Iyakar kuɗin Energy';
+
+  @override
+  String get transactionEstimatedFee => 'Ƙiyasin kuɗin hanyar sadarwa';
+
+  @override
+  String get transactionUnavailable => 'Ba a samu ba';
+
+  @override
+  String get transactionResources => 'Albarkatun hanyar sadarwa';
+
+  @override
+  String get transactionAfterConfirmation => 'Bayan tabbatarwa';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Hanyar sadarwa za ta lissafa';
+
+  @override
+  String get transactionEstimatedTotal => 'Ƙiyasin jimilla';
 }

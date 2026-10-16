@@ -4057,6 +4057,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The submission outcome is unknown. Check the transaction status before trying again.'**
   String get bitcoinRbfUnknown;
+
+  /// No description provided for @transactionNonce.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction nonce'**
+  String get transactionNonce;
+
+  /// No description provided for @transactionExecutionFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Execution fee'**
+  String get transactionExecutionFee;
+
+  /// No description provided for @transactionSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Slot'**
+  String get transactionSlot;
+
+  /// No description provided for @transactionComputeUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute units used'**
+  String get transactionComputeUnits;
+
+  /// No description provided for @transactionEnergyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy used'**
+  String get transactionEnergyUsed;
+
+  /// No description provided for @transactionBandwidthUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bandwidth used'**
+  String get transactionBandwidthUsed;
+
+  /// No description provided for @transactionEnergyFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy fee'**
+  String get transactionEnergyFee;
+
+  /// No description provided for @transactionBandwidthFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Bandwidth fee'**
+  String get transactionBandwidthFee;
+
+  /// No description provided for @transactionEnergyFeeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy fee limit'**
+  String get transactionEnergyFeeLimit;
+
+  /// No description provided for @transactionEstimatedFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated network fee'**
+  String get transactionEstimatedFee;
+
+  /// No description provided for @transactionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get transactionUnavailable;
+
+  /// No description provided for @transactionResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Network resources'**
+  String get transactionResources;
+
+  /// No description provided for @transactionAfterConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'After confirmation'**
+  String get transactionAfterConfirmation;
+
+  /// No description provided for @transactionCalculatedByNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated by network'**
+  String get transactionCalculatedByNetwork;
+
+  /// No description provided for @transactionEstimatedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated total'**
+  String get transactionEstimatedTotal;
 }
 
 class _AppLocalizationsDelegate

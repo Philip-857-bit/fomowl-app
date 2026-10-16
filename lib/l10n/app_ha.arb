@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "Shigar da ƙimar kuɗi mafi girma a cikakken lamba.",
   "bitcoinRbfUnavailable": "Ba a iya ƙara sauri ba. Duba matsayin mu’amalar kafin sake gwadawa.",
   "bitcoinRbfSubmitted": "An aika mu’amalar musanya. Ana jiran tabbatarwa.",
-  "bitcoinRbfUnknown": "Ba a san sakamakon aikawa ba. Duba matsayin mu’amalar kafin sake gwadawa."
+  "bitcoinRbfUnknown": "Ba a san sakamakon aikawa ba. Duba matsayin mu’amalar kafin sake gwadawa.",
+  "transactionNonce": "Lambar mu’amala",
+  "transactionExecutionFee": "Kuɗin aiwatarwa",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "Rukunin lissafi da aka yi amfani da su",
+  "transactionEnergyUsed": "Energy da aka yi amfani da shi",
+  "transactionBandwidthUsed": "Bandwidth da aka yi amfani da shi",
+  "transactionEnergyFee": "Kuɗin Energy",
+  "transactionBandwidthFee": "Kuɗin Bandwidth",
+  "transactionEnergyFeeLimit": "Iyakar kuɗin Energy",
+  "transactionEstimatedFee": "Ƙiyasin kuɗin hanyar sadarwa",
+  "transactionUnavailable": "Ba a samu ba",
+  "transactionResources": "Albarkatun hanyar sadarwa",
+  "transactionAfterConfirmation": "Bayan tabbatarwa",
+  "transactionCalculatedByNetwork": "Hanyar sadarwa za ta lissafa",
+  "transactionEstimatedTotal": "Ƙiyasin jimilla"
 }

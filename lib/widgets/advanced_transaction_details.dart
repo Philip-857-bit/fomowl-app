@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 class AdvancedTransactionDetail {
   final String label;
   final String value;
-  const AdvancedTransactionDetail({required this.label, required this.value});
+  final bool selectable;
+  const AdvancedTransactionDetail({
+    required this.label,
+    required this.value,
+    this.selectable = false,
+  });
 }
 
 /// Presentation only: no account, transaction or chain-specific dependencies.
@@ -71,14 +76,23 @@ class _AdvancedTransactionDetailsState
                         ),
                         const SizedBox(width: 16),
                         Flexible(
-                          child: Text(
-                            item.value,
-                            textAlign: TextAlign.end,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child: item.selectable
+                              ? SelectableText(
+                                  item.value,
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(
+                                  item.value,
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ],
                     ),

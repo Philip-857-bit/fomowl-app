@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "Saisissez un taux de frais entier plus élevé.",
   "bitcoinRbfUnavailable": "L’accélération n’a pas pu être effectuée. Vérifiez le statut de la transaction avant de réessayer.",
   "bitcoinRbfSubmitted": "Transaction de remplacement soumise. La confirmation est encore en attente.",
-  "bitcoinRbfUnknown": "Le résultat de l’envoi est inconnu. Vérifiez le statut de la transaction avant de réessayer."
+  "bitcoinRbfUnknown": "Le résultat de l’envoi est inconnu. Vérifiez le statut de la transaction avant de réessayer.",
+  "transactionNonce": "Nonce de transaction",
+  "transactionExecutionFee": "Frais d’exécution",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "Unités de calcul utilisées",
+  "transactionEnergyUsed": "Énergie utilisée",
+  "transactionBandwidthUsed": "Bande passante utilisée",
+  "transactionEnergyFee": "Frais d’énergie",
+  "transactionBandwidthFee": "Frais de bande passante",
+  "transactionEnergyFeeLimit": "Limite des frais d’énergie",
+  "transactionEstimatedFee": "Frais de réseau estimés",
+  "transactionUnavailable": "Indisponible",
+  "transactionResources": "Ressources du réseau",
+  "transactionAfterConfirmation": "Après confirmation",
+  "transactionCalculatedByNetwork": "Calculés par le réseau",
+  "transactionEstimatedTotal": "Total estimé"
 }

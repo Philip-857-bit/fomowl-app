@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "Tẹ òṣùwọ̀n owó odidi tó ga jù sílẹ̀.",
   "bitcoinRbfUnavailable": "A kò lè mú un yára. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.",
   "bitcoinRbfSubmitted": "A ti fi ìṣòwò ìrọ́pò ránṣẹ́. Ìmúdájú ṣì ń dúró.",
-  "bitcoinRbfUnknown": "A kò mọ àbájáde fífi ránṣẹ́. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú."
+  "bitcoinRbfUnknown": "A kò mọ àbájáde fífi ránṣẹ́. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.",
+  "transactionNonce": "Nọ́mbà ìdúnàádúrà",
+  "transactionExecutionFee": "Owó ìmúṣẹ",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "Àwọn ẹyọ ìṣírò tí a lò",
+  "transactionEnergyUsed": "Energy tí a lò",
+  "transactionBandwidthUsed": "Bandwidth tí a lò",
+  "transactionEnergyFee": "Owó Energy",
+  "transactionBandwidthFee": "Owó Bandwidth",
+  "transactionEnergyFeeLimit": "Ààlà owó Energy",
+  "transactionEstimatedFee": "Àfojúsùn owó nẹ́tíwọ́ọ̀kì",
+  "transactionUnavailable": "Kò sí ní báyìí",
+  "transactionResources": "Àwọn orísun nẹ́tíwọ́ọ̀kì",
+  "transactionAfterConfirmation": "Lẹ́yìn ìmúdájú",
+  "transactionCalculatedByNetwork": "Nẹ́tíwọ́ọ̀kì yóò ṣe ìṣírò",
+  "transactionEstimatedTotal": "Àfojúsùn àpapọ̀"
 }

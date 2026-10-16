@@ -130,11 +130,27 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Confirmed'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget);
+      expect(find.text('2'), findsNothing);
+      expect(find.text(hash), findsNothing);
       expect(find.text('0.0000004 BTC'), findsOneWidget);
       expect(find.text('0.0000001 BTC (10 sats)'), findsOneWidget);
+      final advanced = find.byKey(
+        const Key('advanced-transaction-details-toggle'),
+      );
+      await tester.scrollUntilVisible(
+        advanced,
+        150,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(advanced);
+      await tester.pumpAndSettle();
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text(hash), findsOneWidget);
       expect(find.text('Gas used'), findsNothing);
       expect(find.textContaining('Gwei'), findsNothing);
+      await tester.tap(advanced);
+      await tester.pumpAndSettle();
+      expect(find.text('2'), findsNothing);
     },
   );
   testWidgets(

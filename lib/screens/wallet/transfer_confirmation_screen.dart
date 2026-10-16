@@ -31,6 +31,7 @@ import '../../models/evm_outbound_transaction.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/entrance_motion.dart';
+import '../../widgets/advanced_transaction_details.dart';
 import '../transaction/transaction_processing_screen.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/confirm_button.dart';
@@ -357,21 +358,6 @@ class _TransferConfirmationScreenState
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
   }
 
-  String _formatGasFeeNative(double value, String symbol) {
-    final decimals = value >= 0.01
-        ? 6
-        : value >= 0.0001
-        ? 8
-        : 10;
-    final formatted = value
-        .toStringAsFixed(decimals)
-        .replaceFirst(RegExp(r'0+$'), '');
-    final normalized = formatted.endsWith('.')
-        ? formatted.substring(0, formatted.length - 1)
-        : formatted;
-    return '$normalized $symbol';
-  }
-
   BigInt _estimatedNonEvmFeeBaseUnits(ChainFamily family) {
     return switch (family) {
       ChainFamily.bitcoin => throw UnsupportedError(
@@ -420,7 +406,7 @@ class _TransferConfirmationScreenState
       final decimals = _nativeDecimalsForFamily(family);
       return '≈ ${AmountUtils.formatBaseUnits(_gasFeeWei, decimals, maxFractionDigits: decimals)} $nativeSymbol';
     }
-    return 'Calculated by network';
+    return AppLocalizations.of(context).transactionCalculatedByNetwork;
   }
 
   BigInt? _nativeBalanceBaseUnits(
@@ -912,7 +898,6 @@ class _TransferConfirmationScreenState
     );
     final token = _args?['token'] as Token?;
     final toAddress = _args?['toAddress'] as String? ?? '';
-    final amountText = _args?['amount'] as String? ?? '0';
     final amountInBaseUnits =
         _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
     final blockchain = Provider.of<BlockchainService>(context);
@@ -927,7 +912,9 @@ class _TransferConfirmationScreenState
         (token?.contractAddress?.isEmpty ?? true);
     final parsedAmount = AmountUtils.formatBaseUnits(
       amountInBaseUnits,
-      token?.decimals ?? 18,
+      token?.decimals ?? _nativeDecimalsForFamily(transferFamily),
+      maxFractionDigits:
+          token?.decimals ?? _nativeDecimalsForFamily(transferFamily),
     );
     final tokenUsdPrice = _tokenUsdPrice(blockchain, token);
     final amountValueText = tokenUsdPrice > 0
@@ -944,9 +931,20 @@ class _TransferConfirmationScreenState
       if (amountValueText.isNotEmpty) amountValueText,
       if (tokenRateText.isNotEmpty) tokenRateText,
     ].join(' • ');
-    final maxTotalDisplay = isNative
-        ? '${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? 18)} $symbol'
-        : '$amountText $symbol';
+    final feeKnown =
+        !_isLoadingGas &&
+        !_gasEstimationFailed &&
+        (transferFamily == ChainFamily.evm
+            ? _selectedEvmFee != null
+            : _gasFeeWei > BigInt.zero);
+    final nativeDecimals = _nativeDecimalsForFamily(transferFamily);
+    final exactFee =
+        '${AmountUtils.formatBaseUnits(_gasFeeWei, nativeDecimals, maxFractionDigits: nativeDecimals)} $nativeSymbol';
+    final maxTotalDisplay = !feeKnown
+        ? '$parsedAmount $symbol + ${l.networkFeeLabel}'
+        : isNative
+        ? '${transferFamily == ChainFamily.solana ? '≈ ' : ''}${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? nativeDecimals, maxFractionDigits: token?.decimals ?? nativeDecimals)} $symbol'
+        : '$parsedAmount $symbol + ${transferFamily == ChainFamily.solana ? '≈ ' : ''}$exactFee';
 
     final isEvmTransfer = transferFamily == ChainFamily.evm;
     final gasLabel = !isEvmTransfer
@@ -959,7 +957,7 @@ class _TransferConfirmationScreenState
         ? _formatNonEvmNetworkFeeValue(transferFamily, nativeSymbol)
         : _gasEstimationFailed
         ? 'Error'
-        : l.transactionFeeUpTo(_formatGasFeeNative(_gasFeeEth, nativeSymbol));
+        : l.transactionFeeUpTo(exactFee);
 
     final gasValueUsd = _gasEstimationFailed || _gasFeeUsd <= 0
         ? ''
@@ -1053,7 +1051,11 @@ class _TransferConfirmationScreenState
                               gasLabel: gasLabel,
                               gasValue: gasValue,
                               gasValueUsd: gasValueUsd,
-                              totalLabel: isNative ? l.maxTotal : l.amount,
+                              totalLabel: isEvmTransfer
+                                  ? l.maxTotal
+                                  : transferFamily == ChainFamily.solana
+                                  ? l.transactionEstimatedTotal
+                                  : l.transactionTotal,
                               maxTotalDisplay: maxTotalDisplay,
                               speedLabel:
                                   isEvmTransfer &&
@@ -1073,6 +1075,30 @@ class _TransferConfirmationScreenState
                                 selected: _evmFeeTier,
                                 enabled: !_isConfirming && !_isLoadingGas,
                                 onChanged: _selectEvmFeeTier,
+                              ),
+                            ],
+                            if (!isEvmTransfer) ...[
+                              const SizedBox(height: 14),
+                              AdvancedTransactionDetails(
+                                title: l.advancedTransactionDetails,
+                                items: [
+                                  if (transferFamily == ChainFamily.solana &&
+                                      feeKnown)
+                                    AdvancedTransactionDetail(
+                                      label: l.transactionEstimatedFee,
+                                      value: '≈ $exactFee',
+                                    ),
+                                  if (transferFamily == ChainFamily.tron) ...[
+                                    AdvancedTransactionDetail(
+                                      label: l.networkFeeLabel,
+                                      value: l.transactionCalculatedByNetwork,
+                                    ),
+                                    AdvancedTransactionDetail(
+                                      label: l.transactionResources,
+                                      value: l.transactionAfterConfirmation,
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ],

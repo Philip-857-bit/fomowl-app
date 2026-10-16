@@ -2166,4 +2166,49 @@ class AppLocalizationsIg extends AppLocalizations {
   @override
   String get bitcoinRbfUnknown =>
       'Amaghị nsonaazụ izipu. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ.';
+
+  @override
+  String get transactionNonce => 'Nọmba azụmahịa';
+
+  @override
+  String get transactionExecutionFee => 'Ụgwọ mmejuputa';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'Ngalaba mgbakọ e ji mee ihe';
+
+  @override
+  String get transactionEnergyUsed => 'Energy e jiri rụọ ọrụ';
+
+  @override
+  String get transactionBandwidthUsed => 'Bandwidth e ji mee ihe';
+
+  @override
+  String get transactionEnergyFee => 'Ụgwọ Energy';
+
+  @override
+  String get transactionBandwidthFee => 'Ụgwọ Bandwidth';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Oke ụgwọ Energy';
+
+  @override
+  String get transactionEstimatedFee => 'Atụmatụ ụgwọ netwọkụ';
+
+  @override
+  String get transactionUnavailable => 'Adịghị ugbu a';
+
+  @override
+  String get transactionResources => 'Akụrụngwa netwọkụ';
+
+  @override
+  String get transactionAfterConfirmation => 'Mgbe nkwenye gasịrị';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Netwọkụ ga-agbakọ ya';
+
+  @override
+  String get transactionEstimatedTotal => 'Nchịkọta e mere atụmatụ';
 }

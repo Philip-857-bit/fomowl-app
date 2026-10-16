@@ -2073,4 +2073,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get bitcoinRbfUnknown => '提交结果未知。请先检查交易状态，再重试。';
+
+  @override
+  String get transactionNonce => '交易序号';
+
+  @override
+  String get transactionExecutionFee => '执行费用';
+
+  @override
+  String get transactionSlot => '时隙';
+
+  @override
+  String get transactionComputeUnits => '已使用计算单元';
+
+  @override
+  String get transactionEnergyUsed => '已使用能量';
+
+  @override
+  String get transactionBandwidthUsed => '已使用带宽';
+
+  @override
+  String get transactionEnergyFee => '能量费用';
+
+  @override
+  String get transactionBandwidthFee => '带宽费用';
+
+  @override
+  String get transactionEnergyFeeLimit => '能量费用上限';
+
+  @override
+  String get transactionEstimatedFee => '预估网络费用';
+
+  @override
+  String get transactionUnavailable => '暂不可用';
+
+  @override
+  String get transactionResources => '网络资源';
+
+  @override
+  String get transactionAfterConfirmation => '确认后';
+
+  @override
+  String get transactionCalculatedByNetwork => '由网络计算';
+
+  @override
+  String get transactionEstimatedTotal => '预估总计';
 }

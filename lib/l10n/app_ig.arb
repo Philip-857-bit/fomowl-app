@@ -729,5 +729,20 @@
   "bitcoinRbfHigherFee": "Tinye ọnụego ụgwọ ka elu n’ọnụọgụ zuru ezu.",
   "bitcoinRbfUnavailable": "Enweghị ike ime ya ngwa ngwa. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ.",
   "bitcoinRbfSubmitted": "E zigara azụmahịa nnọchi. A ka na-eche nkwenye.",
-  "bitcoinRbfUnknown": "Amaghị nsonaazụ izipu. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ."
+  "bitcoinRbfUnknown": "Amaghị nsonaazụ izipu. Lelee ọnọdụ azụmahịa tupu ịnwale ọzọ.",
+  "transactionNonce": "Nọmba azụmahịa",
+  "transactionExecutionFee": "Ụgwọ mmejuputa",
+  "transactionSlot": "Slot",
+  "transactionComputeUnits": "Ngalaba mgbakọ e ji mee ihe",
+  "transactionEnergyUsed": "Energy e jiri rụọ ọrụ",
+  "transactionBandwidthUsed": "Bandwidth e ji mee ihe",
+  "transactionEnergyFee": "Ụgwọ Energy",
+  "transactionBandwidthFee": "Ụgwọ Bandwidth",
+  "transactionEnergyFeeLimit": "Oke ụgwọ Energy",
+  "transactionEstimatedFee": "Atụmatụ ụgwọ netwọkụ",
+  "transactionUnavailable": "Adịghị ugbu a",
+  "transactionResources": "Akụrụngwa netwọkụ",
+  "transactionAfterConfirmation": "Mgbe nkwenye gasịrị",
+  "transactionCalculatedByNetwork": "Netwọkụ ga-agbakọ ya",
+  "transactionEstimatedTotal": "Nchịkọta e mere atụmatụ"
 }

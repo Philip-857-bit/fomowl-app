@@ -84,12 +84,16 @@ class TransactionDetailsCard extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              Text(
-                maxTotalDisplay,
-                style: GoogleFonts.outfit(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  maxTotalDisplay,
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],

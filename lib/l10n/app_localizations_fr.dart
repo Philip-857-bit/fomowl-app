@@ -2218,4 +2218,49 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get bitcoinRbfUnknown =>
       'Le résultat de l’envoi est inconnu. Vérifiez le statut de la transaction avant de réessayer.';
+
+  @override
+  String get transactionNonce => 'Nonce de transaction';
+
+  @override
+  String get transactionExecutionFee => 'Frais d’exécution';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'Unités de calcul utilisées';
+
+  @override
+  String get transactionEnergyUsed => 'Énergie utilisée';
+
+  @override
+  String get transactionBandwidthUsed => 'Bande passante utilisée';
+
+  @override
+  String get transactionEnergyFee => 'Frais d’énergie';
+
+  @override
+  String get transactionBandwidthFee => 'Frais de bande passante';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Limite des frais d’énergie';
+
+  @override
+  String get transactionEstimatedFee => 'Frais de réseau estimés';
+
+  @override
+  String get transactionUnavailable => 'Indisponible';
+
+  @override
+  String get transactionResources => 'Ressources du réseau';
+
+  @override
+  String get transactionAfterConfirmation => 'Après confirmation';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Calculés par le réseau';
+
+  @override
+  String get transactionEstimatedTotal => 'Total estimé';
 }

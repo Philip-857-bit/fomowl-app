@@ -2165,4 +2165,49 @@ class AppLocalizationsYo extends AppLocalizations {
   @override
   String get bitcoinRbfUnknown =>
       'A kò mọ àbájáde fífi ránṣẹ́. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.';
+
+  @override
+  String get transactionNonce => 'Nọ́mbà ìdúnàádúrà';
+
+  @override
+  String get transactionExecutionFee => 'Owó ìmúṣẹ';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'Àwọn ẹyọ ìṣírò tí a lò';
+
+  @override
+  String get transactionEnergyUsed => 'Energy tí a lò';
+
+  @override
+  String get transactionBandwidthUsed => 'Bandwidth tí a lò';
+
+  @override
+  String get transactionEnergyFee => 'Owó Energy';
+
+  @override
+  String get transactionBandwidthFee => 'Owó Bandwidth';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Ààlà owó Energy';
+
+  @override
+  String get transactionEstimatedFee => 'Àfojúsùn owó nẹ́tíwọ́ọ̀kì';
+
+  @override
+  String get transactionUnavailable => 'Kò sí ní báyìí';
+
+  @override
+  String get transactionResources => 'Àwọn orísun nẹ́tíwọ́ọ̀kì';
+
+  @override
+  String get transactionAfterConfirmation => 'Lẹ́yìn ìmúdájú';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Nẹ́tíwọ́ọ̀kì yóò ṣe ìṣírò';
+
+  @override
+  String get transactionEstimatedTotal => 'Àfojúsùn àpapọ̀';
 }
