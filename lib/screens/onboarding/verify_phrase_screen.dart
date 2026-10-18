@@ -26,6 +26,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   final List<TextEditingController> _controllers = [];
   final List<FocusNode> _focusNodes = [];
+  final List<bool> _obscureWords = [];
   final Random _random = Random.secure();
 
   List<String>? _originalPhrase;
@@ -74,6 +75,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
     for (var node in _focusNodes) {
       node.dispose();
     }
+    _obscureWords.clear();
     unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
@@ -92,6 +94,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       List.generate(requestedCount, (_) => TextEditingController()),
     );
     _focusNodes.addAll(List.generate(requestedCount, (_) => FocusNode()));
+    _obscureWords.addAll(List.generate(requestedCount, (_) => true));
   }
 
   void _verifyAndContinue() {
@@ -279,6 +282,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                               TextField(
                                 controller: _controllers[index],
                                 focusNode: _focusNodes[index],
+                                obscureText: _obscureWords[index],
+                                maxLines: _obscureWords[index] ? 1 : null,
                                 autocorrect: false,
                                 enableSuggestions: false,
                                 keyboardType: TextInputType.visiblePassword,
@@ -288,10 +293,27 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                   isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureWords[index]
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white54,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureWords[index] =
+                                            !_obscureWords[index];
+                                      });
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
                                 ),
                                 textInputAction:
                                     index < _verificationIndexes.length - 1
