@@ -162,6 +162,10 @@ class ValueFormatter {
     return _formatConvertedCurrencyWithGrouping(_convertFromUsd(value));
   }
 
+  /// Formats an amount already denominated in the selected display currency.
+  static String formatSelectedCurrencyAmount(Decimal amount) =>
+      _formatConvertedCurrencyWithGrouping(amount);
+
   static String _formatConvertedCurrencyWithGrouping(Decimal converted) {
     final fixed = _fixed(converted, 2);
     final parts = fixed.split('.');

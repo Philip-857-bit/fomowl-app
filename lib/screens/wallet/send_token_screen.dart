@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +16,7 @@ import '../../services/recipient_book_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/send_amount_utils.dart';
+import '../../utils/send_amount_conversion.dart';
 import '../../utils/bitcoin_amount_utils.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/bitcoin_network_data.dart';
@@ -62,6 +66,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   Token? _selectedToken;
   AmountInputMode _inputMode = AmountInputMode.token;
   bool _syncingDisplay = false;
+  String _amountCurrencyCode = 'USD';
   bool _isCalculatingMax = false;
   bool _isPreparingBitcoin = false;
   Object? _bitcoinPreparationAttempt;
@@ -76,6 +81,9 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   bool _nonEvmAddressMissing = false;
 
   ChainFamily? _lastFamily;
+  String? _lastNetworkKey;
+  String? _lastWalletScope;
+  Object? _defaultTokenLoad;
   bool _didApplyRouteToken = false;
   bool _receiverSelected = false;
   String _recipientLabel = '';
@@ -91,6 +99,14 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final currency = context.watch<CurrencyController>();
+    if (_amountCurrencyCode != currency.currencyCode) {
+      _amountCurrencyCode = currency.currencyCode;
+      if (_inputMode == AmountInputMode.fiat) {
+        if (_currentConversion() == null) _inputMode = AmountInputMode.token;
+        _setDisplayFromTokenAmount(_amountController.text);
+      }
+    }
     final blockchain = Provider.of<BlockchainService>(context);
     final currentFamily = blockchain.activeFamily;
 
@@ -101,6 +117,8 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       final arg = ModalRoute.of(context)?.settings.arguments;
       if (arg is Token) {
         _lastFamily = currentFamily;
+        _lastNetworkKey = blockchain.activeNetworkKey;
+        _lastWalletScope = blockchain.activeWalletAddress;
         _applySelectedToken(arg);
         return;
       }
@@ -109,8 +127,13 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final tokenIsStale =
         _selectedToken != null &&
         _selectedToken!.networkKey != blockchain.activeNetworkKey;
-    if (_lastFamily != currentFamily || tokenIsStale) {
+    if (_lastFamily != currentFamily ||
+        tokenIsStale ||
+        _lastNetworkKey != blockchain.activeNetworkKey ||
+        _lastWalletScope != blockchain.activeWalletAddress) {
       _lastFamily = currentFamily;
+      _lastNetworkKey = blockchain.activeNetworkKey;
+      _lastWalletScope = blockchain.activeWalletAddress;
       _loadDefaultToken();
     }
   }
@@ -119,16 +142,25 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
   /// hand-off) as the active send token, refreshing the available balance.
   void _applySelectedToken(Token token) {
     if (!mounted) return;
+    _defaultTokenLoad = null;
+    final previous = _selectedToken;
+    if (previous != null &&
+        (previous.networkKey != token.networkKey ||
+            previous.contractAddress != token.contractAddress ||
+            previous.symbol != token.symbol)) {
+      _amountController.clear();
+    }
     setState(() {
       _selectedToken = token;
       _selectedPercentage = null;
       _availableBalance = token.balance;
       _availableBalanceBaseUnits = AmountUtils.parseDecimalToBaseUnits(
-        token.balance.toString(),
+        ValueFormatter.decimalFromNum(token.balance).toString(),
         token.decimals,
       );
-      // Fall back to token mode if the new token has no USD price.
-      if (_inputMode == AmountInputMode.fiat && _currentTokenUsdPrice() <= 0) {
+      // A newly selected asset starts in token units; never reuse fiat text
+      // as an amount of a different asset.
+      if (_inputMode == AmountInputMode.fiat) {
         _inputMode = AmountInputMode.token;
       }
     });
@@ -146,78 +178,91 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   void _handleDisplayChanged() {
     if (_syncingDisplay) return;
-    final raw = _displayController.text.replaceAll(',', '');
-    if (_selectedToken?.networkKey?.startsWith('bitcoin:') == true) {
-      _amountController.text = _displayController.text;
-      if (mounted) setState(() => _selectedPercentage = null);
+    final raw = _displayController.text;
+    if (_inputMode == AmountInputMode.token) {
+      _amountController.text =
+          context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin
+          ? raw
+          : raw.replaceAll(',', '');
+    } else {
+      try {
+        final conversion = _currentConversion();
+        if (conversion == null) {
+          throw const FormatException('Conversion unavailable');
+        }
+        final units = conversion.fiatToBaseUnits(raw);
+        _amountController.text = AmountUtils.formatBaseUnits(
+          units,
+          conversion.decimals,
+          maxFractionDigits: conversion.decimals,
+        );
+      } on FormatException {
+        _amountController.clear();
+      }
+    }
+    if (mounted) setState(() => _selectedPercentage = null);
+  }
+
+  SendAmountConversion? _currentConversion() =>
+      _conversion(context.read<BlockchainService>());
+
+  void _toggleAmountMode() {
+    if (_isPreparingBitcoin || _isCalculatingMax) return;
+    if (_inputMode == AmountInputMode.token && _currentConversion() == null) {
       return;
     }
-    final entered = double.tryParse(raw) ?? 0.0;
-    final tokenUsdPrice = _currentTokenUsdPrice();
-    String tokenAmountText;
-    if (_inputMode == AmountInputMode.token) {
-      tokenAmountText = raw;
-    } else if (entered > 0 && tokenUsdPrice > 0) {
-      final usdValue = ValueFormatter.doubleFromDecimal(
-        ValueFormatter.convertToUsdDecimal(
-          ValueFormatter.decimalFromNum(entered),
-        ),
-      );
-      final tokenAmount = usdValue / tokenUsdPrice;
-      final decimals = _selectedToken?.decimals ?? 18;
-      final displayDecimals = decimals > 8 ? 8 : decimals;
-      tokenAmountText = tokenAmount.toStringAsFixed(displayDecimals);
-      tokenAmountText = _trimTrailingZeros(tokenAmountText);
-    } else {
-      tokenAmountText = '';
-    }
-    _amountController.text = tokenAmountText;
-    if (mounted) {
-      setState(() => _selectedPercentage = null);
-    }
-  }
-
-  String _trimTrailingZeros(String value) {
-    var output = value;
-    while (output.contains('.') && output.endsWith('0')) {
-      output = output.substring(0, output.length - 1);
-    }
-    if (output.endsWith('.')) {
-      output = output.substring(0, output.length - 1);
-    }
-    return output;
-  }
-
-  double _currentTokenUsdPrice() {
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    return _selectedTokenUsdPrice(blockchain);
+    setState(() {
+      _inputMode = _inputMode == AmountInputMode.token
+          ? AmountInputMode.fiat
+          : AmountInputMode.token;
+      _setDisplayFromTokenAmount(_amountController.text);
+    });
   }
 
   void _setDisplayFromTokenAmount(String tokenAmount) {
     _syncingDisplay = true;
-    if (_inputMode == AmountInputMode.token) {
-      _displayController.text = tokenAmount;
-    } else {
-      final tokenValue = double.tryParse(tokenAmount) ?? 0.0;
-      final tokenUsdPrice = _currentTokenUsdPrice();
-      if (tokenValue > 0 && tokenUsdPrice > 0) {
-        final fiatValue = ValueFormatter.doubleFromDecimal(
-          ValueFormatter.convertFromUsdDecimal(
-            ValueFormatter.decimalFromNum(tokenValue * tokenUsdPrice),
-          ),
-        );
-        _displayController.text = fiatValue.toStringAsFixed(2);
+    try {
+      if (_inputMode == AmountInputMode.token) {
+        _displayController.text = tokenAmount;
       } else {
-        _displayController.text = '';
+        final conversion = _currentConversion();
+        final units =
+            context.read<BlockchainService>().activeFamily ==
+                ChainFamily.bitcoin
+            ? BitcoinAmountUtils.parse(tokenAmount)
+            : AmountUtils.parseDecimalToBaseUnits(
+                tokenAmount,
+                _selectedToken?.decimals ?? 18,
+              );
+        _displayController.text = conversion?.baseUnitsToFiat(units) ?? '';
       }
+    } on FormatException {
+      _displayController.clear();
+    } finally {
+      _syncingDisplay = false;
     }
-    _syncingDisplay = false;
   }
 
   Future<void> _loadDefaultToken() async {
     if (!mounted) return;
+    _selectedToken = null;
+    _availableBalance = 0;
+    _availableBalanceBaseUnits = BigInt.zero;
+    _inputMode = AmountInputMode.token;
+    _selectedPercentage = null;
+    _amountController.clear();
+    _setDisplayFromTokenAmount('');
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final family = blockchain.activeFamily;
+    final networkKey = blockchain.activeNetworkKey;
+    final walletScope = blockchain.activeWalletAddress;
+    final load = Object();
+    _defaultTokenLoad = load;
+    bool current() =>
+        mounted &&
+        identical(_defaultTokenLoad, load) &&
+        blockchain.activeNetworkKey == networkKey &&
+        blockchain.activeWalletAddress == walletScope;
 
     // Native token decimals differ per family.
     final int nativeDecimals = switch (family) {
@@ -234,7 +279,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final address = family == ChainFamily.bitcoin
         ? await _walletService.getCurrentWalletAddress()
         : await _walletService.getWalletAddressForFamily(family);
-    if (!mounted) return;
+    if (!current()) return;
 
     if (address == null || address.isEmpty) {
       setState(() {
@@ -248,7 +293,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           decimals: nativeDecimals,
           coinGeckoId: nativeCoinGeckoId,
           imageUrl: BlockchainCatalog.iconUrlForSymbol(nativeSymbol),
-          networkKey: blockchain.activeNetworkKey,
+          networkKey: networkKey,
         );
         _availableBalanceBaseUnits = BigInt.zero;
         _nonEvmAddressMissing = family != ChainFamily.evm;
@@ -271,6 +316,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         _inputMode = AmountInputMode.token;
       } else if (family == ChainFamily.evm) {
         balance = await blockchain.getEthBalance(address);
+        if (!current()) return;
         balanceBaseUnits = await blockchain.getNativeBalanceBaseUnits(address);
       } else {
         // For non-EVM, pull from the already-loaded token list.
@@ -289,7 +335,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
         }
       }
 
-      if (mounted) {
+      if (current()) {
         setState(() {
           _selectedToken = Token(
             symbol: nativeSymbol,
@@ -301,14 +347,14 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
             decimals: nativeDecimals,
             coinGeckoId: nativeCoinGeckoId,
             imageUrl: BlockchainCatalog.iconUrlForSymbol(nativeSymbol),
-            networkKey: blockchain.activeNetworkKey,
+            networkKey: networkKey,
           );
           _availableBalance = balance;
           _availableBalanceBaseUnits = balanceBaseUnits;
         });
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!current()) return;
       setState(() {
         _selectedToken = Token(
           symbol: nativeSymbol,
@@ -320,7 +366,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
           decimals: nativeDecimals,
           coinGeckoId: nativeCoinGeckoId,
           imageUrl: BlockchainCatalog.iconUrlForSymbol(nativeSymbol),
-          networkKey: blockchain.activeNetworkKey,
+          networkKey: networkKey,
         );
         _availableBalanceBaseUnits = BigInt.zero;
       });
@@ -521,7 +567,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final amount = AmountUtils.formatBaseUnits(
       baseUnits,
       decimals,
-      maxFractionDigits: decimals > 8 ? 8 : decimals,
+      maxFractionDigits: decimals,
     );
     _amountController.text = amount;
     _setDisplayFromTokenAmount(amount);
@@ -540,6 +586,16 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     final l = AppLocalizations.of(context);
     final destination = _addressController.text.trim();
     final amountText = _amountController.text.trim();
+    if (_selectedToken == null) {
+      _showError(l.selectTokenTitle);
+      return;
+    }
+    if (_inputMode == AmountInputMode.fiat && _currentConversion() == null) {
+      _showError(
+        '${context.read<CurrencyController>().currencyCode}: ${l.transactionUnavailable}',
+      );
+      return;
+    }
 
     if (destination.isEmpty) {
       _showError(l.enterReceivingAddress);
@@ -548,6 +604,11 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final family = blockchain.activeFamily;
+    final tokenNetwork = _selectedToken?.networkKey;
+    if (tokenNetwork != null && tokenNetwork != blockchain.activeNetworkKey) {
+      _showError(l.selectTokenTitle);
+      return;
+    }
     final isValidAddress = _isValidAddressForFamily(destination, family);
     if (!isValidAddress) {
       _showError(
@@ -770,30 +831,52 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
     }
   }
 
-  double _selectedTokenUsdPrice(BlockchainService blockchain) {
-    final token = _selectedToken;
-    if (token == null) {
-      return 0.0;
-    }
-    if (token.unitPriceUsd > 0) {
-      return token.unitPriceUsd;
-    }
-    final selectedAddress = (token.contractAddress ?? '').toLowerCase();
+  SendAmountConversion? _conversion(BlockchainService blockchain) {
+    final selected = _selectedToken;
+    final rate = context.read<CurrencyController>().amountInputUsdRate;
+    if (selected == null || rate == null) return null;
+    final network = selected.networkKey ?? blockchain.activeNetworkKey;
+    if (network != blockchain.activeNetworkKey) return null;
+    final ignoreAddressCase = NetworkKey.familyOf(network) == ChainFamily.evm;
+    final selectedAddress = selected.contractAddress ?? '';
+    final address = ignoreAddressCase
+        ? selectedAddress.toLowerCase()
+        : selectedAddress;
+    var priced = selected;
     for (final candidate in blockchain.tokens) {
-      final candidateAddress = (candidate.contractAddress ?? '').toLowerCase();
-      if (selectedAddress.isNotEmpty &&
-          selectedAddress == candidateAddress &&
-          candidate.unitPriceUsd > 0) {
-        return candidate.unitPriceUsd;
+      if ((candidate.networkKey ?? blockchain.activeNetworkKey) != network) {
+        continue;
       }
-      if (selectedAddress.isEmpty &&
-          candidateAddress.isEmpty &&
-          candidate.symbol.toUpperCase() == token.symbol.toUpperCase() &&
-          candidate.unitPriceUsd > 0) {
-        return candidate.unitPriceUsd;
+      final rawAddress = candidate.contractAddress ?? '';
+      final candidateAddress = ignoreAddressCase
+          ? rawAddress.toLowerCase()
+          : rawAddress;
+      if (address.isNotEmpty
+          ? candidateAddress == address
+          : candidateAddress.isEmpty &&
+                candidate.symbol.toUpperCase() ==
+                    selected.symbol.toUpperCase()) {
+        priced = candidate;
+        break;
       }
     }
-    return 0.0;
+    if (priced.hasProviderError ||
+        priced.priceUpdatedAt != null &&
+            DateTime.now().toUtc().difference(priced.priceUpdatedAt!.toUtc()) >
+                const Duration(minutes: 30)) {
+      return null;
+    }
+    try {
+      return SendAmountConversion(
+        decimals: selected.decimals,
+        tokenUsdPrice: priced.priceUsd.toString(),
+        tokenBalance: priced.balance.toString(),
+        tokenValueUsd: priced.valueUsd.toString(),
+        usdToFiatRate: rate,
+      );
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Shrinks the amount so a long value (e.g. from the 100% button) always fits
@@ -811,28 +894,41 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    context.select<CurrencyController, String>(
-      (controller) => controller.currencyCode,
-    );
     final blockchain = Provider.of<BlockchainService>(context);
-    final tokenAmount = double.tryParse(
-      _amountController.text.replaceAll(',', ''),
-    );
-    final tokenUsdPrice = _selectedTokenUsdPrice(blockchain);
+    final currency = context.read<CurrencyController>();
+    if (currency.amountInputUsdRate == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(currency.refreshAmountInputRates());
+        }
+      });
+    }
+    final conversion = _conversion(blockchain);
     final tokenSymbol = _selectedToken?.symbol ?? '';
-
-    // Equivalent shown beneath the input:
-    //   token mode → equivalent fiat value
-    //   fiat mode  → equivalent token amount
+    final inputSuffix = _inputMode == AmountInputMode.token
+        ? tokenSymbol
+        : currency.currencyCode;
     String equivalentText = '';
-    if (tokenAmount != null && tokenAmount > 0 && tokenUsdPrice > 0) {
-      if (_inputMode == AmountInputMode.token) {
-        equivalentText =
-            '≈ ${ValueFormatter.formatCurrencyWithGrouping(ValueFormatter.decimalFromNum(tokenAmount * tokenUsdPrice))}';
-      } else {
-        equivalentText =
-            '≈ ${ValueFormatter.formatTokenRateAmount(tokenAmount)} $tokenSymbol';
+    try {
+      final units = blockchain.activeFamily == ChainFamily.bitcoin
+          ? BitcoinAmountUtils.parse(_amountController.text)
+          : AmountUtils.parseDecimalToBaseUnits(
+              _amountController.text,
+              _selectedToken?.decimals ?? 18,
+            );
+      if (units > BigInt.zero) {
+        if (_inputMode == AmountInputMode.fiat) {
+          equivalentText =
+              '≈ ${AmountUtils.formatBaseUnits(units, _selectedToken!.decimals, maxFractionDigits: _selectedToken!.decimals)} $tokenSymbol';
+        } else if (conversion != null) {
+          final fiat = conversion.baseUnitsToFiat(units);
+          equivalentText = fiat == '0.00'
+              ? '< ${ValueFormatter.currencyPrefix}0.01'
+              : '≈ ${ValueFormatter.formatSelectedCurrencyAmount(Decimal.parse(fiat))}';
+        }
       }
+    } on FormatException {
+      // Incomplete input has no spendable amount or estimated equivalent.
     }
 
     if (!_receiverSelected) {
@@ -989,14 +1085,34 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                       ),
                     ),
                     const SizedBox(height: 28),
-                    Text(
-                      'AMOUNT',
-                      style: GoogleFonts.inter(
-                        color: const Color(0xFF94A3B8),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.7,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'AMOUNT',
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF94A3B8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                        Tooltip(
+                          message: '$tokenSymbol ↔ ${currency.currencyCode}',
+                          child: AmountInputModeToggle(
+                            key: const Key('send-amount-mode'),
+                            mode: _inputMode,
+                            tokenSymbol: tokenSymbol,
+                            fiatCode: currency.currencyCode,
+                            enabled:
+                                !_isPreparingBitcoin &&
+                                !_isCalculatingMax &&
+                                (conversion != null ||
+                                    _inputMode == AmountInputMode.fiat),
+                            onToggle: _toggleAmountMode,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -1017,11 +1133,16 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                               // instead of overflowing into it.
                               final amountFontSize = _amountFontSizeFor(
                                 value.text,
-                                tokenSymbol,
+                                inputSuffix,
                                 constraints.maxWidth,
                               );
                               return TextField(
+                                key: const Key('send-amount-input'),
                                 controller: _displayController,
+                                enabled:
+                                    _selectedToken != null &&
+                                    !_isPreparingBitcoin &&
+                                    !_isCalculatingMax,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
@@ -1039,7 +1160,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                                     fontSize: amountFontSize,
                                     fontWeight: FontWeight.w700,
                                   ),
-                                  suffixText: tokenSymbol,
+                                  suffixText: inputSuffix,
                                   suffixStyle: GoogleFonts.inter(
                                     color: Colors.white,
                                     fontSize: 15,
@@ -1056,6 +1177,7 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                       const SizedBox(height: 8),
                       Text(
                         equivalentText,
+                        key: const Key('send-amount-equivalent'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.inter(
@@ -1064,6 +1186,18 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                         ),
                       ),
                     ],
+                    if (conversion == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          '${currency.currencyCode}: ${AppLocalizations.of(context).transactionUnavailable}',
+                          key: const Key('send-fiat-unavailable'),
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF94A3B8),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 18),
                     Row(
                       children: [25, 50, 75, 100]
@@ -1076,7 +1210,10 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
                                 child: OutlinedButton(
                                   key: ValueKey('send-percentage-$percentage'),
                                   onPressed:
-                                      percentage == 100 && _isCalculatingMax
+                                      _selectedToken == null ||
+                                          percentage == 100 &&
+                                              _isCalculatingMax ||
+                                          _isPreparingBitcoin
                                       ? null
                                       : () => _setPercentage(percentage),
                                   style: OutlinedButton.styleFrom(
