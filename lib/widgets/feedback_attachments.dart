@@ -26,6 +26,7 @@ class _FeedbackAttachmentsState extends State<FeedbackAttachments> {
   String? _error;
 
   Future<void> _pick() async {
+    if (widget.disabled || _busy || _files.length >= 3) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -33,26 +34,45 @@ class _FeedbackAttachmentsState extends State<FeedbackAttachments> {
     widget.onBusyChanged(true);
     try {
       SystemPickerGuard.arm();
-      final file = await FilePicker.pickFile(
+      final files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: feedbackFileTypes.keys.toList(),
       );
       SystemPickerGuard.clear();
-      if (!mounted || file == null) return;
-      validateFeedbackFile(file.name, await file.length());
-      final bytes = await file.readAsBytes();
+      if (!mounted || files.isEmpty) return;
+      final remaining = 3 - _files.length;
+      if (files.length > remaining) {
+        throw FormatException(
+          'You can attach up to 3 files. Choose up to $remaining more.',
+        );
+      }
+      // Validate the entire selection before starting any upload.
+      for (final file in files) {
+        validateFeedbackFile(file.name, await file.length());
+      }
       final wallet = await WalletService().getCurrentWalletAddress();
       if (wallet == null || wallet.isEmpty) {
-        throw Exception('Connect your wallet to attach a file.');
+        throw Exception('Connect your wallet to attach files.');
       }
-      final uploaded = await _service.uploadAttachment(
-        walletAddress: wallet,
-        name: file.name,
-        bytes: bytes,
-      );
-      if (!mounted) return;
-      setState(() => _files.add(uploaded));
-      widget.onChanged(List.unmodifiable(_files));
+      final errors = <String>[];
+      for (final file in files) {
+        if (!mounted) return;
+        try {
+          final uploaded = await _service.uploadAttachment(
+            walletAddress: wallet,
+            name: file.name,
+            bytes: await file.readAsBytes(),
+          );
+          if (!mounted) return;
+          setState(() => _files.add(uploaded));
+          widget.onChanged(List.unmodifiable(_files));
+        } catch (_) {
+          errors.add('${file.name}: unable to upload. Please try again.');
+        }
+      }
+      if (mounted && errors.isNotEmpty) {
+        setState(() => _error = errors.join('\n'));
+      }
     } catch (error) {
       if (mounted) {
         setState(
@@ -86,7 +106,7 @@ class _FeedbackAttachmentsState extends State<FeedbackAttachments> {
               )
             : const Icon(Icons.attach_file),
         label: Text(
-          _busy ? 'Uploading attachment...' : 'Attach screenshot or file',
+          _busy ? 'Uploading attachments...' : 'Attach screenshots or files',
         ),
       ),
       const Text(
