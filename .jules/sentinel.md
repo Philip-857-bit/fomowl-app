@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2024-10-18 - [Fix Input Visibility on Verify Phrase Screen]
+**Vulnerability:** Seed phrase words during the verification process were visible in plain text.
+**Learning:** Even if `keyboardType: TextInputType.visiblePassword` is set, `obscureText: true` must be explicitly defined. When dynamically generating input fields for verification, each text field requires its own state to track obscuration effectively.
+**Prevention:** Make sure all `TextField`s accepting sensitive information initialize with `obscureText: true` and have a functional toggle button for visibility, with `maxLines` properly configured to 1 to prevent assertion errors.
