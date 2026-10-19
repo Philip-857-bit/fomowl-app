@@ -1,4 +1,13 @@
 import 'dart:async';
+import 'bitcoin_transfer_confirmation_screen.dart';
+import '../../services/bitcoin/bitcoin_send_service.dart';
+import '../../services/bitcoin/bitcoin_signing_service.dart';
+import '../../services/bitcoin/bitcoin_broadcast_service.dart';
+import '../../services/bitcoin/bitcoin_post_transaction_refresh.dart';
+import '../../services/blockchain/bitcoin_catalog.dart';
+import '../../models/bitcoin_account_state.dart';
+import '../../services/wallet_vault_service.dart';
+import '../../utils/wallet_unlock_navigation.dart';
 import 'dart:convert';
 
 import 'package:decimal/decimal.dart';
@@ -17,21 +26,25 @@ import '../../services/recipient_book_service.dart';
 import '../../models/chain.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/amount_utils.dart';
-import '../../utils/evm_fee_estimation_utils.dart';
+import '../../models/evm_fee_quote.dart';
+import '../../models/evm_outbound_transaction.dart';
 import '../../utils/app_error_utils.dart';
 import '../../utils/value_formatter.dart';
 import '../../widgets/entrance_motion.dart';
+import '../../widgets/advanced_transaction_details.dart';
 import '../transaction/transaction_processing_screen.dart';
 import 'widgets/transfer_confirmation/amount_summary.dart';
 import 'widgets/transfer_confirmation/confirm_button.dart';
 import 'widgets/transfer_confirmation/transaction_details_card.dart';
 import 'widgets/transfer_confirmation/transfer_header.dart';
 import 'widgets/transfer_confirmation/warning_banner.dart';
+import 'widgets/transfer_confirmation/evm_fee_options.dart';
 
 /// Transfer Confirmation Screen
 /// Shows transaction details and fee breakdown before confirming
 class TransferConfirmationScreen extends StatefulWidget {
-  const TransferConfirmationScreen({super.key});
+  const TransferConfirmationScreen({super.key, this.walletService});
+  final WalletService? walletService;
 
   @override
   State<TransferConfirmationScreen> createState() =>
@@ -42,7 +55,8 @@ class _TransferConfirmationScreenState
     extends State<TransferConfirmationScreen> {
   static final BigInt _solanaTransferFeeLamports = BigInt.from(5000);
 
-  final WalletService _walletService = WalletService();
+  late final WalletService _walletService =
+      widget.walletService ?? WalletService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
   final WalletNotificationService _walletNotificationService =
       WalletNotificationService();
@@ -51,21 +65,36 @@ class _TransferConfirmationScreenState
   Map<String, dynamic>? _args;
   String? _fromAddress;
   bool _isConfirming = false;
+  BitcoinSignedTransfer? _signedBitcoin;
+  final _bitcoinRefresh = BitcoinPostTransactionRefresh();
+  @override
+  void dispose() {
+    _bitcoinRefresh.dispose();
+    super.dispose();
+  }
 
-  double _gasPriceGwei = 0;
   double _gasFeeEth = 0;
   double _gasFeeUsd = 0;
   BigInt _gasFeeWei = BigInt.zero;
-  BigInt? _estimatedGasPriceWei;
-  int? _estimatedGasLimit;
-  DateTime? _gasEstimateAt;
+  EvmFeeQuotes? _evmFees;
+  EvmFeeTier _evmFeeTier = EvmFeeTier.normal;
+  double _evmNativePrice = 0;
+  int _feeGeneration = 0;
+  String? _evmFeeNetworkKey;
+  EvmFeeQuote? get _selectedEvmFee => _evmFees?.forTier(_evmFeeTier);
   bool _isLoadingGas = true;
   bool _gasEstimationFailed = false;
+  bool _evmOutcomeUnknown = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _args ??= _routeArgumentsAsMap(ModalRoute.of(context)?.settings.arguments);
+    if (_args?['bitcoinTransfer'] is BitcoinPreparedTransfer ||
+        _args?['chainFamily'] == 'bitcoin' ||
+        _args?['networkKey']?.toString().startsWith('bitcoin:') == true) {
+      return;
+    }
     if (_fromAddress == null) {
       _loadFromAddress();
     }
@@ -161,6 +190,8 @@ class _TransferConfirmationScreenState
     }
     final networkKey = _transferNetworkKey(blockchain);
     return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.bitcoin =>
+        networkKey == 'bitcoin:testnet4' ? 'Bitcoin Testnet4' : 'Bitcoin',
       ChainFamily.solana => 'Solana',
       ChainFamily.tron => 'TRON',
       ChainFamily.evm => _evmChainForTransfer(blockchain, networkKey).name,
@@ -174,6 +205,7 @@ class _TransferConfirmationScreenState
     }
     final networkKey = _transferNetworkKey(blockchain);
     return switch (NetworkKey.familyOf(networkKey)) {
+      ChainFamily.bitcoin => 'BTC',
       ChainFamily.solana => 'SOL',
       ChainFamily.tron => 'TRX',
       ChainFamily.evm => _evmChainForTransfer(blockchain, networkKey).symbol,
@@ -199,6 +231,13 @@ class _TransferConfirmationScreenState
   }
 
   Future<void> _fetchGasEstimate() async {
+    final generation = ++_feeGeneration;
+    if (mounted) {
+      setState(() {
+        _isLoadingGas = true;
+        _gasEstimationFailed = false;
+      });
+    }
     try {
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
       final networkKey = _transferNetworkKey(blockchain);
@@ -223,15 +262,13 @@ class _TransferConfirmationScreenState
             estimatedFeeUsd = 0;
           }
         }
-        if (mounted) {
+        if (mounted && generation == _feeGeneration) {
           setState(() {
-            _gasPriceGwei = 0;
             _gasFeeEth = estimatedFeeNative;
             _gasFeeUsd = estimatedFeeUsd;
             _gasFeeWei = estimatedFeeBaseUnits;
-            _estimatedGasPriceWei = null;
-            _estimatedGasLimit = null;
-            _gasEstimateAt = null;
+            _evmFees = null;
+            _evmFeeNetworkKey = null;
             _isLoadingGas = false;
             _gasEstimationFailed = false;
           });
@@ -251,55 +288,60 @@ class _TransferConfirmationScreenState
 
       double nativePrice = 0;
       if (effectiveCoinId != null && effectiveCoinId.isNotEmpty) {
-        final prices = await blockchain.getTokenPrices([effectiveCoinId]);
-        nativePrice = prices[effectiveCoinId] ?? 0;
+        try {
+          final prices = await blockchain.getTokenPrices([effectiveCoinId]);
+          nativePrice = prices[effectiveCoinId] ?? 0;
+        } catch (_) {
+          /* Fiat display is optional; fee facts remain authoritative. */
+        }
       }
-
-      final gasData =
-          _fromAddress != null &&
-              _fromAddress!.isNotEmpty &&
-              toAddress.isNotEmpty &&
-              amountInBaseUnits > BigInt.zero
-          ? await EvmFeeEstimationUtils.estimateTransfer(
-              requestedAmount: amountInBaseUnits,
-              isNative: isNativeToken,
-              estimate: (amount) => _walletService.estimateTransferFee(
-                fromAddress: _fromAddress!,
-                toAddress: toAddress,
-                amountInBaseUnits: amount,
-                rpcUrl: evmChain.rpcUrl,
-                tokenAddress: token?.contractAddress?.isNotEmpty == true
-                    ? token!.contractAddress
-                    : null,
-                nativePriceUsd: nativePrice,
-              ),
-            )
-          : await blockchain.estimateGasFee(nativePriceUsd: nativePrice);
-      if (mounted) {
+      if (_fromAddress == null ||
+          toAddress.isEmpty ||
+          amountInBaseUnits <= BigInt.zero) {
+        throw const EvmFeeQuoteException('Missing transfer information');
+      }
+      final quotes = await _walletService.quoteTransferFees(
+        chainId: NetworkKey.evmChainIdOf(networkKey) ?? evmChain.chainId,
+        fromAddress: _fromAddress!,
+        toAddress: toAddress,
+        amountInBaseUnits: amountInBaseUnits,
+        rpcUrl: evmChain.rpcUrl,
+        tokenAddress: isNativeToken ? null : token!.contractAddress,
+      );
+      if (mounted && generation == _feeGeneration) {
         setState(() {
-          _gasPriceGwei = gasData['gasGwei'] ?? 20;
-          _gasFeeEth = gasData['totalFeeEth'] ?? 0;
-          _gasFeeUsd = gasData['totalFeeUsd'] ?? 0;
-          _gasFeeWei = gasData['totalFeeWei'] as BigInt? ?? BigInt.zero;
-          _estimatedGasPriceWei = gasData['gasPriceWei'] as BigInt?;
-          _estimatedGasLimit = (gasData['gasLimitUnits'] as num?)?.ceil();
-          _gasEstimateAt = DateTime.now();
+          _evmFees = quotes;
+          _evmFeeNetworkKey = networkKey;
+          _evmNativePrice = nativePrice;
+          _applyEvmFee(quotes.forTier(_evmFeeTier));
           _isLoadingGas = false;
           _gasEstimationFailed = false;
         });
       }
-    } catch (e) {
-      debugPrint('Gas estimation failed: $e');
-      if (mounted) {
+    } catch (_) {
+      if (mounted && generation == _feeGeneration) {
         setState(() {
           _isLoadingGas = false;
           _gasEstimationFailed = true;
-          _estimatedGasPriceWei = null;
-          _estimatedGasLimit = null;
-          _gasEstimateAt = null;
+          _evmFees = null;
+          _evmFeeNetworkKey = null;
         });
       }
     }
+  }
+
+  void _applyEvmFee(EvmFeeQuote quote) {
+    _gasFeeWei = quote.maximumTotalFeeWei;
+    _gasFeeEth = _baseUnitsToDouble(_gasFeeWei, 18);
+    _gasFeeUsd = _gasFeeEth * _evmNativePrice;
+  }
+
+  void _selectEvmFeeTier(EvmFeeTier tier) {
+    if (_isConfirming || _isLoadingGas || _evmFees == null) return;
+    setState(() {
+      _evmFeeTier = tier;
+      _applyEvmFee(_evmFees!.forTier(tier));
+    });
   }
 
   String _shortenAddress(String? address) {
@@ -316,36 +358,11 @@ class _TransferConfirmationScreenState
     return '${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}';
   }
 
-  String _formatGasPriceGwei(double value) {
-    if (value >= 10) {
-      return value.toStringAsFixed(1);
-    }
-    if (value >= 1) {
-      return value.toStringAsFixed(2);
-    }
-    if (value >= 0.01) {
-      return value.toStringAsFixed(4);
-    }
-    return value.toStringAsFixed(6);
-  }
-
-  String _formatGasFeeNative(double value, String symbol) {
-    final decimals = value >= 0.01
-        ? 6
-        : value >= 0.0001
-        ? 8
-        : 10;
-    final formatted = value
-        .toStringAsFixed(decimals)
-        .replaceFirst(RegExp(r'0+$'), '');
-    final normalized = formatted.endsWith('.')
-        ? formatted.substring(0, formatted.length - 1)
-        : formatted;
-    return '$normalized $symbol';
-  }
-
   BigInt _estimatedNonEvmFeeBaseUnits(ChainFamily family) {
     return switch (family) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana => _solanaTransferFeeLamports,
       ChainFamily.tron => BigInt.zero,
       ChainFamily.evm => BigInt.zero,
@@ -354,6 +371,7 @@ class _TransferConfirmationScreenState
 
   int _nativeDecimalsForFamily(ChainFamily family) {
     return switch (family) {
+      ChainFamily.bitcoin => 8,
       ChainFamily.solana => 9,
       ChainFamily.tron => 6,
       ChainFamily.evm => 18,
@@ -376,6 +394,7 @@ class _TransferConfirmationScreenState
     ChainFamily family,
   ) {
     return switch (family) {
+      ChainFamily.bitcoin => 'bitcoin',
       ChainFamily.solana => 'solana',
       ChainFamily.tron => 'tron',
       ChainFamily.evm => blockchain.activeNetworkCoinGeckoId,
@@ -387,7 +406,7 @@ class _TransferConfirmationScreenState
       final decimals = _nativeDecimalsForFamily(family);
       return '≈ ${AmountUtils.formatBaseUnits(_gasFeeWei, decimals, maxFractionDigits: decimals)} $nativeSymbol';
     }
-    return 'Calculated by network';
+    return AppLocalizations.of(context).transactionCalculatedByNetwork;
   }
 
   BigInt? _nativeBalanceBaseUnits(
@@ -425,6 +444,12 @@ class _TransferConfirmationScreenState
     final family = NetworkKey.familyOf(networkKey);
 
     switch (family) {
+      case ChainFamily.bitcoin:
+        if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) return null;
+        final chain = networkKey == 'bitcoin:mainnet'
+            ? BitcoinCatalog.mainnet
+            : BitcoinCatalog.testnet4;
+        return '${chain.explorerUrl}/tx/$hash';
       case ChainFamily.solana:
         // Solana signatures are 87-88 base58 chars.
         if (!RegExp(r'^[1-9A-HJ-NP-Za-km-z]{80,90}$').hasMatch(hash)) {
@@ -515,6 +540,28 @@ class _TransferConfirmationScreenState
   Future<void> _confirmTransfer() async {
     if (_isConfirming) {
       return;
+    }
+    final selectedBlockchain = context.read<BlockchainService>();
+    final approvedEvmFee = _selectedEvmFee;
+    if (_transferFamily(selectedBlockchain) == ChainFamily.evm) {
+      if (_evmOutcomeUnknown ||
+          _isLoadingGas ||
+          _gasEstimationFailed ||
+          approvedEvmFee == null ||
+          _evmFeeNetworkKey != _transferNetworkKey(selectedBlockchain)) {
+        return;
+      }
+      if (!approvedEvmFee.isFresh(DateTime.now())) {
+        await _fetchGasEstimate();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).evmFeeQuoteUpdated),
+            ),
+          );
+        }
+        return;
+      }
     }
     setState(() => _isConfirming = true);
 
@@ -623,25 +670,18 @@ class _TransferConfirmationScreenState
           networkKey: blockchain.activeNetworkKey,
         );
       } else {
-        final estimateIsFresh =
-            !_gasEstimationFailed &&
-            _gasEstimateAt != null &&
-            DateTime.now().difference(_gasEstimateAt!) <
-                const Duration(seconds: 30);
-        final hasCompleteEstimate =
-            estimateIsFresh &&
-            _estimatedGasPriceWei != null &&
-            _estimatedGasLimit != null;
-        final gasPriceWei = hasCompleteEstimate ? _estimatedGasPriceWei : null;
-        final gasLimit = hasCompleteEstimate ? _estimatedGasLimit : null;
+        if (approvedEvmFee == null) {
+          throw const EvmFeeQuoteException(
+            'Review network fees before signing',
+          );
+        }
         txHash = isNative
             ? await _walletService.sendNativeTransaction(
                 toAddress: toAddress,
                 amountInBaseUnits: amountInBaseUnits,
                 rpcUrl: evmChain!.rpcUrl,
                 chainId: evmChain.chainId,
-                gasPriceWei: gasPriceWei,
-                gasLimit: gasLimit,
+                feeQuote: approvedEvmFee,
               )
             : await _walletService.sendTokenTransaction(
                 tokenAddress: token!.contractAddress!,
@@ -649,8 +689,7 @@ class _TransferConfirmationScreenState
                 amountInBaseUnits: amountInBaseUnits,
                 rpcUrl: evmChain!.rpcUrl,
                 chainId: evmChain.chainId,
-                gasPriceWei: gasPriceWei,
-                gasLimit: gasLimit,
+                feeQuote: approvedEvmFee,
               );
       }
 
@@ -736,6 +775,14 @@ class _TransferConfirmationScreenState
       if (!mounted) {
         return;
       }
+      if (e is EvmSubmissionUnknown) {
+        setState(() => _evmOutcomeUnknown = true);
+        progressController.setSubmissionUnknown(
+          reference: _shortHash(e.hash),
+          detailsUrl: _transactionDetailsUrl(e.hash, selectedBlockchain) ?? '',
+        );
+        return;
+      }
       final l = AppLocalizations.of(context);
       progressController.setError(
         AppErrorUtils.userMessage(e, fallback: l.transactionFailed),
@@ -747,14 +794,110 @@ class _TransferConfirmationScreenState
     }
   }
 
+  Future<void> _confirmBitcoin(BitcoinPreparedTransfer transfer) async {
+    if (_signedBitcoin != null) return;
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    bool current() =>
+        mounted &&
+        blockchain.activeNetworkKey == transfer.network.networkKey &&
+        blockchain.activeWalletAddress.toLowerCase() ==
+            transfer.walletIdentity.toLowerCase();
+    final signed = await BitcoinSigningService().sign(
+      transfer,
+      isCurrent: current,
+      authenticate: () async {
+        await WalletVaultService.lockAll();
+        if (!mounted || !current()) return false;
+        final authenticated = await requestWalletUnlock(context);
+        return authenticated && current();
+      },
+    );
+    if (!current()) return;
+    setState(() => _signedBitcoin = signed);
+    final progress = _openProgressFlow();
+    progress.setSwapSubmitting();
+    try {
+      final outcome = await BitcoinBroadcastService().broadcast(
+        signed,
+        isCurrent: current,
+      );
+      final chain = transfer.network == BitcoinProductNetwork.mainnet
+          ? BitcoinCatalog.mainnet
+          : BitcoinCatalog.testnet4;
+      final detailsUrl = '${chain.explorerUrl}/tx/${outcome.txid}';
+      if (outcome.status == BitcoinSubmissionStatus.accepted) {
+        progress.setSubmitted(reference: outcome.txid, detailsUrl: detailsUrl);
+      } else {
+        progress.setSubmissionUnknown(
+          reference: outcome.txid,
+          detailsUrl: detailsUrl,
+        );
+      }
+      unawaited(
+        _walletHistoryService
+            .recordBitcoinSend(
+              walletIdentity: transfer.walletIdentity,
+              txid: outcome.txid,
+              network: transfer.network,
+              amountSats: transfer.plan.recipientTotalSat,
+              recipient: transfer.plan.recipients.single.address,
+            )
+            .catchError((Object _) {}),
+      );
+      void refreshBitcoin() => _bitcoinRefresh.schedule(
+        isCurrent: current,
+        refresh: () => blockchain.refreshBitcoinAccountAfterTransaction(
+          transfer.walletIdentity,
+          transfer.network,
+          isCurrent: current,
+        ),
+      );
+      refreshBitcoin();
+      final status = await _transactionMonitor.waitForConfirmation(
+        txHash: outcome.txid,
+        blockchain: blockchain,
+        networkKey: transfer.network.networkKey,
+        isCurrent: current,
+      );
+      if (current() && status == TransactionConfirmationStatus.confirmed) {
+        refreshBitcoin();
+        progress.setConfirmed(
+          reference: outcome.txid,
+          detailsUrl: '${chain.explorerUrl}/tx/${outcome.txid}',
+        );
+      }
+    } on BitcoinBroadcastMismatch {
+      progress.setError(
+        'Bitcoin provider returned an unexpected transaction ID.',
+      );
+    } catch (_) {
+      progress.setError('Bitcoin transaction could not be submitted.');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bitcoinTransfer = _args?['bitcoinTransfer'];
+    if (bitcoinTransfer is BitcoinPreparedTransfer) {
+      return BitcoinTransferConfirmationScreen(
+        transfer: bitcoinTransfer,
+        onConfirm: _signedBitcoin == null ? _confirmBitcoin : null,
+      );
+    }
+    if (_args?['chainFamily'] == 'bitcoin' ||
+        _args?['networkKey']?.toString().startsWith('bitcoin:') == true) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Confirm Bitcoin transfer')),
+        body: const Center(
+          child: Text('Return to Send and prepare a Bitcoin transaction plan.'),
+        ),
+      );
+    }
     context.select<CurrencyController, String>(
       (controller) => controller.currencyCode,
     );
     final token = _args?['token'] as Token?;
     final toAddress = _args?['toAddress'] as String? ?? '';
-    final amountText = _args?['amount'] as String? ?? '0';
     final amountInBaseUnits =
         _args?['amountBaseUnits'] as BigInt? ?? BigInt.zero;
     final blockchain = Provider.of<BlockchainService>(context);
@@ -769,7 +912,9 @@ class _TransferConfirmationScreenState
         (token?.contractAddress?.isEmpty ?? true);
     final parsedAmount = AmountUtils.formatBaseUnits(
       amountInBaseUnits,
-      token?.decimals ?? 18,
+      token?.decimals ?? _nativeDecimalsForFamily(transferFamily),
+      maxFractionDigits:
+          token?.decimals ?? _nativeDecimalsForFamily(transferFamily),
     );
     final tokenUsdPrice = _tokenUsdPrice(blockchain, token);
     final amountValueText = tokenUsdPrice > 0
@@ -786,22 +931,33 @@ class _TransferConfirmationScreenState
       if (amountValueText.isNotEmpty) amountValueText,
       if (tokenRateText.isNotEmpty) tokenRateText,
     ].join(' • ');
-    final maxTotalDisplay = isNative
-        ? '${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? 18)} $symbol'
-        : '$amountText $symbol';
+    final feeKnown =
+        !_isLoadingGas &&
+        !_gasEstimationFailed &&
+        (transferFamily == ChainFamily.evm
+            ? _selectedEvmFee != null
+            : _gasFeeWei > BigInt.zero);
+    final nativeDecimals = _nativeDecimalsForFamily(transferFamily);
+    final exactFee =
+        '${AmountUtils.formatBaseUnits(_gasFeeWei, nativeDecimals, maxFractionDigits: nativeDecimals)} $nativeSymbol';
+    final maxTotalDisplay = !feeKnown
+        ? '$parsedAmount $symbol + ${l.networkFeeLabel}'
+        : isNative
+        ? '${transferFamily == ChainFamily.solana ? '≈ ' : ''}${AmountUtils.formatBaseUnits(amountInBaseUnits + _gasFeeWei, token?.decimals ?? nativeDecimals, maxFractionDigits: token?.decimals ?? nativeDecimals)} $symbol'
+        : '$parsedAmount $symbol + ${transferFamily == ChainFamily.solana ? '≈ ' : ''}$exactFee';
 
     final isEvmTransfer = transferFamily == ChainFamily.evm;
     final gasLabel = !isEvmTransfer
         ? l.networkFeeLabel
         : _gasEstimationFailed
         ? '${l.networkFeeLabel} (${l.estimationFailed})'
-        : '${l.networkFeeLabel} (${_formatGasPriceGwei(_gasPriceGwei)} Gwei)';
+        : l.networkFeeLabel;
 
     final gasValue = !isEvmTransfer
         ? _formatNonEvmNetworkFeeValue(transferFamily, nativeSymbol)
         : _gasEstimationFailed
         ? 'Error'
-        : _formatGasFeeNative(_gasFeeEth, nativeSymbol);
+        : l.transactionFeeUpTo(exactFee);
 
     final gasValueUsd = _gasEstimationFailed || _gasFeeUsd <= 0
         ? ''
@@ -895,9 +1051,56 @@ class _TransferConfirmationScreenState
                               gasLabel: gasLabel,
                               gasValue: gasValue,
                               gasValueUsd: gasValueUsd,
-                              totalLabel: isNative ? l.maxTotal : l.amount,
+                              totalLabel: isEvmTransfer
+                                  ? l.maxTotal
+                                  : transferFamily == ChainFamily.solana
+                                  ? l.transactionEstimatedTotal
+                                  : l.transactionTotal,
                               maxTotalDisplay: maxTotalDisplay,
+                              speedLabel:
+                                  isEvmTransfer &&
+                                      _evmFees?.hasDistinctTiers == true
+                                  ? l.transactionSpeed
+                                  : null,
+                              speedValue:
+                                  isEvmTransfer &&
+                                      _evmFees?.hasDistinctTiers == true
+                                  ? evmFeeTierLabel(l, _evmFeeTier)
+                                  : null,
                             ),
+                            if (isEvmTransfer && _evmFees != null) ...[
+                              const SizedBox(height: 14),
+                              EvmFeeOptions(
+                                quotes: _evmFees!,
+                                selected: _evmFeeTier,
+                                enabled: !_isConfirming && !_isLoadingGas,
+                                onChanged: _selectEvmFeeTier,
+                              ),
+                            ],
+                            if (!isEvmTransfer) ...[
+                              const SizedBox(height: 14),
+                              AdvancedTransactionDetails(
+                                title: l.advancedTransactionDetails,
+                                items: [
+                                  if (transferFamily == ChainFamily.solana &&
+                                      feeKnown)
+                                    AdvancedTransactionDetail(
+                                      label: l.transactionEstimatedFee,
+                                      value: '≈ $exactFee',
+                                    ),
+                                  if (transferFamily == ChainFamily.tron) ...[
+                                    AdvancedTransactionDetail(
+                                      label: l.networkFeeLabel,
+                                      value: l.transactionCalculatedByNetwork,
+                                    ),
+                                    AdvancedTransactionDetail(
+                                      label: l.transactionResources,
+                                      value: l.transactionAfterConfirmation,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -907,7 +1110,11 @@ class _TransferConfirmationScreenState
                       delay: const Duration(milliseconds: 140),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: WarningBanner(message: l.transferWarningMessage),
+                        child: WarningBanner(
+                          message: isEvmTransfer && _evmOutcomeUnknown
+                              ? l.evmReplacementCheckOutcome
+                              : l.transferWarningMessage,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -923,6 +1130,12 @@ class _TransferConfirmationScreenState
                   isLoading: _isConfirming,
                   onPressed: _confirmTransfer,
                   label: l.confirmTransfer,
+                  enabled:
+                      !isEvmTransfer ||
+                      (!_evmOutcomeUnknown &&
+                          !_isLoadingGas &&
+                          !_gasEstimationFailed &&
+                          _selectedEvmFee != null),
                 ),
               ),
             ),

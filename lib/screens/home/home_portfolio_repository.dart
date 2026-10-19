@@ -130,6 +130,8 @@ class HomePortfolioRepository {
         token.effectiveTokenStandard == TokenStandard.native;
     final symbol = token.symbol.trim().toUpperCase();
     switch (chain.family) {
+      case ChainFamily.bitcoin:
+        return isNative && symbol == 'BTC';
       case ChainFamily.evm:
         if (token.effectiveTokenStandard == TokenStandard.spl ||
             token.effectiveTokenStandard == TokenStandard.trc20) {
@@ -162,6 +164,7 @@ class HomePortfolioRepository {
 
   String _sectionNetworkKey(EvmChain chain) {
     return switch (chain.family) {
+      ChainFamily.bitcoin => chain.networkKey,
       ChainFamily.solana => NetworkKey.solana('mainnet'),
       ChainFamily.tron => NetworkKey.tron('mainnet'),
       ChainFamily.evm => NetworkKey.evm(chain.chainId),

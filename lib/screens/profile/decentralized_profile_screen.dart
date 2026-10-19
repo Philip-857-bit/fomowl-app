@@ -28,6 +28,7 @@ import '../admin/admin_dashboard_screen.dart';
 import '../home/widgets/network_selector_sheet.dart';
 import '../onboarding/language_selection_screen.dart';
 import 'widgets/settings_group_card.dart';
+import 'widgets/bitcoin_network_preference_tile.dart';
 import 'widgets/settings_item_tile.dart';
 import 'widgets/settings_section_header.dart';
 import 'widgets/settings_wallet_header_card.dart';
@@ -77,6 +78,7 @@ class _DecentralizedProfileScreenState
   String _canonicalWalletAddress = '';
   ChainFamily _displayedFamily = ChainFamily.evm;
   BlockchainService? _blockchain;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
@@ -110,7 +112,14 @@ class _DecentralizedProfileScreenState
     final nextFamily = _blockchain?.activeFamily ?? ChainFamily.evm;
     if (nextActive.isEmpty ||
         (nextActive == _canonicalWalletAddress.toLowerCase() &&
-            nextFamily == _displayedFamily)) {
+            nextFamily == _displayedFamily &&
+            _blockchain!.enabledFamilies.length == _enabledFamilies.length &&
+            _blockchain!.enabledFamilies.every(_enabledFamilies.contains) &&
+            _blockchain!.activeWalletSupportedFamilies.length ==
+                _supportedFamilies.length &&
+            _blockchain!.activeWalletSupportedFamilies.every(
+              _supportedFamilies.contains,
+            ))) {
       return;
     }
     // Active wallet changed from another tab — refresh the settings header.
@@ -140,6 +149,7 @@ class _DecentralizedProfileScreenState
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     final walletName = await _storageService.getWalletName();
     final canonicalWalletAddress = await _walletService
         .getCurrentWalletAddress();
@@ -151,13 +161,12 @@ class _DecentralizedProfileScreenState
         activeAccount?.getWalletAddressForFamily(activeFamily) ??
         canonicalWalletAddress;
 
-    if (!mounted) return;
+    if (!mounted || generation != _loadGeneration) return;
 
     // Determine which network families this wallet actually supports.
     // Private-key imports are EVM-only. Seed-phrase wallets have all 3 families.
     final origin = activeAccount?.origin ?? WalletOrigin.derived;
-    final supported =
-        activeAccount?.addressesByFamily.keys.toSet() ?? {ChainFamily.evm};
+    final supported = activeAccount?.supportedFamilies ?? {ChainFamily.evm};
 
     setState(() {
       _walletName = walletName ?? 'Main Wallet';
@@ -180,7 +189,7 @@ class _DecentralizedProfileScreenState
 
   Future<void> _toggleFamily(ChainFamily family) async {
     final blockchain = context.read<BlockchainService>();
-    final updated = Set<ChainFamily>.of(_enabledFamilies);
+    final updated = Set<ChainFamily>.of(blockchain.enabledFamilies);
     if (updated.contains(family)) {
       if (updated.length == 1) return; // must keep at least one
       updated.remove(family);
@@ -667,6 +676,10 @@ class _DecentralizedProfileScreenState
                       SettingsSectionHeader(title: 'Manage Networks'),
                       SettingsGroupCard(
                         children: [
+                          BitcoinNetworkPreferenceTile(
+                            origin: _walletOrigin,
+                            wallet: _walletService,
+                          ),
                           if (_supportedFamilies.contains(ChainFamily.evm))
                             SettingsItemTile(
                               icon: Icons.hexagon_outlined,

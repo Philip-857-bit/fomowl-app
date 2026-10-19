@@ -8,6 +8,8 @@ class AmountSummary extends StatelessWidget {
   final String symbol;
   final String title;
   final String subtitle;
+  final Color accentColor;
+  final bool fitAmount;
 
   const AmountSummary({
     super.key,
@@ -15,10 +17,34 @@ class AmountSummary extends StatelessWidget {
     required this.symbol,
     this.title = 'AMOUNT TO SEND',
     this.subtitle = '',
+    this.accentColor = AppColors.accentRed,
+    this.fitAmount = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final amount = RichText(
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: amountText,
+            style: GoogleFonts.outfit(
+              fontSize: 36,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          TextSpan(
+            text: ' $symbol',
+            style: GoogleFonts.outfit(
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
+              color: accentColor,
+            ),
+          ),
+        ],
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -28,32 +54,21 @@ class AmountSummary extends StatelessWidget {
             fontSize: 11,
             letterSpacing: 1,
             fontWeight: FontWeight.w500,
-            color: AppColors.accentRed.withValues(alpha: 0.8),
+            color: accentColor.withValues(alpha: 0.8),
           ),
         ),
         const SizedBox(height: 12),
-        RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: amountText,
-                style: GoogleFonts.outfit(
-                  fontSize: 36,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-              TextSpan(
-                text: ' $symbol',
-                style: GoogleFonts.outfit(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.accentRed,
-                ),
-              ),
-            ],
-          ),
-        ),
+        if (fitAmount)
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: amount,
+            ),
+          )
+        else
+          amount,
         if (subtitle.trim().isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(

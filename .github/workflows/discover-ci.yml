@@ -9,7 +9,7 @@ on:
 
 jobs:
   flutter-discover:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     steps:
       - uses: actions/checkout@v5
 
@@ -39,6 +39,7 @@ jobs:
           test/discover_landing_view_test.dart
           test/admin_dashboard_screen_test.dart
           test/dapp_provider_bridge_test.dart
+          test/discover_network_access_test.dart
           integration_test/discover_browser_flow_test.dart
           integration_test/discover_smoke_test.dart
 
@@ -52,12 +53,13 @@ jobs:
           test/discover_landing_view_test.dart
           test/admin_dashboard_screen_test.dart
           test/dapp_provider_bridge_test.dart
+          test/discover_network_access_test.dart
 
   android-discover-integration:
     # The emulator suite is intentionally opt-in. The focused Discover tests
     # above remain the required, fast signal on every pull request and push.
     if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
@@ -92,6 +94,7 @@ jobs:
         run: flutter pub get
 
       - name: Free disk space
+        if: runner.environment == 'github-hosted'
         run: |
           df -h
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup || true
@@ -102,14 +105,25 @@ jobs:
       # Compile the Rust bridge and Android application before QEMU starts.
       # Keeping the emulator alive during the cold native build starves QEMU on
       # hosted runners and caused repeated hanging-thread/runner-eviction errors.
+      - name: Set up Android SDK and native tooling
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;28.2.13676358
+
       - name: Prebuild Android debug application
         run: flutter build apk --debug --target-platform android-x64
 
-      - name: Enable KVM
+      - name: Check KVM access
+        id: kvm
+        shell: bash
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          if test -r /dev/kvm -a -w /dev/kvm; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo KVM_AVAILABLE
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo KVM_UNAVAILABLE
+          fi
 
       - name: Run Discover integration tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -117,9 +131,10 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
-          emulator-boot-timeout: 900
+          emulator-boot-timeout: 1200
           disable-animations: true
-          cores: 4
-          ram-size: 3072M
+          disable-linux-hw-accel: ${{ steps.kvm.outputs.available != 'true' }}
+          cores: 2
+          ram-size: 2048M
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: flutter test integration_test/discover_browser_flow_test.dart integration_test/discover_smoke_test.dart -d emulator-5554

@@ -25,7 +25,7 @@ permissions:
 jobs:
   patch_android:
     if: inputs.platform == 'android'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, owllet-ci]
     defaults:
       run:
         shell: bash
@@ -74,6 +74,7 @@ jobs:
           ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
 
       - name: Free up disk space
+        if: runner.environment == 'github-hosted'
         run: |
           set -euo pipefail
           echo "Disk space before cleanup:"

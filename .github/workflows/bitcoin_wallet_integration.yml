@@ -1,0 +1,120 @@
+name: Bitcoin wallet integration
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bitcoin-wallet-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host:
+    runs-on: [self-hosted, linux, x64, owllet-ci]
+    env:
+      CARGO_BUILD_JOBS: 2
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_TEST_DEBUG: 0
+      CARGO_INCREMENTAL: 0
+      FRB_DART_LOAD_EXTERNAL_LIBRARY_NATIVE_LIB_DIR: ${{ github.workspace }}/rust/target/debug/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
+      - run: flutter pub get --enforce-lockfile
+      - run: cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+      - run: cargo clippy --locked --manifest-path rust/Cargo.toml --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --manifest-path rust/Cargo.toml --all-targets --all-features
+      - run: cargo run --locked --manifest-path rust/consumers/owllet-core-smoke/Cargo.toml -- --self-test
+      - run: cargo clippy --locked --manifest-path rust/consumers/owllet-core-smoke/Cargo.toml --all-targets -- -D warnings
+      - run: cargo build --locked --manifest-path rust/Cargo.toml
+      - run: flutter analyze
+      - run: flutter test --concurrency=2
+
+  android:
+    runs-on: [self-hosted, linux, x64, owllet-ci]
+    env:
+      CARGO_BUILD_JOBS: 2
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG: 0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reserve space on the disposable Android runner
+        if: runner.environment == 'github-hosted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/local/.ghcup /opt/ghc /usr/share/dotnet /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;28.2.13676358
+      - run: flutter pub get --enforce-lockfile
+      - name: Create build-only Firebase placeholder
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          config = {
+            "project_info": {"project_number": "123456789", "project_id": "owllet-ci-unfunded"},
+            "client": [{"client_info": {
+              "mobilesdk_app_id": "1:123456789:android:0000000000000000",
+              "android_client_info": {"package_name": "com.fomowl.owllet"}},
+              "api_key": [{"current_key": "CI_BUILD_PLACEHOLDER_NOT_A_CREDENTIAL"}]}],
+            "configuration_version": "1"}
+          Path("android/app/google-services.json").write_text(json.dumps(config))
+      - run: flutter build apk --debug --target-platform android-arm64 --dart-define=PUSH_NOTIFICATIONS_ENABLED=false
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bitcoin-review-android-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 7
+
+  ios:
+    runs-on: macos-latest
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios-sim, x86_64-apple-ios
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build ios --simulator --debug --no-codesign --dart-define=PUSH_NOTIFICATIONS_ENABLED=false

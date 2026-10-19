@@ -36,7 +36,7 @@ void main() {
       await tester.ensureVisible(find.text('Send Feedback'));
       await tester.tap(find.text('Send Feedback'));
       await tester.pumpAndSettle();
-      expect(find.text('Attach screenshot or file'), findsOneWidget);
+      expect(find.text('Attach screenshots or files'), findsOneWidget);
       expect(find.textContaining('15 MB each'), findsOneWidget);
       await tester.ensureVisible(find.text('Send'));
       await tester.tap(find.text('Send'));

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/bitcoin_capability_gate.dart';
 
 import '../features/mini_apps/mini_app_host_screen.dart';
 import '../features/shell/app_shell_controller.dart';
@@ -85,7 +86,11 @@ Widget _miniAppRoute(BuildContext context, {RuntimeFeature? requiredFeature}) {
   if (launchFeature != RuntimeFeature.miniApps) {
     features.add(launchFeature);
   }
-  return _gateRuntimeFeatures(MiniAppHostScreen.fromRoute(context), features);
+  return BitcoinCapabilityGate(
+    feature: 'Mini apps and payments',
+    builder: (context) =>
+        _gateRuntimeFeatures(MiniAppHostScreen.fromRoute(context), features),
+  );
 }
 
 Map<String, WidgetBuilder> buildAppRoutes() {
@@ -120,17 +125,26 @@ Map<String, WidgetBuilder> buildAppRoutes() {
       feature: RuntimeFeature.transfers,
       child: SendTokenScreen(),
     ),
-    '/send-nft': (_) => const RuntimeFeatureGate(
-      feature: RuntimeFeature.transfers,
-      child: SendNftScreen(),
+    '/send-nft': (_) => BitcoinCapabilityGate(
+      feature: 'NFT transfers',
+      builder: (_) => const RuntimeFeatureGate(
+        feature: RuntimeFeature.transfers,
+        child: SendNftScreen(),
+      ),
     ),
     '/transfer-confirmation': (_) => const RuntimeFeatureGate(
       feature: RuntimeFeature.transfers,
       child: TransferConfirmationScreen(),
     ),
     '/token-detail': (_) => const TokenDetailScreen(),
-    '/token-management': (_) => const TokenManagementScreen(),
-    '/nft-gallery': (_) => NftGalleryScreen(),
+    '/token-management': (_) => BitcoinCapabilityGate(
+      feature: 'Custom tokens',
+      builder: (_) => const TokenManagementScreen(),
+    ),
+    '/nft-gallery': (_) => BitcoinCapabilityGate(
+      feature: 'NFTs',
+      builder: (_) => NftGalleryScreen(),
+    ),
     '/profile': (_) =>
         const DecentralizedProfileScreen(showBottomNavigation: false),
     '/notifications': (_) => const NotificationsScreen(),
@@ -155,31 +169,46 @@ Map<String, WidgetBuilder> buildAppRoutes() {
     '/add-network': (_) => const AddNetworkScreen(),
     '/transaction-processing': (_) => const TransactionProcessingScreen(),
     '/transactions': (_) => const TransactionsScreen(),
-    '/bill-payment': (_) => _gateRuntimeFeatures(
-      const BillPaymentScreen(),
-      const [RuntimeFeature.legacySystem, RuntimeFeature.bills],
+    '/bill-payment': (_) => BitcoinCapabilityGate(
+      feature: 'Payments',
+      builder: (_) => _gateRuntimeFeatures(const BillPaymentScreen(), const [
+        RuntimeFeature.legacySystem,
+        RuntimeFeature.bills,
+      ]),
     ),
-    '/withdraw-to-bank': (_) => _gateRuntimeFeatures(
-      const ComingSoonOverlay(
-        title: 'Withdraw to Bank',
-        child: WithdrawToBankScreen(),
+    '/withdraw-to-bank': (_) => BitcoinCapabilityGate(
+      feature: 'Payments',
+      builder: (_) => _gateRuntimeFeatures(
+        const ComingSoonOverlay(
+          title: 'Withdraw to Bank',
+          child: WithdrawToBankScreen(),
+        ),
+        const [RuntimeFeature.legacySystem, RuntimeFeature.cashOut],
       ),
-      const [RuntimeFeature.legacySystem, RuntimeFeature.cashOut],
     ),
-    '/deposit-funds': (_) => _gateRuntimeFeatures(
-      const ComingSoonOverlay(
-        title: 'Deposit Funds',
-        child: DepositFundsScreen(),
+    '/deposit-funds': (_) => BitcoinCapabilityGate(
+      feature: 'Payments',
+      builder: (_) => _gateRuntimeFeatures(
+        const ComingSoonOverlay(
+          title: 'Deposit Funds',
+          child: DepositFundsScreen(),
+        ),
+        const [RuntimeFeature.legacySystem, RuntimeFeature.cashIn],
       ),
-      const [RuntimeFeature.legacySystem, RuntimeFeature.cashIn],
     ),
-    '/third-party-deposit': (_) => _gateRuntimeFeatures(
-      const ThirdPartyDepositScreen(),
-      const [RuntimeFeature.legacySystem, RuntimeFeature.cashIn],
+    '/third-party-deposit': (_) => BitcoinCapabilityGate(
+      feature: 'Payments',
+      builder: (_) => _gateRuntimeFeatures(
+        const ThirdPartyDepositScreen(),
+        const [RuntimeFeature.legacySystem, RuntimeFeature.cashIn],
+      ),
     ),
-    '/electricity-suppliers': (_) => _gateRuntimeFeatures(
-      const ElectricitySuppliersScreen(),
-      const [RuntimeFeature.legacySystem, RuntimeFeature.bills],
+    '/electricity-suppliers': (_) => BitcoinCapabilityGate(
+      feature: 'Payments',
+      builder: (_) => _gateRuntimeFeatures(
+        const ElectricitySuppliersScreen(),
+        const [RuntimeFeature.legacySystem, RuntimeFeature.bills],
+      ),
     ),
     '/kyc-success': (_) => const KycSuccessScreen(),
   };

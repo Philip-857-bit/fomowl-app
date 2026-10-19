@@ -15,7 +15,11 @@ import 'app_shell_bottom_navigation.dart';
 import 'app_shell_controller.dart';
 
 class AppShellScreen extends StatefulWidget {
-  const AppShellScreen({super.key});
+  const AppShellScreen({super.key, this.walletPage});
+
+  /// Optional wallet presentation; shell navigation and lifecycle remain owned
+  /// here, independently of the wallet dashboard's data loading.
+  final Widget? walletPage;
 
   @override
   State<AppShellScreen> createState() => _AppShellScreenState();
@@ -73,6 +77,9 @@ class _AppShellScreenState extends State<AppShellScreen> {
 
   bool _canOpenTradingScreen() {
     final family = context.read<BlockchainService>().activeFamily;
+    // Bitcoin's destination exposes Bridge only and enforces route/runtime
+    // availability itself. Keep it reachable for network selection and review.
+    if (family == ChainFamily.bitcoin) return true;
     return _runtimeConfig.snapshot.allowsTradingScreen(
       limitSupported: family == ChainFamily.evm || family == ChainFamily.solana,
     );
@@ -87,6 +94,14 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   Future<void> _openOwlletPay() async {
+    if (context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitcoin payments are not available yet.'),
+        ),
+      );
+      return;
+    }
     if (_openingOwlletPay) {
       return;
     }
@@ -190,15 +205,19 @@ class _AppShellScreenState extends State<AppShellScreen> {
         body: IndexedStack(
           index: controller.currentIndex,
           children: [
-            HomeScreen(
-              showBottomNavigation: false,
-              refreshRevision: _walletRefreshRevision,
-            ),
+            widget.walletPage ??
+                HomeScreen(
+                  showBottomNavigation: false,
+                  refreshRevision: _walletRefreshRevision,
+                ),
             const SwapScreen(showBottomNavigation: false),
             const DiscoverScreen(),
           ],
         ),
         bottomNavigationBar: AppShellBottomNavigation(
+          bitcoinBridgeOnly:
+              context.watch<BlockchainService>().activeFamily ==
+              ChainFamily.bitcoin,
           currentTab: controller.currentTab,
           onTabTap: _selectTab,
           onPayTap: _openOwlletPay,

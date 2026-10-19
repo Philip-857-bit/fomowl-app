@@ -1787,4 +1787,335 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get doneLabel => '完成';
+
+  @override
+  String get bitcoinConfirmTransfer => '确认 Bitcoin 转账';
+
+  @override
+  String get bitcoinInvalidPlan => '此 Bitcoin 交易方案无效。请返回发送页面重新准备。';
+
+  @override
+  String get bitcoinTransferFailed => '无法完成 Bitcoin 转账。';
+
+  @override
+  String get bitcoinPreparingTransfer => '正在准备转账…';
+
+  @override
+  String get bitcoinAmount => '金额';
+
+  @override
+  String get bitcoinDestination => '收款地址';
+
+  @override
+  String get bitcoinFeeRate => '费率';
+
+  @override
+  String get bitcoinNetworkFee => '网络费用';
+
+  @override
+  String get bitcoinEstimatedVbytes => '预计虚拟字节数';
+
+  @override
+  String get bitcoinTotalDebit => '总支出';
+
+  @override
+  String get bitcoinAddressType => '地址类型';
+
+  @override
+  String get bitcoinNativeSegwit => '原生 SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => '已启用';
+
+  @override
+  String get bitcoinDisabled => '已禁用';
+
+  @override
+  String get bitcoinTransaction => 'Bitcoin 交易';
+
+  @override
+  String get bitcoinStatus => '状态';
+
+  @override
+  String get bitcoinConfirmed => '已确认';
+
+  @override
+  String get bitcoinPending => '待确认';
+
+  @override
+  String get bitcoinConfirmations => '确认数';
+
+  @override
+  String get bitcoinBlockHeight => '区块高度';
+
+  @override
+  String get bitcoinTransactionId => '交易 ID';
+
+  @override
+  String get bitcoinWalletChange => '钱包余额变动';
+
+  @override
+  String get bitcoinTimestamp => '时间';
+
+  @override
+  String get bitcoinStatusUnavailable => '暂时无法获取最新交易状态。';
+
+  @override
+  String get bitcoinViewExplorer => '在区块浏览器中查看';
+
+  @override
+  String get bitcoinReceiveWarning => '仅向此地址发送 Bitcoin (BTC)。';
+
+  @override
+  String get bitcoinCapabilityUnavailable => 'Bitcoin 暂不支持此功能。';
+
+  @override
+  String get bitcoinEconomy => '经济';
+
+  @override
+  String get bitcoinNormal => '普通';
+
+  @override
+  String get bitcoinPriority => '优先';
+
+  @override
+  String get bitcoinSplitFunds =>
+      '资金分布于原生 SegWit 和 Taproot。单一地址类型的资金必须足以支付金额和网络费用。';
+
+  @override
+  String get advancedTransactionDetails => '高级详情';
+
+  @override
+  String get bitcoinNetworkSpeed => '网络速度';
+
+  @override
+  String get bitcoinEqualFeeTiers => '目前所有速度选项的手续费相同。';
+
+  @override
+  String get bitcoinInputType => '地址 / 输入类型';
+
+  @override
+  String get bitcoinEstimatedSize => '预计交易大小';
+
+  @override
+  String get bitcoinReplaceByFee => '手续费替换';
+
+  @override
+  String get bitcoinSpeed => '速度';
+
+  @override
+  String get transactionAmountToSend => '发送金额';
+
+  @override
+  String get transactionTotal => '总计';
+
+  @override
+  String get transactionSubmittedTitle => '已提交';
+
+  @override
+  String get transactionSubmittedSubtitle => '网络已接受并传播您的交易，正在等待首次确认。';
+
+  @override
+  String get transactionSubmissionUnknownTitle => '提交状态不确定';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      '无法确认网络是否已接受此交易。再次发送前请检查其状态。';
+
+  @override
+  String get transactionConfirmedSubtitle => '您的交易已被纳入区块。';
+
+  @override
+  String get bitcoinRecoveryTitle => '查看已保存的尝试';
+
+  @override
+  String get bitcoinRecoveryWarning => '仅恢复您确定在广播前被拒绝的尝试。找不到交易本身不能证明这一点。';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => '此尝试在广播前已被拒绝。';
+
+  @override
+  String get bitcoinRecoveryAction => '恢复 Testnet4 预留';
+
+  @override
+  String get bitcoinRecoveryUnavailable => '无法恢复，此尝试仍保持预留。';
+
+  @override
+  String get bitcoinRecoveryError => '无法验证恢复。未发送新交易。';
+
+  @override
+  String get bitcoinRecoveryEmpty => '此网络没有已保存的尝试。';
+
+  @override
+  String get bitcoinRecoverySuccess => '已恢复预留，您可以准备新转账。';
+
+  @override
+  String get bitcoinReservedInputs => '预留输入';
+
+  @override
+  String get bitcoinRecoveryCheck => '检查交易状态';
+
+  @override
+  String get transactionEconomy => '经济';
+
+  @override
+  String get transactionNormal => '普通';
+
+  @override
+  String get transactionPriority => '优先';
+
+  @override
+  String get transactionNetworkSpeed => '网络速度';
+
+  @override
+  String get transactionSpeed => '速度';
+
+  @override
+  String get transactionEqualFeeTiers => '目前所有速度选项的手续费相同。';
+
+  @override
+  String get evmTransactionType => '交易类型';
+
+  @override
+  String get evmGasLimit => 'Gas 上限';
+
+  @override
+  String get evmGasPrice => 'Gas 价格';
+
+  @override
+  String get evmBaseFee => '基础费用';
+
+  @override
+  String get evmPriorityFee => '优先费用';
+
+  @override
+  String get evmMaxFee => '最高费用';
+
+  @override
+  String get evmLegacyTransaction => '传统交易（类型 0）';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559（类型 2）';
+
+  @override
+  String get evmFeeQuoteUpdated => '网络费用已变化。请检查更新后的费用并再次确认。';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return '最高 $fee';
+  }
+
+  @override
+  String get evmSpeedUp => '加速';
+
+  @override
+  String get evmCancelTransaction => '取消交易';
+
+  @override
+  String get evmOldFee => '原预计手续费';
+
+  @override
+  String get evmNewFee => '新预计手续费';
+
+  @override
+  String get evmAdditionalFee => '额外预计费用';
+
+  @override
+  String get evmMaximumFee => '最高执行手续费';
+
+  @override
+  String get evmCancelWarning => '原交易可能先被确认。取消会向您自己的地址发送零金额交易，并产生网络手续费。';
+
+  @override
+  String get evmSpeedUpWarning => '收款地址和金额保持不变。提高手续费不保证确认时间。';
+
+  @override
+  String get evmReplacementSubmitted => '替换交易已提交，仍待确认。';
+
+  @override
+  String get evmReplacementCheckOutcome => '请先检查已保存交易的状态再重试。结果未知不代表交易失败。';
+
+  @override
+  String get evmSubmissionUnknown => '提交结果未知';
+
+  @override
+  String get evmTransactionSubmitted => '交易已提交';
+
+  @override
+  String get bitcoinSpeedUp => '加速';
+
+  @override
+  String get bitcoinRbfOriginalFee => '原网络手续费';
+
+  @override
+  String get bitcoinRbfReplacementFee => '替换交易网络手续费';
+
+  @override
+  String get bitcoinRbfAdditionalFee => '额外手续费';
+
+  @override
+  String get bitcoinRbfNewRate => '新费率';
+
+  @override
+  String get bitcoinRbfWarning => '收款地址和金额保持不变。更高的手续费并不保证确认时间。';
+
+  @override
+  String get bitcoinRbfHigherFee => '请输入更高的整数费率。';
+
+  @override
+  String get bitcoinRbfUnavailable => '无法完成加速。请先检查交易状态，再重试。';
+
+  @override
+  String get bitcoinRbfSubmitted => '替换交易已提交，仍在等待确认。';
+
+  @override
+  String get bitcoinRbfUnknown => '提交结果未知。请先检查交易状态，再重试。';
+
+  @override
+  String get transactionNonce => '交易序号';
+
+  @override
+  String get transactionExecutionFee => '执行费用';
+
+  @override
+  String get transactionSlot => '时隙';
+
+  @override
+  String get transactionComputeUnits => '已使用计算单元';
+
+  @override
+  String get transactionEnergyUsed => '已使用能量';
+
+  @override
+  String get transactionBandwidthUsed => '已使用带宽';
+
+  @override
+  String get transactionEnergyFee => '能量费用';
+
+  @override
+  String get transactionBandwidthFee => '带宽费用';
+
+  @override
+  String get transactionEnergyFeeLimit => '能量费用上限';
+
+  @override
+  String get transactionEstimatedFee => '预估网络费用';
+
+  @override
+  String get transactionUnavailable => '暂不可用';
+
+  @override
+  String get transactionResources => '网络资源';
+
+  @override
+  String get transactionAfterConfirmation => '确认后';
+
+  @override
+  String get transactionCalculatedByNetwork => '由网络计算';
+
+  @override
+  String get transactionEstimatedTotal => '预估总计';
 }

@@ -1868,4 +1868,359 @@ class AppLocalizationsHa extends AppLocalizations {
 
   @override
   String get doneLabel => 'An gama';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Tabbatar da tura Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Wannan tsarin Bitcoin bai inganta ba. Koma zuwa Tura ka sake shirya shi.';
+
+  @override
+  String get bitcoinTransferFailed => 'Ba a iya kammala tura Bitcoin ba.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'Ana shirya turawa…';
+
+  @override
+  String get bitcoinAmount => 'Adadi';
+
+  @override
+  String get bitcoinDestination => 'Adireshin karɓa';
+
+  @override
+  String get bitcoinFeeRate => 'Ƙimar kuɗin aiki';
+
+  @override
+  String get bitcoinNetworkFee => 'Kuɗin hanyar sadarwa';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes da aka ƙiyasta';
+
+  @override
+  String get bitcoinTotalDebit => 'Jimillar cirewa';
+
+  @override
+  String get bitcoinAddressType => 'Nau\'in adireshi';
+
+  @override
+  String get bitcoinNativeSegwit => 'Native SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'An kunna';
+
+  @override
+  String get bitcoinDisabled => 'An kashe';
+
+  @override
+  String get bitcoinTransaction => 'Mu\'amalar Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Matsayi';
+
+  @override
+  String get bitcoinConfirmed => 'An tabbatar';
+
+  @override
+  String get bitcoinPending => 'Ana jira';
+
+  @override
+  String get bitcoinConfirmations => 'Tabbatarwa';
+
+  @override
+  String get bitcoinBlockHeight => 'Tsayin block';
+
+  @override
+  String get bitcoinTransactionId => 'ID na mu\'amala';
+
+  @override
+  String get bitcoinWalletChange => 'Canjin kuɗin walat';
+
+  @override
+  String get bitcoinTimestamp => 'Lokaci';
+
+  @override
+  String get bitcoinStatusUnavailable =>
+      'Ba a samun sabon matsayin mu\'amalar yanzu.';
+
+  @override
+  String get bitcoinViewExplorer => 'Duba a mai bincike';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Aika Bitcoin (BTC) kawai zuwa wannan adireshi.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'Wannan fasalin bai samu ga Bitcoin ba tukuna.';
+
+  @override
+  String get bitcoinEconomy => 'Mai rahusa';
+
+  @override
+  String get bitcoinNormal => 'Na yau da kullum';
+
+  @override
+  String get bitcoinPriority => 'Fifiko';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'An raba kuɗin tsakanin Native SegWit da Taproot. Nau\'in adireshi ɗaya dole ya biya adadi da kuɗin hanyar sadarwa.';
+
+  @override
+  String get advancedTransactionDetails => 'Ƙarin bayani';
+
+  @override
+  String get bitcoinNetworkSpeed => 'SAURIN HANYAR SADARWA';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'Duk zaɓuɓɓukan sauri suna amfani da kuɗi iri ɗaya a yanzu.';
+
+  @override
+  String get bitcoinInputType => 'Nau’in adireshi / shigarwa';
+
+  @override
+  String get bitcoinEstimatedSize => 'Girman ciniki da aka kiyasta';
+
+  @override
+  String get bitcoinReplaceByFee => 'Sauyawa da kuɗi';
+
+  @override
+  String get bitcoinSpeed => 'Sauri';
+
+  @override
+  String get transactionAmountToSend => 'ADADIN DA ZA A AIKA';
+
+  @override
+  String get transactionTotal => 'Jimilla';
+
+  @override
+  String get transactionSubmittedTitle => 'An aika';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'Cibiyar sadarwa ta karɓi ma’amalarka don yaɗawa. Ana jiran tabbatarwa ta farko.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Ba a tabbatar da aikawa ba';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'Ba mu iya tabbatar ko cibiyar sadarwa ta karɓi wannan ma’amala ba. Duba matsayinta kafin sake aikawa.';
+
+  @override
+  String get transactionConfirmedSubtitle =>
+      'An haɗa ma’amalarka cikin wani bulok.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Duba ƙoƙarin da aka ajiye';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Ka dawo da ƙoƙarin da ka san an ƙi kafin yaɗawa kawai. Rashin ganin ma’amala kaɗai ba hujja ba ne.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => 'An ƙi wannan ƙoƙari kafin yaɗawa.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Dawo da ajiyar Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'Ba za a iya dawo da ita ba. Wannan ƙoƙarin yana nan a ajiye.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'Ba a iya tabbatar da dawowa ba. Ba a aika sabuwar ma’amala ba.';
+
+  @override
+  String get bitcoinRecoveryEmpty =>
+      'Babu ƙoƙarin da aka ajiye ga wannan cibiyar sadarwa.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'An dawo da ajiyar. Za ka iya shirya sabon canja wuri.';
+
+  @override
+  String get bitcoinReservedInputs => 'Abubuwan shiga da aka ajiye';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Duba matsayin ma’amala';
+
+  @override
+  String get transactionEconomy => 'Mai rahusa';
+
+  @override
+  String get transactionNormal => 'Na yau da kullum';
+
+  @override
+  String get transactionPriority => 'Fifiko';
+
+  @override
+  String get transactionNetworkSpeed => 'SAURIN HANYAR SADARWA';
+
+  @override
+  String get transactionSpeed => 'Sauri';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Duk zaɓuɓɓukan sauri suna amfani da kuɗi iri ɗaya a yanzu.';
+
+  @override
+  String get evmTransactionType => 'Nau’in ma’amala';
+
+  @override
+  String get evmGasLimit => 'Iyakar gas';
+
+  @override
+  String get evmGasPrice => 'Farashin gas';
+
+  @override
+  String get evmBaseFee => 'Kuɗin tushe';
+
+  @override
+  String get evmPriorityFee => 'Kuɗin fifiko';
+
+  @override
+  String get evmMaxFee => 'Mafi yawan kuɗi';
+
+  @override
+  String get evmLegacyTransaction => 'Na gargajiya (nau’i 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (nau’i 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Kuɗin hanyar sadarwa sun canza. Duba sabbin kuɗin sannan ka sake tabbatarwa.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Har zuwa $fee';
+  }
+
+  @override
+  String get evmSpeedUp => 'Gaggauta';
+
+  @override
+  String get evmCancelTransaction => 'Soke ma’amala';
+
+  @override
+  String get evmOldFee => 'Tsohon kuɗin da aka kiyasta';
+
+  @override
+  String get evmNewFee => 'Sabon kuɗin da aka kiyasta';
+
+  @override
+  String get evmAdditionalFee => 'Ƙarin kuɗin da aka kiyasta';
+
+  @override
+  String get evmMaximumFee => 'Mafi girman kuɗin aiwatarwa';
+
+  @override
+  String get evmCancelWarning =>
+      'Ma’amalar asali na iya samun tabbaci da farko. Sokewa tana aika ƙimar sifili zuwa adireshinka kuma tana buƙatar kuɗin hanyar sadarwa.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'Mai karɓa da adadin ba su canza ba. Ƙarin kuɗi ba ya tabbatar da lokacin tabbaci.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'An aika ma’amalar maye gurbi. Ana jiran tabbaci.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Duba matsayin ma’amalar da aka adana kafin sake gwadawa. Sakamakon da ba a sani ba ba yana nufin gazawa ba.';
+
+  @override
+  String get evmSubmissionUnknown => 'Ba a san sakamakon aikawa ba';
+
+  @override
+  String get evmTransactionSubmitted => 'An aika ma’amala';
+
+  @override
+  String get bitcoinSpeedUp => 'Ƙara sauri';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Kuɗin cibiyar sadarwa na asali';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Kuɗin cibiyar sadarwa na musanya';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Ƙarin kuɗi';
+
+  @override
+  String get bitcoinRbfNewRate => 'Sabon ƙimar kuɗi';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'Adireshin karɓa da adadin ba su canza ba. Ƙarin kuɗi ba ya tabbatar da lokacin tabbatarwa.';
+
+  @override
+  String get bitcoinRbfHigherFee =>
+      'Shigar da ƙimar kuɗi mafi girma a cikakken lamba.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'Ba a iya ƙara sauri ba. Duba matsayin mu’amalar kafin sake gwadawa.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'An aika mu’amalar musanya. Ana jiran tabbatarwa.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'Ba a san sakamakon aikawa ba. Duba matsayin mu’amalar kafin sake gwadawa.';
+
+  @override
+  String get transactionNonce => 'Lambar mu’amala';
+
+  @override
+  String get transactionExecutionFee => 'Kuɗin aiwatarwa';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits =>
+      'Rukunin lissafi da aka yi amfani da su';
+
+  @override
+  String get transactionEnergyUsed => 'Energy da aka yi amfani da shi';
+
+  @override
+  String get transactionBandwidthUsed => 'Bandwidth da aka yi amfani da shi';
+
+  @override
+  String get transactionEnergyFee => 'Kuɗin Energy';
+
+  @override
+  String get transactionBandwidthFee => 'Kuɗin Bandwidth';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Iyakar kuɗin Energy';
+
+  @override
+  String get transactionEstimatedFee => 'Ƙiyasin kuɗin hanyar sadarwa';
+
+  @override
+  String get transactionUnavailable => 'Ba a samu ba';
+
+  @override
+  String get transactionResources => 'Albarkatun hanyar sadarwa';
+
+  @override
+  String get transactionAfterConfirmation => 'Bayan tabbatarwa';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Hanyar sadarwa za ta lissafa';
+
+  @override
+  String get transactionEstimatedTotal => 'Ƙiyasin jimilla';
 }

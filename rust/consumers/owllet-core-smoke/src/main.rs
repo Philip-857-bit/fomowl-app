@@ -156,6 +156,7 @@ fn self_test() -> Result<(), String> {
         "Locked TRON account accepted signing",
     )?;
     println!("PASS TRON: message format, raw transaction digest/signature, vault, lock");
+    bitcoin_self_test()?;
     println!(
         "PASS independent Rust host: no Flutter, FRB, backend or platform keystore dependencies"
     );
@@ -174,4 +175,125 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+fn bitcoin_self_test() -> Result<(), String> {
+    use owllet_core::{
+        bitcoin_vault::*,
+        transactions::{bitcoin::*, bitcoin_psbt::*, bitcoin_rbf::*, bitcoin_signing::*},
+        *,
+    };
+    let seed=mnemonic_to_seed("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")?;
+    for purpose in [BitcoinAccountPurpose::Bip84, BitcoinAccountPurpose::Bip86] {
+        let account = derive_bitcoin_account(&seed, BitcoinNetwork::Mainnet, 0, purpose)?;
+        let secret = derive_bitcoin_account_xprv_from_seed(&seed, account.network, 0, purpose)?;
+        let receive = derive_bitcoin_address_from_account(
+            &account,
+            account.network,
+            BitcoinKeychain::External,
+            0,
+        )?;
+        let change = derive_bitcoin_address_from_account(
+            &account,
+            account.network,
+            BitcoinKeychain::Internal,
+            0,
+        )?;
+        check(receive != change, "Bitcoin receive/change scope differs")?;
+        check(
+            receive
+                == if purpose == BitcoinAccountPurpose::Bip84 {
+                    "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"
+                } else {
+                    "bc1p5cyxnuxmeuwuvkwfem96lqzszd02n6xdcjrs20cac6yqjjwudpxqkedrcr"
+                },
+            "Bitcoin official address mismatch",
+        )?;
+        let utxo = BitcoinUtxo {
+            txid: "11".repeat(32),
+            vout: 0,
+            value_sat: 100_000,
+            script_pubkey_hex: derive_bitcoin_script_pubkey_from_account(
+                &account,
+                account.network,
+                BitcoinKeychain::External,
+                0,
+            )?,
+            keychain: BitcoinKeychain::External,
+            address_index: 0,
+        };
+        let recipient = BitcoinRecipient {
+            address: derive_bitcoin_address_from_account(
+                &account,
+                account.network,
+                BitcoinKeychain::External,
+                1,
+            )?,
+            amount_sat: 50_000,
+        };
+        let plan =
+            plan_bitcoin_transaction(account.network, &account, &[utxo], &[recipient], 2, 0, true)?;
+        let signed = sign_bitcoin_transaction(&plan, &secret)?;
+        check(
+            signed == verify_signed_bitcoin_transaction(&plan, &signed.raw_transaction_hex)?,
+            "Bitcoin signature verification mismatch",
+        )?;
+        let replacement = plan_bitcoin_rbf_replacement(
+            &plan,
+            &signed.raw_transaction_hex,
+            &BitcoinRbfContext {
+                original_txid: signed.txid.clone(),
+                original_unconfirmed: true, // Offline fixture observation only.
+                has_descendants: false,
+                incremental_relay_fee_sat_vb: 1,
+            },
+            4,
+        )?;
+        check(
+            replacement.recipients == plan.recipients
+                && replacement.selected_utxos == plan.selected_utxos,
+            "Bitcoin RBF intent mismatch",
+        )?;
+        let psbt = create_bitcoin_psbt(&plan)?;
+        let final_psbt = finalize_bitcoin_psbt(&sign_bitcoin_psbt(&account, &secret, &psbt)?)?;
+        check(
+            final_psbt.complete
+                && final_psbt.raw_transaction_hex.as_deref() == Some(&signed.raw_transaction_hex),
+            "Bitcoin PSBT/direct signing mismatch",
+        )?;
+        let record = seal_bitcoin_account_vault(
+            &account,
+            &secret,
+            &[42; 32],
+            &[purpose.number() as u8; 12],
+        )?;
+        let (mut session, handle) = open_bitcoin_account_vault(&account, &record, &[42; 32])?;
+        check(
+            session.sign_transaction(&handle, &plan)? == signed,
+            "Bitcoin custody signature mismatch",
+        )?;
+        check(
+            finalize_bitcoin_psbt(&session.sign_psbt(&handle, &psbt)?)?.complete,
+            "Bitcoin custody PSBT incomplete",
+        )?;
+        let replacement_signed = session.sign_transaction(&handle, &replacement)?;
+        check(
+            replacement_signed
+                == verify_signed_bitcoin_transaction(
+                    &replacement,
+                    &replacement_signed.raw_transaction_hex,
+                )?,
+            "Bitcoin RBF custody verification mismatch",
+        )?;
+        session.lock();
+        check(
+            session.sign_transaction(&handle, &plan).is_err(),
+            "Bitcoin locked session signed",
+        )?;
+        println!(
+            "PASS Bitcoin {:?}: XPUB receive/change, plan, RBF replacement, verified signing, PSBT, vault and lock",
+            purpose
+        );
+    }
+    Ok(())
 }

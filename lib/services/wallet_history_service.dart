@@ -1,4 +1,7 @@
 import 'dart:async';
+import '../models/bitcoin_account_history.dart';
+import '../models/bitcoin_account_state.dart';
+import '../utils/bitcoin_amount_utils.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -23,6 +26,7 @@ class WalletHistoryEntry {
     this.tokenSymbol,
     this.amount,
     this.networkKey,
+    this.bitcoin,
   });
 
   final String id;
@@ -40,6 +44,7 @@ class WalletHistoryEntry {
   final DateTime createdAt;
   final String source;
   final String? networkKey;
+  final BitcoinAccountHistoryEntry? bitcoin;
 
   factory WalletHistoryEntry.fromJson(Map<String, dynamic> json) {
     final createdAtRaw = json['createdAt']?.toString() ?? '';
@@ -131,6 +136,31 @@ class WalletHistoryService {
       throw Exception('Wallet history response was malformed.');
     }
     return WalletHistoryResponse.fromJson(decoded);
+  }
+
+  Future<void> recordBitcoinSend({
+    required String walletIdentity,
+    required String txid,
+    required BitcoinProductNetwork network,
+    required BigInt amountSats,
+    required String recipient,
+  }) {
+    final amount = BitcoinAmountUtils.format(amountSats);
+    return _recordHistory({
+      'walletAddress': walletIdentity,
+      'txHash': txid,
+      'txType': 'send',
+      'tokenName': 'Bitcoin',
+      'tokenSymbol': 'BTC',
+      'amount': _parseAmount(amount),
+      'isIncoming': false,
+      'networkName': network == BitcoinProductNetwork.mainnet
+          ? 'Bitcoin'
+          : 'Bitcoin Testnet4',
+      'networkKey': network.networkKey,
+      'title': 'Bitcoin submitted',
+      'message': 'Submitted $amount BTC to $recipient.',
+    });
   }
 
   Future<void> recordSendConfirmed({
@@ -299,9 +329,7 @@ class WalletHistoryService {
           .timeout(const Duration(seconds: 8));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint(
-          'Wallet history creation failed: ${response.statusCode} ${response.body}',
-        );
+        debugPrint('Wallet history creation failed: ${response.statusCode}');
       }
     } catch (error, stackTrace) {
       debugPrint('Wallet history creation failed: $error');

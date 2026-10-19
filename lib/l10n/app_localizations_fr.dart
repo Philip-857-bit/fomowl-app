@@ -1907,4 +1907,360 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get doneLabel => 'Terminé';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Confirmer le transfert Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Ce plan Bitcoin est invalide. Revenez à l’envoi et préparez-le à nouveau.';
+
+  @override
+  String get bitcoinTransferFailed =>
+      'Le transfert Bitcoin n’a pas pu être effectué.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'Préparation du transfert…';
+
+  @override
+  String get bitcoinAmount => 'Montant';
+
+  @override
+  String get bitcoinDestination => 'Destination';
+
+  @override
+  String get bitcoinFeeRate => 'Taux de frais';
+
+  @override
+  String get bitcoinNetworkFee => 'Frais de réseau';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes estimés';
+
+  @override
+  String get bitcoinTotalDebit => 'Débit total';
+
+  @override
+  String get bitcoinAddressType => 'Type d’adresse';
+
+  @override
+  String get bitcoinNativeSegwit => 'SegWit natif';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'Activé';
+
+  @override
+  String get bitcoinDisabled => 'Désactivé';
+
+  @override
+  String get bitcoinTransaction => 'Transaction Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Statut';
+
+  @override
+  String get bitcoinConfirmed => 'Confirmée';
+
+  @override
+  String get bitcoinPending => 'En attente';
+
+  @override
+  String get bitcoinConfirmations => 'Confirmations';
+
+  @override
+  String get bitcoinBlockHeight => 'Hauteur du bloc';
+
+  @override
+  String get bitcoinTransactionId => 'Identifiant de transaction';
+
+  @override
+  String get bitcoinWalletChange => 'Variation du portefeuille';
+
+  @override
+  String get bitcoinTimestamp => 'Horodatage';
+
+  @override
+  String get bitcoinStatusUnavailable =>
+      'Le statut actuel de la transaction est indisponible.';
+
+  @override
+  String get bitcoinViewExplorer => 'Voir dans l’explorateur';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Envoyez uniquement du Bitcoin (BTC) à cette adresse.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'Cette fonctionnalité n’est pas encore disponible pour Bitcoin.';
+
+  @override
+  String get bitcoinEconomy => 'Économique';
+
+  @override
+  String get bitcoinNormal => 'Normal';
+
+  @override
+  String get bitcoinPriority => 'Prioritaire';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'Les fonds sont répartis entre SegWit natif et Taproot. Un seul format d’adresse doit couvrir le montant et les frais de réseau.';
+
+  @override
+  String get advancedTransactionDetails => 'Détails avancés';
+
+  @override
+  String get bitcoinNetworkSpeed => 'VITESSE DU RÉSEAU';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'Toutes les options de vitesse utilisent actuellement les mêmes frais.';
+
+  @override
+  String get bitcoinInputType => 'Type d’adresse / d’entrée';
+
+  @override
+  String get bitcoinEstimatedSize => 'Taille estimée de la transaction';
+
+  @override
+  String get bitcoinReplaceByFee => 'Remplacement par frais';
+
+  @override
+  String get bitcoinSpeed => 'Vitesse';
+
+  @override
+  String get transactionAmountToSend => 'MONTANT À ENVOYER';
+
+  @override
+  String get transactionTotal => 'Total';
+
+  @override
+  String get transactionSubmittedTitle => 'Envoyée';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'Le réseau a accepté votre transaction pour sa diffusion. En attente de sa première confirmation.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Envoi incertain';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'Nous ne pouvons pas confirmer si le réseau a accepté cette transaction. Vérifiez son statut avant de renvoyer.';
+
+  @override
+  String get transactionConfirmedSubtitle =>
+      'Votre transaction a été incluse dans un bloc.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Examiner les tentatives enregistrées';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Ne récupérez que les tentatives rejetées avant diffusion. Une transaction introuvable ne constitue pas une preuve.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge =>
+      'Cette tentative a été rejetée avant diffusion.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Récupérer la réservation Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'La récupération est indisponible. Cette tentative reste réservée.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'Impossible de vérifier la récupération. Aucune nouvelle transaction envoyée.';
+
+  @override
+  String get bitcoinRecoveryEmpty =>
+      'Aucune tentative enregistrée pour ce réseau.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'Réservation récupérée. Vous pouvez préparer un nouveau transfert.';
+
+  @override
+  String get bitcoinReservedInputs => 'Entrées réservées';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Vérifier le statut';
+
+  @override
+  String get transactionEconomy => 'Économique';
+
+  @override
+  String get transactionNormal => 'Normal';
+
+  @override
+  String get transactionPriority => 'Prioritaire';
+
+  @override
+  String get transactionNetworkSpeed => 'VITESSE DU RÉSEAU';
+
+  @override
+  String get transactionSpeed => 'Vitesse';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Toutes les options de vitesse utilisent actuellement les mêmes frais.';
+
+  @override
+  String get evmTransactionType => 'Type de transaction';
+
+  @override
+  String get evmGasLimit => 'Limite de gas';
+
+  @override
+  String get evmGasPrice => 'Prix du gas';
+
+  @override
+  String get evmBaseFee => 'Frais de base';
+
+  @override
+  String get evmPriorityFee => 'Frais de priorité';
+
+  @override
+  String get evmMaxFee => 'Frais maximum';
+
+  @override
+  String get evmLegacyTransaction => 'Classique (type 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (type 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Les frais du réseau ont changé. Vérifiez les nouveaux frais puis confirmez à nouveau.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Jusqu’à $fee';
+  }
+
+  @override
+  String get evmSpeedUp => 'Accélérer';
+
+  @override
+  String get evmCancelTransaction => 'Annuler la transaction';
+
+  @override
+  String get evmOldFee => 'Anciens frais estimés';
+
+  @override
+  String get evmNewFee => 'Nouveaux frais estimés';
+
+  @override
+  String get evmAdditionalFee => 'Coût estimé supplémentaire';
+
+  @override
+  String get evmMaximumFee => 'Frais d’exécution maximum';
+
+  @override
+  String get evmCancelWarning =>
+      'La transaction initiale peut être confirmée en premier. L’annulation envoie une valeur nulle à votre adresse et entraîne des frais réseau.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'Le destinataire et le montant restent identiques. Des frais plus élevés ne garantissent pas un délai de confirmation.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'Transaction de remplacement envoyée. La confirmation est en attente.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Vérifiez le statut de la transaction enregistrée avant de réessayer. Un résultat inconnu ne signifie pas un échec.';
+
+  @override
+  String get evmSubmissionUnknown => 'Résultat de l’envoi inconnu';
+
+  @override
+  String get evmTransactionSubmitted => 'Transaction envoyée';
+
+  @override
+  String get bitcoinSpeedUp => 'Accélérer';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Frais réseau initiaux';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Frais réseau de remplacement';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Frais supplémentaires';
+
+  @override
+  String get bitcoinRbfNewRate => 'Nouveau taux de frais';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'La destination et le montant restent identiques. Des frais plus élevés ne garantissent pas un délai de confirmation.';
+
+  @override
+  String get bitcoinRbfHigherFee =>
+      'Saisissez un taux de frais entier plus élevé.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'L’accélération n’a pas pu être effectuée. Vérifiez le statut de la transaction avant de réessayer.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'Transaction de remplacement soumise. La confirmation est encore en attente.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'Le résultat de l’envoi est inconnu. Vérifiez le statut de la transaction avant de réessayer.';
+
+  @override
+  String get transactionNonce => 'Nonce de transaction';
+
+  @override
+  String get transactionExecutionFee => 'Frais d’exécution';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'Unités de calcul utilisées';
+
+  @override
+  String get transactionEnergyUsed => 'Énergie utilisée';
+
+  @override
+  String get transactionBandwidthUsed => 'Bande passante utilisée';
+
+  @override
+  String get transactionEnergyFee => 'Frais d’énergie';
+
+  @override
+  String get transactionBandwidthFee => 'Frais de bande passante';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Limite des frais d’énergie';
+
+  @override
+  String get transactionEstimatedFee => 'Frais de réseau estimés';
+
+  @override
+  String get transactionUnavailable => 'Indisponible';
+
+  @override
+  String get transactionResources => 'Ressources du réseau';
+
+  @override
+  String get transactionAfterConfirmation => 'Après confirmation';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Calculés par le réseau';
+
+  @override
+  String get transactionEstimatedTotal => 'Total estimé';
 }

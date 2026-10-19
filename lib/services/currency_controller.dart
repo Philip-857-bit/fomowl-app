@@ -8,12 +8,17 @@ import 'http_client_service.dart';
 import 'storage_service.dart';
 
 class CurrencyController extends ChangeNotifier {
-  CurrencyController({StorageService? storage, HttpClientService? httpClient})
-    : _storage = storage ?? StorageService(),
-      _httpClient = httpClient ?? HttpClientService();
+  CurrencyController({
+    StorageService? storage,
+    HttpClientService? httpClient,
+    DateTime Function()? now,
+  }) : _storage = storage ?? StorageService(),
+       _httpClient = httpClient ?? HttpClientService(),
+       _now = now ?? DateTime.now;
 
   final StorageService _storage;
   final HttpClientService _httpClient;
+  final DateTime Function() _now;
 
   static const _supportedCurrencies = {'USD', 'EUR', 'GBP', 'NGN'};
   static const _exchangeRatesBaseUrl = 'https://api.frankfurter.dev/v1/latest';
@@ -28,6 +33,43 @@ class CurrencyController extends ChangeNotifier {
 
   String _currencyCode = 'USD';
   bool _initialized = false;
+  Map<String, double> _inputRates = const {'USD': 1};
+  DateTime? _inputRatesObservedAt;
+  DateTime? _lastRateRefreshAttempt;
+  Future<void>? _amountRateRefresh;
+
+  /// Just-in-time refresh for Send, coalesced and bounded during an outage.
+  Future<void> refreshAmountInputRates() {
+    if (!_initialized || amountInputUsdRate != null) return Future.value();
+    final pending = _amountRateRefresh;
+    if (pending != null) return pending;
+    final last = _lastRateRefreshAttempt;
+    if (last != null &&
+        _now().toUtc().difference(last) < const Duration(minutes: 1)) {
+      return Future.value();
+    }
+    return _amountRateRefresh = _refreshRates().whenComplete(() {
+      _amountRateRefresh = null;
+      if (hasListeners) {
+        notifyListeners();
+      }
+    });
+  }
+
+  /// Static display fallbacks must never determine a transaction amount.
+  String? get amountInputUsdRate {
+    if (_currencyCode == 'USD') return '1';
+    final observed = _inputRatesObservedAt;
+    final rate = _inputRates[_currencyCode];
+    if (observed == null ||
+        _now().toUtc().difference(observed) > const Duration(minutes: 30) ||
+        rate == null ||
+        !rate.isFinite ||
+        rate <= 0) {
+      return null;
+    }
+    return rate.toString();
+  }
 
   String get currencyCode => _currencyCode;
   bool get initialized => _initialized;
@@ -49,14 +91,15 @@ class CurrencyController extends ChangeNotifier {
     final normalized = code.trim().toUpperCase();
     if (normalized.isEmpty || normalized == _currencyCode) return;
     if (!_supportedCurrencies.contains(normalized)) return;
-    _currencyCode = normalized;
     await _refreshRates();
+    _currencyCode = normalized;
     ValueFormatter.setCurrencyCode(normalized);
     notifyListeners();
     await _storage.setCurrency(normalized);
   }
 
   Future<void> _refreshRates() async {
+    _lastRateRefreshAttempt = _now().toUtc();
     final rates = <String, double>{'USD': 1.0};
     try {
       rates.addAll(await _fetchFrankfurterRates());
@@ -75,6 +118,8 @@ class CurrencyController extends ChangeNotifier {
       }
     }
 
+    _inputRates = Map.unmodifiable(rates);
+    _inputRatesObservedAt = _now().toUtc();
     for (final entry in _staticFallbackRates.entries) {
       rates.putIfAbsent(entry.key, () => entry.value);
     }
@@ -125,7 +170,7 @@ class CurrencyController extends ChangeNotifier {
     for (final code in _supportedCurrencies) {
       if (code == 'USD') continue;
       final value = rawRates[code];
-      if (value is num && value > 0) {
+      if (value is num && value.isFinite && value > 0) {
         rates[code] = value.toDouble();
       }
     }

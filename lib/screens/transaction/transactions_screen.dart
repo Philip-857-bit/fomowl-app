@@ -1,4 +1,10 @@
+import 'history_transaction_details_sheet.dart';
+import '../../models/evm_outbound_transaction.dart';
 import 'dart:convert';
+import 'dart:async';
+import 'bitcoin_transaction_details_sheet.dart';
+import '../../utils/bitcoin_amount_utils.dart';
+import '../../services/blockchain/bitcoin_catalog.dart';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -6,7 +12,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:web3dart/web3dart.dart';
 
 import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
@@ -16,6 +21,8 @@ import '../../services/blockchain_service.dart';
 import '../../services/etherscan_v2_service.dart';
 import '../../services/http_client_service.dart';
 import '../../services/wallet_history_service.dart';
+import '../../services/bitcoin/bitcoin_history_service.dart';
+import '../../models/bitcoin_account_state.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/in_app_link_router.dart';
 
@@ -24,403 +31,6 @@ class TransactionsScreen extends StatefulWidget {
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
-}
-
-class _HistoryTransactionDetailsSheet extends StatefulWidget {
-  const _HistoryTransactionDetailsSheet({
-    required this.entry,
-    required this.chain,
-    required this.explorerUrl,
-    required this.walletService,
-    required this.titleText,
-    required this.messageText,
-    required this.amountText,
-    required this.timestampText,
-    required this.networkText,
-    required this.onOpenExplorer,
-  });
-
-  final WalletHistoryEntry entry;
-  final EvmChain? chain;
-  final String? explorerUrl;
-  final WalletService walletService;
-  final String titleText;
-  final String messageText;
-  final String amountText;
-  final String timestampText;
-  final String networkText;
-  final Future<void> Function(String url) onOpenExplorer;
-
-  @override
-  State<_HistoryTransactionDetailsSheet> createState() =>
-      _HistoryTransactionDetailsSheetState();
-}
-
-class _HistoryTransactionDetailsSheetState
-    extends State<_HistoryTransactionDetailsSheet> {
-  Future<TransactionReceipt?>? _receiptFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    final txHash = widget.entry.txHash?.trim();
-    final rpcUrl = widget.chain?.rpcUrl.trim();
-    if (txHash != null &&
-        txHash.isNotEmpty &&
-        rpcUrl != null &&
-        rpcUrl.isNotEmpty) {
-      _receiptFuture = widget.walletService.getTransactionReceipt(
-        txHash: txHash,
-        rpcUrl: rpcUrl,
-      );
-    }
-  }
-
-  String _statusLabel(AppLocalizations l, bool? status) {
-    if (status == null) {
-      return l.pendingLabel;
-    }
-    return status ? l.confirmedLabel : l.failedLabel;
-  }
-
-  String _formatGasPrice(TransactionReceipt receipt) {
-    final gasPrice = receipt.effectiveGasPrice;
-    if (gasPrice == null) {
-      return '-';
-    }
-    return '${gasPrice.getValueInUnit(EtherUnit.gwei).toStringAsFixed(3)} Gwei';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final themeText = GoogleFonts.outfit(color: Colors.white);
-
-    return SafeArea(
-      top: false,
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.88,
-        ),
-        decoration: const BoxDecoration(
-          color: AppColors.cardDark,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 12, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l.transactionDetails,
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.titleText,
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      widget.messageText,
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        height: 1.4,
-                        color: Colors.white.withValues(alpha: 0.68),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _HistoryDetailSection(
-                      children: [
-                        _HistoryDetailRow(
-                          label: l.network,
-                          value: widget.networkText,
-                        ),
-                        _HistoryDetailRow(
-                          label: l.historyTimestampLabel,
-                          value: widget.timestampText,
-                        ),
-                        if (widget.amountText.isNotEmpty)
-                          _HistoryDetailRow(
-                            label: l.amount,
-                            value: widget.amountText,
-                          ),
-                        if (widget.entry.tokenName?.trim().isNotEmpty == true)
-                          _HistoryDetailRow(
-                            label: l.tokenLabel,
-                            value:
-                                '${widget.entry.tokenName} (${widget.entry.tokenSymbol ?? '-'})',
-                          ),
-                        if (widget.entry.txHash?.trim().isNotEmpty == true)
-                          _HistoryDetailRow(
-                            label: l.historyTransactionHashLabel,
-                            value: widget.entry.txHash!,
-                            monospace: true,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    if (_receiptFuture == null)
-                      _HistoryInfoBanner(message: l.historyReceiptUnavailable)
-                    else
-                      FutureBuilder<TransactionReceipt?>(
-                        future: _receiptFuture,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return _HistoryInfoBanner(
-                              message: l.historyLoadingReceipt,
-                              loading: true,
-                            );
-                          }
-                          if (snapshot.hasError) {
-                            return _HistoryInfoBanner(
-                              message: l.historyReceiptLoadError,
-                            );
-                          }
-                          final receipt = snapshot.data;
-                          if (receipt == null) {
-                            return _HistoryInfoBanner(
-                              message: l.historyReceiptPending,
-                            );
-                          }
-
-                          return _HistoryDetailSection(
-                            children: [
-                              _HistoryDetailRow(
-                                label: l.historyStatusLabel,
-                                value: _statusLabel(l, receipt.status),
-                                valueColor: receipt.status == null
-                                    ? Colors.white
-                                    : (receipt.status!
-                                          ? AppColors.success
-                                          : AppColors.accentRed),
-                              ),
-                              _HistoryDetailRow(
-                                label: l.historyBlockNumberLabel,
-                                value: receipt.blockNumber.isPending
-                                    ? l.pendingLabel
-                                    : receipt.blockNumber.blockNum.toString(),
-                              ),
-                              _HistoryDetailRow(
-                                label: l.historyFromLabel,
-                                value: receipt.from?.hexEip55 ?? '-',
-                                monospace: true,
-                              ),
-                              _HistoryDetailRow(
-                                label: l.historyToLabel,
-                                value: receipt.to?.hexEip55 ?? '-',
-                                monospace: true,
-                              ),
-                              if (receipt.gasUsed != null)
-                                _HistoryDetailRow(
-                                  label: l.historyGasUsedLabel,
-                                  value: receipt.gasUsed.toString(),
-                                ),
-                              _HistoryDetailRow(
-                                label: l.historyGasPriceLabel,
-                                value: _formatGasPrice(receipt),
-                              ),
-                              if (receipt.contractAddress != null)
-                                _HistoryDetailRow(
-                                  label: l.historyContractAddressLabel,
-                                  value: receipt.contractAddress!.hexEip55,
-                                  monospace: true,
-                                ),
-                              _HistoryDetailRow(
-                                label: l.historyLogCountLabel,
-                                value: receipt.logs.length.toString(),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    if (widget.explorerUrl != null &&
-                        widget.explorerUrl!.trim().isNotEmpty) ...[
-                      const SizedBox(height: 18),
-                      GestureDetector(
-                        onTap: () => widget.onOpenExplorer(widget.explorerUrl!),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            gradient: AppColors.primaryGradient,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Center(
-                            child: Text(
-                              l.viewOnExplorer,
-                              style: themeText.copyWith(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HistoryDetailSection extends StatelessWidget {
-  const _HistoryDetailSection({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(children: children),
-    );
-  }
-}
-
-class _HistoryDetailRow extends StatelessWidget {
-  const _HistoryDetailRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-    this.monospace = false,
-  });
-
-  final String label;
-  final String value;
-  final Color? valueColor;
-  final bool monospace;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Colors.white.withValues(alpha: 0.55),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            flex: 2,
-            child: SelectableText(
-              value,
-              style:
-                  (monospace ? GoogleFonts.robotoMono() : GoogleFonts.outfit())
-                      .copyWith(
-                        fontSize: monospace ? 12.5 : 13.5,
-                        fontWeight: FontWeight.w500,
-                        color: valueColor ?? Colors.white,
-                      ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HistoryInfoBanner extends StatelessWidget {
-  const _HistoryInfoBanner({required this.message, this.loading = false});
-
-  final String message;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        children: [
-          if (loading)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.accentRed,
-              ),
-            )
-          else
-            Icon(
-              Icons.receipt_long_rounded,
-              color: Colors.white.withValues(alpha: 0.75),
-              size: 18,
-            ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                height: 1.4,
-                color: Colors.white.withValues(alpha: 0.74),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
@@ -439,12 +49,26 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   List<WalletHistoryEntry> _allHistory = [];
   String _selectedType = 'all';
   int? _selectedChainId;
+  String? _historyContext;
+  int _historyGeneration = 0;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final blockchain = context.watch<BlockchainService>();
+    final nextContext =
+        '${blockchain.activeWalletAddress.toLowerCase()}|${blockchain.activeNetworkKey}';
+    if (_historyContext == nextContext) return;
+    _historyContext = nextContext;
+    final generation = ++_historyGeneration;
+    _allHistory = [];
+    _isLoading = true;
+    _isPartial = false;
+    _errorMessage = null;
+    _partialMessage = null;
+    _selectedChainId = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && generation == _historyGeneration) {
         _fetchHistory();
       }
     });
@@ -453,15 +77,58 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   Future<void> _fetchHistory() async {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final l = AppLocalizations.of(context);
+    final generation = ++_historyGeneration;
+    final networkKey = blockchain.activeNetworkKey;
+    final walletIdentity = blockchain.activeWalletAddress.toLowerCase();
+    bool currentRequest() =>
+        mounted &&
+        generation == _historyGeneration &&
+        blockchain.activeNetworkKey == networkKey &&
+        blockchain.activeWalletAddress.toLowerCase() == walletIdentity;
     try {
       final family = blockchain.activeFamily;
+      if (family == ChainFamily.bitcoin) {
+        final networkKey = blockchain.activeNetworkKey;
+        final identity = await _walletService.getCurrentWalletAddress();
+        if (!currentRequest()) return;
+        if (identity == null) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = l.noActiveWalletFound;
+            _allHistory = [];
+          });
+          return;
+        }
+        bool current() =>
+            currentRequest() &&
+            blockchain.activeNetworkKey == networkKey &&
+            blockchain.activeWalletAddress.toLowerCase() ==
+                identity.toLowerCase();
+        final response = await BitcoinHistoryService().fetch(
+          identity,
+          BitcoinProductNetwork.fromId(
+            NetworkKey.bitcoinNetworkIdOf(networkKey),
+          ),
+          isCurrent: current,
+        );
+        if (!current()) return;
+        setState(() {
+          _allHistory = response.history;
+          _isPartial = response.partial;
+          _partialMessage = response.message;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+        return;
+      }
+
       final String? address;
       if (family == ChainFamily.evm) {
         address = await _walletService.getCurrentWalletAddress();
       } else {
         address = await _walletService.getWalletAddressForFamily(family);
       }
-      if (!mounted) return;
+      if (!currentRequest()) return;
       if (address == null || address.trim().isEmpty) {
         setState(() {
           _isLoading = false;
@@ -493,9 +160,39 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           ? l.walletHistoryFallbackWarning
           : null;
 
+      final localOutbound = <WalletHistoryEntry>[];
+      if (family == ChainFamily.evm) {
+        for (final entry in await _walletService.evmOutbound.list(address)) {
+          if (!entry.unresolved) continue;
+          final chain = blockchain.allChains
+              .where((chain) => chain.chainId == entry.fields.chainId)
+              .firstOrNull;
+          if (chain == null) continue;
+          localOutbound.add(
+            WalletHistoryEntry(
+              id: 'evm_outbound_${entry.hash}',
+              walletAddress: address,
+              chainId: entry.fields.chainId,
+              networkKey: chain.networkKey,
+              networkName: chain.name,
+              txHash: entry.hash,
+              eventType: 'send',
+              title: entry.state == EvmOutboundState.submitted
+                  ? l.evmTransactionSubmitted
+                  : l.evmSubmissionUnknown,
+              message: entry.state == EvmOutboundState.submitted
+                  ? l.historyReceiptPending
+                  : l.evmReplacementCheckOutcome,
+              isIncoming: false,
+              createdAt: entry.createdAt,
+              source: 'evm_outbound',
+            ),
+          );
+        }
+      }
       final mergedHistory = _mergeHistory(
         preferred: response?.history ?? const [],
-        fallback: explorerHistory,
+        fallback: [...explorerHistory, ...localOutbound],
         limit: 120,
       );
 
@@ -503,7 +200,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         throw Exception('Unable to load wallet history');
       }
 
-      if (!mounted) return;
+      if (!currentRequest()) return;
       setState(() {
         _allHistory = mergedHistory;
         _isPartial = (response?.partial ?? false) || fallbackWarning != null;
@@ -515,7 +212,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         _errorMessage = null;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!currentRequest()) return;
       setState(() {
         _isLoading = false;
         _errorMessage = l.walletHistoryLoadError;
@@ -528,6 +225,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     required String walletAddress,
   }) async {
     final family = blockchain.activeFamily;
+    if (family == ChainFamily.bitcoin) return const [];
     if (family == ChainFamily.solana) {
       return _loadSolanaHistory(walletAddress);
     }
@@ -937,6 +635,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final txHash = entry.txHash;
     if (txHash == null || txHash.isEmpty) return null;
 
+    if (entry.networkKey == 'bitcoin:mainnet' ||
+        entry.networkKey == 'bitcoin:testnet4') {
+      if (!RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(txHash)) return null;
+      final chain = entry.networkKey == 'bitcoin:mainnet'
+          ? BitcoinCatalog.mainnet
+          : BitcoinCatalog.testnet4;
+      return '${chain.explorerUrl}/tx/$txHash';
+    }
     // Solana
     final networkKey = entry.networkKey;
     if (networkKey == 'solana:mainnet') {
@@ -988,6 +694,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _entryTitle(WalletHistoryEntry entry, AppLocalizations l) {
+    if (entry.source == 'evm_outbound') return entry.title;
     switch (entry.eventType) {
       case 'receive':
         return l.historyTransferReceived;
@@ -1005,6 +712,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _entryDescription(WalletHistoryEntry entry, AppLocalizations l) {
+    if (entry.source == 'evm_outbound') return entry.message;
     final networkName = _networkLabel(entry, l);
     final amount = entry.amount;
     final tokenSymbol = entry.tokenSymbol?.trim();
@@ -1045,13 +753,36 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     WalletHistoryEntry entry,
     BlockchainService blockchain,
   ) async {
+    if (entry.networkKey == 'bitcoin:mainnet' ||
+        entry.networkKey == 'bitcoin:testnet4') {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => BitcoinTransactionDetailsSheet(
+          entry: entry,
+          network: BitcoinProductNetwork.fromId(
+            NetworkKey.bitcoinNetworkIdOf(entry.networkKey!),
+          ),
+          onOpenExplorer: _openExplorer,
+          enableSpeedUp: !entry.isIncoming,
+          isCurrent: () =>
+              mounted &&
+              blockchain.activeNetworkKey == entry.networkKey &&
+              blockchain.activeWalletAddress.trim().toLowerCase() ==
+                  entry.walletAddress.trim().toLowerCase(),
+          onReplacement: _fetchHistory,
+        ),
+      );
+      return;
+    }
     final chain = _historyChain(blockchain, entry);
     final explorerUrl = _txExplorerUrl(entry, blockchain);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _HistoryTransactionDetailsSheet(
+      builder: (context) => HistoryTransactionDetailsSheet(
         entry: entry,
         chain: chain,
         explorerUrl: explorerUrl,
@@ -1066,6 +797,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         onOpenExplorer: _openExplorer,
       ),
     );
+    if (mounted && blockchain.activeFamily == ChainFamily.evm) {
+      unawaited(_fetchHistory());
+    }
   }
 
   IconData _entryIcon(WalletHistoryEntry entry) {
@@ -1099,6 +833,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   String _formattedAmount(WalletHistoryEntry entry) {
+    if (entry.bitcoin != null) {
+      return '${BitcoinAmountUtils.format(entry.bitcoin!.deltaSats.abs())} BTC';
+    }
+    if (entry.networkKey == 'bitcoin:mainnet' ||
+        entry.networkKey == 'bitcoin:testnet4') {
+      return '${BitcoinAmountUtils.formatLegacyDisplay(entry.amount)} BTC';
+    }
+
     final amount = entry.amount;
     final tokenSymbol = entry.tokenSymbol;
     if (amount == null || tokenSymbol == null || tokenSymbol.isEmpty) {

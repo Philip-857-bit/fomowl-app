@@ -1866,4 +1866,353 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get doneLabel => 'تم';
+
+  @override
+  String get bitcoinConfirmTransfer => 'تأكيد تحويل Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'خطة Bitcoin غير صالحة. ارجع إلى الإرسال وأعد إعدادها.';
+
+  @override
+  String get bitcoinTransferFailed => 'تعذر إكمال تحويل Bitcoin.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'جارٍ إعداد التحويل…';
+
+  @override
+  String get bitcoinAmount => 'المبلغ';
+
+  @override
+  String get bitcoinDestination => 'الوجهة';
+
+  @override
+  String get bitcoinFeeRate => 'معدل الرسوم';
+
+  @override
+  String get bitcoinNetworkFee => 'رسوم الشبكة';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'الحجم الافتراضي المقدر';
+
+  @override
+  String get bitcoinTotalDebit => 'إجمالي الخصم';
+
+  @override
+  String get bitcoinAddressType => 'نوع العنوان';
+
+  @override
+  String get bitcoinNativeSegwit => 'SegWit الأصلي';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'مفعّل';
+
+  @override
+  String get bitcoinDisabled => 'معطّل';
+
+  @override
+  String get bitcoinTransaction => 'معاملة Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'الحالة';
+
+  @override
+  String get bitcoinConfirmed => 'مؤكدة';
+
+  @override
+  String get bitcoinPending => 'قيد الانتظار';
+
+  @override
+  String get bitcoinConfirmations => 'التأكيدات';
+
+  @override
+  String get bitcoinBlockHeight => 'ارتفاع الكتلة';
+
+  @override
+  String get bitcoinTransactionId => 'معرّف المعاملة';
+
+  @override
+  String get bitcoinWalletChange => 'تغيّر رصيد المحفظة';
+
+  @override
+  String get bitcoinTimestamp => 'التاريخ والوقت';
+
+  @override
+  String get bitcoinStatusUnavailable => 'حالة المعاملة الحالية غير متاحة.';
+
+  @override
+  String get bitcoinViewExplorer => 'عرض في المستكشف';
+
+  @override
+  String get bitcoinReceiveWarning => 'أرسل Bitcoin (BTC) فقط إلى هذا العنوان.';
+
+  @override
+  String get bitcoinCapabilityUnavailable =>
+      'هذه الميزة غير متاحة لـ Bitcoin بعد.';
+
+  @override
+  String get bitcoinEconomy => 'اقتصادي';
+
+  @override
+  String get bitcoinNormal => 'عادي';
+
+  @override
+  String get bitcoinPriority => 'أولوية';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'الأموال موزعة بين SegWit الأصلي وTaproot. يجب أن يغطي نوع عنوان واحد المبلغ ورسوم الشبكة.';
+
+  @override
+  String get advancedTransactionDetails => 'تفاصيل متقدمة';
+
+  @override
+  String get bitcoinNetworkSpeed => 'سرعة الشبكة';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'تستخدم جميع خيارات السرعة الرسوم نفسها حاليًا.';
+
+  @override
+  String get bitcoinInputType => 'نوع العنوان / المدخل';
+
+  @override
+  String get bitcoinEstimatedSize => 'حجم المعاملة التقديري';
+
+  @override
+  String get bitcoinReplaceByFee => 'الاستبدال بالرسوم';
+
+  @override
+  String get bitcoinSpeed => 'السرعة';
+
+  @override
+  String get transactionAmountToSend => 'المبلغ المراد إرساله';
+
+  @override
+  String get transactionTotal => 'الإجمالي';
+
+  @override
+  String get transactionSubmittedTitle => 'تم الإرسال';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'قبلت الشبكة معاملتك لنشرها. في انتظار التأكيد الأول.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'حالة الإرسال غير مؤكدة';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'تعذر التأكد من قبول الشبكة لهذه المعاملة. تحقق من حالتها قبل الإرسال مرة أخرى.';
+
+  @override
+  String get transactionConfirmedSubtitle => 'تم تضمين معاملتك في كتلة.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'مراجعة المحاولات المحفوظة';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'استرد فقط محاولة تعلم أنها رُفضت قبل البث. عدم العثور على المعاملة وحده ليس دليلاً.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge => 'رُفضت هذه المحاولة قبل البث.';
+
+  @override
+  String get bitcoinRecoveryAction => 'استرداد حجز Testnet4';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'الاسترداد غير متاح. تظل هذه المحاولة محجوزة.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'تعذر التحقق من الاسترداد. لم يتم إرسال معاملة جديدة.';
+
+  @override
+  String get bitcoinRecoveryEmpty => 'لا توجد محاولات محفوظة لهذه الشبكة.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'تم استرداد الحجز. يمكنك إعداد تحويل جديد.';
+
+  @override
+  String get bitcoinReservedInputs => 'المدخلات المحجوزة';
+
+  @override
+  String get bitcoinRecoveryCheck => 'التحقق من حالة المعاملة';
+
+  @override
+  String get transactionEconomy => 'اقتصادي';
+
+  @override
+  String get transactionNormal => 'عادي';
+
+  @override
+  String get transactionPriority => 'أولوية';
+
+  @override
+  String get transactionNetworkSpeed => 'سرعة الشبكة';
+
+  @override
+  String get transactionSpeed => 'السرعة';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'تستخدم جميع خيارات السرعة الرسوم نفسها حاليًا.';
+
+  @override
+  String get evmTransactionType => 'نوع المعاملة';
+
+  @override
+  String get evmGasLimit => 'حد الغاز';
+
+  @override
+  String get evmGasPrice => 'سعر الغاز';
+
+  @override
+  String get evmBaseFee => 'الرسوم الأساسية';
+
+  @override
+  String get evmPriorityFee => 'رسوم الأولوية';
+
+  @override
+  String get evmMaxFee => 'الحد الأقصى للرسوم';
+
+  @override
+  String get evmLegacyTransaction => 'تقليدية (النوع 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (النوع 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'تغيرت رسوم الشبكة. راجع الرسوم المحدثة ثم أكد مرة أخرى.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'حتى $fee';
+  }
+
+  @override
+  String get evmSpeedUp => 'تسريع';
+
+  @override
+  String get evmCancelTransaction => 'إلغاء المعاملة';
+
+  @override
+  String get evmOldFee => 'الرسوم التقديرية السابقة';
+
+  @override
+  String get evmNewFee => 'الرسوم التقديرية الجديدة';
+
+  @override
+  String get evmAdditionalFee => 'التكلفة التقديرية الإضافية';
+
+  @override
+  String get evmMaximumFee => 'الحد الأقصى لرسوم التنفيذ';
+
+  @override
+  String get evmCancelWarning =>
+      'قد يتم تأكيد المعاملة الأصلية أولاً. يرسل الإلغاء معاملة بقيمة صفر إلى عنوانك ويترتب عليه رسوم شبكة.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'يبقى المستلم والمبلغ كما هما. الرسوم الأعلى لا تضمن وقت التأكيد.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'تم إرسال المعاملة البديلة. ما زال التأكيد قيد الانتظار.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'تحقق من حالة المعاملة المحفوظة قبل المحاولة مجدداً. النتيجة غير المعروفة لا تعني الفشل.';
+
+  @override
+  String get evmSubmissionUnknown => 'نتيجة الإرسال غير معروفة';
+
+  @override
+  String get evmTransactionSubmitted => 'تم إرسال المعاملة';
+
+  @override
+  String get bitcoinSpeedUp => 'تسريع';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'رسوم الشبكة الأصلية';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'رسوم شبكة المعاملة البديلة';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'الرسوم الإضافية';
+
+  @override
+  String get bitcoinRbfNewRate => 'معدل الرسوم الجديد';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'تبقى الوجهة والمبلغ كما هما. الرسوم الأعلى لا تضمن وقتًا محددًا للتأكيد.';
+
+  @override
+  String get bitcoinRbfHigherFee => 'أدخل معدل رسوم أعلى بعدد صحيح.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'تعذر إكمال التسريع. تحقق من حالة المعاملة قبل المحاولة مجددًا.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'تم إرسال المعاملة البديلة. لا يزال التأكيد قيد الانتظار.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'نتيجة الإرسال غير معروفة. تحقق من حالة المعاملة قبل المحاولة مجددًا.';
+
+  @override
+  String get transactionNonce => 'الرقم التسلسلي للمعاملة';
+
+  @override
+  String get transactionExecutionFee => 'رسوم التنفيذ';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'وحدات الحوسبة المستخدمة';
+
+  @override
+  String get transactionEnergyUsed => 'الطاقة المستخدمة';
+
+  @override
+  String get transactionBandwidthUsed => 'عرض النطاق المستخدم';
+
+  @override
+  String get transactionEnergyFee => 'رسوم الطاقة';
+
+  @override
+  String get transactionBandwidthFee => 'رسوم عرض النطاق';
+
+  @override
+  String get transactionEnergyFeeLimit => 'حد رسوم الطاقة';
+
+  @override
+  String get transactionEstimatedFee => 'رسوم الشبكة المقدرة';
+
+  @override
+  String get transactionUnavailable => 'غير متاح';
+
+  @override
+  String get transactionResources => 'موارد الشبكة';
+
+  @override
+  String get transactionAfterConfirmation => 'بعد التأكيد';
+
+  @override
+  String get transactionCalculatedByNetwork => 'تحسبها الشبكة';
+
+  @override
+  String get transactionEstimatedTotal => 'الإجمالي المقدر';
 }

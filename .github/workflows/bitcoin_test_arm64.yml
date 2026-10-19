@@ -1,0 +1,219 @@
+name: Bitcoin ARM64 Staging Test APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bitcoin-staging-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: [self-hosted, linux, x64, owllet-ci]
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: 1
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG: 0
+      FRB_DART_LOAD_EXTERNAL_LIBRARY_NATIVE_LIB_DIR: ${{ github.workspace }}/rust/target/debug/
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reserve space on the disposable build runner
+        if: runner.environment == 'github-hosted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/local/.ghcup /opt/ghc /usr/share/dotnet /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          df -h /
+      - name: Verify immutable SDK pins
+        shell: python
+        run: |
+          import tomllib
+          from pathlib import Path
+          for name in ["rust/Cargo.toml", "rust/consumers/owllet-core-smoke/Cargo.toml"]:
+              dependency = tomllib.loads(Path(name).read_text())["dependencies"]["owllet-core"]
+              assert dependency["version"] == "=0.2.1", f"Unexpected SDK version in {name}"
+              assert dependency["rev"] == "9918187371812e059bb4a6a07b8550c33318f43c", f"Unexpected SDK revision in {name}"
+              assert dependency["git"] == "https://github.com/Philip-857-bit/owllet-core.git"
+              assert "path" not in dependency
+              assert {"bitcoin", "signing-session", "vault"}.issubset(dependency["features"])
+          print("Both SDK manifests pin owllet-core 0.2.1 at 9918187371812e059bb4a6a07b8550c33318f43c")
+      - uses: ./.github/actions/setup-owllet-core
+        with:
+          ssh-private-key: ${{ secrets.OWLLET_CORE_SSH_KEY }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.6
+          channel: stable
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;37.0.0 ndk;28.2.13676358
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze
+      - name: Build host library for focused Flutter tests
+        run: cargo build --locked --manifest-path rust/Cargo.toml
+      - name: Verify Bitcoin adaptive theme and user preferences
+        run: flutter test --no-pub --concurrency=2 test/bitcoin_adaptive_theme_test.dart test/bitcoin_rollout_service_test.dart test/bitcoin_network_preference_test.dart
+      - name: Release host-test build cache before Android packaging
+        run: cargo clean --manifest-path rust/Cargo.toml --profile dev
+      - name: Bound release compiler memory on the disposable runner
+        shell: python
+        run: |
+          from pathlib import Path
+          properties = Path("android/gradle.properties")
+          overrides = {
+              "org.gradle.jvmargs": "-Xmx3G -XX:MaxMetaspaceSize=768m -XX:ReservedCodeCacheSize=256m -Dfile.encoding=UTF-8",
+              "org.gradle.workers.max": "1",
+              "org.gradle.parallel": "false",
+              "kotlin.daemon.jvmargs": "-Xmx512m",
+          }
+          lines = [line for line in properties.read_text().splitlines()
+                   if line.split("=", 1)[0].strip() not in overrides]
+          properties.write_text("\n".join(lines + [f"{key}={value}" for key, value in overrides.items()]) + "\n")
+      - name: Reserve compiler swap headroom on the disposable runner
+        if: runner.environment == 'github-hosted'
+        shell: bash
+        run: |
+          set -euo pipefail
+          swap_file=/mnt/owllet-bitcoin-build.swap
+          test ! -e "$swap_file"
+          sudo fallocate -l 4G "$swap_file"
+          sudo chmod 600 "$swap_file"
+          sudo mkswap "$swap_file"
+          sudo swapon "$swap_file"
+          free -m
+          df -h /
+      - name: Create build-only Firebase placeholder
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          config = {
+            "project_info": {"project_number": "123456789", "project_id": "owllet-ci-unfunded"},
+            "client": [{"client_info": {
+              "mobilesdk_app_id": "1:123456789:android:0000000000000000",
+              "android_client_info": {"package_name": "com.fomowl.owllet"}},
+              "api_key": [{"current_key": "CI_BUILD_PLACEHOLDER_NOT_A_CREDENTIAL"}]}],
+            "configuration_version": "1"}
+          Path("android/app/google-services.json").write_text(json.dumps(config))
+      - name: Render runner-only release signing files
+        shell: python
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          import base64
+          import os
+          from pathlib import Path
+          keys = ["KEYSTORE_BASE64", "KEYSTORE_PASSWORD", "KEY_ALIAS", "KEY_PASSWORD"]
+          if any(not os.environ.get(key) for key in keys):
+              raise SystemExit("Required release signing configuration is missing")
+          def properties_value(value):
+              return value.replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+          directory = Path("keystore")
+          directory.mkdir(exist_ok=True)
+          keystore = directory / "owllet-release.jks"
+          try:
+              keystore.write_bytes(base64.b64decode("".join(os.environ["KEYSTORE_BASE64"].split()), validate=True))
+          except Exception:
+              raise SystemExit("Release keystore could not be decoded") from None
+          keystore.chmod(0o600)
+          properties = Path("android/key.properties")
+          properties.write_text("storeFile=../keystore/owllet-release.jks\n" + "\n".join(
+              f"{name}={properties_value(os.environ[key])}" for name, key in [
+                  ("storePassword", "KEYSTORE_PASSWORD"), ("keyAlias", "KEY_ALIAS"), ("keyPassword", "KEY_PASSWORD")]) + "\n")
+          properties.chmod(0o600)
+      - name: Build signed ARM64 staging APK
+        env:
+          COINGECKO_URL: ${{ vars.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Resource telemetry contains process names/RSS only, never command arguments or environment.
+          (
+            while true; do
+              date -u
+              free -m
+              df -h /
+              ps -eo comm,rss --sort=-rss | head -n 8 || true
+              sleep 60
+            done
+          ) &
+          monitor_pid=$!
+          trap 'kill "$monitor_pid" 2>/dev/null || true; free -m; df -h /; grep "^oom_kill " /proc/vmstat || true' EXIT
+          flutter build apk --release --target-platform android-arm64 --split-per-abi --no-tree-shake-icons \
+            --dart-define=BACKEND_BASE_URL=https://corestaging.owlletapp.com \
+            --dart-define=BACKEND_CERT_SHA256_PINS= \
+            --dart-define=BACKEND_CERT_PINNING_ENABLED=false \
+            --dart-define=BITCOIN_BUILD_AUDIENCE=internal \
+            --dart-define=PUSH_NOTIFICATIONS_ENABLED=false \
+            --dart-define="COINGECKO_API_BASE_URL=$COINGECKO_URL" \
+            --dart-define=CONNECTIVITY_CHECK_URL=https://www.google.com \
+            --dart-define=CASH_IN_MINI_APP_URL=https://owlletpaystaging.owlletapp.com \
+            --dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=https://owlletpaystaging.owlletapp.com \
+            --dart-define=OWLLET_PAY_MINI_APP_URL=https://owlletpaystaging.owlletapp.com \
+            --dart-define=OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS=https://owlletpaystaging.owlletapp.com \
+            --dart-define=AFFILIATE_MINI_APP_URL=https://affiliatestaging.owlletapp.com \
+            --dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=https://affiliatestaging.owlletapp.com
+      - name: Verify actual package, signing and native ABI
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          "$ANDROID_HOME/build-tools/37.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/37.0.0/aapt" dump badging "$APK" > apk-badging.txt
+          python3 - <<'PY'
+          import hashlib
+          import re
+          import shutil
+          import zipfile
+          from pathlib import Path
+          apk = Path("build/app/outputs/flutter-apk/app-arm64-v8a-release.apk")
+          assert set(apk.parent.glob("*.apk")) == {apk}, "Unexpected additional APK architecture/output"
+          assert not list(Path("build/app/outputs").rglob("*.aab")), "Unexpected AAB"
+          with zipfile.ZipFile(apk) as archive:
+              libraries = [name for name in archive.namelist() if name.startswith("lib/") and name.endswith(".so")]
+              abis = {name.split("/")[1] for name in libraries}
+          assert abis == {"arm64-v8a"}, f"Unexpected packaged ABIs: {sorted(abis)}"
+          badging = Path("apk-badging.txt").read_text()
+          package = re.search(r"^package: name='([^']+)'", badging, re.MULTILINE)
+          assert package and package.group(1) == "com.fomowl.owllet", "Unexpected Android package ID"
+          output = Path("artifacts")
+          output.mkdir(exist_ok=True)
+          target = output / "owllet-bitcoin-test-arm64.apk"
+          shutil.copyfile(apk, target)
+          with target.open("rb") as stream:
+              digest = hashlib.file_digest(stream, "sha256").hexdigest()
+          target.with_suffix(".apk.sha256").write_text(f"{digest}  {target.name}\n")
+          print(f"Package: {package.group(1)}\nNative ABIs: {sorted(abis)}\nAPK size: {target.stat().st_size} bytes\nSHA-256: {digest}")
+          with Path(__import__('os').environ["GITHUB_STEP_SUMMARY"]).open("a") as summary:
+              summary.write(f"Signed staging APK: `{target.name}`\n\nPackage: `com.fomowl.owllet`\n\nABI: `arm64-v8a` only\n\nSize: {target.stat().st_size} bytes\n\nSHA-256: `{digest}`\n\nBackend: https://corestaging.owlletapp.com\n\nAudience: `internal`\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: owllet-bitcoin-test-arm64
+          path: |
+            artifacts/owllet-bitcoin-test-arm64.apk
+            artifacts/owllet-bitcoin-test-arm64.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove runner-only signing files
+        if: always()
+        shell: python
+        run: |
+          from pathlib import Path
+          for name in ["android/key.properties", "keystore/owllet-release.jks"]:
+              Path(name).unlink(missing_ok=True)

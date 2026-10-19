@@ -6,6 +6,7 @@ import 'package:hex/hex.dart';
 import '../models/chain.dart';
 import '../src/rust/api/wallet_vault.dart' as rust;
 import 'native_crypto.dart';
+import 'bitcoin/bitcoin_wallet_vault_service.dart';
 
 /// A single protected-storage value contains both authenticated ciphertext and
 /// wrapping material. Platform storage protects the whole value; atomic writes
@@ -68,13 +69,17 @@ class WalletVaultService {
   static bool _locked = true;
 
   static void unlock() {
+    BitcoinWalletVaultService.unlock();
     _locked = false;
     _generation++;
   }
 
   static Future<void> lockAll() async {
     _locked = true;
-    await invalidateOpenAccounts();
+    await Future.wait([
+      _invalidateGenericAccounts(),
+      BitcoinWalletVaultService.lockAll(),
+    ]);
   }
 
   static bool isOpen(rust.RustWalletSigningAccount signer) =>
@@ -82,6 +87,13 @@ class WalletVaultService {
 
   /// Context changes revoke in-flight custody without changing authentication.
   static Future<void> invalidateOpenAccounts() async {
+    await Future.wait([
+      _invalidateGenericAccounts(),
+      BitcoinWalletVaultService.invalidateOpenAccounts(),
+    ]);
+  }
+
+  static Future<void> _invalidateGenericAccounts() async {
     _generation++;
     await Future.wait(_accounts.toList().map(close));
   }

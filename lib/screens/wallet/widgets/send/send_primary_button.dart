@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../constants/app_colors.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class SendPrimaryButton extends StatelessWidget {
   final VoidCallback onPressed;
+  final bool isLoading;
 
-  const SendPrimaryButton({super.key, required this.onPressed});
+  const SendPrimaryButton({
+    super.key,
+    required this.onPressed,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: isLoading ? null : onPressed,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 15),
@@ -28,14 +34,25 @@ class SendPrimaryButton extends StatelessWidget {
           ],
         ),
         child: Center(
-          child: Text(
-            'Send',
-            style: GoogleFonts.outfit(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          child: isLoading
+              ? SizedBox(
+                  key: const Key('send-preparing-indicator'),
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppColors.textPrimary,
+                    semanticsLabel: AppLocalizations.of(context).loading,
+                  ),
+                )
+              : Text(
+                  'Send',
+                  style: GoogleFonts.outfit(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
         ),
       ),
     );

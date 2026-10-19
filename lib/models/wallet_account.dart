@@ -10,6 +10,7 @@ class WalletAccount {
   final String? seedGroupId;
   final DateTime createdAt;
   final Map<ChainFamily, String> addressesByFamily;
+  final bool supportsBitcoin;
 
   WalletAccount({
     required this.address,
@@ -18,8 +19,10 @@ class WalletAccount {
     this.derivationIndex,
     this.seedGroupId,
     required this.createdAt,
+    bool supportsBitcoin = false,
     Map<ChainFamily, String>? addressesByFamily,
-  }) : addressesByFamily = Map.unmodifiable(
+  }) : supportsBitcoin = supportsBitcoin && origin == WalletOrigin.derived,
+       addressesByFamily = Map.unmodifiable(
          _normalizeAddressesByFamily(address, addressesByFamily),
        );
 
@@ -37,6 +40,7 @@ class WalletAccount {
       seedGroupId: (json['seedGroupId'] as String?)?.trim().isNotEmpty == true
           ? (json['seedGroupId'] as String).trim()
           : null,
+      supportsBitcoin: json['supportsBitcoin'] == true,
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
@@ -47,7 +51,17 @@ class WalletAccount {
     );
   }
 
+  Set<ChainFamily> get supportedFamilies => Set.unmodifiable({
+    for (final family in ChainFamily.values)
+      if (supportsFamily(family)) family,
+  });
+
+  bool supportsFamily(ChainFamily family) => family == ChainFamily.bitcoin
+      ? supportsBitcoin && origin == WalletOrigin.derived
+      : getWalletAddressForFamily(family) != null;
+
   String? getWalletAddressForFamily(ChainFamily family) {
+    if (family == ChainFamily.bitcoin) return null;
     final mapped = addressesByFamily[family]?.trim();
     if (mapped != null && mapped.isNotEmpty) {
       return mapped;
@@ -60,6 +74,7 @@ class WalletAccount {
 
   Map<String, dynamic> toJson() => {
     'address': address,
+    'supportsBitcoin': supportsBitcoin && origin == WalletOrigin.derived,
     'addressesByFamily': addressesByFamily.map(
       (family, familyAddress) => MapEntry(family.wireValue, familyAddress),
     ),
@@ -78,7 +93,7 @@ class WalletAccount {
     final normalized = <ChainFamily, String>{};
     addressesByFamily?.forEach((family, familyAddress) {
       final trimmed = familyAddress.trim();
-      if (trimmed.isNotEmpty) {
+      if (family != ChainFamily.bitcoin && trimmed.isNotEmpty) {
         normalized[family] = trimmed;
       }
     });
@@ -98,7 +113,9 @@ class WalletAccount {
       raw.forEach((key, value) {
         final family = ChainFamilyCodec.fromWireValue(key?.toString());
         final address = value?.toString().trim();
-        if (address != null && address.isNotEmpty) {
+        if (family != ChainFamily.bitcoin &&
+            address != null &&
+            address.isNotEmpty) {
           parsed[family] = address;
         }
       });

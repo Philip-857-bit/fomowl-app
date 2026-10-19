@@ -12,6 +12,7 @@ bool walletAddressLooksValidForNetwork(
   final address = walletAddress.trim();
   if (address.isEmpty) return false;
   return switch (NetworkKey.familyOf(networkKey)) {
+    ChainFamily.bitcoin => false,
     ChainFamily.evm => RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address),
     ChainFamily.solana => RegExp(
       r'^[1-9A-HJ-NP-Za-km-z]{32,44}$',

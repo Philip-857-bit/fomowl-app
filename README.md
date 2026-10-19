@@ -2,6 +2,27 @@
 
 Self-custodial Flutter wallet for EVM, Solana, and TRON accounts, swaps, bridges, notifications, NFTs, dapps, and hosted mini apps. Rust FFI handles sensitive key derivation and signing operations.
 
+## Staged Bitcoin integration
+
+Seed wallets have a separate Bitcoin HD account model for BIP-84 Native SegWit
+and BIP-86 Taproot. Derivation, transaction planning/signing, PSBT and encrypted
+opaque custody use proprietary Owllet Core 0.2.0 pinned to
+`930eca151035eec9432d7f41b1b221bd5d27e829`.
+
+Bitcoin is disabled by default. Admission requires the backend runtime Bitcoin
+policy and configured network capabilities. `BITCOIN_BUILD_AUDIENCE` selects
+`internal`, `test-users`, `beta` or `production` (default); Testnet4 is restricted
+to admitted non-production builds. Backend deployment and mobile rollout remain
+separate review decisions. This SDK change requires a full binary release.
+
+The host keeps protected public account/scan state, receive/change indices,
+network transport and UI in dedicated `lib/services/bitcoin` and `lib/models/bitcoin_*`
+modules. Rust adapters live in `rust/src/api/bitcoin_*`. Providers receive public
+addresses and signed transactions; account XPUBs and secret material stay local.
+
+See [Bitcoin validation](docs/bitcoin-validation.md) for automated gates, native
+platform requirements, pending-submission limits and paused live-device checks.
+
 ## Current notes
 
 - The app now reads build-time environment values from `AppEnvironment`.

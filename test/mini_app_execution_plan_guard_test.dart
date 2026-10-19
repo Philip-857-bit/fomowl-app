@@ -2,6 +2,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/mini_apps/mini_app_host_screen.dart';
 
 void main() {
+  test('Bitcoin only permits the narrow OwlletPay cash-out bridge', () {
+    for (final id in ['owllet_pay', 'cash_in']) {
+      for (final action in [
+        'ready',
+        'close',
+        'request_wallet_transfer',
+        'request_bitcoin_bill_payment',
+        'get_bitcoin_bill_payment_status',
+        'get_balances',
+        'get_network_balances',
+      ]) {
+        expect(bitcoinCashoutBridgeActionAllowed(id, action), isTrue);
+      }
+      for (final action in [
+        'request_cross_chain_swap',
+        'request_contract_transaction',
+        'request_sign_message',
+        'unknown',
+      ]) {
+        expect(bitcoinCashoutBridgeActionAllowed(id, action), isFalse);
+      }
+    }
+    expect(
+      bitcoinCashoutBridgeActionAllowed('burst', 'request_wallet_transfer'),
+      isFalse,
+    );
+    expect(bitcoinCashoutBridgeActionAllowed('untrusted', 'ready'), isFalse);
+    expect(
+      bitcoinCashoutBridgeActionAllowed(
+        'untrusted',
+        'request_bitcoin_bill_payment',
+      ),
+      isFalse,
+    );
+    expect(
+      bitcoinCashoutBridgeActionAllowed(
+        'untrusted',
+        'get_bitcoin_bill_payment_status',
+      ),
+      isFalse,
+    );
+  });
   test('swap preflight checks CROSS input rather than stablecoin output', () {
     final spend = cashinPreflightTokenSpend({
       'kind': 'transaction',

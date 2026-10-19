@@ -2,6 +2,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:hex/hex.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:web3dart/web3dart.dart';
+import 'package:web3dart/crypto.dart' as web3_crypto;
 import 'package:eth_sig_util/eth_sig_util.dart';
 
 import 'package:fomowl_wallet/services/wallet_service.dart';
@@ -18,6 +20,8 @@ import 'package:fomowl_wallet/services/evm_transaction_service.dart';
 import 'package:fomowl_wallet/services/token_approval_service.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/models/token.dart';
+import 'package:fomowl_wallet/models/evm_fee_quote.dart';
+import 'package:fomowl_wallet/models/evm_outbound_transaction.dart';
 import 'package:fomowl_wallet/services/native_crypto.dart';
 import 'package:fomowl_wallet/services/wallet_vault_service.dart';
 import 'package:fomowl_wallet/services/cow_limit_order_signing.dart';
@@ -57,14 +61,37 @@ class _Wallet extends WalletService {
   Future<String?> getPrivateKey([String? address]) async => key;
 }
 
+class _SwitchingWallet extends _Wallet {
+  _SwitchingWallet(super.client);
+  String selected = _sender;
+  @override
+  Future<String?> getCurrentWalletAddress() async => selected;
+}
+
 class _Rpc {
-  _Rpc(this.expectedData, {this.allowance = 0, this.baseFeeAvailable = true}) {
+  _Rpc(
+    this.expectedData, {
+    this.allowance = 0,
+    this.baseFeeAvailable = true,
+    this.modernFees = false,
+    this.outbound = false,
+    this.timeoutBroadcast = false,
+    this.wrongHash = false,
+  }) {
     client = Web3Client('https://rpc.invalid', MockClient(_handle));
   }
 
   final String expectedData;
   final int allowance;
   final bool baseFeeAvailable;
+  final bool modernFees;
+  final bool outbound;
+  final bool timeoutBroadcast;
+  final bool wrongHash;
+  void Function(String)? afterNonce;
+  String get broadcastHash => outbound
+      ? '0x${HEX.encode(web3_crypto.keccak256(web3_crypto.hexToBytes(rawTransaction!)))}'
+      : _hash;
   final List<String> methods = [];
   String? rawTransaction;
   late final Web3Client client;
@@ -77,10 +104,26 @@ class _Rpc {
     final Object result;
     switch (method) {
       case 'eth_getBlockByNumber':
-        expect(params, ['latest', true]);
+        expect(params, ['latest', !modernFees]);
         result = {
           'timestamp': '0x0',
+          if (modernFees) 'number': '0x100',
+          if (modernFees) 'gasLimit': '0x1c9c380',
           if (baseFeeAvailable) 'baseFeePerGas': '0x3b9aca00',
+        };
+      case 'eth_chainId':
+        result = '0x1';
+      case 'eth_feeHistory':
+        result = {
+          'oldestBlock': '0xfc',
+          'baseFeePerGas': List.filled(
+            3,
+            baseFeeAvailable ? '0x3b9aca00' : '0x0',
+          ),
+          'reward': List.generate(
+            2,
+            (_) => ['0x3b9aca00', '0x77359400', '0xb2d05e00'],
+          ),
         };
       case 'eth_call':
         final tx = params.first as Map<String, dynamic>;
@@ -93,15 +136,19 @@ class _Rpc {
         final tx = params.first as Map<String, dynamic>;
         expect((tx['from'] as String).toLowerCase(), _sender.toLowerCase());
         expect((tx['to'] as String).toLowerCase(), _contract);
-        expect(tx['data'], expectedData);
+        expect(tx['data'] ?? '0x', expectedData);
         result = '0xc350'; // 50,000 gas before the existing 15% NFT buffer.
       case 'eth_getTransactionCount':
         expect((params[0] as String).toLowerCase(), _sender.toLowerCase());
-        expect(params[1], 'pending');
+        expect(params[1], outbound ? anyOf('pending', 'latest') : 'pending');
+        afterNonce?.call(params[1] as String);
         result = '0x7';
       case 'eth_sendRawTransaction':
         rawTransaction = params.single as String;
-        result = _hash;
+        if (timeoutBroadcast) {
+          throw TimeoutException('fixture-sensitive-context');
+        }
+        result = wrongHash ? _hash : broadcastHash;
       default:
         throw StateError('Unexpected RPC method: $method');
     }
@@ -116,6 +163,7 @@ class _Rpc {
 Future<String> _referenceTransaction(
   String data, {
   int gasLimit = 57500,
+  int gasPriceWei = 1000000000,
   BigInt? valueWei,
   String? toAddress = _contract,
   BigInt? maxFeePerGasWei,
@@ -131,7 +179,7 @@ Future<String> _referenceTransaction(
       Transaction(
         nonce: 7,
         gasPrice: maxFeePerGasWei == null
-            ? EtherAmount.inWei(BigInt.from(1000000000))
+            ? EtherAmount.inWei(BigInt.from(gasPriceWei))
             : null,
         maxFeePerGas: maxFeePerGasWei == null
             ? null
@@ -465,7 +513,7 @@ void main() {
             ? '0x'
             : '0xa9059cbb$_recipientWord'
                   '00000000000000000000000000000000000000000000000000000000000003e8';
-        final rpc = _Rpc(data);
+        final rpc = _Rpc(data, outbound: true);
         addTearDown(rpc.client.dispose);
         final wallet = _Wallet(rpc.client);
         final amount = BigInt.from(isNative ? 10 : 1000);
@@ -487,7 +535,7 @@ void main() {
                 gasPriceWei: BigInt.from(1000000000),
                 gasLimit: 75000,
               );
-        expect(hash, _hash);
+        expect(hash, rpc.broadcastHash);
         expect(
           rpc.rawTransaction,
           await _referenceTransaction(
@@ -498,8 +546,282 @@ void main() {
         );
         expect(rpc.methods, [
           'eth_getTransactionCount',
+          'eth_getTransactionCount',
           'eth_sendRawTransaction',
         ]);
+      },
+    );
+  }
+
+  for (final isNative in [true, false]) {
+    for (final tier in EvmFeeTier.values) {
+      test(
+        'approved ${tier.name} type-2 ${isNative ? 'native' : 'token'} fees reach Rust unchanged',
+        () async {
+          final data = isNative
+              ? '0x'
+              : '0xa9059cbb$_recipientWord'
+                    '00000000000000000000000000000000000000000000000000000000000003e8';
+          final rpc = _Rpc(data, outbound: true);
+          addTearDown(rpc.client.dispose);
+          final wallet = _Wallet(rpc.client);
+          final amount = BigInt.from(isNative ? 10 : 1000);
+          final tip = BigInt.from((tier.index + 1) * 1000000000);
+          final cap = BigInt.from(2000000000) + tip;
+          final quote = EvmFeeQuote(
+            intent: EvmFeeIntent(
+              chainId: 1,
+              sender: _sender,
+              destination: _contract,
+              valueWei: isNative ? amount : BigInt.zero,
+              data: Uint8List.fromList(HEX.decode(data.substring(2))),
+              rpcScope: rpc.client,
+            ),
+            tier: tier,
+            type: EvmTransactionType.dynamicFee,
+            gasLimit: 75000,
+            quotedAt: DateTime.now(),
+            baseFeePerGasWei: BigInt.from(1000000000),
+            maxPriorityFeePerGasWei: tip,
+            maxFeePerGasWei: cap,
+          );
+          final result = isNative
+              ? await wallet.sendNativeTransaction(
+                  toAddress: _contract,
+                  amountInBaseUnits: amount,
+                  rpcUrl: 'https://rpc.invalid',
+                  chainId: 1,
+                  feeQuote: quote,
+                )
+              : await wallet.sendTokenTransaction(
+                  tokenAddress: _contract,
+                  toAddress: _recipient,
+                  amountInBaseUnits: amount,
+                  rpcUrl: 'https://rpc.invalid',
+                  chainId: 1,
+                  feeQuote: quote,
+                );
+          expect(result, rpc.broadcastHash);
+          expect(
+            rpc.rawTransaction,
+            await _referenceTransaction(
+              data,
+              gasLimit: 75000,
+              valueWei: isNative ? amount : BigInt.zero,
+              maxFeePerGasWei: cap,
+              maxPriorityFeePerGasWei: tip,
+            ),
+          );
+          expect(rpc.methods, [
+            'eth_getTransactionCount',
+            'eth_getTransactionCount',
+            'eth_sendRawTransaction',
+          ]);
+        },
+      );
+    }
+  }
+
+  for (final dynamicFee in [true, false]) {
+    for (final isNative in [true, false]) {
+      test(
+        'runtime ${dynamicFee ? 'type-2' : 'legacy'} ${isNative ? 'native' : 'token'} defaults to Normal',
+        () async {
+          final data = isNative
+              ? '0x'
+              : '0xa9059cbb$_recipientWord'
+                    '00000000000000000000000000000000000000000000000000000000000003e8';
+          final rpc = _Rpc(
+            data,
+            modernFees: true,
+            outbound: true,
+            baseFeeAvailable: dynamicFee,
+          );
+          addTearDown(rpc.client.dispose);
+          final wallet = _Wallet(rpc.client);
+          final amount = BigInt.from(isNative ? 10 : 1000);
+          final result = isNative
+              ? await wallet.sendNativeTransaction(
+                  toAddress: _contract,
+                  amountInBaseUnits: amount,
+                  rpcUrl: 'https://rpc.invalid',
+                  chainId: 1,
+                )
+              : await wallet.sendTokenTransaction(
+                  tokenAddress: _contract,
+                  toAddress: _recipient,
+                  amountInBaseUnits: amount,
+                  rpcUrl: 'https://rpc.invalid',
+                  chainId: 1,
+                );
+          expect(result, rpc.broadcastHash);
+          if (dynamicFee) {
+            expect(
+              rpc.rawTransaction,
+              await _referenceTransaction(
+                data,
+                gasLimit: 55000,
+                valueWei: isNative ? amount : BigInt.zero,
+                maxFeePerGasWei: BigInt.from(4000000000),
+                maxPriorityFeePerGasWei: BigInt.from(2000000000),
+              ),
+            );
+          } else {
+            expect(
+              rpc.rawTransaction,
+              await _referenceTransaction(
+                data,
+                gasLimit: 55000,
+                gasPriceWei: 2000000000,
+                valueWei: isNative ? amount : BigInt.zero,
+              ),
+            );
+          }
+          expect(
+            rpc.methods,
+            containsAll([
+              'eth_chainId',
+              'eth_getBlockByNumber',
+              'eth_gasPrice',
+              'eth_estimateGas',
+              'eth_feeHistory',
+            ]),
+          );
+          expect(
+            rpc.methods.where((m) => m == 'eth_sendRawTransaction'),
+            hasLength(1),
+          );
+        },
+      );
+    }
+  }
+
+  for (final wrongHash in [true, false]) {
+    test(
+      'normal ${wrongHash ? 'hash mismatch' : 'timeout'} returns Unknown and persists exact signed identity',
+      () async {
+        final rpc = _Rpc(
+          '0x',
+          outbound: true,
+          wrongHash: wrongHash,
+          timeoutBroadcast: !wrongHash,
+        );
+        addTearDown(rpc.client.dispose);
+        final wallet = _Wallet(rpc.client);
+        try {
+          await wallet.sendNativeTransaction(
+            toAddress: _contract,
+            amountInBaseUnits: BigInt.from(10),
+            rpcUrl: 'https://rpc.invalid',
+            chainId: 1,
+            gasPriceWei: BigInt.from(1000000000),
+            gasLimit: 75000,
+          );
+          fail('Expected unknown outcome');
+        } on EvmSubmissionUnknown catch (error) {
+          expect(error.hash, rpc.broadcastHash);
+          expect(
+            error.toString(),
+            isNot(contains('fixture-sensitive-context')),
+          );
+        }
+        final saved = (await wallet.evmOutbound.list(_sender)).single;
+        expect(saved.hash, rpc.broadcastHash);
+        expect(saved.state, EvmOutboundState.unknown);
+        expect(saved.fields.valueWei, BigInt.from(10));
+        expect(saved.fields.nonce, 7);
+        await expectLater(
+          wallet.sendNativeTransaction(
+            toAddress: _contract,
+            amountInBaseUnits: BigInt.from(20),
+            rpcUrl: 'https://rpc.invalid',
+            chainId: 1,
+            gasPriceWei: BigInt.from(1000000000),
+            gasLimit: 75000,
+          ),
+          throwsA(isA<EvmReplacementException>()),
+        );
+        expect(
+          rpc.methods.where((method) => method == 'eth_sendRawTransaction'),
+          hasLength(1),
+        );
+      },
+    );
+  }
+  test(
+    'wallet switch after persistence rejects only its own no-provider attempt',
+    () async {
+      final rpc = _Rpc('0x', outbound: true);
+      addTearDown(rpc.client.dispose);
+      final wallet = _SwitchingWallet(rpc.client);
+      rpc.afterNonce = (tag) {
+        if (tag == 'latest') wallet.selected = _recipient;
+      };
+      await expectLater(
+        wallet.sendNativeTransaction(
+          toAddress: _contract,
+          amountInBaseUnits: BigInt.from(10),
+          rpcUrl: 'https://rpc.invalid',
+          chainId: 1,
+          gasPriceWei: BigInt.from(1000000000),
+          gasLimit: 75000,
+        ),
+        throwsA(isA<EvmReplacementException>()),
+      );
+      expect(rpc.rawTransaction, isNull);
+      expect(
+        (await wallet.evmOutbound.list(_sender)).single.state,
+        EvmOutboundState.rejected,
+      );
+    },
+  );
+
+  for (final mismatch in [
+    'expired',
+    'sender',
+    'chain',
+    'destination',
+    'value',
+    'data',
+    'rpc',
+  ]) {
+    test(
+      'approved fee quote rejects $mismatch before nonce or signing',
+      () async {
+        final rpc = _Rpc('0x');
+        addTearDown(rpc.client.dispose);
+        final wallet = _Wallet(rpc.client);
+        final quote = EvmFeeQuote(
+          intent: EvmFeeIntent(
+            chainId: mismatch == 'chain' ? 56 : 1,
+            sender: mismatch == 'sender' ? _recipient : _sender,
+            destination: mismatch == 'destination' ? _recipient : _contract,
+            valueWei: BigInt.from(mismatch == 'value' ? 11 : 10),
+            data: Uint8List.fromList(mismatch == 'data' ? [1] : []),
+            rpcScope: mismatch == 'rpc' ? Object() : rpc.client,
+          ),
+          tier: EvmFeeTier.normal,
+          type: EvmTransactionType.dynamicFee,
+          gasLimit: 75000,
+          quotedAt: DateTime.now().subtract(
+            Duration(seconds: mismatch == 'expired' ? 31 : 0),
+          ),
+          baseFeePerGasWei: BigInt.one,
+          maxPriorityFeePerGasWei: BigInt.one,
+          maxFeePerGasWei: BigInt.from(3),
+        );
+        await expectLater(
+          wallet.sendNativeTransaction(
+            toAddress: _contract,
+            amountInBaseUnits: BigInt.from(10),
+            rpcUrl: 'https://rpc.invalid',
+            chainId: 1,
+            feeQuote: quote,
+          ),
+          throwsA(isA<EvmFeeQuoteException>()),
+        );
+        expect(rpc.methods, isEmpty);
+        expect(rpc.rawTransaction, isNull);
       },
     );
   }

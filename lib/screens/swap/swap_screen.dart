@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'bitcoin_bridge_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:decimal/decimal.dart';
@@ -58,16 +59,29 @@ import 'widgets/swap_tab_content.dart';
 import 'widgets/swap_token_selector_dialog.dart';
 
 /// Swap Screen — DEX token swap interface
-class SwapScreen extends StatefulWidget {
+class SwapScreen extends StatelessWidget {
+  final bool showBottomNavigation;
   const SwapScreen({super.key, this.showBottomNavigation = true});
+  @override
+  Widget build(BuildContext context) {
+    if (context.watch<BlockchainService>().activeFamily ==
+        ChainFamily.bitcoin) {
+      return BitcoinBridgeScreen(showBottomNavigation: showBottomNavigation);
+    }
+    return _SupportedSwapScreen(showBottomNavigation: showBottomNavigation);
+  }
+}
+
+class _SupportedSwapScreen extends StatefulWidget {
+  const _SupportedSwapScreen({this.showBottomNavigation = true});
 
   final bool showBottomNavigation;
 
   @override
-  State<SwapScreen> createState() => _SwapScreenState();
+  State<_SupportedSwapScreen> createState() => _SwapScreenState();
 }
 
-class _SwapScreenState extends State<SwapScreen> {
+class _SwapScreenState extends State<_SupportedSwapScreen> {
   static const String _livePriceScope = 'swap_screen';
   static const String _limitShowcaseSeenKey = 'swap_limit_showcase_seen_v1';
   static const String _limitTutorialControlHiddenKey =

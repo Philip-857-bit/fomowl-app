@@ -11,6 +11,7 @@ class AmountInputModeToggle extends StatelessWidget {
   final String tokenSymbol;
   final VoidCallback onToggle;
   final bool enabled;
+  final String? fiatCode;
 
   const AmountInputModeToggle({
     super.key,
@@ -18,15 +19,15 @@ class AmountInputModeToggle extends StatelessWidget {
     required this.tokenSymbol,
     required this.onToggle,
     this.enabled = true,
+    this.fiatCode,
   });
 
   @override
   Widget build(BuildContext context) {
-    final primaryLabel = mode == AmountInputMode.token
-        ? tokenSymbol
-        : ValueFormatter.currencyCode;
+    final currency = fiatCode ?? ValueFormatter.currencyCode;
+    final primaryLabel = mode == AmountInputMode.token ? tokenSymbol : currency;
     final secondaryLabel = mode == AmountInputMode.token
-        ? ValueFormatter.currencyCode
+        ? currency
         : tokenSymbol;
     final isDisabled = !enabled || tokenSymbol.isEmpty;
 

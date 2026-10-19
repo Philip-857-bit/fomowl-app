@@ -1,4 +1,7 @@
 import 'dart:async';
+import '../models/bitcoin_account_state.dart';
+import 'bitcoin/bitcoin_network_service.dart';
+import 'bitcoin/bitcoin_transaction_monitor.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -12,6 +15,9 @@ import 'http_client_service.dart';
 enum TransactionConfirmationStatus { confirmed, failed, pending }
 
 class TransactionMonitor {
+  final BitcoinTransactionMonitor _bitcoin;
+  TransactionMonitor({BitcoinNetworkApi? bitcoinNetwork})
+    : _bitcoin = BitcoinTransactionMonitor(network: bitcoinNetwork);
   final HttpClientService _httpClientService = HttpClientService();
 
   Future<TransactionConfirmationStatus> waitForConfirmation({
@@ -23,11 +29,29 @@ class TransactionMonitor {
     Duration timeout = const Duration(minutes: 2),
     Duration receiptTimeout = const Duration(seconds: 8),
     void Function(int attempts)? onPoll,
+    bool Function()? isCurrent,
   }) async {
     final effectiveNetworkKey = networkKey?.trim().isNotEmpty == true
         ? networkKey!.trim()
         : blockchain.activeNetworkKey;
     final family = NetworkKey.familyOf(effectiveNetworkKey);
+
+    if (family == ChainFamily.bitcoin) {
+      final confirmed = await _bitcoin.wait(
+        txid: txHash,
+        productNetwork: BitcoinProductNetwork.fromId(
+          NetworkKey.bitcoinNetworkIdOf(effectiveNetworkKey),
+        ),
+        pollInterval: pollInterval,
+        timeout: timeout,
+        requestTimeout: receiptTimeout,
+        onPoll: onPoll,
+        isCurrent: isCurrent,
+      );
+      return confirmed
+          ? TransactionConfirmationStatus.confirmed
+          : TransactionConfirmationStatus.pending;
+    }
 
     if (family == ChainFamily.solana || family == ChainFamily.tron) {
       return _waitForNonEvmConfirmation(

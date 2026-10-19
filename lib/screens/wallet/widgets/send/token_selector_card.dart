@@ -67,12 +67,17 @@ class TokenSelectorCard extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  '${l.networkLabel}: ${_activeNetworkName()}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.72),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${l.networkLabel}: ${_activeNetworkName()}',
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),

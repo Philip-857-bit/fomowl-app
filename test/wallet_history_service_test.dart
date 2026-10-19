@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -17,6 +18,30 @@ class _FakeHttpClientService extends HttpClientService {
 }
 
 void main() {
+  test(
+    'Bitcoin send records stable identity and network key without a legacy chain id',
+    () async {
+      Map<String, dynamic>? payload;
+      final client = MockClient((request) async {
+        payload = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"success":true}', 201);
+      });
+      await WalletHistoryService(
+        httpClientService: _FakeHttpClientService(client),
+      ).recordBitcoinSend(
+        walletIdentity: '0xwallet',
+        txid: '11' * 32,
+        network: BitcoinProductNetwork.mainnet,
+        amountSats: BigInt.one,
+        recipient: 'bc1q_public_fixture',
+      );
+      expect(payload?['walletAddress'], '0xwallet');
+      expect(payload?['networkKey'], 'bitcoin:mainnet');
+      expect(payload?.containsKey('chainId'), isFalse);
+      expect(payload?['tokenSymbol'], 'BTC');
+      expect(payload?['message'], contains('0.00000001 BTC'));
+    },
+  );
   test(
     'confirmed send includes token address for server-side pricing',
     () async {

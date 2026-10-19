@@ -1,3 +1,8 @@
+import 'blockchain/bitcoin_catalog.dart';
+import 'bitcoin/bitcoin_wallet_vault_service.dart';
+import 'bitcoin/bitcoin_wallet_service.dart';
+import 'bitcoin/bitcoin_host_availability.dart';
+import '../models/bitcoin_account_state.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'dart:math';
@@ -79,7 +84,13 @@ class BlockchainService extends ChangeNotifier {
   // State
   List<EvmChain> _customChains = [];
   EvmChain _activeChain = builtInChains[0];
-  String _activeNetworkKeyOverride = ''; // non-empty only for Solana/Tron
+  String _activeNetworkKeyOverride = ''; // non-empty for non-EVM families
+  // Restore the user's Bitcoin choice only after wallet and runtime admission
+  // are known. A temporary startup fallback must not overwrite that choice.
+  String? _pendingBitcoinNetworkKey;
+  String _pendingBitcoinWalletAddress = '';
+  bool _bitcoinAvailable = false;
+  bool _bitcoinTestnetEnabled = false;
   Set<ChainFamily> _enabledFamilies = {ChainFamily.evm};
   // Tracks the active wallet's supported chain families. Imported private-key
   // wallets only support a single family (e.g. EVM-only), so the network
@@ -97,6 +108,7 @@ class BlockchainService extends ChangeNotifier {
   final Map<String, _WalletTokensCacheEntry> _walletTokensCache = {};
   final Map<String, WalletTokenState> _walletTokenStates = {};
   final Map<String, Future<List<Token>>> _walletTokensInFlight = {};
+  final Map<String, int> _bitcoinRefreshEpochs = {};
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
   Timer? _livePriceTimer;
   final Map<String, Set<String>> _trackedPriceIdsByScope = {};
@@ -115,9 +127,14 @@ class BlockchainService extends ChangeNotifier {
   int _lastDiscoveryTokenCount = 0;
   String? _lastDiscoveryMessage;
 
-  BlockchainService() {
+  late final BitcoinWalletApi _bitcoinWallet;
+  BlockchainService({
+    BitcoinWalletApi? bitcoinWallet,
+    PriceFetcher? priceFetcher,
+  }) {
+    _bitcoinWallet = bitcoinWallet ?? BitcoinWalletService();
     _tokenPortfolioModule = TokenPortfolioModule(
-      getTokenPrices: getTokenPrices,
+      getTokenPrices: priceFetcher ?? getTokenPrices,
       getTokenBalance: getTokenBalance,
       resolveIconUrl: BlockchainCatalog.iconUrlForSymbol,
     );
@@ -160,13 +177,18 @@ class BlockchainService extends ChangeNotifier {
     );
   }
 
+  BitcoinChain get _activeBitcoinChain => BitcoinCatalog.builtInChains
+      .firstWhere((chain) => chain.networkKey == activeNetworkKey);
+
   String get activeNetworkName => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.name,
     ChainFamily.solana => _activeSolanaChain.name,
     ChainFamily.tron => _activeTronChain.name,
     ChainFamily.evm => _activeChain.name,
   };
 
   String get activeNetworkSymbol => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.symbol,
     ChainFamily.solana => _activeSolanaChain.symbol,
     ChainFamily.tron => _activeTronChain.symbol,
     ChainFamily.evm => _activeChain.symbol,
@@ -180,18 +202,21 @@ class BlockchainService extends ChangeNotifier {
   );
 
   String? get activeNetworkCoinGeckoId => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.coinGeckoId,
     ChainFamily.solana => _activeSolanaChain.coinGeckoId,
     ChainFamily.tron => _activeTronChain.coinGeckoId,
     ChainFamily.evm => _activeChain.coinGeckoId,
   };
 
   String? get activeNetworkExplorerUrl => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.explorerUrl,
     ChainFamily.solana => _activeSolanaChain.explorerUrl,
     ChainFamily.tron => _activeTronChain.explorerUrl,
     ChainFamily.evm => _activeChain.explorerUrl,
   };
 
   String? get activeNetworkLogoUrl => switch (activeFamily) {
+    ChainFamily.bitcoin => _activeBitcoinChain.logoUrl,
     ChainFamily.solana => _activeSolanaChain.logoUrl,
     ChainFamily.tron => _activeTronChain.logoUrl,
     ChainFamily.evm => _activeChain.logoUrl,
@@ -229,11 +254,21 @@ class BlockchainService extends ChangeNotifier {
     }
     _activeWalletAddress = trimmedAddress;
     _activeWalletSupportedFamilies = normalizedFamilies;
+    if (_pendingBitcoinNetworkKey != null) {
+      if (_pendingBitcoinWalletAddress.isNotEmpty &&
+          _pendingBitcoinWalletAddress != normalizedAddress) {
+        _clearPendingBitcoinNetwork();
+      } else {
+        _pendingBitcoinWalletAddress = normalizedAddress;
+      }
+    }
     // Custom networks are stored per wallet; load this wallet's set on switch.
     if (addressChanged) {
       unawaited(_reloadCustomChainsForActiveWallet());
     }
-    final activeNetworkChanged = _ensureActiveNetworkSupportedByWallet();
+    final activeNetworkChanged =
+        _restorePendingBitcoinNetwork() ||
+        _ensureActiveNetworkSupportedByWallet();
     if (activeNetworkChanged) {
       _walletTokens = [];
       unawaited(_saveActiveChain());
@@ -242,8 +277,54 @@ class BlockchainService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Runtime/provider availability is supplied by the rollout coordinator.
+  void configureBitcoinAvailability({
+    required bool available,
+    bool testnetEnabled = false,
+  }) {
+    _bitcoinAvailable = available;
+    BitcoinHostAvailability.configure(mainnet: available);
+    _bitcoinTestnetEnabled = available && testnetEnabled;
+    _restorePendingBitcoinNetwork();
+    if (activeFamily == ChainFamily.bitcoin &&
+        !isBitcoinNetworkAvailable(activeNetworkKey)) {
+      _ensureActiveNetworkSupportedByWallet();
+      unawaited(BitcoinWalletVaultService.invalidateOpenAccounts());
+    }
+    notifyListeners();
+  }
+
+  void _clearPendingBitcoinNetwork() {
+    _pendingBitcoinNetworkKey = null;
+    _pendingBitcoinWalletAddress = '';
+  }
+
+  bool _restorePendingBitcoinNetwork() {
+    final key = _pendingBitcoinNetworkKey;
+    if (key == null ||
+        _activeWalletAddress.isEmpty ||
+        !_enabledFamilies.contains(ChainFamily.bitcoin) ||
+        !_activeWalletSupportedFamilies.contains(ChainFamily.bitcoin) ||
+        !isBitcoinNetworkAvailable(key)) {
+      return false;
+    }
+    _activeNetworkKeyOverride = key;
+    _walletTokens = [];
+    _clearPendingBitcoinNetwork();
+    return true;
+  }
+
+  bool isBitcoinNetworkAvailable(String key) =>
+      _bitcoinAvailable &&
+      (key == 'bitcoin:mainnet' ||
+          key == 'bitcoin:testnet4' && _bitcoinTestnetEnabled);
+  bool _familyAvailable(ChainFamily family) =>
+      family != ChainFamily.bitcoin || _bitcoinAvailable;
+
   bool _ensureActiveNetworkSupportedByWallet() {
-    if (_activeWalletSupportedFamilies.contains(activeFamily)) {
+    if (_activeWalletSupportedFamilies.contains(activeFamily) &&
+        (activeFamily != ChainFamily.bitcoin ||
+            isBitcoinNetworkAvailable(activeNetworkKey))) {
       return false;
     }
     final fallbackFamily = _fallbackFamilyForActiveWallet();
@@ -258,15 +339,18 @@ class BlockchainService extends ChangeNotifier {
       ChainFamily.evm,
       ChainFamily.solana,
       ChainFamily.tron,
+      ChainFamily.bitcoin,
     ];
     for (final family in preferredOrder) {
       if (_activeWalletSupportedFamilies.contains(family) &&
+          _familyAvailable(family) &&
           _enabledFamilies.contains(family)) {
         return family;
       }
     }
     for (final family in preferredOrder) {
-      if (_activeWalletSupportedFamilies.contains(family)) {
+      if (_activeWalletSupportedFamilies.contains(family) &&
+          _familyAvailable(family)) {
         _enabledFamilies.add(family);
         unawaited(_storageService.setEnabledChainFamilies(_enabledFamilies));
         return family;
@@ -278,6 +362,10 @@ class BlockchainService extends ChangeNotifier {
   bool _activateDefaultNetworkForFamily(ChainFamily family) {
     final before = activeNetworkKey;
     switch (family) {
+      case ChainFamily.bitcoin:
+        if (!_bitcoinAvailable) return false;
+        _activeNetworkKeyOverride = NetworkKey.bitcoin('mainnet');
+        break;
       case ChainFamily.evm:
         _activeNetworkKeyOverride = '';
         break;
@@ -303,7 +391,9 @@ class BlockchainService extends ChangeNotifier {
   /// both globally enabled AND supported by the active wallet are shown.
   Set<ChainFamily> get _selectorFamilies => {
     for (final family in _enabledFamilies)
-      if (_activeWalletSupportedFamilies.contains(family)) family,
+      if (_activeWalletSupportedFamilies.contains(family) &&
+          _familyAvailable(family))
+        family,
   };
 
   /// Ordered network entries for the selector, filtered by enabled families.
@@ -333,6 +423,12 @@ class BlockchainService extends ChangeNotifier {
 
     if (selectorFamilies.contains(ChainFamily.tron)) {
       entries.add(TronNetworkEntry(TronCatalog.mainnet));
+    }
+    if (selectorFamilies.contains(ChainFamily.bitcoin)) {
+      entries.add(BitcoinNetworkEntry(BitcoinCatalog.mainnet));
+      if (_bitcoinTestnetEnabled) {
+        entries.add(BitcoinNetworkEntry(BitcoinCatalog.testnet4));
+      }
     }
 
     if (selectorFamilies.contains(ChainFamily.evm)) {
@@ -388,6 +484,8 @@ class BlockchainService extends ChangeNotifier {
     int evmFallbackChainId,
   ) {
     switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.bitcoin:
+        return BitcoinLegacyUiIds.forNetworkKey(networkKey);
       case ChainFamily.solana:
         return -501;
       case ChainFamily.tron:
@@ -398,11 +496,13 @@ class BlockchainService extends ChangeNotifier {
   }
 
   List<CustomTokenDefinition> get customTokensForActiveChain =>
-      List.unmodifiable(
-        (_customTokens[_customTokenChainKey] ?? const []).where(
-          _customTokenMatchesActiveNetwork,
-        ),
-      );
+      activeFamily == ChainFamily.bitcoin
+      ? const []
+      : List.unmodifiable(
+          (_customTokens[_customTokenChainKey] ?? const []).where(
+            _customTokenMatchesActiveNetwork,
+          ),
+        );
 
   List<CustomTokenDefinition> customTokensForChain(int chainId) =>
       List.unmodifiable(_customTokens[chainId] ?? const []);
@@ -467,6 +567,8 @@ class BlockchainService extends ChangeNotifier {
       return false;
     }
     switch (NetworkKey.familyOf(networkKey)) {
+      case ChainFamily.bitcoin:
+        return true;
       case ChainFamily.evm:
         return !RegExp(r'^0x[a-fA-F0-9]{40}$').hasMatch(address);
       case ChainFamily.solana:
@@ -480,6 +582,9 @@ class BlockchainService extends ChangeNotifier {
   }) {
     if (isNative) return TokenStandard.native;
     return switch (activeFamily) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana => TokenStandard.spl,
       ChainFamily.tron => TokenStandard.trc20,
       ChainFamily.evm => TokenStandard.erc20,
@@ -504,6 +609,7 @@ class BlockchainService extends ChangeNotifier {
       valueUsd: 0.0,
       changePercent24h: 0.0,
       decimals: switch (activeFamily) {
+        ChainFamily.bitcoin => 8,
         ChainFamily.solana => 9,
         ChainFamily.tron => 6,
         ChainFamily.evm => 18,
@@ -561,6 +667,13 @@ class BlockchainService extends ChangeNotifier {
   }
 
   String _walletTokenCacheKeyForRequest(String walletAddress, int? chainId) {
+    if (chainId == BitcoinLegacyUiIds.mainnet ||
+        chainId == BitcoinLegacyUiIds.testnet4) {
+      return _walletTokenStateKeyForNetwork(
+        BitcoinLegacyUiIds.networkKey(chainId!),
+        walletAddress,
+      );
+    }
     if (_isActiveNonEvmTokenRequest(chainId)) {
       return _walletTokenStateKeyForNetwork(activeNetworkKey, walletAddress);
     }
@@ -776,7 +889,19 @@ class BlockchainService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final networkKey = prefs.getString(_keyActiveNetworkKey);
       final family = NetworkKey.familyOf(networkKey);
-      if (family == ChainFamily.solana || family == ChainFamily.tron) {
+      // Load preference before deciding whether a saved Bitcoin choice is valid.
+      final saved = await _storageService.getEnabledChainFamilies();
+      _enabledFamilies = saved ?? {ChainFamily.evm};
+      if (family == ChainFamily.bitcoin) {
+        _activeNetworkKeyOverride = '';
+        if ((networkKey == 'bitcoin:mainnet' ||
+                networkKey == 'bitcoin:testnet4') &&
+            _enabledFamilies.contains(ChainFamily.bitcoin)) {
+          _pendingBitcoinNetworkKey = networkKey;
+          _pendingBitcoinWalletAddress = _activeWalletAddress.toLowerCase();
+          _restorePendingBitcoinNetwork();
+        }
+      } else if (family == ChainFamily.solana || family == ChainFamily.tron) {
         _activeNetworkKeyOverride = networkKey!;
       } else {
         _activeNetworkKeyOverride = '';
@@ -792,16 +917,24 @@ class BlockchainService extends ChangeNotifier {
       }
 
       // Load enabled families; default to evm-only for existing users.
-      final saved = await _storageService.getEnabledChainFamilies();
-      _enabledFamilies = saved ?? {ChainFamily.evm};
-      // Ensure the active family is always in the enabled set.
-      _enabledFamilies.add(NetworkKey.familyOf(activeNetworkKey));
+      // A stale saved active network must not restore a disabled Bitcoin preference.
+      if (activeFamily == ChainFamily.bitcoin &&
+          !_enabledFamilies.contains(ChainFamily.bitcoin)) {
+        final fallback = _fallbackFamilyForActiveWallet();
+        if (fallback != null) {
+          _activateDefaultNetworkForFamily(fallback);
+          await _saveActiveChain();
+        }
+      } else if (_pendingBitcoinNetworkKey == null) {
+        _enabledFamilies.add(NetworkKey.familyOf(activeNetworkKey));
+      }
     } catch (e) {
       debugPrint('Error loading active chain: $e');
     }
   }
 
   Future<void> _saveActiveChain() async {
+    if (_pendingBitcoinNetworkKey != null) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       if (_activeNetworkKeyOverride.isNotEmpty) {
@@ -822,6 +955,7 @@ class BlockchainService extends ChangeNotifier {
   Future<void> saveActiveNetworkForTest() => _saveActiveChain();
 
   void setActiveChain(EvmChain chain) {
+    _clearPendingBitcoinNetwork();
     _activeNetworkKeyOverride = '';
     _activeChain = chain;
     refresh();
@@ -830,6 +964,7 @@ class BlockchainService extends ChangeNotifier {
   }
 
   void setActiveChainByChainId(int chainId) {
+    _clearPendingBitcoinNetwork();
     _activeNetworkKeyOverride = '';
     _activeChain = allChains.firstWhere(
       (c) => c.chainId == chainId,
@@ -842,6 +977,21 @@ class BlockchainService extends ChangeNotifier {
 
   void setActiveNetworkKey(String networkKey) {
     final family = NetworkKey.familyOf(networkKey);
+    if (family == ChainFamily.bitcoin) {
+      if (!isBitcoinNetworkAvailable(networkKey) ||
+          !_activeWalletSupportedFamilies.contains(ChainFamily.bitcoin)) {
+        return;
+      }
+      unawaited(BitcoinWalletVaultService.invalidateOpenAccounts());
+      _clearPendingBitcoinNetwork();
+      _activeNetworkKeyOverride = networkKey;
+      refresh();
+      unawaited(_saveActiveChain());
+      return;
+    }
+    if (activeFamily == ChainFamily.bitcoin) {
+      unawaited(BitcoinWalletVaultService.invalidateOpenAccounts());
+    }
     if (_activeWalletAddress.isNotEmpty &&
         !_activeWalletSupportedFamilies.contains(family)) {
       final fallbackFamily = _fallbackFamilyForActiveWallet();
@@ -853,6 +1003,7 @@ class BlockchainService extends ChangeNotifier {
       }
       return;
     }
+    _clearPendingBitcoinNetwork();
     if (family == ChainFamily.solana || family == ChainFamily.tron) {
       _activeNetworkKeyOverride = family == ChainFamily.tron
           ? NetworkKey.tron('mainnet')
@@ -897,10 +1048,17 @@ class BlockchainService extends ChangeNotifier {
   Future<void> setEnabledFamilies(Set<ChainFamily> families) async {
     if (families.isEmpty) return;
     _enabledFamilies = Set.of(families);
+    if (!_enabledFamilies.contains(ChainFamily.bitcoin) &&
+        _pendingBitcoinNetworkKey != null) {
+      _clearPendingBitcoinNetwork();
+      await _saveActiveChain();
+    }
+    _restorePendingBitcoinNetwork();
     // If current active family is no longer enabled, switch to first available.
     if (!_enabledFamilies.contains(activeFamily)) {
       final firstFamily = _enabledFamilies.first;
       final defaultKey = switch (firstFamily) {
+        ChainFamily.bitcoin => NetworkKey.bitcoin('mainnet'),
         ChainFamily.solana => NetworkKey.solana('mainnet-beta'),
         ChainFamily.tron => NetworkKey.tron('mainnet'),
         ChainFamily.evm => NetworkKey.evm(builtInChains[0].chainId),
@@ -1217,11 +1375,21 @@ class BlockchainService extends ChangeNotifier {
   // ─── BALANCE FETCHING ────────────────────────────
 
   Future<double> getNativeBalance(String address) async {
+    if (activeFamily == ChainFamily.bitcoin) {
+      final sats = await getNativeBalanceBaseUnits(address);
+      return _scaledBigIntToDouble(sats, 8);
+    }
     final balanceWei = await getNativeBalanceBaseUnits(address);
     return _scaledBigIntToDouble(balanceWei, 18);
   }
 
   Future<BigInt> getNativeBalanceBaseUnits(String address) async {
+    if (activeFamily == ChainFamily.bitcoin) {
+      final network = BitcoinProductNetwork.fromId(
+        NetworkKey.bitcoinNetworkIdOf(activeNetworkKey),
+      );
+      return (await _bitcoinWallet.refresh(address, network)).totalSats;
+    }
     final result = await _rpcCall('eth_getBalance', [address, 'latest']);
     if (result != null) {
       return BigInt.parse((result as String).substring(2), radix: 16);
@@ -1544,14 +1712,19 @@ class BlockchainService extends ChangeNotifier {
     bool Function()? applyGuard,
   }) async {
     // For non-EVM families, use the full activeNetworkKey; chainId is irrelevant.
-    final effectiveNetworkKey = _isActiveNonEvmTokenRequest(chainId)
+    final effectiveNetworkKey =
+        chainId == BitcoinLegacyUiIds.mainnet ||
+            chainId == BitcoinLegacyUiIds.testnet4
+        ? BitcoinLegacyUiIds.networkKey(chainId!)
+        : _isActiveNonEvmTokenRequest(chainId)
         ? activeNetworkKey
         : NetworkKey.evm(chainId ?? _activeChain.chainId);
     final requestedChainId = _walletTokenChainIdForRequest(chainId);
-    if (!walletAddressLooksValidForNetwork(
-      walletAddress,
-      effectiveNetworkKey,
-    )) {
+    if (NetworkKey.familyOf(effectiveNetworkKey) != ChainFamily.bitcoin &&
+        !walletAddressLooksValidForNetwork(
+          walletAddress,
+          effectiveNetworkKey,
+        )) {
       debugPrint(
         'Skipping wallet token fetch for invalid ${NetworkKey.familyOf(effectiveNetworkKey).wireValue} address: $walletAddress',
       );
@@ -1559,7 +1732,9 @@ class BlockchainService extends ChangeNotifier {
     }
     // Non-EVM chains must use a network-key-based cache key to avoid colliding
     // with an EVM chain that happens to share the same numeric chainId slot.
-    final cacheKey = _isActiveNonEvmTokenRequest(chainId)
+    final cacheKey =
+        NetworkKey.familyOf(effectiveNetworkKey) == ChainFamily.bitcoin ||
+            _isActiveNonEvmTokenRequest(chainId)
         ? _walletTokenStateKeyForNetwork(effectiveNetworkKey, walletAddress)
         : _walletTokenStateKey(requestedChainId, walletAddress);
     final now = DateTime.now();
@@ -1626,12 +1801,39 @@ class BlockchainService extends ChangeNotifier {
       applyGuard: applyGuard,
     );
     _walletTokensInFlight[cacheKey] = future;
-    future.whenComplete(() {
+    void clearInFlight() {
       if (identical(_walletTokensInFlight[cacheKey], future)) {
         _walletTokensInFlight.remove(cacheKey);
       }
-    });
+    }
+
+    unawaited(
+      future.then<void>(
+        (_) => clearInFlight(),
+        onError: (Object _, StackTrace _) => clearInFlight(),
+      ),
+    );
     return future;
+  }
+
+  Future<void> refreshBitcoinAccountAfterTransaction(
+    String identity,
+    BitcoinProductNetwork network, {
+    required bool Function() isCurrent,
+  }) async {
+    if (!isCurrent()) return;
+    final key = _walletTokenStateKeyForNetwork(network.networkKey, identity);
+    _bitcoinRefreshEpochs[key] = (_bitcoinRefreshEpochs[key] ?? 0) + 1;
+    _bitcoinWallet.invalidate(identity, network);
+    _walletTokensCache.remove(key);
+    await fetchWalletTokens(
+      identity,
+      chainId: network == BitcoinProductNetwork.mainnet
+          ? BitcoinLegacyUiIds.mainnet
+          : BitcoinLegacyUiIds.testnet4,
+      forceRefresh: true,
+      applyGuard: isCurrent,
+    );
   }
 
   Future<List<Token>> refreshWalletTokens(
@@ -1770,6 +1972,89 @@ class BlockchainService extends ChangeNotifier {
     return double.tryParse(normalized) ?? 0.0;
   }
 
+  Future<List<Token>> _fetchBitcoinWalletTokens(
+    String identity,
+    String cacheKey,
+    int chainId,
+    String networkKey,
+    bool Function()? applyGuard,
+  ) async {
+    final epoch = _bitcoinRefreshEpochs[cacheKey] ?? 0;
+    bool current() =>
+        (_bitcoinRefreshEpochs[cacheKey] ?? 0) == epoch &&
+        (applyGuard?.call() ?? true);
+    final previous =
+        _walletTokenStates[cacheKey]?.tokens ??
+        _walletTokensCache[cacheKey]?.tokens ??
+        const <Token>[];
+    try {
+      final network = BitcoinProductNetwork.fromId(
+        NetworkKey.bitcoinNetworkIdOf(networkKey),
+      );
+      final snapshot = await _bitcoinWallet.refresh(
+        identity,
+        network,
+        force: true,
+        isCurrent: current,
+      );
+      if (!current()) return previous;
+      final chain = network == BitcoinProductNetwork.mainnet
+          ? BitcoinCatalog.mainnet
+          : BitcoinCatalog.testnet4;
+      // Presentation conversion only. Send amounts and fees use the snapshot's BigInt sats.
+      final token = Token(
+        symbol: 'BTC',
+        name: chain.name,
+        balance: _scaledBigIntToDouble(snapshot.totalSats, 8),
+        valueUsd: 0,
+        changePercent24h: 0,
+        decimals: 8,
+        imageUrl: chain.logoUrl,
+        coinGeckoId: chain.coinGeckoId,
+        networkKey: networkKey,
+        tokenStandard: TokenStandard.native,
+      );
+      final enriched = await _tokenPortfolioModule.enrichTokensWithPrices([
+        token,
+      ], nativeCoinGeckoId: chain.coinGeckoId);
+      if (!current()) return previous;
+      final fetched = DateTime.now().toUtc();
+      _walletTokensCache[cacheKey] = _WalletTokensCacheEntry(
+        tokens: enriched,
+        fetchedAt: fetched,
+        source: 'bitcoin-hd',
+      );
+      _setWalletTokenState(
+        cacheKey,
+        WalletTokenState(
+          tokens: enriched,
+          source: 'bitcoin-hd',
+          isLoading: false,
+          isStale: false,
+          lastUpdatedAt: fetched,
+        ),
+        chainId: chainId,
+        notify: true,
+      );
+      return enriched;
+    } catch (_) {
+      if (!current()) return previous;
+      _setWalletTokenState(
+        cacheKey,
+        WalletTokenState(
+          tokens: previous,
+          source: 'bitcoin-hd',
+          isLoading: false,
+          isStale: true,
+          message: 'Bitcoin network data is unavailable',
+        ),
+        chainId: chainId,
+        notify: true,
+      );
+      rethrow;
+    }
+  }
+
   Future<List<Token>> _fetchWalletTokensFresh(
     String walletAddress,
     String cacheKey,
@@ -1780,6 +2065,15 @@ class BlockchainService extends ChangeNotifier {
     final effectiveNetworkKey =
         requestedNetworkKey ?? NetworkKey.evm(requestedChainId);
     final effectiveFamily = NetworkKey.familyOf(effectiveNetworkKey);
+    if (effectiveFamily == ChainFamily.bitcoin) {
+      return _fetchBitcoinWalletTokens(
+        walletAddress,
+        cacheKey,
+        requestedChainId,
+        effectiveNetworkKey,
+        applyGuard,
+      );
+    }
     final isNonEvm =
         effectiveFamily == ChainFamily.solana ||
         effectiveFamily == ChainFamily.tron;
@@ -2543,6 +2837,12 @@ class BlockchainService extends ChangeNotifier {
         final isActiveNativeToken =
             contractAddress == null && entryNetworkKey == activeNetworkKey;
         final defaultStandard = switch (NetworkKey.familyOf(entryNetworkKey)) {
+          ChainFamily.bitcoin =>
+            contractAddress == null
+                ? 'native'
+                : throw UnsupportedError(
+                    'Bitcoin custom tokens are unavailable.',
+                  ),
           ChainFamily.solana => contractAddress == null ? 'native' : 'spl',
           ChainFamily.tron => contractAddress == null ? 'native' : 'trc20',
           ChainFamily.evm => contractAddress == null ? 'native' : 'erc20',
@@ -2802,6 +3102,9 @@ class BlockchainService extends ChangeNotifier {
         : _networkKeyForTokenStorageChainId(chainId);
     final family = NetworkKey.familyOf(networkKey);
     final tokenStandard = switch (family) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana =>
         token.tokenStandard == TokenStandard.erc20
             ? TokenStandard.spl
@@ -2826,6 +3129,10 @@ class BlockchainService extends ChangeNotifier {
   }
 
   String _networkKeyForTokenStorageChainId(int chainId) {
+    if (chainId == BitcoinLegacyUiIds.mainnet ||
+        chainId == BitcoinLegacyUiIds.testnet4) {
+      return BitcoinLegacyUiIds.networkKey(chainId);
+    }
     return switch (chainId) {
       -501 => NetworkKey.solana('mainnet'),
       -195 => NetworkKey.tron('mainnet'),

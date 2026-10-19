@@ -102,10 +102,16 @@ class _ImportSecretPhraseScreenState extends State<ImportSecretPhraseScreen> {
 
     try {
       // Import wallet from mnemonic and discover additional used accounts.
-      await _walletService.importWalletsFromMnemonic(
+      final imported = await _walletService.importWalletsFromMnemonic(
         phrase,
         walletName: walletName,
       );
+
+      if (imported.isNotEmpty && imported.first['discoveryPartial'] == 'true') {
+        ToastUtils.showInfo(
+          'Wallet restored. Account discovery was incomplete; retry when network data is available.',
+        );
+      }
 
       // Refresh blockchain cache independently so refresh failures do not fail import.
       if (mounted) {

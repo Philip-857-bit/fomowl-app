@@ -3493,6 +3493,660 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get doneLabel;
+
+  /// No description provided for @bitcoinConfirmTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Bitcoin transfer'**
+  String get bitcoinConfirmTransfer;
+
+  /// No description provided for @bitcoinInvalidPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'This Bitcoin plan is invalid. Return to Send and prepare it again.'**
+  String get bitcoinInvalidPlan;
+
+  /// No description provided for @bitcoinTransferFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin transfer could not be completed.'**
+  String get bitcoinTransferFailed;
+
+  /// No description provided for @bitcoinPreparingTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing transfer…'**
+  String get bitcoinPreparingTransfer;
+
+  /// No description provided for @bitcoinAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get bitcoinAmount;
+
+  /// No description provided for @bitcoinDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Destination'**
+  String get bitcoinDestination;
+
+  /// No description provided for @bitcoinFeeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee rate'**
+  String get bitcoinFeeRate;
+
+  /// No description provided for @bitcoinNetworkFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fee'**
+  String get bitcoinNetworkFee;
+
+  /// No description provided for @bitcoinEstimatedVbytes.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated vbytes'**
+  String get bitcoinEstimatedVbytes;
+
+  /// No description provided for @bitcoinTotalDebit.
+  ///
+  /// In en, this message translates to:
+  /// **'Total debit'**
+  String get bitcoinTotalDebit;
+
+  /// No description provided for @bitcoinAddressType.
+  ///
+  /// In en, this message translates to:
+  /// **'Address type'**
+  String get bitcoinAddressType;
+
+  /// No description provided for @bitcoinNativeSegwit.
+  ///
+  /// In en, this message translates to:
+  /// **'Native SegWit'**
+  String get bitcoinNativeSegwit;
+
+  /// No description provided for @bitcoinTaproot.
+  ///
+  /// In en, this message translates to:
+  /// **'Taproot'**
+  String get bitcoinTaproot;
+
+  /// No description provided for @bitcoinEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get bitcoinEnabled;
+
+  /// No description provided for @bitcoinDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get bitcoinDisabled;
+
+  /// No description provided for @bitcoinTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Bitcoin transaction'**
+  String get bitcoinTransaction;
+
+  /// No description provided for @bitcoinStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get bitcoinStatus;
+
+  /// No description provided for @bitcoinConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get bitcoinConfirmed;
+
+  /// No description provided for @bitcoinPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bitcoinPending;
+
+  /// No description provided for @bitcoinConfirmations.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmations'**
+  String get bitcoinConfirmations;
+
+  /// No description provided for @bitcoinBlockHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Block height'**
+  String get bitcoinBlockHeight;
+
+  /// No description provided for @bitcoinTransactionId.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get bitcoinTransactionId;
+
+  /// No description provided for @bitcoinWalletChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Wallet change'**
+  String get bitcoinWalletChange;
+
+  /// No description provided for @bitcoinTimestamp.
+  ///
+  /// In en, this message translates to:
+  /// **'Timestamp'**
+  String get bitcoinTimestamp;
+
+  /// No description provided for @bitcoinStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest transaction status is unavailable.'**
+  String get bitcoinStatusUnavailable;
+
+  /// No description provided for @bitcoinViewExplorer.
+  ///
+  /// In en, this message translates to:
+  /// **'View in explorer'**
+  String get bitcoinViewExplorer;
+
+  /// No description provided for @bitcoinReceiveWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Bitcoin (BTC) only to this address.'**
+  String get bitcoinReceiveWarning;
+
+  /// No description provided for @bitcoinCapabilityUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature is not available for Bitcoin yet.'**
+  String get bitcoinCapabilityUnavailable;
+
+  /// No description provided for @bitcoinEconomy.
+  ///
+  /// In en, this message translates to:
+  /// **'Economy'**
+  String get bitcoinEconomy;
+
+  /// No description provided for @bitcoinNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get bitcoinNormal;
+
+  /// No description provided for @bitcoinPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get bitcoinPriority;
+
+  /// No description provided for @bitcoinSplitFunds.
+  ///
+  /// In en, this message translates to:
+  /// **'Funds are split across Native SegWit and Taproot. One address format must cover the amount and network fee.'**
+  String get bitcoinSplitFunds;
+
+  /// No description provided for @advancedTransactionDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Advanced details'**
+  String get advancedTransactionDetails;
+
+  /// No description provided for @bitcoinNetworkSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'NETWORK SPEED'**
+  String get bitcoinNetworkSpeed;
+
+  /// No description provided for @bitcoinEqualFeeTiers.
+  ///
+  /// In en, this message translates to:
+  /// **'All speed options currently use the same fee.'**
+  String get bitcoinEqualFeeTiers;
+
+  /// No description provided for @bitcoinInputType.
+  ///
+  /// In en, this message translates to:
+  /// **'Address / input type'**
+  String get bitcoinInputType;
+
+  /// No description provided for @bitcoinEstimatedSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated transaction size'**
+  String get bitcoinEstimatedSize;
+
+  /// No description provided for @bitcoinReplaceByFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace-by-fee'**
+  String get bitcoinReplaceByFee;
+
+  /// No description provided for @bitcoinSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get bitcoinSpeed;
+
+  /// No description provided for @transactionAmountToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'AMOUNT TO SEND'**
+  String get transactionAmountToSend;
+
+  /// No description provided for @transactionTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get transactionTotal;
+
+  /// No description provided for @transactionSubmittedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted'**
+  String get transactionSubmittedTitle;
+
+  /// No description provided for @transactionSubmittedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The network accepted your transaction for relay. Waiting for its first confirmation.'**
+  String get transactionSubmittedSubtitle;
+
+  /// No description provided for @transactionSubmissionUnknownTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission uncertain'**
+  String get transactionSubmissionUnknownTitle;
+
+  /// No description provided for @transactionSubmissionUnknownSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm whether the network accepted this transaction. Check its status before sending again.'**
+  String get transactionSubmissionUnknownSubtitle;
+
+  /// No description provided for @transactionConfirmedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your transaction has been included in a block.'**
+  String get transactionConfirmedSubtitle;
+
+  /// No description provided for @bitcoinRecoveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review saved attempts'**
+  String get bitcoinRecoveryTitle;
+
+  /// No description provided for @bitcoinRecoveryWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Only recover an attempt you know was rejected before broadcast. A missing transaction alone is not proof.'**
+  String get bitcoinRecoveryWarning;
+
+  /// No description provided for @bitcoinRecoveryAcknowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'This attempt was rejected before broadcast.'**
+  String get bitcoinRecoveryAcknowledge;
+
+  /// No description provided for @bitcoinRecoveryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Recover Testnet4 reservation'**
+  String get bitcoinRecoveryAction;
+
+  /// No description provided for @bitcoinRecoveryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery is unavailable. This attempt remains reserved.'**
+  String get bitcoinRecoveryUnavailable;
+
+  /// No description provided for @bitcoinRecoveryError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not verify recovery. No new transaction has been sent.'**
+  String get bitcoinRecoveryError;
+
+  /// No description provided for @bitcoinRecoveryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No saved attempts for this network.'**
+  String get bitcoinRecoveryEmpty;
+
+  /// No description provided for @bitcoinRecoverySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation recovered. You can prepare a new transfer.'**
+  String get bitcoinRecoverySuccess;
+
+  /// No description provided for @bitcoinReservedInputs.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved inputs'**
+  String get bitcoinReservedInputs;
+
+  /// No description provided for @bitcoinRecoveryCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Check transaction status'**
+  String get bitcoinRecoveryCheck;
+
+  /// No description provided for @transactionEconomy.
+  ///
+  /// In en, this message translates to:
+  /// **'Economy'**
+  String get transactionEconomy;
+
+  /// No description provided for @transactionNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get transactionNormal;
+
+  /// No description provided for @transactionPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get transactionPriority;
+
+  /// No description provided for @transactionNetworkSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'NETWORK SPEED'**
+  String get transactionNetworkSpeed;
+
+  /// No description provided for @transactionSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get transactionSpeed;
+
+  /// No description provided for @transactionEqualFeeTiers.
+  ///
+  /// In en, this message translates to:
+  /// **'All speed options currently use the same fee.'**
+  String get transactionEqualFeeTiers;
+
+  /// No description provided for @evmTransactionType.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction type'**
+  String get evmTransactionType;
+
+  /// No description provided for @evmGasLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas limit'**
+  String get evmGasLimit;
+
+  /// No description provided for @evmGasPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Gas price'**
+  String get evmGasPrice;
+
+  /// No description provided for @evmBaseFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Base fee'**
+  String get evmBaseFee;
+
+  /// No description provided for @evmPriorityFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority fee'**
+  String get evmPriorityFee;
+
+  /// No description provided for @evmMaxFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Max fee'**
+  String get evmMaxFee;
+
+  /// No description provided for @evmLegacyTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Legacy (type 0)'**
+  String get evmLegacyTransaction;
+
+  /// No description provided for @evmDynamicTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'EIP-1559 (type 2)'**
+  String get evmDynamicTransaction;
+
+  /// No description provided for @evmFeeQuoteUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Network fees changed. Review the updated fee and confirm again.'**
+  String get evmFeeQuoteUpdated;
+
+  /// Maximum approved network fee ceiling
+  ///
+  /// In en, this message translates to:
+  /// **'Up to {fee}'**
+  String transactionFeeUpTo(String fee);
+
+  /// No description provided for @evmSpeedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Up'**
+  String get evmSpeedUp;
+
+  /// No description provided for @evmCancelTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel transaction'**
+  String get evmCancelTransaction;
+
+  /// No description provided for @evmOldFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Old estimated fee'**
+  String get evmOldFee;
+
+  /// No description provided for @evmNewFee.
+  ///
+  /// In en, this message translates to:
+  /// **'New estimated fee'**
+  String get evmNewFee;
+
+  /// No description provided for @evmAdditionalFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional estimated cost'**
+  String get evmAdditionalFee;
+
+  /// No description provided for @evmMaximumFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum execution fee'**
+  String get evmMaximumFee;
+
+  /// No description provided for @evmCancelWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The original transaction may confirm first. Cancellation sends zero value to your own address and costs a network fee.'**
+  String get evmCancelWarning;
+
+  /// No description provided for @evmSpeedUpWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The recipient and amount stay the same. A higher fee does not guarantee an inclusion time.'**
+  String get evmSpeedUpWarning;
+
+  /// No description provided for @evmReplacementSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement submitted. Confirmation is still pending.'**
+  String get evmReplacementSubmitted;
+
+  /// No description provided for @evmReplacementCheckOutcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the saved transaction status before trying again. An unknown outcome is not a failed transaction.'**
+  String get evmReplacementCheckOutcome;
+
+  /// No description provided for @evmSubmissionUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Submission outcome unknown'**
+  String get evmSubmissionUnknown;
+
+  /// No description provided for @evmTransactionSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction submitted'**
+  String get evmTransactionSubmitted;
+
+  /// No description provided for @bitcoinSpeedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed Up'**
+  String get bitcoinSpeedUp;
+
+  /// No description provided for @bitcoinRbfOriginalFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Original network fee'**
+  String get bitcoinRbfOriginalFee;
+
+  /// No description provided for @bitcoinRbfReplacementFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement network fee'**
+  String get bitcoinRbfReplacementFee;
+
+  /// No description provided for @bitcoinRbfAdditionalFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Additional fee'**
+  String get bitcoinRbfAdditionalFee;
+
+  /// No description provided for @bitcoinRbfNewRate.
+  ///
+  /// In en, this message translates to:
+  /// **'New fee rate'**
+  String get bitcoinRbfNewRate;
+
+  /// No description provided for @bitcoinRbfWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'The destination and amount stay the same. A higher fee does not guarantee a confirmation time.'**
+  String get bitcoinRbfWarning;
+
+  /// No description provided for @bitcoinRbfHigherFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a higher whole-number fee rate.'**
+  String get bitcoinRbfHigherFee;
+
+  /// No description provided for @bitcoinRbfUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed up could not be completed. Check the transaction status before trying again.'**
+  String get bitcoinRbfUnavailable;
+
+  /// No description provided for @bitcoinRbfSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement submitted. Confirmation is still pending.'**
+  String get bitcoinRbfSubmitted;
+
+  /// No description provided for @bitcoinRbfUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'The submission outcome is unknown. Check the transaction status before trying again.'**
+  String get bitcoinRbfUnknown;
+
+  /// No description provided for @transactionNonce.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction nonce'**
+  String get transactionNonce;
+
+  /// No description provided for @transactionExecutionFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Execution fee'**
+  String get transactionExecutionFee;
+
+  /// No description provided for @transactionSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Slot'**
+  String get transactionSlot;
+
+  /// No description provided for @transactionComputeUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Compute units used'**
+  String get transactionComputeUnits;
+
+  /// No description provided for @transactionEnergyUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy used'**
+  String get transactionEnergyUsed;
+
+  /// No description provided for @transactionBandwidthUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bandwidth used'**
+  String get transactionBandwidthUsed;
+
+  /// No description provided for @transactionEnergyFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy fee'**
+  String get transactionEnergyFee;
+
+  /// No description provided for @transactionBandwidthFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Bandwidth fee'**
+  String get transactionBandwidthFee;
+
+  /// No description provided for @transactionEnergyFeeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Energy fee limit'**
+  String get transactionEnergyFeeLimit;
+
+  /// No description provided for @transactionEstimatedFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated network fee'**
+  String get transactionEstimatedFee;
+
+  /// No description provided for @transactionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get transactionUnavailable;
+
+  /// No description provided for @transactionResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Network resources'**
+  String get transactionResources;
+
+  /// No description provided for @transactionAfterConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'After confirmation'**
+  String get transactionAfterConfirmation;
+
+  /// No description provided for @transactionCalculatedByNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculated by network'**
+  String get transactionCalculatedByNetwork;
+
+  /// No description provided for @transactionEstimatedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated total'**
+  String get transactionEstimatedTotal;
 }
 
 class _AppLocalizationsDelegate

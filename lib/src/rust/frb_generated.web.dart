@@ -9,6 +9,10 @@
 import 'api/argon2.dart';
 import 'api/bip32.dart';
 import 'api/bip39.dart';
+import 'api/bitcoin_account.dart';
+import 'api/bitcoin_signing_account.dart';
+import 'api/bitcoin_transaction.dart';
+import 'api/bitcoin_vault.dart';
 import 'api/chain_rules.dart';
 import 'api/evm_signing_account.dart';
 import 'api/evm_tx.dart';
@@ -30,12 +34,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_RustBitcoinSigningAccountPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_RustEvmSigningAccountPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_RustWalletSigningAccountPtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount;
+
+  @protected
+  RustBitcoinSigningAccount
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    dynamic raw,
+  );
 
   @protected
   RustEvmSigningAccount
@@ -46,6 +60,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustWalletSigningAccount
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
+  RustBitcoinSigningAccount
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
     dynamic raw,
   );
 
@@ -62,6 +82,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustBitcoinSigningAccount
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
   RustEvmSigningAccount
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     dynamic raw,
@@ -70,6 +96,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustWalletSigningAccount
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    dynamic raw,
+  );
+
+  @protected
+  RustBitcoinSigningAccount
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
     dynamic raw,
   );
 
@@ -89,7 +121,66 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String dco_decode_String(dynamic raw);
 
   @protected
+  BitcoinAccountDto dco_decode_bitcoin_account_dto(dynamic raw);
+
+  @protected
+  BitcoinKeychainDto dco_decode_bitcoin_keychain_dto(dynamic raw);
+
+  @protected
+  BitcoinNetworkDto dco_decode_bitcoin_network_dto(dynamic raw);
+
+  @protected
+  BitcoinPsbtFinalizationDto dco_decode_bitcoin_psbt_finalization_dto(
+    dynamic raw,
+  );
+
+  @protected
+  BitcoinPsbtInspectionDto dco_decode_bitcoin_psbt_inspection_dto(dynamic raw);
+
+  @protected
+  BitcoinPsbtOutputDto dco_decode_bitcoin_psbt_output_dto(dynamic raw);
+
+  @protected
+  BitcoinPurposeDto dco_decode_bitcoin_purpose_dto(dynamic raw);
+
+  @protected
+  BitcoinRecipientDto dco_decode_bitcoin_recipient_dto(dynamic raw);
+
+  @protected
+  BitcoinTransactionPlanDto dco_decode_bitcoin_transaction_plan_dto(
+    dynamic raw,
+  );
+
+  @protected
+  BitcoinUtxoDto dco_decode_bitcoin_utxo_dto(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  BitcoinAccountDto dco_decode_box_autoadd_bitcoin_account_dto(dynamic raw);
+
+  @protected
+  BitcoinTransactionPlanDto dco_decode_box_autoadd_bitcoin_transaction_plan_dto(
+    dynamic raw,
+  );
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
+  List<BitcoinPsbtOutputDto> dco_decode_list_bitcoin_psbt_output_dto(
+    dynamic raw,
+  );
+
+  @protected
+  List<BitcoinRecipientDto> dco_decode_list_bitcoin_recipient_dto(dynamic raw);
+
+  @protected
+  List<BitcoinUtxoDto> dco_decode_list_bitcoin_utxo_dto(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -99,6 +190,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  SealedBitcoinAccountDto dco_decode_sealed_bitcoin_account_dto(dynamic raw);
+
+  @protected
+  SignedBitcoinTransactionDto dco_decode_signed_bitcoin_transaction_dto(
+    dynamic raw,
+  );
 
   @protected
   SolanaPrivateKeyImport dco_decode_solana_private_key_import(dynamic raw);
@@ -119,6 +221,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt dco_decode_usize(dynamic raw);
 
   @protected
+  RustBitcoinSigningAccount
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustEvmSigningAccount
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     SseDeserializer deserializer,
@@ -127,6 +235,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustWalletSigningAccount
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustBitcoinSigningAccount
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
     SseDeserializer deserializer,
   );
 
@@ -143,6 +257,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustBitcoinSigningAccount
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustEvmSigningAccount
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     SseDeserializer deserializer,
@@ -151,6 +271,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustWalletSigningAccount
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustBitcoinSigningAccount
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
     SseDeserializer deserializer,
   );
 
@@ -170,7 +296,86 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
+  BitcoinAccountDto sse_decode_bitcoin_account_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinKeychainDto sse_decode_bitcoin_keychain_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinNetworkDto sse_decode_bitcoin_network_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPsbtFinalizationDto sse_decode_bitcoin_psbt_finalization_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPsbtInspectionDto sse_decode_bitcoin_psbt_inspection_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPsbtOutputDto sse_decode_bitcoin_psbt_output_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinPurposeDto sse_decode_bitcoin_purpose_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinRecipientDto sse_decode_bitcoin_recipient_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinTransactionPlanDto sse_decode_bitcoin_transaction_plan_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinUtxoDto sse_decode_bitcoin_utxo_dto(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  BitcoinAccountDto sse_decode_box_autoadd_bitcoin_account_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BitcoinTransactionPlanDto sse_decode_box_autoadd_bitcoin_transaction_plan_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
+  List<BitcoinPsbtOutputDto> sse_decode_list_bitcoin_psbt_output_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BitcoinRecipientDto> sse_decode_list_bitcoin_recipient_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<BitcoinUtxoDto> sse_decode_list_bitcoin_utxo_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -180,6 +385,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  SealedBitcoinAccountDto sse_decode_sealed_bitcoin_account_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SignedBitcoinTransactionDto sse_decode_signed_bitcoin_transaction_dto(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SolanaPrivateKeyImport sse_decode_solana_private_key_import(
@@ -202,7 +420,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    RustBitcoinSigningAccount self,
+    SseSerializer serializer,
+  );
 
   @protected
   void
@@ -215,6 +437,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     RustWalletSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    RustBitcoinSigningAccount self,
     SseSerializer serializer,
   );
 
@@ -234,6 +463,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    RustBitcoinSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     RustEvmSigningAccount self,
     SseSerializer serializer,
@@ -243,6 +479,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustWalletSigningAccount(
     RustWalletSigningAccount self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    RustBitcoinSigningAccount self,
     SseSerializer serializer,
   );
 
@@ -264,7 +507,103 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
+  void sse_encode_bitcoin_account_dto(
+    BitcoinAccountDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_keychain_dto(
+    BitcoinKeychainDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_network_dto(
+    BitcoinNetworkDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_psbt_finalization_dto(
+    BitcoinPsbtFinalizationDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_psbt_inspection_dto(
+    BitcoinPsbtInspectionDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_psbt_output_dto(
+    BitcoinPsbtOutputDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_purpose_dto(
+    BitcoinPurposeDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_recipient_dto(
+    BitcoinRecipientDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_transaction_plan_dto(
+    BitcoinTransactionPlanDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_bitcoin_utxo_dto(
+    BitcoinUtxoDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_bitcoin_account_dto(
+    BitcoinAccountDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_bitcoin_transaction_plan_dto(
+    BitcoinTransactionPlanDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_bitcoin_psbt_output_dto(
+    List<BitcoinPsbtOutputDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_bitcoin_recipient_dto(
+    List<BitcoinRecipientDto> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_bitcoin_utxo_dto(
+    List<BitcoinUtxoDto> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -277,6 +616,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sealed_bitcoin_account_dto(
+    SealedBitcoinAccountDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_signed_bitcoin_transaction_dto(
+    SignedBitcoinTransactionDto self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_solana_private_key_import(
@@ -298,15 +652,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
 
 class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+        ptr,
+      );
 
   void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
@@ -347,6 +714,16 @@ external RustLibWasmModule get wasmModule;
 @JS()
 @anonymous
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustBitcoinSigningAccount(
+    int ptr,
+  );
+
   external void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerRustEvmSigningAccount(
     int ptr,

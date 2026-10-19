@@ -99,6 +99,8 @@ class _ImportPrivateKeyScreenState extends State<ImportPrivateKeyScreen> {
     try {
       // Import wallet using the selected chain family
       switch (_selectedChain) {
+        case ChainFamily.bitcoin:
+          throw UnsupportedError('Bitcoin is unavailable for this operation.');
         case ChainFamily.solana:
           await _walletService.importWalletFromSolanaKey(
             privateKey,
@@ -478,6 +480,9 @@ class _ChainLogo extends StatelessWidget {
       );
     }
     return switch (family) {
+      ChainFamily.bitcoin => throw UnsupportedError(
+        'Bitcoin is unavailable for this operation.',
+      ),
       ChainFamily.solana => const SizedBox(
         width: 24,
         height: 24,

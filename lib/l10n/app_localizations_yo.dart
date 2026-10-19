@@ -1859,4 +1859,355 @@ class AppLocalizationsYo extends AppLocalizations {
 
   @override
   String get doneLabel => 'Ti parí';
+
+  @override
+  String get bitcoinConfirmTransfer => 'Jẹ́rìí sí ìfiránṣẹ́ Bitcoin';
+
+  @override
+  String get bitcoinInvalidPlan =>
+      'Ètò Bitcoin yìí kò tọ́. Padà sí Firanṣẹ́ kí o tún ṣètò rẹ̀.';
+
+  @override
+  String get bitcoinTransferFailed => 'A kò lè parí ìfiránṣẹ́ Bitcoin.';
+
+  @override
+  String get bitcoinPreparingTransfer => 'A ń ṣètò ìfiránṣẹ́…';
+
+  @override
+  String get bitcoinAmount => 'Iye owó';
+
+  @override
+  String get bitcoinDestination => 'Àdírẹ́sì olùgbà';
+
+  @override
+  String get bitcoinFeeRate => 'Ìwọ̀n ọ̀ya';
+
+  @override
+  String get bitcoinNetworkFee => 'Ọ̀ya nẹ́tíwọ́ọ̀kì';
+
+  @override
+  String get bitcoinEstimatedVbytes => 'vbytes tí a fojú díwọ̀n';
+
+  @override
+  String get bitcoinTotalDebit => 'Àpapọ̀ owó tí a ó yọ';
+
+  @override
+  String get bitcoinAddressType => 'Irú àdírẹ́sì';
+
+  @override
+  String get bitcoinNativeSegwit => 'Native SegWit';
+
+  @override
+  String get bitcoinTaproot => 'Taproot';
+
+  @override
+  String get bitcoinEnabled => 'Ti ṣiṣẹ́';
+
+  @override
+  String get bitcoinDisabled => 'Ti pa';
+
+  @override
+  String get bitcoinTransaction => 'Ìṣòwò Bitcoin';
+
+  @override
+  String get bitcoinStatus => 'Ipò';
+
+  @override
+  String get bitcoinConfirmed => 'Ti jẹ́rìí';
+
+  @override
+  String get bitcoinPending => 'Ń dúró';
+
+  @override
+  String get bitcoinConfirmations => 'Àwọn ìjẹ́rìí';
+
+  @override
+  String get bitcoinBlockHeight => 'Gíga block';
+
+  @override
+  String get bitcoinTransactionId => 'ID ìṣòwò';
+
+  @override
+  String get bitcoinWalletChange => 'Ìyípadà owó àpamọ́wọ́';
+
+  @override
+  String get bitcoinTimestamp => 'Àkókò';
+
+  @override
+  String get bitcoinStatusUnavailable => 'Ipò ìṣòwò tuntun kò sí ní báyìí.';
+
+  @override
+  String get bitcoinViewExplorer => 'Wo nínú aṣàwárí';
+
+  @override
+  String get bitcoinReceiveWarning =>
+      'Firanṣẹ́ Bitcoin (BTC) nìkan sí àdírẹ́sì yìí.';
+
+  @override
+  String get bitcoinCapabilityUnavailable => 'Ẹ̀yà yìí kò tíì sí fún Bitcoin.';
+
+  @override
+  String get bitcoinEconomy => 'Ọ̀ya kékeré';
+
+  @override
+  String get bitcoinNormal => 'Déédéé';
+
+  @override
+  String get bitcoinPriority => 'Àkọ́kọ́';
+
+  @override
+  String get bitcoinSplitFunds =>
+      'Owó pín sí Native SegWit àti Taproot. Irú àdírẹ́sì kan gbọ́dọ̀ tó fún iye owó àti ọ̀ya nẹ́tíwọ́ọ̀kì.';
+
+  @override
+  String get advancedTransactionDetails => 'Àwọn àlàyé síwájú';
+
+  @override
+  String get bitcoinNetworkSpeed => 'ÌYÁRÁ NẸ́TÍWỌ́Ọ̀KÌ';
+
+  @override
+  String get bitcoinEqualFeeTiers =>
+      'Gbogbo àṣàyàn ìyára ń lo owó kan náà lọ́wọ́lọ́wọ́.';
+
+  @override
+  String get bitcoinInputType => 'Irú àdírẹ́sì / ìwọlé';
+
+  @override
+  String get bitcoinEstimatedSize => 'Ìwọ̀n ìṣòwò tí a fojú díwọ̀n';
+
+  @override
+  String get bitcoinReplaceByFee => 'Rọ́pò pẹ̀lú owó';
+
+  @override
+  String get bitcoinSpeed => 'Ìyára';
+
+  @override
+  String get transactionAmountToSend => 'IYE LÁTI FI RÁNṢẸ́';
+
+  @override
+  String get transactionTotal => 'Àpapọ̀';
+
+  @override
+  String get transactionSubmittedTitle => 'A ti fi ránṣẹ́';
+
+  @override
+  String get transactionSubmittedSubtitle =>
+      'Nẹ́tíwọ́ọ̀kì ti gba ìṣòwò rẹ fún ìtànkálẹ̀. A ń dúró de ìmúdájú àkọ́kọ́ rẹ.';
+
+  @override
+  String get transactionSubmissionUnknownTitle => 'Ipò ìfiránṣẹ́ kò dájú';
+
+  @override
+  String get transactionSubmissionUnknownSubtitle =>
+      'A kò lè jẹ́rìí pé nẹ́tíwọ́ọ̀kì gba ìṣòwò yìí. Ṣàyẹ̀wò ipò rẹ kí o tó tún fi ránṣẹ́.';
+
+  @override
+  String get transactionConfirmedSubtitle => 'A ti fi ìṣòwò rẹ sínú bulọọki.';
+
+  @override
+  String get bitcoinRecoveryTitle => 'Ṣàyẹ̀wò àwọn ìgbìyànjú tí a fipamọ́';
+
+  @override
+  String get bitcoinRecoveryWarning =>
+      'Gba ìgbìyànjú padà tí o mọ̀ pé a kọ̀ ṣáájú ìtànkálẹ̀ nìkan. Àìrí ìṣòwò kì í ṣe ẹ̀rí.';
+
+  @override
+  String get bitcoinRecoveryAcknowledge =>
+      'A kọ ìgbìyànjú yìí ṣáájú ìtànkálẹ̀.';
+
+  @override
+  String get bitcoinRecoveryAction => 'Gba ìpamọ́ Testnet4 padà';
+
+  @override
+  String get bitcoinRecoveryUnavailable =>
+      'Ìgbàpadà kò sí. Ìgbìyànjú yìí ṣì wà ní ìpamọ́.';
+
+  @override
+  String get bitcoinRecoveryError =>
+      'A kò lè jẹ́rìí ìgbàpadà. A kò fi ìṣòwò tuntun ránṣẹ́.';
+
+  @override
+  String get bitcoinRecoveryEmpty =>
+      'Kò sí ìgbìyànjú tí a fipamọ́ fún nẹ́tíwọ́ọ̀kì yìí.';
+
+  @override
+  String get bitcoinRecoverySuccess =>
+      'A ti gba ìpamọ́ padà. O lè ṣètò ìfiránṣẹ́ tuntun.';
+
+  @override
+  String get bitcoinReservedInputs => 'Àwọn ìwọlé tí a fipamọ́';
+
+  @override
+  String get bitcoinRecoveryCheck => 'Ṣàyẹ̀wò ipò ìṣòwò';
+
+  @override
+  String get transactionEconomy => 'Ọ̀ya kékeré';
+
+  @override
+  String get transactionNormal => 'Déédéé';
+
+  @override
+  String get transactionPriority => 'Àkọ́kọ́';
+
+  @override
+  String get transactionNetworkSpeed => 'ÌYÁRÁ NẸ́TÍWỌ́Ọ̀KÌ';
+
+  @override
+  String get transactionSpeed => 'Ìyára';
+
+  @override
+  String get transactionEqualFeeTiers =>
+      'Gbogbo àṣàyàn ìyára ń lo owó kan náà lọ́wọ́lọ́wọ́.';
+
+  @override
+  String get evmTransactionType => 'Irú ìṣòwò';
+
+  @override
+  String get evmGasLimit => 'Ààlà gas';
+
+  @override
+  String get evmGasPrice => 'Iye gas';
+
+  @override
+  String get evmBaseFee => 'Owó ìpìlẹ̀';
+
+  @override
+  String get evmPriorityFee => 'Owó ìṣáájú';
+
+  @override
+  String get evmMaxFee => 'Owó tó pọ̀jù';
+
+  @override
+  String get evmLegacyTransaction => 'Àtijọ́ (irú 0)';
+
+  @override
+  String get evmDynamicTransaction => 'EIP-1559 (irú 2)';
+
+  @override
+  String get evmFeeQuoteUpdated =>
+      'Owó nẹ́tíwọ́ọ̀kì ti yí padà. Ṣàyẹ̀wò owó tuntun kí o sì jẹ́rìí lẹ́ẹ̀kan sí i.';
+
+  @override
+  String transactionFeeUpTo(String fee) {
+    return 'Títí dé $fee';
+  }
+
+  @override
+  String get evmSpeedUp => 'Yára sí i';
+
+  @override
+  String get evmCancelTransaction => 'Fagilé ìṣòwò';
+
+  @override
+  String get evmOldFee => 'Owó àfojúsùn àtijọ́';
+
+  @override
+  String get evmNewFee => 'Owó àfojúsùn tuntun';
+
+  @override
+  String get evmAdditionalFee => 'Àfikún owó àfojúsùn';
+
+  @override
+  String get evmMaximumFee => 'Owó ìmúṣẹ tó pọ̀ jù';
+
+  @override
+  String get evmCancelWarning =>
+      'Ìṣòwò àkọ́kọ́ lè gba ìmúdájú ṣáájú. Ìfagilé ń fi iye òdo ránṣẹ́ sí àdírẹ́sì rẹ ó sì ní owó nẹ́tíwọ́ọ̀kì.';
+
+  @override
+  String get evmSpeedUpWarning =>
+      'Olùgbà àti iye kò yí padà. Owó tó ga kò ṣe ìlérí àkókò ìmúdájú.';
+
+  @override
+  String get evmReplacementSubmitted =>
+      'A ti fi ìṣòwò àropò ránṣẹ́. A ṣì ń dúró de ìmúdájú.';
+
+  @override
+  String get evmReplacementCheckOutcome =>
+      'Ṣàyẹ̀wò ipò ìṣòwò tí a fipamọ́ ṣáájú kí o tún gbìyànjú. Àbájáde àìmọ̀ kò túmọ̀ sí ìkùnà.';
+
+  @override
+  String get evmSubmissionUnknown => 'A kò mọ àbájáde fífiránṣẹ́';
+
+  @override
+  String get evmTransactionSubmitted => 'A ti fi ìṣòwò ránṣẹ́';
+
+  @override
+  String get bitcoinSpeedUp => 'Mú un yára';
+
+  @override
+  String get bitcoinRbfOriginalFee => 'Owó nẹ́tíwọ́ọ̀kì ìpilẹ̀ṣẹ̀';
+
+  @override
+  String get bitcoinRbfReplacementFee => 'Owó nẹ́tíwọ́ọ̀kì ìrọ́pò';
+
+  @override
+  String get bitcoinRbfAdditionalFee => 'Owó àfikún';
+
+  @override
+  String get bitcoinRbfNewRate => 'Òṣùwọ̀n owó tuntun';
+
+  @override
+  String get bitcoinRbfWarning =>
+      'Àdírẹ́sì olùgbà àti iye owó kò yí padà. Owó tó ga jù kò ṣe ìlérí àkókò ìmúdájú.';
+
+  @override
+  String get bitcoinRbfHigherFee => 'Tẹ òṣùwọ̀n owó odidi tó ga jù sílẹ̀.';
+
+  @override
+  String get bitcoinRbfUnavailable =>
+      'A kò lè mú un yára. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.';
+
+  @override
+  String get bitcoinRbfSubmitted =>
+      'A ti fi ìṣòwò ìrọ́pò ránṣẹ́. Ìmúdájú ṣì ń dúró.';
+
+  @override
+  String get bitcoinRbfUnknown =>
+      'A kò mọ àbájáde fífi ránṣẹ́. Ṣàyẹ̀wò ipò ìṣòwò náà kí o tó tún gbìyànjú.';
+
+  @override
+  String get transactionNonce => 'Nọ́mbà ìdúnàádúrà';
+
+  @override
+  String get transactionExecutionFee => 'Owó ìmúṣẹ';
+
+  @override
+  String get transactionSlot => 'Slot';
+
+  @override
+  String get transactionComputeUnits => 'Àwọn ẹyọ ìṣírò tí a lò';
+
+  @override
+  String get transactionEnergyUsed => 'Energy tí a lò';
+
+  @override
+  String get transactionBandwidthUsed => 'Bandwidth tí a lò';
+
+  @override
+  String get transactionEnergyFee => 'Owó Energy';
+
+  @override
+  String get transactionBandwidthFee => 'Owó Bandwidth';
+
+  @override
+  String get transactionEnergyFeeLimit => 'Ààlà owó Energy';
+
+  @override
+  String get transactionEstimatedFee => 'Àfojúsùn owó nẹ́tíwọ́ọ̀kì';
+
+  @override
+  String get transactionUnavailable => 'Kò sí ní báyìí';
+
+  @override
+  String get transactionResources => 'Àwọn orísun nẹ́tíwọ́ọ̀kì';
+
+  @override
+  String get transactionAfterConfirmation => 'Lẹ́yìn ìmúdájú';
+
+  @override
+  String get transactionCalculatedByNetwork => 'Nẹ́tíwọ́ọ̀kì yóò ṣe ìṣírò';
+
+  @override
+  String get transactionEstimatedTotal => 'Àfojúsùn àpapọ̀';
 }

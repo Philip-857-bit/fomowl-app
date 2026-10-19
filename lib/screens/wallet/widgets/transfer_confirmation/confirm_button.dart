@@ -8,6 +8,7 @@ class ConfirmButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
   final String loadingLabel;
+  final bool enabled;
 
   const ConfirmButton({
     super.key,
@@ -15,18 +16,19 @@ class ConfirmButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.loadingLabel = 'Signing...',
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isLoading ? null : onPressed,
+      onTap: isLoading || !enabled ? null : onPressed,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: isLoading ? null : AppColors.primaryGradient,
-          color: isLoading ? Colors.grey : null,
+          gradient: isLoading || !enabled ? null : AppColors.primaryGradient,
+          color: isLoading || !enabled ? Colors.grey : null,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(

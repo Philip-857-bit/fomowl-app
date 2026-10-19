@@ -10,11 +10,13 @@ class AppShellBottomNavigation extends StatelessWidget {
     required this.currentTab,
     required this.onTabTap,
     required this.onPayTap,
+    this.bitcoinBridgeOnly = false,
   });
 
   final AppShellTab currentTab;
   final ValueChanged<AppShellTab> onTabTap;
   final VoidCallback onPayTap;
+  final bool bitcoinBridgeOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +33,7 @@ class AppShellBottomNavigation extends StatelessWidget {
         FloatingNavigationDestinationData(
           icon: Icons.swap_horiz_outlined,
           selectedIcon: Icons.swap_horiz_rounded,
-          label: l.swap,
+          label: bitcoinBridgeOnly ? 'Bridge' : l.swap,
           selected: currentTab == AppShellTab.swap,
           onTap: () => onTabTap(AppShellTab.swap),
         ),

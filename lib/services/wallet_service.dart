@@ -11,11 +11,21 @@ import 'package:hex/hex.dart' as pkg_hex;
 import '../config/app_environment.dart';
 import '../models/chain.dart';
 import '../models/wallet_account.dart';
+import '../models/bitcoin_account_state.dart';
+import 'bitcoin/bitcoin_provisioning_service.dart';
+import 'bitcoin/bitcoin_seed_wallet_initializer.dart';
+import 'bitcoin/bitcoin_seed_account_discovery.dart';
+import 'bitcoin/bitcoin_host_availability.dart';
 import 'storage_service.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
 import 'native_crypto.dart';
 import 'evm_transaction_service.dart';
+import 'evm_fee_service.dart';
+import '../models/evm_fee_quote.dart';
+import '../models/evm_outbound_transaction.dart';
+import 'evm_outbound_store.dart';
+import 'evm_replacement_service.dart';
 import 'wallet_vault_service.dart';
 import '../src/rust/api/wallet_vault.dart' as rust_vault;
 
@@ -39,10 +49,15 @@ class WalletService {
   WalletService({
     StorageService? storageService,
     SeedAccountActivityChecker? seedAccountActivityChecker,
+    BitcoinSeedDiscoveryApi? bitcoinSeedDiscovery,
+    bool Function()? bitcoinDiscoveryEnabled,
     Web3Client Function(String rpcUrl)? web3ClientFactory,
     EvmTypedDataSigner? typedDataSigner,
   }) : _storage = storageService ?? StorageService(),
        _seedAccountActivityChecker = seedAccountActivityChecker,
+       _bitcoinSeedDiscoveryOverride = bitcoinSeedDiscovery,
+       _bitcoinDiscoveryEnabled =
+           bitcoinDiscoveryEnabled ?? (() => BitcoinHostAvailability.mainnet),
        _web3ClientFactory = web3ClientFactory,
        _typedDataSigner =
            typedDataSigner ??
@@ -51,6 +66,10 @@ class WalletService {
 
   final StorageService _storage;
   final SeedAccountActivityChecker? _seedAccountActivityChecker;
+  final BitcoinSeedDiscoveryApi? _bitcoinSeedDiscoveryOverride;
+  late final BitcoinSeedDiscoveryApi _bitcoinSeedDiscovery =
+      _bitcoinSeedDiscoveryOverride ?? BitcoinSeedAccountDiscovery();
+  final bool Function() _bitcoinDiscoveryEnabled;
   final Web3Client Function(String rpcUrl)? _web3ClientFactory;
   final EvmTypedDataSigner _typedDataSigner;
   final HttpClientService _httpClientService = HttpClientService();
@@ -103,7 +122,12 @@ class WalletService {
     }
 
     final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
-    final material = await _deriveWalletMaterialFromSeed(seed, derivationIndex);
+    late final _DerivedWalletMaterial material;
+    try {
+      material = await _deriveWalletMaterialFromSeed(seed, derivationIndex);
+    } finally {
+      seed.fillRange(0, seed.length, 0);
+    }
     final resolvedSeedGroupId =
         seedGroupId ?? _seedGroupIdFromMnemonic(normalizedMnemonic);
 
@@ -117,6 +141,16 @@ class WalletService {
     return material.toResult();
   }
 
+  Future<BitcoinWalletAccountState?> ensureBitcoinAccount(
+    String walletIdentity, {
+    BitcoinProductNetwork network = BitcoinProductNetwork.mainnet,
+    bool restoreRemovedWallet = false,
+  }) => BitcoinProvisioningService(storage: _storage).ensureWallet(
+    walletIdentity,
+    network: network,
+    restoreRemovedWallet: restoreRemovedWallet,
+  );
+
   Future<List<Map<String, String>>> importWalletsFromMnemonic(
     String mnemonic, {
     String? walletName,
@@ -127,51 +161,71 @@ class WalletService {
     }
 
     final seed = await NativeCrypto.mnemonicToSeed(normalizedMnemonic);
-    final seedGroupId = _seedGroupIdFromMnemonic(normalizedMnemonic);
-    final imported = <Map<String, String>>[];
-    var consecutiveUnused = 0;
+    try {
+      final seedGroupId = _seedGroupIdFromMnemonic(normalizedMnemonic);
+      final imported = <Map<String, String>>[];
+      var consecutiveUnused = 0;
+      String? discoveryIdentity;
+      var discoveryPartial = false;
 
-    for (var index = 0; index < 20; index++) {
-      final material = await _deriveWalletMaterialFromSeed(seed, index);
-      var shouldSave = index == 0;
+      for (var index = 0; index < 20; index++) {
+        final material = await _deriveWalletMaterialFromSeed(seed, index);
+        var shouldSave = index == 0;
 
-      if (index > 0) {
-        try {
-          shouldSave = await _hasSeedAccountActivity(
-            evmAddress: material.evmAddress,
-            solanaAddress: material.solanaAddress,
-            tronAddress: material.tronAddress,
-            derivationIndex: index,
-          );
-        } catch (error) {
-          debugPrint(
-            '[WalletService] Seed account discovery stopped at index $index: $error',
-          );
-          break;
+        if (index > 0) {
+          try {
+            shouldSave = await _hasSeedAccountActivity(
+              evmAddress: material.evmAddress,
+              solanaAddress: material.solanaAddress,
+              tronAddress: material.tronAddress,
+              derivationIndex: index,
+            );
+            if (!shouldSave &&
+                _bitcoinDiscoveryEnabled() &&
+                discoveryIdentity != null) {
+              shouldSave = await _bitcoinSeedDiscovery.hasActivity(
+                seed,
+                discoveryIdentity,
+                index,
+              );
+            }
+          } catch (error) {
+            discoveryPartial = true;
+            debugPrint(
+              '[WalletService] Seed account discovery stopped at index $index: $error',
+            );
+            break;
+          }
+
+          if (!shouldSave) {
+            consecutiveUnused++;
+            if (consecutiveUnused >= 5) break;
+            continue;
+          }
+          consecutiveUnused = 0;
         }
 
-        if (!shouldSave) {
-          consecutiveUnused++;
-          if (consecutiveUnused >= 5) break;
-          continue;
-        }
-        consecutiveUnused = 0;
+        await _saveDerivedWalletMaterial(
+          material,
+          mnemonic: normalizedMnemonic,
+          walletName: index == 0
+              ? (walletName?.trim().isNotEmpty == true
+                    ? walletName!.trim()
+                    : 'Wallet 1')
+              : 'Wallet ${index + 1}',
+          seedGroupId: seedGroupId,
+        );
+        imported.add(material.toResult());
+        discoveryIdentity ??= material.evmAddress;
       }
 
-      await _saveDerivedWalletMaterial(
-        material,
-        mnemonic: normalizedMnemonic,
-        walletName: index == 0
-            ? (walletName?.trim().isNotEmpty == true
-                  ? walletName!.trim()
-                  : 'Wallet 1')
-            : 'Wallet ${index + 1}',
-        seedGroupId: seedGroupId,
-      );
-      imported.add(material.toResult());
+      if (discoveryPartial && imported.isNotEmpty) {
+        imported.first['discoveryPartial'] = 'true';
+      }
+      return imported;
+    } finally {
+      seed.fillRange(0, seed.length, 0);
     }
-
-    return imported;
   }
 
   Future<_DerivedWalletMaterial> _deriveWalletMaterialFromSeed(
@@ -239,6 +293,9 @@ class WalletService {
       },
     );
     await migrateWalletVaults();
+    await BitcoinSeedWalletInitializer(
+      storage: _storage,
+    ).initializeSavedSeedWallet(material.evmAddress);
   }
 
   String _seedGroupIdFromMnemonic(String normalizedMnemonic) {
@@ -466,6 +523,8 @@ class WalletService {
     }
 
     switch (family) {
+      case ChainFamily.bitcoin:
+        throw UnsupportedError('Bitcoin is unavailable for this operation.');
       case ChainFamily.evm:
         final privateKey = await _storage.getPrivateKeyForAddress(
           account.address,
@@ -896,8 +955,10 @@ class WalletService {
     required int chainId,
     BigInt? gasPriceWei,
     int? gasLimit,
+    EvmFeeQuote? feeQuote,
   }) async {
-    if ((gasPriceWei == null) != (gasLimit == null)) {
+    if ((gasPriceWei == null) != (gasLimit == null) ||
+        feeQuote != null && (gasPriceWei != null || gasLimit != null)) {
       throw ArgumentError(
         'gasPriceWei and gasLimit must either both be supplied or both omitted',
       );
@@ -905,34 +966,19 @@ class WalletService {
 
     final account = await _activeEvmSigningAccount();
     try {
-      final sender = account.address;
-
       final client = _clientForRpc(rpcUrl);
       final recipient = EthereumAddress.fromHex(toAddress);
 
-      final resolvedGasPriceWei =
-          gasPriceWei ?? (await client.getGasPrice()).getInWei;
-
-      final resolvedGasLimit =
-          gasLimit ??
-          BigInt.from(
-            ((await client.estimateGas(
-                      sender: sender,
-                      to: recipient,
-                      value: EtherAmount.inWei(amountInBaseUnits),
-                    )).toInt() *
-                    1.1)
-                .ceil(),
-          ).toInt();
-
-      return await EvmTransactionService.broadcastLegacy(
+      return await _broadcastQuotedEvmTransfer(
         client: client,
         account: account,
         chainId: chainId,
         to: recipient,
         valueWei: amountInBaseUnits,
-        gasPriceWei: resolvedGasPriceWei,
-        gasLimit: resolvedGasLimit,
+        data: Uint8List(0),
+        feeQuote: feeQuote,
+        gasPriceWei: gasPriceWei,
+        gasLimit: gasLimit,
       );
     } finally {
       await account.close();
@@ -947,8 +993,10 @@ class WalletService {
     required int chainId,
     BigInt? gasPriceWei,
     int? gasLimit,
+    EvmFeeQuote? feeQuote,
   }) async {
-    if ((gasPriceWei == null) != (gasLimit == null)) {
+    if ((gasPriceWei == null) != (gasLimit == null) ||
+        feeQuote != null && (gasPriceWei != null || gasLimit != null)) {
       throw ArgumentError(
         'gasPriceWei and gasLimit must either both be supplied or both omitted',
       );
@@ -956,8 +1004,6 @@ class WalletService {
 
     final account = await _activeEvmSigningAccount();
     try {
-      final sender = account.address;
-
       final client = _clientForRpc(rpcUrl);
       final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
       final recipient = EthereumAddress.fromHex(toAddress);
@@ -966,34 +1012,174 @@ class WalletService {
         amount: amountInBaseUnits,
       );
 
-      final resolvedGasPriceWei =
-          gasPriceWei ?? (await client.getGasPrice()).getInWei;
-
-      final resolvedGasLimit =
-          gasLimit ??
-          BigInt.from(
-            ((await client.estimateGas(
-                      sender: sender,
-                      to: tokenContractAddress,
-                      data: data,
-                    )).toInt() *
-                    1.1)
-                .ceil(),
-          ).toInt();
-
-      return await EvmTransactionService.broadcastLegacy(
+      return await _broadcastQuotedEvmTransfer(
         client: client,
         account: account,
         chainId: chainId,
         to: tokenContractAddress,
         valueWei: BigInt.zero,
-        gasPriceWei: resolvedGasPriceWei,
-        gasLimit: resolvedGasLimit,
+        gasPriceWei: gasPriceWei,
+        gasLimit: gasLimit,
+        feeQuote: feeQuote,
         data: data,
       );
     } finally {
       await account.close();
     }
+  }
+
+  EvmOutboundStore get evmOutbound => _storage.evmOutbound;
+  EvmReplacementService evmReplacements(String rpcUrl) => EvmReplacementService(
+    journal: evmOutbound,
+    client: _clientForRpc(rpcUrl),
+    currentSender: getCurrentWalletAddress,
+    openSigner: getEvmSigningAccount,
+  );
+
+  EvmFeeService _feeService(Web3Client client) => EvmFeeService(
+    rpcScope: client,
+    rpc: (method, params) => client.makeRPCCall<Object?>(method, params),
+  );
+
+  Future<String> _broadcastQuotedEvmTransfer({
+    required Web3Client client,
+    required EvmSigningAccount account,
+    required int chainId,
+    required EthereumAddress to,
+    required BigInt valueWei,
+    required Uint8List data,
+    EvmFeeQuote? feeQuote,
+    BigInt? gasPriceWei,
+    int? gasLimit,
+  }) async {
+    final intent = EvmFeeIntent(
+      chainId: chainId,
+      sender: account.address.hex,
+      destination: to.hex,
+      valueWei: valueWei,
+      data: data,
+      rpcScope: client,
+    );
+    final quote =
+        feeQuote ??
+        (gasPriceWei != null
+            ? EvmFeeQuote(
+                intent: intent,
+                tier: EvmFeeTier.normal,
+                type: EvmTransactionType.legacy,
+                gasLimit: gasLimit!,
+                gasPriceWei: gasPriceWei,
+                quotedAt: DateTime.now(),
+              )
+            : (await _feeService(client).quote(
+                chainId: chainId,
+                sender: account.address.hex,
+                destination: to.hex,
+                valueWei: valueWei,
+                data: data,
+              )).forTier(EvmFeeTier.normal));
+    if (!quote.intent.matches(
+      chainId: chainId,
+      sender: account.address.hex,
+      destination: to.hex,
+      valueWei: valueWei,
+      data: data,
+      rpcScope: client,
+    )) {
+      throw const EvmFeeQuoteException(
+        'Transaction does not match the approved fee quote',
+      );
+    }
+    quote.requireFresh(DateTime.now());
+    final journal = _storage.evmOutbound;
+    await journal.activate(account.address.hex);
+    EvmOutboundReservation? reservation;
+    var abortedLocally = false;
+    try {
+      final hash = await EvmTransactionService.broadcastTransaction(
+        client: client,
+        account: account,
+        chainId: chainId,
+        to: to,
+        valueWei: valueWei,
+        data: data,
+        gasLimit: quote.gasLimit,
+        gasPriceWei: quote.gasPriceWei,
+        maxFeePerGasWei: quote.maxFeePerGasWei,
+        maxPriorityFeePerGasWei: quote.maxPriorityFeePerGasWei,
+        broadcastTimeout: const Duration(seconds: 20),
+        beforeProviderSend: () => journal.beginProviderSend(reservation!),
+        validateBeforeSigning: () => quote.requireFresh(DateTime.now()),
+        beforeBroadcast: (signed) async {
+          final current = await getCurrentWalletAddress();
+          if (current?.toLowerCase() != account.address.hex.toLowerCase()) {
+            throw const EvmReplacementException('Wallet context changed');
+          }
+          final confirmedNonce = await client
+              .getTransactionCount(
+                account.address,
+                atBlock: const BlockNum.current(),
+              )
+              .timeout(const Duration(seconds: 12));
+          quote.requireFresh(DateTime.now());
+          reservation = await journal.reserve(
+            EvmOutboundTransaction(
+              fields: signed.fields,
+              hash: signed.hash,
+              state: EvmOutboundState.unknown,
+              createdAt: DateTime.now(),
+            ),
+            confirmedNonce: confirmedNonce,
+          );
+          if ((await getCurrentWalletAddress())?.toLowerCase() !=
+              account.address.hex.toLowerCase()) {
+            throw const EvmReplacementException('Wallet context changed');
+          }
+        },
+        abortedBeforeBroadcast: () async {
+          abortedLocally = true;
+          if (reservation != null) {
+            await journal.rejectedBeforeProvider(reservation!);
+          }
+        },
+      );
+      await journal.submitted(reservation!, hash);
+      return hash;
+    } catch (_) {
+      if (reservation != null && !abortedLocally) {
+        throw EvmSubmissionUnknown(reservation!.transaction.hash);
+      }
+      rethrow;
+    }
+  }
+
+  Future<EvmFeeQuotes> quoteTransferFees({
+    required int chainId,
+    required String fromAddress,
+    required String toAddress,
+    required BigInt amountInBaseUnits,
+    required String rpcUrl,
+    String? tokenAddress,
+  }) async {
+    final client = _clientForRpc(rpcUrl);
+    final sender = EthereumAddress.fromHex(fromAddress);
+    final recipient = EthereumAddress.fromHex(toAddress);
+    final native = tokenAddress == null || tokenAddress.isEmpty;
+    final data = native
+        ? Uint8List(0)
+        : await NativeCrypto.encodeErc20Transfer(
+            toAddress: recipient.hex,
+            amount: amountInBaseUnits,
+          );
+    return _feeService(client).quote(
+      chainId: chainId,
+      sender: sender.hex,
+      destination: native
+          ? recipient.hex
+          : EthereumAddress.fromHex(tokenAddress).hex,
+      valueWei: native ? amountInBaseUnits : BigInt.zero,
+      data: data,
+    );
   }
 
   Future<String> sendNftTransaction({
@@ -1137,49 +1323,34 @@ class WalletService {
     required String rpcUrl,
     String? tokenAddress,
     double nativePriceUsd = 0,
+    int? chainId,
   }) async {
     final client = _clientForRpc(rpcUrl);
-    final sender = EthereumAddress.fromHex(fromAddress);
-    final recipient = EthereumAddress.fromHex(toAddress);
-    late final Future<BigInt> estimatedGasFuture;
-    if (tokenAddress == null || tokenAddress.isEmpty) {
-      estimatedGasFuture = client.estimateGas(
-        sender: sender,
-        to: recipient,
-        value: EtherAmount.inWei(amountInBaseUnits),
-      );
-    } else {
-      final tokenContractAddress = EthereumAddress.fromHex(tokenAddress);
-      final data = await NativeCrypto.encodeErc20Transfer(
-        toAddress: recipient.hex,
-        amount: amountInBaseUnits,
-      );
-      estimatedGasFuture = client.estimateGas(
-        sender: sender,
-        to: tokenContractAddress,
-        data: data,
-      );
-    }
-
-    final estimates = await Future.wait<Object>([
-      client.getGasPrice(),
-      estimatedGasFuture,
-    ]);
-    final gasPrice = estimates[0] as EtherAmount;
-    final estimatedGas = estimates[1] as BigInt;
-    final bufferedGas = BigInt.from((estimatedGas.toInt() * 1.1).ceil());
-    final totalFeeWei = gasPrice.getInWei * bufferedGas;
+    final quotes = await quoteTransferFees(
+      chainId: chainId ?? (await client.getChainId()).toInt(),
+      fromAddress: fromAddress,
+      toAddress: toAddress,
+      amountInBaseUnits: amountInBaseUnits,
+      rpcUrl: rpcUrl,
+      tokenAddress: tokenAddress,
+    );
+    final quote = quotes.forTier(EvmFeeTier.normal);
+    final totalFeeWei = quote.maximumTotalFeeWei;
     final totalFeeNativeDouble = EtherAmount.inWei(
       totalFeeWei,
     ).getValueInUnit(EtherUnit.ether).toDouble();
 
     return {
-      'gasGwei': gasPrice.getValueInUnit(EtherUnit.gwei),
-      'gasPriceWei': gasPrice.getInWei,
-      'gasLimitUnits': bufferedGas.toDouble(),
+      'gasGwei': EtherAmount.inWei(
+        quote.effectivePriceWei,
+      ).getValueInUnit(EtherUnit.gwei),
+      'gasPriceWei': quote.gasPriceWei,
+      'gasLimitUnits': quote.gasLimit,
       'totalFeeEth': totalFeeNativeDouble,
       'totalFeeUsd': totalFeeNativeDouble * nativePriceUsd,
       'totalFeeWei': totalFeeWei,
+      'feeQuote': quote,
+      'feeQuotes': quotes,
     };
   }
 

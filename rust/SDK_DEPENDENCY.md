@@ -1,8 +1,10 @@
 # Shared SDK dependency
 
 The canonical proprietary SDK is https://github.com/Philip-857-bit/owllet-core.
-Release v0.1.0 uses commit bd26eb9603c56d3ec012a5e11ad7b8558a2a2e9e.
-The adapter and independent consumer pin both this revision and version =0.1.0.
+The verified v0.2.1 candidate uses commit 9918187371812e059bb4a6a07b8550c33318f43c.
+It is prepared on feat/bitcoin-rbf-speed-up; no v0.2.1 tag/release has been created.
+The immutable v0.2.0 remains 930eca151035eec9432d7f41b1b221bd5d27e829.
+The adapter and independent consumer pin both this revision and version =0.2.1.
 Core source, capability checks, packaging and releases are maintained in that
 repository. There is no embedded source copy in this app.
 
@@ -24,3 +26,8 @@ The host owns RPC transport, user permissions, platform storage, lifecycle and
 backend communication. Payment/KYC/swap provider credentials remain server-side.
 Other Rust products can consume the same pinned Git dependency or the verified
 private release package; other languages need platform adapters.
+
+Bitcoin is explicitly enabled alongside signing-session and vault. The native
+consumer verifies BIP84/BIP86, offline planning, signing, PSBT and HD custody.
+This upgrade requires a full native binary release; a Shorebird-only patch is
+insufficient. Bitcoin host APIs and UI remain separate integration steps.

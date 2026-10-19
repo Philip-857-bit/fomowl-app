@@ -59,6 +59,7 @@ class AppShellController extends ChangeNotifier {
   /// route so Android back returns to token details without duplicating the
   /// app shell or mutating the route underneath it.
   void openSwapWithToken(Token token) {
+    if (token.networkKey?.startsWith('bitcoin:') == true) return;
     _pendingSwapFromToken = token;
   }
 

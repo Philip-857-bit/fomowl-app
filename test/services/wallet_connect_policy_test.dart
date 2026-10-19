@@ -25,6 +25,23 @@ void main() {
       );
     });
 
+    test('an EVM session never authorizes Bitcoin signing', () {
+      expect(
+        () => WalletConnectPolicy.validateSessionRequest(
+          namespaces: namespaces,
+          chainId: 'bip122:000000000019d6689c085ae165831e93',
+          method: 'bitcoin_signPsbt',
+        ),
+        throwsA(
+          isA<WalletConnectPolicyException>().having(
+            (error) => error.code,
+            'code',
+            4200,
+          ),
+        ),
+      );
+    });
+
     test('rejects a method that the session did not approve', () {
       expect(
         () => WalletConnectPolicy.validateSessionRequest(

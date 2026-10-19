@@ -6,6 +6,6 @@ publish = false
 description = "Independent offline native consumer of Owllet Core"
 
 [dependencies]
-owllet-core = { git = "https://github.com/Philip-857-bit/owllet-core.git", rev = "bd26eb9603c56d3ec012a5e11ad7b8558a2a2e9e", version = "=0.1.0", default-features = false, features = ["evm", "solana", "tron", "vault"] }
+owllet-core = { git = "https://github.com/Philip-857-bit/owllet-core.git", rev = "9918187371812e059bb4a6a07b8550c33318f43c", version = "=0.2.1", default-features = false, features = ["evm", "solana", "tron", "bitcoin", "signing-session", "vault"] }
 base64 = "0.22.1"
 serde_json = "1.0"
