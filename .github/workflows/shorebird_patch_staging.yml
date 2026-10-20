@@ -101,6 +101,32 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Ensure GitHub CLI is available
+        run: |
+          set -euo pipefail
+          if command -v gh >/dev/null 2>&1; then
+            gh --version
+            exit 0
+          fi
+          # Self-hosted runners do not include the hosted runner's GitHub CLI.
+          # Install the official archive without sudo and verify its checksum.
+          version=2.102.0
+          archive="gh_${version}_linux_amd64.tar.gz"
+          install_dir="$RUNNER_TEMP/github-cli"
+          mkdir -p "$install_dir"
+          cd "$install_dir"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/cli/cli/releases/download/v${version}/${archive}" -o "$archive"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/cli/cli/releases/download/v${version}/gh_${version}_checksums.txt" -o checksums.txt
+          awk -v file="$archive" '$2 == file' checksums.txt > archive.sha256
+          test -s archive.sha256
+          sha256sum --check archive.sha256
+          tar -xzf "$archive"
+          cli_bin="$install_dir/gh_${version}_linux_amd64/bin"
+          echo "$cli_bin" >> "$GITHUB_PATH"
+          "$cli_bin/gh" --version
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
