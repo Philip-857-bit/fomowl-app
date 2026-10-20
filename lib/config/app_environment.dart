@@ -124,7 +124,7 @@ class AppEnvironment {
       return raw;
     }
     // Production WalletConnect / Reown Cloud Project ID
-    return '45932c507126fc35338b2f1b5c342504';
+    return 'e444a0603b47cc04909f519fec165fcf';
   }
 
   /// Optional SPKI (public-key) pinning for the backend host.
