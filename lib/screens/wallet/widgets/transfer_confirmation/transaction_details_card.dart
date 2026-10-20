@@ -268,11 +268,10 @@ class TransactionDetailsCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                softWrap: true,
                 textAlign: TextAlign.end,
                 style: GoogleFonts.outfit(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                   color: isError ? AppColors.accentRed : Colors.white,
                 ),

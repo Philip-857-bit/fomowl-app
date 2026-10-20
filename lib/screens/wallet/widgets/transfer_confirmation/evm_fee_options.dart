@@ -50,7 +50,7 @@ class EvmFeeOptions extends StatelessWidget {
               if (quotes.hasDistinctTiers)
                 Row(
                   children: [
-                    for (final tier in EvmFeeTier.values)
+                    for (final tier in quotes.distinctTiers)
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -58,14 +58,16 @@ class EvmFeeOptions extends StatelessWidget {
                             key: Key('evm-fee-tier-${tier.name}'),
                             onPressed: enabled ? () => onChanged(tier) : null,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: tier == selected
+                              foregroundColor:
+                                  tier == quotes.displayTier(selected)
                                   ? accent
                                   : Colors.white70,
-                              backgroundColor: tier == selected
+                              backgroundColor:
+                                  tier == quotes.displayTier(selected)
                                   ? accent.withValues(alpha: 0.12)
                                   : null,
                               side: BorderSide(
-                                color: tier == selected
+                                color: tier == quotes.displayTier(selected)
                                     ? accent
                                     : Colors.white24,
                               ),

@@ -18,7 +18,7 @@ class AmountSummary extends StatelessWidget {
     this.title = 'AMOUNT TO SEND',
     this.subtitle = '',
     this.accentColor = AppColors.accentRed,
-    this.fitAmount = false,
+    this.fitAmount = true,
   });
 
   @override
@@ -29,7 +29,7 @@ class AmountSummary extends StatelessWidget {
           TextSpan(
             text: amountText,
             style: GoogleFonts.outfit(
-              fontSize: 36,
+              fontSize: 28,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -37,7 +37,7 @@ class AmountSummary extends StatelessWidget {
           TextSpan(
             text: ' $symbol',
             style: GoogleFonts.outfit(
-              fontSize: 28,
+              fontSize: 22,
               fontWeight: FontWeight.w600,
               color: accentColor,
             ),

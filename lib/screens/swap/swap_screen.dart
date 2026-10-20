@@ -39,6 +39,7 @@ import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/token_trust_utils.dart';
 import '../../utils/value_formatter.dart';
+import '../../utils/sensitive_access_guard.dart';
 import '../../widgets/amount_input_mode_toggle.dart';
 import '../../widgets/runtime_feature_gate.dart';
 import 'dart:convert';
@@ -3106,17 +3107,43 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       return;
     }
 
+    final approvalNetwork = blockchain.activeNetworkKey;
+    final approvalWallet = blockchain.activeWalletAddress;
+    final approvalSource = _walletAddress;
+    final approvalAmount = _fromController.text;
+    bool approvalCurrent() =>
+        mounted &&
+        _activeTab == SwapTab.swap &&
+        _runtimeConfig.snapshot.allows(RuntimeFeature.swaps) &&
+        blockchain.activeNetworkKey == approvalNetwork &&
+        blockchain.activeWalletAddress == approvalWallet &&
+        _walletAddress == approvalSource &&
+        identical(_fromToken, fromToken) &&
+        identical(_toToken, toToken) &&
+        _fromController.text == approvalAmount;
     TransactionProgressController? progressController;
     if (mounted) {
       setState(() => _isSwapFlowActive = true);
     }
 
     try {
+      final authenticated = await SensitiveAccessGuard.verify(
+        context,
+        reason: 'Authenticate to confirm this swap.',
+        requireTwoFactor: false,
+      );
+      if (!authenticated || !approvalCurrent()) return;
       progressController = _openProgressFlow();
       progressController.setPreparing();
 
       final relayQuote = _currentRelayQuote;
       if (relayQuote != null) {
+        if (!committedBridgeQuoteIsFresh(relayQuote, now: DateTime.now())) {
+          progressController.setError(
+            'The swap quote expired. Refresh the quote before continuing.',
+          );
+          return;
+        }
         await _performRelaySwap(
           quote: relayQuote,
           fromToken: fromToken,

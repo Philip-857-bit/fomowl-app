@@ -151,6 +151,19 @@ class EvmFeeQuotes {
     }
   }
   EvmFeeQuote forTier(EvmFeeTier tier) => tiers[tier]!;
-  bool get hasDistinctTiers =>
-      tiers.values.map((q) => q.effectivePriceWei).toSet().length > 1;
+  bool _sameFees(EvmFeeTier a, EvmFeeTier b) =>
+      forTier(a).effectivePriceWei == forTier(b).effectivePriceWei &&
+      forTier(a).maximumTotalFeeWei == forTier(b).maximumTotalFeeWei;
+
+  /// Group truly equivalent choices without altering any quoted fee fields.
+  EvmFeeTier displayTier(EvmFeeTier tier) {
+    if (_sameFees(tier, EvmFeeTier.normal)) return EvmFeeTier.normal;
+    return EvmFeeTier.values.firstWhere((other) => _sameFees(tier, other));
+  }
+
+  List<EvmFeeTier> get distinctTiers => [
+    for (final tier in EvmFeeTier.values)
+      if (displayTier(tier) == tier) tier,
+  ];
+  bool get hasDistinctTiers => distinctTiers.length > 1;
 }

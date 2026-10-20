@@ -41,6 +41,16 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byType(BitcoinBridgeScreen), findsOneWidget);
+        final header = find.byKey(const Key('bitcoin-bridge-header'));
+        expect(tester.widget<Text>(header).data, 'BRIDGE');
+        expect(tester.widget<Text>(header).style!.fontSize, 16);
+        expect(
+          tester.getCenter(header).dx,
+          closeTo(
+            tester.view.physicalSize.width / tester.view.devicePixelRatio / 2,
+            1,
+          ),
+        );
         expect(find.byType(SwapTabContent), findsNothing);
         expect(find.text('Limit'), findsNothing);
         // Runtime is off in this fixture: no native account/provider flow starts.

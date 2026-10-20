@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../constants/app_colors.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../services/blockchain_service.dart';
@@ -65,78 +66,103 @@ class _BitcoinBridgeScreenState extends State<BitcoinBridgeScreen> {
                 )
               : null,
           body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 64,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      IconButton(
-                        onPressed: () {
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          } else {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/shell',
-                              (_) => false,
-                              arguments: AppShellTab.wallet.index,
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'Bridge',
-                          style: TextStyle(
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton(
+                          onPressed: () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.pop(context);
+                            } else {
+                              Navigator.pushNamedAndRemoveUntil(
+                                context,
+                                '/shell',
+                                (_) => false,
+                                arguments: AppShellTab.wallet.index,
+                              );
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
                             color: Colors.white,
-                            fontSize: 24,
+                            size: 20,
+                          ),
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          'BRIDGE',
+                          key: const Key('bitcoin-bridge-header'),
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
+                            letterSpacing: 1.8,
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  SwapNetworkCard(
-                    networkName: chain.activeNetworkName,
-                    logoUrl: chain.activeNetworkLogoUrl,
-                    accentColor: context.chainTheme.accentColor,
-                    canSwitch: chain.networkEntries.length > 1,
-                    onChangeNetwork: () => _selectNetwork(chain),
-                  ),
-                  const SizedBox(height: 20),
-                  if (!mainnet)
-                    const Text(
-                      'Bitcoin bridges use Mainnet. Testnet4 is available for wallet transfer testing.',
-                      style: TextStyle(color: Colors.white70),
-                    )
-                  else if (!available || identity.isEmpty)
-                    const Text(
-                      'Bitcoin bridging is unavailable right now.',
-                      style: TextStyle(color: Colors.white70),
-                    )
-                  else
-                    BridgeTabContent(
-                      blockchain: chain,
-                      walletService: _wallet,
-                      walletAddress: identity,
-                      tokens: chain.tokens,
-                      onSelectFromChain: () => _selectNetwork(chain),
-                      onBridgeCompleted: () =>
-                          chain.refreshBitcoinAccountAfterTransaction(
-                            identity,
-                            BitcoinProductNetwork.mainnet,
-                            isCurrent: () =>
-                                mounted &&
-                                chain.activeWalletAddress == identity &&
-                                chain.activeNetworkKey == 'bitcoin:mainnet',
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 24),
+                        if (!mainnet || !available || identity.isEmpty) ...[
+                          SwapNetworkCard(
+                            networkName: chain.activeNetworkName,
+                            logoUrl: chain.activeNetworkLogoUrl,
+                            accentColor: context.chainTheme.accentColor,
+                            canSwitch: chain.networkEntries.length > 1,
+                            onChangeNetwork: () => _selectNetwork(chain),
                           ),
+                          const SizedBox(height: 20),
+                        ],
+                        if (!mainnet)
+                          const Text(
+                            'Bitcoin bridges use Mainnet. Testnet4 is available for wallet transfer testing.',
+                            style: TextStyle(color: Colors.white70),
+                          )
+                        else if (!available || identity.isEmpty)
+                          const Text(
+                            'Bitcoin bridging is unavailable right now.',
+                            style: TextStyle(color: Colors.white70),
+                          )
+                        else
+                          BridgeTabContent(
+                            blockchain: chain,
+                            walletService: _wallet,
+                            walletAddress: identity,
+                            tokens: chain.tokens,
+                            onSelectFromChain: () => _selectNetwork(chain),
+                            onBridgeCompleted: () =>
+                                chain.refreshBitcoinAccountAfterTransaction(
+                                  identity,
+                                  BitcoinProductNetwork.mainnet,
+                                  isCurrent: () =>
+                                      mounted &&
+                                      chain.activeWalletAddress == identity &&
+                                      chain.activeNetworkKey ==
+                                          'bitcoin:mainnet',
+                                ),
+                          ),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
           ),
         );

@@ -8,6 +8,7 @@ import 'package:web3dart/web3dart.dart';
 import '../../../models/chain.dart';
 import '../../../models/bitcoin_account_state.dart';
 import '../../../models/bitcoin_discovery.dart';
+import '../../../models/bitcoin_wallet_balance.dart';
 import '../../../services/bitcoin/bitcoin_address_allocator.dart';
 import '../../../services/bitcoin/bitcoin_bridge_funding_service.dart';
 import '../../../services/bitcoin/bitcoin_broadcast_service.dart';
@@ -18,6 +19,7 @@ import '../../../services/storage_service.dart';
 import '../../../services/runtime_config_service.dart';
 import '../../../services/wallet_vault_service.dart';
 import '../../../utils/wallet_unlock_navigation.dart';
+import '../../../utils/sensitive_access_guard.dart';
 import '../../../utils/bitcoin_amount_utils.dart';
 import '../../wallet/bitcoin_transfer_confirmation_screen.dart';
 import '../../../models/token.dart';
@@ -42,6 +44,7 @@ import '../../../utils/toast_utils.dart';
 import '../../../utils/token_trust_utils.dart';
 import '../../../utils/value_formatter.dart';
 import '../../transaction/transaction_processing_screen.dart';
+import '../../transaction/transactions_screen.dart';
 import '../swap_screen_helpers.dart';
 import 'swap_figma_icons.dart';
 import 'swap_primary_button.dart';
@@ -123,7 +126,6 @@ double? destinationAmountUsd({
   return amount * price;
 }
 
-@visibleForTesting
 bool committedBridgeQuoteIsFresh(BridgeQuote quote, {required DateTime now}) {
   final deadline = quote.deadline;
   // Same-chain providers return immediately executable transactions rather
@@ -173,6 +175,12 @@ String formatBridgePlatformFee({
 }
 
 bool hasQuotedOriginNetworkFee(double? value) => value != null && value > 0;
+
+/// Require discovered funds in one account and headroom for the Core-planned fee.
+bool bitcoinBridgeHasFunds(BitcoinWalletSnapshot? snapshot, BigInt amount) =>
+    snapshot != null &&
+    amount > BigInt.zero &&
+    snapshot.balances.values.any((balance) => balance.spendableSats > amount);
 
 /// Bridge tab — Relay-powered cross-chain transfers.
 ///
@@ -227,6 +235,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   BridgeQuote? _quote;
   bool _isQuoting = false;
   bool _isBridging = false;
+  bool _bridgeActionActive = false;
   String? _quoteError;
   int _slippageBps = 50;
   Timer? _debounce;
@@ -243,6 +252,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   BitcoinBridgeFundingRecovery? _bitcoinRecovery;
   bool _bitcoinHasPending = false;
   bool _bitcoinRecoveryLoaded = false;
+  bool _bitcoinBalanceLoading = false;
+  int _bitcoinLoadGeneration = 0;
   bool _isCheckingBitcoin = false;
   Timer? _bitcoinPoll;
 
@@ -340,10 +351,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   Future<void> _loadBitcoinAddress() async {
     final identity = widget.blockchain.activeWalletAddress.trim().toLowerCase();
     if (!_bitcoinAllowed || identity.isEmpty) return;
+    final networkKey = widget.blockchain.activeNetworkKey;
+    final generation = ++_bitcoinLoadGeneration;
     bool current() =>
         mounted &&
+        generation == _bitcoinLoadGeneration &&
+        widget.blockchain.activeNetworkKey == networkKey &&
         _bitcoinAllowed &&
         widget.blockchain.activeWalletAddress.trim().toLowerCase() == identity;
+    if (_isBitcoinOrigin) setState(() => _bitcoinBalanceLoading = true);
     try {
       final storage = StorageService();
       final accounts = await storage.getWalletAccounts();
@@ -366,6 +382,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             ),
           );
       final pending = await _bitcoinFunding.journal.pending(identity);
+      if (_isBitcoinOrigin && current()) {
+        await _bitcoinFunding.planner.wallet.refresh(
+          identity,
+          BitcoinProductNetwork.mainnet,
+          isCurrent: current,
+        );
+      }
       if (!current()) return;
       setState(() {
         _bitcoinReceive = receive;
@@ -378,9 +401,12 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     } catch (_) {
       if (current() && _isBitcoinOrigin) {
         setState(
-          () => _quoteError = 'Unable to load the Bitcoin bridge account.',
+          () => _quoteError =
+              'Unable to load the Bitcoin bridge account. Refresh the BTC balance to try again.',
         );
       }
+    } finally {
+      if (current()) setState(() => _bitcoinBalanceLoading = false);
     }
   }
 
@@ -579,6 +605,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _syncFromToken(reset: networkChanged);
       _syncToChain();
       if (networkChanged) {
+        _bitcoinRecoveryLoaded = false;
+        _bitcoinBalanceLoading = false;
+        unawaited(_loadBitcoinAddress());
         _resetQuote();
         _requestQuote();
       }
@@ -590,6 +619,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _bitcoinRecovery = null;
       _bitcoinHasPending = false;
       _bitcoinRecoveryLoaded = false;
+      _bitcoinBalanceLoading = false;
+      _bitcoinLoadGeneration++;
       _resetQuote();
       unawaited(_loadFamilyAddresses());
     }
@@ -1117,10 +1148,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           widget.blockchain.activeWalletAddress,
           BitcoinProductNetwork.mainnet,
         );
-        // An unavailable snapshot is resolved by the authoritative core planner,
-        // never by converting a token UI double back into satoshis.
-        return amount > BigInt.zero &&
-            (snapshot == null || amount <= snapshot.spendableSats);
+        return !_bitcoinBalanceLoading &&
+            bitcoinBridgeHasFunds(snapshot, amount);
       } catch (_) {
         return false;
       }
@@ -1140,6 +1169,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
   String? get _buttonLabel {
     if (_isBridging) return 'Bridging...';
+    if (_bridgeActionActive) return 'Preparing bridge...';
+    if (_isBitcoinOrigin && _bitcoinBalanceLoading) {
+      return 'Checking BTC balance…';
+    }
+    if (_isBitcoinOrigin && !_bitcoinRecoveryLoaded) {
+      return 'BTC balance unavailable';
+    }
     if (_amountValue > 0 && !_hasSufficientBalance) {
       return 'Insufficient ${_fromToken?.symbol ?? 'balance'}';
     }
@@ -1150,6 +1186,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   bool get _canBridge =>
+      !_bridgeActionActive &&
       !_isBridging &&
       !_isQuoting &&
       _pendingOperation == null &&
@@ -1300,12 +1337,27 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   Future<void> _executeBridge() async {
+    if (!_canBridge) return;
+    setState(() {
+      _bridgeActionActive = true;
+      _isBridging = true;
+    });
+    try {
+      await _prepareAndExecuteBridge();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBridging = false;
+          _bridgeActionActive = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _prepareAndExecuteBridge() async {
     var quote = _quote;
     final from = _fromToken;
-    if (quote == null ||
-        from == null ||
-        _isBridging ||
-        _pendingOperation != null) {
+    if (quote == null || from == null || _pendingOperation != null) {
       return;
     }
     if (quote.bitcoinQuote != null && !_bitcoinAllowed) {
@@ -1325,6 +1377,25 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       await _executeBitcoinBridge(quote);
       return;
     }
+
+    final approvalNetwork = widget.blockchain.activeNetworkKey;
+    final approvalWallet = widget.walletAddress;
+    final approvalIdentity = widget.blockchain.activeWalletAddress;
+    final approvalAmount = _amountController.text;
+    final approvalDestination = _toChain;
+    final approvalCurrency = _toCurrency;
+    final approvalSlippage = _slippageBps;
+    bool approvalCurrent() =>
+        mounted &&
+        widget.blockchain.activeNetworkKey == approvalNetwork &&
+        widget.walletAddress == approvalWallet &&
+        widget.blockchain.activeWalletAddress == approvalIdentity &&
+        _amountController.text == approvalAmount &&
+        _slippageBps == approvalSlippage &&
+        identical(_fromToken, from) &&
+        identical(_toChain, approvalDestination) &&
+        identical(_toCurrency, approvalCurrency) &&
+        RuntimeConfigService.instance.snapshot.allows(RuntimeFeature.bridges);
 
     // A NEAR Intents preview is deliberately dry. Commit immediately before
     // signing so the one-time deposit address and deadline are fresh.
@@ -1372,7 +1443,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         amountUsd: from.priceUsd > 0 ? _amountValue * from.priceUsd : null,
         slippageBps: _slippageBps,
       );
-      if (!mounted) return;
+      if (!approvalCurrent()) return;
       if (committed == null ||
           !committed.committed ||
           committed.steps.isEmpty) {
@@ -1400,7 +1471,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
 
     if (!await _confirmBitcoinDestination(quote)) return;
-    if (!mounted) return;
+    if (!mounted || !approvalCurrent()) return;
 
     // SECURITY: bound what the relay-crafted EVM transactions can move. When
     // bridging the native token the total native value across steps must not
@@ -1423,6 +1494,26 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
 
     setState(() => _isBridging = true);
+    var authenticated = false;
+    try {
+      authenticated =
+          await SensitiveAccessGuard.verify(
+            context,
+            reason: 'Authenticate to confirm this bridge.',
+            requireTwoFactor: false,
+          ) &&
+          approvalCurrent() &&
+          committedBridgeQuoteIsFresh(quote, now: DateTime.now());
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _quoteError = 'Unable to unlock this wallet. Please try again.',
+        );
+      }
+    } finally {
+      if (!authenticated && mounted) setState(() => _isBridging = false);
+    }
+    if (!authenticated || !mounted) return;
     final controller = TransactionProgressController(
       flow: TransactionProgressFlow.generic,
     );
@@ -1850,14 +1941,14 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       if (mounted) {
         setState(
           () => _quoteError =
-              'These Bitcoin funds are reserved by an earlier submission. Check its outcome before paying again.',
+              'Some BTC is reserved for an earlier transaction. Open Send → Review saved attempts to check its status before spending it again.',
         );
       }
     } catch (_) {
       if (mounted) {
         setState(
           () => _quoteError =
-              'Unable to prepare this Bitcoin bridge. Review any saved attempt before retrying.',
+              'Unable to prepare this Bitcoin bridge. Refresh your BTC balance and try again.',
         );
       }
     } finally {
@@ -1944,12 +2035,30 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                       'Bridge failed · review required. Do not pay again.',
                     BitcoinBridgePhase.reviewRequired =>
                       'Bridge needs review. Your payment remains recorded.',
-                    _ => 'Checking the saved Bitcoin bridge. Do not pay again.',
+                    _ =>
+                      'Checking an earlier Bitcoin bridge submission. Do not pay again until its status is known.',
                   }, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                 ),
-                TextButton(
-                  onPressed: _isCheckingBitcoin ? null : _checkBitcoinBridge,
-                  child: Text(_isCheckingBitcoin ? 'Checking…' : 'Check'),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextButton(
+                      onPressed: _isCheckingBitcoin
+                          ? null
+                          : _checkBitcoinBridge,
+                      child: Text(
+                        _isCheckingBitcoin ? 'Checking…' : 'Check status',
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const TransactionsScreen(),
+                        ),
+                      ),
+                      child: const Text('Transaction history'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -2051,9 +2160,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                 children: [
                   Expanded(
                     child: Text(
-                      ValueFormatter.formatCurrencyWithGrouping(
-                        ValueFormatter.decimalFromNum(fromUsd),
-                      ),
+                      from != null && from.priceUsd > 0
+                          ? ValueFormatter.formatCurrencyWithGrouping(
+                              ValueFormatter.decimalFromNum(fromUsd),
+                            )
+                          : '—',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
@@ -2193,9 +2304,17 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           },
         ),
         const SizedBox(height: 20),
+        if (_isBitcoinOrigin &&
+            !_bitcoinRecoveryLoaded &&
+            !_bitcoinBalanceLoading)
+          TextButton.icon(
+            onPressed: _loadBitcoinAddress,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Refresh BTC balance'),
+          ),
         SwapPrimaryButton(
           enabled: _canBridge,
-          isBusy: _isBridging,
+          isBusy: _isBridging || _bridgeActionActive,
           onPressed: _executeBridge,
           label: _buttonLabel,
         ),

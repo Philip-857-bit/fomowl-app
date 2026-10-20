@@ -8,6 +8,11 @@ import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/screens/swap/widgets/bridge_tab_content.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/services/bridge_service.dart';
+import 'package:fomowl_wallet/models/bitcoin_account_state.dart';
+import 'package:fomowl_wallet/models/bitcoin_discovery.dart';
+import 'package:fomowl_wallet/models/bitcoin_network_data.dart';
+import 'package:fomowl_wallet/models/bitcoin_wallet_balance.dart';
+import 'bitcoin_wallet_balance_test.dart' as balance_fixtures;
 
 Token token(String symbol, String networkKey, {String? address}) => Token(
   symbol: symbol,
@@ -22,6 +27,61 @@ Token token(String symbol, String networkKey, {String? address}) => Token(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  BitcoinWalletSnapshot funds(int segwit, int taproot) {
+    final base = balance_fixtures.fixture(pending84: 0);
+    return BitcoinWalletSnapshot(
+      BitcoinDiscoverySnapshot(
+        state: base.state,
+        ownership: base.ownership,
+        scannedAt: base.scannedAt,
+        activity: {
+          for (final entry in base.ownership.entries)
+            entry.key: BitcoinAddressActivity.fromJson({
+              'address': entry.key,
+              'used': true,
+              'txCount': 1,
+              'confirmedBalanceSats':
+                  entry.value.account.purpose == BitcoinPurpose.bip84
+                  ? segwit
+                  : taproot,
+              'mempoolBalanceSats': 0,
+              'utxos': [
+                if ((entry.value.account.purpose == BitcoinPurpose.bip84
+                        ? segwit
+                        : taproot) >
+                    0)
+                  {
+                    'txid': 'a' * 64,
+                    'vout': 0,
+                    'valueSats':
+                        entry.value.account.purpose == BitcoinPurpose.bip84
+                        ? segwit
+                        : taproot,
+                    'address': entry.key,
+                    'scriptPubkeyHex': '0014${'00' * 20}',
+                    'confirmed': true,
+                    'blockHeight': 1,
+                  },
+              ],
+            }),
+        },
+      ),
+    );
+  }
+
+  test('Bitcoin bridge rejects unavailable and zero spendable balances', () {
+    expect(bitcoinBridgeHasFunds(null, BigInt.one), isFalse);
+    expect(bitcoinBridgeHasFunds(funds(0, 0), BigInt.one), isFalse);
+    expect(bitcoinBridgeHasFunds(funds(1000, 0), BigInt.zero), isFalse);
+    expect(bitcoinBridgeHasFunds(funds(1000, 0), -BigInt.one), isFalse);
+  });
+  test('Bitcoin bridge requires one funded purpose plus fee headroom', () {
+    expect(bitcoinBridgeHasFunds(funds(100, 100), BigInt.from(150)), isFalse);
+    expect(bitcoinBridgeHasFunds(funds(150, 0), BigInt.from(150)), isFalse);
+    expect(bitcoinBridgeHasFunds(funds(200, 0), BigInt.from(150)), isTrue);
+    expect(bitcoinBridgeHasFunds(funds(0, 200), BigInt.from(150)), isTrue);
+  });
 
   test('bridge origin tokens are scoped to the active chain', () {
     final tokens = [

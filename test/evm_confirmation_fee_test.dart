@@ -13,6 +13,7 @@ import 'package:fomowl_wallet/services/wallet_service.dart';
 import 'package:fomowl_wallet/screens/wallet/transfer_confirmation_screen.dart';
 import 'package:fomowl_wallet/screens/wallet/widgets/transfer_confirmation/confirm_button.dart';
 import 'package:fomowl_wallet/screens/wallet/widgets/transfer_confirmation/transaction_details_card.dart';
+import 'package:fomowl_wallet/screens/wallet/widgets/transfer_confirmation/amount_summary.dart';
 import 'helpers/test_fonts.dart';
 import 'evm_fee_options_test.dart' as fixtures;
 
@@ -86,6 +87,27 @@ Future<void> mount(WidgetTester tester, Wallet wallet, {Token? token}) async {
 void main() {
   setUp(installTestFonts);
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+  testWidgets(
+    'long token amounts fit and exact network fees are not truncated',
+    (tester) async {
+      final wallet = Wallet();
+      await mount(tester, wallet);
+      tester.view.physicalSize = const Size(360, 900);
+      wallet.response.complete(fixtures.quotes());
+      await tester.pumpAndSettle();
+      final summary = tester.widget<AmountSummary>(find.byType(AmountSummary));
+      expect(summary.fitAmount, isTrue);
+      expect(summary.amountText, '0.000000000000000001');
+      final card = tester.widget<TransactionDetailsCard>(
+        find.byType(TransactionDetailsCard),
+      );
+      final fee = tester.widget<Text>(find.text(card.gasValue));
+      expect(fee.maxLines, isNull);
+      expect(fee.overflow, isNot(TextOverflow.ellipsis));
+      expect(fee.style!.fontSize, 12);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'ERC20 maximum total retains separate token and native fee units',
     (tester) async {

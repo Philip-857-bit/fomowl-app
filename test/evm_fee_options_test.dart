@@ -8,6 +8,7 @@ import 'package:fomowl_wallet/screens/wallet/widgets/transfer_confirmation/evm_f
 EvmFeeQuotes quotes({
   bool equal = false,
   bool legacy = false,
+  bool partial = false,
   DateTime? quotedAt,
 }) {
   final intent = EvmFeeIntent(
@@ -19,6 +20,11 @@ EvmFeeQuotes quotes({
     rpcScope: Object(),
   );
   final now = quotedAt ?? DateTime.now();
+  int price(EvmFeeTier tier) => equal
+      ? 3
+      : partial && tier == EvmFeeTier.economy
+      ? 2
+      : tier.index + 1;
   return EvmFeeQuotes({
     for (final tier in EvmFeeTier.values)
       tier: EvmFeeQuote(
@@ -29,14 +35,10 @@ EvmFeeQuotes quotes({
             : EvmTransactionType.dynamicFee,
         gasLimit: 23100,
         quotedAt: now,
-        gasPriceWei: legacy ? BigInt.from(equal ? 3 : tier.index + 1) : null,
+        gasPriceWei: legacy ? BigInt.from(price(tier)) : null,
         baseFeePerGasWei: legacy ? null : BigInt.from(1000000000),
-        maxPriorityFeePerGasWei: legacy
-            ? null
-            : BigInt.from(equal ? 3 : tier.index + 1),
-        maxFeePerGasWei: legacy
-            ? null
-            : BigInt.from(2000000000 + (equal ? 3 : tier.index + 1)),
+        maxPriorityFeePerGasWei: legacy ? null : BigInt.from(price(tier)),
+        maxFeePerGasWei: legacy ? null : BigInt.from(2000000000 + price(tier)),
       ),
   });
 }
@@ -48,6 +50,33 @@ Widget host(Widget child) => MaterialApp(
   home: Scaffold(body: SingleChildScrollView(child: child)),
 );
 void main() {
+  for (final legacy in [true, false]) {
+    testWidgets(
+      'equivalent Economy and Normal fees share one choice ($legacy)',
+      (tester) async {
+        EvmFeeTier? selected;
+        final fees = quotes(legacy: legacy, partial: true);
+        await tester.pumpWidget(
+          host(
+            EvmFeeOptions(
+              quotes: fees,
+              selected: EvmFeeTier.economy,
+              onChanged: (tier) => selected = tier,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(fees.distinctTiers, [EvmFeeTier.normal, EvmFeeTier.priority]);
+        expect(find.byKey(const Key('evm-fee-tier-economy')), findsNothing);
+        await tester.tap(find.byKey(const Key('evm-fee-tier-normal')));
+        expect(selected, EvmFeeTier.normal);
+        expect(
+          fees.forTier(EvmFeeTier.economy).maximumTotalFeeWei,
+          fees.forTier(EvmFeeTier.normal).maximumTotalFeeWei,
+        );
+      },
+    );
+  }
   testWidgets('distinct tiers remain selectable and Normal is the default', (
     tester,
   ) async {

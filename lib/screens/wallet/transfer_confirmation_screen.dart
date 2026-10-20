@@ -1010,12 +1010,14 @@ class _TransferConfirmationScreenState
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Text(
-                                  l.confirmTransfer,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                Flexible(
+                                  child: Text(
+                                    l.confirmTransfer,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1065,7 +1067,10 @@ class _TransferConfirmationScreenState
                               speedValue:
                                   isEvmTransfer &&
                                       _evmFees?.hasDistinctTiers == true
-                                  ? evmFeeTierLabel(l, _evmFeeTier)
+                                  ? evmFeeTierLabel(
+                                      l,
+                                      _evmFees!.displayTier(_evmFeeTier),
+                                    )
                                   : null,
                             ),
                             if (isEvmTransfer && _evmFees != null) ...[
