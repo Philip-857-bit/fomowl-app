@@ -12,6 +12,7 @@ void main() {
         'get_bitcoin_bill_payment_status',
         'get_balances',
         'get_network_balances',
+        'request_switch_network',
       ]) {
         expect(bitcoinCashoutBridgeActionAllowed(id, action), isTrue);
       }
@@ -29,6 +30,10 @@ void main() {
       isFalse,
     );
     expect(bitcoinCashoutBridgeActionAllowed('untrusted', 'ready'), isFalse);
+    expect(
+      bitcoinCashoutBridgeActionAllowed('untrusted', 'request_switch_network'),
+      isFalse,
+    );
     expect(
       bitcoinCashoutBridgeActionAllowed(
         'untrusted',

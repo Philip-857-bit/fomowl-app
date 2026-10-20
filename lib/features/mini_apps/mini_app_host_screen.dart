@@ -63,6 +63,7 @@ bool bitcoinCashoutBridgeActionAllowed(String miniAppId, String type) =>
       'get_bitcoin_bill_payment_status',
       'get_balances',
       'get_network_balances',
+      'request_switch_network',
     }.contains(type);
 
 @visibleForTesting
