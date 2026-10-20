@@ -86,11 +86,9 @@ Widget _miniAppRoute(BuildContext context, {RuntimeFeature? requiredFeature}) {
   if (launchFeature != RuntimeFeature.miniApps) {
     features.add(launchFeature);
   }
-  return BitcoinCapabilityGate(
-    feature: 'Mini apps and payments',
-    builder: (context) =>
-        _gateRuntimeFeatures(MiniAppHostScreen.fromRoute(context), features),
-  );
+  // The host admits only supported OwlletPay Bitcoin mainnet sessions and
+  // continues to block other mini apps. Keep the independent runtime gates.
+  return _gateRuntimeFeatures(MiniAppHostScreen.fromRoute(context), features);
 }
 
 Map<String, WidgetBuilder> buildAppRoutes() {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -18,6 +20,7 @@ import 'package:fomowl_wallet/features/shell/app_shell_screen.dart';
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 import 'package:fomowl_wallet/models/chain.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:fomowl_wallet/services/runtime_config_service.dart';
 import '../test_support/discover/fake_dapp_permission_service.dart';
 import '../test_support/discover/fake_discover_catalog_service.dart';
 import '../test_support/discover/fake_wallet_service.dart';
@@ -86,6 +89,49 @@ void main() {
         );
   });
   setUp(installTestFonts);
+
+  testWidgets('shell Pay opens OwlletPay when Bitcoin mainnet is selected', (
+    tester,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'owllet.runtime_policy.last_good.v1',
+      jsonEncode({
+        ...const RuntimePolicySnapshot().toJson(),
+        'persistedAt': DateTime.now().toUtc().toIso8601String(),
+      }),
+    );
+    await RuntimeConfigService.instance.hydrate();
+    await tester.binding.setSurfaceSize(const Size(430, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final chain = await _chain('bitcoin:mainnet');
+    final shell = AppShellController();
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<BlockchainService>.value(value: chain),
+          ChangeNotifierProvider<AppShellController>.value(value: shell),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routes: {
+            '/owllet-pay': (_) => const Scaffold(body: Text('Pay destination')),
+          },
+          home: const AppShellScreen(walletPage: Text('Wallet fixture')),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pay').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Pay destination'), findsOneWidget);
+    expect(find.text('Bitcoin payments are not available yet.'), findsNothing);
+    expect(shell.currentTab, AppShellTab.wallet);
+    await tester.pumpWidget(const SizedBox.shrink());
+    chain.dispose();
+    shell.dispose();
+  });
 
   for (final network in ['bitcoin:mainnet', 'bitcoin:testnet4']) {
     testWidgets('shell Discover navigation remains accessible on $network', (

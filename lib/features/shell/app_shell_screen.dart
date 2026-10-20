@@ -94,14 +94,6 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   Future<void> _openOwlletPay() async {
-    if (context.read<BlockchainService>().activeFamily == ChainFamily.bitcoin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bitcoin payments are not available yet.'),
-        ),
-      );
-      return;
-    }
     if (_openingOwlletPay) {
       return;
     }
