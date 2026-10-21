@@ -118,225 +118,238 @@ class _NetworkSelectorSheetState extends State<NetworkSelectorSheet> {
     final l = AppLocalizations.of(context);
     final theme = context.chainTheme;
     final visibleEntries = _visibleEntries;
+    final media = MediaQuery.of(context);
+    final keyboardInset = media.viewInsets.bottom;
+    final availableHeight = media.size.height - keyboardInset;
+    final targetHeight = media.size.height * 0.72;
+    final maxHeight = availableHeight * 0.94;
+    final sheetHeight = targetHeight < maxHeight ? targetHeight : maxHeight;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF020202),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          children: [
-            Center(
-              child: Container(
-                width: 73,
-                height: 3,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6C6C6D),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                l.selectNetwork,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                key: const ValueKey('network-search-field'),
-                onChanged: (value) => setState(() => _searchQuery = value),
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-                cursorColor: theme.accentColor,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Search networks',
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white54,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: Colors.white54,
-                    size: 20,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF101010),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(
-                      color: theme.accentColor.withValues(alpha: 0.65),
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: SizedBox(
+        key: const ValueKey('network-selector-sheet'),
+        height: sheetHeight,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF020202),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    width: 73,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C6C6D),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (visibleEntries.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 24,
-                ),
-                child: Center(
+                const SizedBox(height: 16),
+                Center(
                   child: Text(
-                    'No networks found',
+                    l.selectNetwork,
                     style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF8894A0),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
                 ),
-              )
-            else
-              ...visibleEntries.asMap().entries.map((item) {
-                final index = item.key;
-                final entry = item.value;
-                final isActive = entry.networkKey == widget.activeNetworkKey;
-                final entryTheme = AppChainTheme.forNetwork(entry);
-
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (index > 0)
-                      Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
-                    InkWell(
-                      onTap: () => widget.onSelect(entry),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF161616),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isActive
-                                      ? entryTheme.accentColor.withValues(
-                                          alpha: 0.5,
-                                        )
-                                      : Colors.white.withValues(alpha: 0.08),
-                                  width: 1,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: ChainLogoImage(
-                                  chainId: entry is EvmNetworkEntry
-                                      ? entry.chain.chainId
-                                      : null,
-                                  logoUrl: entry.logoUrl,
-                                  width: 28,
-                                  height: 28,
-                                  fit: BoxFit.contain,
-                                  fallback: _fallbackSymbol(
-                                    entry,
-                                    isActive,
-                                    entryTheme.accentColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _displayName(entry),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    _subtitle(entry),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF8894A0),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _buildTrailing(
-                              entry,
-                              isActive,
-                              entryTheme.accentColor,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }),
-            if (widget.onAddCustomNetwork != null) ...[
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ElevatedButton.icon(
-                  onPressed: widget.onAddCustomNetwork,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    backgroundColor: theme.accentColor,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
-                  label: Text(
-                    l.addCustomNetwork,
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    key: const ValueKey('network-search-field'),
+                    onChanged: (value) => setState(() => _searchQuery = value),
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                    cursorColor: theme.accentColor,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'Search networks',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white54,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: Colors.white54,
+                        size: 20,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF101010),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: theme.accentColor.withValues(alpha: 0.65),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 12),
-          ],
+                const SizedBox(height: 10),
+                Expanded(
+                  child: visibleEntries.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No networks found',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF8894A0),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: EdgeInsets.zero,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          itemCount: visibleEntries.length,
+                          separatorBuilder: (_, _) => Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Colors.white.withValues(alpha: 0.05),
+                          ),
+                          itemBuilder: (context, index) {
+                            final entry = visibleEntries[index];
+                            final isActive =
+                                entry.networkKey == widget.activeNetworkKey;
+                            final entryTheme = AppChainTheme.forNetwork(entry);
+                            return InkWell(
+                              onTap: () => widget.onSelect(entry),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF161616),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isActive
+                                              ? entryTheme.accentColor
+                                                    .withValues(alpha: 0.5)
+                                              : Colors.white.withValues(
+                                                  alpha: 0.08,
+                                                ),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: ChainLogoImage(
+                                          chainId: entry is EvmNetworkEntry
+                                              ? entry.chain.chainId
+                                              : null,
+                                          logoUrl: entry.logoUrl,
+                                          width: 28,
+                                          height: 28,
+                                          fit: BoxFit.contain,
+                                          fallback: _fallbackSymbol(
+                                            entry,
+                                            isActive,
+                                            entryTheme.accentColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _displayName(entry),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            _subtitle(entry),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w500,
+                                              color: const Color(0xFF8894A0),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    _buildTrailing(
+                                      entry,
+                                      isActive,
+                                      entryTheme.accentColor,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                if (widget.onAddCustomNetwork != null) ...[
+                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ElevatedButton.icon(
+                      onPressed: widget.onAddCustomNetwork,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        backgroundColor: theme.accentColor,
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.add_circle_outline_rounded,
+                        size: 20,
+                      ),
+                      label: Text(
+                        l.addCustomNetwork,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -3272,6 +3272,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.cardDark,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),

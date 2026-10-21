@@ -28,6 +28,7 @@ class _BitcoinBridgeScreenState extends State<BitcoinBridgeScreen> {
   void _selectNetwork(BlockchainService chain) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: AppColors.cardDark,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
