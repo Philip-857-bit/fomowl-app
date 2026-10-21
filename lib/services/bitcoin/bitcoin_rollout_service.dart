@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/bitcoin_account_state.dart';
 import '../../models/wallet_account.dart';
 import '../blockchain_service.dart';
