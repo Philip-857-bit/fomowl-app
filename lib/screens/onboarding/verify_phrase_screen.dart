@@ -26,6 +26,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   final List<TextEditingController> _controllers = [];
   final List<FocusNode> _focusNodes = [];
+  final List<bool> _obscureTexts = [];
   final Random _random = Random.secure();
 
   List<String>? _originalPhrase;
@@ -92,6 +93,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       List.generate(requestedCount, (_) => TextEditingController()),
     );
     _focusNodes.addAll(List.generate(requestedCount, (_) => FocusNode()));
+    _obscureTexts.addAll(List.generate(requestedCount, (_) => true));
   }
 
   void _verifyAndContinue() {
@@ -279,6 +281,8 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                               TextField(
                                 controller: _controllers[index],
                                 focusNode: _focusNodes[index],
+                                obscureText: _obscureTexts[index],
+                                maxLines: 1,
                                 autocorrect: false,
                                 enableSuggestions: false,
                                 keyboardType: TextInputType.visiblePassword,
@@ -288,10 +292,24 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                   isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureTexts[index]
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureTexts[index] =
+                                            !_obscureTexts[index];
+                                      });
+                                    },
+                                  ),
                                 ),
                                 textInputAction:
                                     index < _verificationIndexes.length - 1
