@@ -118,7 +118,7 @@ void main() {
     },
   );
   test(
-    'backend unavailable/outage disables admission and stale enabling responses cannot override off',
+    'transient capability outage retains last known admission while explicit off still disables it',
     () async {
       final blockchain = BlockchainService();
       blockchain.setActiveWalletContext(
@@ -136,12 +136,24 @@ void main() {
         bitcoinRolloutStage: 'default',
         bitcoinTestnetEnabled: true,
       );
+
+      // With no prior successful capability check, an outage remains
+      // fail-closed.
+      network.outage = true;
+      await service.refresh(on);
+      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isFalse);
+
+      // Once availability has been confirmed, a temporary backend/network
+      // failure must not make Bitcoin disappear from the app.
+      network.outage = false;
       await service.refresh(on);
       expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isTrue);
       expect(blockchain.isBitcoinNetworkAvailable('bitcoin:testnet4'), isFalse);
       network.outage = true;
       await service.refresh(on);
-      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isFalse);
+      expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isTrue);
+
+      // An explicit runtime-policy disable is authoritative.
       network.outage = false;
       network.delayed = Completer<bool>();
       final late = service.refresh(on);
@@ -150,6 +162,7 @@ void main() {
       network.delayed!.complete(true);
       await late;
       expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isFalse);
+
       service.dispose();
       blockchain.dispose();
     },

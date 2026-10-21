@@ -75,17 +75,30 @@ class BitcoinRolloutService {
       blockchain.configureBitcoinAvailability(available: false);
       return;
     }
-    var mainnet = false;
-    var testnet = false;
+    // A transient capability-check failure must not make Bitcoin disappear
+    // after it was already admitted. Preserve the last confirmed state on
+    // transport/server failures; explicit policy or capability responses can
+    // still disable Bitcoin.
+    var mainnet = blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet');
+    var testnet =
+        policy.bitcoinTestnetEnabled &&
+        audience != BitcoinBuildAudience.production &&
+        blockchain.isBitcoinNetworkAvailable('bitcoin:testnet4');
     try {
       mainnet = await network.available(BitcoinProductNetwork.mainnet);
       if (policy.bitcoinTestnetEnabled &&
           audience != BitcoinBuildAudience.production) {
         testnet = await network.available(BitcoinProductNetwork.testnet4);
+      } else {
+        testnet = false;
       }
-    } catch (_) {
-      mainnet = false;
-      testnet = false;
+    } catch (error) {
+      // Unknown is not the same as unavailable. The next refresh will retry,
+      // while the last confirmed availability keeps the user's network stable.
+      debugPrint(
+        '[BitcoinRollout] Capability refresh failed; retaining last known '
+        'availability: $error',
+      );
     }
     if (_disposed ||
         generation != _generation ||
