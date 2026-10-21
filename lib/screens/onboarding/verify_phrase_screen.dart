@@ -31,6 +31,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   List<String>? _originalPhrase;
   List<int> _verificationIndexes = const [];
   bool _isLoading = false;
+  bool _obscurePhrase = true;
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
@@ -282,16 +283,31 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 autocorrect: false,
                                 enableSuggestions: false,
                                 keyboardType: TextInputType.visiblePassword,
+                                obscureText: _obscurePhrase,
+                                maxLines: _obscurePhrase ? 1 : null,
                                 textCapitalization: TextCapitalization.none,
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                   isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePhrase
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePhrase = !_obscurePhrase;
+                                      });
+                                    },
+                                  ),
                                 ),
                                 textInputAction:
                                     index < _verificationIndexes.length - 1
