@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
-
 import '../../constants/app_colors.dart';
 import '../../services/auth_service.dart';
-import '../../services/screen_capture_guard.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
 
@@ -22,17 +19,10 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
   final _xSecretController = TextEditingController();
   final _authService = AuthService();
   final _walletService = WalletService();
-  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureSecret = true;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_screenCaptureGuard.enableProtection());
-  }
 
   @override
   void dispose() {
@@ -40,7 +30,6 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
     _usernameController.dispose();
     _passwordController.dispose();
     _xSecretController.dispose();
-    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 

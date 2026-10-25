@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
-
 import '../../constants/app_colors.dart';
 import '../../services/auth_service.dart';
-import '../../services/screen_capture_guard.dart';
 import '../../utils/toast_utils.dart';
 
 class LoginProfileScreen extends StatefulWidget {
@@ -18,22 +15,14 @@ class _LoginProfileScreenState extends State<LoginProfileScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
-  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
-  void initState() {
-    super.initState();
-    unawaited(_screenCaptureGuard.enableProtection());
-  }
-
-  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 
