@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2026-10-26 - [Profile Auth Screens Capture Guard]
+**Vulnerability:** Authentication screens for user profiles (login/register) lacked screen capture protection, risking the exposure of sensitive credentials (passwords, X-Secrets) to malware or background recording apps.
+**Learning:** Similar to wallet onboarding, all authentication-related forms must utilize the `ScreenCaptureGuard`. The lack of a centralized form component wrapper meant each screen needed it applied individually.
+**Prevention:** Consider abstracting sensitive form screens into a base class or wrapper that automatically handles the `ScreenCaptureGuard` lifecycle.
