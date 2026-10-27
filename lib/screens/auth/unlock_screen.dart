@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/storage_service.dart';
 import '../../services/biometric_service.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -20,6 +21,7 @@ class UnlockScreen extends StatefulWidget {
 class _UnlockScreenState extends State<UnlockScreen> {
   final StorageService _storage = StorageService();
   final BiometricService _biometric = BiometricService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
   String _passcode = '';
   static const int _minLength = 6;
@@ -40,12 +42,14 @@ class _UnlockScreenState extends State<UnlockScreen> {
   @override
   void initState() {
     super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
     _checkLockoutAndBiometric();
   }
 
   @override
   void dispose() {
     _lockoutTimer?.cancel();
+    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 

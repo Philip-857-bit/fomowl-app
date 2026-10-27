@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2024-10-27 - [Auth Screens Screen Capture Guard]
+**Vulnerability:** The login, register, and unlock screens lacked screen capture protection, potentially exposing sensitive inputs such as passwords and passcodes to background recording or malicious applications.
+**Learning:** It's important to remember that any screen accepting sensitive authentication credentials (like passcodes or passwords) needs the same level of screen capture protection as private key or seed phrase screens.
+**Prevention:** Always ensure new or existing authentication screens instantiate and properly manage the `ScreenCaptureGuard` lifecycle in `initState` and `dispose`.
