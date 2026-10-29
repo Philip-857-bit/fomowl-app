@@ -33,6 +33,7 @@ import '../../utils/bitcoin_amount_utils.dart';
 import '../../services/wallet_vault_service.dart';
 import '../../screens/wallet/bitcoin_transfer_confirmation_screen.dart';
 import '../../utils/wallet_unlock_navigation.dart';
+import '../../utils/sensitive_access_guard.dart';
 import '../../services/bridge_service.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/http_client_service.dart';
@@ -50,6 +51,7 @@ import '../../screens/transaction/transaction_processing_screen.dart';
 import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
+import 'burst_sign_in.dart';
 import 'widgets/mini_app_identity_title.dart';
 
 @visibleForTesting
@@ -280,6 +282,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   bool _loadingContext = true;
   bool _switchNetworkRequestInFlight = false;
   bool _bitcoinCashoutInFlight = false;
+  final BurstSignInController _burstSignIn = BurstSignInController();
   final BitcoinPostTransactionRefresh _bitcoinCashoutRefresh =
       BitcoinPostTransactionRefresh();
   late final BitcoinOfframpApi _bitcoinOfframpApi = BitcoinOfframpApi();
@@ -638,7 +641,8 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               _runtimeConfig.snapshot.miniAppsEnabled &&
               _runtimeConfig.snapshot.transfersEnabled &&
               widget.definition.id == 'burst',
-          'requestSignMessage': activeChainFamily != 'bitcoin',
+          'requestSignMessage':
+              activeChainFamily == 'evm' && widget.definition.id == 'burst',
           'notify': true,
           'getBalances':
               _runtimeConfig.snapshot.portfolioEnabled &&
@@ -2558,23 +2562,79 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     return plan;
   }
 
-  /// Wallet sign-in signatures are no longer offered. Owllet Pay accounts are
-  /// created on the register page, and a connected wallet is only used to pay.
+  /// Burst uses backend-verified wallet sign-in. Other mini apps retain their
+  /// existing account-login policy; this is not a general message-signing API.
   Future<Map<String, dynamic>> _handleSignMessageRequest(
     Map<String, dynamic> payload,
   ) async {
-    final message = payload['message']?.toString() ?? '';
-    if (message.trim().isEmpty) {
+    if (widget.definition.id != 'burst') {
       return const <String, dynamic>{
         'ok': false,
-        'error': 'Missing message to sign.',
+        'error':
+            'Wallet sign-in is turned off. Sign in with your Owllet Pay email and password.',
       };
     }
-    return const <String, dynamic>{
-      'ok': false,
-      'error':
-          'Wallet sign-in is turned off. Sign in with your Owllet Pay email and password.',
-    };
+    try {
+      return await _burstSignIn.sign(
+        miniAppId: widget.definition.id,
+        payload: payload,
+        readIdentity: () async {
+          final uri = await _controller?.getUrl();
+          if (!mounted || uri == null || !_isTrustedOrigin(uri)) {
+            throw StateError('Burst is no longer on its trusted page.');
+          }
+          final networkKey = context.read<BlockchainService>().activeNetworkKey;
+          final address = await _walletService.getWalletAddressForFamily(
+            ChainFamily.evm,
+          );
+          return BurstSignInIdentity(
+            address: address ?? '',
+            networkKey: networkKey,
+            origin: normalizeOriginFromUri(uri),
+          );
+        },
+        confirm: (message, address) async {
+          if (!mounted) return false;
+          return await showDialog<bool>(
+                context: context,
+                barrierDismissible: false,
+                builder: (dialogContext) => AlertDialog(
+                  backgroundColor: AppColors.cardDark,
+                  title: const Text('Sign in to Burst'),
+                  content: SingleChildScrollView(
+                    child: Text(
+                      'Prove ownership of $address. No transaction or gas fee.\n\n$message',
+                    ),
+                  ),
+                  actions: <Widget>[
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Sign in'),
+                    ),
+                  ],
+                ),
+              ) ??
+              false;
+        },
+        authenticate: () async =>
+            mounted &&
+            await SensitiveAccessGuard.verify(
+              context,
+              reason: 'Sign in to Burst with this wallet.',
+              requireTwoFactor: false,
+            ),
+        signMessage: _walletService.signMessageForAddress,
+      );
+    } catch (error) {
+      return <String, dynamic>{
+        'ok': false,
+        'error': AppErrorUtils.userMessage(error),
+      };
+    }
   }
 
   /// Surface a host (system) notification for the mini app â€” e.g. "your
