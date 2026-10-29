@@ -167,7 +167,9 @@ jobs:
             --dart-define=OWLLET_PAY_MINI_APP_URL=https://owlletpaystaging.owlletapp.com \
             --dart-define=OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS=https://owlletpaystaging.owlletapp.com \
             --dart-define=AFFILIATE_MINI_APP_URL=https://affiliatestaging.owlletapp.com \
-            --dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=https://affiliatestaging.owlletapp.com
+            --dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=https://affiliatestaging.owlletapp.com \
+            --dart-define=BURST_MINI_APP_URL=https://burststaging.owlletapp.com \
+            --dart-define=BURST_MINI_APP_ALLOWED_ORIGINS=https://burststaging.owlletapp.com
       - name: Verify actual package, signing and native ABI
         shell: bash
         run: |

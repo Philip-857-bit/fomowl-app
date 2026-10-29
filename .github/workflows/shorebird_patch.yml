@@ -50,6 +50,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: ${{ vars.CASH_IN_MINI_APP_ALLOWED_ORIGINS || secrets.CASH_IN_MINI_APP_ALLOWED_ORIGINS || '' }}
       AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
       AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      BURST_MINI_APP_URL: ${{ vars.BURST_MINI_APP_URL || 'https://burst.owlletapp.com' }}
+      BURST_MINI_APP_ALLOWED_ORIGINS: ${{ vars.BURST_MINI_APP_ALLOWED_ORIGINS || 'https://burst.owlletapp.com' }}
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
       KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -248,6 +250,8 @@ jobs:
             echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
             echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
             echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=BURST_MINI_APP_URL=$(sanitize "$BURST_MINI_APP_URL")"
+            echo "--dart-define=BURST_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$BURST_MINI_APP_ALLOWED_ORIGINS")"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -311,6 +315,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: ${{ vars.CASH_IN_MINI_APP_ALLOWED_ORIGINS || secrets.CASH_IN_MINI_APP_ALLOWED_ORIGINS || '' }}
       AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || secrets.AFFILIATE_MINI_APP_URL || '' }}
       AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || secrets.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || '' }}
+      BURST_MINI_APP_URL: ${{ vars.BURST_MINI_APP_URL || 'https://burst.owlletapp.com' }}
+      BURST_MINI_APP_ALLOWED_ORIGINS: ${{ vars.BURST_MINI_APP_ALLOWED_ORIGINS || 'https://burst.owlletapp.com' }}
       GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
       IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
       IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
@@ -472,6 +478,8 @@ jobs:
             echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
             echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
             echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=BURST_MINI_APP_URL=$(sanitize "$BURST_MINI_APP_URL")"
+            echo "--dart-define=BURST_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$BURST_MINI_APP_ALLOWED_ORIGINS")"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
