@@ -168,6 +168,21 @@ void main() {
     );
   });
 
+  test('Relay distinguishes inadequate fee balance from gas estimation', () {
+    expect(
+      relaySwapExecutionErrorMessage('insufficient funds for gas * price + value'),
+      contains('native coin'),
+    );
+    expect(
+      relaySwapExecutionErrorMessage('gas required exceeds allowance (4956)'),
+      contains('estimate enough gas'),
+    );
+    expect(
+      relaySwapExecutionErrorMessage('execution reverted'),
+      contains('rejected'),
+    );
+  });
+
   test('keeps unrelated Relay execution failures generic', () {
     expect(
       relaySwapExecutionErrorMessage('RPC connection closed'),

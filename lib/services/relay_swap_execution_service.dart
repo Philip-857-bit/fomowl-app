@@ -1,6 +1,7 @@
 import 'package:web3dart/crypto.dart';
 import 'package:web3dart/web3dart.dart';
 
+import '../utils/app_error_utils.dart';
 import 'blockchain_service.dart';
 import 'bridge_service.dart';
 import 'http_client_service.dart';
@@ -28,6 +29,14 @@ String relaySwapExecutionErrorMessage(Object error) {
   if (lower.contains('differror') || lower.contains(_relayDiffErrorSelector)) {
     return 'This token may charge a transfer fee that exceeds the current '
         'slippage tolerance. Increase slippage and try again.';
+  }
+  if (lower.contains('insufficient funds') ||
+      lower.contains('gas required exceeds allowance') ||
+      lower.contains('intrinsic gas too low') ||
+      lower.contains('out of gas') ||
+      lower.contains('execution reverted') ||
+      lower.contains('transaction underpriced')) {
+    return AppErrorUtils.userMessage(error);
   }
   return 'Relay swap failed. Please try again.';
 }

@@ -67,16 +67,27 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
-      'failed to get quotes',
-      'no solana swap route',
-      'no swap route',
-      'no quote',
-      'route not found',
       'amount too low',
       'swap quote response was missing',
       'missing the unsigned transaction',
     ])) {
       return 'Amount is too low for this swap. Try a larger amount.';
+    }
+
+    if (_containsAny(lowered, const [
+      'failed to get quotes',
+      'no quote',
+      'no solana swap route',
+      'no swap route',
+      'route not found',
+    ])) {
+      return 'No swap quote is available right now. Please try again or choose another pair.';
+    }
+    if (_containsAny(lowered, const [
+      'no liquidity',
+      'insufficient liquidity',
+    ])) {
+      return "There isn't enough liquidity for this swap right now. Try another amount or pair.";
     }
 
     if (_containsAny(lowered, const [
@@ -126,9 +137,17 @@ class AppErrorUtils {
 
     if (_containsAny(lowered, const [
       'insufficient funds for fee',
+      'insufficient funds for gas',
+      'insufficient native gas',
       'insufficient funds',
     ])) {
-      return 'Insufficient balance to cover the transfer amount and network fee.';
+      return "You don't have enough of the network's native coin to cover this transaction and its gas fee.";
+    }
+    if (_containsAny(lowered, const [
+      'insufficient balance',
+      'insufficient_balance',
+    ])) {
+      return 'Your balance is too low for this transaction. Try a smaller amount.';
     }
 
     if (_containsAny(lowered, const [
@@ -190,22 +209,27 @@ class AppErrorUtils {
       return 'Transaction reverted or failed. Please check your balance or slippage and try again.';
     }
 
-    if (_containsAny(lowered, const [
-      'gas required exceeds allowance',
-      'intrinsic gas too low',
-      'out of gas',
-      'exceeds allowance',
-    ])) {
-      return 'Transaction failed because the network fee estimate was too low. Please try again or use a smaller amount.';
+    if (lowered.contains('gas required exceeds allowance')) {
+      return 'The network could not estimate enough gas for this transaction. Please refresh your quote and try again.';
+    }
+    if (lowered.contains('intrinsic gas too low')) {
+      return 'This transaction needs a higher gas limit. Please refresh your quote and try again.';
+    }
+    if (lowered.contains('out of gas')) {
+      return 'The transaction ran out of gas. Please refresh your quote and try again.';
     }
 
     if (_containsAny(lowered, const [
       'execution reverted',
-      'transaction underpriced',
-      'replacement transaction underpriced',
-      'nonce too low',
     ])) {
-      return 'Transaction could not be completed on the network. Please check your balance and try again.';
+      return 'The network rejected this transaction. Check the token, amount and approval, then try again.';
+    }
+    if (lowered.contains('nonce too low')) {
+      return 'This transaction is out of date. Wait for your pending transaction to finish, then try again.';
+    }
+    if (lowered.contains('transaction underpriced') ||
+        lowered.contains('replacement transaction underpriced')) {
+      return 'The network requires a higher transaction fee. Refresh your quote and try again.';
     }
 
     if (_containsAny(lowered, const [

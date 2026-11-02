@@ -1401,19 +1401,29 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
     }
 
-    if (lower.contains('failed to get quotes') ||
-        lower.contains('could not find any route') ||
+    if (lower.contains('gas required exceeds allowance') ||
+        lower.contains('intrinsic gas too low') ||
+        lower.contains('out of gas')) {
+      return AppErrorUtils.userMessage(raw);
+    }
+    if (lower.contains('failed to get quotes')) {
+      return 'No swap quote is available right now. Please try again or choose another pair.';
+    }
+    if (lower.contains('no liquidity') || lower.contains('insufficient liquidity')) {
+      return "There isn't enough liquidity for this swap right now. Try another amount or pair.";
+    }
+    if (lower.contains('could not find any route') ||
         lower.contains('no solana swap route') ||
         lower.contains('no swap route') ||
         lower.contains('route not found') ||
         lower.contains('amount too low')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
+      return 'No swap route is available for this pair right now. Try another amount or pair.';
     }
     if (lower.contains('swap quote response was missing') ||
         lower.contains('missing the unsigned transaction') ||
         lower.contains('transaction":""') ||
         lower.contains('transaction is empty')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
+      return 'The swap quote was incomplete. Please refresh it and try again.';
     }
     if (lower.contains('unable to fetch a swap price right now') ||
         lower.contains('upstream request failed') ||
@@ -1426,7 +1436,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         (lower.contains('insufficient funds') ||
             lower.contains('insufficient native gas') ||
             lower.contains('funds for gas') ||
-            lower.contains('gas required exceeds allowance'))) {
+            lower.contains('insufficient funds for fee'))) {
       final fromToken = _fromToken;
       if (fromToken != null) {
         return _gaslessApprovalFundingMessage(
@@ -1494,8 +1504,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     )) {
       return 'Gasless mode only supports ERC-20 source tokens. Select a token like USDC/USDT.';
     }
-    if (lower.contains('no route found') || lower.contains('no liquidity')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
+    if (lower.contains('no route found')) {
+      return 'No swap route is available right now. Try another amount or pair.';
     }
     if (lower.contains('user denied') ||
         lower.contains('user rejected') ||

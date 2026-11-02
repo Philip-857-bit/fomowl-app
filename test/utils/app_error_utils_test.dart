@@ -96,7 +96,7 @@ void main() {
           '{"error":"Swap failed","message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\",\\"error\\":\\"Failed to get quotes\\"}"}';
       expect(
         AppErrorUtils.backendMessage(body, fallback: fallback),
-        'Amount is too low for this swap. Try a larger amount.',
+        'No swap quote is available right now. Please try again or choose another pair.',
       );
     });
 
@@ -168,7 +168,44 @@ void main() {
           'Jupiter /order failed: {"requestId":"abc","error":"Failed to get quotes"}',
           fallback: fallback,
         ),
-        'Amount is too low for this swap. Try a larger amount.',
+        'No swap quote is available right now. Please try again or choose another pair.',
+      );
+    });
+
+    test('separates inadequate gas limit from insufficient native coin', () {
+      expect(
+        AppErrorUtils.userMessage('RPCError: gas required exceeds allowance (4956)'),
+        'The network could not estimate enough gas for this transaction. Please refresh your quote and try again.',
+      );
+      expect(
+        AppErrorUtils.userMessage('intrinsic gas too low'),
+        'This transaction needs a higher gas limit. Please refresh your quote and try again.',
+      );
+      expect(
+        AppErrorUtils.userMessage('out of gas'),
+        'The transaction ran out of gas. Please refresh your quote and try again.',
+      );
+      expect(
+        AppErrorUtils.userMessage('insufficient funds for gas * price + value'),
+        'You don\'t have enough of the network\'s native coin to cover this transaction and its gas fee.',
+      );
+    });
+
+    test('does not misreport a generic execution revert as a gas problem', () {
+      expect(
+        AppErrorUtils.userMessage('execution reverted'),
+        'The network rejected this transaction. Check the token, amount and approval, then try again.',
+      );
+    });
+
+    test('does not label provider failures as amounts too small', () {
+      expect(
+        AppErrorUtils.userMessage('failed to get quotes'),
+        'No swap quote is available right now. Please try again or choose another pair.',
+      );
+      expect(
+        AppErrorUtils.userMessage('no liquidity'),
+        'There isn\'t enough liquidity for this swap right now. Try another amount or pair.',
       );
     });
 
@@ -178,7 +215,7 @@ void main() {
           'Bridge failed: RPCError: got code -32000 with msg "gas required exceeds allowance (4956)"',
           fallback: fallback,
         ),
-        'Transaction failed because the network fee estimate was too low. Please try again or use a smaller amount.',
+        'The network could not estimate enough gas for this transaction. Please refresh your quote and try again.',
       );
     });
 
