@@ -26,6 +26,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
 
   final List<TextEditingController> _controllers = [];
   final List<FocusNode> _focusNodes = [];
+  final List<bool> _obscureWords = [];
   final Random _random = Random.secure();
 
   List<String>? _originalPhrase;
@@ -92,6 +93,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
       List.generate(requestedCount, (_) => TextEditingController()),
     );
     _focusNodes.addAll(List.generate(requestedCount, (_) => FocusNode()));
+    _obscureWords.addAll(List.generate(requestedCount, (_) => true));
   }
 
   void _verifyAndContinue() {
@@ -282,16 +284,40 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 autocorrect: false,
                                 enableSuggestions: false,
                                 keyboardType: TextInputType.visiblePassword,
+                                obscureText: _obscureWords[index],
                                 textCapitalization: TextCapitalization.none,
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                   isDense: true,
+                                  suffixIconConstraints: const BoxConstraints(
+                                    minHeight: 24,
+                                    minWidth: 24,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      _obscureWords[index]
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureWords[index] =
+                                            !_obscureWords[index];
+                                      });
+                                    },
+                                  ),
                                 ),
                                 textInputAction:
                                     index < _verificationIndexes.length - 1
