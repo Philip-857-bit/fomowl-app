@@ -96,7 +96,7 @@ void main() {
           '{"error":"Swap failed","message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\",\\"error\\":\\"Failed to get quotes\\"}"}';
       expect(
         AppErrorUtils.backendMessage(body, fallback: fallback),
-        'Amount is too low for this swap. Try a larger amount.',
+        'No swap quote is available right now. Please try again or choose another pair.',
       );
     });
 
@@ -168,7 +168,7 @@ void main() {
           'Jupiter /order failed: {"requestId":"abc","error":"Failed to get quotes"}',
           fallback: fallback,
         ),
-        'Amount is too low for this swap. Try a larger amount.',
+        'No swap quote is available right now. Please try again or choose another pair.',
       );
     });
 
