@@ -75,16 +75,6 @@ class AppErrorUtils {
     }
 
     if (_containsAny(lowered, const [
-      'jupiter',
-      '/order',
-      '/execute',
-      'requestid',
-      'swap provider',
-    ])) {
-      return fallback;
-    }
-
-    if (_containsAny(lowered, const [
       'failed to get quotes',
       'no quote',
       'no solana swap route',
@@ -98,6 +88,16 @@ class AppErrorUtils {
       'insufficient liquidity',
     ])) {
       return "There isn't enough liquidity for this swap right now. Try another amount or pair.";
+    }
+
+    if (_containsAny(lowered, const [
+      'jupiter',
+      '/order',
+      '/execute',
+      'requestid',
+      'swap provider',
+    ])) {
+      return fallback;
     }
 
     if (_containsAny(lowered, const [
