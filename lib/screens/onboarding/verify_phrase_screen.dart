@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+
 import 'dart:async';
 import 'dart:math';
+
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../services/wallet_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/screen_capture_guard.dart';
+
 import 'package:provider/provider.dart';
+
 import '../../utils/app_error_utils.dart';
 import '../../utils/toast_utils.dart';
 
@@ -31,6 +36,7 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
   List<String>? _originalPhrase;
   List<int> _verificationIndexes = const [];
   bool _isLoading = false;
+  bool _obscureWords = true;
   final WalletService _walletService = WalletService();
   final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
@@ -283,15 +289,30 @@ class _VerifyPhraseScreenState extends State<VerifyPhraseScreen> {
                                 enableSuggestions: false,
                                 keyboardType: TextInputType.visiblePassword,
                                 textCapitalization: TextCapitalization.none,
+                                obscureText: _obscureWords,
+                                maxLines: 1,
                                 style: GoogleFonts.outfit(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.white,
                                 ),
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   border: InputBorder.none,
                                   contentPadding: EdgeInsets.zero,
                                   isDense: true,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureWords
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: Colors.white54,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureWords = !_obscureWords;
+                                      });
+                                    },
+                                  ),
                                 ),
                                 textInputAction:
                                     index < _verificationIndexes.length - 1
