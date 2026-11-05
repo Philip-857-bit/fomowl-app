@@ -60,6 +60,49 @@ class DeepLinkService {
     return null;
   }
 
+  /// Public protocol for links that open a specific page inside Discover.
+  /// Accepts `owllet://open?url=ENCODED_HTTPS_URL` and the verified app-link
+  /// equivalent `https://owlletapp.com/open?url=ENCODED_HTTPS_URL`.
+  /// No arbitrary URI schemes or credentials may be passed to the webview.
+  static Uri? discoverUrlFromLink(Uri link) {
+    final isCustom =
+        link.scheme.toLowerCase() == 'owllet' &&
+        ((link.host.toLowerCase() == 'open' &&
+                (link.path.isEmpty || link.path == '/')) ||
+            (link.host.toLowerCase() == 'app' && link.path == '/open'));
+    final isWeb =
+        link.scheme.toLowerCase() == 'https' &&
+        link.host.toLowerCase() == 'owlletapp.com' &&
+        link.path == '/open';
+    if (!isCustom && !isWeb) return null;
+
+    final raw = link.queryParameters['url'];
+    if (raw == null || raw.isEmpty) return null;
+    final target = Uri.tryParse(raw);
+    if (target == null ||
+        target.scheme.toLowerCase() != 'https' ||
+        target.host.isEmpty ||
+        target.userInfo.isNotEmpty) {
+      return null;
+    }
+    return target;
+  }
+
+  Future<void> _openDiscoverWhenReady(Uri target) async {
+    // Initial Android App Links can arrive before the navigator has mounted.
+    for (var attempt = 0; attempt < 40; attempt++) {
+      final context = appNavigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        await InAppLinkRouter.open(context, target.toString());
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    debugPrint(
+      '[DeepLink] Discover URL could not open: navigator unavailable.',
+    );
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
@@ -96,6 +139,12 @@ class DeepLinkService {
     final pairingUri = extractWalletConnectPairingUri(rawString);
     if (pairingUri != null && pairingUri.isNotEmpty) {
       await WalletConnectService.instance.pair(pairingUri);
+      return;
+    }
+
+    final discoverTarget = discoverUrlFromLink(uri);
+    if (discoverTarget != null) {
+      await _openDiscoverWhenReady(discoverTarget);
       return;
     }
 
