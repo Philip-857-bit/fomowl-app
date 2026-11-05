@@ -58,6 +58,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="wc" />
             </intent-filter>
+            <!-- Open a validated HTTPS URL directly inside Discover. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="owlletapp.com" android:pathPrefix="/open" />
+            </intent-filter>
             <!-- WalletConnect Universal Links (App Links) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
