@@ -65,11 +65,13 @@ class DeepLinkService {
   /// equivalent https://owlletapp.com/open?url=<encoded HTTPS URL>.
   /// No arbitrary URI schemes or credentials may be passed to the webview.
   static Uri? discoverUrlFromLink(Uri link) {
-    final isCustom = link.scheme.toLowerCase() == 'owllet' &&
+    final isCustom =
+        link.scheme.toLowerCase() == 'owllet' &&
         ((link.host.toLowerCase() == 'open' &&
                 (link.path.isEmpty || link.path == '/')) ||
             (link.host.toLowerCase() == 'app' && link.path == '/open'));
-    final isWeb = link.scheme.toLowerCase() == 'https' &&
+    final isWeb =
+        link.scheme.toLowerCase() == 'https' &&
         link.host.toLowerCase() == 'owlletapp.com' &&
         link.path == '/open';
     if (!isCustom && !isWeb) return null;
