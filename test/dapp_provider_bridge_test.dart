@@ -110,6 +110,18 @@ void main() {
         expect(script, contains('window.web3.currentProvider'));
         expect(script, contains("name: 'Owllet'"));
         expect(script, contains('isMetaMask = true'));
+        // Regression: EIP-3085 adds a network; it does NOT switch the wallet.
+        // The injected JS must not fake a chainChanged event on add.
+        expect(
+          script,
+          isNot(contains(
+            "payload.method === 'wallet_switchEthereumChain' || payload.method === 'wallet_addEthereumChain'",
+          )),
+        );
+        expect(
+          script,
+          contains("if (payload.method === 'wallet_switchEthereumChain') {"),
+        );
       },
     );
 
