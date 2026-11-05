@@ -236,10 +236,15 @@ void main() {
       expect(service.isChainSupported(81457, isGasless: true), isFalse);
     });
 
-    test('normal swaps accept every built-in EVM chain', () {
+    test('normal swaps support provider-enabled built-in EVM chains', () {
       final service = SwapService();
 
+      // Native wallet connectivity and external Discover dApps are supported
+      // independently of the aggregator's available quote networks.
+      expect(service.isChainSupported(42420, isGasless: false), isFalse);
+      expect(service.isChainSupported(42420, isGasless: true), isFalse);
       for (final chain in BlockchainCatalog.builtInChains) {
+        if (chain.chainId == 42420) continue;
         expect(
           service.isChainSupported(chain.chainId, isGasless: false),
           isTrue,
