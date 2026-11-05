@@ -113,6 +113,20 @@ void main() {
       },
     );
 
+    test('Asset Chain mainnet uses a branded adaptive theme', () {
+      final chain = BlockchainCatalog.findChain(42420);
+      expect(chain, isNotNull);
+      expect(chain!.name, 'Asset Chain');
+      expect(chain.symbol, 'RWA');
+      expect(chain.rpcUrl.toString(), contains('/42420/rpc'));
+      expect(chain.explorerUrl, 'https://scan.assetchain.org');
+      expect(chain.logoUrl, isNotNull);
+      final theme = AppChainTheme.forNetworkKey('evm:42420');
+      expect(theme.id, 'asset_chain');
+      expect(theme.displayName, 'Asset Chain');
+      expect(theme.balanceCardGradient.colors.length, greaterThanOrEqualTo(2));
+    });
+
     test('Custom unconfigured EVM chain resolves deterministic fallback', () {
       final customChain = const EvmChain(
         chainId: 999999,
