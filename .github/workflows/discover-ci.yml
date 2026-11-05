@@ -23,11 +23,6 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      - name: Show Dart formatter diff for review
-        run: |
-          dart format lib/services/deep_link_service.dart test/dapp_provider_bridge_test.dart
-          git diff -- lib/services/deep_link_service.dart test/dapp_provider_bridge_test.dart
-
       - name: Analyze Discover files
         run: >
           flutter analyze
