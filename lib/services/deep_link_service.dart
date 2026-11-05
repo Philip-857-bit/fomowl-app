@@ -98,7 +98,9 @@ class DeepLinkService {
       }
       await Future<void>.delayed(const Duration(milliseconds: 250));
     }
-    debugPrint('[DeepLink] Discover URL could not open: navigator unavailable.');
+    debugPrint(
+      '[DeepLink] Discover URL could not open: navigator unavailable.',
+    );
   }
 
   Future<void> initialize() async {
