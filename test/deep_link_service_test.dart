@@ -12,7 +12,9 @@ void main() {
 
     test('official universal link opens the same Discover target', () {
       final target = DeepLinkService.discoverUrlFromLink(
-        Uri.parse('https://owlletapp.com/open?url=https%3A%2F%2Fapp.assetclaw.xyz'),
+        Uri.parse(
+          'https://owlletapp.com/open?url=https%3A%2F%2Fapp.assetclaw.xyz',
+        ),
       );
       expect(target?.toString(), 'https://app.assetclaw.xyz');
     });
@@ -30,19 +32,26 @@ void main() {
           host: 'open',
           queryParameters: {'url': destination},
         );
-        expect(DeepLinkService.discoverUrlFromLink(uri), isNull,
-            reason: 'Unsafe destination unexpectedly allowed: $destination');
+        expect(
+          DeepLinkService.discoverUrlFromLink(uri),
+          isNull,
+          reason: 'Unsafe destination unexpectedly allowed: $destination',
+        );
       }
     });
 
     test('does not intercept WalletConnect or unrelated hosts', () {
       expect(
-        DeepLinkService.discoverUrlFromLink(Uri.parse('owllet://wc?uri=wc%3Aabc')),
+        DeepLinkService.discoverUrlFromLink(
+          Uri.parse('owllet://wc?uri=wc%3Aabc'),
+        ),
         isNull,
       );
       expect(
         DeepLinkService.discoverUrlFromLink(
-          Uri.parse('https://attacker.example/open?url=https%3A%2F%2Fapp.assetclaw.xyz'),
+          Uri.parse(
+            'https://attacker.example/open?url=https%3A%2F%2Fapp.assetclaw.xyz',
+          ),
         ),
         isNull,
       );
