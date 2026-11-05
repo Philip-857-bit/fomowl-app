@@ -211,7 +211,7 @@ class DappProviderBridge {
       if (payload.method === 'eth_chainId') {
         this._setChainId(typeof result === 'string' ? result : null);
       }
-      if (payload.method === 'wallet_switchEthereumChain' || payload.method === 'wallet_addEthereumChain') {
+      if (payload.method === 'wallet_switchEthereumChain') {
         const nextChainId = payload.params && payload.params[0] ? payload.params[0].chainId : null;
         this._setChainId(typeof nextChainId === 'string' ? nextChainId : null);
       }
