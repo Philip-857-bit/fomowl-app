@@ -61,8 +61,8 @@ class DeepLinkService {
   }
 
   /// Public protocol for links that open a specific page inside Discover.
-  /// Accepts owllet://open?url=<encoded HTTPS URL> and the verified app-link
-  /// equivalent https://owlletapp.com/open?url=<encoded HTTPS URL>.
+  /// Accepts `owllet://open?url=ENCODED_HTTPS_URL` and the verified app-link
+  /// equivalent `https://owlletapp.com/open?url=ENCODED_HTTPS_URL`.
   /// No arbitrary URI schemes or credentials may be passed to the webview.
   static Uri? discoverUrlFromLink(Uri link) {
     final isCustom =
