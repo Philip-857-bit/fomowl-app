@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   host:
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
     env:
       CARGO_BUILD_JOBS: 2
       CARGO_PROFILE_DEV_DEBUG: 0
@@ -47,7 +47,7 @@ jobs:
       - run: flutter test --concurrency=2
 
   android:
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
     env:
       CARGO_BUILD_JOBS: 2
       CARGO_INCREMENTAL: 0
