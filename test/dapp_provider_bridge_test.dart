@@ -113,6 +113,31 @@ void main() {
       },
     );
 
+    test('adding a chain must not spoof the injected provider network', () async {
+      final bridge = DappProviderBridge(
+        sessionController: BrowserSessionController(
+          catalogService: FakeDiscoverCatalogService(
+            snapshot: DiscoverCatalogSnapshot(
+              dapps: const <DiscoverDappEntry>[],
+              fetchedAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+            ),
+          ),
+        ),
+        permissionService: FakeDappPermissionService(),
+        walletService: FakeWalletService(),
+      );
+      final script = await bridge.providerInjectionScript();
+      // EIP-3085 adds a network; only a successful EIP-3326 switch
+      // changes the selected chain and emits chainChanged.
+      expect(
+        script,
+        isNot(contains(
+          "payload.method === 'wallet_switchEthereumChain' || payload.method === 'wallet_addEthereumChain'",
+        )),
+      );
+      expect(script, contains("payload.method === 'wallet_switchEthereumChain'"));
+    });
+
     testWidgets('eth_requestAccounts returns 4001 when approval is rejected', (
       tester,
     ) async {
