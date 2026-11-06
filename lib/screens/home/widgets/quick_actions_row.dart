@@ -8,12 +8,14 @@ class QuickActionsRow extends StatelessWidget {
   final VoidCallback onReceive;
   final VoidCallback onSend;
   final VoidCallback? onWithdraw;
+  final VoidCallback? onBurst;
 
   const QuickActionsRow({
     super.key,
     required this.onReceive,
     required this.onSend,
     this.onWithdraw,
+    this.onBurst,
   });
 
   @override
@@ -40,6 +42,12 @@ class QuickActionsRow extends StatelessWidget {
               icon: Icons.account_balance_rounded,
               label: l.withdraw,
               onTap: onWithdraw!,
+            ),
+          if (onBurst != null)
+            _QuickActionButton(
+              icon: Icons.rocket_launch_outlined,
+              label: 'Burst',
+              onTap: onBurst!,
             ),
         ],
       ),

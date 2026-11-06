@@ -11,6 +11,8 @@ import '../../config/app_environment.dart';
 import '../../constants/app_colors.dart';
 import '../../features/mini_apps/mini_app_host_screen.dart';
 import '../../features/mini_apps/mini_app_registry.dart';
+import '../../features/burst/burst_native_screen.dart';
+import '../../features/burst/burst_theme.dart';
 import '../../features/shell/app_shell_controller.dart';
 import '../../models/chain.dart';
 import '../profile/add_network_screen.dart';
@@ -2026,6 +2028,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 onSend: () =>
                                     Navigator.pushNamed(context, '/send-token'),
                                 onWithdraw: _openCashInWithdraw,
+                                onBurst: () => Navigator.of(context).push(
+                                  BurstPageRoute<void>(
+                                    builder: (_) => const BurstNativeScreen(),
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 26),

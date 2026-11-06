@@ -125,6 +125,7 @@ flutter:
     - assets/images/chains/
     - assets/images/tokens/
     - assets/images/discover/
+    - assets/burst/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
