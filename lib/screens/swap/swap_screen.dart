@@ -84,7 +84,8 @@ class _SupportedSwapScreen extends StatefulWidget {
 
 class _SwapScreenState extends State<_SupportedSwapScreen> {
   static const String _livePriceScope = 'swap_screen';
-  static const String _confirmedSwapOutboxKey = 'confirmed_swap_analytics_outbox_v1';
+  static const String _confirmedSwapOutboxKey =
+      'confirmed_swap_analytics_outbox_v1';
   bool _confirmedSwapOutboxFlushing = false;
   Timer? _confirmedSwapOutboxTimer;
   static const String _limitShowcaseSeenKey = 'swap_limit_showcase_seen_v1';
@@ -1828,7 +1829,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       // Persist first, before navigating away from the successful swap.
       // Only public transaction identifiers are saved, never wallet secrets.
       final prefs = await SharedPreferences.getInstance();
-      final entries = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+      final entries =
+          prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
       final event = <String, dynamic>{
         'eventId': analyticsEventId,
         'chainId': chainId,
@@ -1850,7 +1852,9 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         entries.add(jsonEncode(event));
         await prefs.setStringList(
           _confirmedSwapOutboxKey,
-          entries.length > 200 ? entries.sublist(entries.length - 200) : entries,
+          entries.length > 200
+              ? entries.sublist(entries.length - 200)
+              : entries,
         );
       }
       unawaited(_drainConfirmedSwapOutbox());
@@ -1865,14 +1869,16 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     _confirmedSwapOutboxFlushing = true;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final pending = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+      final pending =
+          prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
       for (final raw in pending) {
         if (!mounted) break;
         Map<String, dynamic> item;
         try {
           item = jsonDecode(raw) as Map<String, dynamic>;
         } catch (_) {
-          final current = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+          final current =
+              prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
           current.remove(raw);
           await prefs.setStringList(_confirmedSwapOutboxKey, current);
           continue;
@@ -1881,7 +1887,10 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         final txHash = item['txHash'] as String?;
         final wallet = item['walletAddress'] as String?;
         final chainId = item['chainId'] as int?;
-        if (eventId == null || txHash == null || wallet == null || chainId == null) {
+        if (eventId == null ||
+            txHash == null ||
+            wallet == null ||
+            chainId == null) {
           continue;
         }
         final recorded = await _swapExecutionService.recordConfirmedSwap(
@@ -1891,7 +1900,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
           walletAddress: wallet,
         );
         if (!recorded) continue; // Retain for retry on next tick/launch.
-        final latest = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+        final latest =
+            prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
         latest.remove(raw);
         await prefs.setStringList(_confirmedSwapOutboxKey, latest);
         if (item['rewardReferral'] == true &&
@@ -1900,7 +1910,9 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
             await _rewardReferralForSwap(wallet, txHash);
           } catch (error) {
             // Backend independently backfills confirmed qualifying rewards.
-            debugPrint('Referral callback unavailable; backend will reconcile: $error');
+            debugPrint(
+              'Referral callback unavailable; backend will reconcile: $error',
+            );
           }
         }
       }
