@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2024-05-24 - [Secure Authentication Input Fields]
+**Vulnerability:** The login and register profile screens accepted sensitive credentials (passwords, x-secrets) without screen capture protections or explicitly clearing the text field memory upon disposal.
+**Learning:** Even standard authentication screens require defense-in-depth measures against malware or shoulder-surfing. The `ScreenCaptureGuard` should be utilized. Additionally, sensitive `TextEditingController` text values must be explicitly cleared to drop references early in the disposal cycle, limiting the time material remains in memory.
+**Prevention:** All authentication screens accepting credentials must implement the `ScreenCaptureGuard` lifecycle properly in `initState` and `dispose`, and explicitly clear contents of controllers associated with sensitive inputs (e.g., `controller.text = ''`) before disposing them.
