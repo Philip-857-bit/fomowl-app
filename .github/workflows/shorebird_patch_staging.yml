@@ -54,8 +54,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
-      AFFILIATE_MINI_APP_URL: https://affiliatestaging.owlletapp.com
-      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: https://affiliatestaging.owlletapp.com
+      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || 'https://affiliate.owlletapp.com' }}
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || 'https://affiliate.owlletapp.com,https://affiliatestaging.owlletapp.com' }}
       BURST_MINI_APP_URL: https://burststaging.owlletapp.com
       BURST_MINI_APP_ALLOWED_ORIGINS: https://burststaging.owlletapp.com
       KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -352,8 +352,8 @@ jobs:
       CASH_IN_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_URL: https://owlletpaystaging.owlletapp.com
       OWLLET_PAY_MINI_APP_ALLOWED_ORIGINS: https://owlletpaystaging.owlletapp.com
-      AFFILIATE_MINI_APP_URL: https://affiliatestaging.owlletapp.com
-      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: https://affiliatestaging.owlletapp.com
+      AFFILIATE_MINI_APP_URL: ${{ vars.AFFILIATE_MINI_APP_URL || 'https://affiliate.owlletapp.com' }}
+      AFFILIATE_MINI_APP_ALLOWED_ORIGINS: ${{ vars.AFFILIATE_MINI_APP_ALLOWED_ORIGINS || 'https://affiliate.owlletapp.com,https://affiliatestaging.owlletapp.com' }}
       BURST_MINI_APP_URL: https://burststaging.owlletapp.com
       BURST_MINI_APP_ALLOWED_ORIGINS: https://burststaging.owlletapp.com
       GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
