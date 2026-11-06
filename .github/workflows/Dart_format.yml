@@ -40,4 +40,9 @@ jobs:
         run: flutter pub get
 
       - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed .
+        run: |
+          dart format --output=none --set-exit-if-changed . || {
+            dart format lib/screens/swap/swap_screen.dart
+            git diff -- lib/screens/swap/swap_screen.dart
+            exit 1
+          }
