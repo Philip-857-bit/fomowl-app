@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/burst/burst_api_client.dart';
 import 'package:fomowl_wallet/features/burst/burst_create_screen.dart';

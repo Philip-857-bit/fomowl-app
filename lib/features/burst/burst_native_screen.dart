@@ -12,12 +12,9 @@ import '../../services/blockchain_service.dart';
 import '../../services/http_client_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/sensitive_access_guard.dart';
-import '../../widgets/bottom_navigation.dart';
 import '../mini_apps/burst_account_session.dart';
 import '../mini_apps/burst_sign_in.dart';
-import '../shell/app_shell_controller.dart';
 import 'burst_api_client.dart';
-import 'burst_account_verifier.dart';
 import 'burst_campaign_screen.dart';
 import 'burst_create_screen.dart';
 import 'burst_draft_recovery.dart';
@@ -114,28 +111,6 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         false;
   }
 
-  Future<void> _ensureAccount() async {
-    await BurstAccountVerifier(
-      readToken: _auth.getToken,
-      logout: _auth.logout,
-      signIn: () async =>
-          mounted &&
-          await Navigator.of(context).pushNamed('/profile-login') == true,
-      fetchProfile: (token) => HttpClientService().client
-          .get(
-            AppEnvironment.profile('/me'),
-            headers: {
-              'Authorization': 'Bearer $token',
-              'Accept': 'application/json',
-            },
-          )
-          .timeout(const Duration(seconds: 20)),
-      readCachedProfile: _auth.getCachedProfile,
-      saveTransientProfile: (profile) =>
-          _auth.saveProfile(profile, persist: false),
-    ).ensureAccount();
-  }
-
   Future<void> _open() async {
     if (_loading || !mounted) return;
     setState(() {
@@ -206,7 +181,6 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         }
         return;
       }
-      await _ensureAccount();
       final identity = await _identity();
       final chainId = int.tryParse(identity.networkKey.substring(4));
       if (chainId == null) throw StateError('Select a supported network.');
@@ -299,26 +273,6 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _changeWallet() async {
-    if (_loading) return;
-    setState(() => _loading = true);
-    await _session?.close();
-    _session = null;
-    _api = null;
-    _address = null;
-    _openedIdentity = null;
-    _config = null;
-    _campaigns = const [];
-    _participations = const [];
-    _hasDraft = false;
-    if (!mounted) return;
-    await Navigator.of(context).pushNamed('/wallets');
-    if (mounted) {
-      setState(() => _loading = false);
-      await _open();
     }
   }
 
@@ -649,27 +603,17 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         );
     return Scaffold(
       backgroundColor: const Color(0xff0a0a0a),
-      bottomNavigationBar: api != null && !_recoveryOnly && _error == null
-          ? BottomNavBar(
-              currentTab: AppShellTab.wallet,
-              onCurrentTabTap: () => Navigator.of(context).pop(),
-            )
-          : null,
-      appBar: api != null && !_recoveryOnly && _error == null
-          ? null
-          : AppBar(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              title: const Text('Burst'),
-              centerTitle: true,
-              actions: [
-                IconButton(
-                  onPressed: _loading ? null : _changeWallet,
-                  tooltip: 'Change wallet',
-                  icon: const Icon(Icons.account_balance_wallet_outlined),
-                ),
-              ],
-            ),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('Burst'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())

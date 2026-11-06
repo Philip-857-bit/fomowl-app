@@ -137,4 +137,65 @@ void main() {
       client.close();
     },
   );
+
+  test(
+    'pure Web3 wallet-first authentication succeeds without account token or profile id',
+    () async {
+      final requests = <http.Request>[];
+      final token = 'bs_${'b' * 64}';
+      const walletProfileId = 'wallet-profile-uuid-1234';
+      final client = MockClient((request) async {
+        requests.add(request);
+        final data = request.url.path.endsWith('/challenge')
+            ? {
+                'profileId': walletProfileId,
+                'address': address,
+                'challengeId': challengeId,
+                'message':
+                    'Owllet Burst wallet connection\nAccount: $walletProfileId\nWallet: $address\nChallenge: $challengeId\n\nLink this wallet to your existing Owllet account for Burst. No transaction or gas fee.\nExpires At: $expiry',
+              }
+            : {
+                'profileId': walletProfileId,
+                'address': address,
+                'token': token,
+                'expiresAt': expiry,
+                'linkedWallets': [address],
+              };
+        return http.Response(jsonEncode({'success': true, 'data': data}), 200);
+      });
+      var signed = 0;
+      final service = BurstAccountSessionService(
+        client: client,
+        api: (path) => Uri.parse('https://example.test/api$path'),
+        readAccountToken: () async => null,
+        readIdentity: () async => const BurstSignInIdentity(
+          address: address,
+          networkKey: 'evm:56',
+          origin: 'native',
+          profileId: '',
+        ),
+        confirm: (_, _) async => true,
+        authenticate: () async => true,
+        signMessage: (_, _) async {
+          signed++;
+          return '0x${'22' * 65}';
+        },
+      );
+      final session = await service.connect(interactive: true);
+      expect(session['token'], token);
+      expect(session['profileId'], walletProfileId);
+      expect(session['address'], address);
+      expect(signed, 1);
+      expect(requests.length, 2);
+      expect(
+        requests.every((r) => r.headers['Authorization'] == null),
+        isTrue,
+        reason: 'Wallet-first flow must omit Authorization header',
+      );
+
+      final snapshot = service.takeReusableSession();
+      expect(snapshot, isNotNull);
+      client.close();
+    },
+  );
 }

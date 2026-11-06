@@ -42,7 +42,7 @@ class SignInFixture {
     signMessage: (account, message) async {
       calls.add('sign');
       expect(account, address);
-      expect(message, challenge());
+      expect(message, payload?['message'] ?? challenge());
       return signature;
     },
   );
@@ -217,4 +217,30 @@ void main() {
     final fixture = SignInFixture()..signature = 'invalid';
     await expectLater(fixture.run(), throwsFormatException);
   });
+
+  test(
+    'wallet-first sign-in succeeds with empty profileId and signs valid backend challenge',
+    () async {
+      final fixture = SignInFixture()
+        ..current = const BurstSignInIdentity(
+          address: address,
+          networkKey: 'evm:56',
+          origin: 'https://burststaging.owlletapp.com',
+          profileId: '',
+        );
+      final result = await fixture.run(
+        payload: {
+          'message':
+              'Owllet Burst wallet connection\nAccount: generated-wallet-profile-id\nWallet: $address\n'
+              'Challenge: 11111111-1111-4111-8111-111111111111\n\n'
+              'Link this wallet to your existing Owllet account for Burst. No transaction or gas fee.'
+              '\nExpires At: 2100-01-01T00:00:00+00:00',
+          'address': address,
+        },
+      );
+      expect(fixture.calls, ['confirm', 'authenticate', 'sign']);
+      expect(result['ok'], isTrue);
+      expect(result['address'], address);
+    },
+  );
 }

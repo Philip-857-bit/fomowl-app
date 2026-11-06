@@ -43,8 +43,7 @@ class BurstSignInController {
     try {
       final identity = await readIdentity();
       final address = identity.address.trim().toLowerCase();
-      if (identity.profileId.isEmpty ||
-          !RegExp(r'^0x[0-9a-f]{40}$').hasMatch(address) ||
+      if (!RegExp(r'^0x[0-9a-f]{40}$').hasMatch(address) ||
           address == '0x${'0' * 40}' ||
           !RegExp(r'^evm:[1-9][0-9]*$').hasMatch(identity.networkKey)) {
         throw const FormatException(
@@ -70,7 +69,8 @@ class BurstSignInController {
           ? null
           : DateTime.tryParse(challenge.group(4)!);
       if (challenge == null ||
-          challenge.group(1) != identity.profileId ||
+          (identity.profileId.isNotEmpty &&
+              challenge.group(1) != identity.profileId) ||
           challenge.group(2)!.toLowerCase() != address ||
           expiresAt == null) {
         throw const FormatException(

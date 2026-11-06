@@ -19,7 +19,7 @@ class BurstSessionSnapshot {
   BurstSessionSnapshot._(this._session, this._identity, this._parentToken);
   final Map<String, dynamic> _session;
   final BurstSignInIdentity _identity;
-  final String _parentToken;
+  final String? _parentToken;
 }
 
 /// Native holds the full account token. Only the server-issued Burst credential
@@ -55,7 +55,6 @@ class BurstAccountSessionService {
     if (_busy ||
         cached == null ||
         identity == null ||
-        parent == null ||
         !_matches(cached, identity)) {
       return null;
     }
@@ -78,11 +77,11 @@ class BurstAccountSessionService {
   Future<Map<String, dynamic>> _request(
     String method,
     String path,
-    String token, [
+    String? token, [
     Map<String, dynamic>? body,
   ]) async {
     final headers = {
-      'Authorization': 'Bearer $token',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       'Accept': 'application/json',
       if (body != null) 'Content-Type': 'application/json',
     };
@@ -110,7 +109,10 @@ class BurstAccountSessionService {
     }
     if (response.statusCode != 200) {
       throw BurstConnectionFailure(
-        response.statusCode == 401 && !token.startsWith('bs_')
+        response.statusCode == 401 &&
+                token != null &&
+                token.isNotEmpty &&
+                !token.startsWith('bs_')
             ? 'ACCOUNT_REQUIRED'
             : value['error'] is String
             ? value['error'] as String
@@ -133,7 +135,8 @@ class BurstAccountSessionService {
   bool _matches(Map<String, dynamic> session, BurstSignInIdentity identity) {
     final expiry = session['expiresAt'];
     final parsed = expiry is String ? DateTime.tryParse(expiry) : null;
-    return session['profileId'] == identity.profileId &&
+    return (identity.profileId.isEmpty ||
+            session['profileId'] == identity.profileId) &&
         session['address'] is String &&
         (session['address'] as String).toLowerCase() ==
             identity.address.toLowerCase() &&
@@ -152,7 +155,7 @@ class BurstAccountSessionService {
 
   Future<void> _requireCurrent(
     BurstSignInIdentity identity,
-    String accountToken,
+    String? accountToken,
   ) async {
     if (!identity.matches(await readIdentity()) ||
         accountToken != await readAccountToken()) {
@@ -173,20 +176,7 @@ class BurstAccountSessionService {
     _busy = true;
     try {
       final accountToken = await readAccountToken();
-      if (accountToken == null || accountToken.isEmpty) {
-        await _clear();
-        throw const BurstConnectionFailure(
-          'ACCOUNT_REQUIRED',
-          'Sign in to your Owllet account.',
-        );
-      }
       final identity = await readIdentity();
-      if (identity.profileId.isEmpty) {
-        throw const BurstConnectionFailure(
-          'ACCOUNT_REQUIRED',
-          'Sign in to your Owllet account.',
-        );
-      }
       if (_cached != null &&
           (_identity == null ||
               !_identity!.matches(identity) ||
@@ -234,7 +224,8 @@ class BurstAccountSessionService {
       );
       final challengeId = challenge['challengeId'];
       final message = challenge['message'];
-      if (challenge['profileId'] != identity.profileId ||
+      if ((identity.profileId.isNotEmpty &&
+              challenge['profileId'] != identity.profileId) ||
           challenge['address'] != identity.address.toLowerCase() ||
           message is! String ||
           challengeId is! String ||
