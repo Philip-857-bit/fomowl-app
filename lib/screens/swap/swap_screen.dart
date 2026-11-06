@@ -84,6 +84,9 @@ class _SupportedSwapScreen extends StatefulWidget {
 
 class _SwapScreenState extends State<_SupportedSwapScreen> {
   static const String _livePriceScope = 'swap_screen';
+  static const String _confirmedSwapOutboxKey = 'confirmed_swap_analytics_outbox_v1';
+  bool _confirmedSwapOutboxFlushing = false;
+  Timer? _confirmedSwapOutboxTimer;
   static const String _limitShowcaseSeenKey = 'swap_limit_showcase_seen_v1';
   static const String _limitTutorialControlHiddenKey =
       'swap_limit_tutorial_control_hidden_v1';
@@ -527,6 +530,13 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       tronService: _tronSwapService,
     );
     _fromDisplayController.addListener(_handleFromDisplayChanged);
+    // A confirmed swap must survive app closure or transient backend
+    // verification lag. Retry persisted analytics on the next launch.
+    unawaited(_drainConfirmedSwapOutbox());
+    _confirmedSwapOutboxTimer = Timer.periodic(
+      const Duration(minutes: 2),
+      (_) => unawaited(_drainConfirmedSwapOutbox()),
+    );
     unawaited(_loadLimitTutorialPreferences());
     _loadWalletBalance();
     _activateSwapLiveTracking();
@@ -959,6 +969,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
 
   @override
   void dispose() {
+    _confirmedSwapOutboxTimer?.cancel();
     _runtimeConfig.removeListener(_handleRuntimePolicyChanged);
     _fromDisplayController.removeListener(_handleFromDisplayChanged);
     _fromDisplayController.dispose();
@@ -1607,7 +1618,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         final confirmation = await _waitForTxConfirmation(txHash);
         if (!mounted) return;
         if (confirmation == TransactionConfirmationStatus.confirmed) {
-          _scheduleConfirmedSwapBookkeeping(
+          await _scheduleConfirmedSwapBookkeeping(
             analyticsEventId: analyticsEventId,
             chainId: chainId,
             txHash: txHash,
@@ -1800,12 +1811,12 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     await _refreshWalletState(blockchain: blockchain);
   }
 
-  void _scheduleConfirmedSwapBookkeeping({
+  Future<void> _scheduleConfirmedSwapBookkeeping({
     required String? analyticsEventId,
     required int chainId,
     required String txHash,
     required bool rewardReferralOnSwap,
-  }) {
+  }) async {
     final walletAddress = _walletAddress;
     if (analyticsEventId == null ||
         analyticsEventId.isEmpty ||
@@ -1813,23 +1824,91 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         walletAddress.isEmpty) {
       return;
     }
-
-    // Analytics verification can retry while backend RPC nodes converge. It
-    // must never hold the confirmed-success UI or the user's next action.
-    unawaited(() async {
-      final recorded = await _swapExecutionService.recordConfirmedSwap(
-        eventId: analyticsEventId,
-        chainId: chainId,
-        transactionHash: txHash,
-        walletAddress: walletAddress,
-      );
-      if (!recorded || !rewardReferralOnSwap) return;
-      try {
-        await _rewardReferralForSwap(walletAddress, txHash);
-      } catch (error) {
-        debugPrint('Referral reward-on-swap failed: $error');
+    try {
+      // Persist first, before navigating away from the successful swap.
+      // Only public transaction identifiers are saved, never wallet secrets.
+      final prefs = await SharedPreferences.getInstance();
+      final entries = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+      final event = <String, dynamic>{
+        'eventId': analyticsEventId,
+        'chainId': chainId,
+        'txHash': txHash.toLowerCase(),
+        'walletAddress': walletAddress.toLowerCase(),
+        'rewardReferral': rewardReferralOnSwap,
+      };
+      final key = '$chainId:${txHash.toLowerCase()}';
+      final duplicate = entries.any((raw) {
+        try {
+          final item = jsonDecode(raw) as Map<String, dynamic>;
+          return '${item['chainId']}:${item['txHash']}' == key;
+        } catch (_) {
+          return false;
+        }
+      });
+      if (!duplicate) {
+        // Limit storage growth without erasing recent in-flight swaps.
+        entries.add(jsonEncode(event));
+        await prefs.setStringList(
+          _confirmedSwapOutboxKey,
+          entries.length > 200 ? entries.sublist(entries.length - 200) : entries,
+        );
       }
-    }());
+      unawaited(_drainConfirmedSwapOutbox());
+    } catch (error) {
+      // Confirmed blockchain success must never turn into a failure screen.
+      debugPrint('Unable to persist confirmed swap analytics: $error');
+    }
+  }
+
+  Future<void> _drainConfirmedSwapOutbox() async {
+    if (_confirmedSwapOutboxFlushing) return;
+    _confirmedSwapOutboxFlushing = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final pending = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+      for (final raw in pending) {
+        if (!mounted) break;
+        Map<String, dynamic> item;
+        try {
+          item = jsonDecode(raw) as Map<String, dynamic>;
+        } catch (_) {
+          final current = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+          current.remove(raw);
+          await prefs.setStringList(_confirmedSwapOutboxKey, current);
+          continue;
+        }
+        final eventId = item['eventId'] as String?;
+        final txHash = item['txHash'] as String?;
+        final wallet = item['walletAddress'] as String?;
+        final chainId = item['chainId'] as int?;
+        if (eventId == null || txHash == null || wallet == null || chainId == null) {
+          continue;
+        }
+        final recorded = await _swapExecutionService.recordConfirmedSwap(
+          eventId: eventId,
+          chainId: chainId,
+          transactionHash: txHash,
+          walletAddress: wallet,
+        );
+        if (!recorded) continue; // Retain for retry on next tick/launch.
+        final latest = prefs.getStringList(_confirmedSwapOutboxKey) ?? <String>[];
+        latest.remove(raw);
+        await prefs.setStringList(_confirmedSwapOutboxKey, latest);
+        if (item['rewardReferral'] == true &&
+            _walletAddress?.toLowerCase() == wallet) {
+          try {
+            await _rewardReferralForSwap(wallet, txHash);
+          } catch (error) {
+            // Backend independently backfills confirmed qualifying rewards.
+            debugPrint('Referral callback unavailable; backend will reconcile: $error');
+          }
+        }
+      }
+    } catch (error) {
+      debugPrint('Confirmed swap analytics replay unavailable: $error');
+    } finally {
+      _confirmedSwapOutboxFlushing = false;
+    }
   }
 
   Future<void> _rewardReferralForSwap(
@@ -3472,7 +3551,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
           );
           return;
         }
-        _scheduleConfirmedSwapBookkeeping(
+        await _scheduleConfirmedSwapBookkeeping(
           analyticsEventId: execResult.analyticsEventId,
           chainId: 792703809,
           txHash: txHash,
@@ -3530,7 +3609,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         }
         final txHash = execResult.transactionHash!;
         _clearSubmittedSwapState();
-        _scheduleConfirmedSwapBookkeeping(
+        await _scheduleConfirmedSwapBookkeeping(
           analyticsEventId: execResult.analyticsEventId,
           chainId: -195,
           txHash: txHash,
@@ -3638,7 +3717,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       final confirmation = await _waitForTxConfirmation(txHash);
       if (!mounted) return;
       if (confirmation == TransactionConfirmationStatus.confirmed) {
-        _scheduleConfirmedSwapBookkeeping(
+        await _scheduleConfirmedSwapBookkeeping(
           analyticsEventId: result.analyticsEventId,
           chainId: blockchain.activeChain.chainId,
           txHash: txHash,
