@@ -2633,11 +2633,11 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     }
     final message = payload['message'] as String;
     if (!message.startsWith(
-          'fomowl.app wants you to sign in with your Ethereum account:\\n',
+          'fomowl.app wants you to sign in with your Ethereum account:\n',
         ) ||
         !message.contains('Sign in to OwlletPay.') ||
-        !message.contains('\\nNonce: ') ||
-        !message.contains('\\nIssued At: ')) {
+        !message.contains('\nNonce: ') ||
+        !message.contains('\nIssued At: ')) {
       return const <String, dynamic>{
         'ok': false,
         'error': 'Only OwlletPay sign-in challenges can be signed here.',
