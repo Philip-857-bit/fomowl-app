@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   release_android_staging:
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash
@@ -377,7 +377,7 @@ jobs:
           retention-days: 90
 
   validate_release_lineage:
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
     needs: release_android_staging
     defaults:
       run:

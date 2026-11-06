@@ -290,7 +290,7 @@ jobs:
           retention-days: 90
 
   validate_release_lineage:
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
     needs: release_ios
     defaults:
       run:

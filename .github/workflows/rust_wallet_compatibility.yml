@@ -24,7 +24,7 @@ defaults:
 jobs:
   wallet-compatibility:
     name: Validate Wallet Invariants & Compatibility
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository

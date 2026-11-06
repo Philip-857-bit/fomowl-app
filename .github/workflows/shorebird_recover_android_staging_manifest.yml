@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   recover_manifest:
-    runs-on: [self-hosted, linux, x64, owllet-ci]
+    runs-on: ubuntu-latest
     steps:
       - name: Set up Python
         uses: actions/setup-python@v5
