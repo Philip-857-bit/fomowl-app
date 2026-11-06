@@ -1242,6 +1242,7 @@ class WalletService {
   Future<String> sendRawTransactionRequest({
     required String rpcUrl,
     required int chainId,
+    String? expectedFromAddress,
     String? toAddress,
     BigInt? valueInWei,
     String? dataHex,
@@ -1257,6 +1258,11 @@ class WalletService {
     }
     final account = await _activeEvmSigningAccount();
     try {
+      if (expectedFromAddress != null &&
+          account.address.hex.toLowerCase() !=
+              expectedFromAddress.toLowerCase()) {
+        throw StateError('The selected wallet changed before signing.');
+      }
       final client = _clientForRpc(rpcUrl);
       final data = _decodeHexBytes(dataHex);
       final to = toAddress == null || toAddress.isEmpty

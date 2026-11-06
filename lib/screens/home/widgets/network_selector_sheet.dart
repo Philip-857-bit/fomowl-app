@@ -108,9 +108,7 @@ class _NetworkSelectorSheetState extends State<NetworkSelectorSheet> {
       if (entry is EvmNetworkEntry) entry.chain.chainId.toString(),
     ];
 
-    return searchableValues.any(
-      (value) => value.toLowerCase().contains(query),
-    );
+    return searchableValues.any((value) => value.toLowerCase().contains(query));
   }
 
   @override

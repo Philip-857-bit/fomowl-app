@@ -18,6 +18,7 @@ class _Wallet extends WalletService {
   Future<String> sendRawTransactionRequest({
     required String rpcUrl,
     required int chainId,
+    String? expectedFromAddress,
     String? toAddress,
     BigInt? valueInWei,
     String? dataHex,

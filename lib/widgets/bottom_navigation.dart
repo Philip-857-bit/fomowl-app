@@ -14,10 +14,12 @@ class BottomNavBar extends StatefulWidget {
     super.key,
     required this.currentTab,
     this.bitcoinBridgeOnly = false,
+    this.onCurrentTabTap,
   });
 
   final AppShellTab? currentTab;
   final bool bitcoinBridgeOnly;
+  final VoidCallback? onCurrentTabTap;
 
   @override
   State<BottomNavBar> createState() => _BottomNavBarState();
@@ -28,6 +30,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   void _openTab(AppShellTab tab) {
     if (widget.currentTab == tab) {
+      widget.onCurrentTabTap?.call();
       return;
     }
     Navigator.pushNamedAndRemoveUntil(

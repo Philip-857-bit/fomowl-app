@@ -8,11 +8,13 @@ const identity = BurstSignInIdentity(
   address: address,
   networkKey: 'evm:56',
   origin: 'https://burststaging.owlletapp.com',
+  profileId: 'account-a',
 );
 String challenge() =>
-    'fomowl.app wants you to sign in with your Ethereum account:\n$address\n\n'
-    'Sign in to OwlletPay. This request will not trigger a blockchain transaction '
-    'or cost any gas fees.\n\nNonce: ${'a' * 64}\nIssued At: 2026-10-29T10:00:00+00:00';
+    'Owllet Burst wallet connection\nAccount: account-a\nWallet: $address\n'
+    'Challenge: 11111111-1111-4111-8111-111111111111\n\n'
+    'Link this wallet to your existing Owllet account for Burst. No transaction or gas fee.'
+    '\nExpires At: 2100-01-01T00:00:00+00:00';
 
 class SignInFixture {
   final controller = BurstSignInController();
@@ -83,12 +85,12 @@ void main() {
         },
         {'message': challenge(), 'address': address, 'transaction': '0x1234'},
         {
-          'message': challenge().replaceFirst('Nonce:', 'Command:'),
+          'message': challenge().replaceFirst('Challenge:', 'Command:'),
           'address': address,
         },
         {
           'message': challenge().replaceFirst(
-            '2026-10-29T10:00:00+00:00',
+            '2100-01-01T00:00:00+00:00',
             'invalid',
           ),
           'address': address,
@@ -101,12 +103,29 @@ void main() {
     },
   );
 
+  test(
+    'an expired challenge throws FormatException and is never signed',
+    () async {
+      final fixture = SignInFixture();
+      final expiredChallenge = challenge().replaceFirst(
+        '2100-01-01T00:00:00+00:00',
+        '2020-01-01T00:00:00+00:00',
+      );
+      await expectLater(
+        fixture.run(payload: {'message': expiredChallenge, 'address': address}),
+        throwsFormatException,
+      );
+      expect(fixture.calls, isEmpty);
+    },
+  );
+
   test('a non-EVM wallet cannot sign a Burst login', () async {
     final fixture = SignInFixture()
       ..current = const BurstSignInIdentity(
         address: address,
         networkKey: 'solana:mainnet',
         origin: 'https://burststaging.owlletapp.com',
+        profileId: 'account-a',
       );
     await expectLater(fixture.run(), throwsFormatException);
     expect(fixture.calls, isEmpty);
@@ -132,16 +151,19 @@ void main() {
           address: '0x2222222222222222222222222222222222222222',
           networkKey: 'evm:56',
           origin: 'https://burststaging.owlletapp.com',
+          profileId: 'account-a',
         ),
         const BurstSignInIdentity(
           address: address,
           networkKey: 'evm:1',
           origin: 'https://burststaging.owlletapp.com',
+          profileId: 'account-a',
         ),
         const BurstSignInIdentity(
           address: address,
           networkKey: 'evm:56',
           origin: 'https://other.example',
+          profileId: 'account-a',
         ),
       ]) {
         final fixture = SignInFixture();
@@ -162,6 +184,7 @@ void main() {
         address: address,
         networkKey: 'evm:1',
         origin: 'https://burststaging.owlletapp.com',
+        profileId: 'account-a',
       );
       return true;
     };

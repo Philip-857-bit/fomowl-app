@@ -52,6 +52,7 @@ import '../discover/discover_url_utils.dart';
 import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
 import 'burst_sign_in.dart';
+import 'burst_account_session.dart';
 import 'widgets/mini_app_identity_title.dart';
 
 @visibleForTesting
@@ -282,7 +283,22 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   bool _loadingContext = true;
   bool _switchNetworkRequestInFlight = false;
   bool _bitcoinCashoutInFlight = false;
-  final BurstSignInController _burstSignIn = BurstSignInController();
+  bool _burstSessionFlowBusy = false;
+  late final BurstAccountSessionService _burstAccountSession =
+      BurstAccountSessionService(
+        client: HttpClientService().client,
+        api: AppEnvironment.api,
+        readAccountToken: _authService.getToken,
+        readIdentity: _readBurstIdentity,
+        confirm: _confirmBurstConnection,
+        authenticate: () async =>
+            mounted &&
+            await SensitiveAccessGuard.verify(
+              context,
+              reason: 'Connect this wallet to your Owllet account.',
+            ),
+        signMessage: _walletService.signMessageForAddress,
+      );
   final BitcoinPostTransactionRefresh _bitcoinCashoutRefresh =
       BitcoinPostTransactionRefresh();
   late final BitcoinOfframpApi _bitcoinOfframpApi = BitcoinOfframpApi();
@@ -438,7 +454,8 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     // wallet key); otherwise we only surface a cached token to keep open fast.
     String? walletSessionToken;
     if (walletAddress != null &&
-        !OwlletMiniApps.isOwlletPayId(widget.definition.id)) {
+        !OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
+        widget.definition.id != 'burst') {
       try {
         walletSessionToken = widget.definition.requiresWalletSession
             ? await _walletBackendAuthService
@@ -641,8 +658,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               _runtimeConfig.snapshot.miniAppsEnabled &&
               _runtimeConfig.snapshot.transfersEnabled &&
               widget.definition.id == 'burst',
-          'requestSignMessage':
-              activeChainFamily == 'evm' && widget.definition.id == 'burst',
+          'requestSignMessage': false,
+          'requestBurstSession': widget.definition.id == 'burst',
+          'disconnectBurstSession': widget.definition.id == 'burst',
           'notify': true,
           'getBalances':
               _runtimeConfig.snapshot.portfolioEnabled &&
@@ -904,6 +922,12 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     requestSignMessage: function(payload) {
       return callHost({ type: 'request_sign_message', payload: payload || {} });
     },
+    requestBurstSession: function(payload) {
+      return callHost({ type: 'request_burst_session', payload: payload || {} });
+    },
+    disconnectBurstSession: function() {
+      return callHost({ type: 'disconnect_burst_session' });
+    },
     saveReceiptImage: function(payload) {
       return callHost({ type: 'save_receipt_image', payload: payload || {} });
     },
@@ -990,6 +1014,28 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         return const <String, dynamic>{'ok': true};
       case 'ready':
         return <String, dynamic>{'ok': true, 'context': _bridgeContext};
+      case 'request_burst_session':
+        final payload = raw['payload'];
+        if (payload is! Map) {
+          return const {
+            'ok': false,
+            'error': 'Invalid wallet connection request.',
+          };
+        }
+        return _handleBurstSessionRequest(payload.cast<String, dynamic>());
+      case 'disconnect_burst_session':
+        if (widget.definition.id != 'burst' || !await _isCurrentPageTrusted()) {
+          return const {
+            'ok': false,
+            'error': 'Wallet connection is unavailable.',
+          };
+        }
+        try {
+          await _burstAccountSession.disconnect();
+          return const {'ok': true};
+        } catch (error) {
+          return {'ok': false, 'error': AppErrorUtils.userMessage(error)};
+        }
       case 'request_wallet_transfer':
         if (!await _runtimeFeatureEnabled('transfer')) {
           return _runtimeFeatureDisabledResponse();
@@ -1727,6 +1773,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       transactionHash = await _walletService.sendRawTransactionRequest(
         rpcUrl: chain.rpcUrl,
         chainId: chainId,
+        expectedFromAddress: walletAddress,
         toAddress: transaction['toAddress']!.toString(),
         valueInWei: _parseBaseUnitValue(transaction['valueBaseUnits']),
         dataHex: transaction['calldata']!.toString(),
@@ -1866,7 +1913,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     required String walletAddress,
     required bool confirm,
   }) async {
-    final auth = CashinProfileAuthService(walletService: _walletService);
+    final auth = _burstAccountSession;
     final response = await auth
         .sendAuthorized(
           walletAddress,
@@ -1897,7 +1944,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     required String walletAddress,
   }) async {
     for (var attempt = 0; attempt < 20; attempt++) {
-      final auth = CashinProfileAuthService(walletService: _walletService);
+      final auth = _burstAccountSession;
       final response = await auth
           .sendAuthorized(
             walletAddress,
@@ -2562,78 +2609,205 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     return plan;
   }
 
-  /// Burst uses backend-verified wallet sign-in. Other mini apps retain their
-  /// existing account-login policy; this is not a general message-signing API.
+  /// Generic web-message signing remains disabled. Burst ownership challenges
+  /// are fetched and signed natively as part of an account-bound connection.
   Future<Map<String, dynamic>> _handleSignMessageRequest(
     Map<String, dynamic> payload,
+  ) async => const {
+    'ok': false,
+    'error': 'Use the account wallet-connection flow in Owllet.',
+  };
+
+  Future<BurstSignInIdentity> _readBurstIdentity() async {
+    final uri = await _controller?.getUrl();
+    if (!mounted || uri == null || !_isTrustedOrigin(uri)) {
+      throw const BurstConnectionFailure(
+        'CONTEXT_CHANGED',
+        'Burst is no longer on its trusted page.',
+      );
+    }
+    final network = context.read<BlockchainService>().activeNetworkKey;
+    final profile = await _authService.getCachedProfile();
+    final wallet = await _walletService.getWalletAddressForFamily(
+      ChainFamily.evm,
+    );
+    if (!network.startsWith('evm:') || wallet == null) {
+      throw const BurstConnectionFailure(
+        'EVM_REQUIRED',
+        'Choose an EVM wallet and network in Owllet.',
+      );
+    }
+    return BurstSignInIdentity(
+      address: wallet,
+      networkKey: network,
+      origin: normalizeOriginFromUri(uri),
+      profileId: profile?['id'] is String ? profile!['id'] as String : '',
+    );
+  }
+
+  Future<bool> _confirmBurstConnection(String message, String address) async {
+    if (!mounted) return false;
+    return await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: AppColors.cardDark,
+            title: const Text('Connect wallet to Burst'),
+            content: SingleChildScrollView(
+              child: Text(
+                'Connect $address to your existing Owllet account. Your account stays the same when you change wallets. No transaction or gas fee.\n\n$message',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Connect'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _ensureBurstAccount({
+    required bool interactive,
+    required bool register,
+  }) async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var token = await _authService.getToken();
+      if (token == null || token.isEmpty) {
+        if (!interactive || !mounted) {
+          throw const BurstConnectionFailure(
+            'ACCOUNT_REQUIRED',
+            'Sign in to your Owllet account.',
+          );
+        }
+        final result = await Navigator.pushNamed(
+          context,
+          register ? '/profile-register' : '/profile-login',
+        );
+        if (result != true) {
+          throw const BurstConnectionFailure(
+            'ACCOUNT_REQUIRED',
+            'Sign in to your Owllet account.',
+          );
+        }
+        token = await _authService.getToken();
+      }
+      if (token == null || token.isEmpty) break;
+      final response = await HttpClientService().client
+          .get(
+            AppEnvironment.profile('/me'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Accept': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode == 401) {
+        await _authService.logout();
+        if (!interactive) break;
+        continue;
+      }
+      if (response.statusCode != 200) {
+        throw const BurstConnectionFailure(
+          'ACCOUNT_UNAVAILABLE',
+          'Your Owllet account could not be verified. Try again.',
+        );
+      }
+      final body = jsonDecode(response.body);
+      final profile = body is Map ? (body['data'] ?? body) : null;
+      if (profile is! Map<String, dynamic> || profile['id'] is! String) {
+        throw const BurstConnectionFailure(
+          'ACCOUNT_UNAVAILABLE',
+          'Your Owllet account could not be verified.',
+        );
+      }
+      await _authService.saveProfile(profile);
+      return;
+    }
+    throw const BurstConnectionFailure(
+      'ACCOUNT_REQUIRED',
+      'Sign in to your Owllet account again.',
+    );
+  }
+
+  Future<Map<String, dynamic>> _handleBurstSessionRequest(
+    Map<String, dynamic> payload,
   ) async {
-    if (widget.definition.id != 'burst') {
-      return const <String, dynamic>{
+    if (widget.definition.id != 'burst' || !await _isCurrentPageTrusted()) {
+      return const {
         'ok': false,
-        'error':
-            'Wallet sign-in is turned off. Sign in with your Owllet Pay email and password.',
+        'code': 'HOST_UNAVAILABLE',
+        'error': 'Wallet connection is unavailable.',
       };
     }
-    try {
-      return await _burstSignIn.sign(
-        miniAppId: widget.definition.id,
-        payload: payload,
-        readIdentity: () async {
-          final uri = await _controller?.getUrl();
-          if (!mounted || uri == null || !_isTrustedOrigin(uri)) {
-            throw StateError('Burst is no longer on its trusted page.');
-          }
-          final networkKey = context.read<BlockchainService>().activeNetworkKey;
-          final address = await _walletService.getWalletAddressForFamily(
-            ChainFamily.evm,
-          );
-          return BurstSignInIdentity(
-            address: address ?? '',
-            networkKey: networkKey,
-            origin: normalizeOriginFromUri(uri),
-          );
-        },
-        confirm: (message, address) async {
-          if (!mounted) return false;
-          return await showDialog<bool>(
-                context: context,
-                barrierDismissible: false,
-                builder: (dialogContext) => AlertDialog(
-                  backgroundColor: AppColors.cardDark,
-                  title: const Text('Sign in to Burst'),
-                  content: SingleChildScrollView(
-                    child: Text(
-                      'Prove ownership of $address. No transaction or gas fee.\n\n$message',
-                    ),
-                  ),
-                  actions: <Widget>[
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(dialogContext, true),
-                      child: const Text('Sign in'),
-                    ),
-                  ],
-                ),
-              ) ??
-              false;
-        },
-        authenticate: () async =>
-            mounted &&
-            await SensitiveAccessGuard.verify(
-              context,
-              reason: 'Sign in to Burst with this wallet.',
-              requireTwoFactor: false,
-            ),
-        signMessage: _walletService.signMessageForAddress,
-      );
-    } catch (error) {
-      return <String, dynamic>{
+    if (_burstSessionFlowBusy) {
+      return const {
         'ok': false,
+        'code': 'REQUEST_PENDING',
+        'error': 'A wallet connection is already open.',
+      };
+    }
+    if (payload.keys.any(
+          (key) => !['interactive', 'selectWallet', 'register'].contains(key),
+        ) ||
+        payload.values.any((value) => value is! bool)) {
+      return const {
+        'ok': false,
+        'code': 'INVALID_REQUEST',
+        'error': 'Invalid wallet connection request.',
+      };
+    }
+    _burstSessionFlowBusy = true;
+    try {
+      final interactive = payload['interactive'] == true;
+      await _ensureBurstAccount(
+        interactive: interactive,
+        register: payload['register'] == true,
+      );
+      if (interactive && payload['selectWallet'] == true) {
+        await _burstAccountSession.disconnect();
+        if (!mounted) {
+          throw const BurstConnectionFailure(
+            'CONTEXT_CHANGED',
+            'Burst was closed.',
+          );
+        }
+        await Navigator.pushNamed(context, '/wallets');
+      }
+      if (!mounted) {
+        throw const BurstConnectionFailure(
+          'CONTEXT_CHANGED',
+          'Burst was closed.',
+        );
+      }
+      await _prepareBridgeContext();
+      await _publishBridgeContext();
+      final session = await _burstAccountSession.connect(
+        interactive: interactive,
+      );
+      await _prepareBridgeContext();
+      await _publishBridgeContext();
+      return {'ok': true, ...session};
+    } on BurstConnectionFailure catch (error) {
+      if (mounted) {
+        await _prepareBridgeContext();
+        await _publishBridgeContext();
+      }
+      return {'ok': false, 'code': error.code, 'error': error.message};
+    } catch (error) {
+      return {
+        'ok': false,
+        'code': 'CONNECTION_FAILED',
         'error': AppErrorUtils.userMessage(error),
       };
+    } finally {
+      _burstSessionFlowBusy = false;
     }
   }
 

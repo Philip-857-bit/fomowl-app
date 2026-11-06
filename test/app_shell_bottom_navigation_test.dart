@@ -4,8 +4,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/shell/app_shell_bottom_navigation.dart';
 import 'package:fomowl_wallet/features/shell/app_shell_controller.dart';
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
+import 'package:fomowl_wallet/widgets/bottom_navigation.dart';
 
 void main() {
+  testWidgets('standalone wallet navigation can return from a feature', (
+    tester,
+  ) async {
+    var walletTaps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          bottomNavigationBar: BottomNavBar(
+            currentTab: AppShellTab.wallet,
+            onCurrentTabTap: () => walletTaps++,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Wallet'));
+    await tester.pump();
+    expect(walletTaps, 1);
+  });
   testWidgets(
     'Bitcoin exposes Bridge rather than ordinary Swap in navigation',
     (tester) async {

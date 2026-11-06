@@ -50,9 +50,9 @@ class BlockchainCatalog {
       chainId: 42420,
       rpcUrl: AppEnvironment.blockchain('/42420/rpc').toString(),
       explorerUrl: 'https://scan.assetchain.org',
-      // Official chainlist icon (IPFS CID in ethereum-lists/chains).
+      // Official network icon from Asset Chain explorer.
       logoUrl:
-          'https://ipfs.io/ipfs/QmXc4bxuyWvQFqjuunXmvZZs1AwGChyY7sGYK6tgCkp3nJ',
+          'https://scan.assetchain.org/assets/configs/network_icon.png',
     ),
     EvmChain(
       name: 'BNB Smart Chain',
@@ -526,6 +526,7 @@ class BlockchainCatalog {
     534352 => 'assets/images/chains/scroll.png',
     1135 => 'assets/images/chains/lisk.webp',
     42220 => 'assets/images/chains/celo.png',
+    42420 => 'assets/images/chains/assetchain.png',
     _ => null,
   };
 

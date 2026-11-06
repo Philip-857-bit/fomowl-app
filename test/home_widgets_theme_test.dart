@@ -193,66 +193,63 @@ void main() {
       },
     );
 
-    testWidgets(
-      'NetworkSelectorSheet keeps a stable height while filtering',
-      (tester) async {
-        final entries = [
-          EvmNetworkEntry(
-            const EvmChain(
-              chainId: 1,
-              name: 'Ethereum',
-              symbol: 'ETH',
-              rpcUrl: '',
-            ),
+    testWidgets('NetworkSelectorSheet keeps a stable height while filtering', (
+      tester,
+    ) async {
+      final entries = [
+        EvmNetworkEntry(
+          const EvmChain(
+            chainId: 1,
+            name: 'Ethereum',
+            symbol: 'ETH',
+            rpcUrl: '',
           ),
-          EvmNetworkEntry(
-            const EvmChain(
-              chainId: 56,
-              name: 'BNB Smart Chain',
-              symbol: 'BNB',
-              rpcUrl: '',
-            ),
+        ),
+        EvmNetworkEntry(
+          const EvmChain(
+            chainId: 56,
+            name: 'BNB Smart Chain',
+            symbol: 'BNB',
+            rpcUrl: '',
           ),
-          EvmNetworkEntry(
-            const EvmChain(
-              chainId: 8453,
-              name: 'Base',
-              symbol: 'ETH',
-              rpcUrl: '',
-            ),
+        ),
+        EvmNetworkEntry(
+          const EvmChain(
+            chainId: 8453,
+            name: 'Base',
+            symbol: 'ETH',
+            rpcUrl: '',
           ),
-        ];
+        ),
+      ];
 
-        await tester.pumpWidget(
-          wrapWithTheme(
-            networkKey: 'evm:56',
-            child: NetworkSelectorSheet(
-              entries: entries,
-              activeNetworkKey: 'evm:56',
-              onSelect: (_) {},
-            ),
+      await tester.pumpWidget(
+        wrapWithTheme(
+          networkKey: 'evm:56',
+          child: NetworkSelectorSheet(
+            entries: entries,
+            activeNetworkKey: 'evm:56',
+            onSelect: (_) {},
           ),
-        );
-        await tester.pump();
+        ),
+      );
+      await tester.pump();
 
-        final sheetFinder = find.byKey(
-          const ValueKey('network-selector-sheet'),
-        );
-        final before = tester.getSize(sheetFinder).height;
+      final sheetFinder = find.byKey(const ValueKey('network-selector-sheet'));
+      final before = tester.getSize(sheetFinder).height;
 
-        await tester.enterText(
-          find.byKey(const ValueKey('network-search-field')),
-          'base',
-        );
-        await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('network-search-field')),
+        'base',
+      );
+      await tester.pump();
 
-        final after = tester.getSize(sheetFinder).height;
-        expect(after, before);
-        expect(find.text('Base Chain'), findsOneWidget);
-        expect(find.text('Ethereum Chain'), findsNothing);
-        expect(find.text('BNB Smart Chain'), findsNothing);
-      },
-    );
+      final after = tester.getSize(sheetFinder).height;
+      expect(after, before);
+      expect(find.text('Base Chain'), findsOneWidget);
+      expect(find.text('Ethereum Chain'), findsNothing);
+      expect(find.text('BNB Smart Chain'), findsNothing);
+    });
 
     testWidgets(
       'BalanceCard Buy Crypto button reflects active chain adaptive theme',

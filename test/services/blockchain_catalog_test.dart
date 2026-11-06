@@ -62,6 +62,22 @@ void main() {
     );
   });
 
+  test('Asset Chain uses its bundled official logo and points to official explorer icon', () {
+    expect(
+      BlockchainCatalog.localChainLogoAsset(42420),
+      'assets/images/chains/assetchain.png',
+    );
+    final assetChain = BlockchainCatalog.builtInChains.singleWhere(
+      (chain) => chain.chainId == 42420,
+    );
+    expect(assetChain.name, 'Asset Chain');
+    expect(assetChain.symbol, 'RWA');
+    expect(
+      assetChain.logoUrl,
+      'https://scan.assetchain.org/assets/configs/network_icon.png',
+    );
+  });
+
   test('identifies Ethereum L2 badges without marking L1 chains', () {
     expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, contains(4663));
     expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, contains(8453));

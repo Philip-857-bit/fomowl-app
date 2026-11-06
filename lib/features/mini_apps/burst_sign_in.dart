@@ -4,20 +4,23 @@ class BurstSignInIdentity {
     required this.address,
     required this.networkKey,
     required this.origin,
+    required this.profileId,
   });
 
   final String address;
   final String networkKey;
   final String origin;
+  final String profileId;
 
   bool matches(BurstSignInIdentity other) =>
       address.toLowerCase() == other.address.toLowerCase() &&
       networkKey == other.networkKey &&
-      origin == other.origin;
+      origin == other.origin &&
+      profileId == other.profileId;
 }
 
-/// Restricts signing to the existing backend's profile authentication challenge.
-/// The backend still verifies and consumes its own nonce before issuing a JWT.
+/// Native-only approval for linking a wallet to an existing account. The full
+/// account credential never enters this class or the hosted mini app.
 class BurstSignInController {
   bool _busy = false;
 
@@ -40,7 +43,8 @@ class BurstSignInController {
     try {
       final identity = await readIdentity();
       final address = identity.address.trim().toLowerCase();
-      if (!RegExp(r'^0x[0-9a-f]{40}$').hasMatch(address) ||
+      if (identity.profileId.isEmpty ||
+          !RegExp(r'^0x[0-9a-f]{40}$').hasMatch(address) ||
           address == '0x${'0' * 40}' ||
           !RegExp(r'^evm:[1-9][0-9]*$').hasMatch(identity.networkKey)) {
         throw const FormatException(
@@ -57,16 +61,25 @@ class BurstSignInController {
         throw const FormatException('Invalid Burst sign-in request.');
       }
       final challenge = RegExp(
-        r'^fomowl\.app wants you to sign in with your Ethereum account:\n'
-        r'(0x[0-9a-fA-F]{40})\n\n'
-        r'Sign in to OwlletPay\. This request will not trigger a blockchain transaction '
-        r'or cost any gas fees\.\n\nNonce: ([0-9a-fA-F]{64})\nIssued At: ([^\n]+)$',
+        r'^Owllet Burst wallet connection\nAccount: ([^\n]+)\nWallet: '
+        r'(0x[0-9a-fA-F]{40})\nChallenge: ([0-9a-fA-F-]{36})\n\n'
+        r'Link this wallet to your existing Owllet account for Burst\. No transaction or gas fee\.'
+        r'\nExpires At: ([^\n]+)$',
       ).firstMatch(message);
+      final expiresAt = challenge == null
+          ? null
+          : DateTime.tryParse(challenge.group(4)!);
       if (challenge == null ||
-          challenge.group(1)!.toLowerCase() != address ||
-          DateTime.tryParse(challenge.group(3)!) == null) {
+          challenge.group(1) != identity.profileId ||
+          challenge.group(2)!.toLowerCase() != address ||
+          expiresAt == null) {
         throw const FormatException(
           'Only an Owllet backend sign-in challenge can be signed here.',
+        );
+      }
+      if (!expiresAt.toUtc().isAfter(DateTime.now().toUtc())) {
+        throw const FormatException(
+          'The sign-in challenge has expired.',
         );
       }
       Future<void> requireCurrent() async {
