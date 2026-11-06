@@ -78,9 +78,7 @@ class BurstSignInController {
         );
       }
       if (!expiresAt.toUtc().isAfter(DateTime.now().toUtc())) {
-        throw const FormatException(
-          'The sign-in challenge has expired.',
-        );
+        throw const FormatException('The sign-in challenge has expired.');
       }
       Future<void> requireCurrent() async {
         if (!identity.matches(await readIdentity())) {

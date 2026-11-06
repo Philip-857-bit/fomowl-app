@@ -183,14 +183,18 @@ class _BurstHistoryScreenState extends State<BurstHistoryScreen> {
                 builder: (context) {
                   final isDark =
                       Theme.of(context).brightness == Brightness.dark;
-                  final cardColor =
-                      isDark ? const Color(0xff0e0e0e) : const Color(0xfff5f5f5);
-                  final borderColor =
-                      isDark ? const Color(0xff1f1f1f) : const Color(0xffe0e0e0);
-                  final titleColor =
-                      isDark ? const Color(0xffe2e2e2) : Colors.black87;
-                  final subtitleColor =
-                      isDark ? const Color(0xffc8c6c8) : Colors.black54;
+                  final cardColor = isDark
+                      ? const Color(0xff0e0e0e)
+                      : const Color(0xfff5f5f5);
+                  final borderColor = isDark
+                      ? const Color(0xff1f1f1f)
+                      : const Color(0xffe0e0e0);
+                  final titleColor = isDark
+                      ? const Color(0xffe2e2e2)
+                      : Colors.black87;
+                  final subtitleColor = isDark
+                      ? const Color(0xffc8c6c8)
+                      : Colors.black54;
 
                   return Container(
                     margin: const EdgeInsets.only(top: 24),

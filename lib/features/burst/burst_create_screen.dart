@@ -571,8 +571,8 @@ class _BurstCreateScreenState extends State<BurstCreateScreen> {
                           _nft
                               ? '${_allocations.fold<int>(0, (sum, a) => sum + a.quantity)} NFTs'
                               : (_amount.text.trim().isEmpty
-                                  ? '--'
-                                  : '${_amount.text.trim()} ${currentToken.symbol}'),
+                                    ? '--'
+                                    : '${_amount.text.trim()} ${currentToken.symbol}'),
                           textAlign: TextAlign.end,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -617,12 +617,12 @@ class _BurstCreateScreenState extends State<BurstCreateScreen> {
                           _nft
                               ? (_participants.text.isEmpty ? '--' : '1 NFT')
                               : (perParticipant == null
-                                  ? '--'
-                                  : burstAssetAmount(
-                                      perParticipant.toString(),
-                                      currentToken.decimals,
-                                      currentToken.symbol,
-                                    )),
+                                    ? '--'
+                                    : burstAssetAmount(
+                                        perParticipant.toString(),
+                                        currentToken.decimals,
+                                        currentToken.symbol,
+                                      )),
                           textAlign: TextAlign.end,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -642,7 +642,10 @@ class _BurstCreateScreenState extends State<BurstCreateScreen> {
                       padding: EdgeInsets.only(top: 8),
                       child: Text(
                         'The amount must divide evenly across participants.',
-                        style: TextStyle(color: Color(0xffff8b91), fontSize: 13),
+                        style: TextStyle(
+                          color: Color(0xffff8b91),
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   const Padding(

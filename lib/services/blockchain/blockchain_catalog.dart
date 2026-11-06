@@ -51,8 +51,7 @@ class BlockchainCatalog {
       rpcUrl: AppEnvironment.blockchain('/42420/rpc').toString(),
       explorerUrl: 'https://scan.assetchain.org',
       // Official network icon from Asset Chain explorer.
-      logoUrl:
-          'https://scan.assetchain.org/assets/configs/network_icon.png',
+      logoUrl: 'https://scan.assetchain.org/assets/configs/network_icon.png',
     ),
     EvmChain(
       name: 'BNB Smart Chain',
