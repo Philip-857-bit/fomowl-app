@@ -45,7 +45,7 @@ class QuickActionsRow extends StatelessWidget {
             ),
           if (onBurst != null)
             _QuickActionButton(
-              icon: Icons.rocket_launch_outlined,
+              imageAsset: 'assets/burst/create_icon.png',
               label: 'Burst',
               onTap: onBurst!,
             ),
@@ -56,15 +56,17 @@ class QuickActionsRow extends StatelessWidget {
 }
 
 class _QuickActionButton extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final String? imageAsset;
   final String label;
   final VoidCallback onTap;
 
   const _QuickActionButton({
-    required this.icon,
+    this.icon,
+    this.imageAsset,
     required this.label,
     required this.onTap,
-  });
+  }) : assert(icon != null || imageAsset != null);
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +97,19 @@ class _QuickActionButton extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            child: Center(
+              child: imageAsset != null
+                  ? Image.asset(
+                      imageAsset!,
+                      width: 24,
+                      height: 24,
+                      fit: BoxFit.contain,
+                      color: iconColor,
+                      colorBlendMode: BlendMode.srcIn,
+                      excludeFromSemantics: true,
+                    )
+                  : Icon(icon, color: iconColor, size: 24),
+            ),
           ),
           const SizedBox(height: 8),
           Text(

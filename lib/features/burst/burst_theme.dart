@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../theme/app_chain_theme.dart';
@@ -18,17 +16,14 @@ class BurstHeader extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Transform.rotate(
-          angle: math.pi,
-          child: Image.asset(
-            'assets/burst/create_icon.png',
-            width: 48,
-            height: 27,
-            fit: BoxFit.contain,
-            color: accent == const Color(0xffea2a33) ? null : accent,
-            colorBlendMode: BlendMode.srcIn,
-            excludeFromSemantics: true,
-          ),
+        Image.asset(
+          'assets/burst/create_icon.png',
+          width: 48,
+          height: 27,
+          fit: BoxFit.contain,
+          color: accent == const Color(0xffea2a33) ? null : accent,
+          colorBlendMode: BlendMode.srcIn,
+          excludeFromSemantics: true,
         ),
         const SizedBox(width: 8),
         const Text(
