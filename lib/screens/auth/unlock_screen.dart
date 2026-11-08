@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/storage_service.dart';
 import '../../services/biometric_service.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../widgets/mobile_scaffold.dart';
 import '../../utils/toast_utils.dart';
 import '../../l10n/app_localizations.dart';
@@ -37,15 +38,20 @@ class _UnlockScreenState extends State<UnlockScreen> {
   bool _navigated = false;
   bool _returnToPrevious = false;
 
+  // Sentinel: Add ScreenCaptureGuard to protect against malicious background screenshotting/recording of password entries
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
+
   @override
   void initState() {
     super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
     _checkLockoutAndBiometric();
   }
 
   @override
   void dispose() {
     _lockoutTimer?.cancel();
+    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 
