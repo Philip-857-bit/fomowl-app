@@ -65,31 +65,35 @@ class _TokenInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[
-      Expanded(
-        child: Text(
-          data.label,
-          style: GoogleFonts.outfit(
-            fontSize: 13,
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        ),
-      ),
-      Text(
-        data.value,
-        style: GoogleFonts.outfit(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-    ];
-    if (data.trailing != null) {
-      children.add(data.trailing!);
-    }
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(children: children),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              data.label,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            data.value,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          if (data.trailing != null) ...[
+            const SizedBox(width: 8),
+            data.trailing!,
+          ],
+        ],
+      ),
     );
   }
 }

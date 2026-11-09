@@ -10,8 +10,8 @@ const Color kSplashBackground = Color(0xFF000000);
 /// Accent red used in the Figma splash design.
 const Color _kSplashAccent = Color(0xFFEA2A33);
 
-/// Exported Figma splash mark: owl, wordmark, and tagline as one centered unit.
-const String _kSplashMarkAsset = 'assets/images/splash.png';
+/// Owl icon asset for the splash screen mark.
+const String _kSplashLogoAsset = 'assets/images/splash.png';
 
 class SplashScreenBody extends StatelessWidget {
   const SplashScreenBody({super.key});
@@ -26,30 +26,54 @@ class SplashScreenBody extends StatelessWidget {
           children: [
             Align(
               alignment: const Alignment(0, -0.07),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final markWidth = (constraints.maxWidth - 48)
-                      .clamp(0.0, 254.0)
-                      .toDouble();
-
-                  return Image.asset(
-                    _kSplashMarkAsset,
-                    width: markWidth,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    _kSplashLogoAsset,
+                    width: 56,
+                    height: 62,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.high,
-                    errorBuilder: (context, err, stack) => SizedBox(
-                      width: markWidth,
-                      height: markWidth,
-                      child: const Center(
+                    errorBuilder: (context, err, stack) => const SizedBox(
+                      width: 56,
+                      height: 62,
+                      child: Center(
                         child: Icon(
                           Icons.broken_image_outlined,
                           color: Colors.white24,
-                          size: 64,
+                          size: 40,
                         ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Owllet',
+                        style: GoogleFonts.poppins(
+                          fontSize: 44,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Trade instantly. Spend Effortlessly',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: _kSplashAccent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             Align(

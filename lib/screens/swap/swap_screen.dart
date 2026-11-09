@@ -1523,6 +1523,10 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     )) {
       return 'Gasless mode only supports ERC-20 source tokens. Select a token like USDC/USDT.';
     }
+    if (lower.contains('quoter simulation failed') ||
+        lower.contains('no liquid market')) {
+      return 'No liquidity pool';
+    }
     if (lower.contains('no route found') || lower.contains('no liquidity')) {
       return 'Amount is too low for this swap. Try a larger amount.';
     }

@@ -7,7 +7,6 @@ import 'package:web3dart/web3dart.dart';
 
 import '../../config/app_environment.dart';
 import '../../models/chain.dart';
-import '../../services/auth_service.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/http_client_service.dart';
 import '../../services/wallet_service.dart';
@@ -42,7 +41,6 @@ class BurstNativeScreen extends StatefulWidget {
 
 class _BurstNativeScreenState extends State<BurstNativeScreen> {
   final _wallet = WalletService();
-  final _auth = AuthService();
   final _drafts = BurstDraftStore();
   BurstNativeSession? _session;
   BurstApiClient? _api;
@@ -74,7 +72,6 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     if (!mounted) throw StateError('Burst was closed.');
     final blockchain = context.read<BlockchainService>();
     final network = blockchain.activeNetworkKey;
-    final profile = await _auth.getCachedProfile();
     final address = await _wallet.getWalletAddressForFamily(ChainFamily.evm);
     if (!network.startsWith('evm:') || address == null || address.isEmpty) {
       throw StateError('Select an EVM wallet and network to use Burst.');
@@ -83,7 +80,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       address: address,
       networkKey: network,
       origin: 'native',
-      profileId: profile?['id']?.toString() ?? '',
+      profileId: '',
     );
   }
 
@@ -94,7 +91,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           builder: (dialog) => AlertDialog(
             title: const Text('Use this wallet for Burst'),
             content: Text(
-              'Confirm that $address belongs to your Owllet account. This signature does not send a transaction or cost gas.',
+              'Confirm that $address belongs to you. This signature does not send a transaction or cost gas.',
             ),
             actions: [
               TextButton(
@@ -187,7 +184,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       final session = BurstNativeSession(
         client: HttpClientService().client,
         api: AppEnvironment.api,
-        readAccountToken: _auth.getToken,
+        readAccountToken: () async => null,
         readIdentity: _identity,
         confirm: _confirm,
         authenticate: () async =>

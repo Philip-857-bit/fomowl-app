@@ -600,7 +600,7 @@ void main() {
       );
 
       expect(quote, isNull);
-      expect(service.lastError, contains('Quoter simulation failed'));
+      expect(service.lastError, contains('No liquidity pool'));
 
       // 2. Non-executable estimate allows slot0 fallback
       final estimate = await service.getBestQuoteResult(

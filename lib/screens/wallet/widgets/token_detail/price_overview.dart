@@ -39,16 +39,20 @@ class PriceOverview extends StatelessWidget {
         const SizedBox(height: 4),
         Row(
           children: [
-            Icon(
-              isPositiveChange ? Icons.trending_up : Icons.trending_down,
-              size: 18,
-              color: isPositiveChange ? AppColors.success : AppColors.error,
-            ),
-            const SizedBox(width: 6),
+            if (changeText != '—') ...[
+              Icon(
+                isPositiveChange ? Icons.trending_up : Icons.trending_down,
+                size: 18,
+                color: isPositiveChange ? AppColors.success : AppColors.error,
+              ),
+              const SizedBox(width: 6),
+            ],
             Text(
               changeText,
               style: GoogleFonts.outfit(
-                color: isPositiveChange ? AppColors.success : AppColors.error,
+                color: changeText == '—'
+                    ? Colors.white70
+                    : (isPositiveChange ? AppColors.success : AppColors.error),
               ),
             ),
             const SizedBox(width: 12),

@@ -552,6 +552,21 @@ class BlockchainCatalog {
     return null;
   }
 
+  /// CoinGecko ids for contracts whose chart and market stats already exist.
+  /// Asset Chain is not a CoinGecko platform, so only bridged assets with a
+  /// known listing are mapped. Native gas RWA and WRWA are not included.
+  static String? knownCoinGeckoId(int? chainId, String? contractAddress) {
+    if (chainId != 42420) return null;
+    final address = contractAddress?.trim().toLowerCase();
+    return switch (address) {
+      '0x26e490d30e73c36800788dc6d6315946c4bbea24' => 'tether',
+      '0x2b7c1342cc64add10b2a79c8f9767d2667de64b2' => 'usd-coin',
+      '0x02afe9989d86a0357fbb238579fe035dc17bcab0' => 'xend-finance',
+      '0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f' => 'compliant-naira',
+      _ => null,
+    };
+  }
+
   /// Wrapped Native (WRWA) contract addresses for Asset Chain networks.
   static const Map<int, String> assetChainWrwaAddresses = {
     42420: '0x2584D40B5553E81Bb9deC0b6CD1a2E504AAB1709',

@@ -171,7 +171,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         trailing: IconButton(
           icon: const Icon(Icons.open_in_new, color: Colors.white54, size: 16),
           tooltip: 'Explorer',
-          padding: const EdgeInsets.all(4),
+          padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           onPressed: () => _openNetworkExplorer(token),
         ),
@@ -193,11 +193,11 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                       size: 16,
                     ),
                     tooltip: 'Copy',
-                    padding: const EdgeInsets.all(4),
+                    padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _copyText(contract),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   IconButton(
                     icon: const Icon(
                       Icons.open_in_new,
@@ -205,7 +205,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                       size: 16,
                     ),
                     tooltip: 'Explorer',
-                    padding: const EdgeInsets.all(4),
+                    padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _openExplorer(token, contract),
                   ),
@@ -488,6 +488,26 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         token.contractAddress!,
       );
     }
+    if ((stats == null || (stats.priceUsd ?? 0) <= 0) &&
+        token != null &&
+        token.unitPriceUsd <= 0 &&
+        token.contractAddress != null &&
+        token.contractAddress!.isNotEmpty) {
+      final discovered = await _priceFromTokenSearch(
+        blockchain,
+        token.contractAddress!,
+      );
+      if (discovered != null && discovered > 0) {
+        stats = TokenMarketData(
+          priceUsd: discovered,
+          marketCapUsd: stats?.marketCapUsd,
+          totalSupply: stats?.totalSupply,
+          circulatingSupply: stats?.circulatingSupply,
+          genesisDate: stats?.genesisDate,
+          changePercent24h: stats?.changePercent24h,
+        );
+      }
+    }
     if (!mounted || generation != _statsGeneration) return;
     setState(() {
       _marketData = stats;
@@ -495,7 +515,28 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     });
   }
 
+  Future<double?> _priceFromTokenSearch(
+    BlockchainService blockchain,
+    String contractAddress,
+  ) async {
+    try {
+      final results = await blockchain.searchTokensFromBackend(
+        contractAddress,
+        limit: 5,
+      );
+      final needle = contractAddress.toLowerCase();
+      for (final result in results) {
+        if ((result.contractAddress ?? '').toLowerCase() == needle &&
+            result.unitPriceUsd > 0) {
+          return result.unitPriceUsd;
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   String _formatFiatValue(double? value) {
+    if (value == null || value <= 0) return '—';
     return ValueFormatter.formatUsdValue(ValueFormatter.decimalFromNum(value));
   }
 
@@ -508,7 +549,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   String _formatPriceLabel(double? price) {
     final decimal = ValueFormatter.decimalFromNum(price);
     if (decimal <= Decimal.zero) {
-      return ValueFormatter.formatUsdPrice(decimal);
+      return '—';
     }
 
     final priceDouble = ValueFormatter.doubleFromDecimal(decimal);
@@ -533,7 +574,12 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   String _formatHoldingsValue(Token token, double? priceUsd) {
-    if (priceUsd == null || priceUsd <= 0) return token.formattedValue;
+    if (priceUsd == null || priceUsd <= 0) {
+      if (token.balanceDecimal > Decimal.zero && !token.hasKnownPrice) {
+        return '—';
+      }
+      return token.formattedValue;
+    }
     return ValueFormatter.formatUsdValue(
       token.balanceDecimal * ValueFormatter.decimalFromNum(priceUsd),
     );
@@ -544,8 +590,17 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     final blockchain = _blockchain;
     if (token != null &&
         token.coinGeckoId != null &&
-        token.coinGeckoId!.isNotEmpty) {
-      return token.coinGeckoId!;
+        token.coinGeckoId!.trim().isNotEmpty) {
+      return token.coinGeckoId!.trim();
+    }
+    final contract = token?.contractAddress?.trim();
+    if (contract != null && contract.isNotEmpty) {
+      final networkKey = token?.networkKey ?? blockchain?.activeNetworkKey;
+      final known = BlockchainCatalog.knownCoinGeckoId(
+        NetworkKey.evmChainIdOf(networkKey),
+        contract,
+      );
+      if (known != null) return known;
     }
     final isNative =
         token != null &&
@@ -563,6 +618,15 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       }
     }
     return null;
+  }
+
+  double? _resolvedChangePercent(Token token, double livePriceUsd) {
+    if (livePriceUsd <= 0) return null;
+    final marketChange = _marketData?.changePercent24h;
+    if (token.changePercent24h == 0 && marketChange != null) {
+      return marketChange;
+    }
+    return token.changePercent24h;
   }
 
   double _resolvedDisplayPriceUsd() {
@@ -655,7 +719,14 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
         : _formatSupplyValue(_marketData?.circulatingSupply);
     final livePriceUsd = _resolvedDisplayPriceUsd();
     final priceDisplay = _formatPriceLabel(livePriceUsd);
-    final holdingsDisplay = _formatHoldingsValue(token, _marketData?.priceUsd);
+    final holdingsDisplay = _formatHoldingsValue(
+      token,
+      livePriceUsd > 0 ? livePriceUsd : null,
+    );
+    final changePercent = _resolvedChangePercent(token, livePriceUsd);
+    final changeText = changePercent == null
+        ? '—'
+        : '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -702,9 +773,10 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                       children: [
                         PriceOverview(
                           priceText: priceDisplay,
-                          changeText: token.formattedChange,
+                          changeText: changeText,
                           holdingsText: holdingsDisplay,
-                          isPositiveChange: token.isPositiveChange,
+                          isPositiveChange:
+                              changePercent != null && changePercent >= 0,
                         ),
                         const SizedBox(height: 20),
                         TokenChartCard(

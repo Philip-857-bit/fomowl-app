@@ -1337,6 +1337,7 @@ class BlockchainService extends ChangeNotifier {
       totalSupply: data.totalSupply,
       circulatingSupply: data.circulatingSupply,
       genesisDate: data.genesisDate,
+      changePercent24h: data.changePercent24h,
     );
   }
 
@@ -1366,6 +1367,7 @@ class BlockchainService extends ChangeNotifier {
         totalSupply: null,
         circulatingSupply: null,
         genesisDate: (data['createdAt'] as String?)?.trim(),
+        changePercent24h: _nullableDouble(data['changePercent24h']),
       );
     } catch (_) {
       return null;
@@ -2545,8 +2547,11 @@ class BlockchainService extends ChangeNotifier {
             changePercent24h: _toDouble(entry['changePercent24h']),
             decimals: (_toInt(entry['decimals']) ?? 0).clamp(0, 255),
             imageUrl: (entry['imageUrl'] as String?)?.trim(),
-            coinGeckoId: ((entry['coinGeckoId'] ?? entry['id']) as String?)
-                ?.trim(),
+            coinGeckoId: _coinGeckoIdOrKnown(
+              (entry['coinGeckoId'] ?? entry['id']) as String?,
+              contractAddress,
+              tokenNetworkKey,
+            ),
             isCertified:
                 entry['isCertified'] == true || entry['isNative'] == true,
             // PATCH: Preserve backend price source for DEX badges.
@@ -2877,7 +2882,11 @@ class BlockchainService extends ChangeNotifier {
               : _asTrimmedString(e['imageUrl']),
           coinGeckoId: isActiveNativeToken
               ? activeNetworkCoinGeckoId
-              : _asTrimmedString(e['coinGeckoId']),
+              : _coinGeckoIdOrKnown(
+                  _asTrimmedString(e['coinGeckoId']),
+                  contractAddress,
+                  entryNetworkKey,
+                ),
           isCertified: e['isCertified'] == true,
           // PATCH: Preserve backend price source for DEX badges.
           priceSource:
@@ -3288,6 +3297,19 @@ class BlockchainService extends ChangeNotifier {
       }
       return token.balance > 0;
     }).toList();
+  }
+
+  String? _coinGeckoIdOrKnown(
+    String? rawId,
+    String? contractAddress,
+    String? networkKey,
+  ) {
+    final trimmed = rawId?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+    return BlockchainCatalog.knownCoinGeckoId(
+      NetworkKey.evmChainIdOf(networkKey),
+      contractAddress,
+    );
   }
 
   List<Map<String, String>> _getWellKnownTokens(

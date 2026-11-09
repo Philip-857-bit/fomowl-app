@@ -597,7 +597,7 @@ class AssetChainSwapService {
 
     if (quoteResult == null || quoteResult.amountOut <= BigInt.zero) {
       _lastError =
-          'Quoter simulation failed. Insufficient liquidity in pools for this swap amount on Asset Chain.';
+          'No liquidity pool';
       return null;
     }
 

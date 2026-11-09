@@ -86,8 +86,54 @@ void main() {
         BlockchainCatalog.iconUrlForSymbol('RWA'),
         'https://scan.assetchain.org/assets/configs/network_icon.png',
       );
+      expect(assetChain.coinGeckoId, isNull);
     },
   );
+
+  test('Asset Chain price history is limited to listed bridged tokens', () {
+    expect(
+      BlockchainCatalog.knownCoinGeckoId(
+        42420,
+        '0x02afe9989D86a0357fbb238579FE035dc17BcAB0',
+      ),
+      'xend-finance',
+    );
+    expect(
+      BlockchainCatalog.knownCoinGeckoId(
+        42420,
+        '0x26E490d30e73c36800788DC6d6315946C4BbEa24',
+      ),
+      'tether',
+    );
+    expect(
+      BlockchainCatalog.knownCoinGeckoId(
+        42420,
+        '0x2B7C1342Cc64add10B2a79C8f9767d2667DE64B2',
+      ),
+      'usd-coin',
+    );
+    expect(
+      BlockchainCatalog.knownCoinGeckoId(
+        42420,
+        '0x7923C0f6FA3d1BA6EAFCAedAaD93e737Fd22FC4F',
+      ),
+      'compliant-naira',
+    );
+    expect(
+      BlockchainCatalog.knownCoinGeckoId(
+        42420,
+        '0x2584D40B5553E81Bb9deC0b6CD1a2E504AAB1709',
+      ),
+      isNull,
+    );
+    expect(
+      BlockchainCatalog.knownCoinGeckoId(
+        42421,
+        '0x02afe9989D86a0357fbb238579FE035dc17BcAB0',
+      ),
+      isNull,
+    );
+  });
 
   test('identifies Ethereum L2 badges without marking L1 chains', () {
     expect(BlockchainCatalog.ethereumLayer2BadgeChainIds, contains(4663));

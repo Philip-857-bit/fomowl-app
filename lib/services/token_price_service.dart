@@ -150,6 +150,9 @@ class TokenPriceService extends BaseService {
             totalSupply: _toDouble(marketData['total_supply']),
             circulatingSupply: _toDouble(marketData['circulating_supply']),
             genesisDate: data['genesis_date'] as String?,
+            changePercent24h: _toDouble(
+              marketData['price_change_percentage_24h'],
+            ),
           );
           _tokenMarketDataCache[coinId] = _CachedMarketData(
             value: result,

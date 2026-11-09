@@ -926,7 +926,7 @@ void main() {
         );
 
         expect(quote, isNull);
-        expect(swapService.lastError, contains('Quoter simulation failed'));
+        expect(swapService.lastError, contains('No liquidity pool'));
         expect(
           quoterCallCount > 0,
           isTrue,
@@ -1075,7 +1075,7 @@ void main() {
         );
 
         expect(quote, isNull);
-        expect(swapService.lastError, contains('Quoter simulation failed'));
+        expect(swapService.lastError, contains('No liquidity pool'));
 
         final estimate = await swapService.getBestQuoteResult(
           chainId: 42420,
@@ -1216,7 +1216,7 @@ void main() {
         );
 
         expect(quote, isNull);
-        expect(swapService.lastError, contains('Quoter simulation failed'));
+        expect(swapService.lastError, contains('No liquidity pool'));
 
         final estimate = await swapService.getBestQuoteResult(
           chainId: 42420,
