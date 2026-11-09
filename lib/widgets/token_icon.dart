@@ -383,6 +383,7 @@ class TokenIcon extends StatelessWidget {
       'FOMOWL': const Color(0xFFFF6B35),
       'SOL': const Color(0xFF9945FF),
       'TRX': const Color(0xFFFF0013),
+      'RWA': const Color(0xFF147BC2),
     };
 
     return colors[symbol.toUpperCase()] ?? const Color(0xFF6B7280);

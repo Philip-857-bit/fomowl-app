@@ -37,6 +37,22 @@ void main() {
       expect(token.hasProviderError, isTrue);
     });
 
+    test('renders a missing price as unavailable instead of zero', () {
+      const token = Token(
+        symbol: 'RWA',
+        name: 'Asset Chain',
+        balance: 25,
+        valueUsd: 0,
+        priceUsd: 0,
+        priceStatus: 'price_unavailable',
+        changePercent24h: 0,
+      );
+
+      expect(token.formattedValue, '—');
+      expect(token.formattedPrice, '—');
+      expect(token.hasKnownPrice, isFalse);
+    });
+
     test('recognizes DexScreener as a DEX price source', () {
       const token = Token(
         symbol: 'DEX',

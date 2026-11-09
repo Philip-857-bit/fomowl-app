@@ -11,7 +11,12 @@ import '../../models/chain.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/token.dart';
 import '../../models/token_market_data.dart';
+import '../../models/token_standard.dart';
 import '../swap/swap_screen.dart';
+import '../../services/blockchain/bitcoin_catalog.dart';
+import '../../services/blockchain/blockchain_catalog.dart';
+import '../../services/blockchain/solana_catalog.dart';
+import '../../services/blockchain/tron_catalog.dart';
 import '../../services/blockchain_service.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/value_formatter.dart';
@@ -19,6 +24,7 @@ import 'widgets/token_detail/token_detail_header.dart';
 import 'widgets/token_detail/price_overview.dart';
 import 'widgets/token_detail/token_chart_card.dart';
 import 'widgets/token_detail/timeframe_selector.dart';
+import '../../utils/in_app_link_router.dart';
 import 'widgets/token_detail/token_actions_row.dart';
 import 'widgets/token_detail/token_info_table.dart';
 
@@ -26,6 +32,94 @@ import 'widgets/token_detail/token_info_table.dart';
 /// Shows price, chart placeholder, quick actions, balance, and token info
 class TokenDetailScreen extends StatefulWidget {
   const TokenDetailScreen({super.key});
+
+  static EvmChain? _findChainInService(
+    BlockchainService? blockchain,
+    int chainId,
+  ) {
+    if (blockchain == null) return null;
+    try {
+      return blockchain.allChains.firstWhere((c) => c.chainId == chainId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String? resolveNetworkExplorerUrl(
+    Token token, {
+    BlockchainService? blockchain,
+  }) {
+    String? baseUrl;
+    final networkKey = token.networkKey?.trim();
+    if (networkKey != null && networkKey.isNotEmpty) {
+      final family = NetworkKey.familyOf(networkKey);
+      switch (family) {
+        case ChainFamily.evm:
+          final chainId = NetworkKey.evmChainIdOf(networkKey);
+          if (chainId != null) {
+            final chain =
+                BlockchainCatalog.findChain(chainId) ??
+                _findChainInService(blockchain, chainId);
+            baseUrl = chain?.explorerUrl;
+          }
+          break;
+        case ChainFamily.solana:
+          final chain = SolanaCatalog.builtInChains.firstWhere(
+            (c) => c.networkKey == networkKey,
+            orElse: () => SolanaCatalog.mainnet,
+          );
+          baseUrl = chain.explorerUrl;
+          break;
+        case ChainFamily.tron:
+          final chain = TronCatalog.builtInChains.firstWhere(
+            (c) => c.networkKey == networkKey,
+            orElse: () => TronCatalog.mainnet,
+          );
+          baseUrl = chain.explorerUrl;
+          break;
+        case ChainFamily.bitcoin:
+          final chain = BitcoinCatalog.builtInChains.firstWhere(
+            (c) => c.networkKey == networkKey,
+            orElse: () => BitcoinCatalog.mainnet,
+          );
+          baseUrl = chain.explorerUrl;
+          break;
+      }
+    }
+    baseUrl ??= blockchain?.activeNetworkExplorerUrl;
+    if (baseUrl == null || baseUrl.trim().isEmpty) return null;
+    return baseUrl.trim().endsWith('/')
+        ? baseUrl.trim().substring(0, baseUrl.trim().length - 1)
+        : baseUrl.trim();
+  }
+
+  static String? resolveExplorerUrl(
+    Token token, {
+    BlockchainService? blockchain,
+  }) {
+    final baseUrl = resolveNetworkExplorerUrl(token, blockchain: blockchain);
+    if (baseUrl == null) return null;
+    final contract = token.contractAddress?.trim();
+    if (contract == null || contract.isEmpty) {
+      return baseUrl;
+    }
+    final family = token.networkKey != null
+        ? NetworkKey.familyOf(token.networkKey!)
+        : (blockchain?.activeFamily ?? ChainFamily.evm);
+    switch (family) {
+      case ChainFamily.solana:
+        if (baseUrl.contains('?cluster=')) {
+          final parts = baseUrl.split('?cluster=');
+          return '${parts[0]}/address/$contract?cluster=${parts[1]}';
+        }
+        return '$baseUrl/address/$contract';
+      case ChainFamily.tron:
+        return '$baseUrl/#/token20/$contract';
+      case ChainFamily.evm:
+      case ChainFamily.bitcoin:
+        return '$baseUrl/token/$contract';
+    }
+  }
 
   @override
   State<TokenDetailScreen> createState() => _TokenDetailScreenState();
@@ -42,6 +136,12 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   BlockchainService? _blockchain;
   String? _lastResolvedCoinId;
   int? _lastChainId;
+  bool _hasAppliedInitialNetwork = false;
+  Token? _metadataToken;
+  String? _metadataNetworkKey;
+  int _metadataGeneration = 0;
+  int _chartGeneration = 0;
+  int _statsGeneration = 0;
 
   final List<String> _timeframes = ['5M', '1H', '1D', '1W', '1M', '1Y'];
 
@@ -65,7 +165,17 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     return [
       TokenInfoRowData(label: 'Name', value: token.name),
       TokenInfoRowData(label: 'Ticker', value: token.symbol),
-      TokenInfoRowData(label: 'Network', value: networkName),
+      TokenInfoRowData(
+        label: 'Network',
+        value: networkName,
+        trailing: IconButton(
+          icon: const Icon(Icons.open_in_new, color: Colors.white54, size: 16),
+          tooltip: 'Explorer',
+          padding: const EdgeInsets.all(4),
+          constraints: const BoxConstraints(),
+          onPressed: () => _openNetworkExplorer(token),
+        ),
+      ),
       TokenInfoRowData(
         label: 'Contract Address',
         value: contract == null || contract.isEmpty
@@ -73,11 +183,37 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
             : _shortenAddress(contract),
         trailing: (contract == null || contract.isEmpty)
             ? null
-            : IconButton(
-                icon: const Icon(Icons.copy, color: Colors.white54, size: 16),
-                onPressed: () => _copyText(contract),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.copy,
+                      color: Colors.white54,
+                      size: 16,
+                    ),
+                    tooltip: 'Copy',
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _copyText(contract),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.open_in_new,
+                      color: Colors.white54,
+                      size: 16,
+                    ),
+                    tooltip: 'Explorer',
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _openExplorer(token, contract),
+                  ),
+                ],
               ),
       ),
+      TokenInfoRowData(label: 'Decimals', value: '${token.decimals}'),
+      TokenInfoRowData(label: 'Balance', value: token.formattedBalance),
       TokenInfoRowData(label: 'Market Cap', value: marketCapText),
       TokenInfoRowData(label: 'Total Supply', value: totalSupplyText),
       TokenInfoRowData(
@@ -87,6 +223,26 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       const TokenInfoRowData(label: 'Holders', value: '0'),
       TokenInfoRowData(label: 'Created On', value: createdOn),
     ];
+  }
+
+  Future<void> _openExplorer(Token token, String contract) async {
+    final explorerUrl = TokenDetailScreen.resolveExplorerUrl(
+      token,
+      blockchain: _blockchain,
+    );
+    if (explorerUrl != null && explorerUrl.isNotEmpty) {
+      await InAppLinkRouter.open(context, explorerUrl);
+    }
+  }
+
+  Future<void> _openNetworkExplorer(Token token) async {
+    final baseUrl = TokenDetailScreen.resolveNetworkExplorerUrl(
+      token,
+      blockchain: _blockchain,
+    );
+    if (baseUrl != null && baseUrl.isNotEmpty) {
+      await InAppLinkRouter.open(context, baseUrl);
+    }
   }
 
   void _copyText(String value) {
@@ -113,6 +269,16 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     if (_token == null) {
       final passedToken = ModalRoute.of(context)?.settings.arguments as Token?;
       if (passedToken != null) {
+        if (!_hasAppliedInitialNetwork &&
+            passedToken.networkKey != null &&
+            passedToken.networkKey != service.activeNetworkKey) {
+          _hasAppliedInitialNetwork = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && service.activeNetworkKey != passedToken.networkKey) {
+              service.setActiveNetworkKey(passedToken.networkKey!);
+            }
+          });
+        }
         // Try to grab the live token from BlockchainService to ensure up-to-date balance
         final tokens = service.tokens;
         _token = _findMatchingToken(tokens, passedToken) ?? passedToken;
@@ -135,6 +301,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   void _handleBlockchainUpdate() {
     if (!mounted) return;
     _refreshTokenFromService();
+    unawaited(_enrichTokenMetadataIfNeeded());
     _reloadTokenMarketData();
   }
 
@@ -157,6 +324,18 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     if (!mounted || current == null || blockchain == null) {
       return;
     }
+    if (_metadataNetworkKey != blockchain.activeNetworkKey) {
+      _metadataNetworkKey = blockchain.activeNetworkKey;
+      _metadataToken = null;
+      ++_metadataGeneration;
+    }
+    final networkKey = current.networkKey ?? blockchain.activeNetworkKey;
+    // Detection currently uses the service's active network. Wait for the
+    // route's network switch rather than querying the previous chain.
+    if (blockchain.activeNetworkKey != networkKey ||
+        identical(_metadataToken, current)) {
+      return;
+    }
     final contract = current.contractAddress?.trim();
     if (contract == null || contract.isEmpty) {
       return;
@@ -169,13 +348,25 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       return;
     }
 
-    final resolved = await blockchain.detectTokenByContract(contract);
-    if (!mounted || resolved == null) {
-      return;
+    _metadataToken = current;
+    final generation = ++_metadataGeneration;
+    try {
+      final resolved = await blockchain.detectTokenByContract(contract);
+      if (!mounted ||
+          resolved == null ||
+          generation != _metadataGeneration ||
+          !identical(_token, current) ||
+          blockchain.activeNetworkKey != networkKey ||
+          (resolved.networkKey != null && resolved.networkKey != networkKey)) {
+        return;
+      }
+      setState(() {
+        _token = _mergeResolvedMetadata(current, resolved);
+      });
+      _reloadTokenMarketData(force: true);
+    } finally {
+      if (generation == _metadataGeneration) _metadataToken = null;
     }
-    setState(() {
-      _token = _mergeResolvedMetadata(current, resolved);
-    });
   }
 
   Token _mergeResolvedMetadata(Token current, CustomTokenDefinition resolved) {
@@ -187,7 +378,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       valueUsd: current.valueUsd,
       priceUsd: current.priceUsd,
       changePercent24h: current.changePercent24h,
-      decimals: resolved.decimals > 0 ? resolved.decimals : current.decimals,
+      decimals: resolved.decimals >= 0 ? resolved.decimals : current.decimals,
       imageUrl: (resolved.imageUrl?.trim().isNotEmpty ?? false)
           ? resolved.imageUrl
           : current.imageUrl,
@@ -195,6 +386,10 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
           ? resolved.coinGeckoId
           : current.coinGeckoId,
       isCertified: current.isCertified,
+      networkKey: current.networkKey ?? resolved.networkKey,
+      tokenStandard: current.tokenStandard != TokenStandard.erc20
+          ? current.tokenStandard
+          : resolved.tokenStandard,
       // PATCH: Preserve backend price source metadata when metadata is refreshed.
       priceSource: current.priceSource,
       priceStatus: current.priceStatus,
@@ -207,25 +402,52 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   Token? _findMatchingToken(List<Token> tokens, Token target) {
-    final addr = (target.contractAddress ?? '').toLowerCase();
+    final addr = (target.contractAddress ?? '').trim().toLowerCase();
+    final targetNetwork = target.networkKey?.trim().toLowerCase();
     if (addr.isNotEmpty) {
-      try {
-        return tokens.firstWhere(
-          (t) => (t.contractAddress ?? '').toLowerCase() == addr,
-        );
-      } catch (e) {
-        debugPrint('Error finding token by address: $e');
+      if (targetNetwork != null) {
+        for (final t in tokens) {
+          if ((t.contractAddress ?? '').trim().toLowerCase() == addr &&
+              (t.networkKey == null ||
+                  t.networkKey?.trim().toLowerCase() == targetNetwork)) {
+            return t;
+          }
+        }
+      } else {
+        for (final t in tokens) {
+          if ((t.contractAddress ?? '').trim().toLowerCase() == addr) {
+            return t;
+          }
+        }
       }
-    }
-    try {
-      return tokens.firstWhere((t) => t.symbol == target.symbol);
-    } catch (e) {
-      debugPrint('Error finding token by symbol: $e');
+      // If contract address was specified, never fall back to matching an unrelated token by symbol.
       return null;
     }
+
+    // Native token matching: target contract address is empty
+    if (targetNetwork != null) {
+      for (final t in tokens) {
+        final tAddr = (t.contractAddress ?? '').trim();
+        if (tAddr.isEmpty &&
+            t.symbol == target.symbol &&
+            (t.networkKey == null ||
+                t.networkKey?.trim().toLowerCase() == targetNetwork)) {
+          return t;
+        }
+      }
+    } else {
+      for (final t in tokens) {
+        final tAddr = (t.contractAddress ?? '').trim();
+        if (tAddr.isEmpty && t.symbol == target.symbol) {
+          return t;
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> _fetchChartData() async {
+    final generation = ++_chartGeneration;
     setState(() => _isLoadingChart = true);
     final coinId = _resolveCoinGeckoId();
     if (coinId == null || coinId.isEmpty) {
@@ -241,7 +463,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       coinId,
       _selectedTimeframe,
     );
-    if (mounted) {
+    if (mounted && generation == _chartGeneration) {
       setState(() {
         _priceData = data;
         _isLoadingChart = false;
@@ -250,19 +472,23 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
   }
 
   Future<void> _fetchTokenStats() async {
+    final generation = ++_statsGeneration;
     setState(() => _isLoadingInfo = true);
     final coinId = _resolveCoinGeckoId();
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final token = _token;
+    final networkKey = token?.networkKey ?? blockchain.activeNetworkKey;
     TokenMarketData? stats;
     if (coinId != null && coinId.isNotEmpty) {
       stats = await blockchain.getTokenMarketData(coinId);
-    } else if (_token?.contractAddress != null &&
-        _token!.contractAddress!.isNotEmpty) {
+    } else if (blockchain.activeNetworkKey == networkKey &&
+        token?.contractAddress != null &&
+        token!.contractAddress!.isNotEmpty) {
       stats = await blockchain.getBackendTokenMarketData(
-        _token!.contractAddress!,
+        token.contractAddress!,
       );
     }
-    if (!mounted) return;
+    if (!mounted || generation != _statsGeneration) return;
     setState(() {
       _marketData = stats;
       _isLoadingInfo = false;
@@ -324,11 +550,17 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     final isNative =
         token != null &&
         (token.contractAddress == null || token.contractAddress!.isEmpty);
-    if (isNative &&
-        blockchain != null &&
-        blockchain.activeChain.coinGeckoId != null &&
-        blockchain.activeChain.coinGeckoId!.isNotEmpty) {
-      return blockchain.activeChain.coinGeckoId!;
+    if (isNative && blockchain != null) {
+      final networkKey = token.networkKey ?? blockchain.activeNetworkKey;
+      final chainId = NetworkKey.evmChainIdOf(networkKey);
+      if (chainId != null) {
+        return (BlockchainCatalog.findChain(chainId) ??
+                TokenDetailScreen._findChainInService(blockchain, chainId))
+            ?.coinGeckoId;
+      }
+      if (blockchain.activeNetworkKey == networkKey) {
+        return blockchain.activeNetworkCoinGeckoId;
+      }
     }
     return null;
   }
@@ -358,6 +590,43 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
     _fetchTokenStats();
   }
 
+  String _resolveNetworkName(Token token, BlockchainService blockchain) {
+    final networkKey = token.networkKey?.trim();
+    if (networkKey != null && networkKey.isNotEmpty) {
+      final family = NetworkKey.familyOf(networkKey);
+      switch (family) {
+        case ChainFamily.evm:
+          final chainId = NetworkKey.evmChainIdOf(networkKey);
+          if (chainId != null) {
+            final chain =
+                BlockchainCatalog.findChain(chainId) ??
+                TokenDetailScreen._findChainInService(blockchain, chainId);
+            if (chain != null && chain.name.isNotEmpty) return chain.name;
+          }
+          break;
+        case ChainFamily.solana:
+          final chain = SolanaCatalog.builtInChains.firstWhere(
+            (c) => c.networkKey == networkKey,
+            orElse: () => SolanaCatalog.mainnet,
+          );
+          return chain.name;
+        case ChainFamily.tron:
+          final chain = TronCatalog.builtInChains.firstWhere(
+            (c) => c.networkKey == networkKey,
+            orElse: () => TronCatalog.mainnet,
+          );
+          return chain.name;
+        case ChainFamily.bitcoin:
+          final chain = BitcoinCatalog.builtInChains.firstWhere(
+            (c) => c.networkKey == networkKey,
+            orElse: () => BitcoinCatalog.mainnet,
+          );
+          return chain.name;
+      }
+    }
+    return blockchain.activeNetworkName;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -374,7 +643,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
       );
     }
     final blockchain = Provider.of<BlockchainService>(context);
-    final networkName = blockchain.activeNetworkName;
+    final networkName = _resolveNetworkName(token, blockchain);
     final marketCapText = _isLoadingInfo
         ? l.loading
         : _formatFiatValue(_marketData?.marketCapUsd);
@@ -416,6 +685,11 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                 TokenDetailHeader(
                   token: token,
                   isFavorite: _isFavorite,
+                  chainId: token.networkKey != null
+                      ? NetworkKey.evmChainIdOf(token.networkKey!)
+                      : (_blockchain?.activeFamily == ChainFamily.evm
+                            ? _blockchain?.activeChain.chainId
+                            : null),
                   onBack: () => Navigator.pop(context),
                   onToggleFavorite: () =>
                       setState(() => _isFavorite = !_isFavorite),
@@ -455,6 +729,7 @@ class _TokenDetailScreenState extends State<TokenDetailScreen> {
                               onTap: () => Navigator.pushNamed(
                                 context,
                                 '/receive-token',
+                                arguments: token,
                               ),
                             ),
                             TokenActionData(

@@ -1,0 +1,242 @@
+[
+  {
+    "name": "empty_key",
+    "key": "",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "cafb80558a927fa8a2dcec3fd1b8e661ca5cc8bddee9578a50edd22088416679"
+  },
+  {
+    "name": "short_key",
+    "key": "k",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "720c0edeff081911a627f51ebad01812f6df8d6fa1fe3b649f662f462760f974"
+  },
+  {
+    "name": "standard_key",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "6ac528dfb0e93e3a31a1c97cac956e3b48e8f02b99c1dab828b36bf972451d24"
+  },
+  {
+    "name": "long_key_over_64",
+    "key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "cbf66a458a24fe21dc5effff35dc2b34cff1e354835ed0e036d50c6de4902f4a"
+  },
+  {
+    "name": "unicode_key",
+    "key": "密匙_🔑_secret",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "2ccc951661fe772f52c75122ce22518ab3313dbb023d64c3a2ea0671c0fe5007"
+  },
+  {
+    "name": "special_char_key",
+    "key": "!@#$%^&*()_+-=[]{}|;:,.<>?",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "cbd6001306f1557a0342b56e292bc6404b18118f6c1c5c158b8f0db7d02c226a"
+  },
+  {
+    "name": "utf8_chinese",
+    "key": "test_secret_key_12345",
+    "method": "POST",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "{\"name\":\"中文测试\"}",
+    "canonical": "POST\n/transactions\n1710000100\n58872e4b952f1929dd051a5e0cd90f0643de5883675774a30328f1a87cbf3fef",
+    "signature": "cc3bcefae9a3e021f184b1d64a8c31575cab6e02ee57a5bb3e4f594771779841"
+  },
+  {
+    "name": "utf8_emoji",
+    "key": "test_secret_key_12345",
+    "method": "POST",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "{\"icon\":\"🦉🚀⚡💰🔥\"}",
+    "canonical": "POST\n/transactions\n1710000100\nf47acd5edf0bb7c15d9eab40212d44c79f8d4150fcd4df2f169697bde2d695b9",
+    "signature": "daf89a19499357bbec019f370908cc2f1ab902e06483997ec1d3b0178dc00d15"
+  },
+  {
+    "name": "utf8_currency",
+    "key": "test_secret_key_12345",
+    "method": "POST",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "{\"symbols\":\"€£¥₹₽₩\"}",
+    "canonical": "POST\n/transactions\n1710000100\n0c52cb7f0c68d9ff9c620df95db99c111fcb23687c036d276e6e1224ee56bc39",
+    "signature": "14f425068c092ca9c5496025aee1845934ee8055b40a9ac35ae3f493a6c2516a"
+  },
+  {
+    "name": "json_whitespace",
+    "key": "test_secret_key_12345",
+    "method": "POST",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "{\n  \"key\": \"value\"\n}",
+    "canonical": "POST\n/transactions\n1710000100\n796a0bdfc73f373f33ec3098a246b3d27a10d75e9f4f3dd4e4630efc0f2d3184",
+    "signature": "d4dbedc61eddce18451e1e16e391c9de72bc07747ade5312dbb8b7a45142cd77"
+  },
+  {
+    "name": "empty_string_body",
+    "key": "test_secret_key_12345",
+    "method": "POST",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "",
+    "canonical": "POST\n/transactions\n1710000100\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "86a9ea21826126ef1ed5f5e02f45e1bcdacbc3e1c27e3d1569c4850b6a31c578"
+  },
+  {
+    "name": "whitespace_only_body",
+    "key": "test_secret_key_12345",
+    "method": "POST",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "   ",
+    "canonical": "POST\n/transactions\n1710000100\n0aad7da77d2ed59c396c99a74e49f3a4524dcdbcb5163251b1433d640247aeb4",
+    "signature": "805ea637963e1bec68de145d01a610421fbbae951953c6749e9cbc399dd3eb79"
+  },
+  {
+    "name": "method_lowercase",
+    "key": "test_secret_key_12345",
+    "method": "get",
+    "path": "/tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "6ac528dfb0e93e3a31a1c97cac956e3b48e8f02b99c1dab828b36bf972451d24"
+  },
+  {
+    "name": "method_mixed",
+    "key": "test_secret_key_12345",
+    "method": "PoSt",
+    "path": "/transactions",
+    "ts": "1710000100",
+    "body": "",
+    "canonical": "POST\n/transactions\n1710000100\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "86a9ea21826126ef1ed5f5e02f45e1bcdacbc3e1c27e3d1569c4850b6a31c578"
+  },
+  {
+    "name": "method_put_spaces",
+    "key": "test_secret_key_12345",
+    "method": "  put  ",
+    "path": "/transactions",
+    "ts": "1710000150",
+    "body": null,
+    "canonical": "PUT\n/transactions\n1710000150\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "d1fc54604245d4c5e93fd358da0ce344f61c14610bc1375ff29661acda465745"
+  },
+  {
+    "name": "path_no_slash",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "tokens",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "6ac528dfb0e93e3a31a1c97cac956e3b48e8f02b99c1dab828b36bf972451d24"
+  },
+  {
+    "name": "path_encoded_query",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/transactions?user=0x1%202&foo=%2Fbar",
+    "ts": "1710000050",
+    "body": null,
+    "canonical": "GET\n/transactions\n1710000050\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "817ac52a1c65ae25b98613d9cc11dee9a9bbd1b198ba20df0bbf1c6dcc90ee77"
+  },
+  {
+    "name": "path_multiple_query",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/bridges?a=1&b=2&c=3&d=4",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/bridges\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "c17ec79c01230dec121fadb07fc8dcea56f99d632975d7b81352fea566814035"
+  },
+  {
+    "name": "path_empty_query",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/tokens?",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "6ac528dfb0e93e3a31a1c97cac956e3b48e8f02b99c1dab828b36bf972451d24"
+  },
+  {
+    "name": "path_root",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "bd0597b5cb1170da4bbe2248870c42e0159510e052102b46cc2d1b90c8530226"
+  },
+  {
+    "name": "path_empty",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "bd0597b5cb1170da4bbe2248870c42e0159510e052102b46cc2d1b90c8530226"
+  },
+  {
+    "name": "path_trailing_slash",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/tokens/",
+    "ts": "1710000000",
+    "body": null,
+    "canonical": "GET\n/tokens/\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "57261c387319c0a9a98806bf8e97d5e25b313d63a5ddce7b8da1dcbfd4f7e908"
+  },
+  {
+    "name": "ts_ms",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": "1710000000000",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "46ee9f269b12a3a2836bb2b99e0c53d02e40d3b11904dc16587b12fd10c78fc7"
+  },
+  {
+    "name": "ts_spaces",
+    "key": "test_secret_key_12345",
+    "method": "GET",
+    "path": "/tokens",
+    "ts": " 1710000000 ",
+    "body": null,
+    "canonical": "GET\n/tokens\n1710000000\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "signature": "6ac528dfb0e93e3a31a1c97cac956e3b48e8f02b99c1dab828b36bf972451d24"
+  }
+]

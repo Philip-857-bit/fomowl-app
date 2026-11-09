@@ -10,6 +10,7 @@ class TokenDetailHeader extends StatelessWidget {
   final bool isFavorite;
   final VoidCallback onBack;
   final VoidCallback onToggleFavorite;
+  final int? chainId;
 
   const TokenDetailHeader({
     super.key,
@@ -17,6 +18,7 @@ class TokenDetailHeader extends StatelessWidget {
     required this.isFavorite,
     required this.onBack,
     required this.onToggleFavorite,
+    this.chainId,
   });
 
   @override
@@ -33,6 +35,7 @@ class TokenDetailHeader extends StatelessWidget {
             tokenSymbol: token.symbol,
             tokenAddress: token.contractAddress,
             tokenImageUrl: token.imageUrl,
+            chainId: chainId,
             size: 36,
           ),
           const SizedBox(width: 12),

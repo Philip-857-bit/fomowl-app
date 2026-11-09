@@ -29,6 +29,86 @@ class HttpClientServiceMock extends HttpClientService {
 void main() {
   group('SwapService quote parsing', () {
     test(
+      'Asset Chain firm quote preserves confirmation bookkeeping id',
+      () async {
+        final service = SwapService(
+          httpClientService: HttpClientServiceMock(
+            MockClient((request) async {
+              return http.Response(
+                jsonEncode({
+                  'buyAmount': '2000000',
+                  'minBuyAmount': '1990000',
+                  'analyticsEventId': 'asset-chain-confirmation-reference',
+                  'transaction': {
+                    'to': '0x1111111111111111111111111111111111111111',
+                    'data': '0x1234',
+                    'value': '0',
+                    'gas': '120000',
+                    'gasPrice': '1025012000',
+                  },
+                }),
+                200,
+              );
+            }),
+          ),
+        );
+        final quote = await service.get0xQuote(
+          chainId: 42420,
+          fromTokenAddress: '0x2584d40b5553e81bb9dec0b6cd1a2e504aab1709',
+          toTokenAddress: '0x1111111111111111111111111111111111111111',
+          amountWei: '1000000000000000000',
+          buyTokenDecimals: 6,
+          isGasless: false,
+          useFirmQuote: true,
+          walletAddress: '0x2222222222222222222222222222222222222222',
+        );
+        expect(quote?.analyticsEventId, 'asset-chain-confirmation-reference');
+        expect(quote?.txGasPrice, '1025012000');
+      },
+    );
+    test('Asset Chain quote sends the wallet sell amount in USD', () async {
+      final service = SwapService(
+        httpClientService: HttpClientServiceMock(
+          MockClient((request) async {
+            expect(request.url.queryParameters['sellAmountUsd'], '12.5');
+            return http.Response(
+              jsonEncode({'buyAmount': '1', 'platformFeeBps': 100}),
+              200,
+            );
+          }),
+        ),
+      );
+      final quote = await service.get0xQuote(
+        chainId: 42420,
+        fromTokenAddress: '',
+        toTokenAddress: '0x1111111111111111111111111111111111111111',
+        amountWei: '1000',
+        buyTokenDecimals: 18,
+        isGasless: false,
+        sellAmountUsd: 12.5,
+      );
+      expect(quote, isNotNull);
+    });
+    test('Asset Chain firm quote does not replace a backend failure', () async {
+      final service = SwapService(
+        httpClientService: HttpClientServiceMock(
+          MockClient((_) async => http.Response('unavailable', 502)),
+        ),
+      );
+      final quote = await service.get0xQuote(
+        chainId: 42420,
+        fromTokenAddress: '',
+        toTokenAddress: '0x1111111111111111111111111111111111111111',
+        amountWei: '1000',
+        buyTokenDecimals: 18,
+        isGasless: false,
+        useFirmQuote: true,
+        walletAddress: '0x2222222222222222222222222222222222222222',
+      );
+      expect(quote, isNull);
+      expect(service.lastError, isNotNull);
+    });
+    test(
       'accepts valid quote with platformFeeBps and computes percent',
       () async {
         final mockClient = MockClient((request) async {
@@ -239,12 +319,12 @@ void main() {
     test('normal swaps support provider-enabled built-in EVM chains', () {
       final service = SwapService();
 
-      // Native wallet connectivity and external Discover dApps are supported
-      // independently of the aggregator's available quote networks.
-      expect(service.isChainSupported(42420, isGasless: false), isFalse);
+      // Asset Chain is supported for normal on-chain swaps, but not gasless fusion
+      expect(service.isChainSupported(42420, isGasless: false), isTrue);
+      expect(service.isChainSupported(42421, isGasless: false), isTrue);
       expect(service.isChainSupported(42420, isGasless: true), isFalse);
+      expect(service.isChainSupported(42421, isGasless: true), isFalse);
       for (final chain in BlockchainCatalog.builtInChains) {
-        if (chain.chainId == 42420) continue;
         expect(
           service.isChainSupported(chain.chainId, isGasless: false),
           isTrue,

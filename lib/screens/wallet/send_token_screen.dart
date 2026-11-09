@@ -116,8 +116,19 @@ class _SendTokenScreenState extends State<SendTokenScreen> {
       _didApplyRouteToken = true;
       final arg = ModalRoute.of(context)?.settings.arguments;
       if (arg is Token) {
-        _lastFamily = currentFamily;
-        _lastNetworkKey = blockchain.activeNetworkKey;
+        final targetFamily = arg.networkKey != null
+            ? NetworkKey.familyOf(arg.networkKey!)
+            : currentFamily;
+        if (arg.networkKey != null &&
+            arg.networkKey != blockchain.activeNetworkKey) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && blockchain.activeNetworkKey != arg.networkKey) {
+              blockchain.setActiveNetworkKey(arg.networkKey!);
+            }
+          });
+        }
+        _lastFamily = targetFamily;
+        _lastNetworkKey = arg.networkKey ?? blockchain.activeNetworkKey;
         _lastWalletScope = blockchain.activeWalletAddress;
         _applySelectedToken(arg);
         return;

@@ -46,18 +46,42 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
   int _addressGeneration = 0;
   String? _receiveError;
   BitcoinPurpose _bitcoinPurpose = BitcoinPurpose.bip84;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initForFamily());
-  }
+  bool _didApplyRouteToken = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
     final currentFamily = blockchain.activeFamily;
+
+    if (!_didApplyRouteToken) {
+      _didApplyRouteToken = true;
+      final arg = ModalRoute.of(context)?.settings.arguments;
+      if (arg is Token) {
+        if (arg.networkKey != null &&
+            arg.networkKey != blockchain.activeNetworkKey) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (blockchain.activeNetworkKey != arg.networkKey) {
+              blockchain.setActiveNetworkKey(arg.networkKey!);
+            }
+            _lastFamily = blockchain.activeFamily;
+            _lastWalletIdentity = blockchain.activeWalletAddress;
+            _initForFamily(
+              initialToken: blockchain.activeNetworkKey == arg.networkKey
+                  ? arg
+                  : null,
+            );
+          });
+          return;
+        }
+        _lastFamily = currentFamily;
+        _lastWalletIdentity = blockchain.activeWalletAddress;
+        _initForFamily(initialToken: arg);
+        return;
+      }
+    }
+
     // Re-initialise when the family changes OR when the selected token is
     // stale — i.e. it belongs to the previous network (happens because tokens
     // for the new family load asynchronously after the family switch).
@@ -75,7 +99,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
 
   /// Resets the selected token to the native token of the active family and
   /// reloads the correct wallet address for that family.
-  Future<void> _initForFamily() async {
+  Future<void> _initForFamily({Token? initialToken}) async {
     if (!mounted) return;
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final generation = ++_addressGeneration;
@@ -98,11 +122,18 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
       nativeToken = blockchain.activeNativeToken;
     }
 
+    final targetToken =
+        initialToken ??
+        ((_selectedToken != null &&
+                _selectedToken!.networkKey == activeNetworkKey)
+            ? _selectedToken!
+            : nativeToken);
+
     // Clear the old address before an asynchronous wallet/network transition.
     setState(() {
       _walletAddress = '';
       _receiveError = null;
-      _selectedToken = nativeToken;
+      _selectedToken = targetToken;
     });
     String? address;
     String? identity;
@@ -136,7 +167,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
         generation == _addressGeneration &&
         blockchain.activeNetworkKey == activeNetworkKey) {
       setState(() {
-        _selectedToken = nativeToken;
+        _selectedToken = targetToken;
         _walletAddress = address ?? '';
       });
     }

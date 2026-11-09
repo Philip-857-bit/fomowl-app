@@ -53,6 +53,15 @@ class BlockchainCatalog {
       // Official network icon from Asset Chain explorer.
       logoUrl: 'https://scan.assetchain.org/assets/configs/network_icon.png',
     ),
+    // Asset Chain Testnet (Enugu)
+    EvmChain(
+      name: 'Asset Chain Testnet',
+      symbol: 'RWA',
+      chainId: 42421,
+      rpcUrl: AppEnvironment.blockchain('/42421/rpc').toString(),
+      explorerUrl: 'https://scan-testnet.assetchain.org',
+      logoUrl: 'https://scan.assetchain.org/assets/configs/network_icon.png',
+    ),
     EvmChain(
       name: 'BNB Smart Chain',
       symbol: 'BNB',
@@ -408,6 +417,8 @@ class BlockchainCatalog {
         return 'https://cryptologos.cc/logos/apecoin-ape-ape-logo.png';
       case 'MNT':
         return 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/mantle/info/logo.png';
+      case 'RWA':
+        return 'https://scan.assetchain.org/assets/configs/network_icon.png';
       default:
         return null;
     }
@@ -490,6 +501,9 @@ class BlockchainCatalog {
     if (chainId == 5042) {
       return 'https://d2xo500swnpgl1.cloudfront.net/uploads/arc/Gradual-Arc-icon-43ee6ca5-45c5-404d-ac1b-f54f93c51f06-1761315436123.png';
     }
+    if (chainId == 42420 || chainId == 42421) {
+      return 'https://scan.assetchain.org/assets/configs/network_icon.png';
+    }
     const relayLogoChainIds = {25, 169, 1088, 1329, 98866};
     if (relayLogoChainIds.contains(chainId)) {
       return 'https://assets.relay.link/icons/$chainId/light.png';
@@ -526,6 +540,7 @@ class BlockchainCatalog {
     1135 => 'assets/images/chains/lisk.webp',
     42220 => 'assets/images/chains/celo.png',
     42420 => 'assets/images/chains/assetchain.png',
+    42421 => 'assets/images/chains/assetchain.png',
     _ => null,
   };
 
@@ -536,4 +551,25 @@ class BlockchainCatalog {
     }
     return null;
   }
+
+  /// Wrapped Native (WRWA) contract addresses for Asset Chain networks.
+  static const Map<int, String> assetChainWrwaAddresses = {
+    42420: '0x2584D40B5553E81Bb9deC0b6CD1a2E504AAB1709',
+    42421: '0x0FA7527F1050bb9F9736828B689c652AB2c483ef',
+  };
+
+  /// Returns the canonical WRWA address for [chainId], or null if not Asset Chain.
+  static String? wrappedNativeAddress(int chainId) =>
+      assetChainWrwaAddresses[chainId];
+
+  /// Returns true if [chainId] is Asset Chain Mainnet or Testnet.
+  static bool isAssetChain(int chainId) =>
+      chainId == 42420 || chainId == 42421;
+
+  /// Default public RPC fallback URL for Asset Chain networks.
+  static String defaultPublicRpcUrl(int chainId) => switch (chainId) {
+    42420 => 'https://mainnet-rpc.assetchain.org',
+    42421 => 'https://enugu-rpc.assetchain.org',
+    _ => '',
+  };
 }

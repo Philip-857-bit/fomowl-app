@@ -19,6 +19,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
   final double platformFeeUsd;
   final double feeAmountUsd;
   final double feeAmountNative;
+  final bool feeUnavailable;
   final String nativeFeeSymbol;
   final String receiveText;
   final String priceSeparator;
@@ -37,6 +38,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
     required this.platformFeeUsd,
     required this.feeAmountUsd,
     required this.feeAmountNative,
+    this.feeUnavailable = false,
     required this.nativeFeeSymbol,
     required this.receiveText,
     this.priceSeparator = '->',
@@ -134,6 +136,7 @@ class SwapPriceDetailsCard extends StatelessWidget {
   }
 
   String _buildFeeText() {
+    if (feeUnavailable) return 'Calculated before signing';
     final resolvedFeeUsd =
         feeAmountUsd > 0 || feeAmountNative <= 0 || nativePriceUsd <= 0
         ? feeAmountUsd

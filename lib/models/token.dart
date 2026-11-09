@@ -166,6 +166,9 @@ class Token {
 
   /// Format USD value
   String get formattedValue {
+    if (balanceDecimal > Decimal.zero && !hasKnownPrice && !hasProviderError) {
+      return '—';
+    }
     if (balanceDecimal > Decimal.zero &&
         valueUsdDecimal <= Decimal.zero &&
         !hasKnownPrice) {
@@ -176,6 +179,7 @@ class Token {
 
   /// Format per-token price for UI
   String get formattedPrice {
+    if (!hasKnownPrice && !hasProviderError) return '—';
     if (!hasKnownPrice) return r'$0';
     return ValueFormatter.formatUsdPrice(unitPriceUsdDecimal);
   }

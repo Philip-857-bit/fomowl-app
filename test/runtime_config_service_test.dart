@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +9,64 @@ import 'package:fomowl_wallet/services/runtime_config_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'failed initial policy fetch keeps mini apps and transfers enabled',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var attempts = 0;
+      final service = RuntimeConfigService.forTesting(
+        client: MockClient((_) async {
+          attempts += 1;
+          if (attempts == 1) return http.Response('unavailable', 503);
+          return http.Response(
+            jsonEncode({
+              'policy': {
+                'features': {'miniAppsEnabled': true},
+              },
+            }),
+            200,
+          );
+        }),
+      );
+      await service.refresh();
+      expect(service.hasPolicy, isFalse);
+      expect(service.refreshFailed, isTrue);
+      expect(service.snapshot.miniAppsEnabled, isTrue);
+      expect(service.snapshot.cashOutEnabled, isFalse);
+      expect(service.snapshot.transfersEnabled, isTrue);
+      await service.refresh();
+      expect(service.hasPolicy, isTrue);
+      expect(service.refreshFailed, isFalse);
+      expect(service.snapshot.miniAppsEnabled, isTrue);
+    },
+  );
+
+  test(
+    'transient network failure preserves a confirmed disabled policy',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var attempts = 0;
+      final service = RuntimeConfigService.forTesting(
+        client: MockClient((_) async {
+          if (++attempts > 1) throw http.ClientException('offline');
+          return http.Response(
+            jsonEncode({
+              'policy': {
+                'features': {'miniAppsEnabled': false},
+              },
+            }),
+            200,
+          );
+        }),
+      );
+      await service.refresh();
+      await service.refresh();
+      expect(service.hasPolicy, isTrue);
+      expect(service.refreshFailed, isTrue);
+      expect(service.snapshot.miniAppsEnabled, isFalse);
+    },
+  );
 
   test('missing runtime fields retain backward-compatible defaults', () {
     final snapshot = RuntimePolicySnapshot.fromJson(const {});

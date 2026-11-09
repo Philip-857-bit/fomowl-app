@@ -37,6 +37,7 @@ class SwapTabContent extends StatelessWidget {
   final double platformFeeUsd;
   final double feeUsd;
   final double feeNative;
+  final bool feeUnavailable;
   final String priceText;
   final String receiveText;
   final String priceSeparator;
@@ -77,6 +78,7 @@ class SwapTabContent extends StatelessWidget {
     required this.platformFeeUsd,
     required this.feeUsd,
     required this.feeNative,
+    this.feeUnavailable = false,
     required this.priceText,
     required this.receiveText,
     required this.priceSeparator,
@@ -158,6 +160,7 @@ class SwapTabContent extends StatelessWidget {
             platformFeeUsd: platformFeeUsd,
             feeAmountUsd: feeUsd,
             feeAmountNative: feeNative,
+            feeUnavailable: feeUnavailable,
             nativeFeeSymbol: blockchain.activeNetworkSymbol,
             receiveText: receiveText,
             priceSeparator: priceSeparator,

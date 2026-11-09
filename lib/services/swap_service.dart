@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../config/app_environment.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
+import 'blockchain/asset_chain_swap_service.dart';
 import 'cow_limit_order_signing.dart';
 import 'http_client_service.dart';
 
@@ -16,6 +17,7 @@ class SwapQuote {
   final String minAmountOutFormatted;
   final double networkFeeUsd;
   final double networkFeeNative;
+  final bool networkFeeUnavailable;
   final String allowanceTarget;
   final String? allowanceSpender;
   final bool needsAllowance;
@@ -42,6 +44,7 @@ class SwapQuote {
     required this.minAmountOutFormatted,
     required this.networkFeeUsd,
     required this.networkFeeNative,
+    this.networkFeeUnavailable = false,
     required this.allowanceTarget,
     required this.allowanceSpender,
     required this.needsAllowance,
@@ -143,10 +146,25 @@ class SwapService {
   static const String _permit2Address =
       '0x000000000022d473030f116ddee9f6b43ac78ba3';
 
-  SwapService({HttpClientService? httpClientService})
-    : _httpClientService = httpClientService ?? HttpClientService();
+  SwapService({
+    HttpClientService? httpClientService,
+    AssetChainSwapService? assetChainSwapService,
+  }) : _httpClientService = httpClientService ?? HttpClientService(),
+       _assetChainSwapService =
+           assetChainSwapService ?? AssetChainSwapService();
 
   final HttpClientService _httpClientService;
+  final AssetChainSwapService _assetChainSwapService;
+
+  /// Asset Chain networks supported for native Uniswap-V3 fork swaps.
+  static const Set<int> assetChainSupportedChainIds = {
+    42420, // Asset Chain Mainnet
+    42421, // Asset Chain Testnet
+  };
+
+  /// Whether [chainId] is Asset Chain Mainnet or Testnet.
+  static bool isAssetChain(int chainId) =>
+      assetChainSupportedChainIds.contains(chainId);
 
   static const Set<int> supportedQuoteChainIds = {
     1, // Ethereum
@@ -417,14 +435,15 @@ class SwapService {
 
   bool isChainSupported(int chainId, {required bool isGasless}) {
     if (isGasless) return supportedGaslessChainIds.contains(chainId);
-    return supportedQuoteChainIds.contains(chainId);
+    return supportedQuoteChainIds.contains(chainId) ||
+        assetChainSupportedChainIds.contains(chainId);
   }
 
   bool isLimitChainSupported(int chainId) {
     return supportedLimitChainIds.contains(chainId);
   }
 
-  /// Get aggregated quote from 0x via backend
+  /// Get aggregated quote from 0x via backend (or AssetChainSwapService for Asset Chain)
   Future<SwapQuote?> get0xQuote({
     required int chainId,
     required String fromTokenAddress,
@@ -435,6 +454,7 @@ class SwapService {
     String? walletAddress,
     int slippageBps = 50,
     bool useFirmQuote = false,
+    double? sellAmountUsd,
   }) async {
     _lastError = null;
     if (!isChainSupported(chainId, isGasless: isGasless)) {
@@ -442,6 +462,136 @@ class SwapService {
           ? 'Gasless swaps are not available on this network yet.'
           : 'Swaps are not available on this network yet.';
       return null;
+    }
+
+    if (isAssetChain(chainId)) {
+      if (isGasless) {
+        _lastError = 'Gasless swaps are not available on Asset Chain.';
+        return null;
+      }
+
+      // 1. Primary: Route via secure Rust backend quoter
+      try {
+        final endpoint = useFirmQuote ? 'quote' : 'price';
+        final src = fromTokenAddress.isEmpty
+            ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+            : fromTokenAddress;
+        final dst = toTokenAddress.isEmpty
+            ? '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+            : toTokenAddress;
+        final queryParams = <String, String>{
+          'chainId': '$chainId',
+          'amount': amountWei,
+          'slippageBps': '$slippageBps',
+          'src': src,
+          'dst': dst,
+        };
+        if (walletAddress != null && walletAddress.isNotEmpty) {
+          queryParams['taker'] = walletAddress;
+        }
+        if (sellAmountUsd != null &&
+            sellAmountUsd.isFinite &&
+            sellAmountUsd > 0) {
+          queryParams['sellAmountUsd'] = sellAmountUsd.toString();
+        }
+        final url = AppEnvironment.swap('/$endpoint', queryParams);
+        final response = await _httpClientService
+            .sendWithRetry(() => _httpClientService.client.get(url))
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode == 200) {
+          final data = _decodeMapBody(
+            response.body,
+            fallbackMessage:
+                'Swap quote response was incomplete. Please try again.',
+          );
+          if (data != null && data['buyAmount'] != null) {
+            final dstAmountWei = data['buyAmount']?.toString() ?? '0';
+            final minAmountWei =
+                data['minBuyAmount']?.toString() ?? dstAmountWei;
+            final dstAmount = BigInt.tryParse(dstAmountWei) ?? BigInt.zero;
+            if (dstAmount > BigInt.zero && data['usedFallback'] != true) {
+              final formatted = AmountUtils.formatBaseUnits(
+                dstAmount,
+                buyTokenDecimals,
+                maxFractionDigits: math.min(buyTokenDecimals, 8),
+              );
+              final minFormatted = AmountUtils.formatBaseUnits(
+                BigInt.tryParse(minAmountWei) ?? dstAmount,
+                buyTokenDecimals,
+                maxFractionDigits: math.min(buyTokenDecimals, 8),
+              );
+              final tx = _asMap(data['transaction']);
+              return SwapQuote(
+                amountOutWei: dstAmountWei,
+                minAmountOutWei: minAmountWei,
+                amountOutFormatted: formatted,
+                minAmountOutFormatted: minFormatted,
+                networkFeeUsd:
+                    double.tryParse(data['networkFeeUsd']?.toString() ?? '0') ??
+                    0.0,
+                networkFeeNative:
+                    double.tryParse(
+                      data['networkFeeNative']?.toString() ?? '0',
+                    ) ??
+                    0.0,
+                networkFeeUnavailable:
+                    data['networkFeeUnavailable'] == true ||
+                    data['networkFeeNative'] == null,
+                allowanceTarget: data['allowanceTarget']?.toString() ?? '',
+                allowanceSpender: data['allowanceSpender']?.toString(),
+                needsAllowance: data['needsAllowance'] == true,
+                hasBalanceIssue: false,
+                balanceNeeded: null,
+                balanceActual: null,
+                platformFeeBps: (data['platformFeeBps'] as num?)?.toInt() ?? 0,
+                platformFeeUsd:
+                    (data['platformFeeUsd'] as num?)?.toDouble() ?? 0.0,
+                txTo: tx?['to']?.toString(),
+                txData: tx?['data']?.toString(),
+                txValue: tx?['value']?.toString(),
+                txGas: tx?['gas']?.toString(),
+                txGasPrice: tx?['gasPrice']?.toString(),
+                analyticsEventId: data['analyticsEventId']?.toString(),
+              );
+            }
+          }
+        }
+        if (useFirmQuote) {
+          _lastError = _extractBackendMessage(
+            response.body,
+            fallback: 'Unable to fetch an executable Asset Chain quote.',
+          );
+          return null;
+        }
+      } catch (e) {
+        if (useFirmQuote) {
+          _lastError = 'Unable to fetch an executable Asset Chain quote.';
+          return null;
+        }
+        debugPrint(
+          'Backend Asset Chain quote error: $e. Falling back to local quoter.',
+        );
+      }
+
+      // Price previews may use the on-device quoter when the backend is down.
+      // Firm quotes stay on the backend so the EVM fee and calldata are the
+      // ones the user signs.
+      final quote = await _assetChainSwapService.getQuote(
+        chainId: chainId,
+        fromTokenAddress: fromTokenAddress,
+        toTokenAddress: toTokenAddress,
+        amountInWei: amountWei,
+        buyTokenDecimals: buyTokenDecimals,
+        walletAddress: walletAddress,
+        slippageBps: slippageBps,
+        useFirmQuote: useFirmQuote,
+      );
+      if (quote == null) {
+        _lastError =
+            _assetChainSwapService.lastError ??
+            'No swap route available for this pair on Asset Chain.';
+      }
+      return quote;
     }
 
     if (isGasless && (walletAddress == null || walletAddress.isEmpty)) {

@@ -78,6 +78,14 @@ void main() {
         assetChain.logoUrl,
         'https://scan.assetchain.org/assets/configs/network_icon.png',
       );
+      expect(
+        BlockchainCatalog.defaultChainLogoUrl(42420),
+        'https://scan.assetchain.org/assets/configs/network_icon.png',
+      );
+      expect(
+        BlockchainCatalog.iconUrlForSymbol('RWA'),
+        'https://scan.assetchain.org/assets/configs/network_icon.png',
+      );
     },
   );
 

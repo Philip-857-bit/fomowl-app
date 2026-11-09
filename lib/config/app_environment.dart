@@ -80,6 +80,19 @@ class AppEnvironment {
   static const String _walletConnectProjectIdEnv = String.fromEnvironment(
     'WALLETCONNECT_PROJECT_ID',
   );
+  static const String _assetchainBridgeBaseUrlEnv = String.fromEnvironment(
+    'ASSETCHAIN_BRIDGE_BASE_URL',
+  );
+  static const String _assetchainBridgeClientNameEnv = String.fromEnvironment(
+    'ASSETCHAIN_BRIDGE_CLIENT_NAME',
+  );
+  static const String _assetchainBridgeClientSecretEnv = String.fromEnvironment(
+    'ASSETCHAIN_BRIDGE_CLIENT_SECRET',
+  );
+  static const bool _assetchainBridgeMockEnabledEnv = bool.fromEnvironment(
+    'ASSETCHAIN_BRIDGE_MOCK_ENABLED',
+    defaultValue: false,
+  );
 
   static final String backendBaseUrl = _resolveBackendBaseUrl();
   static final String coinGeckoApiBaseUrl = _resolveConfiguredUrl(
@@ -126,6 +139,39 @@ class AppEnvironment {
     // Production WalletConnect / Reown Cloud Project ID
     return 'e444a0603b47cc04909f519fec165fcf';
   }
+
+  /// Base URL for the Asset Chain Bridge API.
+  /// Defaults to Mainnet (https://bridge.assetchain.org) or Testnet (https://bridge-testnet.assetchain.org).
+  static String assetChainBridgeBaseUrl({bool testnet = false}) {
+    final configured = _optionalEnv(_assetchainBridgeBaseUrlEnv);
+    if (configured != null) {
+      return _normalizeUrl(configured);
+    }
+    return testnet
+        ? 'https://bridge-testnet.assetchain.org'
+        : 'https://bridge.assetchain.org';
+  }
+
+  /// Backend proxy URL for Asset Chain Bridge.
+  static String get assetChainBridgeProxyUrl =>
+      swap('/assetchain/bridge').toString();
+
+  /// Client name issued by AssetChain for API Guard authentication.
+  /// Returns null if absent, triggering mock fallback mode.
+  static String? get assetChainBridgeClientName =>
+      _optionalEnv(_assetchainBridgeClientNameEnv);
+
+  /// Client secret key for HMAC-SHA256 signature calculation.
+  /// Returns null if absent, triggering mock fallback mode.
+  static String? get assetChainBridgeClientSecret =>
+      _optionalEnv(_assetchainBridgeClientSecretEnv);
+
+  /// Explicit mock fallback toggle from environment.
+  static bool get assetChainBridgeMockEnabled =>
+      _assetchainBridgeMockEnabledEnv;
+
+  /// The wallet uses the backend proxy; absent provider credentials are normal.
+  static bool get isAssetChainBridgeMockMode => assetChainBridgeMockEnabled;
 
   /// Optional SPKI (public-key) pinning for the backend host.
   ///

@@ -8,8 +8,13 @@ import '../../../../widgets/token_icon.dart';
 
 class BalanceSummaryCard extends StatelessWidget {
   final Token token;
+  final int? chainId;
 
-  const BalanceSummaryCard({super.key, required this.token});
+  const BalanceSummaryCard({
+    super.key,
+    required this.token,
+    this.chainId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +43,7 @@ class BalanceSummaryCard extends StatelessWidget {
                 tokenSymbol: token.symbol,
                 tokenAddress: token.contractAddress,
                 tokenImageUrl: token.imageUrl,
+                chainId: chainId,
                 size: 46,
               ),
               const SizedBox(width: 12),

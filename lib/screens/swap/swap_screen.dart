@@ -96,6 +96,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
   static const Duration _gaslessStatusPollInterval = Duration(seconds: 2);
   static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
   final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
+  BlockchainService? _blockchainService;
 
   bool _isStablecoin(Token? token) => isSwapStablecoin(token);
 
@@ -201,6 +202,10 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final blockchain = Provider.of<BlockchainService>(context);
+    if (!identical(_blockchainService, blockchain)) {
+      _blockchainService?.clearLivePriceTracking(scope: _livePriceScope);
+      _blockchainService = blockchain;
+    }
 
     // If the user launched Swap from a token's detail screen, pre-select that
     // token as the "from" side. Consumed once so normal tab switching is
@@ -466,8 +471,20 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
   }
 
   bool _supportsLimitTab(BlockchainService blockchain) {
+    if (blockchain.activeFamily == ChainFamily.evm &&
+        SwapService.isAssetChain(blockchain.activeChain.chainId)) {
+      return false;
+    }
     return blockchain.activeFamily == ChainFamily.evm ||
         blockchain.activeFamily == ChainFamily.solana;
+  }
+
+  bool _supportsBridgeTab(BlockchainService blockchain) {
+    if (blockchain.activeFamily == ChainFamily.evm &&
+        SwapService.isAssetChain(blockchain.activeChain.chainId)) {
+      return false;
+    }
+    return true;
   }
 
   bool _tabAvailable(
@@ -476,7 +493,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     BlockchainService blockchain,
   ) => switch (tab) {
     SwapTab.swap => policy.allows(RuntimeFeature.swaps),
-    SwapTab.bridge => policy.allows(RuntimeFeature.bridges),
+    SwapTab.bridge =>
+      policy.allows(RuntimeFeature.bridges) && _supportsBridgeTab(blockchain),
     SwapTab.limit =>
       _supportsLimitTab(blockchain) &&
           !policy.fullMaintenance &&
@@ -980,8 +998,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     _limitUsdController.dispose();
     _debounceTimer?.cancel();
     // Clear only swap-owned tracking so Home continues receiving updates.
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
-    blockchain.clearLivePriceTracking(scope: _livePriceScope);
+    _blockchainService?.clearLivePriceTracking(scope: _livePriceScope);
     super.dispose();
   }
 
@@ -2040,6 +2057,10 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
             isGasless: _isGasless,
             walletAddress: _walletAddress,
             slippageBps: _slippageBps,
+            sellAmountUsd: _usdValueFor(
+              _fromToken,
+              _parseAmount(_fromController),
+            ),
           )
           .timeout(_quoteUiTimeout);
 
@@ -2049,13 +2070,20 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
         final inAmount = _parseAmount(_fromController);
         final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
-        double feeNative = quote.networkFeeNative;
-        double feeUsd = quote.networkFeeUsd > 0
+        double feeNative = quote.networkFeeUnavailable
+            ? 0
+            : quote.networkFeeNative;
+        double feeUsd = quote.networkFeeUnavailable
+            ? 0
+            : quote.networkFeeUsd > 0
             ? quote.networkFeeUsd
             : quote.networkFeeNative * _nativeTokenPriceUsd;
 
         // Fallback: estimate gas fee if backend did not return fee fields.
-        if (!_isGasless && feeNative <= 0 && feeUsd <= 0) {
+        if (!_isGasless &&
+            !quote.networkFeeUnavailable &&
+            feeNative <= 0 &&
+            feeUsd <= 0) {
           var nativePrice = _nativeTokenPriceUsd;
           if (nativePrice <= 0) {
             await _refreshTokenPrices();
@@ -3098,6 +3126,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
           walletAddress: _walletAddress,
           slippageBps: _slippageBps,
           useFirmQuote: true,
+          sellAmountUsd: _usdValueFor(fromToken, _parseAmount(_fromController)),
         )
         .timeout(_quoteUiTimeout);
 
@@ -3108,12 +3137,14 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     final rawOutAmount = double.tryParse(quote.amountOutFormatted) ?? 0.0;
     final inAmount = _parseAmount(_fromController);
     final unitRate = inAmount > 0 ? (rawOutAmount / inAmount) : 0.0;
-    var feeNative = quote.networkFeeNative;
-    var feeUsd = quote.networkFeeUsd > 0
+    var feeNative = quote.networkFeeUnavailable ? 0.0 : quote.networkFeeNative;
+    var feeUsd = quote.networkFeeUnavailable
+        ? 0.0
+        : quote.networkFeeUsd > 0
         ? quote.networkFeeUsd
         : quote.networkFeeNative * _nativeTokenPriceUsd;
 
-    if (feeNative <= 0 && feeUsd <= 0) {
+    if (!quote.networkFeeUnavailable && feeNative <= 0 && feeUsd <= 0) {
       // Fee presentation must not delay signing. The preview already obtained
       // a fee estimate; retain it if the committed response omits fee fields.
       feeNative = _feeNative;
@@ -3995,64 +4026,69 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 24),
-                      Showcase(
-                        key: _limitTabShowcaseKey,
-                        title: 'Limit orders',
-                        description:
-                            'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
-                        child: SwapTabSelector(
-                          activeTab: _activeTab,
-                          swapEnabled: runtimePolicy.allows(
-                            RuntimeFeature.swaps,
-                          ),
-                          showLimitTab: _supportsLimitTab(blockchain),
-                          showBridgeTab: runtimePolicy.allows(
-                            RuntimeFeature.bridges,
-                          ),
-                          onChanged: (tab) {
-                            if (_activeTab == tab) return;
-                            if (tab == SwapTab.swap &&
-                                !runtimePolicy.allows(RuntimeFeature.swaps)) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    runtimePolicy.unavailableMessage(
-                                      RuntimeFeature.swaps,
+                      if (_supportsLimitTab(blockchain) ||
+                          (runtimePolicy.allows(RuntimeFeature.bridges) &&
+                              _supportsBridgeTab(blockchain))) ...[
+                        Showcase(
+                          key: _limitTabShowcaseKey,
+                          title: 'Limit orders',
+                          description:
+                              'Use Swap for instant market execution. Use Limit to set a target price and let Owllet place the order when the market reaches it.',
+                          child: SwapTabSelector(
+                            activeTab: _activeTab,
+                            swapEnabled: runtimePolicy.allows(
+                              RuntimeFeature.swaps,
+                            ),
+                            showLimitTab: _supportsLimitTab(blockchain),
+                            showBridgeTab: runtimePolicy.allows(
+                              RuntimeFeature.bridges,
+                            ) && _supportsBridgeTab(blockchain),
+                            onChanged: (tab) {
+                              if (_activeTab == tab) return;
+                              if (tab == SwapTab.swap &&
+                                  !runtimePolicy.allows(RuntimeFeature.swaps)) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      runtimePolicy.unavailableMessage(
+                                        RuntimeFeature.swaps,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                              return;
-                            }
-                            if (tab == SwapTab.bridge &&
-                                !runtimePolicy.allows(RuntimeFeature.bridges)) {
-                              return;
-                            }
-                            if (tab == SwapTab.limit &&
-                                !_supportsLimitTab(blockchain)) {
-                              return;
-                            }
-                            setState(() {
-                              _activeTab = tab;
-                              if (tab == SwapTab.limit) {
-                                _ensureLimitEligiblePair();
+                                );
+                                return;
                               }
-                            });
-                            if (tab == SwapTab.swap) {
-                              _getQuote();
-                            } else if (tab == SwapTab.limit) {
-                              _updateLimitPreview();
-                              unawaited(
-                                _refreshLimitOrders(
-                                  showLoading: _limitOrders.isEmpty,
-                                ),
-                              );
-                              unawaited(_startLimitShowcaseIfNeeded());
-                            }
-                          },
+                              if (tab == SwapTab.bridge &&
+                                  (!runtimePolicy.allows(RuntimeFeature.bridges) ||
+                                      !_supportsBridgeTab(blockchain))) {
+                                return;
+                              }
+                              if (tab == SwapTab.limit &&
+                                  !_supportsLimitTab(blockchain)) {
+                                return;
+                              }
+                              setState(() {
+                                _activeTab = tab;
+                                if (tab == SwapTab.limit) {
+                                  _ensureLimitEligiblePair();
+                                }
+                              });
+                              if (tab == SwapTab.swap) {
+                                _getQuote();
+                              } else if (tab == SwapTab.limit) {
+                                _updateLimitPreview();
+                                unawaited(
+                                  _refreshLimitOrders(
+                                    showLoading: _limitOrders.isEmpty,
+                                  ),
+                                );
+                                unawaited(_startLimitShowcaseIfNeeded());
+                              }
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 19),
+                        const SizedBox(height: 19),
+                      ],
                       // The bridge tab embeds its own origin-chain selector in
                       // the "BRIDGE FROM" card, so skip the network card there.
                       if (blockchain.activeFamily == ChainFamily.evm &&
@@ -4099,6 +4135,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
                           platformFeeUsd: _platformFeeUsd,
                           feeUsd: _feeUsd,
                           feeNative: _feeNative,
+                          feeUnavailable:
+                              _currentQuote?.networkFeeUnavailable ?? false,
                           priceText: priceText,
                           receiveText: receiveText,
                           priceSeparator: _priceSeparator,

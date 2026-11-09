@@ -400,6 +400,8 @@ class WalletConnectProposalModal extends StatelessWidget {
     if (lower == 'eip155:10') return 'Optimism';
     if (lower == 'eip155:8453') return 'Base';
     if (lower == 'eip155:43114') return 'Avalanche';
+    if (lower == 'eip155:42420') return 'Asset Chain';
+    if (lower == 'eip155:42421') return 'Asset Chain Testnet';
     if (lower.startsWith('solana:')) return 'Solana';
     if (lower.startsWith('tron:')) return 'Tron';
     return chain;

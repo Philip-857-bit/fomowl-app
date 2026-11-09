@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config/app_environment.dart';
 import '../models/bitcoin_bridge_quote.dart' as bitcoin;
 import '../utils/app_error_utils.dart';
+import 'blockchain/asset_chain_bridge_client.dart';
 import 'http_client_service.dart';
 import 'wallet_backend_auth_service.dart';
 
@@ -263,15 +264,96 @@ class BridgeService {
   BridgeService({
     HttpClientService? httpClientService,
     WalletBackendAuthService? walletBackendAuthService,
+    AssetChainBridgeClient? assetChainBridgeClient,
   }) : _http = httpClientService ?? HttpClientService(),
        _walletBackendAuthService =
-           walletBackendAuthService ?? WalletBackendAuthService();
+           walletBackendAuthService ?? WalletBackendAuthService(),
+       _assetChainBridgeClient =
+           assetChainBridgeClient ?? AssetChainBridgeClient.fromEnvironment();
 
   final HttpClientService _http;
   final WalletBackendAuthService _walletBackendAuthService;
+  final AssetChainBridgeClient _assetChainBridgeClient;
   String? _lastError;
 
   String? get lastError => _lastError;
+  AssetChainBridgeClient get assetChainBridgeClient => _assetChainBridgeClient;
+
+  /// Fetches tokens available for bridging on Asset Chain.
+  Future<List<AssetChainBridgeToken>> getAssetChainTokens({String? chainId}) {
+    return _assetChainBridgeClient.getTokens(chainId: chainId);
+  }
+
+  /// Fetches active bridge deployments for Asset Chain.
+  Future<List<AssetChainBridgeDeployment>> getAssetChainBridges({
+    String? chainId,
+  }) {
+    return _assetChainBridgeClient.getBridges(chainId: chainId);
+  }
+
+  /// Queries bridge transfer history for a wallet on Asset Chain.
+  Future<AssetChainBridgeTransactionList> getAssetChainTransactions({
+    required String userAddress,
+    String? secondaryAddress,
+    String? chainIds,
+    bool? fulfilled,
+    bool? forceSync,
+    String? symbol,
+    int page = 1,
+    int limit = 10,
+  }) {
+    return _assetChainBridgeClient.getTransactions(
+      userAddress: userAddress,
+      secondaryAddress: secondaryAddress,
+      chainIds: chainIds,
+      fulfilled: fulfilled,
+      forceSync: forceSync,
+      symbol: symbol,
+      page: page,
+      limit: limit,
+    );
+  }
+
+  /// Records an on-chain deposit transaction on Asset Chain bridge.
+  Future<AssetChainBridgeTransaction> recordAssetChainDeposit({
+    required String bridgeId,
+    required String index,
+    required String userAddress,
+    required String transactionHash,
+  }) {
+    return _assetChainBridgeClient.recordTransaction(
+      bridgeId: bridgeId,
+      index: index,
+      userAddress: userAddress,
+      transactionHash: transactionHash,
+    );
+  }
+
+  /// Updates transaction status after claiming on destination chain.
+  Future<AssetChainBridgeClaimResult> updateAssetChainFulfillment({
+    required String transactionId,
+    required String claimTransactionHash,
+    required String toBridgeId,
+  }) {
+    return _assetChainBridgeClient.updateTransactionFulfillment(
+      transactionId: transactionId,
+      claimTransactionHash: claimTransactionHash,
+      toBridgeId: toBridgeId,
+    );
+  }
+
+  /// Fetches relayer signatures required to fulfill a transfer.
+  Future<AssetChainBridgeSignatures> getAssetChainRelayerSignatures({
+    required String bridgeId,
+    required String index,
+    required String fromUser,
+  }) {
+    return _assetChainBridgeClient.getRelayerSignatures(
+      bridgeId: bridgeId,
+      index: index,
+      fromUser: fromUser,
+    );
+  }
 
   /// Relay represents native EVM tokens with the zero address.
   static const String nativeCurrency =

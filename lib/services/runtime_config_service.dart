@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_environment.dart';
@@ -331,21 +332,20 @@ class RuntimePolicySnapshot {
 }
 
 class RuntimeConfigService extends ChangeNotifier {
-  RuntimeConfigService._();
+  RuntimeConfigService._() : _client = null;
 
   @visibleForTesting
-  RuntimeConfigService.forTesting();
+  RuntimeConfigService.forTesting({http.Client? client}) : _client = client;
 
   static final RuntimeConfigService instance = RuntimeConfigService._();
   static const _persistKey = 'owllet.runtime_policy.last_good.v1';
   static const _etagKey = 'owllet.runtime_policy.etag.v1';
   static const _persistTtl = Duration(hours: 1);
 
-  // Fail closed at the feature level until a persisted or freshly fetched
-  // policy is available. Loading is not full maintenance: treating it as such
-  // removes the app's startup navigator and can strand the user on startup.
-  // `fromJson` remains permissive for backward compatibility with older
-  // backend payloads that do not contain the newer feature fields.
+  // Mini apps and transfers stay available when the first policy fetch fails.
+  // A valid cached or fetched policy, including maintenance and explicit
+  // disables, overrides this startup default. Swaps, bridges, and cash
+  // features wait for a policy.
   RuntimePolicySnapshot _snapshot = const RuntimePolicySnapshot(
     maintenanceMode: 'off',
     maintenanceMessage: '',
@@ -358,16 +358,25 @@ class RuntimeConfigService extends ChangeNotifier {
     refreshOnEntry: false,
     refreshOnResume: false,
     refreshOnTransaction: false,
-    transfersEnabled: false,
+    transfersEnabled: true,
     swapsEnabled: false,
     bridgesEnabled: false,
-    miniAppsEnabled: false,
+    miniAppsEnabled: true,
     cashInEnabled: false,
     cashOutEnabled: false,
     billsEnabled: false,
     shopEnabled: false,
     legacySystemEnabled: false,
   );
+  final http.Client? _client;
+  bool _hasPolicy = false;
+  bool _refreshing = false;
+  bool _refreshFailed = false;
+  Future<void>? _refreshFuture;
+  bool get hasPolicy => _hasPolicy;
+  bool get refreshing => _refreshing;
+  bool get refreshFailed => _refreshFailed;
+
   String? _etag;
   bool _hydrated = false;
   Future<void>? _hydrateFuture;
@@ -405,7 +414,9 @@ class RuntimeConfigService extends ChangeNotifier {
       }
       final hydrated = RuntimePolicySnapshot.fromJson(decoded);
       final hydratedEtag = prefs.getString(_etagKey);
-      final changed = hydrated != _snapshot || hydratedEtag != _etag;
+      final changed =
+          !_hasPolicy || hydrated != _snapshot || hydratedEtag != _etag;
+      _hasPolicy = true;
       _snapshot = hydrated;
       _etag = hydratedEtag;
       if (changed) notifyListeners();
@@ -417,31 +428,55 @@ class RuntimeConfigService extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    final inFlight = _refreshFuture;
+    if (inFlight != null) return inFlight;
+    final future = _refreshPolicy();
+    _refreshFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_refreshFuture, future)) _refreshFuture = null;
+    }
+  }
+
+  Future<void> _refreshPolicy() async {
     await hydrate();
+    _refreshing = true;
+    _refreshFailed = false;
+    notifyListeners();
     try {
       final headers = <String, String>{};
-      if (_etag != null && _etag!.isNotEmpty) {
+      if (_hasPolicy && _etag != null && _etag!.isNotEmpty) {
         headers['If-None-Match'] = _etag!;
       }
-      final response = await HttpClientService().client
+      final response = await (_client ?? HttpClientService().client)
           .get(AppEnvironment.api('/runtime-config'), headers: headers)
           .timeout(const Duration(seconds: 6));
-      if (response.statusCode == 304) return;
-      if (response.statusCode < 200 || response.statusCode >= 300) return;
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map<String, dynamic>) return;
-      final next = RuntimePolicySnapshot.fromJson(decoded);
-      final nextEtag = response.headers['etag'];
-      if (next != _snapshot || nextEtag != _etag) {
-        _snapshot = next;
-        _etag = nextEtag;
-        await _persist(next, nextEtag);
-        notifyListeners();
+      if (response.statusCode == 304 && _hasPolicy) {
+        await _persist(_snapshot, _etag);
+        return;
       }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw http.ClientException(
+          'Availability check returned ${response.statusCode}',
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic> || decoded['policy'] is! Map) {
+        throw const FormatException('Invalid runtime policy');
+      }
+      _snapshot = RuntimePolicySnapshot.fromJson(decoded);
+      _etag = response.headers['etag'];
+      _hasPolicy = true;
+      await _persist(_snapshot, _etag);
     } catch (error) {
+      _refreshFailed = true;
       debugPrint(
         '[RuntimeConfig] Refresh failed; retaining current policy: $error',
       );
+    } finally {
+      _refreshing = false;
+      notifyListeners();
     }
   }
 

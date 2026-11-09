@@ -876,7 +876,9 @@ class _TokenManagementScreenState extends State<TokenManagementScreen> {
                         tokenName: _resolvedTokenName,
                         tokenSymbol: _resolvedTokenSymbol,
                         tokenImageUrl: _resolvedTokenImageUrl,
-                        chainId: blockchain.activeChain.chainId,
+                        chainId: blockchain.activeFamily == ChainFamily.evm
+                            ? blockchain.activeChain.chainId
+                            : null,
                       ),
                     ),
                   const SizedBox(height: 4),

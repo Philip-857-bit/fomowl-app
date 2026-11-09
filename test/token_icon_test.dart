@@ -48,4 +48,13 @@ void main() {
 
     expect(find.byKey(const ValueKey('token-chain-badge-56')), findsNothing);
   });
+
+  testWidgets('native RWA on AssetChain has no parent-chain badge and resolves asset', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: TokenIcon(tokenSymbol: 'RWA', chainId: 42420)),
+    );
+
+    expect(find.byKey(const ValueKey('token-chain-badge-42420')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
