@@ -160,7 +160,8 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
                       () {
                         setState(() => _obscureSecret = !_obscureSecret);
                       },
-                      helperText: 'Used to authorize sensitive changes (like swapping linked wallets).',
+                      helperText:
+                          'Used to authorize sensitive changes (like swapping linked wallets).',
                     ),
                     const SizedBox(height: 48),
 
