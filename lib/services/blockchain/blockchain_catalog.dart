@@ -50,8 +50,9 @@ class BlockchainCatalog {
       chainId: 42420,
       rpcUrl: AppEnvironment.blockchain('/42420/rpc').toString(),
       explorerUrl: 'https://scan.assetchain.org',
-      // Official network icon from Asset Chain explorer.
-      logoUrl: 'https://scan.assetchain.org/assets/configs/network_icon.png',
+      // Official chainlist icon (IPFS CID in ethereum-lists/chains).
+      logoUrl:
+          'https://ipfs.io/ipfs/QmXc4bxuyWvQFqjuunXmvZZs1AwGChyY7sGYK6tgCkp3nJ',
     ),
     // Asset Chain Testnet (Enugu)
     EvmChain(

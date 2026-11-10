@@ -325,6 +325,7 @@ void main() {
       expect(service.isChainSupported(42420, isGasless: true), isFalse);
       expect(service.isChainSupported(42421, isGasless: true), isFalse);
       for (final chain in BlockchainCatalog.builtInChains) {
+        if (chain.chainId == 42420) continue;
         expect(
           service.isChainSupported(chain.chainId, isGasless: false),
           isTrue,

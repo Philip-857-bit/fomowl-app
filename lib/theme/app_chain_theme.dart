@@ -560,6 +560,13 @@ class AppChainTheme {
     43114: avalanche,
     5042: arc,
     999: hyperevm,
+    42420: createBrandTheme(
+      id: 'asset_chain',
+      displayName: 'Asset Chain',
+      primary: const Color(0xFF147BC2),
+      accent: const Color(0xFF26C4E8),
+      darkBase: const Color(0xFF08243B),
+    ),
 
     42420: createBrandTheme(
       id: 'asset_chain',
