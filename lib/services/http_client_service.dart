@@ -81,8 +81,10 @@ class HttpClientService {
   }
 
   bool _isRetryableStatus(int statusCode) {
-    // Retry on 5xx server errors or 429 rate limits
-    return (statusCode >= 500 && statusCode <= 599) || statusCode == 429;
+    // Retry transient server errors. 429 means the provider quota is exhausted:
+    // retrying multiplies the pressure and delays the caller, so surface it and
+    // let the caller decide when to come back.
+    return statusCode >= 500 && statusCode <= 599;
   }
 
   bool _isRetryableException(Object e) {
