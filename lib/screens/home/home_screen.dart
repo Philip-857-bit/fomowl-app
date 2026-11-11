@@ -94,8 +94,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final address = await _networkDataWalletIdentity(blockchain.activeFamily);
     if (!mounted || address == null || address.isEmpty) return;
     await _fetchRealBalances(address, forceRefresh: true);
-    if (mounted && _portfolioRuntimeEnabled) {
-      await _fetchPortfolioData(address, sync: true);
+    if (mounted &&
+        _portfolioRuntimeEnabled &&
+        _selectedAssetTab == HomeAssetTab.portfolio) {
+      await _activatePortfolioTab(force: true);
     }
   }
 
@@ -130,6 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<HomePortfolioSection> _portfolioSections = const [];
   List<HomePortfolioSection> _portfolioRawSections = const [];
   DateTime? _portfolioUpdatedAt;
+  DateTime? _portfolioFetchedAt;
+  static const Duration _portfolioTabCacheTtl = Duration(seconds: 60);
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
@@ -494,6 +498,14 @@ class _HomeScreenState extends State<HomeScreen> {
     // This second-line guard also rejects a request that completed after an
     // administrator turned the feature off.
     if (!_portfolioRuntimeEnabled) return;
+    // Never let an older payload replace newer state already on screen. A live
+    // chain refresh stamps _portfolioUpdatedAt, so a slow aggregate response
+    // (or a disk snapshot) can no longer revert a post-transaction balance.
+    final currentUpdatedAt = _portfolioUpdatedAt;
+    if (currentUpdatedAt != null &&
+        snapshot.timestamp.isBefore(currentUpdatedAt)) {
+      return;
+    }
     _portfolioRawSections = List<HomePortfolioSection>.from(snapshot.sections);
     final data = await _buildPortfolioDataFromSections(_portfolioRawSections);
     if (!mounted) {
@@ -560,6 +572,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isUsingCachedData: false,
           );
           await _portfolioSnapshotService.saveSnapshot(fallbackSnapshot);
+          _portfolioFetchedAt = DateTime.now();
         } else {
           setState(() {
             _applyPortfolioData(_fallbackPortfolioData());
@@ -603,6 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _isLoadingPortfolio = false);
       }
       await _portfolioSnapshotService.saveSnapshot(snapshot);
+      _portfolioFetchedAt = DateTime.now();
     } catch (error) {
       debugPrint('Error fetching portfolio data: $error');
       if (!await _isStillActiveWalletRequest(
@@ -629,6 +643,7 @@ class _HomeScreenState extends State<HomeScreen> {
           isUsingCachedData: false,
         );
         await _portfolioSnapshotService.saveSnapshot(fallbackSnapshot);
+        _portfolioFetchedAt = DateTime.now();
       }
       if (!mounted) {
         return;
@@ -720,99 +735,48 @@ class _HomeScreenState extends State<HomeScreen> {
     final blockchain =
         _blockchain ?? Provider.of<BlockchainService>(context, listen: false);
 
-    if (blockchain.activeFamily != ChainFamily.evm) {
-      try {
-        final tokens = await blockchain.fetchWalletTokens(walletAddress);
-        final hiddenTokenKeys = await _tokenVisibilityService.loadHiddenTokens(
-          _effectiveVisibilityChainId(blockchain),
-        );
-        final visibleTokens = _portfolioRepository.prepareVisibleTokens(
-          tokens,
-          hiddenTokenKeys,
-          userAddedAddresses: {
-            for (final token in blockchain.customTokensForChain(
-              _effectiveVisibilityChainId(blockchain),
-            ))
-              token.address.trim().toLowerCase(),
-          },
-          chainId: _effectiveVisibilityChainId(blockchain),
-        );
-        if (visibleTokens.isEmpty) {
-          return null;
-        }
-        return HomeAggregatedPortfolioSnapshot(
-          walletAddress: walletAddress,
-          sections: [
-            HomePortfolioSection(
-              chain: _activePortfolioChain(blockchain),
-              tokens: visibleTokens,
-            ),
-          ],
-          timestamp: DateTime.now().toUtc(),
-          source: 'client-fallback',
-          isStale: false,
-          partialFailure: false,
-          chainsPending: const <int>[],
-        );
-      } catch (error) {
-        debugPrint(
-          'Portfolio fallback fetch failed for ${blockchain.activeNetworkKey}: $error',
-        );
+    // Only the active chain is fetched. Fanning out to every built-in chain here
+    // meant a single portfolio failure could fire up to 37 concurrent discovery
+    // requests; other chains load when the user switches to them.
+    try {
+      final tokens = await blockchain.fetchWalletTokens(walletAddress);
+      final hiddenTokenKeys = await _tokenVisibilityService.loadHiddenTokens(
+        _effectiveVisibilityChainId(blockchain),
+      );
+      final visibleTokens = _portfolioRepository.prepareVisibleTokens(
+        tokens,
+        hiddenTokenKeys,
+        userAddedAddresses: {
+          for (final token in blockchain.customTokensForChain(
+            _effectiveVisibilityChainId(blockchain),
+          ))
+            token.address.trim().toLowerCase(),
+        },
+        chainId: _effectiveVisibilityChainId(blockchain),
+      );
+      if (visibleTokens.isEmpty) {
         return null;
       }
-    }
-
-    final rawSections = await Future.wait(
-      blockchain.allChains.map((chain) async {
-        try {
-          final tokens = await blockchain.fetchWalletTokens(
-            walletAddress,
-            chainId: chain.chainId,
-          );
-          final hiddenTokenKeys = await _tokenVisibilityService
-              .loadHiddenTokens(chain.chainId);
-          final visibleTokens = _portfolioRepository.prepareVisibleTokens(
-            tokens,
-            hiddenTokenKeys,
-            userAddedAddresses: {
-              for (final token in blockchain.customTokensForChain(
-                chain.chainId,
-              ))
-                token.address.trim().toLowerCase(),
-            },
-            chainId: chain.chainId,
-          );
-          if (visibleTokens.isEmpty) {
-            return null;
-          }
-          return HomePortfolioSection(chain: chain, tokens: visibleTokens);
-        } catch (error) {
-          debugPrint(
-            'Portfolio fallback fetch failed for chain ${chain.chainId}: $error',
-          );
-          return null;
-        }
-      }),
-    );
-
-    final sections = rawSections.whereType<HomePortfolioSection>().toList()
-      ..sort(
-        (left, right) => right.totalBalanceUsd.compareTo(left.totalBalanceUsd),
+      return HomeAggregatedPortfolioSnapshot(
+        walletAddress: walletAddress,
+        sections: [
+          HomePortfolioSection(
+            chain: _activePortfolioChain(blockchain),
+            tokens: visibleTokens,
+          ),
+        ],
+        timestamp: DateTime.now().toUtc(),
+        source: 'client-fallback',
+        isStale: false,
+        partialFailure: false,
+        chainsPending: const <int>[],
       );
-
-    if (sections.isEmpty) {
+    } catch (error) {
+      debugPrint(
+        'Portfolio fallback fetch failed for ${blockchain.activeNetworkKey}: $error',
+      );
       return null;
     }
-
-    return HomeAggregatedPortfolioSnapshot(
-      walletAddress: walletAddress,
-      sections: sections,
-      timestamp: DateTime.now().toUtc(),
-      source: 'client-fallback',
-      isStale: false,
-      partialFailure: false,
-      chainsPending: const <int>[],
-    );
   }
 
   Future<void> _reloadPortfolioFromCachedTokens() async {
@@ -853,6 +817,27 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       _hydrateActiveTokensFromPortfolio(isUsingCachedData: _isUsingCachedData);
     });
+  }
+
+  /// Loads the aggregate portfolio only while the Portfolio tab is visible.
+  /// Opening the wallet must not pay for an aggregate fetch nobody looks at.
+  Future<void> _activatePortfolioTab({bool force = false}) async {
+    if (!mounted || !_portfolioRuntimeEnabled) return;
+    if (!force) {
+      final fetchedAt = _portfolioFetchedAt;
+      if (fetchedAt != null &&
+          DateTime.now().difference(fetchedAt) < _portfolioTabCacheTtl &&
+          _portfolioRawSections.isNotEmpty) {
+        return;
+      }
+    }
+    final walletAddress = await _walletService.getCurrentWalletAddress();
+    if (!mounted || walletAddress == null || walletAddress.isEmpty) return;
+    if (_portfolioRawSections.isEmpty) {
+      await _applyPortfolioSnapshot(walletAddress);
+      if (!mounted) return;
+    }
+    await _fetchPortfolioData(walletAddress, sync: force);
   }
 
   Future<void> _applyPortfolioSnapshot(String walletAddress) async {
@@ -1006,9 +991,8 @@ class _HomeScreenState extends State<HomeScreen> {
           preChainId,
           address,
         );
-        final portfolioSnapshotFuture = _portfolioRuntimeEnabled
-            ? _applyPortfolioSnapshot(address)
-            : Future<void>.value();
+        // The aggregate portfolio is loaded lazily when its tab is opened;
+        // Tokens are per-chain and do not need it to render Home.
 
         if (snapshot != null &&
             mounted &&
@@ -1028,8 +1012,6 @@ class _HomeScreenState extends State<HomeScreen> {
             '[OWLLET] Loaded cached snapshot: ${_tokens.length} tokens',
           );
         }
-
-        await portfolioSnapshotFuture;
 
         // Unblock the UI now — cached data is shown.
         if (mounted && loadGeneration == _walletLoadGeneration) {
@@ -1068,11 +1050,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _replaceDisplayedTokens(const [], isUsingCachedData: false);
             _isLoadingBalances = false;
           });
-        }
-        if (balanceAddress != null && balanceAddress.isNotEmpty) {
-          unawaited(
-            _fetchPortfolioData(balanceAddress, sync: forcePortfolioSync),
-          );
         }
         _scheduleDeferredHomeTasks(balanceAddress ?? address);
         unawaited(_checkWhatsNew());
@@ -1443,9 +1420,11 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
 
-      await _applyPortfolioSnapshot(address);
+      _portfolioFetchedAt = null;
       _fetchRealBalances(address);
-      unawaited(_fetchPortfolioData(address, sync: true));
+      if (mounted && _selectedAssetTab == HomeAssetTab.portfolio) {
+        unawaited(_activatePortfolioTab(force: true));
+      }
       _scheduleDeferredHomeTasks(address);
     });
   }
@@ -1803,7 +1782,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final address = await _networkDataWalletIdentity(blockchain.activeFamily);
       if (address != null && address.isNotEmpty) {
         unawaited(_fetchRealBalances(address));
-        unawaited(_fetchPortfolioData(address, sync: true));
+        if (_selectedAssetTab == HomeAssetTab.portfolio) {
+          unawaited(_activatePortfolioTab(force: true));
+        }
       }
     }
   }
@@ -2118,6 +2099,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     return;
                                   }
                                   setState(() => _selectedAssetTab = tab);
+                                  if (tab == HomeAssetTab.portfolio) {
+                                    unawaited(_activatePortfolioTab());
+                                  }
                                 },
                                 onSelectToken: (token) {
                                   Navigator.pushNamed(
