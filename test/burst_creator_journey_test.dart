@@ -740,9 +740,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Confirm Burst'), findsOneWidget);
       expect(find.text('1 $symbol'), findsWidgets);
-      expect(find.text('Upfront native cost'), findsOneWidget);
-      expect(find.text('Starts'), findsOneWidget);
-      expect(find.text('Claims end'), findsOneWidget);
+      expect(find.text('Total. Burst Amount + Fees'), findsOneWidget);
+      expect(find.text('Upfront native cost'), findsNothing);
+      expect(find.text('Starts'), findsNothing);
+      expect(find.text('Claims end'), findsNothing);
       expect(await store.read('profile', wallet, chainId), isNotNull);
       await tester.ensureVisible(
         find.widgetWithText(FilledButton, 'Create Burst'),

@@ -375,25 +375,54 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           store: _drafts,
           onPrepared: (prepared) async {
             if (!mounted) return;
-            final completed = await Navigator.of(context).push<bool>(
-              BurstPageRoute(
-                builder: (_) => BurstReviewScreen(
-                  prepared: prepared,
-                  executor: executor,
-                  nativeSymbol: chain.symbol,
-                  chainName: chain.name,
-                  onCompleted: () async {
-                    await _drafts.clear(
-                      identity.profileId,
-                      identity.address,
-                      chain.chainId,
-                    );
-                    if (mounted) setState(() => _hasDraft = false);
-                  },
-                ),
+            final completed = await showModalBottomSheet<bool>(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => BurstReviewSheet(
+                prepared: prepared,
+                executor: executor,
+                nativeSymbol: chain.symbol,
+                chainName: chain.name,
+                onCompleted: () async {
+                  await _drafts.clear(
+                    identity.profileId,
+                    identity.address,
+                    chain.chainId,
+                  );
+                  if (mounted) setState(() => _hasDraft = false);
+                },
               ),
             );
-            if (completed != null && mounted) {
+            if (completed == true && mounted) {
+              await _drafts.clear(
+                identity.profileId,
+                identity.address,
+                chain.chainId,
+              );
+              if (!mounted) return;
+              setState(() => _hasDraft = false);
+              final viewCampaign = await Navigator.of(context).push<bool>(
+                BurstPageRoute(
+                  builder: (_) => BurstCreatedSuccessScreen(
+                    campaign: Map<String, dynamic>.from(
+                      prepared['campaign'] as Map,
+                    ),
+                    joinCode: prepared['joinCode'] as String? ?? '',
+                    nativeSymbol: chain.symbol,
+                    chainName: chain.name,
+                    onViewBurst: () => Navigator.of(context).pop(true),
+                  ),
+                ),
+              );
+              if (mounted) {
+                Navigator.of(context).pop(
+                  viewCampaign == true
+                      ? Map<String, dynamic>.from(prepared['campaign'] as Map)
+                      : null,
+                );
+              }
+            } else if (completed == false && mounted) {
               await _drafts.clear(
                 identity.profileId,
                 identity.address,
@@ -401,11 +430,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
               );
               if (mounted) {
                 setState(() => _hasDraft = false);
-                Navigator.of(context).pop(
-                  completed
-                      ? Map<String, dynamic>.from(prepared['campaign'] as Map)
-                      : null,
-                );
+                Navigator.of(context).pop(null);
               }
             } else if (mounted) {
               setState(() => _hasDraft = true);
@@ -470,22 +495,23 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         'prepared': prepared,
       });
       if (!mounted) return;
-      final completed = await Navigator.of(context).push<bool>(
-        BurstPageRoute(
-          builder: (_) => BurstReviewScreen(
-            prepared: prepared,
-            executor: _executor(api, identity),
-            nativeSymbol: chain.symbol,
-            chainName: chain.name,
-            onCompleted: () async {
-              await _drafts.clear(
-                identity.profileId,
-                identity.address,
-                chain.chainId,
-              );
-              if (mounted) setState(() => _hasDraft = false);
-            },
-          ),
+      final completed = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => BurstReviewSheet(
+          prepared: prepared,
+          executor: _executor(api, identity),
+          nativeSymbol: chain.symbol,
+          chainName: chain.name,
+          onCompleted: () async {
+            await _drafts.clear(
+              identity.profileId,
+              identity.address,
+              chain.chainId,
+            );
+            if (mounted) setState(() => _hasDraft = false);
+          },
         ),
       );
       if (completed != null) {
@@ -494,14 +520,31 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           identity.address,
           chain.chainId,
         );
-        if (mounted) setState(() => _hasDraft = false);
+        if (!mounted) return;
+        setState(() => _hasDraft = false);
       }
-      if (mounted) await _open();
-      if (mounted && completed == true) {
-        await _openCampaign(
-          Map<String, dynamic>.from(prepared['campaign'] as Map),
+      if (!mounted) return;
+      if (completed == true) {
+        final viewCampaign = await Navigator.of(context).push<bool>(
+          BurstPageRoute(
+            builder: (_) => BurstCreatedSuccessScreen(
+              campaign: Map<String, dynamic>.from(prepared['campaign'] as Map),
+              joinCode: prepared['joinCode'] as String? ?? '',
+              nativeSymbol: chain.symbol,
+              chainName: chain.name,
+              onViewBurst: () => Navigator.of(context).pop(true),
+            ),
+          ),
         );
         if (mounted) await _open();
+        if (mounted && viewCampaign == true) {
+          await _openCampaign(
+            Map<String, dynamic>.from(prepared['campaign'] as Map),
+          );
+          if (mounted) await _open();
+        }
+      } else if (mounted) {
+        await _open();
       }
     } catch (error) {
       if (mounted) {

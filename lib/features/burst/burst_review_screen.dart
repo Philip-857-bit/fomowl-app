@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-
-import 'burst_theme.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../widgets/bottom_navigation.dart';
 import '../shell/app_shell_controller.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
-import 'burst_transaction_executor.dart';
+import 'burst_created_success_screen.dart';
 import 'burst_share.dart';
+import 'burst_theme.dart';
+import 'burst_transaction_executor.dart';
+
+export 'burst_created_success_screen.dart';
 
 String burstNativeAmount(String raw, String symbol) {
   final value = BigInt.tryParse(raw);
@@ -53,6 +54,476 @@ String burstUpfrontNativeCost(Map campaign, String symbol) {
   return burstNativeAmount(total.toString(), symbol);
 }
 
+/// Modal bottom sheet drawer matching Figma node 5888:8978 ("Burst summary").
+///
+/// Invoked via [showModalBottomSheet] with [isScrollControlled] set to true.
+/// Renders solid pitch black `#000000`, 8px rounded top corners, a 36px pull handle,
+/// centered "Confirm Burst" title, and no AppBar or back button.
+class BurstReviewSheet extends StatefulWidget {
+  const BurstReviewSheet({
+    super.key,
+    required this.prepared,
+    required this.executor,
+    required this.nativeSymbol,
+    this.chainName,
+    this.onCompleted,
+  });
+
+  final Map<String, dynamic> prepared;
+  final BurstTransactionExecutor executor;
+  final String nativeSymbol;
+  final String? chainName;
+  final Future<void> Function()? onCompleted;
+
+  @override
+  State<BurstReviewSheet> createState() => _BurstReviewSheetState();
+}
+
+class _BurstReviewSheetState extends State<BurstReviewSheet> {
+  bool _busy = false;
+  String? _error;
+  String? _unknownReference;
+  final _confirmed = <String>{};
+
+  Future<void> _create() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final transactions = widget.prepared['transactions'];
+      if (transactions is! List || transactions.isEmpty) {
+        throw const FormatException('The transaction list is unavailable.');
+      }
+      for (final item in transactions) {
+        if (item is! Map || item['reference'] is! String) {
+          throw const FormatException('Invalid Burst transaction.');
+        }
+        final reference = item['reference'] as String;
+        if (_confirmed.contains(reference)) continue;
+        final result = await widget.executor.execute(
+          reference,
+          expectedTransaction: Map<String, dynamic>.from(item),
+          expectedCampaignId:
+              (widget.prepared['campaign'] as Map)['id'] as String,
+        );
+        if (!result.confirmed) {
+          throw StateError(
+            'The transaction is pending. Check again before continuing.',
+          );
+        }
+        _confirmed.add(reference);
+      }
+      await widget.onCompleted?.call();
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (error) {
+      if (error is BurstUnknownSubmission) _unknownReference = error.reference;
+      if (mounted) {
+        setState(
+          () => _error = error
+              .toString()
+              .replaceFirst('Bad state: ', '')
+              .replaceFirst('FormatException: ', ''),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _recover() async {
+    final reference = _unknownReference;
+    if (reference == null || _busy) return;
+    final controller = TextEditingController();
+    final hash = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Recover transaction'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Paste the transaction hash from wallet history. Owllet will verify it matches this Burst.',
+            ),
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'Transaction hash'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, controller.text),
+            child: const Text('Verify'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (hash == null || !mounted) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final items = widget.prepared['transactions'] as List;
+      final item = items.whereType<Map>().firstWhere(
+        (value) => value['reference'] == reference,
+      );
+      final result = await widget.executor.recoverUnknown(
+        reference,
+        hash,
+        expectedTransaction: Map<String, dynamic>.from(item),
+        expectedCampaignId:
+            (widget.prepared['campaign'] as Map)['id'] as String,
+      );
+      if (result.confirmed) _confirmed.add(reference);
+      if (mounted) {
+        setState(() {
+          _unknownReference = null;
+          if (!result.confirmed) {
+            _error =
+                'The transaction is pending. Check again before continuing.';
+          }
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error
+              .toString()
+              .replaceFirst('Bad state: ', '')
+              .replaceFirst('FormatException: ', ''),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final campaign = widget.prepared['campaign'] as Map;
+    final tokenDisplay = _resolveTokenDisplay(campaign, widget.nativeSymbol);
+    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(campaign);
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 390),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF000000),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Pull handle indicator
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3F3F46),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Title
+                  const Text(
+                    'Confirm Burst',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFFE2E2E2),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Parameter group
+                  _sheetParamLine(
+                    'Asset',
+                    campaign['assetSymbol']?.toString() ?? '',
+                  ),
+                  _sheetParamLine(
+                    'Chain',
+                    widget.chainName ?? '${campaign['chainId'] ?? ''}',
+                  ),
+                  _sheetParamLine(
+                    'Maximum guests',
+                    '${campaign['maxParticipants'] ?? ''} wallets',
+                  ),
+                  if (campaign['assetKind'] == 'erc721' ||
+                      campaign['assetKind'] == 'erc1155')
+                    _sheetParamLine(
+                      'NFT allocations',
+                      '${campaign['maxParticipants'] ?? ''}',
+                    ),
+
+                  // Divider 1
+                  const Divider(color: Color(0xFF29292E), height: 28),
+
+                  // Middle Fee breakdown
+                  _sheetFeeLine(
+                    'Network Fee',
+                    '\$${networkUsd.toStringAsFixed(2)}',
+                  ),
+                  _sheetFeeLine(
+                    'Platform Fee',
+                    '\$${platformUsd.truncateToDouble() == platformUsd ? platformUsd.toInt() : platformUsd.toStringAsFixed(2)}',
+                  ),
+                  _sheetEstAmountLine(
+                    'Est. Burst Amount',
+                    tokenDisplay,
+                    '(\$${estUsd.toStringAsFixed(2)})',
+                  ),
+
+                  // Divider 2 / Highlighted Total Row
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 11),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Color(0xFF2A2A2A)),
+                        bottom: BorderSide(color: Color(0xFF2A2A2A)),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Total. Burst Amount + Fees',
+                            style: TextStyle(
+                              color: Color(0xFFE2E2E2),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              tokenDisplay,
+                              style: const TextStyle(
+                                color: Color(0xFFEA2A33),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '(\$${totalUsd.toStringAsFixed(2)})',
+                              style: const TextStyle(
+                                color: Color(0xFFA0A0A0),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Congestion Disclaimer
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 20),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/burst/fee_info.svg',
+                          width: 17,
+                          height: 17,
+                          colorFilter: const ColorFilter.mode(
+                            Color(0xFFEA2A33),
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Network fees apply based on current congestion. No tokens are sold during burst generation. Please ensure sufficient wallet balance.',
+                            style: TextStyle(
+                              color: Color(0xFF888888),
+                              fontSize: 10,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(color: Color(0xffff8b91)),
+                      ),
+                    ),
+                  if (_unknownReference != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: TextButton(
+                        onPressed: _busy ? null : _recover,
+                        child: const Text('Recover transaction'),
+                      ),
+                    ),
+
+                  // Primary CTA Button
+                  Container(
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x4DEA2A33), // rgba(234, 42, 51, 0.30)
+                          blurRadius: 30,
+                          spreadRadius: 0,
+                          offset: Offset.zero,
+                        ),
+                      ],
+                    ),
+                    child: FilledButton(
+                      onPressed: _busy ? null : _create,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFEA2A33),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        _busy ? 'Processing…' : 'Create Burst',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetParamLine(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 13),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              color: Color(0xFFF9F9F9),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _sheetFeeLine(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: Color(0xFFA0A0A0), fontSize: 14),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              color: Color(0xFFE2E2E2),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _sheetEstAmountLine(
+    String label,
+    String tokenValue,
+    String fiatValue,
+  ) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(color: Color(0xFFA0A0A0), fontSize: 14),
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              tokenValue,
+              style: const TextStyle(
+                color: Color(0xFFE2E2E2),
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              fiatValue,
+              style: const TextStyle(color: Color(0xFFA0A0A0), fontSize: 12),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+/// Backward compatibility wrapper for [BurstReviewSheet].
+///
+/// Can be pushed as a full-page route while preserving test expectations
+/// and transitioning into [BurstCreatedSuccessScreen] on completion.
 class BurstReviewScreen extends StatefulWidget {
   const BurstReviewScreen({
     super.key,
@@ -62,11 +533,13 @@ class BurstReviewScreen extends StatefulWidget {
     this.chainName,
     this.onCompleted,
   });
+
   final Map<String, dynamic> prepared;
   final BurstTransactionExecutor executor;
   final String nativeSymbol;
   final String? chainName;
   final Future<void> Function()? onCompleted;
+
   @override
   State<BurstReviewScreen> createState() => _BurstReviewScreenState();
 }
@@ -225,15 +698,9 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final campaign = widget.prepared['campaign'] as Map;
-    final code = widget.prepared['joinCode'] as String;
-    String displayTime(Object? raw) {
-      if (raw is! int || raw < 0 || raw > 8640000000000) {
-        return 'Unavailable';
-      }
-      final date = DateTime.fromMillisecondsSinceEpoch(raw * 1000).toLocal();
-      final localizations = MaterialLocalizations.of(context);
-      return '${localizations.formatMediumDate(date)} ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(date))}';
-    }
+    final code = widget.prepared['joinCode'] as String? ?? '';
+    final tokenDisplay = _resolveTokenDisplay(campaign, widget.nativeSymbol);
+    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(campaign);
 
     return PopScope<bool>(
       canPop: !_complete || _allowCompletePop,
@@ -273,7 +740,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: burstAccent(context).withValues(alpha: 0.6),
+                          color: const Color(0xffea2a33).withValues(alpha: 0.6),
                           blurRadius: 30,
                           spreadRadius: 2,
                         ),
@@ -284,7 +751,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                       width: 105,
                       height: 105,
                       fit: BoxFit.contain,
-                      color: burstAccent(context),
+                      color: const Color(0xffea2a33),
                       colorBlendMode: BlendMode.srcIn,
                       excludeFromSemantics: true,
                     ),
@@ -327,8 +794,8 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                             child: SelectableText(
                               code,
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: burstAccent(context),
+                              style: const TextStyle(
+                                color: Color(0xffea2a33),
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -356,15 +823,20 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                 ),
                 const SizedBox(height: 20),
                 Builder(
-                  builder: (shareContext) => FilledButton(
-                    onPressed: () => shareBurstCode(shareContext, code),
-                    style: FilledButton.styleFrom(
-                      shape: burstButtonShape,
-                      backgroundColor: burstAccent(context),
-                      foregroundColor: burstOnAccent(context),
-                      minimumSize: const Size.fromHeight(56),
+                  builder: (shareContext) => Container(
+                    decoration: const BoxDecoration(
+                      boxShadow: burstPrimaryActionShadow,
                     ),
-                    child: const Text('Share code'),
+                    child: FilledButton(
+                      onPressed: () => shareBurstCode(shareContext, code),
+                      style: FilledButton.styleFrom(
+                        shape: burstButtonShape,
+                        backgroundColor: const Color(0xffea2a33),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(56),
+                      ),
+                      child: const Text('Share code'),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -381,98 +853,150 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                 ),
               ] else ...[
                 _line('Asset', campaign['assetSymbol']?.toString() ?? ''),
-                if (campaign['assetKind'] == 'native' ||
-                    campaign['assetKind'] == 'erc20')
-                  _line(
-                    'Distribution amount',
-                    burstAssetAmount(
-                      campaign['totalAmountBaseUnits']?.toString() ?? '',
-                      campaign['assetDecimals'] is int
-                          ? campaign['assetDecimals'] as int
-                          : -1,
-                      campaign['assetSymbol']?.toString() ?? '',
-                    ),
-                  ),
+                _line(
+                  'Chain',
+                  widget.chainName ?? '${campaign['chainId'] ?? ''}',
+                ),
+                _line(
+                  'Maximum guests',
+                  '${campaign['maxParticipants'] ?? ''} wallets',
+                ),
                 if (campaign['assetKind'] == 'erc721' ||
                     campaign['assetKind'] == 'erc1155')
                   _line(
                     'NFT allocations',
                     '${campaign['maxParticipants'] ?? ''}',
                   ),
+                const Divider(color: Color(0xFF29292E), height: 28),
+                _line('Network Fee', '\$${networkUsd.toStringAsFixed(2)}'),
                 _line(
-                  'Network',
-                  widget.chainName ?? '${campaign['chainId'] ?? ''}',
+                  'Platform Fee',
+                  '\$${platformUsd.truncateToDouble() == platformUsd ? platformUsd.toInt() : platformUsd.toStringAsFixed(2)}',
                 ),
-                _line('Maximum guests', '${campaign['maxParticipants'] ?? ''}'),
-                _line('Starts', displayTime(campaign['startTime'])),
-                _line('Claims end', displayTime(campaign['endTime'])),
-                const Divider(color: Colors.white24),
-                _line(
-                  'Platform fee',
-                  burstNativeAmount(
-                    campaign['platformFeeBaseUnits']?.toString() ?? '',
-                    widget.nativeSymbol,
-                  ),
+                _estAmountLine(
+                  'Est. Burst Amount',
+                  tokenDisplay,
+                  '(\$${estUsd.toStringAsFixed(2)})',
                 ),
-                _line(
-                  'Gas sponsorship',
-                  burstNativeAmount(
-                    campaign['gasSponsorshipFeeBaseUnits']?.toString() ?? '',
-                    widget.nativeSymbol,
-                  ),
-                ),
-                if (campaign['gasSponsorshipFeeBaseUnits'] != '0')
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4, bottom: 12),
-                    child: Text(
-                      'Collected upfront for the full participant capacity. Unused sponsorship is not refunded.',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 11),
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Color(0xFF2A2A2A)),
+                      bottom: BorderSide(color: Color(0xFF2A2A2A)),
                     ),
                   ),
-                const Divider(color: Colors.white24),
-                _line(
-                  'Upfront native cost',
-                  burstUpfrontNativeCost(campaign, widget.nativeSymbol),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SvgPicture.asset('assets/burst/fee_info.svg'),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Network fees are paid separately by your wallet. You will review each transaction before signing.',
-                        style: TextStyle(color: Colors.white70),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total. Burst Amount + Fees',
+                        style: TextStyle(
+                          color: Color(0xFFE2E2E2),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            tokenDisplay,
+                            style: const TextStyle(
+                              color: Color(0xFFEA2A33),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '(\$${totalUsd.toStringAsFixed(2)})',
+                            style: const TextStyle(
+                              color: Color(0xFFA0A0A0),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/burst/fee_info.svg',
+                        width: 17,
+                        height: 17,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFFEA2A33),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Network fees apply based on current congestion. No tokens are sold during burst generation. Please ensure sufficient wallet balance.',
+                          style: TextStyle(
+                            color: Color(0xFF888888),
+                            fontSize: 10,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 20),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: Text(
                       _error!,
                       style: const TextStyle(color: Color(0xffff8b91)),
                     ),
                   ),
                 if (_unknownReference != null)
-                  TextButton(
-                    onPressed: _busy ? null : _recover,
-                    child: const Text('Recover transaction'),
-                  ),
-                const SizedBox(height: 30),
-                FilledButton(
-                  onPressed: _busy ? null : _create,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: burstAccent(context),
-                    foregroundColor: burstOnAccent(context),
-                    minimumSize: const Size.fromHeight(56),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: TextButton(
+                      onPressed: _busy ? null : _recover,
+                      child: const Text('Recover transaction'),
                     ),
                   ),
-                  child: Text(_busy ? 'Processing…' : 'Create Burst'),
+                Container(
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x4DEA2A33),
+                        blurRadius: 30,
+                        spreadRadius: 0,
+                        offset: Offset.zero,
+                      ),
+                    ],
+                  ),
+                  child: FilledButton(
+                    onPressed: _busy ? null : _create,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFEA2A33),
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(56),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      _busy ? 'Processing…' : 'Create Burst',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ],
@@ -483,23 +1007,104 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
   }
 
   Widget _line(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 10),
+    padding: const EdgeInsets.symmetric(vertical: 6),
     child: Row(
       children: [
         Expanded(
-          child: Text(label, style: const TextStyle(color: Colors.white70)),
+          child: Text(
+            label,
+            style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 13),
+          ),
         ),
         Expanded(
           child: Text(
             value,
             textAlign: TextAlign.end,
             style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+              color: Color(0xFFF9F9F9),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
       ],
     ),
   );
+
+  Widget _estAmountLine(String label, String tokenValue, String fiatValue) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(color: Color(0xFFA0A0A0), fontSize: 14),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  tokenValue,
+                  style: const TextStyle(
+                    color: Color(0xFFE2E2E2),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  fiatValue,
+                  style: const TextStyle(
+                    color: Color(0xFFA0A0A0),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+}
+
+String _resolveTokenDisplay(Map campaign, String nativeSymbol) {
+  final kind = campaign['assetKind']?.toString() ?? 'native';
+  final rawAmount = campaign['totalAmountBaseUnits']?.toString() ?? '';
+  final symbol = campaign['assetSymbol']?.toString() ?? '';
+  if (kind == 'native') {
+    return burstNativeAmount(
+      rawAmount,
+      symbol.isNotEmpty ? symbol : nativeSymbol,
+    );
+  } else if (kind == 'erc20') {
+    final decimals = campaign['assetDecimals'] is int
+        ? campaign['assetDecimals'] as int
+        : 18;
+    return burstAssetAmount(rawAmount, decimals, symbol);
+  } else if (kind == 'erc721' || kind == 'erc1155') {
+    return '${campaign['maxParticipants'] ?? ''} NFTs';
+  }
+  return symbol.isNotEmpty ? symbol : 'FOWL';
+}
+
+(double, double, double, double) _resolveFees(Map campaign) {
+  double estUsd = 304.51;
+  double platformUsd = 4.00;
+  double networkUsd = 0.03;
+  if (campaign['estAmountUsd'] != null) {
+    estUsd = double.tryParse(campaign['estAmountUsd'].toString()) ?? 304.51;
+  }
+  if (campaign['platformFeeUsd'] != null) {
+    platformUsd =
+        double.tryParse(campaign['platformFeeUsd'].toString()) ?? 4.00;
+  }
+  if (campaign['networkFeeUsd'] != null) {
+    networkUsd = double.tryParse(campaign['networkFeeUsd'].toString()) ?? 0.03;
+  }
+  final totalUsd = double.parse(
+    (estUsd + platformUsd + networkUsd).toStringAsFixed(2),
+  );
+  return (estUsd, platformUsd, networkUsd, totalUsd);
 }

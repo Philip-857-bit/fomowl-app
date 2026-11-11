@@ -62,6 +62,8 @@ class BurstCampaignDraft {
     this.assetAddress,
     this.nfts = const [],
     this.randomizeNfts = false,
+    this.startTime,
+    this.endTime,
   });
   final int chainId;
   final String title;
@@ -74,6 +76,8 @@ class BurstCampaignDraft {
   final String? assetAddress;
   final List<BurstNftAllocation> nfts;
   final bool randomizeNfts;
+  final int? startTime;
+  final int? endTime;
 
   Map<String, dynamic> toRequest({
     required String idempotencyKey,
@@ -151,7 +155,6 @@ class BurstCampaignDraft {
         );
       }
     }
-    final timestamp = now.toUtc().millisecondsSinceEpoch ~/ 1000;
     final allocationOrder = List<BurstNftAllocation>.of(nfts);
     if (nft && randomizeNfts) {
       allocationOrder.shuffle(random ?? Random.secure());
@@ -176,8 +179,8 @@ class BurstCampaignDraft {
             )
             .toList(),
       'maxParticipants': participants,
-      'startTime': timestamp + 60,
-      'endTime': timestamp + 7 * 24 * 60 * 60,
+      if (startTime != null) 'startTime': startTime,
+      if (endTime != null) 'endTime': endTime,
       'idempotencyKey': idempotencyKey,
     };
   }

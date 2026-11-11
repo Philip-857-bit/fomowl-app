@@ -43,12 +43,19 @@ void validateBurstCreation({
   if (!RegExp(r'^0x[0-9a-f]{40}$').hasMatch(token)) {
     throw const FormatException('Invalid Burst asset address.');
   }
+  final expectedStart = draft['startTime'] ?? campaign['startTime'];
+  final expectedEnd = draft['endTime'] ?? campaign['endTime'];
+  final startBig = expectedStart != null
+      ? BigInt.from(expectedStart as num)
+      : null;
+  final endBig = expectedEnd != null ? BigInt.from(expectedEnd as num) : null;
   if (number(1) != BigInt.from(kind) ||
       word(2) != '${'0' * 24}${token.substring(2)}' ||
       (!nft && number(3).toString() != draft['totalAmountBaseUnits']) ||
       number(nft ? 3 : 4) != BigInt.from(draft['maxParticipants'] as int) ||
-      number(nft ? 4 : 5) != BigInt.from(draft['startTime'] as int) ||
-      number(nft ? 5 : 6) != BigInt.from(draft['endTime'] as int) ||
+      (startBig != null && number(nft ? 4 : 5) != startBig) ||
+      (endBig != null && number(nft ? 5 : 6) != endBig) ||
+      number(nft ? 5 : 6) <= number(nft ? 4 : 5) ||
       number(nft ? 6 : 7) != BigInt.zero ||
       number(nft ? 7 : 8) != BigInt.zero) {
     throw const FormatException(

@@ -45,8 +45,8 @@ class BurstPreparedCampaign {
       'totalAmountBaseUnits',
       if (!isNft) 'amountPerParticipantBaseUnits',
       'maxParticipants',
-      'startTime',
-      'endTime',
+      if (draft['startTime'] != null) 'startTime',
+      if (draft['endTime'] != null) 'endTime',
     ]) {
       if (campaign[field] != draft[field]) {
         throw const FormatException(

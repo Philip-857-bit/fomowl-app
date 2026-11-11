@@ -21,14 +21,17 @@ Map<String, dynamic> burstFixture(Map<String, dynamic> draft) {
   final asset = kind == 0
       ? '0' * 40
       : (draft['assetAddress'] as String).substring(2).toLowerCase();
+  final nowSeconds = 1731234567;
+  final startTime = draft['startTime'] ?? nowSeconds;
+  final endTime = draft['endTime'] ?? (nowSeconds + 7 * 86400);
   final words = [
     salt,
     uintWord(kind),
     asset.padLeft(64, '0'),
     if (!nft) uintWord(draft['totalAmountBaseUnits']),
     uintWord(draft['maxParticipants']),
-    uintWord(draft['startTime']),
-    uintWord(draft['endTime']),
+    uintWord(startTime),
+    uintWord(endTime),
     uintWord(0),
     uintWord(0),
   ];

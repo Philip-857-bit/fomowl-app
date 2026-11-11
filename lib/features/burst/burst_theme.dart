@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../services/blockchain_service.dart';
 import '../../theme/app_chain_theme.dart';
 
 const burstButtonShape = RoundedRectangleBorder(
@@ -35,17 +37,37 @@ class BurstHeader extends StatelessWidget {
   }
 }
 
-/// Preserve the Burst design in Classic while following the active network in
-/// the wallet's Adaptive theme.
-Color burstAccent(BuildContext context) {
-  final theme = context.chainTheme;
-  return theme.id == 'fomowl_signature'
-      ? const Color(0xffea2a33)
-      : theme.accentColor;
+/// Tier 1: Invariant brand electric red for primary CTAs, total highlights, and ambient glow.
+const Color burstPrimaryActionColor = Color(0xffea2a33);
+
+/// Ambient glow shadow for primary Burst action buttons per Figma.
+const List<BoxShadow> burstPrimaryActionShadow = [
+  BoxShadow(
+    color: Color(0x4dea2a33), // rgba(234, 42, 51, 0.30)
+    blurRadius: 30,
+    spreadRadius: 0,
+    offset: Offset.zero,
+  ),
+];
+
+/// Tier 1: Invariant Electric Red (#EA2A33) across all chains for primary CTAs
+/// and total highlights.
+Color burstAccent(BuildContext context) => burstPrimaryActionColor;
+
+Color burstOnAccent(BuildContext context) => Colors.white;
+
+/// Tier 2: Dynamic chain accents strictly for network badges, tags, and selector borders.
+Color burstChainAccent(BuildContext context) {
+  try {
+    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    return AppChainTheme.forNetworkKey(blockchain.activeNetworkKey).accentColor;
+  } catch (_) {
+    return context.chainTheme.accentColor;
+  }
 }
 
-Color burstOnAccent(BuildContext context) =>
-    ThemeData.estimateBrightnessForColor(burstAccent(context)) ==
+Color burstOnChainAccent(BuildContext context) =>
+    ThemeData.estimateBrightnessForColor(burstChainAccent(context)) ==
         Brightness.light
     ? Colors.black
     : Colors.white;

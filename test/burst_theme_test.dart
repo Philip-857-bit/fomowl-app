@@ -84,7 +84,7 @@ void main() {
   );
 
   testWidgets(
-    'Burst routes update Material controls when the network changes',
+    'Two-Tier Theme: Tier 1 invariant Electric Red and Tier 2 dynamic chain accent',
     (tester) async {
       final chain = _Chain();
       await tester.pumpWidget(
@@ -106,29 +106,27 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      Color primary() => Theme.of(
-        tester.element(find.text('Burst route')),
-      ).colorScheme.primary;
-      expect(primary(), const Color(0xfff3ba2f));
-      expect(
-        Theme.of(
-          tester.element(find.text('Burst route')),
-        ).colorScheme.onSecondary,
-        Colors.black,
-      );
+      final routeElement = tester.element(find.text('Burst route'));
+      Color primary() => Theme.of(routeElement).colorScheme.primary;
+      // Tier 1: Invariant Electric Red regardless of network
+      expect(primary(), const Color(0xffea2a33));
+      expect(burstAccent(routeElement), const Color(0xffea2a33));
+      expect(Theme.of(routeElement).colorScheme.onSecondary, Colors.white);
+      // Tier 2: Dynamic chain accent matches BSC
+      expect(burstChainAccent(routeElement), const Color(0xfff3ba2f));
+
       chain.select('evm:8453');
       await tester.pump();
-      expect(primary(), const Color(0xff0052ff));
-      expect(
-        Theme.of(
-          tester.element(find.text('Burst route')),
-        ).colorScheme.onSecondary,
-        Colors.white,
-      );
+      final updatedElement = tester.element(find.text('Burst route'));
+      // Tier 1 remains Electric Red on Base
+      expect(primary(), const Color(0xffea2a33));
+      expect(burstAccent(updatedElement), const Color(0xffea2a33));
+      // Tier 2 updates dynamically to Base blue
+      expect(burstChainAccent(updatedElement), const Color(0xff0052ff));
     },
   );
 
-  testWidgets('Burst actions follow the selected network and keep contrast', (
+  testWidgets('Burst actions use invariant Electric Red across chains', (
     tester,
   ) async {
     final chain = _Chain();
@@ -154,20 +152,16 @@ void main() {
     ButtonStyle? style() => tester
         .widget<FilledButton>(find.widgetWithText(FilledButton, 'Join Burst'))
         .style;
-    expect(style()!.backgroundColor!.resolve({}), const Color(0xfff3ba2f));
-    expect(style()!.foregroundColor!.resolve({}), Colors.black);
-    expect(
-      tester.widget<Image>(find.byType(Image)).color,
-      const Color(0xfff3ba2f),
-    );
+    // On BSC: invariant Electric Red
+    expect(style()!.backgroundColor!.resolve({}), const Color(0xffea2a33));
+    expect(style()!.foregroundColor!.resolve({}), Colors.white);
+
     chain.select('evm:8453');
     await tester.pump();
-    expect(style()!.backgroundColor!.resolve({}), const Color(0xff0052ff));
+    // On Base: still invariant Electric Red
+    expect(style()!.backgroundColor!.resolve({}), const Color(0xffea2a33));
     expect(style()!.foregroundColor!.resolve({}), Colors.white);
-    expect(
-      tester.widget<Image>(find.byType(Image)).color,
-      const Color(0xff0052ff),
-    );
+
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

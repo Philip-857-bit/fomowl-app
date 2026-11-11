@@ -268,7 +268,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Upfront native cost'), findsOneWidget);
+    expect(find.text('Total. Burst Amount + Fees'), findsOneWidget);
+    expect(find.text('Upfront native cost'), findsNothing);
     expect(tester.takeException(), isNull);
     final boundary =
         key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
