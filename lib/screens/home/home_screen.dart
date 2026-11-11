@@ -133,7 +133,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<HomePortfolioSection> _portfolioRawSections = const [];
   DateTime? _portfolioUpdatedAt;
   DateTime? _portfolioFetchedAt;
-  static const Duration _portfolioTabCacheTtl = Duration(seconds: 60);
   bool _balanceVisible = true;
   bool _hasUnreadNotifications = false;
   bool? _hasInternet;
@@ -824,9 +823,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _activatePortfolioTab({bool force = false}) async {
     if (!mounted || !_portfolioRuntimeEnabled) return;
     if (!force) {
+      final cacheTtl = Duration(
+        seconds: _runtimeConfig.snapshot.balanceRefreshIntervalSeconds,
+      );
       final fetchedAt = _portfolioFetchedAt;
       if (fetchedAt != null &&
-          DateTime.now().difference(fetchedAt) < _portfolioTabCacheTtl &&
+          DateTime.now().difference(fetchedAt) < cacheTtl &&
           _portfolioRawSections.isNotEmpty) {
         return;
       }

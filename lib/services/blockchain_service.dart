@@ -1256,7 +1256,7 @@ class BlockchainService extends ChangeNotifier {
 
   void setLivePriceTrackingForTokens(
     List<Token> tokens, {
-    Duration interval = const Duration(minutes: 1),
+    Duration? interval,
     String scope = 'default',
   }) {
     final trackedIds = tokens
@@ -1273,7 +1273,16 @@ class BlockchainService extends ChangeNotifier {
     }
 
     _trackedPriceIdsByScope[scope] = trackedIds;
-    _livePriceIntervalsByScope[scope] = interval;
+    // Cadence comes from runtime policy so operators can slow polling during
+    // provider quota pressure without shipping a client build.
+    _livePriceIntervalsByScope[scope] =
+        interval ??
+        Duration(
+          seconds: RuntimeConfigService
+              .instance
+              .snapshot
+              .priceRefreshIntervalSeconds,
+        );
     _reconfigureLivePriceTimer();
   }
 

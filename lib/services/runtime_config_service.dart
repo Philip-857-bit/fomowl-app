@@ -56,6 +56,8 @@ class RuntimePolicySnapshot {
     this.refreshOnEntry = true,
     this.refreshOnResume = true,
     this.refreshOnTransaction = true,
+    this.priceRefreshIntervalSeconds = 300,
+    this.balanceRefreshIntervalSeconds = 60,
     this.transfersEnabled = true,
     this.swapsEnabled = true,
     this.bridgesEnabled = true,
@@ -83,6 +85,8 @@ class RuntimePolicySnapshot {
   final bool refreshOnEntry;
   final bool refreshOnResume;
   final bool refreshOnTransaction;
+  final int priceRefreshIntervalSeconds;
+  final int balanceRefreshIntervalSeconds;
   final bool transfersEnabled;
   final bool swapsEnabled;
   final bool bridgesEnabled;
@@ -170,6 +174,8 @@ class RuntimePolicySnapshot {
       other.refreshOnEntry == refreshOnEntry &&
       other.refreshOnResume == refreshOnResume &&
       other.refreshOnTransaction == refreshOnTransaction &&
+      other.priceRefreshIntervalSeconds == priceRefreshIntervalSeconds &&
+      other.balanceRefreshIntervalSeconds == balanceRefreshIntervalSeconds &&
       other.transfersEnabled == transfersEnabled &&
       other.swapsEnabled == swapsEnabled &&
       other.bridgesEnabled == bridgesEnabled &&
@@ -198,6 +204,8 @@ class RuntimePolicySnapshot {
     refreshOnEntry,
     refreshOnResume,
     refreshOnTransaction,
+    priceRefreshIntervalSeconds,
+    balanceRefreshIntervalSeconds,
     transfersEnabled,
     swapsEnabled,
     bridgesEnabled,
@@ -227,6 +235,8 @@ class RuntimePolicySnapshot {
         'refreshOnEntry': refreshOnEntry,
         'refreshOnResume': refreshOnResume,
         'refreshOnTransaction': refreshOnTransaction,
+        'priceRefreshIntervalSeconds': priceRefreshIntervalSeconds,
+        'balanceRefreshIntervalSeconds': balanceRefreshIntervalSeconds,
       },
       'features': {
         'transfersEnabled': transfersEnabled,
@@ -272,6 +282,21 @@ class RuntimePolicySnapshot {
       return fallback;
     }
 
+    int readSeconds(
+      Map<String, dynamic> source,
+      String key, {
+      required int fallback,
+      required int min,
+      required int max,
+    }) {
+      final value = source[key];
+      final parsed = value is int
+          ? value
+          : int.tryParse(value?.toString() ?? '');
+      if (parsed == null) return fallback;
+      return parsed.clamp(min, max).toInt();
+    }
+
     return RuntimePolicySnapshot(
       bitcoinEnabled: features['bitcoinEnabled'] == true,
       bitcoinTestnetEnabled: features['bitcoinTestnetEnabled'] == true,
@@ -313,6 +338,20 @@ class RuntimePolicySnapshot {
         portfolio,
         'refreshOnTransaction',
         fallback: true,
+      ),
+      priceRefreshIntervalSeconds: readSeconds(
+        portfolio,
+        'priceRefreshIntervalSeconds',
+        fallback: 300,
+        min: 30,
+        max: 3600,
+      ),
+      balanceRefreshIntervalSeconds: readSeconds(
+        portfolio,
+        'balanceRefreshIntervalSeconds',
+        fallback: 60,
+        min: 10,
+        max: 600,
       ),
       transfersEnabled: readFlag(features, 'transfersEnabled', fallback: false),
       swapsEnabled: readFlag(features, 'swapsEnabled', fallback: false),
