@@ -568,14 +568,6 @@ class AppChainTheme {
       darkBase: const Color(0xFF08243B),
     ),
 
-    42420: createBrandTheme(
-      id: 'asset_chain',
-      displayName: 'Asset Chain',
-      primary: const Color(0xFF147BC2),
-      accent: const Color(0xFF26C4E8),
-      darkBase: const Color(0xFF08243B),
-    ),
-
     // Dedicated Ecosystem Brand Themes
     324: createBrandTheme(
       id: 'zksync',
