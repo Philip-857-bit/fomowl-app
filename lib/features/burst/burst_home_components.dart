@@ -117,9 +117,11 @@ class BurstHomeCampaignCard extends StatelessWidget {
     super.key,
     required this.campaign,
     required this.onTap,
+    this.onDelete,
   });
   final Map<String, dynamic> campaign;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +174,19 @@ class BurstHomeCampaignCard extends StatelessWidget {
                         fontSize: 10,
                       ),
                     ),
+                    if (onDelete != null)
+                      IconButton(
+                        tooltip: 'Delete draft',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: onDelete,
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 16,
+                          color: Colors.white54,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 8),

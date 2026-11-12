@@ -608,6 +608,42 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     );
   }
 
+  Future<void> _confirmDeleteDraft(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xff141414),
+        title: const Text('Delete draft?'),
+        content: const Text(
+          'This draft Burst will be removed. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final api = _api;
+    if (api == null) return;
+    try {
+      await api.deleteCampaign(id);
+      if (!mounted) return;
+      await _open();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete the draft: $error')),
+      );
+    }
+  }
+
   Future<void> _openListedCampaign(Map<String, dynamic> campaign) async {
     if (campaign['_isParticipation'] != true) {
       await _openCampaign(campaign);
@@ -858,6 +894,15 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
                                     campaign: Map<String, dynamic>.from(
                                       campaign,
                                     ),
+                                    onDelete:
+                                        campaign['_isParticipation'] != true &&
+                                            campaign['status']?.toString() ==
+                                                'draft' &&
+                                            campaign['id'] is String
+                                        ? () => _confirmDeleteDraft(
+                                            campaign['id'] as String,
+                                          )
+                                        : null,
                                     onTap: campaign['id'] is! String
                                         ? null
                                         : () async {

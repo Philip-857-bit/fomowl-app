@@ -120,6 +120,8 @@ class BurstApiClient {
       _request('GET', '/campaigns/${Uri.encodeComponent(id)}');
   Future<Map<String, dynamic>> campaignCode(String id) =>
       _request('GET', '/campaigns/${Uri.encodeComponent(id)}/code');
+  Future<Map<String, dynamic>> deleteCampaign(String id) =>
+      _request('DELETE', '/campaigns/${Uri.encodeComponent(id)}');
   Future<Map<String, dynamic>> prepare(Map<String, dynamic> draft) =>
       _request('POST', '/campaigns/prepare', body: draft);
   Future<Map<String, dynamic>> previewJoin(String code) =>
