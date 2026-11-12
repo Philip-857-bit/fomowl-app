@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-10-20)
+# Graph Report - .  (2026-11-12)
 
 ## Corpus Check
-- 57 files · ~483,376 words
+- 59 files · ~543,493 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 524 nodes · 771 edges · 64 communities detected
+- 530 nodes · 775 edges · 66 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -74,6 +74,8 @@
 - [[_COMMUNITY_Community 61|Community 61]]
 - [[_COMMUNITY_Community 62|Community 62]]
 - [[_COMMUNITY_Community 63|Community 63]]
+- [[_COMMUNITY_Community 64|Community 64]]
+- [[_COMMUNITY_Community 65|Community 65]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `pde_ffi_dispatcher_primary_impl()` - 74 edges
@@ -98,11 +100,11 @@ Nodes (76): pde_ffi_dispatcher_primary_impl(), pde_ffi_dispatcher_sync_impl(), w
 
 ### Community 1 - "Community 1"
 Cohesion: 0.03
-Nodes (18): crate::api::bitcoin_account::BitcoinKeychainDto, crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto, crate::api::bitcoin_transaction::BitcoinUtxoDto, crate::api::bitcoin_vault::SealedBitcoinAccountDto, Option<String>, Option<u64>, RustBitcoinSigningAccount, RustEvmSigningAccount (+10 more)
+Nodes (18): crate::api::bitcoin_account::BitcoinPurposeDto, crate::api::bitcoin_transaction::BitcoinPsbtOutputDto, crate::api::bitcoin_transaction::BitcoinRecipientDto, crate::api::bitcoin_transaction::SignedBitcoinTransactionDto, Option<String>, Option<u64>, RustBitcoinSigningAccount, RustEvmSigningAccount (+10 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.04
-Nodes (12): crate::api::bip32::SolanaPrivateKeyImport, crate::api::bitcoin_account::BitcoinAccountDto, crate::api::bitcoin_account::BitcoinNetworkDto, crate::api::bitcoin_account::BitcoinPurposeDto, crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto, crate::api::bitcoin_transaction::BitcoinPsbtOutputDto, crate::api::bitcoin_transaction::BitcoinRecipientDto, crate::api::bitcoin_transaction::BitcoinTransactionPlanDto (+4 more)
+Nodes (12): crate::api::bip32::SolanaPrivateKeyImport, crate::api::bitcoin_account::BitcoinAccountDto, crate::api::bitcoin_account::BitcoinKeychainDto, crate::api::bitcoin_account::BitcoinNetworkDto, crate::api::bitcoin_transaction::BitcoinPsbtFinalizationDto, crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto, crate::api::bitcoin_transaction::BitcoinTransactionPlanDto, crate::api::bitcoin_transaction::BitcoinUtxoDto (+4 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.13
@@ -142,7 +144,7 @@ Nodes (3): hd_signers_keep_purpose_scope_and_close_is_terminal(), open_bitcoin_s
 
 ### Community 12 - "Community 12"
 Cohesion: 0.2
-Nodes (0): 
+Nodes (0):
 
 ### Community 13 - "Community 13"
 Cohesion: 0.36
@@ -198,7 +200,7 @@ Nodes (4): export_bitcoin_vault_xprv(), seal_bitcoin_seed_account(), SealedBitco
 
 ### Community 26 - "Community 26"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (0):
 
 ### Community 27 - "Community 27"
 Cohesion: 0.5
@@ -210,7 +212,7 @@ Nodes (2): RunnerTests, XCTestCase
 
 ### Community 29 - "Community 29"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (0):
 
 ### Community 30 - "Community 30"
 Cohesion: 0.67
@@ -242,166 +244,174 @@ Nodes (1): ()
 
 ### Community 37 - "Community 37"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (0):
 
 ### Community 38 - "Community 38"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (1): Empirical Adversarial Validation & Stress Harness for AssetChain Logo.  This scr
 
 ### Community 39 - "Community 39"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (0):
 
 ### Community 40 - "Community 40"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 41 - "Community 41"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 42 - "Community 42"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 43 - "Community 43"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 44 - "Community 44"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 45 - "Community 45"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 46 - "Community 46"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 47 - "Community 47"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 48 - "Community 48"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 49 - "Community 49"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 50 - "Community 50"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 51 - "Community 51"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 52 - "Community 52"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 53 - "Community 53"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 54 - "Community 54"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 55 - "Community 55"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 56 - "Community 56"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 57 - "Community 57"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 58 - "Community 58"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 59 - "Community 59"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 60 - "Community 60"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 61 - "Community 61"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 62 - "Community 62"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (0):
 
 ### Community 63 - "Community 63"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 64 - "Community 64"
+Cohesion: 1.0
+Nodes (0):
+
+### Community 65 - "Community 65"
 Cohesion: 1.0
 Nodes (1): Build a verified proprietary source package without uploading to a registry.
 
 ## Knowledge Gaps
-- **12 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `FrbWrapper<RustBitcoinSigningAccount>`, `FrbWrapper<RustEvmSigningAccount>`, `FrbWrapper<RustWalletSigningAccount>` (+7 more)
+- **13 isolated node(s):** `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `FrbWrapper<RustBitcoinSigningAccount>`, `FrbWrapper<RustEvmSigningAccount>`, `FrbWrapper<RustWalletSigningAccount>` (+8 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 38`** (2 nodes): `derive_passcode_hash_argon2()`, `argon2.rs`
+- **Thin community `Community 40`** (2 nodes): `derive_passcode_hash_argon2()`, `argon2.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 39`** (2 nodes): `Resolve-Symlinks()`, `resolve_symlinks.ps1`
+- **Thin community `Community 41`** (2 nodes): `Resolve-Symlinks()`, `resolve_symlinks.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 40`** (2 nodes): `shorebird_release_manifest.py`, `main()`
+- **Thin community `Community 42`** (2 nodes): `shorebird_release_manifest.py`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 41`** (2 nodes): `write_shorebird_yaml.py`, `main()`
+- **Thin community `Community 43`** (2 nodes): `write_shorebird_yaml.py`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 42`** (2 nodes): `RegisterPlugins()`, `generated_plugin_registrant.cc`
+- **Thin community `Community 44`** (2 nodes): `RegisterPlugins()`, `generated_plugin_registrant.cc`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 43`** (2 nodes): `wWinMain()`, `main.cpp`
+- **Thin community `Community 45`** (2 nodes): `wWinMain()`, `main.cpp`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 44`** (1 nodes): `build.gradle.kts`
+- **Thin community `Community 46`** (1 nodes): `build.gradle.kts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (1 nodes): `settings.gradle.kts`
+- **Thin community `Community 47`** (1 nodes): `settings.gradle.kts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (1 nodes): `GeneratedPluginRegistrant.h`
+- **Thin community `Community 48`** (1 nodes): `GeneratedPluginRegistrant.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (1 nodes): `Runner-Bridging-Header.h`
+- **Thin community `Community 49`** (1 nodes): `Runner-Bridging-Header.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (1 nodes): `lib.rs`
+- **Thin community `Community 50`** (1 nodes): `lib.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (1 nodes): `mod.rs`
+- **Thin community `Community 51`** (1 nodes): `mod.rs`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (1 nodes): `dummy_file.c`
+- **Thin community `Community 52`** (1 nodes): `dummy_file.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (1 nodes): `dummy_file.c`
+- **Thin community `Community 53`** (1 nodes): `dummy_file.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (1 nodes): `bump_mobile_version.ps1`
+- **Thin community `Community 54`** (1 nodes): `bump_mobile_version.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (1 nodes): `create_android_keystore.ps1`
+- **Thin community `Community 55`** (1 nodes): `create_android_keystore.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (1 nodes): `encode_android_keystore.ps1`
+- **Thin community `Community 56`** (1 nodes): `encode_android_keystore.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (1 nodes): `encode_google_services_json.ps1`
+- **Thin community `Community 57`** (1 nodes): `encode_google_services_json.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (1 nodes): `generate_shorebird_patch_keys.ps1`
+- **Thin community `Community 58`** (1 nodes): `generate_shorebird_patch_keys.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (1 nodes): `get_android_fingerprints.ps1`
+- **Thin community `Community 59`** (1 nodes): `get_android_fingerprints.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (1 nodes): `shorebird_patch_local.ps1`
+- **Thin community `Community 60`** (1 nodes): `shorebird_patch_local.ps1`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (1 nodes): `generated_plugin_registrant.h`
+- **Thin community `Community 61`** (1 nodes): `generated_plugin_registrant.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (1 nodes): `resource.h`
+- **Thin community `Community 62`** (1 nodes): `resource.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (1 nodes): `utils.h`
+- **Thin community `Community 63`** (1 nodes): `utils.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (1 nodes): `win32_window.h`
+- **Thin community `Community 64`** (1 nodes): `win32_window.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (1 nodes): `Build a verified proprietary source package without uploading to a registry.`
+- **Thin community `Community 65`** (1 nodes): `Build a verified proprietary source package without uploading to a registry.`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
@@ -410,9 +420,9 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `usize` connect `Community 1` to `Community 0`?**
   _High betweenness centrality (0.011) - this node is a cross-community bridge._
 - **Why does `crate::api::bip32::SolanaPrivateKeyImport` connect `Community 2` to `Community 1`?**
-  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `Intercept NOTIFY_DEBUGGER_ABOUT_RX_PAGES and touch the pages.`, `-registerWithRegistry`, `FrbWrapper<RustBitcoinSigningAccount>` to the rest of the system?**
-  _12 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _13 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.06 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**

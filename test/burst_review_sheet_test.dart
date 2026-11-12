@@ -52,6 +52,79 @@ void main() {
     'networkFeeUsd': 0.03,
   };
 
+  testWidgets('loads network fee and includes every native fee in total', (
+    tester,
+  ) async {
+    final prepared = Map<String, dynamic>.from(samplePrepared)
+      ..remove('networkFeeUsd');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BurstReviewSheet(
+            prepared: prepared,
+            executor: executor,
+            nativeSymbol: 'BNB',
+            loadNetworkFee: () async => BigInt.from(100000000000000),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(r'$0.03'), findsOneWidget);
+    expect(find.text('1.0051 BNB'), findsOneWidget);
+    expect(find.text(r'($301.53)'), findsOneWidget);
+  });
+
+  testWidgets('failed network estimate offers retry and recovers', (
+    tester,
+  ) async {
+    var attempts = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BurstReviewSheet(
+            prepared: Map<String, dynamic>.from(samplePrepared)
+              ..remove('networkFeeUsd'),
+            executor: executor,
+            nativeSymbol: 'BNB',
+            loadNetworkFee: () async {
+              if (attempts++ == 0) throw StateError('RPC unavailable');
+              return BigInt.from(100000000000000);
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Unable to estimate network fee. Retry'), findsOneWidget);
+    await tester.tap(find.text('Unable to estimate network fee. Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text(r'$0.03'), findsOneWidget);
+  });
+
+  testWidgets('network fee remains visible without a USD price', (
+    tester,
+  ) async {
+    final prepared = Map<String, dynamic>.from(samplePrepared)
+      ..remove('networkFeeUsd')
+      ..remove('nativePriceUsd');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BurstReviewSheet(
+            prepared: prepared,
+            executor: executor,
+            nativeSymbol: 'BNB',
+            loadNetworkFee: () async => BigInt.from(100000000000000),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('0.0001 BNB'), findsOneWidget);
+    expect(find.text('1.0051 BNB'), findsOneWidget);
+  });
+
   testWidgets('BurstReviewSheet renders matching Figma node 5888:8978 specs', (
     tester,
   ) async {

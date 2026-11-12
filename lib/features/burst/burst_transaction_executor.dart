@@ -74,6 +74,7 @@ class BurstTransactionExecutor {
     required this.approve,
     required this.broadcast,
     this.verifyBroadcast,
+    this.beginSubmission,
     this.allowNewTransactions = true,
   });
   final BurstApiClient api;
@@ -86,6 +87,7 @@ class BurstTransactionExecutor {
   final Future<bool> Function(BurstExecutionPlan plan, String hash)?
   verifyBroadcast;
   final bool allowNewTransactions;
+  final Future<void> Function(BurstExecutionPlan plan)? beginSubmission;
   bool _busy = false;
 
   Future<BurstTransactionResult> execute(
@@ -190,6 +192,9 @@ class BurstTransactionExecutor {
         'campaignId': current.campaignId,
         'operation': current.operation,
       };
+      // Reserve the exact current reference on the backend before a broadcast
+      // can race an edit. A refusal leaves the journal untouched and sends nothing.
+      await beginSubmission?.call(current);
       await journal.write(reference, entry);
       final bool currentWallet;
       try {

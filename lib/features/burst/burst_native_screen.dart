@@ -171,7 +171,22 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           throw StateError('Unable to load joined Bursts.');
         }
         if (mounted) {
+          final identity = _openedIdentity;
+          final chainId = identity == null
+              ? null
+              : int.tryParse(identity.networkKey.substring(4));
+          final saved = identity == null || chainId == null
+              ? null
+              : await readRecoverableBurstDraft(
+                  api: _api!,
+                  store: _drafts,
+                  profileId: identity.profileId,
+                  wallet: identity.address,
+                  chainId: chainId,
+                );
+          if (!mounted) return;
           setState(() {
+            _hasDraft = saved != null;
             _campaigns = campaigns['campaigns'] as List;
             _participations = joined['campaigns'] as List;
           });
@@ -197,10 +212,12 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       );
       _session = session;
       final api = await session.open();
-      final savedDraft = await _drafts.read(
-        identity.profileId,
-        identity.address,
-        chainId,
+      final savedDraft = await readRecoverableBurstDraft(
+        api: api,
+        store: _drafts,
+        profileId: identity.profileId,
+        wallet: identity.address,
+        chainId: chainId,
       );
       Map<String, dynamic> config;
       var recoveryOnly = false;
@@ -317,6 +334,42 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     return authenticated;
   }
 
+  Future<BigInt> _estimateReviewFee(
+    Map<String, dynamic> prepared,
+    BurstSignInIdentity identity,
+  ) async {
+    if (!identity.matches(await _identity()) || !mounted) {
+      throw StateError('The wallet or network changed.');
+    }
+    final chain = context.read<BlockchainService>().activeChain;
+    final rpc = Web3Client(chain.rpcUrl, http.Client());
+    try {
+      final transactions = prepared['transactions'];
+      if (transactions is! List || transactions.isEmpty) {
+        throw const FormatException('The transaction list is unavailable.');
+      }
+      var total = BigInt.zero;
+      for (final item in transactions) {
+        final transaction = Map<String, dynamic>.from(item as Map);
+        final plan = BurstExecutionPlan.parse(
+          {
+            'walletAddress': identity.address,
+            'campaignId': (prepared['campaign'] as Map)['id'],
+            'transaction': transaction,
+          },
+          reference: transaction['reference'] as String,
+          wallet: identity.address,
+          chainId: chain.chainId,
+        );
+        final fee = await BurstNetworkFee.estimate(rpc, plan);
+        total += fee.maximumFeeWei;
+      }
+      return total;
+    } finally {
+      rpc.dispose();
+    }
+  }
+
   BurstTransactionExecutor _executor(
     BurstApiClient api,
     BurstSignInIdentity identity,
@@ -331,6 +384,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       allowNewTransactions: !_recoveryOnly,
       isCurrent: () async => mounted && identity.matches(await _identity()),
       approve: _approveTransaction,
+      beginSubmission: (plan) => api.beginExecution(plan.reference),
       verifyBroadcast: (plan, hash) async {
         final rpc = Web3Client(chain.rpcUrl, http.Client());
         try {
@@ -358,7 +412,30 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     );
   }
 
-  Future<void> _startBurst() async {
+  Future<bool> _canEditPrepared(Map<String, dynamic> prepared) async {
+    final api = _api;
+    if (api == null) return false;
+    final transactions = prepared['transactions'];
+    if (transactions is! List || transactions.isEmpty) return false;
+    final journal = BurstPreferencesJournal();
+    for (final transaction in transactions) {
+      if (transaction is! Map ||
+          transaction['reference'] is! String ||
+          await journal.read(transaction['reference'] as String) != null) {
+        return false;
+      }
+    }
+    try {
+      final draft = await api.draft(
+        (prepared['campaign'] as Map)['id'] as String,
+      );
+      return draft['editable'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _startBurst({Map<String, dynamic>? initialDraft}) async {
     final api = _api;
     final identity = _openedIdentity;
     final config = _config;
@@ -373,6 +450,8 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           config: config,
           profileId: identity.profileId,
           store: _drafts,
+          initialDraft: initialDraft,
+          canEditPrepared: _canEditPrepared,
           onPrepared: (prepared) async {
             if (!mounted) return;
             final completed = await showModalBottomSheet<bool>(
@@ -381,9 +460,11 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
               backgroundColor: Colors.transparent,
               builder: (_) => BurstReviewSheet(
                 prepared: prepared,
+                loadNetworkFee: () => _estimateReviewFee(prepared, identity),
                 executor: executor,
                 nativeSymbol: chain.symbol,
                 chainName: chain.name,
+                allowEdit: true,
                 onCompleted: () async {
                   await _drafts.clear(
                     identity.profileId,
@@ -454,18 +535,49 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     }
   }
 
-  Future<void> _resumeBurst() async {
+  Future<void> _resumeBurst({String? campaignId}) async {
     final api = _api;
     final identity = _openedIdentity;
     if (api == null || identity == null) return;
     final chain = context.read<BlockchainService>().activeChain;
     try {
-      final saved = await _drafts.read(
-        identity.profileId,
-        identity.address,
-        chain.chainId,
+      var saved = await readRecoverableBurstDraft(
+        api: api,
+        store: _drafts,
+        profileId: identity.profileId,
+        wallet: identity.address,
+        chainId: chain.chainId,
       );
-      if (saved == null) throw StateError('No pending Burst was found.');
+      if (campaignId != null) {
+        final existingPrepared = saved?['prepared'];
+        final existingCampaign = existingPrepared is Map
+            ? existingPrepared['campaign']
+            : null;
+        final existingId = existingCampaign is Map
+            ? existingCampaign['id']
+            : null;
+        if (saved != null && existingId != campaignId) {
+          throw StateError(
+            'Finish or delete your existing pending Burst before editing another.',
+          );
+        }
+        if (saved == null) {
+          final response = await api.draft(campaignId);
+          saved = {
+            'request': response['request'],
+            'prepared': response['prepared'],
+          };
+        }
+      }
+      if (saved == null) {
+        if (mounted) setState(() => _hasDraft = false);
+        return;
+      }
+      if (saved['pendingUpdate'] is Map) {
+        if (!mounted) return;
+        await _startBurst(initialDraft: saved);
+        return;
+      }
       final request = Map<String, dynamic>.from(saved['request'] as Map);
       final Map<String, dynamic> prepared;
       try {
@@ -490,6 +602,36 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         wallet: identity.address,
         proxyInitCodeHash: _config?['proxyInitCodeHash']?.toString(),
       );
+      if (!_recoveryOnly && await _canEditPrepared(prepared)) {
+        final current = await api.draft(
+          (prepared['campaign'] as Map)['id'] as String,
+        );
+        final next = <String, dynamic>{
+          'request': current['request'],
+          'prepared': current['prepared'],
+        };
+        if (current['editable'] != true) {
+          throw StateError(
+            'Submission has started. Reopen this Burst to recover it.',
+          );
+        }
+        BurstPreparedCampaign.parse(
+          Map<String, dynamic>.from(next['prepared'] as Map),
+          Map<String, dynamic>.from(next['request'] as Map),
+          factoryAddress: _config?['factoryAddress']?.toString() ?? '',
+          wallet: identity.address,
+          proxyInitCodeHash: _config?['proxyInitCodeHash']?.toString(),
+        );
+        await _drafts.write(
+          identity.profileId,
+          identity.address,
+          chain.chainId,
+          next,
+        );
+        if (!mounted) return;
+        await _startBurst(initialDraft: next);
+        return;
+      }
       await _drafts.write(identity.profileId, identity.address, chain.chainId, {
         'request': request,
         'prepared': prepared,
@@ -501,6 +643,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         backgroundColor: Colors.transparent,
         builder: (_) => BurstReviewSheet(
           prepared: prepared,
+          loadNetworkFee: () => _estimateReviewFee(prepared, identity),
           executor: _executor(api, identity),
           nativeSymbol: chain.symbol,
           chainName: chain.name,
@@ -594,6 +737,10 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         ),
       );
       if (view != true || !mounted) return;
+    } else if (campaign['status'] == 'draft' ||
+        campaign['status'] == 'pending_chain') {
+      await _resumeBurst(campaignId: id);
+      return;
     }
     await Navigator.of(context).push(
       BurstPageRoute<void>(
@@ -634,6 +781,24 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     if (api == null) return;
     try {
       await api.deleteCampaign(id);
+      final identity = _openedIdentity;
+      final chainId = identity == null
+          ? null
+          : int.tryParse(identity.networkKey.substring(4));
+      if (identity != null && chainId != null) {
+        await _drafts.clearCampaign(
+          identity.profileId,
+          identity.address,
+          chainId,
+          id,
+        );
+        final saved = await _drafts.read(
+          identity.profileId,
+          identity.address,
+          chainId,
+        );
+        if (mounted) setState(() => _hasDraft = saved != null);
+      }
       if (!mounted) return;
       await _open();
     } catch (error) {

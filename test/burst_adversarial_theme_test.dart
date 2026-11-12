@@ -104,6 +104,7 @@ void main() {
     'transactions': [],
     'nativePriceUsd': 300.0,
     'networkFeeUsd': 0.03,
+    'networkFeeBaseUnits': '100000000000000',
   };
 
   group('Two-Tier Adaptive Theme Hierarchy Adversarial Verification', () {
@@ -237,11 +238,11 @@ void main() {
             reason: 'Total highlight amount text must follow the chain accent on $name',
           );
 
-          // 4. Total USD amount must be mathematical sum $308.54
+          // Total includes distribution, platform fee, sponsorship, and network gas.
           expect(
-            find.text(r'($75001.23)'),
+            find.text(r'($75001.24)'),
             findsOneWidget,
-            reason: 'Total USD must be (\$308.54)',
+            reason: 'Total USD must include every charged fee',
           );
           expect(
             find.text(r'($308.454)'),

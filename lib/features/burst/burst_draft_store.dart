@@ -41,4 +41,18 @@ class BurstDraftStore {
 
   Future<void> clear(String profile, String wallet, int chainId) =>
       _storage.delete(key: _key(profile, wallet, chainId));
+
+  Future<void> clearCampaign(
+    String profile,
+    String wallet,
+    int chainId,
+    String campaignId,
+  ) async {
+    final saved = await read(profile, wallet, chainId);
+    final prepared = saved?['prepared'];
+    final campaign = prepared is Map ? prepared['campaign'] : null;
+    if (campaign is Map && campaign['id'] == campaignId) {
+      await clear(profile, wallet, chainId);
+    }
+  }
 }

@@ -56,6 +56,73 @@ void main() {
         http.Response.fromStream(await client.send(request)),
   );
 
+  test(
+    'submission lock refusal prevents broadcast and journal writes',
+    () async {
+      var broadcasts = 0;
+      final journal = MemoryJournal();
+      final client = MockClient(
+        (_) async => http.Response(jsonEncode(plan()), 200),
+      );
+      final executor = BurstTransactionExecutor(
+        api: api(client),
+        journal: journal,
+        wallet: wallet,
+        chainId: 56,
+        isCurrent: () async => true,
+        approve: (_) async => true,
+        beginSubmission: (_) async => throw StateError('Draft changed'),
+        broadcast: (_) async {
+          broadcasts++;
+          return hash;
+        },
+      );
+      await expectLater(executor.execute('reference'), throwsStateError);
+      expect(broadcasts, 0);
+      expect(journal.entries, isEmpty);
+      client.close();
+    },
+  );
+
+  test(
+    'submission is locked after approval and before journal or broadcast',
+    () async {
+      final events = <String>[];
+      final journal = MemoryJournal();
+      final client = MockClient(
+        (r) async => http.Response(
+          r.url.path.endsWith('/execution')
+              ? jsonEncode(plan())
+              : '{"status":"confirmed"}',
+          200,
+        ),
+      );
+      final executor = BurstTransactionExecutor(
+        api: api(client),
+        journal: journal,
+        wallet: wallet,
+        chainId: 56,
+        isCurrent: () async => true,
+        approve: (_) async {
+          events.add('approve');
+          return true;
+        },
+        beginSubmission: (_) async {
+          expect(journal.entries, isEmpty);
+          events.add('lock');
+        },
+        broadcast: (_) async {
+          expect(journal.entries.containsKey('reference'), isTrue);
+          events.add('broadcast');
+          return hash;
+        },
+      );
+      expect((await executor.execute('reference')).confirmed, isTrue);
+      expect(events, ['approve', 'lock', 'broadcast']);
+      client.close();
+    },
+  );
+
   test('paused recovery cannot broadcast a new transaction', () async {
     var broadcasts = 0;
     final client = MockClient(

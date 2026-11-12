@@ -124,6 +124,28 @@ class BurstApiClient {
       _request('DELETE', '/campaigns/${Uri.encodeComponent(id)}');
   Future<Map<String, dynamic>> prepare(Map<String, dynamic> draft) =>
       _request('POST', '/campaigns/prepare', body: draft);
+  Future<Map<String, dynamic>> draft(String id) =>
+      _request('GET', '/campaigns/${Uri.encodeComponent(id)}/draft');
+  Future<Map<String, dynamic>> updateDraft(
+    String id,
+    Map<String, dynamic> body,
+  ) => _request(
+    'PUT',
+    '/campaigns/${Uri.encodeComponent(id)}/draft',
+    body: body,
+  );
+  Future<void> beginExecution(String reference) async {
+    final result = await _request(
+      'POST',
+      '/transactions/${Uri.encodeComponent(reference)}/begin',
+    );
+    if (result['locked'] != true) {
+      throw StateError(
+        'Unable to lock this Burst before submission. Try again.',
+      );
+    }
+  }
+
   Future<Map<String, dynamic>> previewJoin(String code) =>
       _request('GET', '/join/${Uri.encodeComponent(code)}');
   Future<Map<String, dynamic>> join(String code) =>

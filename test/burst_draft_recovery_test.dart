@@ -8,6 +8,38 @@ import 'package:http/testing.dart';
 import 'burst_draft_store_test.dart' show MemoryStorage;
 
 void main() {
+  test(
+    'stale deleted drafts clear while temporary failures preserve recovery',
+    () async {
+      var status = 503;
+      final client = MockClient((_) async => http.Response('{}', status));
+      final api = BurstApiClient(
+        api: (path) => Uri.parse('https://example.test/api$path'),
+        client: client,
+        authorize: (request) async =>
+            http.Response.fromStream(await client.send(request)),
+      );
+      final store = BurstDraftStore(storage: MemoryStorage());
+      await store.write('profile', 'wallet', 56, {
+        'request': {'idempotencyKey': 'one'},
+        'prepared': {
+          'campaign': {'id': 'deleted'},
+        },
+      });
+      Future<Map<String, dynamic>?> read() => readRecoverableBurstDraft(
+        api: api,
+        store: store,
+        profileId: 'profile',
+        wallet: 'wallet',
+        chainId: 56,
+      );
+      expect(await read(), isNotNull);
+      status = 404;
+      expect(await read(), isNull);
+      expect(await store.read('profile', 'wallet', 56), isNull);
+      client.close();
+    },
+  );
   test('rejected unprepared drafts clear, uncertain drafts remain', () async {
     var status = 400;
     final client = MockClient(

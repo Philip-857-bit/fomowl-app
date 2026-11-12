@@ -9,7 +9,7 @@
       "source_file": "android\\build.gradle.kts",
       "source_location": "L1",
       "id": "android_build_gradle_kts",
-      "community": 44
+      "community": 46
     },
     {
       "label": "settings.gradle.kts",
@@ -17,7 +17,7 @@
       "source_file": "android\\settings.gradle.kts",
       "source_location": "L1",
       "id": "android_settings_gradle_kts",
-      "community": 45
+      "community": 47
     },
     {
       "label": "build.gradle.kts",
@@ -289,7 +289,7 @@
       "source_file": "ios\\Runner\\GeneratedPluginRegistrant.h",
       "source_location": "L1",
       "id": "ios_runner_generatedpluginregistrant_h",
-      "community": 46
+      "community": 48
     },
     {
       "label": "GeneratedPluginRegistrant.m",
@@ -313,7 +313,7 @@
       "source_file": "ios\\Runner\\Runner-Bridging-Header.h",
       "source_location": "L1",
       "id": "ios_runner_runner_bridging_header_h",
-      "community": 47
+      "community": 49
     },
     {
       "label": "RunnerTests.swift",
@@ -1121,7 +1121,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3184",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinkeychaindto",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_decode()",
@@ -1129,7 +1129,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3186",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinkeychaindto_sse_decode",
-      "community": 1
+      "community": 2
     },
     {
       "label": "crate::api::bitcoin_account::BitcoinNetworkDto",
@@ -1153,7 +1153,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3208",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtfinalizationdto",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_decode()",
@@ -1161,7 +1161,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3210",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtfinalizationdto_sse_decode",
-      "community": 1
+      "community": 2
     },
     {
       "label": "crate::api::bitcoin_transaction::BitcoinPsbtInspectionDto",
@@ -1185,7 +1185,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3237",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtoutputdto",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_decode()",
@@ -1193,7 +1193,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3239",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtoutputdto_sse_decode",
-      "community": 2
+      "community": 1
     },
     {
       "label": "crate::api::bitcoin_account::BitcoinPurposeDto",
@@ -1201,7 +1201,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3249",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinpurposedto",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_decode()",
@@ -1209,7 +1209,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3251",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinpurposedto_sse_decode",
-      "community": 2
+      "community": 1
     },
     {
       "label": "crate::api::bitcoin_transaction::BitcoinRecipientDto",
@@ -1217,7 +1217,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3261",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinrecipientdto",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_decode()",
@@ -1225,7 +1225,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3263",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinrecipientdto_sse_decode",
-      "community": 2
+      "community": 1
     },
     {
       "label": "crate::api::bitcoin_transaction::BitcoinTransactionPlanDto",
@@ -1249,7 +1249,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3306",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinutxodto",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_decode()",
@@ -1257,7 +1257,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3308",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinutxodto_sse_decode",
-      "community": 1
+      "community": 2
     },
     {
       "label": "bool",
@@ -1393,7 +1393,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3415",
       "id": "frb_generated_crate_api_bitcoin_vault_sealedbitcoinaccountdto",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_decode()",
@@ -1401,7 +1401,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3417",
       "id": "frb_generated_crate_api_bitcoin_vault_sealedbitcoinaccountdto_sse_decode",
-      "community": 1
+      "community": 2
     },
     {
       "label": "crate::api::bitcoin_transaction::SignedBitcoinTransactionDto",
@@ -1409,7 +1409,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3428",
       "id": "frb_generated_crate_api_bitcoin_transaction_signedbitcointransactiondto",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_decode()",
@@ -1417,7 +1417,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3430",
       "id": "frb_generated_crate_api_bitcoin_transaction_signedbitcointransactiondto_sse_decode",
-      "community": 2
+      "community": 1
     },
     {
       "label": "crate::api::bip32::SolanaPrivateKeyImport",
@@ -1625,7 +1625,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3678",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinkeychaindto_into_dart",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".into_into_dart()",
@@ -1633,7 +1633,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3693",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinkeychaindto_into_into_dart",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".into_dart()",
@@ -1665,7 +1665,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3736",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtfinalizationdto_into_into_dart",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".into_dart()",
@@ -1697,7 +1697,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3779",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtoutputdto_into_into_dart",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".into_dart()",
@@ -1705,7 +1705,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3785",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinpurposedto_into_dart",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".into_into_dart()",
@@ -1713,7 +1713,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3800",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinpurposedto_into_into_dart",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".into_dart()",
@@ -1729,7 +1729,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3821",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinrecipientdto_into_into_dart",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".into_dart()",
@@ -1761,7 +1761,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3876",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinutxodto_into_into_dart",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".into_dart()",
@@ -1777,7 +1777,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3897",
       "id": "frb_generated_crate_api_bitcoin_vault_sealedbitcoinaccountdto_into_into_dart",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".into_dart()",
@@ -1793,7 +1793,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L3923",
       "id": "frb_generated_crate_api_bitcoin_transaction_signedbitcointransactiondto_into_into_dart",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".into_dart()",
@@ -1881,7 +1881,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4044",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinkeychaindto_sse_encode",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_encode()",
@@ -1897,7 +1897,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4076",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtfinalizationdto_sse_encode",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_encode()",
@@ -1913,7 +1913,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4097",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinpsbtoutputdto_sse_encode",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_encode()",
@@ -1921,7 +1921,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4105",
       "id": "frb_generated_crate_api_bitcoin_account_bitcoinpurposedto_sse_encode",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_encode()",
@@ -1929,7 +1929,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4121",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinrecipientdto_sse_encode",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_encode()",
@@ -1945,7 +1945,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4152",
       "id": "frb_generated_crate_api_bitcoin_transaction_bitcoinutxodto_sse_encode",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_encode()",
@@ -2017,7 +2017,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4238",
       "id": "frb_generated_crate_api_bitcoin_vault_sealedbitcoinaccountdto_sse_encode",
-      "community": 1
+      "community": 2
     },
     {
       "label": ".sse_encode()",
@@ -2025,7 +2025,7 @@
       "source_file": "rust\\src\\frb_generated.rs",
       "source_location": "L4246",
       "id": "frb_generated_crate_api_bitcoin_transaction_signedbitcointransactiondto_sse_encode",
-      "community": 2
+      "community": 1
     },
     {
       "label": ".sse_encode()",
@@ -2177,7 +2177,7 @@
       "source_file": "rust\\src\\lib.rs",
       "source_location": "L1",
       "id": "rust_src_lib_rs",
-      "community": 48
+      "community": 50
     },
     {
       "label": "argon2.rs",
@@ -2185,7 +2185,7 @@
       "source_file": "rust\\src\\api\\argon2.rs",
       "source_location": "L1",
       "id": "rust_src_api_argon2_rs",
-      "community": 38
+      "community": 40
     },
     {
       "label": "derive_passcode_hash_argon2()",
@@ -2193,7 +2193,7 @@
       "source_file": "rust\\src\\api\\argon2.rs",
       "source_location": "L8",
       "id": "argon2_derive_passcode_hash_argon2",
-      "community": 38
+      "community": 40
     },
     {
       "label": "bip32.rs",
@@ -3265,7 +3265,7 @@
       "source_file": "rust\\src\\api\\mod.rs",
       "source_location": "L1",
       "id": "rust_src_api_mod_rs",
-      "community": 49
+      "community": 51
     },
     {
       "label": "secp256k1_api.rs",
@@ -3553,7 +3553,7 @@
       "source_file": "rust_builder\\cargokit\\cmake\\resolve_symlinks.ps1",
       "source_location": "L1",
       "id": "rust_builder_cargokit_cmake_resolve_symlinks_ps1",
-      "community": 39
+      "community": 41
     },
     {
       "label": "Resolve-Symlinks()",
@@ -3561,7 +3561,7 @@
       "source_file": "rust_builder\\cargokit\\cmake\\resolve_symlinks.ps1",
       "source_location": "L1",
       "id": "resolve_symlinks_resolve_symlinks",
-      "community": 39
+      "community": 41
     },
     {
       "label": "dummy_file.c",
@@ -3569,7 +3569,7 @@
       "source_file": "rust_builder\\ios\\Classes\\dummy_file.c",
       "source_location": "L1",
       "id": "rust_builder_ios_classes_dummy_file_c",
-      "community": 50
+      "community": 52
     },
     {
       "label": "dummy_file.c",
@@ -3577,7 +3577,7 @@
       "source_file": "rust_builder\\macos\\Classes\\dummy_file.c",
       "source_location": "L1",
       "id": "rust_builder_macos_classes_dummy_file_c",
-      "community": 51
+      "community": 53
     },
     {
       "label": "bump_mobile_version.ps1",
@@ -3585,7 +3585,7 @@
       "source_file": "scripts\\bump_mobile_version.ps1",
       "source_location": "L1",
       "id": "scripts_bump_mobile_version_ps1",
-      "community": 52
+      "community": 54
     },
     {
       "label": "create_android_keystore.ps1",
@@ -3593,7 +3593,7 @@
       "source_file": "scripts\\create_android_keystore.ps1",
       "source_location": "L1",
       "id": "scripts_create_android_keystore_ps1",
-      "community": 53
+      "community": 55
     },
     {
       "label": "encode_android_keystore.ps1",
@@ -3601,7 +3601,7 @@
       "source_file": "scripts\\encode_android_keystore.ps1",
       "source_location": "L1",
       "id": "scripts_encode_android_keystore_ps1",
-      "community": 54
+      "community": 56
     },
     {
       "label": "encode_google_services_json.ps1",
@@ -3609,7 +3609,7 @@
       "source_file": "scripts\\encode_google_services_json.ps1",
       "source_location": "L1",
       "id": "scripts_encode_google_services_json_ps1",
-      "community": 55
+      "community": 57
     },
     {
       "label": "generate_shorebird_patch_keys.ps1",
@@ -3617,7 +3617,7 @@
       "source_file": "scripts\\generate_shorebird_patch_keys.ps1",
       "source_location": "L1",
       "id": "scripts_generate_shorebird_patch_keys_ps1",
-      "community": 56
+      "community": 58
     },
     {
       "label": "get_android_fingerprints.ps1",
@@ -3625,7 +3625,7 @@
       "source_file": "scripts\\get_android_fingerprints.ps1",
       "source_location": "L1",
       "id": "scripts_get_android_fingerprints_ps1",
-      "community": 57
+      "community": 59
     },
     {
       "label": "shorebird_ci_common.py",
@@ -3793,7 +3793,7 @@
       "source_file": "scripts\\shorebird_patch_local.ps1",
       "source_location": "L1",
       "id": "scripts_shorebird_patch_local_ps1",
-      "community": 58
+      "community": 60
     },
     {
       "label": "shorebird_release_manifest.py",
@@ -3801,7 +3801,7 @@
       "source_file": "scripts\\shorebird_release_manifest.py",
       "source_location": "L1",
       "id": "scripts_shorebird_release_manifest_py",
-      "community": 40
+      "community": 42
     },
     {
       "label": "main()",
@@ -3809,7 +3809,7 @@
       "source_file": "scripts\\shorebird_release_manifest.py",
       "source_location": "L23",
       "id": "shorebird_release_manifest_main",
-      "community": 40
+      "community": 42
     },
     {
       "label": "write_shorebird_key.py",
@@ -3865,7 +3865,7 @@
       "source_file": "scripts\\write_shorebird_yaml.py",
       "source_location": "L1",
       "id": "scripts_write_shorebird_yaml_py",
-      "community": 41
+      "community": 43
     },
     {
       "label": "main()",
@@ -3873,7 +3873,55 @@
       "source_file": "scripts\\write_shorebird_yaml.py",
       "source_location": "L7",
       "id": "write_shorebird_yaml_main",
-      "community": 41
+      "community": 43
+    },
+    {
+      "label": "empirical_logo_test.py",
+      "file_type": "code",
+      "source_file": "test\\empirical_logo_test.py",
+      "source_location": "L1",
+      "id": "test_empirical_logo_test_py",
+      "community": 38
+    },
+    {
+      "label": "run_tests()",
+      "file_type": "code",
+      "source_file": "test\\empirical_logo_test.py",
+      "source_location": "L25",
+      "id": "empirical_logo_test_run_tests",
+      "community": 38
+    },
+    {
+      "label": "Empirical Adversarial Validation & Stress Harness for AssetChain Logo.  This scr",
+      "file_type": "rationale",
+      "source_file": "test\\empirical_logo_test.py",
+      "source_location": "L1",
+      "community": 38,
+      "id": "empirical_logo_test_rationale_1"
+    },
+    {
+      "label": "generate_adversarial_vectors.py",
+      "file_type": "code",
+      "source_file": "test\\generate_adversarial_vectors.py",
+      "source_location": "L1",
+      "id": "test_generate_adversarial_vectors_py",
+      "community": 39
+    },
+    {
+      "label": "canonical_string()",
+      "file_type": "code",
+      "source_file": "test\\generate_adversarial_vectors.py",
+      "source_location": "L5",
+      "id": "generate_adversarial_vectors_canonical_string",
+      "community": 39
+    },
+    {
+      "label": "sign()",
+      "file_type": "code",
+      "source_file": "test\\generate_adversarial_vectors.py",
+      "source_location": "L16",
+      "id": "generate_adversarial_vectors_sign",
+      "community": 39
     },
     {
       "label": "generated_plugin_registrant.cc",
@@ -3881,7 +3929,7 @@
       "source_file": "windows\\flutter\\generated_plugin_registrant.cc",
       "source_location": "L1",
       "id": "windows_flutter_generated_plugin_registrant_cc",
-      "community": 42
+      "community": 44
     },
     {
       "label": "RegisterPlugins()",
@@ -3889,7 +3937,7 @@
       "source_file": "windows\\flutter\\generated_plugin_registrant.cc",
       "source_location": "L18",
       "id": "generated_plugin_registrant_registerplugins",
-      "community": 42
+      "community": 44
     },
     {
       "label": "generated_plugin_registrant.h",
@@ -3897,7 +3945,7 @@
       "source_file": "windows\\flutter\\generated_plugin_registrant.h",
       "source_location": "L1",
       "id": "windows_flutter_generated_plugin_registrant_h",
-      "community": 59
+      "community": 61
     },
     {
       "label": "flutter_window.cpp",
@@ -3953,7 +4001,7 @@
       "source_file": "windows\\runner\\main.cpp",
       "source_location": "L1",
       "id": "windows_runner_main_cpp",
-      "community": 43
+      "community": 45
     },
     {
       "label": "wWinMain()",
@@ -3961,7 +4009,7 @@
       "source_file": "windows\\runner\\main.cpp",
       "source_location": "L8",
       "id": "main_wwinmain",
-      "community": 43
+      "community": 45
     },
     {
       "label": "resource.h",
@@ -3969,7 +4017,7 @@
       "source_file": "windows\\runner\\resource.h",
       "source_location": "L1",
       "id": "windows_runner_resource_h",
-      "community": 60
+      "community": 62
     },
     {
       "label": "utils.cpp",
@@ -4009,7 +4057,7 @@
       "source_file": "windows\\runner\\utils.h",
       "source_location": "L1",
       "id": "windows_runner_utils_h",
-      "community": 61
+      "community": 63
     },
     {
       "label": "win32_window.cpp",
@@ -4185,14 +4233,14 @@
       "source_file": "windows\\runner\\win32_window.h",
       "source_location": "L1",
       "id": "windows_runner_win32_window_h",
-      "community": 62
+      "community": 64
     },
     {
       "label": "Build a verified proprietary source package without uploading to a registry.",
       "file_type": "rationale",
       "source_file": "scripts\\package_internal_core.py",
       "source_location": "L1",
-      "community": 63,
+      "community": 65,
       "id": "package_internal_core_rationale_1"
     }
   ],
@@ -12895,6 +12943,54 @@
       "_tgt": "write_shorebird_yaml_main",
       "source": "scripts_write_shorebird_yaml_py",
       "target": "write_shorebird_yaml_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test\\empirical_logo_test.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_src": "test_empirical_logo_test_py",
+      "_tgt": "empirical_logo_test_run_tests",
+      "source": "test_empirical_logo_test_py",
+      "target": "empirical_logo_test_run_tests",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "test\\empirical_logo_test.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_src": "empirical_logo_test_rationale_1",
+      "_tgt": "test_empirical_logo_test_py",
+      "source": "test_empirical_logo_test_py",
+      "target": "empirical_logo_test_rationale_1",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test\\generate_adversarial_vectors.py",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_src": "test_generate_adversarial_vectors_py",
+      "_tgt": "generate_adversarial_vectors_canonical_string",
+      "source": "test_generate_adversarial_vectors_py",
+      "target": "generate_adversarial_vectors_canonical_string",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "test\\generate_adversarial_vectors.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_src": "test_generate_adversarial_vectors_py",
+      "_tgt": "generate_adversarial_vectors_sign",
+      "source": "test_generate_adversarial_vectors_py",
+      "target": "generate_adversarial_vectors_sign",
       "confidence_score": 1.0
     },
     {

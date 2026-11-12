@@ -69,6 +69,8 @@ class BurstReviewSheet extends StatefulWidget {
     required this.nativeSymbol,
     this.chainName,
     this.onCompleted,
+    this.loadNetworkFee,
+    this.allowEdit = false,
   });
 
   final Map<String, dynamic> prepared;
@@ -76,6 +78,8 @@ class BurstReviewSheet extends StatefulWidget {
   final String nativeSymbol;
   final String? chainName;
   final Future<void> Function()? onCompleted;
+  final Future<BigInt> Function()? loadNetworkFee;
+  final bool allowEdit;
 
   @override
   State<BurstReviewSheet> createState() => _BurstReviewSheetState();
@@ -86,6 +90,32 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
   String? _error;
   String? _unknownReference;
   final _confirmed = <String>{};
+  BigInt? _networkFeeWei;
+  bool _estimatingFee = false;
+  bool _feeFailed = false;
+  bool _submissionStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.loadNetworkFee != null) _loadFee();
+  }
+
+  Future<void> _loadFee() async {
+    setState(() {
+      _estimatingFee = true;
+      _feeFailed = false;
+    });
+    try {
+      final fee = await widget.loadNetworkFee!();
+      if (fee.isNegative) throw const FormatException('Invalid network fee');
+      if (mounted) setState(() => _networkFeeWei = fee);
+    } catch (_) {
+      if (mounted) setState(() => _feeFailed = true);
+    } finally {
+      if (mounted) setState(() => _estimatingFee = false);
+    }
+  }
 
   Future<void> _create() async {
     if (_busy) return;
@@ -104,6 +134,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
         }
         final reference = item['reference'] as String;
         if (_confirmed.contains(reference)) continue;
+        setState(() => _submissionStarted = true);
         final result = await widget.executor.execute(
           reference,
           expectedTransaction: Map<String, dynamic>.from(item),
@@ -214,7 +245,42 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
   Widget build(BuildContext context) {
     final campaign = widget.prepared['campaign'] as Map;
     final tokenDisplay = _resolveTokenDisplay(campaign, widget.nativeSymbol);
-    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(widget.prepared);
+    final feePrepared = <String, dynamic>{
+      ...widget.prepared,
+      if (_networkFeeWei != null) 'networkFeeBaseUnits': '$_networkFeeWei',
+    };
+    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(
+      feePrepared,
+    );
+    final networkFeeWei =
+        _networkFeeWei ??
+        BigInt.tryParse(
+          widget.prepared['networkFeeBaseUnits']?.toString() ?? '',
+        );
+    final networkText = _estimatingFee
+        ? 'Estimating…'
+        : networkUsd != null
+        ? _formatUsd(networkUsd)
+        : networkFeeWei != null
+        ? burstNativeAmount('$networkFeeWei', widget.nativeSymbol)
+        : 'Unavailable';
+    final upfront = burstUpfrontNativeCost(campaign, widget.nativeSymbol);
+    final upfrontRaw = upfront == 'Unavailable'
+        ? null
+        : BigInt.parse(campaign['platformFeeBaseUnits'].toString()) +
+              BigInt.parse(campaign['gasSponsorshipFeeBaseUnits'].toString()) +
+              (campaign['assetKind'] == 'native'
+                  ? BigInt.parse(campaign['totalAmountBaseUnits'].toString())
+                  : BigInt.zero);
+    final totalNative = upfrontRaw == null || networkFeeWei == null
+        ? (_estimatingFee ? 'Estimating…' : 'Unavailable')
+        : burstNativeAmount(
+            (upfrontRaw + networkFeeWei).toString(),
+            widget.nativeSymbol,
+          );
+    final totalDisplay = campaign['assetKind'] == 'native'
+        ? totalNative
+        : '$tokenDisplay + $totalNative';
 
     return Center(
       child: ConstrainedBox(
@@ -281,14 +347,15 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                   const Divider(color: Color(0xFF29292E), height: 28),
 
                   // Middle Fee breakdown
-                  _sheetFeeLine(
-                    'Network Fee',
-                    _formatUsd(networkUsd),
-                  ),
-                  _sheetFeeLine(
-                    'Platform Fee',
-                    _formatUsd(platformUsd),
-                  ),
+                  _sheetFeeLine('Network Fee', networkText),
+                  if (_feeFailed)
+                    TextButton(
+                      onPressed: _estimatingFee ? null : _loadFee,
+                      child: const Text(
+                        'Unable to estimate network fee. Retry',
+                      ),
+                    ),
+                  _sheetFeeLine('Platform Fee', _formatUsd(platformUsd)),
                   _sheetEstAmountLine(
                     'Est. Burst Amount',
                     tokenDisplay,
@@ -324,7 +391,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              tokenDisplay,
+                              totalDisplay,
                               style: TextStyle(
                                 color: burstAccent(context),
                                 fontSize: 16,
@@ -393,12 +460,21 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                     ),
 
                   // Primary CTA Button
+                  if (widget.allowEdit && !_submissionStarted)
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: const Text('Edit draft'),
+                    ),
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(12)),
                       boxShadow: [
                         BoxShadow(
-                          color: burstAccent(context).withValues(alpha: 0.30), // rgba(234, 42, 51, 0.30)
+                          color: burstAccent(
+                            context,
+                          ).withValues(alpha: 0.30), // rgba(234, 42, 51, 0.30)
                           blurRadius: 30,
                           spreadRadius: 0,
                           offset: Offset.zero,
@@ -702,7 +778,9 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
     final campaign = widget.prepared['campaign'] as Map;
     final code = widget.prepared['joinCode'] as String? ?? '';
     final tokenDisplay = _resolveTokenDisplay(campaign, widget.nativeSymbol);
-    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(widget.prepared);
+    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(
+      widget.prepared,
+    );
 
     return PopScope<bool>(
       canPop: !_complete || _allowCompletePop,
@@ -871,10 +949,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                   ),
                 const Divider(color: Color(0xFF29292E), height: 28),
                 _line('Network Fee', _formatUsd(networkUsd)),
-                _line(
-                  'Platform Fee',
-                  _formatUsd(platformUsd),
-                ),
+                _line('Platform Fee', _formatUsd(platformUsd)),
                 _estAmountLine(
                   'Est. Burst Amount',
                   tokenDisplay,
@@ -1115,11 +1190,20 @@ String _resolveTokenDisplay(Map campaign, String nativeSymbol) {
       : null;
   // Platform fees are always charged in the native coin.
   final platformUsd = toUsd(campaign['platformFeeBaseUnits'], 18);
-  final networkUsd = double.tryParse(
-    prepared['networkFeeUsd']?.toString() ?? '',
-  );
-  final totalUsd = (estUsd != null && platformUsd != null && networkUsd != null)
-      ? double.parse((estUsd + platformUsd + networkUsd).toStringAsFixed(2))
+  final networkUsd =
+      toUsd(prepared['networkFeeBaseUnits'], 18) ??
+      double.tryParse(prepared['networkFeeUsd']?.toString() ?? '');
+  final sponsorshipUsd = toUsd(campaign['gasSponsorshipFeeBaseUnits'], 18);
+  final totalUsd =
+      (estUsd != null &&
+          platformUsd != null &&
+          networkUsd != null &&
+          sponsorshipUsd != null)
+      ? double.parse(
+          (estUsd + platformUsd + networkUsd + sponsorshipUsd).toStringAsFixed(
+            2,
+          ),
+        )
       : null;
   return (estUsd, platformUsd, networkUsd, totalUsd);
 }

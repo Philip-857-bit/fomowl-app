@@ -43,6 +43,19 @@ class MemoryStorage extends FlutterSecureStorage {
 }
 
 void main() {
+  test('deleting a campaign clears only its matching recovery draft', () async {
+    final store = BurstDraftStore(storage: MemoryStorage());
+    await store.write('a', '0xabc', 56, {
+      'request': {'idempotencyKey': 'one'},
+      'prepared': {
+        'campaign': {'id': 'pending'},
+      },
+    });
+    await store.clearCampaign('a', '0xabc', 56, 'other');
+    expect(await store.read('a', '0xabc', 56), isNotNull);
+    await store.clearCampaign('a', '0xabc', 56, 'pending');
+    expect(await store.read('a', '0xabc', 56), isNull);
+  });
   test('persists draft only for its account, wallet, and network', () async {
     final storage = MemoryStorage();
     final store = BurstDraftStore(storage: storage);

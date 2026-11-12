@@ -11,7 +11,7 @@ const Color kSplashBackground = Color(0xFF000000);
 const Color _kSplashAccent = Color(0xFFEA2A33);
 
 /// Owl icon asset for the splash screen mark.
-const String _kSplashLogoAsset = 'assets/images/splash.png';
+const String _kSplashLogoAsset = 'assets/images/launcher_icon.png';
 
 class SplashScreenBody extends StatelessWidget {
   const SplashScreenBody({super.key});
