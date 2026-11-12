@@ -23,7 +23,7 @@ class BurstHeader extends StatelessWidget {
           width: 48,
           height: 27,
           fit: BoxFit.contain,
-          color: accent == const Color(0xffea2a33) ? null : accent,
+          color: accent,
           colorBlendMode: BlendMode.srcIn,
           excludeFromSemantics: true,
         ),
@@ -37,24 +37,26 @@ class BurstHeader extends StatelessWidget {
   }
 }
 
-/// Tier 1: Invariant brand electric red for primary CTAs, total highlights, and ambient glow.
+/// Brand fallback, used only when a chain has no usable accent.
 const Color burstPrimaryActionColor = Color(0xffea2a33);
 
-/// Ambient glow shadow for primary Burst action buttons per Figma.
-const List<BoxShadow> burstPrimaryActionShadow = [
+/// Ambient glow for primary Burst actions, derived from the active accent.
+List<BoxShadow> burstActionShadow(BuildContext context) => [
   BoxShadow(
-    color: Color(0x4dea2a33), // rgba(234, 42, 51, 0.30)
+    color: burstAccent(context).withValues(alpha: 0.30),
     blurRadius: 30,
     spreadRadius: 0,
     offset: Offset.zero,
   ),
 ];
 
-/// Tier 1: Invariant Electric Red (#EA2A33) across all chains for primary CTAs
-/// and total highlights.
-Color burstAccent(BuildContext context) => burstPrimaryActionColor;
+/// Primary Burst accent follows the active chain theme (adaptive theming).
+Color burstAccent(BuildContext context) {
+  final accent = burstChainAccent(context);
+  return accent.a == 0 ? burstPrimaryActionColor : accent;
+}
 
-Color burstOnAccent(BuildContext context) => Colors.white;
+Color burstOnAccent(BuildContext context) => burstOnChainAccent(context);
 
 /// Tier 2: Dynamic chain accents strictly for network badges, tags, and selector borders.
 Color burstChainAccent(BuildContext context) {

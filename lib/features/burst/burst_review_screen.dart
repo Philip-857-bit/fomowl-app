@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -212,7 +214,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
   Widget build(BuildContext context) {
     final campaign = widget.prepared['campaign'] as Map;
     final tokenDisplay = _resolveTokenDisplay(campaign, widget.nativeSymbol);
-    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(campaign);
+    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(widget.prepared);
 
     return Center(
       child: ConstrainedBox(
@@ -281,16 +283,16 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                   // Middle Fee breakdown
                   _sheetFeeLine(
                     'Network Fee',
-                    '\$${networkUsd.toStringAsFixed(2)}',
+                    _formatUsd(networkUsd),
                   ),
                   _sheetFeeLine(
                     'Platform Fee',
-                    '\$${platformUsd.truncateToDouble() == platformUsd ? platformUsd.toInt() : platformUsd.toStringAsFixed(2)}',
+                    _formatUsd(platformUsd),
                   ),
                   _sheetEstAmountLine(
                     'Est. Burst Amount',
                     tokenDisplay,
-                    '(\$${estUsd.toStringAsFixed(2)})',
+                    '(${_formatUsd(estUsd)})',
                   ),
 
                   // Divider 2 / Highlighted Total Row
@@ -323,15 +325,15 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                           children: [
                             Text(
                               tokenDisplay,
-                              style: const TextStyle(
-                                color: Color(0xFFEA2A33),
+                              style: TextStyle(
+                                color: burstAccent(context),
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '(\$${totalUsd.toStringAsFixed(2)})',
+                              '(${_formatUsd(totalUsd)})',
                               style: const TextStyle(
                                 color: Color(0xFFA0A0A0),
                                 fontSize: 12,
@@ -353,8 +355,8 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                           'assets/burst/fee_info.svg',
                           width: 17,
                           height: 17,
-                          colorFilter: const ColorFilter.mode(
-                            Color(0xFFEA2A33),
+                          colorFilter: ColorFilter.mode(
+                            burstAccent(context),
                             BlendMode.srcIn,
                           ),
                         ),
@@ -392,11 +394,11 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
 
                   // Primary CTA Button
                   Container(
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       borderRadius: BorderRadius.all(Radius.circular(12)),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0x4DEA2A33), // rgba(234, 42, 51, 0.30)
+                          color: burstAccent(context).withValues(alpha: 0.30), // rgba(234, 42, 51, 0.30)
                           blurRadius: 30,
                           spreadRadius: 0,
                           offset: Offset.zero,
@@ -406,7 +408,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                     child: FilledButton(
                       onPressed: _busy ? null : _create,
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFEA2A33),
+                        backgroundColor: burstAccent(context),
                         foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(56),
                         shape: RoundedRectangleBorder(
@@ -700,7 +702,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
     final campaign = widget.prepared['campaign'] as Map;
     final code = widget.prepared['joinCode'] as String? ?? '';
     final tokenDisplay = _resolveTokenDisplay(campaign, widget.nativeSymbol);
-    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(campaign);
+    final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(widget.prepared);
 
     return PopScope<bool>(
       canPop: !_complete || _allowCompletePop,
@@ -740,7 +742,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xffea2a33).withValues(alpha: 0.6),
+                          color: burstAccent(context).withValues(alpha: 0.6),
                           blurRadius: 30,
                           spreadRadius: 2,
                         ),
@@ -751,7 +753,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                       width: 105,
                       height: 105,
                       fit: BoxFit.contain,
-                      color: const Color(0xffea2a33),
+                      color: burstAccent(context),
                       colorBlendMode: BlendMode.srcIn,
                       excludeFromSemantics: true,
                     ),
@@ -794,8 +796,8 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                             child: SelectableText(
                               code,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Color(0xffea2a33),
+                              style: TextStyle(
+                                color: burstAccent(context),
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -824,14 +826,14 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                 const SizedBox(height: 20),
                 Builder(
                   builder: (shareContext) => Container(
-                    decoration: const BoxDecoration(
-                      boxShadow: burstPrimaryActionShadow,
+                    decoration: BoxDecoration(
+                      boxShadow: burstActionShadow(context),
                     ),
                     child: FilledButton(
                       onPressed: () => shareBurstCode(shareContext, code),
                       style: FilledButton.styleFrom(
                         shape: burstButtonShape,
-                        backgroundColor: const Color(0xffea2a33),
+                        backgroundColor: burstAccent(context),
                         foregroundColor: Colors.white,
                         minimumSize: const Size.fromHeight(56),
                       ),
@@ -868,15 +870,15 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                     '${campaign['maxParticipants'] ?? ''}',
                   ),
                 const Divider(color: Color(0xFF29292E), height: 28),
-                _line('Network Fee', '\$${networkUsd.toStringAsFixed(2)}'),
+                _line('Network Fee', _formatUsd(networkUsd)),
                 _line(
                   'Platform Fee',
-                  '\$${platformUsd.truncateToDouble() == platformUsd ? platformUsd.toInt() : platformUsd.toStringAsFixed(2)}',
+                  _formatUsd(platformUsd),
                 ),
                 _estAmountLine(
                   'Est. Burst Amount',
                   tokenDisplay,
-                  '(\$${estUsd.toStringAsFixed(2)})',
+                  '(${_formatUsd(estUsd)})',
                 ),
                 Container(
                   margin: const EdgeInsets.symmetric(vertical: 11),
@@ -903,15 +905,15 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                         children: [
                           Text(
                             tokenDisplay,
-                            style: const TextStyle(
-                              color: Color(0xFFEA2A33),
+                            style: TextStyle(
+                              color: burstAccent(context),
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '(\$${totalUsd.toStringAsFixed(2)})',
+                            '(${_formatUsd(totalUsd)})',
                             style: const TextStyle(
                               color: Color(0xFFA0A0A0),
                               fontSize: 12,
@@ -931,8 +933,8 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                         'assets/burst/fee_info.svg',
                         width: 17,
                         height: 17,
-                        colorFilter: const ColorFilter.mode(
-                          Color(0xFFEA2A33),
+                        colorFilter: ColorFilter.mode(
+                          burstAccent(context),
                           BlendMode.srcIn,
                         ),
                       ),
@@ -967,11 +969,11 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                     ),
                   ),
                 Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     borderRadius: BorderRadius.all(Radius.circular(12)),
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0x4DEA2A33),
+                        color: burstAccent(context).withValues(alpha: 0.30),
                         blurRadius: 30,
                         spreadRadius: 0,
                         offset: Offset.zero,
@@ -981,7 +983,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                   child: FilledButton(
                     onPressed: _busy ? null : _create,
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFEA2A33),
+                      backgroundColor: burstAccent(context),
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(56),
                       shape: RoundedRectangleBorder(
@@ -1089,22 +1091,41 @@ String _resolveTokenDisplay(Map campaign, String nativeSymbol) {
   return symbol.isNotEmpty ? symbol : 'FOWL';
 }
 
-(double, double, double, double) _resolveFees(Map campaign) {
-  double estUsd = 304.51;
-  double platformUsd = 4.00;
-  double networkUsd = 0.03;
-  if (campaign['estAmountUsd'] != null) {
-    estUsd = double.tryParse(campaign['estAmountUsd'].toString()) ?? 304.51;
+/// USD figures are derived from the prepared campaign and the native price the
+/// backend resolved. Unknown values stay null and render as an em dash instead
+/// of a placeholder number.
+(double?, double?, double?, double?) _resolveFees(Map prepared) {
+  final campaign = prepared['campaign'] is Map
+      ? prepared['campaign'] as Map
+      : const <String, dynamic>{};
+  final price = double.tryParse(prepared['nativePriceUsd']?.toString() ?? '');
+  final decimals = (campaign['assetDecimals'] as num?)?.toInt() ?? 18;
+  final isNative = (campaign['assetKind']?.toString() ?? 'native') == 'native';
+
+  double? toUsd(Object? raw, int unitDecimals) {
+    if (price == null || price <= 0) return null;
+    final value = BigInt.tryParse(raw?.toString() ?? '');
+    if (value == null || value.isNegative) return null;
+    final scale = math.pow(10, unitDecimals).toDouble();
+    return (value.toDouble() / scale) * price;
   }
-  if (campaign['platformFeeUsd'] != null) {
-    platformUsd =
-        double.tryParse(campaign['platformFeeUsd'].toString()) ?? 4.00;
-  }
-  if (campaign['networkFeeUsd'] != null) {
-    networkUsd = double.tryParse(campaign['networkFeeUsd'].toString()) ?? 0.03;
-  }
-  final totalUsd = double.parse(
-    (estUsd + platformUsd + networkUsd).toStringAsFixed(2),
+
+  final estUsd = isNative
+      ? toUsd(campaign['totalAmountBaseUnits'], decimals)
+      : null;
+  // Platform fees are always charged in the native coin.
+  final platformUsd = toUsd(campaign['platformFeeBaseUnits'], 18);
+  final networkUsd = double.tryParse(
+    prepared['networkFeeUsd']?.toString() ?? '',
   );
+  final totalUsd = (estUsd != null && platformUsd != null && networkUsd != null)
+      ? double.parse((estUsd + platformUsd + networkUsd).toStringAsFixed(2))
+      : null;
   return (estUsd, platformUsd, networkUsd, totalUsd);
+}
+
+String _formatUsd(double? value) {
+  if (value == null) return '—';
+  if (value > 0 && value < 0.01) return '\$${value.toStringAsFixed(4)}';
+  return '\$${value.toStringAsFixed(2)}';
 }

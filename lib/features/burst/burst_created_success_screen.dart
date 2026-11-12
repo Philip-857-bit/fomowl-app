@@ -44,7 +44,7 @@ class BurstCreatedSuccessScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xffea2a33).withValues(alpha: 0.6),
+                      color: burstAccent(context).withValues(alpha: 0.6),
                       blurRadius: 30,
                       spreadRadius: 2,
                     ),
@@ -55,7 +55,7 @@ class BurstCreatedSuccessScreen extends StatelessWidget {
                   width: 105,
                   height: 105,
                   fit: BoxFit.contain,
-                  color: const Color(0xffea2a33),
+                  color: burstAccent(context),
                   colorBlendMode: BlendMode.srcIn,
                   excludeFromSemantics: true,
                 ),
@@ -98,8 +98,8 @@ class BurstCreatedSuccessScreen extends StatelessWidget {
                         child: SelectableText(
                           joinCode,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xffea2a33),
+                          style: TextStyle(
+                            color: burstAccent(context),
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
@@ -128,14 +128,14 @@ class BurstCreatedSuccessScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Builder(
               builder: (shareContext) => Container(
-                decoration: const BoxDecoration(
-                  boxShadow: burstPrimaryActionShadow,
+                decoration: BoxDecoration(
+                  boxShadow: burstActionShadow(context),
                 ),
                 child: FilledButton(
                   onPressed: () => shareBurstCode(shareContext, joinCode),
                   style: FilledButton.styleFrom(
                     shape: burstButtonShape,
-                    backgroundColor: const Color(0xffea2a33),
+                    backgroundColor: burstAccent(context),
                     foregroundColor: Colors.white,
                     minimumSize: const Size.fromHeight(56),
                   ),

@@ -48,6 +48,8 @@ void main() {
     },
     'joinCode': 'TEST-CODE-1234',
     'transactions': [],
+    'nativePriceUsd': 300.0,
+    'networkFeeUsd': 0.03,
   };
 
   testWidgets('BurstReviewSheet renders matching Figma node 5888:8978 specs', (
@@ -127,11 +129,16 @@ void main() {
 
     // 5. Total. Burst Amount + Fees row present with Electric Red highlight
     expect(find.text('Total. Burst Amount + Fees'), findsOneWidget);
-    expect(find.text(r'($308.54)'), findsOneWidget);
+    expect(find.text(r'($301.53)'), findsOneWidget);
 
-    // 6. Primary CTA button styled with Electric Red and ambient glow
+    // 6. Primary CTA uses the adaptive accent and its matching ambient glow
     final ctaText = find.text('Create Burst');
     expect(ctaText, findsOneWidget);
+    final ctaButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Create Burst'),
+    );
+    final ctaColor = ctaButton.style?.backgroundColor?.resolve({});
+    expect(ctaColor, isNotNull);
 
     final glowDecorated = find.byWidgetPredicate((w) {
       if (w is Container && w.decoration is BoxDecoration) {
@@ -140,7 +147,7 @@ void main() {
         if (shadows != null && shadows.isNotEmpty) {
           return shadows.any(
             (s) =>
-                s.color == const Color(0x4dea2a33) &&
+                s.color == ctaColor!.withValues(alpha: 0.30) &&
                 s.blurRadius == 30.0 &&
                 s.spreadRadius == 0.0,
           );
