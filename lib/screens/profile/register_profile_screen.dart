@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../constants/app_colors.dart';
 import '../../services/auth_service.dart';
+import '../../services/screen_capture_guard.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/toast_utils.dart';
 
@@ -19,17 +23,27 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
   final _xSecretController = TextEditingController();
   final _authService = AuthService();
   final _walletService = WalletService();
+  final ScreenCaptureGuard _screenCaptureGuard = ScreenCaptureGuard();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureSecret = true;
 
   @override
+  void initState() {
+    super.initState();
+    unawaited(_screenCaptureGuard.enableProtection());
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _usernameController.dispose();
+    _passwordController.text = ''; // Clear sensitive data
     _passwordController.dispose();
+    _xSecretController.text = ''; // Clear sensitive data
     _xSecretController.dispose();
+    unawaited(_screenCaptureGuard.disableProtection());
     super.dispose();
   }
 
@@ -145,8 +159,7 @@ class _RegisterProfileScreenState extends State<RegisterProfileScreen> {
                       () {
                         setState(() => _obscureSecret = !_obscureSecret);
                       },
-                      helperText:
-                          'Used to authorize sensitive changes (like swapping linked wallets).',
+                      helperText: 'Used to authorize sensitive changes (like swapping linked wallets).',
                     ),
                     const SizedBox(height: 48),
 
