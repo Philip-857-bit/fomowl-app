@@ -6,3 +6,7 @@
 **Vulnerability:** The private key input screen lacked screen capture protection, potentially exposing sensitive cryptographic keys to background recording or malicious applications.
 **Learning:** Found that some screens dealing with sensitive inputs used `ScreenCaptureGuard` while others did not. The correct pattern involves wrapping async enablement and disablement calls in `unawaited` inside `initState` and `dispose` lifecycle methods respectively.
 **Prevention:** Always ensure any new or existing screens accepting sensitive information (private keys, mnemonics) instantiate and properly manage the `ScreenCaptureGuard` lifecycle.
+## 2024-05-24 - [Auth Profile Screen Capture Guard]
+**Vulnerability:** The login and register screens in the profile tab accepted sensitive credentials (password, x-secret) but lacked screen capture protection and did not clear controller text before disposal, risking exposure to malicious apps and memory scraping.
+**Learning:** `ScreenCaptureGuard` was applied inconsistently across the app. Not all screens collecting sensitive inputs were protected. Additionally, text controllers holding secrets weren't consistently cleared before disposal.
+**Prevention:** Ensure all screens processing sensitive credentials (passwords, secrets) utilize `ScreenCaptureGuard` (enabled in `initState`, disabled in `dispose`) and explicitly clear `TextEditingController` text before calling `dispose()`.
