@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fomowl_wallet/utils/app_error_utils.dart';
+import 'package:fomowl_wallet/utils/swap_quote_error_messages.dart';
 
 void main() {
   group('AppErrorUtils.backendMessage', () {
@@ -96,7 +97,7 @@ void main() {
           '{"error":"Swap failed","message":"Jupiter /order failed: {\\"requestId\\":\\"abc\\",\\"error\\":\\"Failed to get quotes\\"}"}';
       expect(
         AppErrorUtils.backendMessage(body, fallback: fallback),
-        'Amount is too low for this swap. Try a larger amount.',
+        swapRouteUnavailableMessage,
       );
     });
 
@@ -168,7 +169,7 @@ void main() {
           'Jupiter /order failed: {"requestId":"abc","error":"Failed to get quotes"}',
           fallback: fallback,
         ),
-        'Amount is too low for this swap. Try a larger amount.',
+        swapRouteUnavailableMessage,
       );
     });
 

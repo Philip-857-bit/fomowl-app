@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'swap_quote_error_messages.dart';
 
 class AppErrorUtils {
   AppErrorUtils._();
@@ -66,18 +67,8 @@ class AppErrorUtils {
       return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
     }
 
-    if (_containsAny(lowered, const [
-      'failed to get quotes',
-      'no solana swap route',
-      'no swap route',
-      'no quote',
-      'route not found',
-      'amount too low',
-      'swap quote response was missing',
-      'missing the unsigned transaction',
-    ])) {
-      return 'Amount is too low for this swap. Try a larger amount.';
-    }
+    final quoteError = swapQuoteErrorMessage(raw);
+    if (quoteError != null) return quoteError;
 
     if (_containsAny(lowered, const [
       'jupiter',
@@ -245,18 +236,9 @@ class AppErrorUtils {
     if (_isSwapSlippageError(lowered)) {
       return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
     }
-    if (_containsAny(lowered, const [
-      'failed to get quotes',
-      'no solana swap route',
-      'no swap route',
-      'no quote',
-      'route not found',
-      'amount too low',
-      'swap quote response was missing',
-      'missing the unsigned transaction',
-    ])) {
-      return 'Amount is too low for this swap. Try a larger amount.';
-    }
+    final quoteError = swapQuoteErrorMessage(body);
+    if (quoteError != null) return quoteError;
+
     if (_containsAny(lowered, const [
       'challenge',
       'signature',

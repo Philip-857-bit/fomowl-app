@@ -35,6 +35,7 @@ import '../../services/wallet_history_service.dart';
 import '../../services/wallet_notification_service.dart';
 import '../../utils/amount_utils.dart';
 import '../../utils/app_error_utils.dart';
+import '../../utils/swap_quote_error_messages.dart';
 import '../../utils/toast_utils.dart';
 import '../../utils/token_visibility_utils.dart';
 import '../../utils/token_trust_utils.dart';
@@ -1423,6 +1424,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     if (isSolanaSwapAddressError(lower)) {
       return 'Selected Solana wallet address is invalid. Switch to a Solana wallet and try again.';
     }
+    final quoteError = swapQuoteErrorMessage(raw);
+    if (quoteError != null) return quoteError;
     if (isSwapPriceMovementError(lower)) {
       if (lower.contains('needs at least') && lower.contains('slippage')) {
         return raw;
@@ -1430,20 +1433,6 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       return 'Swap failed due to price movement. Try increasing your slippage tolerance.';
     }
 
-    if (lower.contains('failed to get quotes') ||
-        lower.contains('could not find any route') ||
-        lower.contains('no solana swap route') ||
-        lower.contains('no swap route') ||
-        lower.contains('route not found') ||
-        lower.contains('amount too low')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
-    }
-    if (lower.contains('swap quote response was missing') ||
-        lower.contains('missing the unsigned transaction') ||
-        lower.contains('transaction":""') ||
-        lower.contains('transaction is empty')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
-    }
     if (lower.contains('unable to fetch a swap price right now') ||
         lower.contains('upstream request failed') ||
         lower.contains('unable to fetch a swap quote right now') ||
@@ -1494,17 +1483,6 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       final tokenSymbol = _fromToken?.symbol ?? 'token';
       return 'You do not have enough $tokenSymbol for this swap amount.';
     }
-    if (lower.contains('sell_amount_too_small') ||
-        lower.contains('buy_amount_too_small') ||
-        lower.contains('provided sell amount is too small') ||
-        lower.contains('provided buy amount is too small') ||
-        lower.contains('minsellamount') ||
-        lower.contains('minbuyamount') ||
-        lower.contains('minimum sell amount') ||
-        lower.contains('minimum buy amount') ||
-        lower.contains('too small to cover fees required to execute swap')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
-    }
     if (lower.contains('invalid chain id')) {
       return l.noQuoteAvailable;
     }
@@ -1522,13 +1500,6 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       'selling native token is not supported for gasless trades',
     )) {
       return 'Gasless mode only supports ERC-20 source tokens. Select a token like USDC/USDT.';
-    }
-    if (lower.contains('quoter simulation failed') ||
-        lower.contains('no liquid market')) {
-      return 'No liquidity pool';
-    }
-    if (lower.contains('no route found') || lower.contains('no liquidity')) {
-      return 'Amount is too low for this swap. Try a larger amount.';
     }
     if (lower.contains('user denied') ||
         lower.contains('user rejected') ||
@@ -2066,7 +2037,11 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
               _parseAmount(_fromController),
             ),
           )
-          .timeout(_quoteUiTimeout);
+          .timeout(
+            SwapService.isAssetChain(blockchain.activeChain.chainId)
+                ? const Duration(seconds: 22)
+                : _quoteUiTimeout,
+          );
 
       if (!mounted || requestId != _quoteRequestId) return;
 
@@ -2120,7 +2095,9 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
             );
         if (!usedRelay && mounted && requestId == _quoteRequestId) {
           final mapped = _mapErrorMessage(
-            _relaySwapService.lastError ?? _swapService.lastError,
+            SwapService.isAssetChain(blockchain.activeChain.chainId)
+                ? _swapService.lastError
+                : _relaySwapService.lastError ?? _swapService.lastError,
           );
           setState(() {
             _quoteStatusMessage = mapped;
@@ -2143,7 +2120,9 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
       if (!usedRelay && mounted && requestId == _quoteRequestId) {
         setState(() {
           _quoteStatusMessage = _mapErrorMessage(
-            _relaySwapService.lastError ?? l.tryAgain,
+            SwapService.isAssetChain(blockchain.activeChain.chainId)
+                ? 'Asset Chain is temporarily unavailable. Please try again shortly.'
+                : _relaySwapService.lastError ?? l.tryAgain,
           );
           _resetQuoteState(
             preserveRequestId: true,
@@ -2173,6 +2152,10 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     required BlockchainService blockchain,
     required String? amountWei,
   }) async {
+    // BridgeService's same-chain EVM quote calls /swap/quote again; Asset
+    // Chain is dispatched to the same provider there, so this is a duplicate
+    // scan, not an alternative route. Keep the original error and request budget.
+    if (SwapService.isAssetChain(blockchain.activeChain.chainId)) return false;
     final from = _fromToken;
     final to = _toToken;
     final wallet = _walletAddress;
@@ -3132,7 +3115,11 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
           useFirmQuote: true,
           sellAmountUsd: _usdValueFor(fromToken, _parseAmount(_fromController)),
         )
-        .timeout(_quoteUiTimeout);
+        .timeout(
+          SwapService.isAssetChain(blockchain.activeChain.chainId)
+              ? const Duration(seconds: 22)
+              : _quoteUiTimeout,
+        );
 
     if (quote == null || !mounted) {
       return quote;
@@ -4044,9 +4031,9 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
                               RuntimeFeature.swaps,
                             ),
                             showLimitTab: _supportsLimitTab(blockchain),
-                            showBridgeTab: runtimePolicy.allows(
-                              RuntimeFeature.bridges,
-                            ) && _supportsBridgeTab(blockchain),
+                            showBridgeTab:
+                                runtimePolicy.allows(RuntimeFeature.bridges) &&
+                                _supportsBridgeTab(blockchain),
                             onChanged: (tab) {
                               if (_activeTab == tab) return;
                               if (tab == SwapTab.swap &&
@@ -4063,7 +4050,9 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
                                 return;
                               }
                               if (tab == SwapTab.bridge &&
-                                  (!runtimePolicy.allows(RuntimeFeature.bridges) ||
+                                  (!runtimePolicy.allows(
+                                        RuntimeFeature.bridges,
+                                      ) ||
                                       !_supportsBridgeTab(blockchain))) {
                                 return;
                               }

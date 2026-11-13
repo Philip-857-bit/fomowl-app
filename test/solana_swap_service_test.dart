@@ -208,7 +208,7 @@ void main() {
         expect(quote, isNull);
         expect(
           service.lastError,
-          'Amount is too low for this swap. Try a larger amount.',
+          'The swap quote is incomplete. Please try again.',
         );
       },
     );

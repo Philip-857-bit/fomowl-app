@@ -10,6 +10,8 @@ import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/services/swap_service.dart';
 import 'package:fomowl_wallet/services/swap_execution_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
+import 'package:fomowl_wallet/utils/swap_quote_error_messages.dart';
+import 'swap_service_test.dart' show HttpClientServiceMock;
 
 /// Mock wallet service capturing the raw transaction requests for verification.
 class _MockCapturingWallet extends WalletService {
@@ -1146,7 +1148,10 @@ void main() {
         );
 
         expect(quote, isNull);
-        expect(swapService.lastError, contains('Insufficient liquidity'));
+        expect(
+          swapQuoteErrorMessage(swapService.lastError!),
+          swapRouteUnavailableMessage,
+        );
       },
     );
 
@@ -1286,31 +1291,18 @@ void main() {
       );
 
       test(
-        'CH-POOL-02: SwapService.get0xQuote dispatch preserves "No liquidity pool found" error for Asset Chain',
+        'CH-POOL-02: SwapService preserves the Asset Chain backend route error',
         () async {
-          final client = Web3Client(
-            'https://rpc.offline.test',
-            MockClient((request) async {
-              final body = jsonDecode(request.body) as Map<String, dynamic>;
-              final feeResponse = feeRpcResponse(body);
-              if (feeResponse != null) return feeResponse;
-              return http.Response(
-                jsonEncode({
-                  'jsonrpc': '2.0',
-                  'id': body['id'],
-                  'result': '0x${'0' * 64}',
-                }),
-                200,
-                headers: {'content-type': 'application/json'},
-              );
-            }),
-          );
-
-          final assetChainSwapService = AssetChainSwapService(
-            web3Client: client,
-          );
           final swapService = SwapService(
-            assetChainSwapService: assetChainSwapService,
+            httpClientService: HttpClientServiceMock(
+              MockClient((request) async {
+                expect(request.url.queryParameters['chainId'], '42420');
+                return http.Response(
+                  '{"message":"No liquidity pool found for this pair on Asset Chain."}',
+                  404,
+                );
+              }),
+            ),
           );
 
           final quote = await swapService.get0xQuote(
@@ -1323,7 +1315,7 @@ void main() {
           );
 
           expect(quote, isNull);
-          expect(swapService.lastError, contains('No liquidity pool found'));
+          expect(swapService.lastError, swapRouteUnavailableMessage);
         },
       );
 

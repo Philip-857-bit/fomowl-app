@@ -157,7 +157,8 @@ flutter:
 # Flutter Native Splash Configuration
 flutter_native_splash:
   color: "#000000"
-  # Padded copy of assets/images/logo.png, shared with the unlock screen.
+  # Unlock logo, centered at 480px maximum size on a 1024px transparent canvas.
+  # Extra padding protects the native mark from device splash-icon masking.
   image: "assets/images/splash_icon_padded.png"
   android: true
   ios: true

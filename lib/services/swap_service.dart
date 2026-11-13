@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 
 import '../config/app_environment.dart';
 import '../utils/amount_utils.dart';
 import '../utils/app_error_utils.dart';
-import 'blockchain/asset_chain_swap_service.dart';
+import '../utils/swap_quote_error_messages.dart';
 import 'cow_limit_order_signing.dart';
 import 'http_client_service.dart';
 
@@ -148,13 +149,14 @@ class SwapService {
 
   SwapService({
     HttpClientService? httpClientService,
-    AssetChainSwapService? assetChainSwapService,
+    Duration assetChainRequestTimeout = const Duration(seconds: 18),
   }) : _httpClientService = httpClientService ?? HttpClientService(),
-       _assetChainSwapService =
-           assetChainSwapService ?? AssetChainSwapService();
+       _assetChainRequestTimeout = assetChainRequestTimeout;
 
   final HttpClientService _httpClientService;
-  final AssetChainSwapService _assetChainSwapService;
+  // Backend Asset Chain quote work has a 16s absolute deadline. Leave room
+  // for transport, and finish before the screen's 22s Asset Chain deadline.
+  final Duration _assetChainRequestTimeout;
 
   /// Asset Chain networks supported for native Uniswap-V3 fork swaps.
   static const Set<int> assetChainSupportedChainIds = {
@@ -443,7 +445,7 @@ class SwapService {
     return supportedLimitChainIds.contains(chainId);
   }
 
-  /// Get aggregated quote from 0x via backend (or AssetChainSwapService for Asset Chain)
+  /// Get a backend-prepared quote, including Asset Chain's native DEX route.
   Future<SwapQuote?> get0xQuote({
     required int chainId,
     required String fromTokenAddress,
@@ -495,9 +497,15 @@ class SwapService {
           queryParams['sellAmountUsd'] = sellAmountUsd.toString();
         }
         final url = AppEnvironment.swap('/$endpoint', queryParams);
-        final response = await _httpClientService
-            .sendWithRetry(() => _httpClientService.client.get(url))
-            .timeout(const Duration(seconds: 10));
+        final response = await _httpClientService.sendWithRetry(
+          () => _httpClientService.client
+              .get(url)
+              .timeout(_assetChainRequestTimeout),
+          // A quote is already refreshed on input/retry. An outer timeout
+          // around retries left background attempts running after the UI
+          // had moved on, amplifying transient RPC failures.
+          maxRetries: 1,
+        );
         if (response.statusCode == 200) {
           final data = _decodeMapBody(
             response.body,
@@ -555,43 +563,27 @@ class SwapService {
               );
             }
           }
-        }
-        if (useFirmQuote) {
-          _lastError = _extractBackendMessage(
-            response.body,
-            fallback: 'Unable to fetch an executable Asset Chain quote.',
-          );
+          _lastError = swapQuoteIncompleteMessage;
           return null;
         }
-      } catch (e) {
-        if (useFirmQuote) {
-          _lastError = 'Unable to fetch an executable Asset Chain quote.';
-          return null;
-        }
-        debugPrint(
-          'Backend Asset Chain quote error: $e. Falling back to local quoter.',
+        _lastError = _extractBackendMessage(
+          response.body,
+          fallback: response.statusCode >= 500
+              ? 'Asset Chain is temporarily unavailable. Please try again shortly.'
+              : 'Unable to fetch an Asset Chain quote for this pair and amount.',
         );
-      }
-
-      // Price previews may use the on-device quoter when the backend is down.
-      // Firm quotes stay on the backend so the EVM fee and calldata are the
-      // ones the user signs.
-      final quote = await _assetChainSwapService.getQuote(
-        chainId: chainId,
-        fromTokenAddress: fromTokenAddress,
-        toTokenAddress: toTokenAddress,
-        amountInWei: amountWei,
-        buyTokenDecimals: buyTokenDecimals,
-        walletAddress: walletAddress,
-        slippageBps: slippageBps,
-        useFirmQuote: useFirmQuote,
-      );
-      if (quote == null) {
+        // A definitive backend error is authoritative. Scanning the same pools
+        // again locally hides its cause and adds more RPC traffic.
+        return null;
+      } on TimeoutException {
         _lastError =
-            _assetChainSwapService.lastError ??
-            'No swap route available for this pair on Asset Chain.';
+            'Asset Chain is temporarily unavailable. Please try again shortly.';
+        return null;
+      } catch (e) {
+        _lastError =
+            'Asset Chain is temporarily unavailable. Please try again shortly.';
+        return null;
       }
-      return quote;
     }
 
     if (isGasless && (walletAddress == null || walletAddress.isEmpty)) {
