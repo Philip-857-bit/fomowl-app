@@ -1,7 +1,7 @@
 import 'dart:async';
 import '../../widgets/bitcoin_capability_gate.dart';
 import 'dart:convert';
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, SocketException;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -81,7 +81,9 @@ bool cashinExecutionPlanIsUsable(
   if (expiresAt.isAfter(now.toUtc())) return true;
   if (!allowExpiredForSubmittedSteps) return false;
   return (plan['steps'] as List?)?.any(
-        (step) => step is Map && step['status'] == 'submitted',
+        (step) =>
+            step is Map &&
+            (step['status'] == 'submitted' || step['status'] == 'confirmed'),
       ) ==
       true;
 }
@@ -191,6 +193,12 @@ class MiniAppHostScreen extends StatelessWidget {
   final MiniAppDefinition definition;
   final String launchSource;
   final String? initialUrl;
+
+  /// Navigates the currently-mounted [MiniAppHostScreen] to [uri] (popping any
+  /// modal/secondary routes above it) if it belongs to that mini-app's trusted
+  /// origins and runtime policy permits it.
+  static Future<bool> openUrlInActiveHost(Uri uri) =>
+      _MiniAppHostScreenState.openUrlInActiveHost(uri);
 
   static Widget fromRoute(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments;
@@ -321,6 +329,136 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   String _lastPublishedRuntimePolicyJson = '';
   bool _walletContextRefreshInFlight = false;
   bool _walletContextRefreshQueued = false;
+  String? _lastReceiptUrl;
+
+  static _MiniAppHostScreenState? _activeInstance;
+
+  static Future<bool> openUrlInActiveHost(Uri uri) async {
+    final instance = _activeInstance;
+    if (instance == null || !instance.mounted) {
+      return false;
+    }
+    if (!instance._isTrustedOrigin(uri) ||
+        !instance._runtimeAllowsMiniAppUrl(uri)) {
+      return false;
+    }
+    return instance._navigateActiveHostToUri(uri);
+  }
+
+  Future<bool> _navigateActiveHostToUri(Uri uri) async {
+    if (!mounted) {
+      return false;
+    }
+    final controller = _controller;
+    if (controller == null) {
+      return false;
+    }
+    if (!_isTrustedOrigin(uri) || !_runtimeAllowsMiniAppUrl(uri)) {
+      return false;
+    }
+    final hostRoute = ModalRoute.of(context);
+    if (hostRoute != null) {
+      Navigator.of(
+        context,
+      ).popUntil((route) => identical(route, hostRoute) || route.isFirst);
+    }
+    await controller.loadUrl(urlRequest: URLRequest(url: WebUri.uri(uri)));
+    await _refreshNavigationState();
+    return true;
+  }
+
+  Uri? _withdrawalReceiptUri(String reference, {required String source}) {
+    final trimmedRef = reference.trim();
+    if (trimmedRef.isEmpty) {
+      return null;
+    }
+    final base = _launchUri;
+    if (base == null || !_isTrustedOrigin(base)) {
+      return null;
+    }
+    final receiptUri = Uri(
+      scheme: base.scheme,
+      userInfo: base.userInfo,
+      host: base.host,
+      port: base.hasPort ? base.port : null,
+      path: '/withdraw/receipt/${Uri.encodeComponent(trimmedRef)}',
+      queryParameters: <String, String>{'source': source},
+    );
+    if (!_isTrustedOrigin(receiptUri) ||
+        !_runtimeAllowsMiniAppUrl(receiptUri)) {
+      return null;
+    }
+    return receiptUri;
+  }
+
+  Uri? _recordWithdrawalReceipt(String reference, {required String source}) {
+    final receiptUri = _withdrawalReceiptUri(reference, source: source);
+    if (receiptUri != null) {
+      final url = receiptUri.toString();
+      _lastReceiptUrl = url;
+      AppNotificationService().setLastTransactionActionUrl(url);
+    }
+    return receiptUri;
+  }
+
+  Future<void> _ensureReceiptIfStillOnWithdraw(
+    Uri receiptUri, {
+    Duration delay = const Duration(milliseconds: 350),
+  }) async {
+    await Future<void>.delayed(delay);
+    if (!mounted) {
+      return;
+    }
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    try {
+      final current = await controller.getUrl();
+      if (!mounted) {
+        return;
+      }
+      final currentPath = current?.uriValue.path.trim() ?? '';
+      if (currentPath == '/withdraw' || currentPath == '/withdraw/') {
+        await controller.loadUrl(
+          urlRequest: URLRequest(url: WebUri.uri(receiptUri)),
+        );
+        await _refreshNavigationState();
+      }
+    } catch (_) {}
+  }
+
+  Uri? _resolveMiniAppNotificationUri(String? rawUrl, {Uri? currentPageUri}) {
+    final trimmed = rawUrl?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      final fallback = _lastReceiptUrl?.trim();
+      if (fallback == null || fallback.isEmpty) {
+        return null;
+      }
+      final parsedFallback = Uri.tryParse(fallback);
+      if (parsedFallback != null &&
+          _isTrustedOrigin(parsedFallback) &&
+          _runtimeAllowsMiniAppUrl(parsedFallback)) {
+        return parsedFallback;
+      }
+      return null;
+    }
+    var candidate = Uri.tryParse(trimmed);
+    if (candidate == null) {
+      return null;
+    }
+    if (!candidate.hasScheme) {
+      final base = currentPageUri ?? _launchUri;
+      if (base == null) {
+        return null;
+      }
+      candidate = base.resolveUri(candidate);
+    }
+    if (!_isTrustedOrigin(candidate) || !_runtimeAllowsMiniAppUrl(candidate)) {
+      return null;
+    }
+    return candidate;
+  }
 
   Uri? get _overrideUri {
     final raw = widget.initialUrl?.trim();
@@ -340,6 +478,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   @override
   void initState() {
     super.initState();
+    _activeInstance = this;
     _runtimeConfig.addListener(_handleRuntimeConfigChanged);
     _prepareBridgeContext();
   }
@@ -357,6 +496,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
 
   @override
   void dispose() {
+    if (identical(_activeInstance, this)) {
+      _activeInstance = null;
+    }
     _bitcoinCashoutRefresh.dispose();
     _blockchain?.removeListener(_handleActiveWalletChange);
     _runtimeConfig.removeListener(_handleRuntimeConfigChanged);
@@ -2160,16 +2302,32 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
             },
     );
 
+    final isOwlletPay = OwlletMiniApps.isOwlletPayId(widget.definition.id);
+    final receiptUri = isOwlletPay
+        ? _recordWithdrawalReceipt(reference, source: 'direct')
+        : null;
     final controller = TransactionProgressController(
       flow: TransactionProgressFlow.transfer,
     );
     if (mounted) {
-      unawaited(
-        Navigator.of(context).pushNamed(
-          '/transaction-processing',
-          arguments: TransactionProcessingArguments(controller: controller),
-        ),
+      final processingRouteFuture = Navigator.of(context).pushNamed(
+        '/transaction-processing',
+        arguments: TransactionProcessingArguments(controller: controller),
       );
+      if (receiptUri != null) {
+        unawaited(
+          processingRouteFuture.whenComplete(() {
+            if (!mounted) {
+              return;
+            }
+            if (controller.state.isSuccessful) {
+              unawaited(_ensureReceiptIfStillOnWithdraw(receiptUri));
+            }
+          }),
+        );
+      } else {
+        unawaited(processingRouteFuture);
+      }
     }
 
     try {
@@ -2189,7 +2347,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           'error': 'Transfer status could not be tracked.',
         };
       }
-      final detailsUrl = _transactionDetailsUrl(txHash, networkKey);
+      final detailsUrl = isOwlletPay
+          ? null
+          : _transactionDetailsUrl(txHash, networkKey);
       controller.setSwapPending(
         reference: _shortHash(txHash),
         detailsUrl: detailsUrl,
@@ -2204,8 +2364,21 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
             ? _evmChainForNetwork(blockchain, networkKey)
             : null,
       );
+      if (confirmation == TransactionConfirmationStatus.failed) {
+        controller.setError(
+          'The transaction was confirmed as failed by the network.',
+          reference: _shortHash(txHash),
+          detailsUrl: detailsUrl,
+        );
+        return <String, dynamic>{
+          'ok': false,
+          'error': 'The transaction was confirmed as failed by the network.',
+          'transactionHash': txHash,
+        };
+      }
+
       if (confirmation == TransactionConfirmationStatus.confirmed) {
-        if (!OwlletMiniApps.isOwlletPayId(widget.definition.id)) {
+        if (!isOwlletPay) {
           final historyChainId = switch (family) {
             ChainFamily.bitcoin => throw UnsupportedError(
               'Bitcoin is unavailable for this operation.',
@@ -2245,11 +2418,21 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
         );
-      } else if (confirmation == TransactionConfirmationStatus.failed) {
-        controller.setError(
-          'The transaction was confirmed as failed by the network.',
+      } else if (isOwlletPay) {
+        // The withdrawal transfer was broadcast; move out of the infinite
+        // processing spinner so tapping Done returns directly to the receipt.
+        controller.setSuccess(
           reference: _shortHash(txHash),
           detailsUrl: detailsUrl,
+        );
+      }
+
+      if (receiptUri != null) {
+        unawaited(
+          _ensureReceiptIfStillOnWithdraw(
+            receiptUri,
+            delay: const Duration(milliseconds: 900),
+          ),
         );
       }
 
@@ -2850,9 +3033,23 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       };
     }
     final body = payload['body']?.toString().trim();
+    Uri? currentPageUri;
+    try {
+      currentPageUri = (await _controller?.getUrl())?.uriValue;
+    } catch (_) {}
+    final resolvedUri = _resolveMiniAppNotificationUri(
+      payload['url']?.toString(),
+      currentPageUri: currentPageUri,
+    );
+    final payloadRoute = resolvedUri?.toString() ?? '/notifications';
+    if (resolvedUri != null) {
+      _lastReceiptUrl = payloadRoute;
+      AppNotificationService().setLastTransactionActionUrl(payloadRoute);
+    }
     await AppNotificationService().showLocal(
       title: '${widget.definition.title}: $title',
       body: body,
+      payloadRoute: payloadRoute,
     );
     return const <String, dynamic>{'ok': true};
   }
@@ -3184,6 +3381,10 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               'sequence',
             ).compareTo(_requiredInt(b, 'sequence')),
           );
+      final isOwlletPay = OwlletMiniApps.isOwlletPayId(widget.definition.id);
+      final receiptUri = isOwlletPay
+          ? _recordWithdrawalReceipt(reference, source: 'saga')
+          : null;
       final steps = allSteps
           .where(
             (step) =>
@@ -3191,6 +3392,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           )
           .toList(growable: false);
       if (steps.isEmpty) {
+        if (receiptUri != null) {
+          unawaited(_ensureReceiptIfStillOnWithdraw(receiptUri));
+        }
         return <String, dynamic>{
           'ok': true,
           'transactionHash': activeExecutionReference,
@@ -3205,15 +3409,29 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       }
 
       final controller = TransactionProgressController(
-        flow: TransactionProgressFlow.generic,
+        flow: isDirectTransfer == true
+            ? TransactionProgressFlow.transfer
+            : TransactionProgressFlow.swap,
       );
       progressController = controller;
-      unawaited(
-        Navigator.of(context).pushNamed(
-          '/transaction-processing',
-          arguments: TransactionProcessingArguments(controller: controller),
-        ),
+      final processingRouteFuture = Navigator.of(context).pushNamed(
+        '/transaction-processing',
+        arguments: TransactionProcessingArguments(controller: controller),
       );
+      if (receiptUri != null) {
+        unawaited(
+          processingRouteFuture.whenComplete(() {
+            if (!mounted) {
+              return;
+            }
+            if (controller.state.isSuccessful) {
+              unawaited(_ensureReceiptIfStillOnWithdraw(receiptUri));
+            }
+          }),
+        );
+      } else {
+        unawaited(processingRouteFuture);
+      }
       controller.setPreparing();
       controller.setSwapSubmitting();
 
@@ -3250,7 +3468,10 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
             );
       }
 
-      for (final plannedStep in steps) {
+      var submittedPending = false;
+      for (var index = 0; index < steps.length; index++) {
+        final plannedStep = steps[index];
+        final isLastStep = index == steps.length - 1;
         final stepId = plannedStep['stepId']?.toString() ?? '';
         var persistedStatus = plannedStep['status']?.toString();
         if (persistedStatus == 'failed') {
@@ -3259,12 +3480,22 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           );
         }
         if (persistedStatus == 'submitted') {
-          await _waitForCashinExecutionStepConfirmation(
+          final confirmed = await _waitForCashinExecutionStepConfirmation(
             reference: reference,
             executionReference: activeExecutionReference,
             walletAddress: walletAddress,
             stepId: stepId,
           );
+          if (!confirmed) {
+            if (isLastStep &&
+                plannedStep['kind']?.toString() == 'transaction') {
+              submittedPending = true;
+              break;
+            }
+            throw const FormatException(
+              'The wallet transaction is still confirming. You can safely reopen this request later.',
+            );
+          }
           continue;
         }
         // Previous steps may take long enough to consume the plan TTL. Reload
@@ -3295,12 +3526,21 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           continue;
         }
         if (persistedStatus == 'submitted') {
-          await _waitForCashinExecutionStepConfirmation(
+          final confirmed = await _waitForCashinExecutionStepConfirmation(
             reference: reference,
             executionReference: activeExecutionReference,
             walletAddress: walletAddress,
             stepId: stepId,
           );
+          if (!confirmed) {
+            if (isLastStep && step['kind']?.toString() == 'transaction') {
+              submittedPending = true;
+              break;
+            }
+            throw const FormatException(
+              'The wallet transaction is still confirming. You can safely reopen this request later.',
+            );
+          }
           continue;
         }
         if (persistedStatus == 'failed') {
@@ -3369,22 +3609,40 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           signedPayload: signedPayload,
         );
         if (kind == 'approval' || kind == 'transaction') {
-          await _waitForCashinExecutionStepConfirmation(
+          final confirmed = await _waitForCashinExecutionStepConfirmation(
             reference: reference,
             executionReference: activeExecutionReference,
             walletAddress: walletAddress,
             stepId: stepId,
           );
+          if (!confirmed) {
+            if (isLastStep && kind == 'transaction') {
+              submittedPending = true;
+              break;
+            }
+            throw const FormatException(
+              'The wallet transaction is still confirming. You can safely reopen this request later.',
+            );
+          }
         }
       }
 
       controller.setSuccess(
         reference: firstTxHash == null ? reference : _shortHash(firstTxHash),
       );
+      if (receiptUri != null) {
+        unawaited(
+          _ensureReceiptIfStillOnWithdraw(
+            receiptUri,
+            delay: const Duration(milliseconds: 900),
+          ),
+        );
+      }
       return <String, dynamic>{
         'ok': true,
         'transactionHash': firstTxHash ?? activeExecutionReference,
-        'confirmed': true,
+        'confirmed': !submittedPending,
+        if (submittedPending) 'pending': true,
       };
     } catch (error) {
       final message = cashinExecutionErrorMessage(
@@ -3498,7 +3756,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     return (executionReference, plan);
   }
 
-  Future<void> _waitForCashinExecutionStepConfirmation({
+  Future<bool> _waitForCashinExecutionStepConfirmation({
     required String reference,
     required String executionReference,
     required String walletAddress,
@@ -3508,12 +3766,38 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       throw const FormatException('The execution step reference is missing.');
     }
     for (var attempt = 0; attempt < 60; attempt++) {
-      final plan = await _fetchCashinExecutionPlan(
-        reference: reference,
-        executionReference: executionReference,
-        walletAddress: walletAddress,
-        allowExpiredForSubmittedSteps: true,
-      );
+      Map<String, dynamic> plan;
+      var retryDelay = const Duration(seconds: 2);
+      try {
+        plan = await _fetchCashinExecutionPlan(
+          reference: reference,
+          executionReference: executionReference,
+          walletAddress: walletAddress,
+          allowExpiredForSubmittedSteps: true,
+        );
+      } on CashinExecutionRequestException catch (error) {
+        final status = error.statusCode;
+        final retryable = status == 429 || status >= 500;
+        if (!retryable || attempt >= 59) {
+          if (!retryable) rethrow;
+          return false;
+        }
+        retryDelay = error.retryAfter ?? retryDelay;
+        await Future<void>.delayed(retryDelay);
+        continue;
+      } on SocketException {
+        if (attempt >= 59) {
+          return false;
+        }
+        await Future<void>.delayed(retryDelay);
+        continue;
+      } on TimeoutException {
+        if (attempt >= 59) {
+          return false;
+        }
+        await Future<void>.delayed(retryDelay);
+        continue;
+      }
       final rawSteps = plan['steps'];
       if (rawSteps is! List) {
         throw const FormatException('The execution plan has no wallet steps.');
@@ -3523,17 +3807,15 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           .where((step) => step['stepId']?.toString() == stepId)
           .firstOrNull;
       final status = current?['status']?.toString();
-      if (status == 'confirmed' || status == 'skipped') return;
+      if (status == 'confirmed' || status == 'skipped') return true;
       if (status == 'failed') {
         throw const FormatException(
           'The wallet transaction failed. Refresh the execution plan and try again.',
         );
       }
-      await Future<void>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(retryDelay);
     }
-    throw const FormatException(
-      'The wallet transaction is still confirming. You can safely reopen this request later.',
-    );
+    return false;
   }
 
   Future<void> _submitCashinExecutionStep({
@@ -3566,32 +3848,67 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     }
     // Cash-in endpoints require the profile JWT (not the ws_ settings token).
     final auth = CashinProfileAuthService(walletService: _walletService);
-    final response = await auth
-        .sendAuthorized(
-          walletAddress,
-          (headers) => HttpClientService().client.post(
-            AppEnvironment.api(
-              '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/submit',
-            ),
-            headers: headers,
-            body: jsonEncode(payload),
+    const delays = <Duration>[
+      Duration(milliseconds: 800),
+      Duration(milliseconds: 1500),
+      Duration(milliseconds: 2500),
+      Duration(seconds: 4),
+    ];
+    for (var attempt = 0; attempt <= delays.length; attempt++) {
+      try {
+        final response = await auth
+            .sendAuthorized(
+              walletAddress,
+              (headers) => HttpClientService().client.post(
+                AppEnvironment.api(
+                  '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/submit',
+                ),
+                headers: headers,
+                body: jsonEncode(payload),
+              ),
+              const <String, String>{
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 20));
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return;
+        }
+        String? code;
+        try {
+          final decoded = _decodeBackendBody(response.body);
+          code = decoded['code']?.toString().trim().toUpperCase();
+        } catch (_) {}
+        final retryable =
+            response.statusCode == 429 ||
+            response.statusCode >= 500 ||
+            (response.statusCode == 409 && code == 'TRANSACTION_NOT_FOUND');
+        if (retryable && attempt < delays.length) {
+          final retryAfter = cashinExecutionRetryAfter(response);
+          await Future<void>.delayed(retryAfter ?? delays[attempt]);
+          continue;
+        }
+        throw CashinExecutionRequestException(
+          AppErrorUtils.backendMessage(
+            response.body,
+            fallback:
+                'The wallet step could not be recorded. Reopen this payment to check its status.',
           ),
-          const <String, String>{
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-        )
-        .timeout(const Duration(seconds: 20));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw CashinExecutionRequestException(
-        AppErrorUtils.backendMessage(
-          response.body,
-          fallback:
-              'The wallet step could not be recorded. Reopen this payment to check its status.',
-        ),
-        statusCode: response.statusCode,
-        retryAfter: cashinExecutionRetryAfter(response),
-      );
+          statusCode: response.statusCode,
+          retryAfter: cashinExecutionRetryAfter(response),
+        );
+      } on SocketException {
+        if (attempt >= delays.length) {
+          rethrow;
+        }
+        await Future<void>.delayed(delays[attempt]);
+      } on TimeoutException {
+        if (attempt >= delays.length) {
+          rethrow;
+        }
+        await Future<void>.delayed(delays[attempt]);
+      }
     }
   }
 

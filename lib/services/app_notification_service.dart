@@ -33,6 +33,28 @@ class AppNotificationService {
       StreamController<AppNotificationEvent>.broadcast();
 
   bool _initialized = false;
+  String? _lastTransactionActionUrl;
+
+  /// Callback provided by the app layer to open HTTP/mini-app notification URLs
+  /// (for example via `InAppLinkRouter.open`) without introducing a circular
+  /// dependency from [AppNotificationService] to UI screens.
+  Future<bool> Function(BuildContext context, String url)? externalUrlTapHandler;
+
+  @visibleForTesting
+  String? get lastTransactionActionUrl => _lastTransactionActionUrl;
+
+  void setLastTransactionActionUrl(String? url) {
+    final trimmed = url?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      _lastTransactionActionUrl = null;
+      return;
+    }
+    if (trimmed.startsWith('https://') ||
+        trimmed.startsWith('http://') ||
+        trimmed.startsWith('/')) {
+      _lastTransactionActionUrl = trimmed;
+    }
+  }
 
   Stream<AppNotificationEvent> get events => _events.stream;
 
@@ -55,7 +77,8 @@ class AppNotificationService {
         android: androidSettings,
         iOS: darwinSettings,
       ),
-      onDidReceiveNotificationResponse: (_) => openNotificationsInbox(),
+      onDidReceiveNotificationResponse: (response) =>
+          unawaited(handleNotificationTap(response.payload)),
       onDidReceiveBackgroundNotificationResponse:
           _handleBackgroundNotificationResponse,
     );
@@ -125,6 +148,13 @@ class AppNotificationService {
       styleInformation: styleInformation,
     );
 
+    final payloadTarget = resolveNotificationTarget(
+      data: message.data,
+      category: message.category,
+      title: title,
+      body: body,
+    );
+
     await _localNotifications.show(
       _notificationIdFor(message),
       title,
@@ -133,7 +163,7 @@ class AppNotificationService {
         android: androidDetails,
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: '/notifications',
+      payload: payloadTarget,
     );
     announceInboxChanged(walletAddress: message.data['wallet_address']);
   }
@@ -198,6 +228,145 @@ class AppNotificationService {
     _events.add(AppNotificationEvent(walletAddress: walletAddress));
   }
 
+  static const List<String> _actionUrlKeys = <String>[
+    'action_url',
+    'actionUrl',
+    'url',
+    'receipt_url',
+    'receiptUrl',
+    'deep_link',
+    'deepLink',
+    'route',
+  ];
+
+  static const List<String> _transactionKeywords = <String>[
+    'transaction',
+    'withdraw',
+    'withdrawal',
+    'transfer',
+    'deposit',
+    'cashin',
+    'cash-in',
+    'cashout',
+    'cash-out',
+    'swap',
+    'bridge',
+    'sent',
+    'received',
+    'settled',
+    'payout',
+    'receipt',
+    'wallet_activity',
+    'tx_',
+  ];
+
+  String resolveNotificationTarget({
+    String? payload,
+    Map<String, dynamic>? data,
+    String? category,
+    String? title,
+    String? body,
+  }) {
+    if (data != null) {
+      for (final key in _actionUrlKeys) {
+        final value = data[key]?.toString().trim();
+        if (value != null && value.isNotEmpty && value != '/notifications') {
+          return value;
+        }
+      }
+    }
+    final trimmedPayload = payload?.trim();
+    if (trimmedPayload != null &&
+        trimmedPayload.isNotEmpty &&
+        trimmedPayload != '/notifications') {
+      return trimmedPayload;
+    }
+
+    final metadataHint = <String?>[
+      category,
+      data?['type']?.toString(),
+      data?['category']?.toString(),
+      data?['event']?.toString(),
+      data?['tx_hash']?.toString(),
+      data?['txHash']?.toString(),
+      data?['transaction_hash']?.toString(),
+      data?['transactionHash']?.toString(),
+      data?['reference']?.toString(),
+    ].whereType<String>().join(' ').toLowerCase();
+    final textHint = '${title ?? ''} ${body ?? ''}'.toLowerCase();
+    final isTransaction = _transactionKeywords.any(
+      (kw) => metadataHint.contains(kw) || textHint.contains(kw),
+    );
+    if (isTransaction) {
+      final cached = _lastTransactionActionUrl?.trim();
+      if (cached != null && cached.isNotEmpty) {
+        return cached;
+      }
+      return '/transactions';
+    }
+    return '/notifications';
+  }
+
+  Future<void> handleNotificationTap(String? payload) async {
+    final target = resolveNotificationTarget(payload: payload);
+    await openNotificationTarget(target);
+  }
+
+  Future<void> handleRemoteMessageOpened(RemoteMessage message) async {
+    announceInboxChanged(walletAddress: message.data['wallet_address']?.toString());
+    final target = resolveNotificationTarget(
+      data: message.data,
+      category: message.category,
+      title: message.notification?.title,
+      body: message.notification?.body,
+    );
+    await openNotificationTarget(target);
+  }
+
+  Future<void> openNotificationTarget(String rawTarget) async {
+    final completer = Completer<void>();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await openNotificationTargetNow(rawTarget);
+      } finally {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    });
+    return completer.future;
+  }
+
+  @visibleForTesting
+  Future<void> openNotificationTargetNow(String rawTarget) async {
+    final target = rawTarget.trim();
+    final navigator = appNavigatorKey.currentState;
+    if (navigator == null) {
+      return;
+    }
+    final navContext = navigator.context;
+    if ((target.startsWith('https://') || target.startsWith('http://')) &&
+        externalUrlTapHandler != null) {
+      try {
+        final handled = await externalUrlTapHandler!(navContext, target);
+        if (handled) {
+          return;
+        }
+      } catch (_) {}
+    }
+    if (target.startsWith('/') && target != '/notifications') {
+      if (currentRouteName.value == target) {
+        return;
+      }
+      unawaited(navigator.pushNamed(target));
+      return;
+    }
+    if (currentRouteName.value == '/notifications') {
+      return;
+    }
+    unawaited(navigator.pushNamed('/notifications'));
+  }
+
   void openNotificationsInbox() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final navigator = appNavigatorKey.currentState;
@@ -222,5 +391,5 @@ class AppNotificationService {
 
 @pragma('vm:entry-point')
 void _handleBackgroundNotificationResponse(NotificationResponse response) {
-  AppNotificationService().openNotificationsInbox();
+  unawaited(AppNotificationService().handleNotificationTap(response.payload));
 }

@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/app_notification_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/app_error_utils.dart';
+import '../../utils/in_app_link_router.dart';
 
 /// Notifications Screen
 /// Lists withdrawal/transfer receipts, KYC status, etc.
@@ -156,12 +157,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           final rawImage =
               item['imageUrl']?.toString() ?? item['image_url']?.toString();
+          final rawActionUrl =
+              item['actionUrl']?.toString() ??
+              item['action_url']?.toString() ??
+              item['url']?.toString();
           return _Notification(
             id: item['id']?.toString() ?? '',
             title: item['title']?.toString() ?? l.notifications,
             message: item['message']?.toString() ?? '',
             imageUrl: (rawImage != null && rawImage.trim().isNotEmpty)
                 ? rawImage.trim()
+                : null,
+            actionUrl:
+                (rawActionUrl != null &&
+                    rawActionUrl.trim().isNotEmpty &&
+                    rawActionUrl.trim() != '/notifications')
+                ? rawActionUrl.trim()
                 : null,
             isRead: item['is_read'] == 1 || item['is_read'] == true,
             date: formatted,
@@ -352,75 +363,107 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               itemCount: _notifications.length,
                               itemBuilder: (context, index) {
                                 final n = _notifications[index];
-                                return Container(
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: n.isRead
-                                        ? Colors.transparent
-                                        : AppColors.cardDark,
-                                    border: Border.all(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                    ),
+                                final actionUrl = n.actionUrl?.trim();
+                                final hasAction =
+                                    actionUrl != null && actionUrl.isNotEmpty;
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
                                     borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
+                                    onTap: !hasAction
+                                        ? null
+                                        : () {
+                                            if (actionUrl.startsWith('/')) {
+                                              Navigator.of(
+                                                context,
+                                              ).pushNamed(actionUrl);
+                                            } else {
+                                              unawaited(
+                                                InAppLinkRouter.open(
+                                                  context,
+                                                  actionUrl,
+                                                  miniAppLaunchSource:
+                                                      'notification',
+                                                ),
+                                              );
+                                            }
+                                          },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: n.isRead
+                                            ? Colors.transparent
+                                            : AppColors.cardDark,
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                        ),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  n.title,
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 16,
+                                                    fontWeight: n.isRead
+                                                        ? FontWeight.w500
+                                                        : FontWeight.w700,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                n.date,
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 12,
+                                                  color: Colors.white
+                                                      .withValues(
+                                                        alpha: n.isRead
+                                                            ? 0.4
+                                                            : 0.7,
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 6),
                                           Text(
-                                            n.title,
+                                            n.message,
                                             style: GoogleFonts.outfit(
-                                              fontSize: 16,
-                                              fontWeight: n.isRead
-                                                  ? FontWeight.w500
-                                                  : FontWeight.w700,
-                                              color: Colors.white,
+                                              fontSize: 14,
+                                              color: Colors.white.withValues(
+                                                alpha: 0.6,
+                                              ),
+                                              height: 1.4,
                                             ),
                                           ),
-                                          Text(
-                                            n.date,
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 12,
-                                              color: Colors.white.withValues(
-                                                alpha: n.isRead ? 0.4 : 0.7,
+                                          if (n.imageUrl != null) ...[
+                                            const SizedBox(height: 10),
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              child: Image.network(
+                                                n.imageUrl!,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, _, _) =>
+                                                    const SizedBox.shrink(),
                                               ),
                                             ),
-                                          ),
+                                          ],
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        n.message,
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 14,
-                                          color: Colors.white.withValues(
-                                            alpha: 0.6,
-                                          ),
-                                          height: 1.4,
-                                        ),
-                                      ),
-                                      if (n.imageUrl != null) ...[
-                                        const SizedBox(height: 10),
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          child: Image.network(
-                                            n.imageUrl!,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, _, _) =>
-                                                const SizedBox.shrink(),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
+                                    ),
                                   ),
                                 );
                               },
@@ -439,6 +482,7 @@ class _Notification {
   final String title;
   final String message;
   final String? imageUrl;
+  final String? actionUrl;
   final bool isRead;
   final String date;
 
@@ -447,6 +491,7 @@ class _Notification {
     required this.title,
     required this.message,
     this.imageUrl,
+    this.actionUrl,
     required this.isRead,
     required this.date,
   });
@@ -456,6 +501,7 @@ class _Notification {
     String? title,
     String? message,
     String? imageUrl,
+    String? actionUrl,
     bool? isRead,
     String? date,
   }) {
@@ -464,6 +510,7 @@ class _Notification {
       title: title ?? this.title,
       message: message ?? this.message,
       imageUrl: imageUrl ?? this.imageUrl,
+      actionUrl: actionUrl ?? this.actionUrl,
       isRead: isRead ?? this.isRead,
       date: date ?? this.date,
     );

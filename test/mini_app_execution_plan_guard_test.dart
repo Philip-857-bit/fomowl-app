@@ -230,4 +230,59 @@ void main() {
     expect(burstOperationAllowsSelector('push', '095ea7b3'), isFalse);
     expect(burstOperationAllowsSelector('unknown', 'a4be8afd'), isFalse);
   });
+
+  test(
+    'expired execution plans remain usable while polling submitted or confirmed steps',
+    () {
+      final now = DateTime.utc(2026, 11, 13, 12, 0, 0);
+      final expiredAt = now.subtract(const Duration(minutes: 2)).toIso8601String();
+      final confirmedPlan = <String, dynamic>{
+        'expiresAt': expiredAt,
+        'steps': [
+          {'stepId': 'step-1', 'status': 'confirmed'},
+        ],
+      };
+      final submittedPlan = <String, dynamic>{
+        'expiresAt': expiredAt,
+        'steps': [
+          {'stepId': 'step-1', 'status': 'submitted'},
+        ],
+      };
+      final pendingPlan = <String, dynamic>{
+        'expiresAt': expiredAt,
+        'steps': [
+          {'stepId': 'step-1', 'status': 'pending'},
+        ],
+      };
+
+      expect(
+        cashinExecutionPlanIsUsable(confirmedPlan, now: now),
+        isFalse,
+      );
+      expect(
+        cashinExecutionPlanIsUsable(
+          confirmedPlan,
+          now: now,
+          allowExpiredForSubmittedSteps: true,
+        ),
+        isTrue,
+      );
+      expect(
+        cashinExecutionPlanIsUsable(
+          submittedPlan,
+          now: now,
+          allowExpiredForSubmittedSteps: true,
+        ),
+        isTrue,
+      );
+      expect(
+        cashinExecutionPlanIsUsable(
+          pendingPlan,
+          now: now,
+          allowExpiredForSubmittedSteps: true,
+        ),
+        isFalse,
+      );
+    },
+  );
 }

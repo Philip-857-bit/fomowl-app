@@ -22,6 +22,12 @@ class InAppLinkRouter {
         ? null
         : OwlletMiniApps.findByUri(target.uri);
     if (miniApp != null) {
+      if (await MiniAppHostScreen.openUrlInActiveHost(target.uri)) {
+        return;
+      }
+      if (!context.mounted) {
+        return;
+      }
       await Navigator.of(context).pushNamed(
         '/mini-app-host',
         arguments: MiniAppHostArguments(

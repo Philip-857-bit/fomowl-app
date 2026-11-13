@@ -12,6 +12,7 @@ import 'app/app_providers.dart';
 import 'app/owllet_app.dart';
 import 'services/app_notification_service.dart';
 import 'services/app_patch_service.dart';
+import 'utils/in_app_link_router.dart';
 
 const bool kEnableRustBridge = bool.fromEnvironment(
   'ENABLE_RUST_BRIDGE',
@@ -33,6 +34,14 @@ Future<void> main() async {
   RemoteMessage? initialPushMessage;
   final appNotificationService = AppNotificationService();
   final appPatchService = AppPatchService.instance;
+  appNotificationService.externalUrlTapHandler = (context, url) async {
+    await InAppLinkRouter.open(
+      context,
+      url,
+      miniAppLaunchSource: 'notification',
+    );
+    return true;
+  };
   await appNotificationService.initialize();
 
   if (AppEnvironment.pushNotificationsEnabled) {
@@ -55,10 +64,7 @@ Future<void> main() async {
         appNotificationService.showForegroundMessage(message);
       });
       FirebaseMessaging.onMessageOpenedApp.listen((message) {
-        appNotificationService.announceInboxChanged(
-          walletAddress: message.data['wallet_address'],
-        );
-        appNotificationService.openNotificationsInbox();
+        unawaited(appNotificationService.handleRemoteMessageOpened(message));
       });
       initialPushMessage = await FirebaseMessaging.instance.getInitialMessage();
     } catch (_) {
@@ -91,9 +97,8 @@ Future<void> main() async {
   unawaited(appPatchService.initialize());
 
   if (initialPushMessage != null) {
-    appNotificationService.announceInboxChanged(
-      walletAddress: initialPushMessage.data['wallet_address'],
+    unawaited(
+      appNotificationService.handleRemoteMessageOpened(initialPushMessage),
     );
-    appNotificationService.openNotificationsInbox();
   }
 }
