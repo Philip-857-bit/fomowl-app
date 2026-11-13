@@ -53,6 +53,7 @@ import 'mini_app_definition.dart';
 import 'mini_app_registry.dart';
 import 'burst_sign_in.dart';
 import 'burst_account_session.dart';
+import 'cashin_execution_error.dart';
 import 'widgets/mini_app_identity_title.dart';
 
 @visibleForTesting
@@ -317,6 +318,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   BlockchainService? _blockchain;
   String _publishedWalletAddress = '';
   String _publishedNetworkKey = '';
+  String _lastPublishedRuntimePolicyJson = '';
   bool _walletContextRefreshInFlight = false;
   bool _walletContextRefreshQueued = false;
 
@@ -364,7 +366,29 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     super.dispose();
   }
 
+  String _currentRuntimePolicySignature() => jsonEncode(<String, dynamic>{
+    'revision': _runtimeConfig.snapshot.revision,
+    'maintenanceMode': _runtimeConfig.snapshot.maintenanceMode,
+    'portfolioEnabled': _runtimeConfig.snapshot.portfolioEnabled,
+    'portfolioUiEnabled': _runtimeConfig.snapshot.portfolioUiEnabled,
+    'scopedBalancesEnabled': _runtimeConfig.snapshot.scopedBalancesEnabled,
+    'legacyAggregateEnabled': _runtimeConfig.snapshot.legacyAggregateEnabled,
+    'refreshOnTransaction': _runtimeConfig.snapshot.refreshOnTransaction,
+    'transfersEnabled': _runtimeConfig.snapshot.transfersEnabled,
+    'swapsEnabled': _runtimeConfig.snapshot.swapsEnabled,
+    'bridgesEnabled': _runtimeConfig.snapshot.bridgesEnabled,
+    'miniAppsEnabled': _runtimeConfig.snapshot.miniAppsEnabled,
+    'cashInEnabled': _runtimeConfig.snapshot.cashInEnabled,
+    'cashOutEnabled': _runtimeConfig.snapshot.cashOutEnabled,
+    'billsEnabled': _runtimeConfig.snapshot.billsEnabled,
+    'shopEnabled': _runtimeConfig.snapshot.shopEnabled,
+  });
+
   void _handleRuntimeConfigChanged() {
+    final signature = _currentRuntimePolicySignature();
+    if (signature == _lastPublishedRuntimePolicyJson) {
+      return;
+    }
     unawaited(
       _prepareBridgeContext().then((_) async {
         await _publishBridgeContext();
@@ -528,6 +552,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           };
     _publishedWalletAddress = walletAddress?.trim().toLowerCase() ?? '';
     _publishedNetworkKey = activeNetworkKey ?? '';
+    _lastPublishedRuntimePolicyJson = _currentRuntimePolicySignature();
     setState(() {
       _bridgeContext = <String, dynamic>{
         'host': 'owllet-mobile',
@@ -1174,7 +1199,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }
 
   Future<bool> _runtimeFeatureEnabled(String feature) async {
-    await _runtimeConfig.refresh();
+    await _runtimeConfig.refresh(force: false);
     final policy = _runtimeConfig.snapshot;
     if (policy.fullMaintenance || policy.readOnly || !policy.miniAppsEnabled) {
       return false;
@@ -2872,9 +2897,11 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       isTransfer: sameAsset,
     );
     if (confirmed != true) {
-      return const <String, dynamic>{
+      return <String, dynamic>{
         'ok': false,
-        'error': 'Swap was cancelled.',
+        'error': sameAsset
+            ? 'Transfer was cancelled.'
+            : 'Payment was cancelled.',
       };
     }
     if (!await _runtimeFeatureEnabled('bridge')) {
@@ -3005,9 +3032,13 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         'confirmed': true,
       };
     } catch (e) {
-      final msg = 'Swap failed: ${e.toString()}';
+      final msg = cashinExecutionErrorMessage(e, isTransfer: sameAsset);
       controller.setError(msg);
-      return <String, dynamic>{'ok': false, 'error': msg};
+      return <String, dynamic>{
+        'ok': false,
+        'error': msg,
+        'transactionHash': ?firstTxHash,
+      };
     }
   }
 
@@ -3027,6 +3058,8 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     }
 
     TransactionProgressController? progressController;
+    bool? isDirectTransfer;
+    String? firstTxHash;
     try {
       var activeExecutionReference = executionReference;
       final previewPlan = await _fetchCashinExecutionPlan(
@@ -3039,6 +3072,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         allowExpiredForSubmittedSteps: true,
       );
       final rawSteps = previewPlan['steps'];
+      isDirectTransfer = cashinExecutionPlanIsTransfer(previewPlan);
       if (rawSteps is! List || rawSteps.isEmpty) {
         throw const FormatException('The execution plan has no wallet steps.');
       }
@@ -3097,7 +3131,6 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       // The authenticated execution plan is authoritative. A direct-settlement
       // route is a token transfer even if an older mini-app supplied stale or
       // mismatched display labels.
-      final isDirectTransfer = cashinExecutionPlanIsTransfer(previewPlan);
       final confirmed = await _confirmCrossChainSwap(
         fromLabel: _swapLabel(payload, 'from'),
         toLabel: _swapLabel(payload, 'to'),
@@ -3108,13 +3141,12 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         isTransfer: isDirectTransfer,
       );
       if (confirmed != true) {
-        return const <String, dynamic>{
+        return <String, dynamic>{
           'ok': false,
-          'error': 'Swap was cancelled.',
+          'error': isDirectTransfer
+              ? 'Transfer was cancelled.'
+              : 'Payment was cancelled.',
         };
-      }
-      if (!await _runtimeFeatureEnabled('bridge')) {
-        return _runtimeFeatureDisabledResponse();
       }
       if (!mounted) {
         return const <String, dynamic>{
@@ -3218,7 +3250,6 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
             );
       }
 
-      String? firstTxHash;
       for (final plannedStep in steps) {
         final stepId = plannedStep['stepId']?.toString() ?? '';
         var persistedStatus = plannedStep['status']?.toString();
@@ -3356,9 +3387,16 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         'confirmed': true,
       };
     } catch (error) {
-      final message = 'Swap failed: ${AppErrorUtils.userMessage(error)}';
+      final message = cashinExecutionErrorMessage(
+        error,
+        isTransfer: isDirectTransfer,
+      );
       progressController?.setError(message);
-      return <String, dynamic>{'ok': false, 'error': message};
+      return <String, dynamic>{
+        'ok': false,
+        'error': message,
+        'transactionHash': ?firstTxHash,
+      };
     }
   }
 
@@ -3370,24 +3408,31 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }) async {
     // Cash-in endpoints require the profile JWT (not the ws_ settings token).
     final auth = CashinProfileAuthService(walletService: _walletService);
-    final response = await auth
-        .sendAuthorized(
-          walletAddress,
-          (headers) => HttpClientService().client.get(
-            AppEnvironment.api(
-              '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}',
+    final response = await readCashinExecutionResponse(
+      () => auth
+          .sendAuthorized(
+            walletAddress,
+            (headers) => HttpClientService().client.get(
+              AppEnvironment.api(
+                '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}',
+              ),
+              headers: headers,
             ),
-            headers: headers,
-          ),
-          const <String, String>{'Accept': 'application/json'},
-        )
-        .timeout(const Duration(seconds: 15));
-    final body = _decodeBackendBody(response.body);
+            const <String, String>{'Accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 15)),
+    );
     if (response.statusCode != 200) {
-      throw FormatException(
-        body['message']?.toString() ?? 'Execution plan unavailable.',
+      throw CashinExecutionRequestException(
+        AppErrorUtils.backendMessage(
+          response.body,
+          fallback: 'Execution plan unavailable.',
+        ),
+        statusCode: response.statusCode,
+        retryAfter: cashinExecutionRetryAfter(response),
       );
     }
+    final body = _decodeBackendBody(response.body);
     final data = _stringKeyedMap(body['data']);
     final execution = _stringKeyedMap(data['execution']);
     final plan = _stringKeyedMap(execution['plan']);
@@ -3413,24 +3458,31 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }) async {
     // Cash-in endpoints require the profile JWT (not the ws_ settings token).
     final auth = CashinProfileAuthService(walletService: _walletService);
-    final response = await auth
-        .sendAuthorized(
-          walletAddress,
-          (headers) => HttpClientService().client.post(
-            AppEnvironment.api(
-              '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/refresh',
+    final response = await readCashinExecutionResponse(
+      () => auth
+          .sendAuthorized(
+            walletAddress,
+            (headers) => HttpClientService().client.post(
+              AppEnvironment.api(
+                '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/refresh',
+              ),
+              headers: headers,
             ),
-            headers: headers,
-          ),
-          const <String, String>{'Accept': 'application/json'},
-        )
-        .timeout(const Duration(seconds: 20));
-    final body = _decodeBackendBody(response.body);
+            const <String, String>{'Accept': 'application/json'},
+          )
+          .timeout(const Duration(seconds: 20)),
+    );
     if (response.statusCode != 200) {
-      throw FormatException(
-        body['message']?.toString() ?? 'Unable to refresh the execution plan.',
+      throw CashinExecutionRequestException(
+        AppErrorUtils.backendMessage(
+          response.body,
+          fallback: 'Unable to refresh the execution plan.',
+        ),
+        statusCode: response.statusCode,
+        retryAfter: cashinExecutionRetryAfter(response),
       );
     }
+    final body = _decodeBackendBody(response.body);
     final data = _stringKeyedMap(body['data']);
     final execution = _stringKeyedMap(data['execution']);
     final plan = _stringKeyedMap(execution['plan']);
@@ -3531,9 +3583,14 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         )
         .timeout(const Duration(seconds: 20));
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final body = _decodeBackendBody(response.body);
-      throw FormatException(
-        body['message']?.toString() ?? 'Step submission failed.',
+      throw CashinExecutionRequestException(
+        AppErrorUtils.backendMessage(
+          response.body,
+          fallback:
+              'The wallet step could not be recorded. Reopen this payment to check its status.',
+        ),
+        statusCode: response.statusCode,
+        retryAfter: cashinExecutionRetryAfter(response),
       );
     }
   }

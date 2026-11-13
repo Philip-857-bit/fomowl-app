@@ -111,6 +111,7 @@ class BlockchainService extends ChangeNotifier {
   final Map<String, int> _bitcoinRefreshEpochs = {};
   final Map<String, DateTime> _backendDiscoveryBackoffUntil = {};
   Timer? _livePriceTimer;
+  Timer? _livePriceInitialDelayTimer;
   final Map<String, Set<String>> _trackedPriceIdsByScope = {};
   final Map<String, Duration> _livePriceIntervalsByScope = {};
   Duration _livePriceInterval = const Duration(minutes: 1);
@@ -282,9 +283,18 @@ class BlockchainService extends ChangeNotifier {
     required bool available,
     bool testnetEnabled = false,
   }) {
+    final nextTestnetEnabled = available && testnetEnabled;
+    final needsFallback =
+        activeFamily == ChainFamily.bitcoin &&
+        !isBitcoinNetworkAvailable(activeNetworkKey);
+    if (_bitcoinAvailable == available &&
+        _bitcoinTestnetEnabled == nextTestnetEnabled &&
+        !needsFallback) {
+      return;
+    }
     _bitcoinAvailable = available;
     BitcoinHostAvailability.configure(mainnet: available);
-    _bitcoinTestnetEnabled = available && testnetEnabled;
+    _bitcoinTestnetEnabled = nextTestnetEnabled;
     _restorePendingBitcoinNetwork();
     if (activeFamily == ChainFamily.bitcoin &&
         !isBitcoinNetworkAvailable(activeNetworkKey)) {
@@ -1266,16 +1276,17 @@ class BlockchainService extends ChangeNotifier {
         .toSet();
 
     if (trackedIds.isEmpty) {
-      _trackedPriceIdsByScope.remove(scope);
-      _livePriceIntervalsByScope.remove(scope);
-      _reconfigureLivePriceTimer();
+      final removedIds = _trackedPriceIdsByScope.remove(scope);
+      final removedInterval = _livePriceIntervalsByScope.remove(scope);
+      if (removedIds != null || removedInterval != null) {
+        _reconfigureLivePriceTimer();
+      }
       return;
     }
 
-    _trackedPriceIdsByScope[scope] = trackedIds;
     // Cadence comes from runtime policy so operators can slow polling during
     // provider quota pressure without shipping a client build.
-    _livePriceIntervalsByScope[scope] =
+    final effectiveInterval =
         interval ??
         Duration(
           seconds: RuntimeConfigService
@@ -1283,13 +1294,27 @@ class BlockchainService extends ChangeNotifier {
               .snapshot
               .priceRefreshIntervalSeconds,
         );
+    final prevIds = _trackedPriceIdsByScope[scope];
+    final prevInterval = _livePriceIntervalsByScope[scope];
+    if (prevIds != null &&
+        setEquals(prevIds, trackedIds) &&
+        prevInterval == effectiveInterval &&
+        (_livePriceTimer?.isActive == true ||
+            _livePriceInitialDelayTimer?.isActive == true)) {
+      return;
+    }
+
+    _trackedPriceIdsByScope[scope] = trackedIds;
+    _livePriceIntervalsByScope[scope] = effectiveInterval;
     _reconfigureLivePriceTimer();
   }
 
   void clearLivePriceTracking({String scope = 'default'}) {
-    _trackedPriceIdsByScope.remove(scope);
-    _livePriceIntervalsByScope.remove(scope);
-    _reconfigureLivePriceTimer();
+    final removedIds = _trackedPriceIdsByScope.remove(scope);
+    final removedInterval = _livePriceIntervalsByScope.remove(scope);
+    if (removedIds != null || removedInterval != null) {
+      _reconfigureLivePriceTimer();
+    }
   }
 
   /// Refresh prices for given tokens — use in confirmation screens before signing
@@ -2996,6 +3021,8 @@ class BlockchainService extends ChangeNotifier {
   void _stopLivePriceTimer() {
     _livePriceTimer?.cancel();
     _livePriceTimer = null;
+    _livePriceInitialDelayTimer?.cancel();
+    _livePriceInitialDelayTimer = null;
   }
 
   Set<String> get _effectiveTrackedPriceIds {
@@ -3019,9 +3046,11 @@ class BlockchainService extends ChangeNotifier {
 
     _livePriceInterval = interval;
     _livePriceTimer?.cancel();
+    _livePriceInitialDelayTimer?.cancel();
 
     final jitter = _getJitter();
-    Future.delayed(jitter, () {
+    _livePriceInitialDelayTimer = Timer(jitter, () {
+      _livePriceInitialDelayTimer = null;
       if (_effectiveTrackedPriceIds.isNotEmpty) {
         unawaited(_refreshTrackedTokenPrices());
       }

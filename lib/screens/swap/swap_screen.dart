@@ -98,6 +98,29 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
   static const Duration _followUpWalletRefreshDelay = Duration(seconds: 3);
   final RuntimeConfigService _runtimeConfig = RuntimeConfigService.instance;
   BlockchainService? _blockchainService;
+  AppShellController? _shellController;
+
+  bool get _isSwapScreenActive {
+    if (!mounted) return false;
+    if (!widget.showBottomNavigation) {
+      final controller =
+          _shellController ??
+          Provider.of<AppShellController?>(context, listen: false);
+      if (controller != null && controller.currentTab != AppShellTab.swap) {
+        return false;
+      }
+    }
+    return ModalRoute.of(context)?.isCurrent != false;
+  }
+
+  void _handleAppShellTabChanged() {
+    if (!mounted) return;
+    if (_isSwapScreenActive) {
+      _activateSwapLiveTracking();
+    } else {
+      _blockchainService?.clearLivePriceTracking(scope: _livePriceScope);
+    }
+  }
 
   bool _isStablecoin(Token? token) => isSwapStablecoin(token);
 
@@ -202,6 +225,15 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final shellController = Provider.of<AppShellController?>(
+      context,
+      listen: false,
+    );
+    if (!identical(_shellController, shellController)) {
+      _shellController?.removeListener(_handleAppShellTabChanged);
+      _shellController = shellController;
+      _shellController?.addListener(_handleAppShellTabChanged);
+    }
     final blockchain = Provider.of<BlockchainService>(context);
     if (!identical(_blockchainService, blockchain)) {
       _blockchainService?.clearLivePriceTracking(scope: _livePriceScope);
@@ -990,6 +1022,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
   @override
   void dispose() {
     _confirmedSwapOutboxTimer?.cancel();
+    _shellController?.removeListener(_handleAppShellTabChanged);
     _runtimeConfig.removeListener(_handleRuntimePolicyChanged);
     _fromDisplayController.removeListener(_handleFromDisplayChanged);
     _fromDisplayController.dispose();
@@ -1003,11 +1036,15 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     super.dispose();
   }
 
-  /// Activate live price tracking for swap tokens to ensure quote freshness
+  /// Activate live price tracking for swap tokens only while Swap is visible.
   void _activateSwapLiveTracking() {
     Future.microtask(() {
       if (!mounted) return;
       final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      if (!_isSwapScreenActive) {
+        blockchain.clearLivePriceTracking(scope: _livePriceScope);
+        return;
+      }
       if (_fromToken != null && _toToken != null) {
         // 5s refresh cadence for swap (hot - user actively trading)
         blockchain.setLivePriceTrackingForTokens(

@@ -44,8 +44,15 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
 
   late final BitcoinRolloutService _bitcoinRollout;
   String _bitcoinWalletContext = '';
+  bool _refreshingBitcoinAdmission = false;
   void _refreshBitcoinAdmission() {
-    if (mounted) unawaited(_bitcoinRollout.refresh(_runtimeConfig.snapshot));
+    if (!mounted || _refreshingBitcoinAdmission) return;
+    _refreshingBitcoinAdmission = true;
+    unawaited(
+      _bitcoinRollout.refresh(_runtimeConfig.snapshot).whenComplete(() {
+        _refreshingBitcoinAdmission = false;
+      }),
+    );
   }
 
   void _bitcoinWalletChanged() {
@@ -99,9 +106,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
     );
     _runtimeConfigTimer = Timer.periodic(
       const Duration(minutes: 1),
-      (_) => unawaited(
-        _runtimeConfig.refresh().then((_) => _refreshBitcoinAdmission()),
-      ),
+      (_) => unawaited(_runtimeConfig.refresh(force: false)),
     );
   }
 
@@ -181,7 +186,7 @@ class _OwlletAppState extends State<OwlletApp> with WidgetsBindingObserver {
   }
 
   Future<void> _refreshRuntimeAndBalances(bool refreshBalances) async {
-    await _runtimeConfig.refresh();
+    await _runtimeConfig.refresh(force: false);
     if (!refreshBalances || !_runtimeConfig.snapshot.refreshOnResume) return;
     final context = appNavigatorKey.currentContext;
     if (context == null || !context.mounted) return;

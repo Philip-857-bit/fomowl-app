@@ -140,6 +140,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _lastChainId;
   String? _lastNetworkKey;
   String? _lastWalletAddress;
+  bool? _lastPortfolioRuntimeEnabled;
+  String? _lastNftPreviewAddress;
+  DateTime? _lastNftPreviewFetchedAt;
   Set<String> _hiddenTokenKeys = {};
   List<NftAsset> _nftPreview = [];
   bool _hasMoreNfts = false;
@@ -173,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _lastPortfolioRuntimeEnabled = _portfolioRuntimeEnabled;
     _runtimeConfig.addListener(_handleRuntimeConfigChanged);
     _tokenVisibilitySubscription = _tokenVisibilityService.changes.listen((
       change,
@@ -209,13 +213,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleRuntimeConfigChanged() {
     if (!mounted) return;
+    final nextEnabled = _portfolioRuntimeEnabled;
+    final wasEnabled = _lastPortfolioRuntimeEnabled;
+    _lastPortfolioRuntimeEnabled = nextEnabled;
+
+    if (_tokens.isNotEmpty) {
+      _blockchain?.setLivePriceTrackingForTokens(
+        _tokens,
+        scope: _livePriceScope,
+      );
+    }
+
     if (!_runtimeConfig.snapshot.portfolioUiEnabled &&
         _selectedAssetTab == HomeAssetTab.portfolio) {
       _selectedAssetTab = HomeAssetTab.tokens;
     }
+    if (!nextEnabled) {
+      if (_isLoading || _selectedAssetTab != HomeAssetTab.tokens) {
+        setState(() => _isLoading = false);
+      } else {
+        setState(() {});
+      }
+      return;
+    }
     setState(() {});
-    if (_runtimeConfig.snapshot.portfolioEnabled &&
-        _runtimeConfig.snapshot.portfolioUiEnabled) {
+    if (wasEnabled == false && nextEnabled) {
       unawaited(_loadWalletData());
     }
   }
@@ -1500,7 +1522,19 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _fetchNftPreview(String address) async {
+  Future<void> _fetchNftPreview(
+    String address, {
+    bool forceRefresh = false,
+  }) async {
+    final normalizedAddress = address.trim().toLowerCase();
+    final lastFetchedAt = _lastNftPreviewFetchedAt;
+    if (!forceRefresh &&
+        normalizedAddress.isNotEmpty &&
+        _lastNftPreviewAddress == normalizedAddress &&
+        lastFetchedAt != null &&
+        DateTime.now().difference(lastFetchedAt) < const Duration(seconds: 60)) {
+      return;
+    }
     final blockchain = Provider.of<BlockchainService>(context, listen: false);
     final solanaAddress = await _walletService.getWalletAddressForFamily(
       ChainFamily.solana,
@@ -1520,6 +1554,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    _lastNftPreviewAddress = normalizedAddress;
+    _lastNftPreviewFetchedAt = DateTime.now();
     if (mounted) {
       setState(() => _isLoadingNfts = true);
     }

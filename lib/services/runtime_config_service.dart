@@ -412,6 +412,7 @@ class RuntimeConfigService extends ChangeNotifier {
   bool _refreshing = false;
   bool _refreshFailed = false;
   Future<void>? _refreshFuture;
+  DateTime? _lastRefreshedAt;
   bool get hasPolicy => _hasPolicy;
   bool get refreshing => _refreshing;
   bool get refreshFailed => _refreshFailed;
@@ -466,7 +467,15 @@ class RuntimeConfigService extends ChangeNotifier {
     }
   }
 
-  Future<void> refresh() async {
+  Future<void> refresh({bool force = true}) async {
+    if (!force &&
+        _hasPolicy &&
+        !_refreshFailed &&
+        _lastRefreshedAt != null &&
+        DateTime.now().difference(_lastRefreshedAt!) <
+            const Duration(seconds: 15)) {
+      return;
+    }
     final inFlight = _refreshFuture;
     if (inFlight != null) return inFlight;
     final future = _refreshPolicy();
@@ -480,9 +489,18 @@ class RuntimeConfigService extends ChangeNotifier {
 
   Future<void> _refreshPolicy() async {
     await hydrate();
+    final prevSnapshot = _snapshot;
+    final prevHasPolicy = _hasPolicy;
+    final prevRefreshFailed = _refreshFailed;
+    final prevEtag = _etag;
     _refreshing = true;
     _refreshFailed = false;
-    notifyListeners();
+    // Only notify on _refreshing transition when blocking on an initial policy
+    // load (e.g. RuntimeFeatureGate spinner); background refreshes with an
+    // existing policy must not trigger wallet/mini-app reload fan-out on 304.
+    if (!prevHasPolicy || prevRefreshFailed) {
+      notifyListeners();
+    }
     try {
       final headers = <String, String>{};
       if (_hasPolicy && _etag != null && _etag!.isNotEmpty) {
@@ -492,6 +510,9 @@ class RuntimeConfigService extends ChangeNotifier {
           .get(AppEnvironment.api('/runtime-config'), headers: headers)
           .timeout(const Duration(seconds: 6));
       if (response.statusCode == 304 && _hasPolicy) {
+        _hasPolicy = true;
+        _refreshFailed = false;
+        _lastRefreshedAt = DateTime.now();
         await _persist(_snapshot, _etag);
         return;
       }
@@ -507,6 +528,8 @@ class RuntimeConfigService extends ChangeNotifier {
       _snapshot = RuntimePolicySnapshot.fromJson(decoded);
       _etag = response.headers['etag'];
       _hasPolicy = true;
+      _refreshFailed = false;
+      _lastRefreshedAt = DateTime.now();
       await _persist(_snapshot, _etag);
     } catch (error) {
       _refreshFailed = true;
@@ -515,7 +538,15 @@ class RuntimeConfigService extends ChangeNotifier {
       );
     } finally {
       _refreshing = false;
-      notifyListeners();
+      final stateChanged =
+          !prevHasPolicy ||
+          _hasPolicy != prevHasPolicy ||
+          _refreshFailed != prevRefreshFailed ||
+          _snapshot != prevSnapshot ||
+          _etag != prevEtag;
+      if (stateChanged) {
+        notifyListeners();
+      }
     }
   }
 

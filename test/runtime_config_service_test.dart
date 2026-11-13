@@ -283,4 +283,50 @@ void main() {
       expect(notifications, 0);
     },
   );
+
+  test(
+    '304 and force:false cooldown do not emit redundant listener notifications',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var requests = 0;
+      final service = RuntimeConfigService.forTesting(
+        client: MockClient((request) async {
+          requests += 1;
+          if (requests == 1) {
+            return http.Response(
+              jsonEncode({
+                'revision': 11,
+                'policy': {
+                  'maintenance': {'mode': 'off', 'message': ''},
+                  'portfolio': {'enabled': true, 'uiEnabled': true},
+                  'features': {
+                    'miniAppsEnabled': true,
+                    'cashOutEnabled': true,
+                  },
+                },
+              }),
+              200,
+              headers: {'etag': 'W/"runtime-11"'},
+            );
+          }
+          expect(request.headers['If-None-Match'], 'W/"runtime-11"');
+          return http.Response('', 304);
+        }),
+      );
+      var notifications = 0;
+      service.addListener(() => notifications += 1);
+
+      await service.refresh();
+      expect(requests, 1);
+      expect(notifications, 2); // initial load: _refreshing=true + loaded policy
+
+      await service.refresh(force: false);
+      expect(requests, 1); // skipped within 15s cooldown
+      expect(notifications, 2);
+
+      await service.refresh();
+      expect(requests, 2); // forced check sent If-None-Match
+      expect(notifications, 2); // 304 did not emit any notifications
+    },
+  );
 }
