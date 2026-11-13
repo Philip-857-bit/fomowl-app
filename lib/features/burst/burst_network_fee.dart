@@ -1,7 +1,21 @@
 import 'package:web3dart/crypto.dart';
+import 'package:web3dart/json_rpc.dart';
 import 'package:web3dart/web3dart.dart';
 
 import 'burst_execution_plan.dart';
+
+/// The RPC could not simulate the transaction with this wallet's native balance.
+/// No gas limit or fee is inferred from the failed simulation.
+class BurstInsufficientNativeBalance implements Exception {
+  const BurstInsufficientNativeBalance();
+
+  String messageFor(String symbol) =>
+      'Insufficient $symbol to cover the Burst amount and fees. Add $symbol and retry.';
+
+  @override
+  String toString() =>
+      'Insufficient native balance to cover the Burst amount and fees.';
+}
 
 class BurstNetworkFee {
   const BurstNetworkFee({required this.gasLimit, required this.gasPriceWei});
@@ -21,12 +35,7 @@ class BurstNetworkFee {
     }
     final results = await Future.wait<Object>([
       client.getGasPrice(),
-      client.estimateGas(
-        sender: EthereumAddress.fromHex(plan.wallet),
-        to: EthereumAddress.fromHex(plan.to),
-        value: EtherAmount.inWei(plan.value),
-        data: hexToBytes(plan.data.substring(2)),
-      ),
+      _estimateGas(client, plan),
     ]).timeout(const Duration(seconds: 20));
     final price = (results[0] as EtherAmount).getInWei;
     final gas = results[1] as BigInt;
@@ -40,6 +49,27 @@ class BurstNetworkFee {
       throw StateError('The network fee estimate is invalid.');
     }
     return BurstNetworkFee(gasLimit: buffered.toInt(), gasPriceWei: price);
+  }
+
+  static Future<BigInt> _estimateGas(
+    Web3Client client,
+    BurstExecutionPlan plan,
+  ) async {
+    try {
+      return await client.estimateGas(
+        sender: EthereumAddress.fromHex(plan.wallet),
+        to: EthereumAddress.fromHex(plan.to),
+        value: EtherAmount.inWei(plan.value),
+        data: hexToBytes(plan.data.substring(2)),
+      );
+    } on RPCError catch (error) {
+      final message = error.message.toLowerCase();
+      if (message.contains('insufficient funds') ||
+          message.contains('insufficient balance')) {
+        throw const BurstInsufficientNativeBalance();
+      }
+      rethrow;
+    }
   }
 
   static Future<bool> matchesTransaction(

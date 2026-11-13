@@ -300,6 +300,8 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     late final BurstNetworkFee fee;
     try {
       fee = await BurstNetworkFee.estimate(rpc, plan);
+    } on BurstInsufficientNativeBalance catch (error) {
+      throw StateError(error.messageFor(chain.symbol));
     } finally {
       rpc.dispose();
     }

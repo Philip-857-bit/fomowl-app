@@ -10,6 +10,7 @@ import 'burst_created_success_screen.dart';
 import 'burst_share.dart';
 import 'burst_theme.dart';
 import 'burst_transaction_executor.dart';
+import 'burst_network_fee.dart';
 
 export 'burst_created_success_screen.dart';
 
@@ -93,6 +94,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
   BigInt? _networkFeeWei;
   bool _estimatingFee = false;
   bool _feeFailed = false;
+  bool _insufficientNativeBalance = false;
   bool _submissionStarted = false;
 
   @override
@@ -105,11 +107,20 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
     setState(() {
       _estimatingFee = true;
       _feeFailed = false;
+      _insufficientNativeBalance = false;
+      _networkFeeWei = null;
     });
     try {
       final fee = await widget.loadNetworkFee!();
       if (fee.isNegative) throw const FormatException('Invalid network fee');
       if (mounted) setState(() => _networkFeeWei = fee);
+    } on BurstInsufficientNativeBalance {
+      if (mounted) {
+        setState(() {
+          _feeFailed = true;
+          _insufficientNativeBalance = true;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _feeFailed = true);
     } finally {
@@ -249,16 +260,20 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
       ...widget.prepared,
       if (_networkFeeWei != null) 'networkFeeBaseUnits': '$_networkFeeWei',
     };
+    if (_estimatingFee || _feeFailed) {
+      feePrepared.remove('networkFeeUsd');
+      feePrepared.remove('networkFeeBaseUnits');
+    }
     final (estUsd, platformUsd, networkUsd, totalUsd) = _resolveFees(
       feePrepared,
     );
     final networkFeeWei =
         _networkFeeWei ??
-        BigInt.tryParse(
-          widget.prepared['networkFeeBaseUnits']?.toString() ?? '',
-        );
+        BigInt.tryParse(feePrepared['networkFeeBaseUnits']?.toString() ?? '');
     final networkText = _estimatingFee
         ? 'Estimating…'
+        : _insufficientNativeBalance
+        ? 'Insufficient ${widget.nativeSymbol}'
         : networkUsd != null
         ? _formatUsd(networkUsd)
         : networkFeeWei != null
@@ -348,11 +363,21 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
 
                   // Middle Fee breakdown
                   _sheetFeeLine('Network Fee', networkText),
+                  if (_insufficientNativeBalance)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Add ${widget.nativeSymbol} to cover the Burst amount and fees, then retry.',
+                        style: const TextStyle(color: Color(0xffff8b91)),
+                      ),
+                    ),
                   if (_feeFailed)
                     TextButton(
                       onPressed: _estimatingFee ? null : _loadFee,
-                      child: const Text(
-                        'Unable to estimate network fee. Retry',
+                      child: Text(
+                        _insufficientNativeBalance
+                            ? 'Retry network fee'
+                            : 'Unable to estimate network fee. Retry',
                       ),
                     ),
                   _sheetFeeLine('Platform Fee', _formatUsd(platformUsd)),
@@ -482,7 +507,10 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                       ],
                     ),
                     child: FilledButton(
-                      onPressed: _busy ? null : _create,
+                      onPressed:
+                          _busy || _estimatingFee || _insufficientNativeBalance
+                          ? null
+                          : _create,
                       style: FilledButton.styleFrom(
                         backgroundColor: burstAccent(context),
                         foregroundColor: Colors.white,

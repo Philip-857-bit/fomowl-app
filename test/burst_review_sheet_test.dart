@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/burst/burst_api_client.dart';
 import 'package:fomowl_wallet/features/burst/burst_review_screen.dart';
 import 'package:fomowl_wallet/features/burst/burst_transaction_executor.dart';
+import 'package:fomowl_wallet/features/burst/burst_network_fee.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -124,6 +125,58 @@ void main() {
     expect(find.text('0.0001 BNB'), findsOneWidget);
     expect(find.text('1.0051 BNB'), findsOneWidget);
   });
+
+  testWidgets(
+    'insufficient BNB explains unavailable fee and blocks creation until retry succeeds',
+    (tester) async {
+      var funded = false;
+      final prepared = Map<String, dynamic>.from(samplePrepared);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BurstReviewSheet(
+              prepared: prepared,
+              executor: executor,
+              nativeSymbol: 'BNB',
+              loadNetworkFee: () async {
+                if (!funded) throw const BurstInsufficientNativeBalance();
+                return BigInt.from(100000000000000);
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Insufficient BNB'), findsOneWidget);
+      expect(
+        find.text('Add BNB to cover the Burst amount and fees, then retry.'),
+        findsOneWidget,
+      );
+      expect(find.text('Unable to estimate network fee. Retry'), findsNothing);
+      expect(find.text(r'$0.03'), findsNothing);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Create Burst'),
+            )
+            .onPressed,
+        isNull,
+      );
+      funded = true;
+      await tester.tap(find.text('Retry network fee'));
+      await tester.pumpAndSettle();
+      expect(find.text('Insufficient BNB'), findsNothing);
+      expect(find.text(r'$0.03'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Create Burst'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
 
   testWidgets('BurstReviewSheet renders matching Figma node 5888:8978 specs', (
     tester,

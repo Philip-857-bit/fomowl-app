@@ -6,6 +6,7 @@ import 'package:fomowl_wallet/features/burst/burst_network_fee.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:web3dart/web3dart.dart';
+import 'package:web3dart/json_rpc.dart';
 
 void main() {
   final plan = BurstExecutionPlan(
@@ -51,6 +52,66 @@ void main() {
     await expectLater(BurstNetworkFee.estimate(client, plan), throwsStateError);
     client.dispose();
   });
+
+  test(
+    'HTTP 200 with insufficient-funds RPC error reports insufficient native balance',
+    () async {
+      final transport = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map;
+        final response = body['method'] == 'eth_estimateGas'
+            ? {
+                'error': {
+                  'code': -32000,
+                  'message':
+                      'failed with 16777216 gas: insufficient funds for gas * price + value: have 420630739988948 want 515100000000000',
+                },
+              }
+            : {
+                'result': body['method'] == 'eth_chainId'
+                    ? '0x38'
+                    : '0x2faf080',
+              };
+        return http.Response(
+          jsonEncode({'jsonrpc': '2.0', 'id': body['id'], ...response}),
+          200,
+        );
+      });
+      final client = Web3Client('https://example.test', transport);
+      await expectLater(
+        BurstNetworkFee.estimate(client, plan),
+        throwsA(isA<BurstInsufficientNativeBalance>()),
+      );
+      client.dispose();
+    },
+  );
+
+  test(
+    'contract revert remains an estimation failure without an invented gas fee',
+    () async {
+      final transport = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map;
+        final response = body['method'] == 'eth_estimateGas'
+            ? {
+                'error': {'code': -32000, 'message': 'execution reverted'},
+              }
+            : {
+                'result': body['method'] == 'eth_chainId'
+                    ? '0x38'
+                    : '0x2faf080',
+              };
+        return http.Response(
+          jsonEncode({'jsonrpc': '2.0', 'id': body['id'], ...response}),
+          200,
+        );
+      });
+      final client = Web3Client('https://example.test', transport);
+      await expectLater(
+        BurstNetworkFee.estimate(client, plan),
+        throwsA(isA<RPCError>()),
+      );
+      client.dispose();
+    },
+  );
 
   test('recovery verifies sender, destination, value and calldata', () async {
     final hash = '0x${'ab' * 32}';
