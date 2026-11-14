@@ -108,19 +108,19 @@ void main() {
       await tester.pumpAndSettle();
       final routeElement = tester.element(find.text('Burst route'));
       Color primary() => Theme.of(routeElement).colorScheme.primary;
-      // Tier 1: Invariant Electric Red regardless of network
-      expect(primary(), const Color(0xffea2a33));
-      expect(burstAccent(routeElement), const Color(0xffea2a33));
-      expect(Theme.of(routeElement).colorScheme.onSecondary, Colors.white);
+      // Tier 1: Primary action color follows BSC chain accent
+      expect(primary(), const Color(0xfff3ba2f));
+      expect(burstAccent(routeElement), const Color(0xfff3ba2f));
+      expect(Theme.of(routeElement).colorScheme.onSecondary, Colors.black);
       // Tier 2: Dynamic chain accent matches BSC
       expect(burstChainAccent(routeElement), const Color(0xfff3ba2f));
 
       chain.select('evm:8453');
       await tester.pump();
       final updatedElement = tester.element(find.text('Burst route'));
-      // Tier 1 remains Electric Red on Base
-      expect(primary(), const Color(0xffea2a33));
-      expect(burstAccent(updatedElement), const Color(0xffea2a33));
+      // Updates dynamically to Base blue
+      expect(primary(), const Color(0xff0052ff));
+      expect(burstAccent(updatedElement), const Color(0xff0052ff));
       // Tier 2 updates dynamically to Base blue
       expect(burstChainAccent(updatedElement), const Color(0xff0052ff));
     },
@@ -152,14 +152,14 @@ void main() {
     ButtonStyle? style() => tester
         .widget<FilledButton>(find.widgetWithText(FilledButton, 'Join Burst'))
         .style;
-    // On BSC: invariant Electric Red
-    expect(style()!.backgroundColor!.resolve({}), const Color(0xffea2a33));
-    expect(style()!.foregroundColor!.resolve({}), Colors.white);
+    // On BSC: chain accent yellow
+    expect(style()!.backgroundColor!.resolve({}), const Color(0xfff3ba2f));
+    expect(style()!.foregroundColor!.resolve({}), Colors.black);
 
     chain.select('evm:8453');
     await tester.pump();
-    // On Base: still invariant Electric Red
-    expect(style()!.backgroundColor!.resolve({}), const Color(0xffea2a33));
+    // On Base: chain accent blue
+    expect(style()!.backgroundColor!.resolve({}), const Color(0xff0052ff));
     expect(style()!.foregroundColor!.resolve({}), Colors.white);
 
     await tester.pumpWidget(
@@ -200,7 +200,7 @@ void main() {
     );
     expect(
       tester.widget<Image>(find.byType(Image)).color,
-      const Color(0xffea2a33),
+      const Color(0xfff3ba2f),
     );
   });
 }

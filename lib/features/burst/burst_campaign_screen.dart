@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-import 'burst_theme.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'burst_api_client.dart';
-import 'burst_transaction_executor.dart';
+import 'burst_review_screen.dart' show burstAssetAmount;
 import 'burst_share.dart';
+import 'burst_theme.dart';
+import 'burst_transaction_executor.dart';
 
 class BurstCampaignScreen extends StatefulWidget {
   const BurstCampaignScreen({
@@ -26,6 +28,7 @@ class BurstCampaignScreen extends StatefulWidget {
 }
 
 class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
+  Timer? _pollTimer;
   Map<String, dynamic>? _campaign;
   String? _error;
   String? _code;
@@ -40,6 +43,24 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
   void initState() {
     super.initState();
     _refresh();
+    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      final status = _campaign?['status']?.toString() ?? '';
+      if (mounted &&
+          !_loading &&
+          !_triggering &&
+          (status.isEmpty ||
+              status == 'active' ||
+              status == 'root_pending' ||
+              status == 'claiming')) {
+        _refresh();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -80,9 +101,18 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
         await showDialog<bool>(
           context: context,
           builder: (dialog) => AlertDialog(
-            title: const Text('Trigger Burst?'),
+            backgroundColor: const Color(0xFF141414),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            title: const Text(
+              'Trigger Burst?',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
             content: const Text(
-              'This freezes the guest list and prepares their allocations. You will review the on-chain transaction before signing.',
+              'This freezes the guest list and prepares their allocations. You will approve the on-chain transaction once.',
+              style: TextStyle(color: Colors.white70, height: 1.4),
             ),
             actions: [
               TextButton(
@@ -153,15 +183,21 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
     final hash = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Recover transaction'),
+        backgroundColor: const Color(0xFF141414),
+        title: const Text(
+          'Recover transaction',
+          style: TextStyle(color: Colors.white),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
               'Paste the transaction hash from wallet history. Owllet will verify it matches this Burst.',
+              style: TextStyle(color: Colors.white70),
             ),
             TextField(
               controller: controller,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(labelText: 'Transaction hash'),
             ),
           ],
@@ -273,10 +309,12 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
         await showDialog<bool>(
           context: context,
           builder: (dialog) => AlertDialog(
+            backgroundColor: const Color(0xFF141414),
             title: Text(
               action == 'cancel'
                   ? 'Cancel this Burst?'
                   : 'Recover unclaimed assets?',
+              style: const TextStyle(color: Colors.white),
             ),
             content: Text(
               action == 'cancel'
@@ -284,6 +322,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                         ? 'Cancellation stops claims. NFTs must then be recovered in a separate transaction.'
                         : 'Cancellation stops claims and returns the remaining assets to this wallet. Network fees apply.')
                   : 'The contract allows recovery after the claim window ends${nft ? ' or after cancellation' : ''}. The assets return to this wallet and network fees apply.',
+              style: const TextStyle(color: Colors.white70),
             ),
             actions: [
               TextButton(
@@ -405,6 +444,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = burstAccent(context);
     final campaign = _campaign;
     final isWallet =
         campaign?['hostWalletAddress']?.toString().toLowerCase() ==
@@ -412,42 +452,170 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
         campaign?['chainId'] == widget.chainId;
     final status = campaign?['status']?.toString() ?? '';
     final canTrigger = status == 'active' || status == 'root_pending';
+    final joined = campaign?['participantCount'] is int
+        ? campaign!['participantCount'] as int
+        : 0;
+    final maxGuests = campaign?['maxParticipants'] is int
+        ? campaign!['maxParticipants'] as int
+        : 0;
+    final percent = maxGuests > 0
+        ? ((joined / maxGuests).clamp(0.0, 1.0) * 100).round()
+        : 0;
+    final isNft =
+        campaign?['assetKind'] == 'erc721' ||
+        campaign?['assetKind'] == 'erc1155';
+    final decimals = campaign?['assetDecimals'];
+    final perGuest = campaign?['amountPerParticipantBaseUnits']?.toString();
+    final rewardSummary = isNft
+        ? 'NFT distribution'
+        : decimals is int && perGuest != null
+        ? '${burstAssetAmount(perGuest, decimals, campaign?['assetSymbol']?.toString() ?? '')} per guest'
+        : null;
+
     return Scaffold(
-      backgroundColor: const Color(0xff0a0a0a),
+      backgroundColor: const Color(0xFF050505),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        title: const Text('Burst details'),
+        title: const BurstHeader(),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           children: [
             if (_loading && campaign == null)
-              const Center(child: CircularProgressIndicator())
+              const Padding(
+                padding: EdgeInsets.only(top: 64),
+                child: Center(child: CircularProgressIndicator()),
+              )
             else if (campaign != null) ...[
-              Text(
-                campaign['title']?.toString() ?? 'Burst',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      accent.withValues(alpha: 0.14),
+                      const Color(0xFF141414),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: accent.withValues(alpha: 0.28),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                campaign['description']?.toString() ?? '',
-                style: const TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                '${campaign['participantCount'] ?? 0} of ${campaign['maxParticipants'] ?? 0} guests',
-                style: const TextStyle(color: Colors.white, fontSize: 20),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Status: $status',
-                style: const TextStyle(color: Colors.white70),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              BurstStatusBadge(
+                                status: status,
+                                showDot:
+                                    status == 'active' ||
+                                    status == 'root_pending',
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Status: $status',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (campaign['assetSymbol'] is String &&
+                            (campaign['assetSymbol'] as String).isNotEmpty)
+                          Text(
+                            campaign['assetSymbol'].toString(),
+                            style: const TextStyle(
+                              color: Colors.white60,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      campaign['title']?.toString() ?? 'Burst',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if ((campaign['description']?.toString() ?? '').isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          campaign['description']?.toString() ?? '',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    if (rewardSummary != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(
+                          rewardSummary,
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$joined of $maxGuests guests',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$percent%',
+                          style: TextStyle(
+                            color: accent,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(99),
+                      child: LinearProgressIndicator(
+                        value: maxGuests > 0
+                            ? (joined / maxGuests).clamp(0.0, 1.0).toDouble()
+                            : 0,
+                        minHeight: 6,
+                        color: accent,
+                        backgroundColor: const Color(0xFF2D2D2D),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (!isWallet)
                 const Padding(
@@ -459,55 +627,127 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 ),
               if (canTrigger && isWallet)
                 Padding(
-                  padding: const EdgeInsets.only(top: 32),
-                  child: FilledButton(
-                    onPressed: _triggering ? null : _trigger,
-                    style: FilledButton.styleFrom(
-                      shape: burstButtonShape,
-                      backgroundColor: burstAccent(context),
-                      foregroundColor: burstOnAccent(context),
-                      minimumSize: const Size.fromHeight(56),
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      boxShadow: burstActionShadow(context),
                     ),
-                    child: Text(
-                      _triggering
-                          ? 'Processing…'
-                          : status == 'root_pending'
-                          ? 'Resume Burst'
-                          : 'Trigger Burst',
+                    child: FilledButton(
+                      onPressed: _triggering ? null : _trigger,
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: accent,
+                        foregroundColor: burstOnAccent(context),
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: Text(
+                        _triggering
+                            ? 'Processing…'
+                            : status == 'root_pending'
+                            ? 'Resume Burst'
+                            : 'Trigger Burst',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               if (isWallet &&
                   {'active', 'root_pending', 'claiming'}.contains(status)) ...[
-                TextButton(
-                  onPressed: _showCode,
-                  child: const Text('Show join code'),
-                ),
-                if (_code != null) ...[
-                  SelectableText(
-                    _code!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white, fontSize: 20),
-                  ),
-                  TextButton(
-                    onPressed: () =>
-                        Clipboard.setData(ClipboardData(text: _code!)),
-                    child: const Text('Copy code'),
-                  ),
-                  Builder(
-                    builder: (shareContext) => TextButton(
-                      onPressed: () => shareBurstCode(shareContext, _code!),
-                      child: const Text('Share code'),
+                const SizedBox(height: 10),
+                if (_code == null)
+                  OutlinedButton.icon(
+                    onPressed: _showCode,
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(40),
+                      backgroundColor: const Color(0xFF171717),
+                      foregroundColor: Colors.white,
+                      side: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
+                    icon: const Icon(Icons.qr_code_rounded, size: 18),
+                    label: const Text('Show join code'),
+                  )
+                else ...[
+                  BurstInviteCodeCard(code: _code!),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            Clipboard.setData(ClipboardData(text: _code!)),
+                        child: const Text('Copy code'),
+                      ),
+                      Builder(
+                        builder: (shareContext) => TextButton(
+                          onPressed: () =>
+                              shareBurstCode(shareContext, _code!),
+                          child: const Text('Share code'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
               if (status == 'claiming')
-                const Padding(
-                  padding: EdgeInsets.only(top: 24),
-                  child: Text(
-                    'Distribution is ready for participants to claim.',
-                    style: TextStyle(color: Colors.white70),
+                Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF103829),
+                    border: Border.all(color: const Color(0xFF1C604C)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        color: Color(0xFF18C783),
+                        size: 20,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Distribution is ready for participants to claim.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (status == 'completed')
+                Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF103829),
+                    border: Border.all(color: const Color(0xFF1C604C)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline_rounded,
+                        color: Color(0xFF18C783),
+                        size: 20,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'All Burst rewards have been delivered.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               if (isWallet &&
@@ -542,7 +782,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                   child: const Text('Recover unclaimed assets'),
                 ),
               if (isWallet) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 4),
                 TextButton(
                   onPressed: _loadingMessages ? null : () => _loadMessages(),
                   child: Text(
@@ -554,19 +794,40 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 if (_messages != null && _messages!.isEmpty)
                   const Text(
                     'No messages yet.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70),
                   ),
                 if (_messages != null)
                   ..._messages!.whereType<Map>().map(
-                    (message) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        message['message']?.toString() ?? '',
-                        style: const TextStyle(color: Colors.white),
+                    (message) => Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
                       ),
-                      subtitle: Text(
-                        message['walletAddress']?.toString() ?? '',
-                        style: const TextStyle(color: Colors.white70),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF121212),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            message['message']?.toString() ?? '',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            message['walletAddress']?.toString() ?? '',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -584,7 +845,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 padding: const EdgeInsets.only(top: 20),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Color(0xffff8b91)),
+                  style: const TextStyle(color: Color(0xFFFF8B91)),
                 ),
               ),
             if (_unknownPlan != null)
@@ -592,7 +853,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 onPressed: _triggering ? null : _recover,
                 child: const Text('Recover transaction'),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             TextButton(onPressed: _refresh, child: const Text('Refresh')),
           ],
         ),

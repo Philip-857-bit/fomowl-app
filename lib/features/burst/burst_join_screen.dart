@@ -1,14 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import 'burst_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'burst_api_client.dart';
+import 'burst_theme.dart';
 
 /// Participant flow. The code is kept in memory only and is never put in logs.
 class BurstJoinScreen extends StatefulWidget {
@@ -37,6 +36,18 @@ class _BurstJoinScreenState extends State<BurstJoinScreen> {
     super.dispose();
   }
 
+  Future<void> _pasteCode() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final raw = data?.text?.trim();
+    if (raw == null || raw.isEmpty || !mounted) return;
+    final sanitized = raw.replaceAll(RegExp(r'[^a-zA-Z2-7-]'), '').toUpperCase();
+    if (sanitized.isEmpty) return;
+    _code.value = TextEditingValue(
+      text: sanitized,
+      selection: TextSelection.collapsed(offset: sanitized.length),
+    );
+  }
+
   Future<void> _join() async {
     final code = _code.text.trim().toUpperCase();
     if (code.isEmpty || _busy) return;
@@ -59,12 +70,49 @@ class _BurstJoinScreenState extends State<BurstJoinScreen> {
         );
       }
       if (!mounted) return;
+      final joinedCount = campaign['participantCount'];
+      final maxGuests = campaign['maxParticipants'];
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialog) => AlertDialog(
-          title: const Text('Confirm your Burst'),
-          content: Text(
-            '${campaign['title']}\nNetwork: ${campaign['chainId']}\nReceiving wallet: ${widget.walletAddress}\n\nYour reward will be sent to this wallet.',
+          backgroundColor: const Color(0xFF141414),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          title: const Text(
+            'Confirm your Burst',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${campaign['title']}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Network: ${campaign['chainId']}'
+                '${joinedCount is int && maxGuests is int ? '\nGuests: $joinedCount / $maxGuests' : ''}'
+                '\nReceiving wallet: ${widget.walletAddress}',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Your reward will be sent to this wallet.',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -115,89 +163,181 @@ class _BurstJoinScreenState extends State<BurstJoinScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xff0a0a0a),
-    appBar: AppBar(
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      title: const BurstHeader(),
-      centerTitle: true,
-    ),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const SizedBox(height: 35),
-          const Text(
-            'ENTER CODE',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey,
-              letterSpacing: 3,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Join Burst',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: _code,
-            enabled: !_busy,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp('[a-zA-Z2-7-]')),
-              LengthLimitingTextInputFormatter(47),
-            ],
-            style: const TextStyle(color: Colors.white, letterSpacing: 2),
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              labelText: 'Burst access code',
-              hintText: 'Enter or paste code',
-              filled: true,
-              fillColor: const Color(0xff181818),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text('Joining wallet', style: TextStyle(color: Colors.grey)),
-          const SizedBox(height: 8),
-          SelectableText(
-            widget.walletAddress,
-            style: const TextStyle(color: Colors.white),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 20),
-              child: Text(
-                _error!,
-                style: const TextStyle(color: Color(0xffff8b91)),
-              ),
-            ),
-          const SizedBox(height: 32),
-          FilledButton(
-            onPressed: _busy ? null : _join,
-            style: FilledButton.styleFrom(
-              shape: burstButtonShape,
-              backgroundColor: burstAccent(context),
-              foregroundColor: burstOnAccent(context),
-              minimumSize: const Size.fromHeight(56),
-            ),
-            child: Text(_busy ? 'Joining…' : 'Join Burst'),
-          ),
-        ],
+  Widget build(BuildContext context) {
+    final accent = burstAccent(context);
+    return Scaffold(
+      backgroundColor: const Color(0xFF050505),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        title: const BurstHeader(),
+        centerTitle: true,
       ),
-    ),
-  );
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.5),
+                      radius: 0.9,
+                      colors: [
+                        accent.withValues(alpha: 0.08),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 28),
+                const Text(
+                  'ENTER CODE',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white54,
+                    letterSpacing: 3,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Join Burst',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Enter or paste the invite code from your host.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                ),
+                const SizedBox(height: 32),
+                TextField(
+                  controller: _code,
+                  enabled: !_busy,
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp('[a-zA-Z2-7-]')),
+                    LengthLimitingTextInputFormatter(47),
+                  ],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    letterSpacing: 3,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    labelText: 'Burst access code',
+                    hintText: 'X7K6P2',
+                    hintStyle: const TextStyle(
+                      color: Colors.white24,
+                      letterSpacing: 3,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFF181818),
+                    suffixIcon: IconButton(
+                      tooltip: 'Paste code',
+                      onPressed: _busy ? null : _pasteCode,
+                      icon: const Icon(
+                        Icons.content_paste_rounded,
+                        color: Colors.white60,
+                        size: 20,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: accent),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Joining wallet',
+                        style: TextStyle(color: Colors.white54, fontSize: 11),
+                      ),
+                      const SizedBox(height: 6),
+                      SelectableText(
+                        widget.walletAddress,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Color(0xFFFF8B91)),
+                    ),
+                  ),
+                const SizedBox(height: 32),
+                Container(
+                  decoration: BoxDecoration(
+                    boxShadow: burstActionShadow(context),
+                  ),
+                  child: FilledButton(
+                    onPressed: _busy ? null : _join,
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: accent,
+                      foregroundColor: burstOnAccent(context),
+                      minimumSize: const Size.fromHeight(56),
+                    ),
+                    child: Text(
+                      _busy ? 'Joining…' : 'Join Burst',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class BurstWaitingScreen extends StatefulWidget {
@@ -237,6 +377,11 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
     return hash.isEmpty ? 'Unavailable' : hash;
   }
 
+  String _shortAddress(String address) {
+    if (address.length <= 12) return address;
+    return '${address.substring(0, 6)}…${address.substring(address.length - 4)}';
+  }
+
   String _receiptAmount(
     Map<String, dynamic> campaign,
     Map<String, dynamic> proof,
@@ -268,7 +413,7 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
   void initState() {
     super.initState();
     _refresh();
-    _timer = Timer.periodic(const Duration(seconds: 10), (_) => _refresh());
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) => _refresh());
   }
 
   @override
@@ -386,8 +531,15 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('Leave this Burst?'),
-        content: const Text('Your place will be available to someone else.'),
+        backgroundColor: const Color(0xFF141414),
+        title: const Text(
+          'Leave this Burst?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Your place will be available to someone else.',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialog, false),
@@ -428,6 +580,7 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = burstAccent(context);
     final status = _proof?['claimStatus']?.toString().toLowerCase();
     final job = _proof?['claimJobStatus']?.toString().toLowerCase();
     final confirmed = status == 'claimed';
@@ -476,35 +629,48 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
         : 'Waiting for host to Burst…';
     final joined = _campaign?['participantCount'];
     final maximum = _campaign?['maxParticipants'];
+    final hostAddress = _campaign?['hostWalletAddress']?.toString() ?? '';
+
     if (confirmed && _campaign != null && _proof != null) {
       return Scaffold(
-        backgroundColor: const Color(0xff111111),
+        backgroundColor: const Color(0xFF131313),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
+          title: const BurstHeader(),
+          centerTitle: true,
         ),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.all(24),
             children: [
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               Center(
                 child: Container(
                   width: 104,
                   height: 104,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xff103d2e),
-                    border: Border.all(color: const Color(0xff176b4e)),
+                    color: const Color(0xFF103829),
+                    border: Border.all(
+                      color: const Color(0xFF1C604C),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF18C783).withValues(alpha: 0.25),
+                        blurRadius: 32,
+                      ),
+                    ],
                   ),
                   child: const Icon(
-                    Icons.check,
-                    color: Color(0xff18c88a),
+                    Icons.check_rounded,
+                    color: Color(0xFF18C783),
                     size: 56,
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
               const Text(
                 'Burst Received!',
                 textAlign: TextAlign.center,
@@ -520,46 +686,66 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70),
               ),
-              const SizedBox(height: 52),
+              const SizedBox(height: 40),
               const Text(
                 'YOU RECEIVED',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, letterSpacing: 1.3),
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.5,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 _receiptAmount(_campaign!, _proof!),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: burstAccent(context),
+                  color: accent,
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xff414141)),
-                  borderRadius: BorderRadius.circular(16),
+                  color: const Color(0xFF171717),
+                  border: Border.all(
+                    color: const Color(0xFF94A3B8).withValues(alpha: 0.35),
+                  ),
+                  borderRadius: BorderRadius.circular(17),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'CONFIRMED',
-                      style: TextStyle(
-                        color: Color(0xff18c88a),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF14362B),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: const Color(0xFF1C604C)),
+                      ),
+                      child: const Text(
+                        'CONFIRMED',
+                        style: TextStyle(
+                          color: Color(0xFF18C783),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     Text(
                       'Network: ${_chainName ?? _campaign!['chainId'] ?? 'Unavailable'}',
                       style: const TextStyle(color: Colors.white70),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     SelectableText(
                       'Transaction: ${_receiptHash()}',
                       style: const TextStyle(color: Colors.white70),
@@ -571,77 +757,120 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                           mode: LaunchMode.externalApplication,
                         ),
                         style: TextButton.styleFrom(
-                          foregroundColor: burstAccent(context),
+                          padding: EdgeInsets.zero,
+                          foregroundColor: accent,
                         ),
                         child: const Text('View on block explorer'),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
-              const Text(
-                'Send a thank-you message (optional)',
-                style: TextStyle(color: Colors.white),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _message,
-                maxLength: 280,
-                minLines: 2,
-                maxLines: 4,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  hintText: 'Write a brief message to the host...',
-                  hintStyle: TextStyle(color: Colors.white54),
-                  border: OutlineInputBorder(),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111111),
+                  border: Border.all(color: const Color(0xFF222222)),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-              ),
-              TextButton(
-                onPressed: _savingMessage ? null : _saveMessage,
-                child: Text(_savingMessage ? 'Sending…' : 'Send message'),
-              ),
-              if (_messageStatus != null)
-                Text(
-                  _messageStatus!,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              const SizedBox(height: 28),
-              FilledButton(
-                onPressed: () => Navigator.of(context).popUntil(
-                  (route) => route.settings.name == '/shell' || route.isFirst,
-                ),
-                style: FilledButton.styleFrom(
-                  shape: burstButtonShape,
-                  backgroundColor: burstAccent(context),
-                  foregroundColor: burstOnAccent(context),
-                  minimumSize: const Size.fromHeight(54),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('View in Wallet'),
-                    const SizedBox(width: 8),
-                    SvgPicture.asset(
-                      'assets/burst/view_wallet.svg',
-                      colorFilter: ColorFilter.mode(
-                        burstOnAccent(context),
-                        BlendMode.srcIn,
+                    const Text(
+                      'Send a thank-you message (optional)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _message,
+                      maxLength: 280,
+                      minLines: 2,
+                      maxLines: 4,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Write a brief message to the host...',
+                        hintStyle: const TextStyle(color: Colors.white38),
+                        filled: true,
+                        fillColor: const Color(0xFF181818),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF2A2A2A),
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _savingMessage ? null : _saveMessage,
+                      style: TextButton.styleFrom(foregroundColor: accent),
+                      child: Text(_savingMessage ? 'Sending…' : 'Send message'),
+                    ),
+                    if (_messageStatus != null)
+                      Text(
+                        _messageStatus!,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+              Container(
+                decoration: BoxDecoration(
+                  boxShadow: burstActionShadow(context),
+                ),
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).popUntil(
+                    (route) => route.settings.name == '/shell' || route.isFirst,
+                  ),
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: accent,
+                    foregroundColor: burstOnAccent(context),
+                    minimumSize: const Size.fromHeight(54),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('View in Wallet'),
+                      const SizedBox(width: 8),
+                      SvgPicture.asset(
+                        'assets/burst/view_wallet.svg',
+                        colorFilter: ColorFilter.mode(
+                          burstOnAccent(context),
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        backgroundColor: const Color(0xFF201F1F),
+                        foregroundColor: Colors.white,
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                       child: const Text('Done'),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Builder(
                       builder: (buttonContext) => OutlinedButton(
@@ -672,11 +901,22 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                             }
                           }
                         },
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          backgroundColor: const Color(0xFF201F1F),
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.1),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             SvgPicture.asset('assets/burst/share.svg'),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 6),
                             const Text('Share'),
                           ],
                         ),
@@ -690,213 +930,326 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
         ),
       );
     }
+
+    final ratio = joined is num && maximum is num && maximum > 0
+        ? (joined / maximum).clamp(0.0, 1.0).toDouble()
+        : 0.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xff0f0f0f),
+      backgroundColor: const Color(0xFF0F0F0F),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        title: const BurstHeader(),
+        centerTitle: true,
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
+        child: Stack(
           children: [
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 13,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xff2a2a2a),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(
-                  widget.title.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: burstAccent(context),
-                    fontSize: 12,
-                    letterSpacing: 1.2,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.35),
+                      radius: 0.85,
+                      colors: [
+                        accent.withValues(alpha: 0.09),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 64),
-            Center(
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: confirmed
-                      ? const Color(0xff123b2b)
-                      : burstAccent(context),
-                  borderRadius: BorderRadius.circular(30),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (confirmed ? Colors.green : burstAccent(context))
-                          .withValues(alpha: 0.22),
-                      blurRadius: 36,
+            ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              children: [
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
                     ),
-                  ],
-                ),
-                child: Center(
-                  child: confirmed
-                      ? const Icon(
-                          Icons.check,
-                          color: Color(0xff18c88a),
-                          size: 48,
-                        )
-                      : SvgPicture.asset('assets/burst/waiting_rocket.svg'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 262),
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 38),
-            if (joined is num && maximum is num)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 24,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xff171918),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xff372021)),
-                ),
-                child: Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Text(
-                        '●  YOU’RE IN',
-                        style: TextStyle(
-                          color: burstAccent(context),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2A2A2A),
+                      borderRadius: BorderRadius.circular(999),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      '$joined of $maximum guests joined',
+                    child: Text(
+                      widget.title.toUpperCase(),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 20),
-                    ),
-                    const SizedBox(height: 16),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: LinearProgressIndicator(
-                        value: maximum > 0
-                            ? (joined / maximum).clamp(0.0, 1.0).toDouble()
-                            : 0,
-                        minHeight: 4,
-                        color: burstAccent(context),
-                        backgroundColor: const Color(0xff343434),
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
                       ),
                     ),
-                  ],
-                ),
-              ),
-            if (_claimError != null || _error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Text(
-                  _claimError ?? _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Color(0xffff8b91)),
-                ),
-              ),
-            if (closed && !pending)
-              Padding(
-                padding: const EdgeInsets.only(top: 24),
-                child: Text(
-                  campaignStatus == 'claiming'
-                      ? 'This Burst may no longer be accepting claims.'
-                      : 'This Burst is no longer accepting claims.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-              )
-            else if (failed && claimsOpen)
-              const Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: Text(
-                  'Your claim could not be completed. Contact Owllet support with this Burst’s details.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70),
-                ),
-              ),
-            if (_proof != null &&
-                claimsOpen &&
-                !confirmed &&
-                !pending &&
-                !failed &&
-                !closed)
-              Padding(
-                padding: const EdgeInsets.only(top: 32),
-                child: FilledButton(
-                  onPressed: _claiming ? null : _claim,
-                  style: FilledButton.styleFrom(
-                    shape: burstButtonShape,
-                    backgroundColor: burstAccent(context),
-                    foregroundColor: burstOnAccent(context),
-                    minimumSize: const Size.fromHeight(56),
                   ),
-                  child: Text(_claiming ? 'Requesting…' : 'Claim reward'),
                 ),
-              ),
-            if (_proof != null &&
-                campaignStatus == 'claiming' &&
-                validWindow &&
-                !claimsOpen &&
-                !confirmed &&
-                !pending &&
-                !failed)
-              Padding(
-                padding: const EdgeInsets.only(top: 32),
-                child: FilledButton(
-                  onPressed: _claiming ? null : _claim,
-                  style: FilledButton.styleFrom(
-                    shape: burstButtonShape,
-                    backgroundColor: burstAccent(context),
-                    foregroundColor: burstOnAccent(context),
-                    minimumSize: const Size.fromHeight(56),
+                if (hostAddress.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Host: ${_shortAddress(hostAddress)}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Color(0xFFB9CBBC),
+                      fontSize: 12,
+                    ),
                   ),
-                  child: Text(_claiming ? 'Requesting…' : 'Try claiming'),
+                ],
+                const SizedBox(height: 16),
+                Center(
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      gradient: confirmed
+                          ? null
+                          : LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                accent,
+                                accent.withValues(alpha: 0.72),
+                              ],
+                            ),
+                      color: confirmed ? const Color(0xFF123B2B) : null,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (confirmed ? Colors.green : accent).withValues(
+                            alpha: 0.35,
+                          ),
+                          blurRadius: 32,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: confirmed
+                          ? const Icon(
+                              Icons.check,
+                              color: Color(0xFF18C88A),
+                              size: 40,
+                            )
+                          : SvgPicture.asset(
+                              'assets/burst/waiting_rocket.svg',
+                              width: 40,
+                              height: 40,
+                              colorFilter: ColorFilter.mode(
+                                burstOnAccent(context),
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                    ),
+                  ),
                 ),
-              ),
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: _refresh,
-              style: TextButton.styleFrom(
-                foregroundColor: burstAccent(context),
-              ),
-              child: const Text('Refresh'),
+                const SizedBox(height: 14),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 280),
+                    child: Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (joined is num && maximum is num)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.26),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const _GuestAvatarStack(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFF303030),
+                                ),
+                              ),
+                              child: Text(
+                                '●  YOU’RE IN',
+                                style: TextStyle(
+                                  color: accent,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.6,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '$joined of $maximum guests joined',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(99),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 5,
+                            color: accent,
+                            backgroundColor: const Color(0xFF343434),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_claimError != null || _error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Text(
+                      _claimError ?? _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Color(0xFFFF8B91)),
+                    ),
+                  ),
+                if (closed && !pending)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Text(
+                      campaignStatus == 'claiming'
+                          ? 'This Burst may no longer be accepting claims.'
+                          : 'This Burst is no longer accepting claims.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  )
+                else if (failed && claimsOpen)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 14),
+                    child: Text(
+                      'Your claim could not be completed. Contact Owllet support with this Burst’s details.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                if (_proof != null &&
+                    claimsOpen &&
+                    !confirmed &&
+                    !pending &&
+                    !failed &&
+                    !closed)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: FilledButton(
+                      onPressed: _claiming ? null : _claim,
+                      style: FilledButton.styleFrom(
+                        shape: burstButtonShape,
+                        backgroundColor: accent,
+                        foregroundColor: burstOnAccent(context),
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: Text(_claiming ? 'Requesting…' : 'Claim reward'),
+                    ),
+                  ),
+                if (_proof != null &&
+                    campaignStatus == 'claiming' &&
+                    validWindow &&
+                    !claimsOpen &&
+                    !confirmed &&
+                    !pending &&
+                    !failed)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: FilledButton(
+                      onPressed: _claiming ? null : _claim,
+                      style: FilledButton.styleFrom(
+                        shape: burstButtonShape,
+                        backgroundColor: accent,
+                        foregroundColor: burstOnAccent(context),
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: Text(_claiming ? 'Requesting…' : 'Try claiming'),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: _refresh,
+                  style: TextButton.styleFrom(foregroundColor: accent),
+                  child: const Text('Refresh'),
+                ),
+                if (campaignStatus == 'active' && _proof == null)
+                  TextButton(
+                    onPressed: _leaving ? null : _leave,
+                    style: TextButton.styleFrom(foregroundColor: accent),
+                    child: Text(_leaving ? 'Leaving…' : 'Leave Burst'),
+                  ),
+              ],
             ),
-            if (campaignStatus == 'active' && _proof == null)
-              TextButton(
-                onPressed: _leaving ? null : _leave,
-                style: TextButton.styleFrom(
-                  foregroundColor: burstAccent(context),
-                ),
-                child: Text(_leaving ? 'Leaving…' : 'Leave Burst'),
-              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _GuestAvatarStack extends StatelessWidget {
+  const _GuestAvatarStack();
+
+  @override
+  Widget build(BuildContext context) {
+    const colors = [
+      Color(0xFFEA2A33),
+      Color(0xFFFC9915),
+      Color(0xFF18C783),
+    ];
+    return SizedBox(
+      width: 56,
+      height: 24,
+      child: Stack(
+        children: [
+          for (var i = 0; i < colors.length; i++)
+            Positioned(
+              left: i * 15.0,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: colors[i].withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF0F0F0F),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  Icons.person_outline_rounded,
+                  size: 13,
+                  color: colors[i],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

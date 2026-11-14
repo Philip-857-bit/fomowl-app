@@ -403,4 +403,43 @@ void main() {
       client.close();
     },
   );
+
+  test('confirm polls past pending_receipt until confirmed', () async {
+    var confirmCalls = 0;
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/execution')) {
+        return http.Response(jsonEncode(plan()), 200);
+      }
+      if (request.url.path.contains('/confirm')) {
+        confirmCalls++;
+        if (confirmCalls < 3) {
+          return http.Response(
+            jsonEncode({
+              'status': confirmCalls == 1
+                  ? 'pending_receipt'
+                  : 'pending_confirmations',
+            }),
+            202,
+          );
+        }
+        return http.Response(jsonEncode({'status': 'confirmed'}), 200);
+      }
+      return http.Response(jsonEncode({'status': 'submitted'}), 200);
+    });
+    final executor = BurstTransactionExecutor(
+      api: api(client),
+      journal: MemoryJournal(),
+      wallet: wallet,
+      chainId: 56,
+      isCurrent: () async => true,
+      approve: (_) async => true,
+      broadcast: (_) async => hash,
+      confirmPollAttempts: 5,
+      confirmPollDelay: Duration.zero,
+    );
+    final result = await executor.execute('reference');
+    expect(result.confirmed, isTrue);
+    expect(confirmCalls, 3);
+    client.close();
+  });
 }

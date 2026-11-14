@@ -76,6 +76,8 @@ class BurstTransactionExecutor {
     this.verifyBroadcast,
     this.beginSubmission,
     this.allowNewTransactions = true,
+    this.confirmPollAttempts = 30,
+    this.confirmPollDelay = const Duration(seconds: 2),
   });
   final BurstApiClient api;
   final BurstSubmissionJournal journal;
@@ -88,6 +90,8 @@ class BurstTransactionExecutor {
   verifyBroadcast;
   final bool allowNewTransactions;
   final Future<void> Function(BurstExecutionPlan plan)? beginSubmission;
+  final int confirmPollAttempts;
+  final Duration confirmPollDelay;
   bool _busy = false;
 
   Future<BurstTransactionResult> execute(
@@ -298,15 +302,31 @@ class BurstTransactionExecutor {
     BurstExecutionPlan plan,
     String hash,
   ) async {
-    final result = await api.recordTransaction(
-      plan.campaignId,
-      plan.operation,
-      true,
-      {'transactionHash': hash},
-    );
-    return BurstTransactionResult(
-      hash: hash,
-      confirmed: result['status'] == 'confirmed',
-    );
+    const pendingStatuses = <String>{
+      'pending_receipt',
+      'pending_confirmations',
+      'pending',
+    };
+    final attempts = confirmPollAttempts < 1 ? 1 : confirmPollAttempts;
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      final result = await api.recordTransaction(
+        plan.campaignId,
+        plan.operation,
+        true,
+        {'transactionHash': hash},
+      );
+      final status = result['status']?.toString();
+      if (status == 'confirmed') {
+        return BurstTransactionResult(hash: hash, confirmed: true);
+      }
+      if (!pendingStatuses.contains(status) || attempt + 1 >= attempts) {
+        break;
+      }
+      await Future<void>.delayed(confirmPollDelay);
+      if (!await isCurrent()) {
+        break;
+      }
+    }
+    return BurstTransactionResult(hash: hash, confirmed: false);
   }
 }

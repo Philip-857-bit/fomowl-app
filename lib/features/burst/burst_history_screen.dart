@@ -2,10 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'burst_theme.dart';
-
 import 'burst_api_client.dart';
 import 'burst_review_screen.dart' show burstAssetAmount;
+import 'burst_theme.dart';
 
 /// The creator's actual campaigns across connected networks.
 class BurstHistoryScreen extends StatefulWidget {
@@ -104,7 +103,7 @@ class _BurstHistoryScreenState extends State<BurstHistoryScreen> {
       };
     }).toList();
     return Scaffold(
-      backgroundColor: const Color(0xff0a0a0a),
+      backgroundColor: const Color(0xFF050505),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
@@ -135,7 +134,7 @@ class _BurstHistoryScreenState extends State<BurstHistoryScreen> {
                         selected: _filter == filter,
                         onSelected: (_) => setState(() => _filter = filter),
                         showCheckmark: false,
-                        backgroundColor: const Color(0xff303030),
+                        backgroundColor: const Color(0xFF202020),
                         selectedColor: burstAccent(context),
                         side: BorderSide.none,
                         shape: const StadiumBorder(),
@@ -143,6 +142,9 @@ class _BurstHistoryScreenState extends State<BurstHistoryScreen> {
                           color: _filter == filter
                               ? burstOnAccent(context)
                               : Colors.white,
+                          fontWeight: _filter == filter
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
                       ),
                     ),
@@ -175,7 +177,7 @@ class _BurstHistoryScreenState extends State<BurstHistoryScreen> {
                 padding: const EdgeInsets.only(top: 16),
                 child: Text(
                   _error!,
-                  style: const TextStyle(color: Color(0xffff8b91)),
+                  style: const TextStyle(color: Color(0xFFFF8B91)),
                 ),
               ),
             if (visible.isEmpty)
@@ -304,8 +306,9 @@ class _HistoryMetric extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xff1b1b1b),
-      borderRadius: BorderRadius.circular(10),
+      color: const Color(0xFF121212),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,12 +345,19 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = burstAccent(context);
     final status = campaign['status']?.toString() ?? '';
+    final normalized = status.toLowerCase();
+    final isActive = normalized == 'active' || normalized == 'root_pending';
+    final isHostActive = isActive && campaign['_isParticipation'] != true;
     final joined = campaign['participantCount'] is int
         ? campaign['participantCount'] as int
         : 0;
     final maximum = campaign['maxParticipants'] is int
         ? campaign['maxParticipants'] as int
+        : 0;
+    final percent = maximum > 0
+        ? ((joined / maximum).clamp(0.0, 1.0) * 100).round()
         : 0;
     final decimals = campaign['assetDecimals'];
     final raw = campaign['amountPerParticipantBaseUnits'];
@@ -360,7 +370,7 @@ class _HistoryCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: const Color(0xff171717),
+        color: const Color(0xFF141414),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -368,8 +378,20 @@ class _HistoryCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
+              gradient: isActive
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        accent.withValues(alpha: 0.14),
+                        const Color(0xFF141414),
+                      ],
+                    )
+                  : null,
               border: Border.all(
-                color: burstAccent(context).withValues(alpha: 0.18),
+                color: isActive
+                    ? accent.withValues(alpha: 0.35)
+                    : Colors.white.withValues(alpha: 0.08),
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -389,23 +411,64 @@ class _HistoryCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      status.toUpperCase(),
-                      style: TextStyle(
-                        color: burstAccent(context),
-                        fontSize: 10,
-                      ),
-                    ),
+                    BurstStatusBadge(status: status, showDot: isActive),
                   ],
                 ),
-                if (reward != null) ...[
+                if (reward != null || isHostActive) ...[
                   const SizedBox(height: 8),
-                  Text(reward, style: const TextStyle(color: Colors.white70)),
+                  Row(
+                    children: [
+                      if (reward != null)
+                        Expanded(
+                          child: Text(
+                            reward,
+                            style: const TextStyle(color: Colors.white70),
+                          ),
+                        )
+                      else
+                        const Spacer(),
+                      if (isHostActive)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            normalized == 'root_pending'
+                                ? 'Resume'
+                                : 'Trigger Burst',
+                            style: TextStyle(
+                              color: burstOnAccent(context),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
                 const SizedBox(height: 16),
-                Text(
-                  '$joined / $maximum guests',
-                  style: const TextStyle(color: Colors.white70),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '$joined / $maximum guests',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    if (maximum > 0)
+                      Text(
+                        '$percent%',
+                        style: TextStyle(
+                          color: accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
                 ),
                 if (maximum > 0) ...[
                   const SizedBox(height: 10),
@@ -414,8 +477,8 @@ class _HistoryCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: (joined / maximum).clamp(0.0, 1.0).toDouble(),
                       minHeight: 4,
-                      color: burstAccent(context),
-                      backgroundColor: const Color(0xff393939),
+                      color: accent,
+                      backgroundColor: const Color(0xFF393939),
                     ),
                   ),
                 ],

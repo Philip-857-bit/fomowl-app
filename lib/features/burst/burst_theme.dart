@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/blockchain_service.dart';
@@ -61,10 +62,17 @@ Color burstOnAccent(BuildContext context) => burstOnChainAccent(context);
 /// Tier 2: Dynamic chain accents strictly for network badges, tags, and selector borders.
 Color burstChainAccent(BuildContext context) {
   try {
-    final blockchain = Provider.of<BlockchainService>(context, listen: false);
+    final blockchain = Provider.of<BlockchainService>(context);
     return AppChainTheme.forNetworkKey(blockchain.activeNetworkKey).accentColor;
   } catch (_) {
-    return context.chainTheme.accentColor;
+    try {
+      final blockchain = Provider.of<BlockchainService>(context, listen: false);
+      return AppChainTheme.forNetworkKey(
+        blockchain.activeNetworkKey,
+      ).accentColor;
+    } catch (_) {
+      return AppChainTheme.fomowlSignature.accentColor;
+    }
   }
 }
 
@@ -100,6 +108,173 @@ class _BurstRouteTheme extends StatelessWidget {
         ),
       ),
       child: child,
+    );
+  }
+}
+
+/// Shared status pill badge matching Figma (#5888:9025 / #5888:9591).
+class BurstStatusBadge extends StatelessWidget {
+  const BurstStatusBadge({
+    super.key,
+    required this.status,
+    this.showDot = false,
+  });
+
+  final String status;
+  final bool showDot;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = status.toLowerCase();
+    final accent = burstAccent(context);
+    final (label, textColor, fillColor, borderColor) = switch (normalized) {
+      'active' => (
+        'Active',
+        accent,
+        accent.withValues(alpha: 0.14),
+        accent.withValues(alpha: 0.28),
+      ),
+      'root_pending' => (
+        'Triggering',
+        const Color(0xFFFC9915),
+        const Color(0x24FC9915),
+        const Color(0x47FC9915),
+      ),
+      'claiming' => (
+        'Claiming',
+        const Color(0xFF18C783),
+        const Color(0xFF14362B),
+        const Color(0xFF1C604C),
+      ),
+      'completed' => (
+        'Completed',
+        const Color(0xFF18C783),
+        const Color(0xFF14362B),
+        const Color(0xFF1C604C),
+      ),
+      'cancelled' => (
+        'Cancelled',
+        const Color(0xFFFF8B91),
+        const Color(0x26FF8B91),
+        const Color(0x47FF8B91),
+      ),
+      _ => (
+        status.isEmpty
+            ? 'Draft'
+            : '${status[0].toUpperCase()}${status.substring(1)}',
+        Colors.white70,
+        const Color(0xFF252525),
+        Colors.white.withValues(alpha: 0.1),
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: fillColor,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showDot) ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: textColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: textColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared single-line invite code box with copy action and feedback SnackBar.
+class BurstInviteCodeCard extends StatelessWidget {
+  const BurstInviteCodeCard({
+    super.key,
+    required this.code,
+    this.maxWidth = 340,
+  });
+
+  final String code;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = burstAccent(context);
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: const Color(0x4D353534),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: SelectableText(
+                      code,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: accent,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 3.6,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Material(
+                color: const Color(0xFF201F1F),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Copy code',
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Invite code copied'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.content_copy_rounded,
+                    size: 18,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

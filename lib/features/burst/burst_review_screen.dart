@@ -1,13 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../widgets/bottom_navigation.dart';
 import '../shell/app_shell_controller.dart';
 import 'burst_created_success_screen.dart';
-import 'burst_share.dart';
 import 'burst_theme.dart';
 import 'burst_transaction_executor.dart';
 import 'burst_network_fee.dart';
@@ -96,6 +94,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
   bool _feeFailed = false;
   bool _insufficientNativeBalance = false;
   bool _submissionStarted = false;
+  bool _hasPendingConfirmation = false;
 
   @override
   void initState() {
@@ -153,10 +152,12 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
               (widget.prepared['campaign'] as Map)['id'] as String,
         );
         if (!result.confirmed) {
+          if (mounted) setState(() => _hasPendingConfirmation = true);
           throw StateError(
             'The transaction is pending. Check again before continuing.',
           );
         }
+        if (mounted) setState(() => _hasPendingConfirmation = false);
         _confirmed.add(reference);
       }
       await widget.onCompleted?.call();
@@ -232,6 +233,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
       if (mounted) {
         setState(() {
           _unknownReference = null;
+          _hasPendingConfirmation = !result.confirmed;
           if (!result.confirmed) {
             _error =
                 'The transaction is pending. Check again before continuing.';
@@ -520,7 +522,11 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                         ),
                       ),
                       child: Text(
-                        _busy ? 'Processing…' : 'Create Burst',
+                        _busy
+                            ? 'Processing…'
+                            : (_hasPendingConfirmation
+                                  ? 'Check Status'
+                                  : 'Create Burst'),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -706,11 +712,6 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
       await widget.onCompleted?.call();
       if (mounted) {
         setState(() => _complete = true);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            _scrollController.jumpTo(0);
-          }
-        });
       }
     } catch (error) {
       if (error is BurstUnknownSubmission) _unknownReference = error.reference;
@@ -816,7 +817,7 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
         if (!didPop && _complete) _leaveComplete(false);
       },
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color(0xFF050505),
         bottomNavigationBar: _complete && widget.onCompleted != null
             ? BottomNavBar(
                 currentTab: AppShellTab.wallet,
@@ -835,132 +836,17 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
           centerTitle: true,
         ),
         body: SafeArea(
-          child: ListView(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(24),
-            children: [
-              if (_complete) ...[
-                Center(
-                  child: Container(
-                    width: 105,
-                    height: 105,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: burstAccent(context).withValues(alpha: 0.6),
-                          blurRadius: 30,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      'assets/burst/create_icon.png',
-                      width: 105,
-                      height: 105,
-                      fit: BoxFit.contain,
-                      color: burstAccent(context),
-                      colorBlendMode: BlendMode.srcIn,
-                      excludeFromSemantics: true,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Burst Created!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Your Owllet Burst is live and ready for guests.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 30),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 300),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xff191516),
-                        border: Border.all(color: const Color(0xff302829)),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: SelectableText(
-                              code,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: burstAccent(context),
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: 'Copy code',
-                            onPressed: () =>
-                                Clipboard.setData(ClipboardData(text: code)),
-                            icon: const Icon(
-                              Icons.content_copy,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'INVITE CODE',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-                const SizedBox(height: 20),
-                Builder(
-                  builder: (shareContext) => Container(
-                    decoration: BoxDecoration(
-                      boxShadow: burstActionShadow(context),
-                    ),
-                    child: FilledButton(
-                      onPressed: () => shareBurstCode(shareContext, code),
-                      style: FilledButton.styleFrom(
-                        shape: burstButtonShape,
-                        backgroundColor: burstAccent(context),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(56),
-                      ),
-                      child: const Text('Share code'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => _leaveComplete(true),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(56),
-                    backgroundColor: const Color(0xff1b1b1b),
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xff414141)),
-                    shape: burstButtonShape,
-                  ),
-                  child: const Text('View My Burst'),
-                ),
-              ] else ...[
-                _line('Asset', campaign['assetSymbol']?.toString() ?? ''),
+          child: _complete
+              ? BurstCreatedSuccessBody(
+                  joinCode: code,
+                  onViewBurst: () => _leaveComplete(true),
+                )
+              : ListView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    ...[
+                      _line('Asset', campaign['assetSymbol']?.toString() ?? ''),
                 _line(
                   'Chain',
                   widget.chainName ?? '${campaign['chainId'] ?? ''}',

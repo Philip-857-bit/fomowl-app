@@ -539,6 +539,7 @@ void main() {
         journal: TestJournal(),
         wallet: testBurstWallet,
         chainId: 56,
+        confirmPollAttempts: 1,
         isCurrent: () async => true,
         approve: (_) async => true,
         broadcast: (plan) async {

@@ -84,29 +84,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     );
   }
 
-  Future<bool> _confirm(String message, String address) async {
-    if (!mounted) return false;
-    return await showDialog<bool>(
-          context: context,
-          builder: (dialog) => AlertDialog(
-            title: const Text('Use this wallet for Burst'),
-            content: Text(
-              'Confirm that $address belongs to you. This signature does not send a transaction or cost gas.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialog, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialog, true),
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-  }
+  Future<bool> _confirm(String message, String address) async => mounted;
 
   Future<void> _open() async {
     if (_loading || !mounted) return;
@@ -306,28 +284,6 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       rpc.dispose();
     }
     if (!mounted) return false;
-    final accepted =
-        await showDialog<bool>(
-          context: context,
-          builder: (dialog) => AlertDialog(
-            title: const Text('Review Burst transaction'),
-            content: SelectableText(
-              'Action: ${plan.operation}\nNetwork: ${chain.name}\nTo: ${plan.to}\nValue: ${burstNativeAmount(plan.value.toString(), chain.symbol)}\nMaximum network fee: ${burstNativeAmount(fee.maximumFeeWei.toString(), chain.symbol)}${plan.approvalDescription == null ? '' : '\n\n${plan.approvalDescription}'}\n\nNetwork fees are paid by this wallet.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialog, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialog, true),
-                child: const Text('Approve'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!accepted || !mounted) return false;
     final authenticated = await SensitiveAccessGuard.verify(
       context,
       reason: 'Approve this Burst transaction',
