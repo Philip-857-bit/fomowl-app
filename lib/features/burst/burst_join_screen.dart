@@ -931,6 +931,7 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
       );
     }
 
+    final tall = MediaQuery.sizeOf(context).height >= 700;
     final ratio = joined is num && maximum is num && maximum > 0
         ? (joined / maximum).clamp(0.0, 1.0).toDouble()
         : 0.0;
@@ -965,11 +966,12 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
             ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               children: [
+                SizedBox(height: tall ? 28 : 4),
                 Center(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
+                      horizontal: 12,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2A2A2A),
@@ -980,29 +982,41 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: accent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                         letterSpacing: 1.2,
                       ),
                     ),
                   ),
                 ),
                 if (hostAddress.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Host: ${_shortAddress(hostAddress)}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFB9CBBC),
-                      fontSize: 12,
+                  SizedBox(height: tall ? 16 : 8),
+                  Text.rich(
+                    TextSpan(
+                      style: const TextStyle(
+                        color: Color(0xFFB9CBBC),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Host: '),
+                        TextSpan(
+                          text: _shortAddress(hostAddress),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
-                const SizedBox(height: 16),
+                SizedBox(height: tall ? 48 : 16),
                 Center(
                   child: Container(
-                    width: 76,
-                    height: 76,
+                    width: tall ? 96 : 76,
+                    height: tall ? 96 : 76,
                     decoration: BoxDecoration(
                       gradient: confirmed
                           ? null
@@ -1015,13 +1029,14 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                               ],
                             ),
                       color: confirmed ? const Color(0xFF123B2B) : null,
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(tall ? 32 : 24),
                       boxShadow: [
                         BoxShadow(
                           color: (confirmed ? Colors.green : accent).withValues(
-                            alpha: 0.35,
+                            alpha: 0.45,
                           ),
-                          blurRadius: 32,
+                          blurRadius: 40,
+                          spreadRadius: 2,
                         ),
                       ],
                     ),
@@ -1044,26 +1059,27 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: tall ? 40 : 14),
                 Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 280),
+                    constraints: const BoxConstraints(maxWidth: 265),
                     child: Text(
                       title,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
+                      style: TextStyle(
+                        color: const Color(0xFFE5E2E1),
+                        fontSize: tall ? 30 : 28,
                         fontWeight: FontWeight.bold,
                         height: 1.2,
+                        letterSpacing: -0.75,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: tall ? 40 : 14),
                 if (joined is num && maximum is num)
                   Container(
-                    padding: const EdgeInsets.all(14),
+                    padding: EdgeInsets.all(tall ? 24 : 14),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(16),
@@ -1076,49 +1092,63 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const _GuestAvatarStack(),
+                            _GuestAvatarStack(
+                              joinedCount: joined.toInt(),
+                              size: tall ? 40 : 28,
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
+                                horizontal: 12,
+                                vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.16),
-                                borderRadius: BorderRadius.circular(999),
+                                color: accent.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                   color: const Color(0xFF303030),
                                 ),
                               ),
-                              child: Text(
-                                '●  YOU’RE IN',
-                                style: TextStyle(
-                                  color: accent,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.6,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline_rounded,
+                                    size: 14,
+                                    color: accent,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'YOU’RE IN!',
+                                    style: TextStyle(
+                                      color: accent,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: tall ? 24 : 12),
                         Text(
                           '$joined of $maximum guests joined',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                          style: TextStyle(
+                            color: const Color(0xFFE5E2E1),
+                            fontSize: tall ? 22 : 18,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: tall ? 16 : 10),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(99),
                           child: LinearProgressIndicator(
                             value: ratio,
-                            minHeight: 5,
+                            minHeight: 4,
                             color: accent,
-                            backgroundColor: const Color(0xFF343434),
+                            backgroundColor: const Color(0xFF353534),
                           ),
                         ),
                       ],
@@ -1192,18 +1222,42 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                       child: Text(_claiming ? 'Requesting…' : 'Try claiming'),
                     ),
                   ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: _refresh,
-                  style: TextButton.styleFrom(foregroundColor: accent),
-                  child: const Text('Refresh'),
-                ),
-                if (campaignStatus == 'active' && _proof == null)
-                  TextButton(
-                    onPressed: _leaving ? null : _leave,
-                    style: TextButton.styleFrom(foregroundColor: accent),
-                    child: Text(_leaving ? 'Leaving…' : 'Leave Burst'),
+                SizedBox(height: tall ? 56 : 8),
+                if (campaignStatus == 'active' && _proof == null) ...[
+                  Center(
+                    child: TextButton(
+                      onPressed: _leaving ? null : _leave,
+                      style: TextButton.styleFrom(
+                        backgroundColor: accent.withValues(alpha: 0.18),
+                        foregroundColor: accent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text(
+                        _leaving ? 'Leaving…' : 'Leave Burst',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ),
+                  SizedBox(height: tall ? 8 : 4),
+                ],
+                Center(
+                  child: TextButton(
+                    onPressed: _refresh,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white54,
+                    ),
+                    child: const Text(
+                      'Refresh',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
@@ -1214,7 +1268,10 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
 }
 
 class _GuestAvatarStack extends StatelessWidget {
-  const _GuestAvatarStack();
+  const _GuestAvatarStack({this.joinedCount = 1, this.size = 40});
+
+  final int joinedCount;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -1223,29 +1280,63 @@ class _GuestAvatarStack extends StatelessWidget {
       Color(0xFFFC9915),
       Color(0xFF18C783),
     ];
+    final visible = joinedCount <= 0
+        ? 1
+        : (joinedCount > 3 ? 3 : joinedCount);
+    final extra = joinedCount > 3 ? joinedCount - 3 : 0;
+    final total = visible + (extra > 0 ? 1 : 0);
+    final overlap = size * 0.30;
+    final step = size - overlap;
+    final totalWidth = size + (total - 1) * step;
     return SizedBox(
-      width: 56,
-      height: 24,
+      width: totalWidth,
+      height: size,
       child: Stack(
         children: [
-          for (var i = 0; i < colors.length; i++)
+          for (var i = 0; i < visible; i++)
             Positioned(
-              left: i * 15.0,
+              left: i * step,
               child: Container(
-                width: 24,
-                height: 24,
+                width: size,
+                height: size,
                 decoration: BoxDecoration(
                   color: colors[i].withValues(alpha: 0.22),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF0F0F0F),
-                    width: 1.5,
+                    color: const Color(0xFF0E0E0E),
+                    width: 2,
                   ),
                 ),
                 child: Icon(
                   Icons.person_outline_rounded,
-                  size: 13,
+                  size: size * 0.45,
                   color: colors[i],
+                ),
+              ),
+            ),
+          if (extra > 0)
+            Positioned(
+              left: visible * step,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF353534),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF0E0E0E),
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    '+$extra',
+                    style: const TextStyle(
+                      color: Color(0xFFB9CBBC),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),

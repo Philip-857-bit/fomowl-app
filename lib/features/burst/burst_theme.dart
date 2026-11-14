@@ -203,12 +203,12 @@ class BurstStatusBadge extends StatelessWidget {
   }
 }
 
-/// Shared single-line invite code box with copy action and feedback SnackBar.
+/// Shared invite code box matching Figma node 5888:9434 with copy action.
 class BurstInviteCodeCard extends StatelessWidget {
   const BurstInviteCodeCard({
     super.key,
     required this.code,
-    this.maxWidth = 340,
+    this.maxWidth = 342,
   });
 
   final String code;
@@ -217,41 +217,44 @@ class BurstInviteCodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = burstAccent(context);
+    final isCompactCode = code.length <= 12;
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
             color: const Color(0x4D353534),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: SelectableText(
-                      code,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: accent,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 3.6,
-                      ),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SelectableText(
+                    code,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: accent,
+                      fontSize: isCompactCode ? 28 : 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: isCompactCode ? 4.8 : 2.0,
+                      height: 1.2,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Material(
-                color: const Color(0xFF201F1F),
-                shape: const CircleBorder(),
+              const SizedBox(width: 16),
+              SizedBox(
+                width: 40,
+                height: 40,
                 child: IconButton(
+                  padding: EdgeInsets.zero,
                   tooltip: 'Copy code',
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: code));
@@ -266,8 +269,8 @@ class BurstInviteCodeCard extends StatelessWidget {
                   },
                   icon: const Icon(
                     Icons.content_copy_rounded,
-                    size: 18,
-                    color: Colors.white70,
+                    size: 20,
+                    color: Color(0xFFB9CBBC),
                   ),
                 ),
               ),

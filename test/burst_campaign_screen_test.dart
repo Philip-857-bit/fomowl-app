@@ -199,7 +199,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(broadcasts, 1);
     expect(
-      find.text('Distribution is ready for participants to claim.'),
+      find.text('Delivering Burst rewards to guests…'),
       findsOneWidget,
     );
     await tester.scrollUntilVisible(
@@ -315,7 +315,62 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(sent, 1);
-    expect(find.text('Status: cancelled'), findsOneWidget);
+    expect(find.text('CANCELLED'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    client.close();
+  });
+
+  testWidgets('automatically transitions from claiming to completed via polling', (
+    tester,
+  ) async {
+    var campaignStatus = 'claiming';
+    final client = MockClient((request) async {
+      return http.Response(
+        jsonEncode({
+          'id': 'one',
+          'title': 'Drop',
+          'status': campaignStatus,
+          'hostWalletAddress': wallet,
+          'chainId': 56,
+          'campaignAddress': destination,
+          'participantCount': 1,
+          'maxParticipants': 1,
+        }),
+        200,
+      );
+    });
+    final api = BurstApiClient(
+      api: (path) => Uri.parse('https://example.test/api$path'),
+      client: client,
+      authorize: (request) async =>
+          http.Response.fromStream(await client.send(request)),
+    );
+    final executor = BurstTransactionExecutor(
+      api: api,
+      journal: Journal(),
+      wallet: wallet,
+      chainId: 56,
+      isCurrent: () async => true,
+      approve: (_) async => true,
+      broadcast: (_) async => '0x${'ab' * 32}',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: BurstCampaignScreen(
+          api: api,
+          executor: executor,
+          campaignId: 'one',
+          wallet: wallet,
+          chainId: 56,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Delivering Burst rewards to guests…'), findsOneWidget);
+    campaignStatus = 'completed';
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.text('All Burst rewards have been delivered.'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     client.close();
   });

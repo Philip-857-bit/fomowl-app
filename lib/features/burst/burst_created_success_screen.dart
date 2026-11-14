@@ -17,6 +17,7 @@ class BurstCreatedSuccessBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = burstAccent(context);
+    final tall = MediaQuery.sizeOf(context).height >= 700;
     return Stack(
       children: [
         Positioned.fill(
@@ -40,11 +41,11 @@ class BurstCreatedSuccessBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 4),
+              SizedBox(height: tall ? 52 : 4),
               Center(
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: tall ? 105 : 80,
+                  height: tall ? 105 : 80,
                   decoration: BoxDecoration(
                     color: accent,
                     shape: BoxShape.circle,
@@ -55,34 +56,44 @@ class BurstCreatedSuccessBody extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Icon(
                       Icons.check_rounded,
-                      color: Color(0xFF050505),
-                      size: 48,
+                      color: burstOnAccent(context),
+                      size: tall ? 44 : 36,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: tall ? 44 : 12),
               const Text(
                 'Burst Created!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
+                  color: Color(0xFFE5E2E1),
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: -0.75,
                 ),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'Your Owllet Burst is live and ready for guests.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+              SizedBox(height: tall ? 22 : 6),
+              Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 245),
+                  child: const Text(
+                    'Your Owllet Burst is live and ready for guests.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xCCB9CBBC),
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: tall ? 38 : 16),
               BurstInviteCodeCard(code: joinCode),
-              const SizedBox(height: 8),
+              SizedBox(height: tall ? 12 : 8),
               const Text(
                 'INVITE CODE',
                 textAlign: TextAlign.center,
@@ -93,7 +104,7 @@ class BurstCreatedSuccessBody extends StatelessWidget {
                   letterSpacing: 1.8,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: tall ? 84 : 16),
               Builder(
                 builder: (shareContext) => Container(
                   decoration: BoxDecoration(
@@ -106,8 +117,8 @@ class BurstCreatedSuccessBody extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       backgroundColor: accent,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(48),
+                      foregroundColor: burstOnAccent(context),
+                      minimumSize: Size.fromHeight(tall ? 56 : 48),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -126,11 +137,11 @@ class BurstCreatedSuccessBody extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: tall ? 16 : 10),
               OutlinedButton(
                 onPressed: onViewBurst,
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
+                  minimumSize: Size.fromHeight(tall ? 56 : 48),
                   backgroundColor: const Color(0xFF201F1F),
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
