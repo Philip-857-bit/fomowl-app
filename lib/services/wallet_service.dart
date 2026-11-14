@@ -1251,6 +1251,9 @@ class WalletService {
     BigInt? maxPriorityFeePerGasWei,
     int? gasLimit,
     int? nonce,
+    Future<void> Function(EvmSignedTransaction transaction)? beforeBroadcast,
+    Future<void> Function()? abortedBeforeBroadcast,
+    void Function()? validateBeforeSigning,
   }) async {
     final typed = maxFeePerGasWei != null || maxPriorityFeePerGasWei != null;
     if (typed && gasPriceWei != null) {
@@ -1316,6 +1319,9 @@ class WalletService {
         gasPriceWei: resolvedGasPrice,
         maxFeePerGasWei: maxFee,
         maxPriorityFeePerGasWei: priority,
+        beforeBroadcast: beforeBroadcast,
+        abortedBeforeBroadcast: abortedBeforeBroadcast,
+        validateBeforeSigning: validateBeforeSigning,
       );
     } finally {
       await account.close();

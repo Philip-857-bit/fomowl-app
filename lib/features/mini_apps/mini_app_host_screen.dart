@@ -54,6 +54,7 @@ import 'mini_app_registry.dart';
 import 'burst_sign_in.dart';
 import 'burst_account_session.dart';
 import 'cashin_execution_error.dart';
+import 'cashin_execution_submission.dart';
 import 'widgets/mini_app_identity_title.dart';
 
 @visibleForTesting
@@ -3257,7 +3258,18 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     TransactionProgressController? progressController;
     bool? isDirectTransfer;
     String? firstTxHash;
+    var hasSubmittedStep = false;
     try {
+      final submission = CashinExecutionSubmission();
+      // Recover before the first network lookup: offline reopening is uncertain,
+      // never evidence that an already prepared transaction failed.
+      firstTxHash = await submission.savedHash(
+        cashinExecutionSubmissionContextKey(
+          reference: reference,
+          routeId: executionReference,
+          walletAddress: walletAddress,
+        ),
+      );
       var activeExecutionReference = executionReference;
       final previewPlan = await _fetchCashinExecutionPlan(
         reference: reference,
@@ -3286,6 +3298,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
                 step['status'] != 'confirmed' && step['status'] != 'skipped',
           )
           .toList(growable: false);
+      hasSubmittedStep = actionablePreviewSteps.any(
+        (step) => step['status'] == 'submitted',
+      );
       if (actionablePreviewSteps.isEmpty) {
         return <String, dynamic>{
           'ok': true,
@@ -3302,16 +3317,22 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       }
 
       if (!mounted) {
-        return const <String, dynamic>{
-          'ok': false,
-          'error': 'Mini-app was closed before the balance check could start.',
-        };
+        throw StateError(
+          'Mini-app was closed before the balance check could start.',
+        );
       }
       final blockchain = context.read<BlockchainService>();
       final initialSpendStep = cashinInitialPreflightStep(
         actionablePreviewSteps,
       );
-      if (initialSpendStep != null) {
+      final hasSavedSubmission = await _hasCashinSavedSubmission(
+        submission,
+        reference,
+        activeExecutionReference,
+        walletAddress,
+        actionablePreviewSteps,
+      );
+      if (initialSpendStep != null && !hasSavedSubmission) {
         await _preflightCashinExecutionBalance(
           blockchain: blockchain,
           walletAddress: walletAddress,
@@ -3319,25 +3340,27 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         );
       }
       if (!mounted) {
-        return const <String, dynamic>{
-          'ok': false,
-          'error': 'Mini-app was closed before the swap could start.',
-        };
+        throw StateError('Mini-app was closed before the swap could start.');
       }
 
       // The authenticated execution plan is authoritative. A direct-settlement
       // route is a token transfer even if an older mini-app supplied stale or
       // mismatched display labels.
-      final confirmed = await _confirmCrossChainSwap(
-        fromLabel: _swapLabel(payload, 'from'),
-        toLabel: _swapLabel(payload, 'to'),
-        reference: reference,
-        stepCount: actionablePreviewSteps
-            .where((step) => step['kind'] != 'providerSubmit')
-            .length,
-        isTransfer: isDirectTransfer,
-      );
+      final confirmed = hasSavedSubmission
+          ? true
+          : await _confirmCrossChainSwap(
+              fromLabel: _swapLabel(payload, 'from'),
+              toLabel: _swapLabel(payload, 'to'),
+              reference: reference,
+              stepCount: actionablePreviewSteps
+                  .where((step) => step['kind'] != 'providerSubmit')
+                  .length,
+              isTransfer: isDirectTransfer,
+            );
       if (confirmed != true) {
+        if (firstTxHash != null || hasSubmittedStep) {
+          throw StateError('The existing payment still needs verification.');
+        }
         return <String, dynamic>{
           'ok': false,
           'error': isDirectTransfer
@@ -3346,10 +3369,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         };
       }
       if (!mounted) {
-        return const <String, dynamic>{
-          'ok': false,
-          'error': 'Mini-app was closed before the swap could start.',
-        };
+        throw StateError('Mini-app was closed before the swap could start.');
       }
 
       // The confirmation dialog is user-controlled and may remain open beyond
@@ -3361,6 +3381,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           reference: reference,
           executionReference: activeExecutionReference,
           walletAddress: walletAddress,
+          allowExpiredForSubmittedSteps: true,
         );
       } on _CashinExecutionPlanExpired {
         final refreshed = await _refreshCashinExecutionPlan(
@@ -3402,10 +3423,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         };
       }
       if (!mounted) {
-        return const <String, dynamic>{
-          'ok': false,
-          'error': 'Mini-app was closed before the swap could start.',
-        };
+        throw StateError('Mini-app was closed before the swap could start.');
       }
 
       final controller = TransactionProgressController(
@@ -3442,6 +3460,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           .where((step) => step['kind'] == 'typedData')
           .toList(growable: false);
       if (typedSteps.isNotEmpty) {
+        if (!cashinExecutionPlanIsUsable(plan, now: DateTime.now().toUtc())) {
+          throw const _CashinExecutionPlanExpired();
+        }
         final approvalStep = typedSteps
             .cast<Map<String, dynamic>?>()
             .firstWhere(
@@ -3475,11 +3496,12 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         final stepId = plannedStep['stepId']?.toString() ?? '';
         var persistedStatus = plannedStep['status']?.toString();
         if (persistedStatus == 'failed') {
-          throw const FormatException(
+          throw const CashinExecutionTransactionFailed(
             'A previous wallet transaction failed. Refresh the execution plan before trying again.',
           );
         }
         if (persistedStatus == 'submitted') {
+          hasSubmittedStep = true;
           final confirmed = await _waitForCashinExecutionStepConfirmation(
             reference: reference,
             executionReference: activeExecutionReference,
@@ -3505,6 +3527,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           reference: reference,
           executionReference: activeExecutionReference,
           walletAddress: walletAddress,
+          allowExpiredForSubmittedSteps: true,
         );
         final currentSteps = currentPlan['steps'];
         if (currentSteps is! List) {
@@ -3526,6 +3549,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           continue;
         }
         if (persistedStatus == 'submitted') {
+          hasSubmittedStep = true;
           final confirmed = await _waitForCashinExecutionStepConfirmation(
             reference: reference,
             executionReference: activeExecutionReference,
@@ -3544,7 +3568,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           continue;
         }
         if (persistedStatus == 'failed') {
-          throw const FormatException(
+          throw const CashinExecutionTransactionFailed(
             'A previous wallet transaction failed. Refresh the execution plan before trying again.',
           );
         }
@@ -3552,9 +3576,14 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         final chainId = _requiredInt(step, 'chainId');
         String? transactionHash;
         String? signedPayload;
-        if (kind == 'approval' ||
-            kind == 'transaction' ||
-            kind == 'typedData') {
+        if ((kind == 'typedData' || kind == 'providerSubmit') &&
+            !cashinExecutionPlanIsUsable(
+              currentPlan,
+              now: DateTime.now().toUtc(),
+            )) {
+          throw const _CashinExecutionPlanExpired();
+        }
+        if (kind == 'typedData') {
           await _preflightCashinExecutionBalance(
             blockchain: blockchain,
             walletAddress: walletAddress,
@@ -3570,13 +3599,61 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               'Required EVM network $chainId is not configured.',
             );
           }
-          final tx = _transactionForExecutionStep(step);
-          transactionHash = await _walletService.sendRawTransactionRequest(
-            rpcUrl: chain.rpcUrl,
-            chainId: chainId,
-            toAddress: tx.$1,
-            valueInWei: tx.$2,
-            dataHex: tx.$3,
+          transactionHash = await submission.run(
+            key: _cashinSubmissionKey(
+              reference,
+              activeExecutionReference,
+              walletAddress,
+              step,
+            ),
+            contextKey: cashinExecutionSubmissionContextKey(
+              reference: reference,
+              routeId: activeExecutionReference,
+              walletAddress: walletAddress,
+            ),
+            broadcast: (beforeBroadcast, abortedBeforeBroadcast) async {
+              // An expired plan may only register an existing hash, never sign.
+              if (!cashinExecutionPlanIsUsable(
+                currentPlan,
+                now: DateTime.now().toUtc(),
+              )) {
+                throw const _CashinExecutionPlanExpired();
+              }
+              await _preflightCashinExecutionBalance(
+                blockchain: blockchain,
+                walletAddress: walletAddress,
+                steps: [step],
+              );
+              final tx = _transactionForExecutionStep(step);
+              return _walletService.sendRawTransactionRequest(
+                rpcUrl: chain.rpcUrl,
+                chainId: chainId,
+                expectedFromAddress: walletAddress,
+                toAddress: tx.$1,
+                valueInWei: tx.$2,
+                dataHex: tx.$3,
+                beforeBroadcast: (signed) => beforeBroadcast(signed.hash),
+                abortedBeforeBroadcast: abortedBeforeBroadcast,
+                validateBeforeSigning: () {
+                  if (!cashinExecutionPlanIsUsable(
+                    currentPlan,
+                    now: DateTime.now().toUtc(),
+                  )) {
+                    throw const _CashinExecutionPlanExpired();
+                  }
+                },
+              );
+            },
+            record: (hash) async {
+              firstTxHash ??= hash;
+              controller.setSwapPending(reference: _shortHash(hash));
+              await _submitCashinExecutionStep(
+                reference: reference,
+                walletAddress: walletAddress,
+                step: step,
+                transactionHash: hash,
+              );
+            },
           );
           firstTxHash ??= transactionHash;
           controller.setSwapPending(reference: _shortHash(transactionHash));
@@ -3601,13 +3678,14 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         } else {
           throw FormatException('Unsupported execution step: $kind.');
         }
-        await _submitCashinExecutionStep(
-          reference: reference,
-          walletAddress: walletAddress,
-          step: step,
-          transactionHash: transactionHash,
-          signedPayload: signedPayload,
-        );
+        if (kind != 'approval' && kind != 'transaction') {
+          await _submitCashinExecutionStep(
+            reference: reference,
+            walletAddress: walletAddress,
+            step: step,
+            signedPayload: signedPayload,
+          );
+        }
         if (kind == 'approval' || kind == 'transaction') {
           final confirmed = await _waitForCashinExecutionStepConfirmation(
             reference: reference,
@@ -3627,9 +3705,16 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         }
       }
 
-      controller.setSuccess(
-        reference: firstTxHash == null ? reference : _shortHash(firstTxHash),
-      );
+      if (submittedPending) {
+        controller.setSubmitted(
+          reference: firstTxHash == null ? reference : _shortHash(firstTxHash!),
+          detailsUrl: receiptUri?.toString() ?? '',
+        );
+      } else {
+        controller.setSuccess(
+          reference: firstTxHash == null ? reference : _shortHash(firstTxHash!),
+        );
+      }
       if (receiptUri != null) {
         unawaited(
           _ensureReceiptIfStillOnWithdraw(
@@ -3645,6 +3730,27 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         if (submittedPending) 'pending': true,
       };
     } catch (error) {
+      if (error is CashinExecutionPendingException) {
+        firstTxHash ??= error.transactionHash;
+      }
+      final pendingHash = firstTxHash;
+      if (cashinExecutionOutcomeIsUncertain(
+        error,
+        transactionHash: pendingHash,
+        hasSubmittedStep: hasSubmittedStep,
+      )) {
+        final receiptUri = _recordWithdrawalReceipt(reference, source: 'saga');
+        progressController?.setSubmissionUnknown(
+          reference: pendingHash == null ? reference : _shortHash(pendingHash),
+          detailsUrl: receiptUri?.toString() ?? '',
+        );
+        return <String, dynamic>{
+          'ok': true,
+          'pending': true,
+          'confirmed': false,
+          'transactionHash': pendingHash ?? executionReference,
+        };
+      }
       final message = cashinExecutionErrorMessage(
         error,
         isTransfer: isDirectTransfer,
@@ -3657,6 +3763,37 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       };
     }
   }
+
+  Future<bool> _hasCashinSavedSubmission(
+    CashinExecutionSubmission submission,
+    String reference,
+    String routeId,
+    String walletAddress,
+    List<Map<String, dynamic>> steps,
+  ) async {
+    for (final step in steps) {
+      if (await submission.savedHash(
+            _cashinSubmissionKey(reference, routeId, walletAddress, step),
+          ) !=
+          null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String _cashinSubmissionKey(
+    String reference,
+    String routeId,
+    String walletAddress,
+    Map<String, dynamic> step,
+  ) => cashinExecutionSubmissionKey(
+    reference: reference,
+    routeId: routeId,
+    stepId: step['stepId']?.toString() ?? '',
+    walletAddress: walletAddress,
+    chainId: _requiredInt(step, 'chainId'),
+  );
 
   Future<Map<String, dynamic>> _fetchCashinExecutionPlan({
     required String reference,
@@ -3700,11 +3837,22 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         'The execution reference does not match the saga.',
       );
     }
-    if (!cashinExecutionPlanIsUsable(
+    var usable = cashinExecutionPlanIsUsable(
       plan,
       now: DateTime.now().toUtc(),
       allowExpiredForSubmittedSteps: allowExpiredForSubmittedSteps,
-    )) {
+    );
+    if (!usable && allowExpiredForSubmittedSteps) {
+      final submission = CashinExecutionSubmission();
+      usable = await _hasCashinSavedSubmission(
+        submission,
+        reference,
+        executionReference,
+        walletAddress,
+        (plan['steps'] as List?)?.map(_stringKeyedMap).toList() ?? [],
+      );
+    }
+    if (!usable) {
       throw const _CashinExecutionPlanExpired();
     }
     return plan;
@@ -3809,7 +3957,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       final status = current?['status']?.toString();
       if (status == 'confirmed' || status == 'skipped') return true;
       if (status == 'failed') {
-        throw const FormatException(
+        throw const CashinExecutionTransactionFailed(
           'The wallet transaction failed. Refresh the execution plan and try again.',
         );
       }
@@ -3848,68 +3996,34 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     }
     // Cash-in endpoints require the profile JWT (not the ws_ settings token).
     final auth = CashinProfileAuthService(walletService: _walletService);
-    const delays = <Duration>[
-      Duration(milliseconds: 800),
-      Duration(milliseconds: 1500),
-      Duration(milliseconds: 2500),
-      Duration(seconds: 4),
-    ];
-    for (var attempt = 0; attempt <= delays.length; attempt++) {
-      try {
-        final response = await auth
-            .sendAuthorized(
-              walletAddress,
-              (headers) => HttpClientService().client.post(
-                AppEnvironment.api(
-                  '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/submit',
-                ),
-                headers: headers,
-                body: jsonEncode(payload),
+    final response = await submitCashinExecutionResponse(
+      () => auth
+          .sendAuthorized(
+            walletAddress,
+            (headers) => HttpClientService().client.post(
+              AppEnvironment.api(
+                '/cash-in/cashin/execution/${Uri.encodeComponent(reference)}/submit',
               ),
-              const <String, String>{
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-              },
-            )
-            .timeout(const Duration(seconds: 20));
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          return;
-        }
-        String? code;
-        try {
-          final decoded = _decodeBackendBody(response.body);
-          code = decoded['code']?.toString().trim().toUpperCase();
-        } catch (_) {}
-        final retryable =
-            response.statusCode == 429 ||
-            response.statusCode >= 500 ||
-            (response.statusCode == 409 && code == 'TRANSACTION_NOT_FOUND');
-        if (retryable && attempt < delays.length) {
-          final retryAfter = cashinExecutionRetryAfter(response);
-          await Future<void>.delayed(retryAfter ?? delays[attempt]);
-          continue;
-        }
-        throw CashinExecutionRequestException(
-          AppErrorUtils.backendMessage(
-            response.body,
-            fallback:
-                'The wallet step could not be recorded. Reopen this payment to check its status.',
-          ),
-          statusCode: response.statusCode,
-          retryAfter: cashinExecutionRetryAfter(response),
-        );
-      } on SocketException {
-        if (attempt >= delays.length) {
-          rethrow;
-        }
-        await Future<void>.delayed(delays[attempt]);
-      } on TimeoutException {
-        if (attempt >= delays.length) {
-          rethrow;
-        }
-        await Future<void>.delayed(delays[attempt]);
-      }
-    }
+              headers: headers,
+              body: jsonEncode(payload),
+            ),
+            const <String, String>{
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 20)),
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) return;
+    throw CashinExecutionRequestException(
+      AppErrorUtils.backendMessage(
+        response.body,
+        fallback:
+            'The wallet step could not be recorded. Reopen this payment to check its status.',
+      ),
+      statusCode: response.statusCode,
+      retryAfter: cashinExecutionRetryAfter(response),
+    );
   }
 
   Future<void> _preflightCashinExecutionBalance({
