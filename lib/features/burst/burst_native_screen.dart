@@ -441,12 +441,14 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
               );
               if (!mounted) return;
               setState(() => _hasDraft = false);
+              final activeCampaign = <String, dynamic>{
+                ...Map<String, dynamic>.from(prepared['campaign'] as Map),
+                'status': 'active',
+              };
               final viewCampaign = await Navigator.of(context).push<bool>(
                 BurstPageRoute(
                   builder: (_) => BurstCreatedSuccessScreen(
-                    campaign: Map<String, dynamic>.from(
-                      prepared['campaign'] as Map,
-                    ),
+                    campaign: activeCampaign,
                     joinCode: prepared['joinCode'] as String? ?? '',
                     nativeSymbol: chain.symbol,
                     chainName: chain.name,
@@ -456,9 +458,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
               );
               if (mounted) {
                 Navigator.of(context).pop(
-                  viewCampaign == true
-                      ? Map<String, dynamic>.from(prepared['campaign'] as Map)
-                      : null,
+                  viewCampaign == true ? activeCampaign : null,
                 );
               }
             } else if (completed == false && mounted) {
@@ -485,10 +485,11 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     );
     if (mounted) {
       setState(() => _hasDraft = saved != null);
-      await _open();
-      if (mounted && viewCampaign != null) {
+      if (viewCampaign != null) {
         await _openCampaign(viewCampaign);
         if (mounted) await _open();
+      } else {
+        await _open();
       }
     }
   }
@@ -626,10 +627,14 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       }
       if (!mounted) return;
       if (completed == true) {
+        final activeCampaign = <String, dynamic>{
+          ...Map<String, dynamic>.from(prepared['campaign'] as Map),
+          'status': 'active',
+        };
         final viewCampaign = await Navigator.of(context).push<bool>(
           BurstPageRoute(
             builder: (_) => BurstCreatedSuccessScreen(
-              campaign: Map<String, dynamic>.from(prepared['campaign'] as Map),
+              campaign: activeCampaign,
               joinCode: prepared['joinCode'] as String? ?? '',
               nativeSymbol: chain.symbol,
               chainName: chain.name,
@@ -637,13 +642,10 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
             ),
           ),
         );
-        if (mounted) await _open();
         if (mounted && viewCampaign == true) {
-          await _openCampaign(
-            Map<String, dynamic>.from(prepared['campaign'] as Map),
-          );
-          if (mounted) await _open();
+          await _openCampaign(activeCampaign);
         }
+        if (mounted) await _open();
       } else if (mounted) {
         await _open();
       }
@@ -664,8 +666,19 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     final identity = _openedIdentity;
     final id = campaign['id'];
     if (api == null || identity == null || id is! String) return;
-    final host = campaign['hostWalletAddress'];
-    final chain = campaign['chainId'];
+    final listed = _campaigns
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .cast<Map<String, dynamic>?>()
+        .firstWhere((item) => item?['id'] == id, orElse: () => null);
+    final resolved =
+        (campaign['status'] == 'draft' ||
+                campaign['status'] == 'pending_chain') &&
+            listed != null
+        ? listed
+        : campaign;
+    final host = resolved['hostWalletAddress'];
+    final chain = resolved['chainId'];
     final selectedChain = context.read<BlockchainService>().activeChain.chainId;
     if (host is! String || chain is! int) {
       setState(
@@ -695,8 +708,8 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
         ),
       );
       if (view != true || !mounted) return;
-    } else if (campaign['status'] == 'draft' ||
-        campaign['status'] == 'pending_chain') {
+    } else if (resolved['status'] == 'draft' ||
+        resolved['status'] == 'pending_chain') {
       await _resumeBurst(campaignId: id);
       return;
     }

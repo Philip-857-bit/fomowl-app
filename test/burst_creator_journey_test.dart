@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/features/burst/burst_api_client.dart';
+import 'package:fomowl_wallet/features/burst/burst_campaign_screen.dart';
 import 'package:fomowl_wallet/features/burst/burst_create_screen.dart';
 import 'package:fomowl_wallet/features/burst/burst_draft_store.dart';
 import 'package:fomowl_wallet/features/burst/burst_prepared_campaign.dart';
@@ -938,4 +939,100 @@ void main() {
       chain.dispose();
     },
   );
+
+  testWidgets('View My Burst opens BurstCampaignScreen with Trigger Burst', (
+    tester,
+  ) async {
+    const wallet = testBurstWallet;
+    const destination = testBurstFactory;
+    final client = MockClient((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/campaigns/campaign-1')) {
+        return http.Response(
+          jsonEncode({
+            'id': 'campaign-1',
+            'title': 'Community Drop',
+            'status': 'active',
+            'hostWalletAddress': wallet,
+            'chainId': 56,
+            'campaignAddress': destination,
+            'participantCount': 0,
+            'maxParticipants': 2,
+            'assetKind': 'native',
+            'assetSymbol': 'BNB',
+            'assetDecimals': 18,
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+    final api = BurstApiClient(
+      api: (path) => Uri.parse('https://example.test/api$path'),
+      client: client,
+      authorize: (request) async =>
+          http.Response.fromStream(await client.send(request)),
+    );
+    final executor = BurstTransactionExecutor(
+      api: api,
+      journal: TestJournal(),
+      wallet: wallet,
+      chainId: 56,
+      isCurrent: () async => true,
+      approve: (_) async => true,
+      broadcast: (_) async => '0x${'ab' * 32}',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: TextButton(
+                onPressed: () async {
+                  final view = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute<bool>(
+                      builder: (_) => BurstCreatedSuccessScreen(
+                        campaign: const {
+                          'id': 'campaign-1',
+                          'status': 'active',
+                          'hostWalletAddress': wallet,
+                          'chainId': 56,
+                        },
+                        joinCode: 'QQJKQCEP',
+                        nativeSymbol: 'BNB',
+                        onViewBurst: () => Navigator.of(context).pop(true),
+                      ),
+                    ),
+                  );
+                  if (view == true && context.mounted) {
+                    await Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => BurstCampaignScreen(
+                          api: api,
+                          executor: executor,
+                          campaignId: 'campaign-1',
+                          wallet: wallet,
+                          chainId: 56,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('Start'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Start'));
+    await tester.pumpAndSettle();
+    expect(find.text('QQJKQCEP'), findsOneWidget);
+    await tester.tap(find.text('View My Burst'));
+    await tester.pumpAndSettle();
+    expect(find.text('Community Drop'), findsOneWidget);
+    expect(find.text('Trigger Burst'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    client.close();
+  });
 }

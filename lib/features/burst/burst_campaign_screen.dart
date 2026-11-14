@@ -43,7 +43,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
   void initState() {
     super.initState();
     _refresh();
-    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       final status = _campaign?['status']?.toString() ?? '';
       if (mounted &&
           !_loading &&
@@ -472,6 +472,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
         ? '${burstAssetAmount(perGuest, decimals, campaign?['assetSymbol']?.toString() ?? '')} per guest'
         : null;
 
+    final tall = MediaQuery.sizeOf(context).height >= 700;
     return Scaffold(
       backgroundColor: const Color(0xFF050505),
       appBar: AppBar(
@@ -491,7 +492,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
               )
             else if (campaign != null) ...[
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: EdgeInsets.all(tall ? 22 : 14),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -512,29 +513,10 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              BurstStatusBadge(
-                                status: status,
-                                showDot:
-                                    status == 'active' ||
-                                    status == 'root_pending',
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  'Status: $status',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        BurstStatusBadge(
+                          status: status,
+                          showDot:
+                              status == 'active' || status == 'root_pending',
                         ),
                         if (campaign['assetSymbol'] is String &&
                             (campaign['assetSymbol'] as String).isNotEmpty)
@@ -548,12 +530,12 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: tall ? 12 : 8),
                     Text(
                       campaign['title']?.toString() ?? 'Burst',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 26,
+                        fontSize: tall ? 28 : 26,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -580,7 +562,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 10),
+                    SizedBox(height: tall ? 16 : 10),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -627,7 +609,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 ),
               if (canTrigger && isWallet)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(top: tall ? 16 : 12),
                   child: Container(
                     decoration: BoxDecoration(
                       boxShadow: burstActionShadow(context),
@@ -640,7 +622,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                         ),
                         backgroundColor: accent,
                         foregroundColor: burstOnAccent(context),
-                        minimumSize: const Size.fromHeight(48),
+                        minimumSize: Size.fromHeight(tall ? 54 : 48),
                       ),
                       child: Text(
                         _triggering
@@ -656,19 +638,16 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                     ),
                   ),
                 ),
-              if (isWallet &&
-                  {'active', 'root_pending', 'claiming'}.contains(status)) ...[
-                const SizedBox(height: 10),
+              if (isWallet && {'active', 'root_pending'}.contains(status)) ...[
+                const SizedBox(height: 12),
                 if (_code == null)
                   OutlinedButton.icon(
                     onPressed: _showCode,
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(40),
-                      backgroundColor: const Color(0xFF171717),
+                      minimumSize: const Size.fromHeight(44),
+                      backgroundColor: const Color(0xFF161616),
                       foregroundColor: Colors.white,
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.1),
-                      ),
+                      side: const BorderSide(color: Colors.white10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -700,8 +679,8 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
               ],
               if (status == 'claiming')
                 Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(top: 14),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: const Color(0xFF103829),
                     border: Border.all(color: const Color(0xFF1C604C)),
@@ -717,7 +696,7 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Distribution is ready for participants to claim.',
+                          'Delivering Burst rewards to guests…',
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
@@ -726,8 +705,8 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 ),
               if (status == 'completed')
                 Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(top: 14),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: const Color(0xFF103829),
                     border: Border.all(color: const Color(0xFF1C604C)),
@@ -782,9 +761,18 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                   child: const Text('Recover unclaimed assets'),
                 ),
               if (isWallet) ...[
-                const SizedBox(height: 4),
-                TextButton(
+                const SizedBox(height: 12),
+                OutlinedButton(
                   onPressed: _loadingMessages ? null : () => _loadMessages(),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    backgroundColor: const Color(0xFF161616),
+                    foregroundColor: accent,
+                    side: const BorderSide(color: Colors.white10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   child: Text(
                     _loadingMessages
                         ? 'Loading messages…'
@@ -792,15 +780,18 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                   ),
                 ),
                 if (_messages != null && _messages!.isEmpty)
-                  const Text(
-                    'No messages yet.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'No messages yet.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70),
+                    ),
                   ),
                 if (_messages != null)
                   ..._messages!.whereType<Map>().map(
                     (message) => Container(
-                      margin: const EdgeInsets.only(top: 4),
+                      margin: const EdgeInsets.only(top: 6),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
@@ -854,7 +845,13 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                 child: const Text('Recover transaction'),
               ),
             const SizedBox(height: 16),
-            TextButton(onPressed: _refresh, child: const Text('Refresh')),
+            Center(
+              child: TextButton(
+                onPressed: _refresh,
+                style: TextButton.styleFrom(foregroundColor: Colors.white54),
+                child: const Text('Refresh', style: TextStyle(fontSize: 12)),
+              ),
+            ),
           ],
         ),
       ),
