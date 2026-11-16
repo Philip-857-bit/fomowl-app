@@ -1,10 +1,122 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cronet_http/cronet_http.dart';
+import 'package:cupertino_http/cupertino_http.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
 import 'spki_pinning.dart';
+
+HttpClient _createConfiguredIoHttpClient() {
+  return HttpClient()
+    ..connectionTimeout = const Duration(seconds: 6)
+    ..idleTimeout = const Duration(seconds: 30);
+}
+
+http.Client _createNativeTransportClient() {
+  if (Platform.isAndroid) {
+    try {
+      final engine = CronetEngine.build(
+        cacheMode: CacheMode.memory,
+        cacheMaxSize: 2 * 1024 * 1024,
+        enableHttp2: true,
+        enableQuic: true,
+        enableBrotli: true,
+      );
+      return _ResilientNativeHttpClient(
+        CronetClient.fromCronetEngine(engine, closeEngine: true),
+      );
+    } catch (_) {
+      // Fall back to dart:io when Cronet native bindings are unavailable (e.g. tests).
+    }
+  }
+  if (Platform.isIOS || Platform.isMacOS) {
+    try {
+      final config = URLSessionConfiguration.ephemeralSessionConfiguration()
+        ..timeoutIntervalForRequest = const Duration(seconds: 15);
+      return _ResilientNativeHttpClient(
+        CupertinoClient.fromSessionConfiguration(config),
+      );
+    } catch (_) {
+      // Fall back to dart:io when Cupertino bindings are unavailable.
+    }
+  }
+  return IOClient(_createConfiguredIoHttpClient());
+}
+
+class _ResilientNativeHttpClient extends http.BaseClient {
+  _ResilientNativeHttpClient(this._native);
+
+  http.Client? _native;
+  http.Client? _fallback;
+  bool _closed = false;
+
+  http.Client _activeFallback() =>
+      _fallback ??= IOClient(_createConfiguredIoHttpClient());
+
+  static http.Request? _snapshotRequest(http.BaseRequest request) {
+    if (request is! http.Request) return null;
+    final copy = http.Request(request.method, request.url)
+      ..headers.addAll(request.headers)
+      ..bodyBytes = request.bodyBytes
+      ..followRedirects = request.followRedirects
+      ..maxRedirects = request.maxRedirects
+      ..persistentConnection = request.persistentConnection;
+    return copy;
+  }
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (_closed) {
+      throw http.ClientException(
+        'HTTP request failed. Client is already closed.',
+        request.url,
+      );
+    }
+    final native = _native;
+    if (native == null) {
+      return _activeFallback().send(request);
+    }
+    final retryCopy = _snapshotRequest(request);
+    try {
+      return await native.send(request);
+    } catch (error) {
+      if (error is http.ClientException ||
+          error is SocketException ||
+          error is TimeoutException ||
+          error is TlsException ||
+          error is HttpException) {
+        rethrow;
+      }
+      // Native wrapper failed asynchronously (e.g. GMS-free Android device missing
+      // Play Services Cronet): permanently degrade to dart:io IOClient.
+      _native = null;
+      try {
+        native.close();
+      } catch (_) {}
+      if (retryCopy != null) {
+        return _activeFallback().send(retryCopy);
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  void close() {
+    _closed = true;
+    final native = _native;
+    _native = null;
+    if (native != null) {
+      try {
+        native.close();
+      } catch (_) {}
+    }
+    final fallback = _fallback;
+    _fallback = null;
+    fallback?.close();
+  }
+}
 
 /// Builds an [http.Client] that enforces SPKI (public-key) pinning for
 /// [pinnedHost] on native (mobile/desktop) platforms.
@@ -14,8 +126,8 @@ import 'spki_pinning.dart';
 /// as long as the server keeps its key pair. Pinning applies only to
 /// [pinnedHost]; requests to other hosts (RPC nodes, CoinGecko, swap
 /// aggregators, ...) get normal TLS validation. If [sha256Fingerprints] is
-/// empty, pinning is disabled and a plain [http.Client] is returned — so this
-/// is safe to call unconditionally.
+/// empty, pinning is disabled and the native HTTP/2 + HTTP/3 transport
+/// (`cronet_http` on Android, `cupertino_http` on iOS/macOS) is used.
 http.Client createPinnedHttpClient(
   List<String> sha256Fingerprints, {
   required String pinnedHost,
@@ -23,7 +135,7 @@ http.Client createPinnedHttpClient(
   final pins = normalizePins(sha256Fingerprints);
 
   if (pins.isEmpty || pinnedHost.isEmpty) {
-    return http.Client();
+    return _createNativeTransportClient();
   }
 
   return _SpkiPinnedHttpClient(pins, pinnedHost);
@@ -49,7 +161,7 @@ class _SpkiPinnedHttpClient extends http.BaseClient {
   final Set<String> _pins;
   final String _pinnedHost;
 
-  HttpClient? _inner = HttpClient();
+  HttpClient? _inner = _createConfiguredIoHttpClient();
 
   @override
   Future<IOStreamedResponse> send(http.BaseRequest request) async {

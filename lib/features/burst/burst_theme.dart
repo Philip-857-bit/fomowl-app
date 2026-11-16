@@ -42,14 +42,33 @@ class BurstHeader extends StatelessWidget {
 const Color burstPrimaryActionColor = Color(0xffea2a33);
 
 /// Ambient glow for primary Burst actions, derived from the active accent.
-List<BoxShadow> burstActionShadow(BuildContext context) => [
-  BoxShadow(
-    color: burstAccent(context).withValues(alpha: 0.30),
-    blurRadius: 30,
-    spreadRadius: 0,
-    offset: Offset.zero,
-  ),
-];
+List<BoxShadow> burstActionShadow(
+  BuildContext context, {
+  bool enabled = true,
+}) => enabled
+    ? [
+        BoxShadow(
+          color: burstAccent(context).withValues(alpha: 0.30),
+          blurRadius: 30,
+          spreadRadius: 0,
+          offset: Offset.zero,
+        ),
+      ]
+    : const [];
+
+ButtonStyle burstPrimaryButtonStyle(
+  BuildContext context, {
+  double height = 56,
+  Color? backgroundColor,
+  Color? foregroundColor,
+}) => FilledButton.styleFrom(
+  backgroundColor: backgroundColor ?? burstAccent(context),
+  foregroundColor: foregroundColor ?? Colors.white,
+  disabledBackgroundColor: const Color(0xFF1F1F1F),
+  disabledForegroundColor: const Color(0x66E2E2E2),
+  minimumSize: Size.fromHeight(height),
+  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+);
 
 /// Primary Burst accent follows the active chain theme (adaptive theming).
 Color burstAccent(BuildContext context) {

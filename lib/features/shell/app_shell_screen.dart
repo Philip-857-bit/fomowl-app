@@ -86,9 +86,12 @@ class _AppShellScreenState extends State<AppShellScreen> {
   }
 
   void _showUnavailable(RuntimeFeature feature) {
+    if (!_runtimeConfig.hasPolicy && _runtimeConfig.refreshFailed) {
+      unawaited(_runtimeConfig.refresh(force: true));
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_runtimeConfig.snapshot.unavailableMessage(feature)),
+        content: Text(_runtimeConfig.unavailableMessageFor(feature)),
       ),
     );
   }

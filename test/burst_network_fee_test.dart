@@ -150,4 +150,47 @@ void main() {
     );
     client.dispose();
   });
+
+  test(
+    'balance-override preview estimates fee even when wallet lacks native funds',
+    () async {
+      final transport = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map;
+        final method = body['method'] as String;
+        final params = body['params'] as List? ?? const [];
+        final Map<String, dynamic> response = switch (method) {
+          'eth_chainId' => {'result': '0x38'},
+          'eth_gasPrice' => {'result': '0x3b9aca00'},
+          'eth_getBalance' => {'result': '0x0'},
+          'eth_estimateGas' when params.length >= 3 => {'result': '0x186a0'},
+          'eth_estimateGas' => {
+            'error': {'code': -32000, 'message': 'insufficient funds for gas'},
+          },
+          _ => {'result': '0x0'},
+        };
+        return http.Response(
+          jsonEncode({'jsonrpc': '2.0', 'id': body['id'], ...response}),
+          200,
+        );
+      });
+      final client = Web3Client('https://example.test', transport);
+      await expectLater(
+        BurstNetworkFee.estimate(
+          client,
+          plan,
+          rpcUrl: 'https://example.test',
+          allowBalanceOverride: true,
+          httpClient: transport,
+        ),
+        throwsA(
+          isA<BurstInsufficientNativeBalance>().having(
+            (e) => e.estimatedFeeWei,
+            'estimatedFeeWei',
+            BigInt.from(120000) * BigInt.from(1000000000),
+          ),
+        ),
+      );
+      client.dispose();
+    },
+  );
 }

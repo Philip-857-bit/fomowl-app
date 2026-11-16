@@ -306,7 +306,9 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       if (transactions is! List || transactions.isEmpty) {
         throw const FormatException('The transaction list is unavailable.');
       }
-      var total = BigInt.zero;
+      var totalFee = BigInt.zero;
+      var insufficientNative = false;
+      var missingOverrideFee = false;
       for (final item in transactions) {
         final transaction = Map<String, dynamic>.from(item as Map);
         final plan = BurstExecutionPlan.parse(
@@ -319,10 +321,29 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           wallet: identity.address,
           chainId: chain.chainId,
         );
-        final fee = await BurstNetworkFee.estimate(rpc, plan);
-        total += fee.maximumFeeWei;
+        try {
+          final fee = await BurstNetworkFee.estimate(
+            rpc,
+            plan,
+            rpcUrl: chain.rpcUrl,
+            allowBalanceOverride: true,
+          );
+          totalFee += fee.maximumFeeWei;
+        } on BurstInsufficientNativeBalance catch (error) {
+          insufficientNative = true;
+          if (error.estimatedFeeWei != null) {
+            totalFee += error.estimatedFeeWei!;
+          } else {
+            missingOverrideFee = true;
+          }
+        }
       }
-      return total;
+      if (insufficientNative) {
+        throw BurstInsufficientNativeBalance(
+          estimatedFeeWei: missingOverrideFee ? null : totalFee,
+        );
+      }
+      return totalFee;
     } finally {
       rpc.dispose();
     }

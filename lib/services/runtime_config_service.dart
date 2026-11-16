@@ -423,6 +423,13 @@ class RuntimeConfigService extends ChangeNotifier {
 
   RuntimePolicySnapshot get snapshot => _snapshot;
 
+  String unavailableMessageFor(RuntimeFeature feature) {
+    if (!_hasPolicy && _refreshFailed) {
+      return 'Unable to connect. Check your internet connection and try again.';
+    }
+    return _snapshot.unavailableMessage(feature);
+  }
+
   Future<void> hydrate() async {
     if (_hydrated) return;
     final inFlight = _hydrateFuture;

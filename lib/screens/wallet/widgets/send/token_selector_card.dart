@@ -56,6 +56,7 @@ class TokenSelectorCard extends StatelessWidget {
                     tokenAddress: token!.contractAddress,
                     tokenImageUrl: token!.imageUrl,
                     size: 38,
+                    chainId: blockchain.activeTokenStorageChainId,
                     isCertified: token!.isCertified,
                   ),
                 if (token != null) const SizedBox(width: 12),

@@ -329,4 +329,42 @@ void main() {
       expect(notifications, 2); // 304 did not emit any notifications
     },
   );
+
+  test(
+    'unavailableMessageFor reports connectivity error when initial policy fetch fails',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final offline = RuntimeConfigService.forTesting(
+        client: MockClient((_) async => http.Response('offline', 503)),
+      );
+      await offline.refresh();
+      expect(offline.hasPolicy, isFalse);
+      expect(offline.refreshFailed, isTrue);
+      expect(
+        offline.unavailableMessageFor(RuntimeFeature.swaps),
+        'Unable to connect. Check your internet connection and try again.',
+      );
+
+      final disabled = RuntimeConfigService.forTesting(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'revision': 1,
+              'policy': {
+                'maintenance': {'mode': 'off', 'message': ''},
+                'features': {'swapsEnabled': false},
+              },
+            }),
+            200,
+          ),
+        ),
+      );
+      await disabled.refresh();
+      expect(disabled.hasPolicy, isTrue);
+      expect(
+        disabled.unavailableMessageFor(RuntimeFeature.swaps),
+        'Swaps are temporarily unavailable. Please try again later.',
+      );
+    },
+  );
 }

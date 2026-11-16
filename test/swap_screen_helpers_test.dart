@@ -56,6 +56,24 @@ void main() {
       final usdt = token('USDT', address: '0x1');
       expect(defaultSwapCounterToken(native, [native, other, usdt]), usdt);
     });
+
+    test('hides native RWA and WRWA on Asset Chain swap', () {
+      final nativeRwa = token('RWA', networkKey: 'evm:42420');
+      final wrwa = token(
+        'WRWA',
+        address: '0x2584d40b5553e81bb9dec0b6cd1a2e504aab1709',
+        networkKey: 'evm:42420',
+      );
+      final shalom = token(
+        'SHALOM',
+        address: '0xf20f989CAf263C513f9183B4Fed88F14Fc04c8dB',
+        networkKey: 'evm:42420',
+      );
+      expect(isSwapEligibleTokenForChain(nativeRwa, 42420), isFalse);
+      expect(isSwapEligibleTokenForChain(wrwa, 42420), isFalse);
+      expect(isSwapEligibleTokenForChain(shalom, 42420), isTrue);
+      expect(isSwapEligibleTokenForChain(token('BNB'), 56), isTrue);
+    });
   });
 
   group('looksLikeTxHash', () {

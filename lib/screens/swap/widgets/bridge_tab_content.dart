@@ -31,6 +31,7 @@ import '../../../services/bridge_service.dart';
 import '../../../services/bridge_operation_store.dart';
 import '../../../services/http_client_service.dart';
 import '../../../services/transaction_monitor.dart';
+import '../../../services/swap_service.dart';
 import '../../../services/tron_swap_service.dart';
 import '../../../services/wallet_service.dart';
 import '../../../services/evm_transaction_service.dart';
@@ -46,7 +47,6 @@ import '../../../utils/value_formatter.dart';
 import '../../transaction/transaction_processing_screen.dart';
 import '../../transaction/transactions_screen.dart';
 import '../swap_screen_helpers.dart';
-import '../asset_chain_native_bridge_screen.dart';
 import 'swap_figma_icons.dart';
 import 'swap_primary_button.dart';
 import 'swap_slippage_section.dart';
@@ -288,6 +288,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     chainId: BridgeService.relayBitcoinChainId,
     rpcUrl: '',
     family: ChainFamily.bitcoin,
+    logoUrl: bridgeFamilyLogoUrl(ChainFamily.bitcoin),
   );
 
   bool get _isBitcoinOrigin =>
@@ -681,6 +682,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (_isBitcoinOrigin && relayIds == null) return [];
     final evmChains = widget.blockchain.allChains.where((chain) {
       if (chain.family != ChainFamily.evm) return false;
+      if (SwapService.isAssetChain(chain.chainId)) return false;
       if (!_isBitcoinOrigin &&
           !_isSolanaOrigin &&
           chain.chainId == widget.blockchain.activeChain.chainId) {
@@ -2010,22 +2012,6 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.blockchain.activeFamily == ChainFamily.evm) ...[
-          OutlinedButton.icon(
-            icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Asset Chain native bridge'),
-            onPressed: _isBridging || widget.walletAddress == null
-                ? null
-                : () => Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => AssetChainNativeBridgeScreen(
-                      blockchain: widget.blockchain,
-                      walletService: widget.walletService,
-                      walletAddress: widget.walletAddress!,
-                    ),
-                  )),
-          ),
-          const SizedBox(height: 12),
-        ],
         if (_bitcoinHasPending || _bitcoinRecovery != null) ...[
           Container(
             padding: const EdgeInsets.all(12),

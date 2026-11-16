@@ -244,10 +244,23 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen> {
       }
       final key = _tokenScopedKey(token, blockchain.activeNetworkKey);
       final existing = byKey[key];
-      if (existing == null || _shouldReplaceToken(existing, token)) {
+      if (existing == null) {
         byKey[key] = token.networkKey == null
             ? token.copyWith(networkKey: blockchain.activeNetworkKey)
             : token;
+      } else {
+        final winner = _shouldReplaceToken(existing, token) ? token : existing;
+        final loser = identical(winner, token) ? existing : token;
+        final preservedImageUrl =
+            (winner.imageUrl == null || winner.imageUrl!.isEmpty) &&
+                loser.imageUrl != null &&
+                loser.imageUrl!.isNotEmpty
+            ? loser.imageUrl
+            : null;
+        byKey[key] = winner.copyWith(
+          networkKey: winner.networkKey ?? blockchain.activeNetworkKey,
+          imageUrl: preservedImageUrl ?? winner.imageUrl,
+        );
       }
     }
 

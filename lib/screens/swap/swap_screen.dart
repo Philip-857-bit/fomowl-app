@@ -912,23 +912,23 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     for (final custom in blockchain.customTokensForActiveChain) {
       final addr = custom.address.trim().toLowerCase();
       if (addr.isNotEmpty && existing.contains(addr)) continue;
-      extra.add(
-        Token(
-          symbol: custom.symbol,
-          name: custom.name,
-          contractAddress: custom.address,
-          balance: 0,
-          valueUsd: 0,
-          priceUsd: 0,
-          changePercent24h: 0,
-          decimals: custom.decimals,
-          imageUrl: custom.imageUrl,
-          coinGeckoId: custom.coinGeckoId,
-          isCertified: false,
-          networkKey: custom.networkKey,
-          tokenStandard: custom.tokenStandard,
-        ),
+      final token = Token(
+        symbol: custom.symbol,
+        name: custom.name,
+        contractAddress: custom.address,
+        balance: 0,
+        valueUsd: 0,
+        priceUsd: 0,
+        changePercent24h: 0,
+        decimals: custom.decimals,
+        imageUrl: custom.imageUrl,
+        coinGeckoId: custom.coinGeckoId,
+        isCertified: false,
+        networkKey: custom.networkKey,
+        tokenStandard: custom.tokenStandard,
       );
+      if (!isSwapEligibleTokenForChain(token, chainId)) continue;
+      extra.add(token);
     }
 
     if (extra.isEmpty) return base;
@@ -937,10 +937,13 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
 
   List<Token> _visibleTokensForChain(List<Token> tokens, int chainId) {
     final hiddenTokens = _tokenVisibilityService.getHiddenTokens(chainId);
-    if (hiddenTokens.isEmpty) {
-      return tokens;
-    }
     return tokens.where((token) {
+      if (!isSwapEligibleTokenForChain(token, chainId)) {
+        return false;
+      }
+      if (hiddenTokens.isEmpty) {
+        return true;
+      }
       final contractAddress = token.contractAddress ?? '';
       if (contractAddress.isEmpty) {
         return true;
@@ -972,11 +975,19 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         tokens: tokens,
         chainId: _tokenStorageChainId(blockchain),
         blockUnverifiedSelection: !isFrom,
-        tokenFilter:
-            _activeTab == SwapTab.limit &&
-                blockchain.activeFamily == ChainFamily.evm
-            ? (token) => _limitOrderEligibleTokens([token]).isNotEmpty
-            : null,
+        tokenFilter: (token) {
+          if (!isSwapEligibleTokenForChain(
+            token,
+            blockchain.activeChain.chainId,
+          )) {
+            return false;
+          }
+          if (_activeTab == SwapTab.limit &&
+              blockchain.activeFamily == ChainFamily.evm) {
+            return _limitOrderEligibleTokens([token]).isNotEmpty;
+          }
+          return true;
+        },
       ),
     );
 
@@ -3852,7 +3863,7 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
     )) {
       return RuntimeFeatureUnavailableScreen(
         feature: RuntimeFeature.swaps,
-        message: runtimePolicy.unavailableMessage(RuntimeFeature.swaps),
+        message: _runtimeConfig.unavailableMessageFor(RuntimeFeature.swaps),
         onReturn: _handleBackNavigation,
       );
     }
@@ -4075,10 +4086,16 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
                               if (_activeTab == tab) return;
                               if (tab == SwapTab.swap &&
                                   !runtimePolicy.allows(RuntimeFeature.swaps)) {
+                                if (!_runtimeConfig.hasPolicy &&
+                                    _runtimeConfig.refreshFailed) {
+                                  unawaited(
+                                    _runtimeConfig.refresh(force: true),
+                                  );
+                                }
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      runtimePolicy.unavailableMessage(
+                                      _runtimeConfig.unavailableMessageFor(
                                         RuntimeFeature.swaps,
                                       ),
                                     ),

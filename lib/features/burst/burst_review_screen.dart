@@ -113,10 +113,11 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
       final fee = await widget.loadNetworkFee!();
       if (fee.isNegative) throw const FormatException('Invalid network fee');
       if (mounted) setState(() => _networkFeeWei = fee);
-    } on BurstInsufficientNativeBalance {
+    } on BurstInsufficientNativeBalance catch (error) {
       if (mounted) {
         setState(() {
-          _feeFailed = true;
+          _networkFeeWei = error.estimatedFeeWei;
+          _feeFailed = error.estimatedFeeWei == null;
           _insufficientNativeBalance = true;
         });
       }
@@ -373,7 +374,7 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                         style: const TextStyle(color: Color(0xffff8b91)),
                       ),
                     ),
-                  if (_feeFailed)
+                  if (_feeFailed || _insufficientNativeBalance)
                     TextButton(
                       onPressed: _estimatingFee ? null : _loadFee,
                       child: Text(
@@ -496,31 +497,21 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                     ),
                   Container(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: burstAccent(
-                            context,
-                          ).withValues(alpha: 0.30), // rgba(234, 42, 51, 0.30)
-                          blurRadius: 30,
-                          spreadRadius: 0,
-                          offset: Offset.zero,
-                        ),
-                      ],
+                      borderRadius: const BorderRadius.all(Radius.circular(12)),
+                      boxShadow: burstActionShadow(
+                        context,
+                        enabled:
+                            !(_busy ||
+                                _estimatingFee ||
+                                _insufficientNativeBalance),
+                      ),
                     ),
                     child: FilledButton(
                       onPressed:
                           _busy || _estimatingFee || _insufficientNativeBalance
                           ? null
                           : _create,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: burstAccent(context),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(56),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      style: burstPrimaryButtonStyle(context),
                       child: Text(
                         _busy
                             ? 'Processing…'
@@ -530,7 +521,6 @@ class _BurstReviewSheetState extends State<BurstReviewSheet> {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
                         ),
                       ),
                     ),
@@ -959,32 +949,17 @@ class _BurstReviewScreenState extends State<BurstReviewScreen> {
                   ),
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.all(Radius.circular(12)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: burstAccent(context).withValues(alpha: 0.30),
-                        blurRadius: 30,
-                        spreadRadius: 0,
-                        offset: Offset.zero,
-                      ),
-                    ],
+                    borderRadius: const BorderRadius.all(Radius.circular(12)),
+                    boxShadow: burstActionShadow(context, enabled: !_busy),
                   ),
                   child: FilledButton(
                     onPressed: _busy ? null : _create,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: burstAccent(context),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    style: burstPrimaryButtonStyle(context),
                     child: Text(
                       _busy ? 'Processing…' : 'Create Burst',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
                       ),
                     ),
                   ),

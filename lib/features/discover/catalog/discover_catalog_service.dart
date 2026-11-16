@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../config/app_environment.dart';
 import '../../../services/blockchain/blockchain_catalog.dart';
+import '../../../services/http_client_service.dart';
 import '../discover_url_utils.dart';
 import 'discover_catalog_snapshot.dart';
 import 'discover_dapp_entry.dart';
@@ -14,7 +15,7 @@ class DiscoverCatalogService {
   static const String _cacheKey = 'discover_catalog_snapshot_v1';
 
   DiscoverCatalogService({http.Client? client})
-    : _client = client ?? http.Client();
+    : _client = client ?? HttpClientService().client;
 
   final http.Client _client;
 

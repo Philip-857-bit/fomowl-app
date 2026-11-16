@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fomowl_wallet/models/token.dart';
 import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:fomowl_wallet/services/evm_transaction_service.dart';
 import 'package:fomowl_wallet/services/swap_service.dart';
 import 'package:fomowl_wallet/services/swap_execution_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
@@ -22,6 +23,9 @@ class _Wallet extends WalletService {
     BigInt? maxPriorityFeePerGasWei,
     int? gasLimit,
     int? nonce,
+    Future<void> Function(EvmSignedTransaction transaction)? beforeBroadcast,
+    Future<void> Function()? abortedBeforeBroadcast,
+    void Function()? validateBeforeSigning,
   }) async {
     request = {
       'rpc': rpcUrl,

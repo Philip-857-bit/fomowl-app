@@ -4,12 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../config/app_environment.dart';
+import '../../services/http_client_service.dart';
 import '../../utils/app_error_utils.dart';
 
 class AdminApiService {
   AdminApiService({required this.adminSecret, http.Client? client})
-    : _client = client ?? http.Client(),
-      _ownsClient = client == null;
+    : _client = client ?? HttpClientService().client,
+      _ownsClient = false;
 
   final String adminSecret;
   final http.Client _client;

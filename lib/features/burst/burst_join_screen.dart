@@ -310,17 +310,14 @@ class _BurstJoinScreenState extends State<BurstJoinScreen> {
                 const SizedBox(height: 32),
                 Container(
                   decoration: BoxDecoration(
-                    boxShadow: burstActionShadow(context),
+                    boxShadow: burstActionShadow(context, enabled: !_busy),
                   ),
                   child: FilledButton(
                     onPressed: _busy ? null : _join,
-                    style: FilledButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    style: burstPrimaryButtonStyle(
+                      context,
                       backgroundColor: accent,
                       foregroundColor: burstOnAccent(context),
-                      minimumSize: const Size.fromHeight(56),
                     ),
                     child: Text(
                       _busy ? 'Joining…' : 'Join Burst',

@@ -1,6 +1,7 @@
 import 'package:decimal/decimal.dart';
 
 import '../../models/token.dart';
+import '../../services/blockchain/asset_chain_swap_service.dart';
 import '../../utils/amount_utils.dart';
 
 /// Pure, widget-state-free helpers for the swap screen.
@@ -34,6 +35,18 @@ const Set<String> _stablecoinSymbols = {
 
 bool isSwapStablecoin(Token? token) =>
     token != null && _stablecoinSymbols.contains(token.symbol.toUpperCase());
+
+/// Returns false for Asset Chain native RWA and WRWA on swap, as they have no
+/// liquidity pool on Asset Chain Swap.
+bool isSwapEligibleTokenForChain(Token token, int chainId) {
+  if (chainId != 42420 && chainId != 42421) return true;
+  final addr = (token.contractAddress ?? '').trim();
+  if (addr.isEmpty || AssetChainSwapService.isNativeAddress(addr)) {
+    return false;
+  }
+  final wrwa = AssetChainSwapService.resolveWrwaAddress(chainId).toLowerCase();
+  return addr.toLowerCase() != wrwa;
+}
 
 bool swapTokensShareNetwork(Token a, Token b) {
   final keyA = a.networkKey?.trim().toLowerCase() ?? '';

@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../config/app_environment.dart';
+import '../../services/http_client_service.dart';
 import '../../utils/app_error_utils.dart';
 import 'home_banner_item.dart';
 
 class HomeBannerService {
   HomeBannerService({http.Client? client})
-    : _client = client ?? http.Client(),
-      _ownsClient = client == null;
+    : _client = client ?? HttpClientService().client,
+      _ownsClient = false;
 
   final http.Client _client;
   final bool _ownsClient;

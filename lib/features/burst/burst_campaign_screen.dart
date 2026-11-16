@@ -612,17 +612,18 @@ class _BurstCampaignScreenState extends State<BurstCampaignScreen> {
                   padding: EdgeInsets.only(top: tall ? 16 : 12),
                   child: Container(
                     decoration: BoxDecoration(
-                      boxShadow: burstActionShadow(context),
+                      boxShadow: burstActionShadow(
+                        context,
+                        enabled: !_triggering,
+                      ),
                     ),
                     child: FilledButton(
                       onPressed: _triggering ? null : _trigger,
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                      style: burstPrimaryButtonStyle(
+                        context,
+                        height: tall ? 54 : 48,
                         backgroundColor: accent,
                         foregroundColor: burstOnAccent(context),
-                        minimumSize: Size.fromHeight(tall ? 54 : 48),
                       ),
                       child: Text(
                         _triggering

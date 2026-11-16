@@ -122,6 +122,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
         tokenGroups: [
           _getDefaultTokens(),
           cachedTokens,
+          blockchain.tokens,
           _customTokensForActiveNetwork(blockchain),
         ],
       );
@@ -131,6 +132,7 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
         tokenGroups: [
           _getDefaultTokens(),
           cachedTokens,
+          blockchain.tokens,
           _customTokensForActiveNetwork(blockchain),
         ],
         explicitSearch: true,
@@ -315,10 +317,23 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
     for (final token in visibleTokens) {
       final scopedKey = _tokenScopedKey(token, blockchain.activeNetworkKey);
       final existing = byKey[scopedKey];
-      if (existing == null || _shouldReplaceToken(existing, token)) {
+      if (existing == null) {
         byKey[scopedKey] = token.networkKey == null
             ? token.copyWith(networkKey: blockchain.activeNetworkKey)
             : token;
+      } else {
+        final winner = _shouldReplaceToken(existing, token) ? token : existing;
+        final loser = identical(winner, token) ? existing : token;
+        final preservedImageUrl =
+            (winner.imageUrl == null || winner.imageUrl!.isEmpty) &&
+                loser.imageUrl != null &&
+                loser.imageUrl!.isNotEmpty
+            ? loser.imageUrl
+            : null;
+        byKey[scopedKey] = winner.copyWith(
+          networkKey: winner.networkKey ?? blockchain.activeNetworkKey,
+          imageUrl: preservedImageUrl ?? winner.imageUrl,
+        );
       }
     }
     final nativeKey = _tokenScopedKey(
@@ -588,11 +603,12 @@ class _SelectTokenScreenState extends State<SelectTokenScreen> {
               tokenSymbol: token.symbol,
               tokenAddress: token.contractAddress,
               tokenImageUrl: token.imageUrl,
+              isCertified: token.isCertified,
               size: 42,
               chainId: Provider.of<BlockchainService>(
                 context,
                 listen: false,
-              ).activeChain.chainId,
+              ).activeTokenStorageChainId,
             ),
             const SizedBox(width: 12),
             Expanded(

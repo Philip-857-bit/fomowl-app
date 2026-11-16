@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../config/app_environment.dart';
+import '../../../services/http_client_service.dart';
 import 'discover_trending_token.dart';
 
 class DiscoverTrendingTokenService {
   DiscoverTrendingTokenService({http.Client? client})
-    : _client = client ?? http.Client();
+    : _client = client ?? HttpClientService().client;
 
   final http.Client _client;
 

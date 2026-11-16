@@ -1,3 +1,4 @@
+import 'package:fomowl_wallet/services/evm_transaction_service.dart';
 import 'package:fomowl_wallet/services/wallet_service.dart';
 
 class FakeWalletService extends WalletService {
@@ -51,6 +52,9 @@ class FakeWalletService extends WalletService {
     BigInt? maxPriorityFeePerGasWei,
     int? gasLimit,
     int? nonce,
+    Future<void> Function(EvmSignedTransaction transaction)? beforeBroadcast,
+    Future<void> Function()? abortedBeforeBroadcast,
+    void Function()? validateBeforeSigning,
   }) async {
     lastRpcUrl = rpcUrl;
     lastChainId = chainId;

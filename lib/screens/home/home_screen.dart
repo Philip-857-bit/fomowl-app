@@ -1665,7 +1665,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      final feed = await _homeBannerService.fetchHomeBanners();
+      final feed = await _homeBannerService.fetchHomeBanners().timeout(
+        const Duration(seconds: 6),
+      );
       if (!mounted) {
         return;
       }
@@ -1969,7 +1971,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               show: _hasInternet != null && !_hasInternet!,
                               statusText: _connectivityStatus,
                             ),
-                            if (blockchain.lastDiscoveryPartialFailure)
+                            if (blockchain.lastDiscoveryPartialFailure &&
+                                _hasInternet != false &&
+                                (blockchain.lastDiscoveryMessage?.isNotEmpty ??
+                                    false))
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
                                   16,
