@@ -40,7 +40,9 @@ class _BurstJoinScreenState extends State<BurstJoinScreen> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final raw = data?.text?.trim();
     if (raw == null || raw.isEmpty || !mounted) return;
-    final sanitized = raw.replaceAll(RegExp(r'[^a-zA-Z2-7-]'), '').toUpperCase();
+    final sanitized = raw
+        .replaceAll(RegExp(r'[^a-zA-Z2-7-]'), '')
+        .toUpperCase();
     if (sanitized.isEmpty) return;
     _code.value = TextEditingValue(
       text: sanitized,
@@ -1020,10 +1022,7 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                           : LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [
-                                accent,
-                                accent.withValues(alpha: 0.72),
-                              ],
+                              colors: [accent, accent.withValues(alpha: 0.72)],
                             ),
                       color: confirmed ? const Color(0xFF123B2B) : null,
                       borderRadius: BorderRadius.circular(tall ? 32 : 24),
@@ -1080,19 +1079,24 @@ class _BurstWaitingScreenState extends State<BurstWaitingScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: accent.withValues(alpha: 0.26),
-                      ),
+                      border: Border.all(color: accent.withValues(alpha: 0.26)),
                     ),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _GuestAvatarStack(
-                              joinedCount: joined.toInt(),
-                              size: tall ? 40 : 28,
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: _GuestAvatarStack(
+                                  joinedCount: joined.toInt(),
+                                  size: tall ? 40 : 28,
+                                ),
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
@@ -1272,14 +1276,8 @@ class _GuestAvatarStack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const colors = [
-      Color(0xFFEA2A33),
-      Color(0xFFFC9915),
-      Color(0xFF18C783),
-    ];
-    final visible = joinedCount <= 0
-        ? 1
-        : (joinedCount > 3 ? 3 : joinedCount);
+    const colors = [Color(0xFFEA2A33), Color(0xFFFC9915), Color(0xFF18C783)];
+    final visible = joinedCount <= 0 ? 1 : (joinedCount > 3 ? 3 : joinedCount);
     final extra = joinedCount > 3 ? joinedCount - 3 : 0;
     final total = visible + (extra > 0 ? 1 : 0);
     final overlap = size * 0.30;
@@ -1299,10 +1297,7 @@ class _GuestAvatarStack extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colors[i].withValues(alpha: 0.22),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF0E0E0E),
-                    width: 2,
-                  ),
+                  border: Border.all(color: const Color(0xFF0E0E0E), width: 2),
                 ),
                 child: Icon(
                   Icons.person_outline_rounded,
@@ -1320,10 +1315,7 @@ class _GuestAvatarStack extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF353534),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0xFF0E0E0E),
-                    width: 2,
-                  ),
+                  border: Border.all(color: const Color(0xFF0E0E0E), width: 2),
                 ),
                 child: Center(
                   child: Text(

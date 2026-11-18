@@ -199,10 +199,22 @@ void main() {
             find.widgetWithText(FilledButton, 'Create Burst'),
           );
           final bgColor = buttonWidget.style?.backgroundColor?.resolve({});
+          final fgColor = buttonWidget.style?.foregroundColor?.resolve({});
+          final expectedForeground =
+              ThemeData.estimateBrightnessForColor(expectedAccent) ==
+                  Brightness.light
+              ? Colors.black
+              : Colors.white;
           expect(
             bgColor,
             expectedAccent,
             reason: 'Create Burst button on $name must follow the chain accent',
+          );
+          expect(
+            fgColor,
+            expectedForeground,
+            reason:
+                'Create Burst text on $name must maintain contrast against $expectedAccent',
           );
 
           // 2. Primary CTA ambient glow shadow MUST be red Color(0x4dea2a33)
@@ -228,14 +240,16 @@ void main() {
           // 3. Total amount highlight ("250 TEST") MUST be Electric Red #EA2A33
           final totalTextFinder = find.byWidgetPredicate((w) {
             if (w is Text && w.data != null && w.data!.contains('TEST')) {
-              return w.style?.color == expectedAccent && w.style?.fontSize == 16;
+              return w.style?.color == expectedAccent &&
+                  w.style?.fontSize == 16;
             }
             return false;
           });
           expect(
             totalTextFinder,
             findsOneWidget,
-            reason: 'Total highlight amount text must follow the chain accent on $name',
+            reason:
+                'Total highlight amount text must follow the chain accent on $name',
           );
 
           // Total includes distribution, platform fee, sponsorship, and network gas.

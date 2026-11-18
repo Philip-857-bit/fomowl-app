@@ -35,6 +35,7 @@ class BrowserSessionController extends ChangeNotifier {
   bool _loadingCatalog = false;
   String? _catalogError;
   String? _scopeKey;
+  String? _lastRecordedHistoryUrl;
   final List<BrowserHistoryEntry> _history = <BrowserHistoryEntry>[];
 
   DiscoverCatalogSnapshot? get snapshot => _snapshot;
@@ -147,6 +148,7 @@ class BrowserSessionController extends ChangeNotifier {
     _activeDapp = null;
     _currentUri = null;
     _pageTitle = null;
+    _lastRecordedHistoryUrl = null;
     notifyListeners();
   }
 
@@ -311,14 +313,35 @@ class BrowserSessionController extends ChangeNotifier {
   }
 
   void _recordHistory(Uri uri, {String? title}) {
-    if (uri.toString() == 'about:blank' || uri.scheme.isEmpty) return;
-    _history.removeWhere((item) => item.url == uri.toString());
+    final url = uri.toString();
+    if (url == 'about:blank' || uri.scheme.isEmpty) return;
+    final trimmedTitle = title?.trim();
+    final origin = normalizeOriginFromUri(uri);
+    if (_lastRecordedHistoryUrl == url && _history.isNotEmpty) {
+      if (trimmedTitle != null &&
+          trimmedTitle.isNotEmpty &&
+          _history.first.url == url &&
+          _history.first.title != trimmedTitle) {
+        _history[0] = BrowserHistoryEntry(
+          url: url,
+          origin: origin,
+          title: trimmedTitle,
+          visitedAt: _history.first.visitedAt,
+        );
+        unawaited(_historyStorage.save(history: _history, scopeKey: _scopeKey));
+      }
+      return;
+    }
+    _lastRecordedHistoryUrl = url;
+    _history.removeWhere((item) => item.url == url);
     _history.insert(
       0,
       BrowserHistoryEntry(
-        url: uri.toString(),
-        origin: normalizeOriginFromUri(uri),
-        title: title,
+        url: url,
+        origin: origin,
+        title: trimmedTitle != null && trimmedTitle.isNotEmpty
+            ? trimmedTitle
+            : null,
         visitedAt: DateTime.now().toUtc(),
       ),
     );
@@ -328,9 +351,11 @@ class BrowserSessionController extends ChangeNotifier {
     unawaited(_historyStorage.save(history: _history, scopeKey: _scopeKey));
     unawaited(
       _historyStorage.recordRemoteVisit(
-        url: uri.toString(),
-        origin: normalizeOriginFromUri(uri),
-        title: title,
+        url: url,
+        origin: origin,
+        title: trimmedTitle != null && trimmedTitle.isNotEmpty
+            ? trimmedTitle
+            : null,
         walletAddress: _scopeKey,
       ),
     );

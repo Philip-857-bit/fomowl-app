@@ -1,8 +1,36 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fomowl_wallet/features/discover/browser/browser_history_entry.dart';
 import 'package:fomowl_wallet/features/discover/browser/browser_session_controller.dart';
+import 'package:fomowl_wallet/features/discover/browser/discover_history_storage.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_catalog_service.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_catalog_snapshot.dart';
 import 'package:fomowl_wallet/features/discover/catalog/discover_dapp_entry.dart';
+
+class _RecordingHistoryStorage extends DiscoverHistoryStorage {
+  int saveCalls = 0;
+  int remoteVisitCalls = 0;
+
+  @override
+  Future<List<BrowserHistoryEntry>> load({String? scopeKey}) async => const [];
+
+  @override
+  Future<void> save({
+    required List<BrowserHistoryEntry> history,
+    String? scopeKey,
+  }) async {
+    saveCalls++;
+  }
+
+  @override
+  Future<void> recordRemoteVisit({
+    required String url,
+    required String origin,
+    String? title,
+    String? walletAddress,
+  }) async {
+    remoteVisitCalls++;
+  }
+}
 
 class _FakeDiscoverCatalogService extends DiscoverCatalogService {
   _FakeDiscoverCatalogService({
@@ -417,5 +445,34 @@ void main() {
       expect(controller.pageTitle, isNull);
       expect(controller.blockedState, isNull);
     });
+
+    test(
+      'deduplicates redundant history writes and remote visits within one page load',
+      () async {
+        final storage = _RecordingHistoryStorage();
+        final controller = BrowserSessionController(
+          catalogService: _FakeDiscoverCatalogService(
+            snapshot: DiscoverCatalogSnapshot(
+              dapps: const [],
+              fetchedAt: DateTime.now().toUtc(),
+            ),
+          ),
+          historyStorage: storage,
+        );
+        await controller.loadCatalog();
+
+        controller.openManualInput(
+          'https://assetclaw-backend.onrender.com/health',
+        );
+        final uri = Uri.parse('https://assetclaw-backend.onrender.com/health');
+        controller.updateLoadedPage(uri);
+        controller.updateLoadedPage(uri);
+        controller.updateLoadedPage(uri, title: 'Health Check');
+
+        expect(storage.remoteVisitCalls, 1);
+        expect(storage.saveCalls, 2);
+        expect(controller.history.single.title, 'Health Check');
+      },
+    );
   });
 }

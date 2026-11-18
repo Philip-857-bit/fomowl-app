@@ -63,7 +63,7 @@ ButtonStyle burstPrimaryButtonStyle(
   Color? foregroundColor,
 }) => FilledButton.styleFrom(
   backgroundColor: backgroundColor ?? burstAccent(context),
-  foregroundColor: foregroundColor ?? Colors.white,
+  foregroundColor: foregroundColor ?? burstOnAccent(context),
   disabledBackgroundColor: const Color(0xFF1F1F1F),
   disabledForegroundColor: const Color(0x66E2E2E2),
   minimumSize: Size.fromHeight(height),

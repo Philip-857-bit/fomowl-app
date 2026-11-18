@@ -951,13 +951,11 @@ class _ProcessingStatusContentState extends State<_ProcessingStatusContent>
                       ),
                     ),
                     child: Center(
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 54,
-                          height: 54,
-                          fit: BoxFit.contain,
-                        ),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 46,
+                        height: 46,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),

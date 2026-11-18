@@ -329,4 +329,87 @@ void main() {
       expect(viewRequested, isTrue);
     },
   );
+
+  testWidgets(
+    'failed fee estimation disables Create Burst until retry succeeds',
+    (tester) async {
+      var shouldFail = true;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BurstReviewSheet(
+              prepared: Map<String, dynamic>.from(samplePrepared)
+                ..remove('networkFeeUsd'),
+              executor: executor,
+              nativeSymbol: 'BNB',
+              loadNetworkFee: () async {
+                if (shouldFail) throw StateError('RPC unavailable');
+                return BigInt.from(100000000000000);
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Create Burst'),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      shouldFail = false;
+      await tester.tap(find.text('Unable to estimate network fee. Retry'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Create Burst'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'insufficient balance still displays overridden network fee estimate',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BurstReviewSheet(
+              prepared: Map<String, dynamic>.from(samplePrepared)
+                ..remove('networkFeeUsd'),
+              executor: executor,
+              nativeSymbol: 'BNB',
+              loadNetworkFee: () async => throw BurstInsufficientNativeBalance(
+                estimatedFeeWei: BigInt.from(100000000000000),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(r'$0.03'), findsOneWidget);
+      expect(find.text('1.0051 BNB'), findsOneWidget);
+      expect(
+        find.text('Add BNB to cover the Burst amount and fees, then retry.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Create Burst'),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'burst_theme.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:web3dart/web3dart.dart';
 
@@ -9,6 +8,7 @@ import '../../config/app_environment.dart';
 import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
 import '../../services/http_client_service.dart';
+import '../../services/rpc_service.dart';
 import '../../services/wallet_service.dart';
 import '../../utils/sensitive_access_guard.dart';
 import '../mini_apps/burst_account_session.dart';
@@ -55,6 +55,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
   bool _loading = false;
   List<Map<String, dynamic>>? _availableNetworks;
   final _feeQuotes = <String, BurstNetworkFee>{};
+  String? _authenticatedCampaignId;
 
   @override
   void initState() {
@@ -274,21 +275,35 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
     if (chain.chainId != plan.chainId) {
       throw StateError('The selected network changed.');
     }
-    final rpc = Web3Client(chain.rpcUrl, http.Client());
+    final httpClient = HttpClientService().client;
+    final rpc = Web3Client(chain.rpcUrl, httpClient);
     late final BurstNetworkFee fee;
     try {
-      fee = await BurstNetworkFee.estimate(rpc, plan);
+      fee = await BurstNetworkFee.estimate(
+        rpc,
+        plan,
+        rpcUrl: chain.rpcUrl,
+        fallbackRpcUrls: RpcService.publicFallbacksForChain(chain.chainId),
+        httpClient: httpClient,
+      );
     } on BurstInsufficientNativeBalance catch (error) {
       throw StateError(error.messageFor(chain.symbol));
     } finally {
       rpc.dispose();
     }
     if (!mounted) return false;
+    if (_authenticatedCampaignId == plan.campaignId) {
+      _feeQuotes[plan.reference] = fee;
+      return true;
+    }
     final authenticated = await SensitiveAccessGuard.verify(
       context,
       reason: 'Approve this Burst transaction',
     );
-    if (authenticated) _feeQuotes[plan.reference] = fee;
+    if (authenticated) {
+      _authenticatedCampaignId = plan.campaignId;
+      _feeQuotes[plan.reference] = fee;
+    }
     return authenticated;
   }
 
@@ -300,50 +315,36 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       throw StateError('The wallet or network changed.');
     }
     final chain = context.read<BlockchainService>().activeChain;
-    final rpc = Web3Client(chain.rpcUrl, http.Client());
+    final httpClient = HttpClientService().client;
+    final rpc = Web3Client(chain.rpcUrl, httpClient);
     try {
       final transactions = prepared['transactions'];
       if (transactions is! List || transactions.isEmpty) {
         throw const FormatException('The transaction list is unavailable.');
       }
-      var totalFee = BigInt.zero;
-      var insufficientNative = false;
-      var missingOverrideFee = false;
-      for (final item in transactions) {
-        final transaction = Map<String, dynamic>.from(item as Map);
-        final plan = BurstExecutionPlan.parse(
-          {
-            'walletAddress': identity.address,
-            'campaignId': (prepared['campaign'] as Map)['id'],
-            'transaction': transaction,
-          },
-          reference: transaction['reference'] as String,
-          wallet: identity.address,
-          chainId: chain.chainId,
-        );
-        try {
-          final fee = await BurstNetworkFee.estimate(
-            rpc,
-            plan,
-            rpcUrl: chain.rpcUrl,
-            allowBalanceOverride: true,
-          );
-          totalFee += fee.maximumFeeWei;
-        } on BurstInsufficientNativeBalance catch (error) {
-          insufficientNative = true;
-          if (error.estimatedFeeWei != null) {
-            totalFee += error.estimatedFeeWei!;
-          } else {
-            missingOverrideFee = true;
-          }
-        }
-      }
-      if (insufficientNative) {
-        throw BurstInsufficientNativeBalance(
-          estimatedFeeWei: missingOverrideFee ? null : totalFee,
-        );
-      }
-      return totalFee;
+      final plans = <BurstExecutionPlan>[
+        for (final item in transactions)
+          () {
+            final transaction = Map<String, dynamic>.from(item as Map);
+            return BurstExecutionPlan.parse(
+              {
+                'walletAddress': identity.address,
+                'campaignId': (prepared['campaign'] as Map)['id'],
+                'transaction': transaction,
+              },
+              reference: transaction['reference'] as String,
+              wallet: identity.address,
+              chainId: chain.chainId,
+            );
+          }(),
+      ];
+      return await BurstNetworkFee.estimateReviewSteps(
+        rpc,
+        plans,
+        rpcUrl: chain.rpcUrl,
+        fallbackRpcUrls: RpcService.publicFallbacksForChain(chain.chainId),
+        httpClient: httpClient,
+      );
     } finally {
       rpc.dispose();
     }
@@ -365,7 +366,7 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
       approve: _approveTransaction,
       beginSubmission: (plan) => api.beginExecution(plan.reference),
       verifyBroadcast: (plan, hash) async {
-        final rpc = Web3Client(chain.rpcUrl, http.Client());
+        final rpc = Web3Client(chain.rpcUrl, HttpClientService().client);
         try {
           return await BurstNetworkFee.matchesTransaction(rpc, plan, hash);
         } finally {
@@ -433,27 +434,33 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
           canEditPrepared: _canEditPrepared,
           onPrepared: (prepared) async {
             if (!mounted) return;
-            final completed = await showModalBottomSheet<bool>(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => BurstReviewSheet(
-                prepared: prepared,
-                loadNetworkFee: () => _estimateReviewFee(prepared, identity),
-                executor: executor,
-                nativeSymbol: chain.symbol,
-                chainName: chain.name,
-                allowEdit: true,
-                onCompleted: () async {
-                  await _drafts.clear(
-                    identity.profileId,
-                    identity.address,
-                    chain.chainId,
-                  );
-                  if (mounted) setState(() => _hasDraft = false);
-                },
-              ),
-            );
+            _authenticatedCampaignId = null;
+            bool? completed;
+            try {
+              completed = await showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => BurstReviewSheet(
+                  prepared: prepared,
+                  loadNetworkFee: () => _estimateReviewFee(prepared, identity),
+                  executor: executor,
+                  nativeSymbol: chain.symbol,
+                  chainName: chain.name,
+                  allowEdit: true,
+                  onCompleted: () async {
+                    await _drafts.clear(
+                      identity.profileId,
+                      identity.address,
+                      chain.chainId,
+                    );
+                    if (mounted) setState(() => _hasDraft = false);
+                  },
+                ),
+              );
+            } finally {
+              _authenticatedCampaignId = null;
+            }
             if (completed == true && mounted) {
               await _drafts.clear(
                 identity.profileId,
@@ -478,9 +485,9 @@ class _BurstNativeScreenState extends State<BurstNativeScreen> {
                 ),
               );
               if (mounted) {
-                Navigator.of(context).pop(
-                  viewCampaign == true ? activeCampaign : null,
-                );
+                Navigator.of(
+                  context,
+                ).pop(viewCampaign == true ? activeCampaign : null);
               }
             } else if (completed == false && mounted) {
               await _drafts.clear(

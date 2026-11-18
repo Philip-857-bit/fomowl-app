@@ -44,7 +44,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   InAppWebViewController? _controller;
   bool _canGoBack = false;
   bool _canGoForward = false;
-  int _progress = 0;
+  final ValueNotifier<int> _progressNotifier = ValueNotifier<int>(0);
   String? _lastLoadedUrl;
   String? _pageLoadErrorMessage;
   // True between load start and stop. Drives a themed loading cover so the
@@ -55,6 +55,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   // app UI leaves the open DApp reading a stale window.ethereum.chainId.
   BlockchainService? _blockchain;
   int? _syncedChainId;
+  String? _scriptInjectMode;
+  String? _scriptOrigin;
+  int? _scriptChainId;
 
   @override
   void initState() {
@@ -85,6 +88,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     DappPermissionService.permissionRevision.removeListener(
       _onPermissionRevisionChanged,
     );
+    _progressNotifier.dispose();
     super.dispose();
   }
 
@@ -96,6 +100,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
         blockchain.activeChain.chainId == _syncedChainId) {
       return;
     }
+    _scriptChainId = null;
     unawaited(_syncInjectedProviderState());
   }
 
@@ -114,6 +119,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
   }
 
   void _onPermissionRevisionChanged() {
+    _scriptOrigin = null;
     unawaited(_syncInjectedProviderState());
   }
 
@@ -151,6 +157,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   databaseEnabled: true,
                   cacheEnabled: true,
                   thirdPartyCookiesEnabled: false,
+                  // PhishingProtectionService validates URLs locally before
+                  // navigation; skip redundant WebView Safe Browsing IPC lookups.
+                  safeBrowsingEnabled: false,
                   // Opaque white content area, like a normal browser. A
                   // transparent webview over the app's dark scaffold makes
                   // failed-load / native error pages (dark text) render onto
@@ -247,7 +256,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   )) {
                     return NavigationActionPolicy.CANCEL;
                   }
-                  await _applyUserScriptsFor(next);
+                  if (action.isForMainFrame) {
+                    await _applyUserScriptsFor(next);
+                  }
                   return NavigationActionPolicy.ALLOW;
                 },
 
@@ -266,8 +277,14 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                     widget.sessionController.updateLoadedPage(next);
                   }
                 },
+                onPageCommitVisible: (_, _) {
+                  if (mounted && _isLoading) {
+                    setState(() => _isLoading = false);
+                  }
+                },
                 onLoadStop: (controller, url) async {
                   final next = url?.uriValue;
+                  _progressNotifier.value = 100;
                   if (mounted) {
                     setState(() {
                       _isLoading = false;
@@ -290,18 +307,29 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                       title: title,
                     );
                     if (widget.sessionController.canInjectProviderFor(next)) {
-                      final providerScript = await widget.providerBridge
-                          .providerInjectionScript();
-                      await controller.evaluateJavascript(
-                        source: providerScript,
-                      );
-                      await controller.evaluateJavascript(
-                        source: await widget.providerBridge
-                            .buildProviderStateSyncScript(
-                              chainId: chainId,
-                              origin: normalizeOriginFromUri(next),
-                            ),
-                      );
+                      final checks = await Future.wait<Object?>([
+                        controller.evaluateJavascript(
+                          source: 'Boolean(window.__owlletProviderInstalled)',
+                        ),
+                        widget.providerBridge.buildProviderStateSyncScript(
+                          chainId: chainId,
+                          origin: normalizeOriginFromUri(next),
+                        ),
+                      ]);
+                      final installed = checks[0] == true;
+                      final stateSyncScript = checks[1]! as String;
+                      if (installed) {
+                        await controller.evaluateJavascript(
+                          source:
+                              'window.__owlletAnnounceProvider && window.__owlletAnnounceProvider();\n$stateSyncScript',
+                        );
+                      } else {
+                        final providerScript = await widget.providerBridge
+                            .providerInjectionScript();
+                        await controller.evaluateJavascript(
+                          source: '$providerScript\n$stateSyncScript',
+                        );
+                      }
                     }
                   }
                   await _refreshNavigationState();
@@ -336,9 +364,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                           type == WebResourceErrorType.TIMEOUT
                       ? l.connectionFailed
                       : 'Unable to load this page right now.';
+                  _progressNotifier.value = 0;
                   setState(() {
                     _pageLoadErrorMessage = message;
-                    _progress = 0;
                     _isLoading = false;
                   });
                 },
@@ -360,10 +388,10 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                       if (!mounted) {
                         return;
                       }
+                      _progressNotifier.value = 0;
                       setState(() {
                         _pageLoadErrorMessage =
                             'Unable to load this page right now.';
-                        _progress = 0;
                         _isLoading = false;
                       });
                     },
@@ -378,7 +406,7 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
                   );
                 },
                 onProgressChanged: (_, progress) {
-                  setState(() => _progress = progress);
+                  _progressNotifier.value = progress;
                 },
                 onUpdateVisitedHistory: (controller, url, isReload) async {
                   final next = url?.uriValue;
@@ -470,32 +498,42 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
     if (controller == null) {
       return;
     }
+    final canInject = widget.sessionController.canInjectProviderFor(uri);
+    final shouldDetect =
+        !canInject && widget.sessionController.shouldInjectDappDetectorFor(uri);
+    final targetMode = canInject
+        ? 'provider'
+        : (shouldDetect ? 'detector' : 'none');
+    final origin = normalizeOriginFromUri(uri);
     final chainId = context.read<BlockchainService>().activeChain.chainId;
-    await controller.removeUserScriptsByGroupName(
-      groupName: _providerScriptGroup,
-    );
-    await controller.removeUserScriptsByGroupName(
-      groupName: _providerStateScriptGroup,
-    );
-    await controller.removeUserScriptsByGroupName(
-      groupName: _detectorScriptGroup,
-    );
 
-    if (widget.sessionController.canInjectProviderFor(uri)) {
-      final providerScript = await widget.providerBridge
-          .providerInjectionScript();
-      final providerStateScript = await widget.providerBridge
-          .buildProviderStateSyncScript(
-            chainId: chainId,
-            origin: normalizeOriginFromUri(uri),
+    if (targetMode == 'provider') {
+      if (_scriptInjectMode == 'provider' &&
+          _scriptOrigin == origin &&
+          _scriptChainId == chainId) {
+        return;
+      }
+      if (_scriptInjectMode != 'provider') {
+        if (_scriptInjectMode == 'detector') {
+          await controller.removeUserScriptsByGroupName(
+            groupName: _detectorScriptGroup,
           );
-      await controller.addUserScript(
-        userScript: UserScript(
-          groupName: _providerScriptGroup,
-          source: providerScript,
-          injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-        ),
+        }
+        final providerScript = await widget.providerBridge
+            .providerInjectionScript();
+        await controller.addUserScript(
+          userScript: UserScript(
+            groupName: _providerScriptGroup,
+            source: providerScript,
+            injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+          ),
+        );
+      }
+      await controller.removeUserScriptsByGroupName(
+        groupName: _providerStateScriptGroup,
       );
+      final providerStateScript = await widget.providerBridge
+          .buildProviderStateSyncScript(chainId: chainId, origin: origin);
       await controller.addUserScript(
         userScript: UserScript(
           groupName: _providerStateScriptGroup,
@@ -503,10 +541,28 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
           injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
         ),
       );
+      _scriptInjectMode = 'provider';
+      _scriptOrigin = origin;
+      _scriptChainId = chainId;
       return;
     }
 
-    if (widget.sessionController.shouldInjectDappDetectorFor(uri)) {
+    if (_scriptInjectMode == targetMode) {
+      return;
+    }
+    if (_scriptInjectMode == 'provider') {
+      await controller.removeUserScriptsByGroupName(
+        groupName: _providerScriptGroup,
+      );
+      await controller.removeUserScriptsByGroupName(
+        groupName: _providerStateScriptGroup,
+      );
+    } else if (_scriptInjectMode == 'detector') {
+      await controller.removeUserScriptsByGroupName(
+        groupName: _detectorScriptGroup,
+      );
+    }
+    if (targetMode == 'detector') {
       await controller.addUserScript(
         userScript: UserScript(
           groupName: _detectorScriptGroup,
@@ -515,6 +571,9 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
         ),
       );
     }
+    _scriptInjectMode = targetMode;
+    _scriptOrigin = origin;
+    _scriptChainId = chainId;
   }
 
   Future<void> _syncInjectedProviderState() async {
@@ -634,12 +693,19 @@ class _DiscoverBrowserViewState extends State<DiscoverBrowserView> {
               ),
             ],
           ),
-          if (_progress > 0 && _progress < 100)
-            LinearProgressIndicator(
-              value: _progress / 100,
-              backgroundColor: Colors.white12,
-              color: AppColors.accentRed,
-            ),
+          ValueListenableBuilder<int>(
+            valueListenable: _progressNotifier,
+            builder: (context, progress, _) {
+              if (progress <= 0 || progress >= 100) {
+                return const SizedBox.shrink();
+              }
+              return LinearProgressIndicator(
+                value: progress / 100,
+                backgroundColor: Colors.white12,
+                color: AppColors.accentRed,
+              );
+            },
+          ),
         ],
       ),
     );

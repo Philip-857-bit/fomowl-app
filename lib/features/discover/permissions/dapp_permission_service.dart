@@ -8,6 +8,8 @@ import 'dapp_permission_record.dart';
 class DappPermissionService {
   static const String _storageKey = 'discover_dapp_permissions_v1';
   static final ValueNotifier<int> _permissionRevision = ValueNotifier<int>(0);
+  static String? _cachedRaw;
+  static List<DappPermissionRecord>? _cachedPermissions;
 
   static ValueListenable<int> get permissionRevision => _permissionRevision;
 
@@ -15,20 +17,28 @@ class DappPermissionService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_storageKey);
     if (raw == null || raw.isEmpty) {
+      _cachedRaw = null;
+      _cachedPermissions = const <DappPermissionRecord>[];
       return const <DappPermissionRecord>[];
+    }
+    if (raw == _cachedRaw && _cachedPermissions != null) {
+      return _cachedPermissions!;
     }
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List<dynamic>) {
         return const <DappPermissionRecord>[];
       }
-      return decoded
+      final parsed = decoded
           .whereType<Map>()
           .map(
             (item) =>
                 DappPermissionRecord.fromJson(item.cast<String, dynamic>()),
           )
           .toList(growable: false);
+      _cachedRaw = raw;
+      _cachedPermissions = parsed;
+      return parsed;
     } catch (_) {
       return const <DappPermissionRecord>[];
     }
@@ -107,11 +117,13 @@ class DappPermissionService {
   }
 
   Future<void> _savePermissions(List<DappPermissionRecord> permissions) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _storageKey,
-      jsonEncode(permissions.map((record) => record.toJson()).toList()),
+    final encoded = jsonEncode(
+      permissions.map((record) => record.toJson()).toList(),
     );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_storageKey, encoded);
+    _cachedRaw = encoded;
+    _cachedPermissions = List<DappPermissionRecord>.unmodifiable(permissions);
     _permissionRevision.value = _permissionRevision.value + 1;
   }
 }

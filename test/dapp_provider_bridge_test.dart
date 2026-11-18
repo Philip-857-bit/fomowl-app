@@ -598,5 +598,90 @@ void main() {
       expect(walletService.lastRpcUrl, 'https://rpc.fallback.test');
       expect(walletService.lastChainId, blockchainService.activeChain.chainId);
     });
+
+    testWidgets(
+      'read RPC passthrough skips pre-flight resolveWorkingRpcUrl and disables error retries',
+      (tester) async {
+        final entry = entryForTestDapp(
+          origin: 'https://app.example',
+          supportedChainIds: [1],
+        );
+        final controller = await controllerForEntry(entry);
+        final rpcSpy = _SpyPassthroughRpcService();
+        final context = await pumpBridgeHarness(
+          tester,
+          blockchainService: FakeBlockchainService(),
+          rpcService: rpcSpy,
+        );
+        final bridge = DappProviderBridge(
+          sessionController: controller,
+          permissionService: FakeDappPermissionService(),
+          walletService: FakeWalletService(),
+        );
+
+        final response = await bridge.handleRequest(
+          context: context,
+          origin: entry.origin,
+          payload: const {'method': 'eth_blockNumber', 'params': []},
+          evaluateJavaScript: (_) async {},
+        );
+
+        expect(response['result'], '0x1234');
+        expect(rpcSpy.resolveCalls, 0);
+        expect(rpcSpy.lastMaxRetries, 1);
+        expect(rpcSpy.lastRetryOnRpcError, isFalse);
+      },
+    );
+
+    test(
+      'isTransientRpcError distinguishes rate limits from contract reverts',
+      () {
+        expect(
+          RpcService.isTransientRpcError(-32005, 'limit exceeded'),
+          isTrue,
+        );
+        expect(
+          RpcService.isTransientRpcError(-32000, 'Too Many Requests'),
+          isTrue,
+        );
+        expect(
+          RpcService.isTransientRpcError(-32000, 'execution reverted'),
+          isFalse,
+        );
+      },
+    );
   });
+}
+
+class _SpyPassthroughRpcService extends FakeRpcService {
+  int resolveCalls = 0;
+  int? lastMaxRetries;
+  bool? lastRetryOnRpcError;
+
+  @override
+  Future<String> resolveWorkingRpcUrl({
+    required int chainId,
+    required String primaryRpcUrl,
+  }) async {
+    resolveCalls++;
+    return super.resolveWorkingRpcUrl(
+      chainId: chainId,
+      primaryRpcUrl: primaryRpcUrl,
+    );
+  }
+
+  @override
+  Future<dynamic> rpcCall({
+    required int chainId,
+    required String primaryRpcUrl,
+    required String method,
+    required List<dynamic> params,
+    Duration timeout = const Duration(seconds: 10),
+    int maxRetries = 3,
+    bool retryOnRpcError = true,
+  }) async {
+    lastMaxRetries = maxRetries;
+    lastRetryOnRpcError = retryOnRpcError;
+    return '0x1234';
+  }
 }

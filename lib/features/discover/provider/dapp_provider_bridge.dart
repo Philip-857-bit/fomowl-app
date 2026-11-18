@@ -57,7 +57,7 @@ class DappProviderBridge {
   static const String handlerName = 'owlletProvider';
   static const String detectorHandlerName = 'owlletDappDetector';
   static const String _walletConnectIconAssetPath =
-      'assets/images/launcher_icon.png';
+      'assets/images/splash_logo.png';
   static const String _fallbackWalletConnectIconDataUri =
       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"%3E%3Crect width="96" height="96" rx="24" fill="%23050505"/%3E%3Cpath d="M24 25c0-3.3 2.7-6 6-6h17c15.46 0 28 12.54 28 28v24c0 3.3-2.7 6-6 6H52.5C36.76 77 24 64.24 24 48.5V25zm12 6v17.5C36 57.61 43.39 65 52.5 65H63V47c0-8.84-7.16-16-16-16H36zm11.75 6.5c4.56 0 8.25 3.69 8.25 8.25S52.31 54 47.75 54 39.5 50.31 39.5 45.75s3.69-8.25 8.25-8.25zm0 4.5a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" fill="%23ff3344"/%3E%3C/svg%3E';
   static const Set<String> _blockedRpcPassthroughMethods = {
@@ -473,12 +473,14 @@ class DappProviderBridge {
     required int chainId,
     required String origin,
   }) async {
-    final accounts = await _ethAccounts(origin);
-    final solanaAddress =
-        await _walletService.getWalletAddressForFamily(ChainFamily.solana) ??
-        '';
-    final tronAddress =
-        await _walletService.getWalletAddressForFamily(ChainFamily.tron) ?? '';
+    final results = await Future.wait<Object?>([
+      _ethAccounts(origin),
+      _walletService.getWalletAddressForFamily(ChainFamily.solana),
+      _walletService.getWalletAddressForFamily(ChainFamily.tron),
+    ]);
+    final accounts = results[0]! as List<String>;
+    final solanaAddress = (results[1] as String?) ?? '';
+    final tronAddress = (results[2] as String?) ?? '';
     return '''
 (() => {
   if (window.ethereum && window.ethereum.isOwllet) {
@@ -1059,15 +1061,14 @@ class DappProviderBridge {
     final blockchain = context.read<BlockchainService>();
     final rpcService = context.read<RpcService>();
     final activeChain = blockchain.activeChain;
-    final resolvedRpcUrl = await rpcService.resolveWorkingRpcUrl(
-      chainId: activeChain.chainId,
-      primaryRpcUrl: activeChain.rpcUrl,
-    );
     final result = await rpcService.rpcCall(
       chainId: activeChain.chainId,
-      primaryRpcUrl: resolvedRpcUrl,
+      primaryRpcUrl: activeChain.rpcUrl,
       method: method,
       params: params,
+      timeout: const Duration(seconds: 6),
+      maxRetries: 1,
+      retryOnRpcError: false,
     );
     final rpcError = rpcService.lastError;
     if (result == null && rpcError != null) {
@@ -1118,6 +1119,7 @@ class DappProviderBridge {
       message:
           '${sessionController.activeDapp?.title ?? sessionController.activeDapp?.origin ?? 'This DApp'} wants a personal signature.\n\n${resolved.preview}',
       confirmLabel: 'Sign',
+      walletAddress: walletAddress,
     );
     if (!approved) {
       throw _ProviderBridgeException(
@@ -1189,6 +1191,7 @@ class DappProviderBridge {
       message:
           '${sessionController.activeDapp?.title ?? sessionController.activeDapp?.origin ?? 'This DApp'} wants an EIP-712 signature.\n\n$summary',
       confirmLabel: 'Sign',
+      walletAddress: walletAddress,
     );
     if (!approved) {
       throw _ProviderBridgeException(
@@ -1274,6 +1277,7 @@ class DappProviderBridge {
       message:
           'Broadcast a transaction on ${activeChain.name}?\n\nTo: ${to == null || to.isEmpty ? 'Contract creation' : to}\nValue: ${valueWei?.toString() ?? '0'} wei',
       confirmLabel: 'Send',
+      walletAddress: walletAddress,
     );
     if (!approved) {
       throw _ProviderBridgeException(
@@ -1780,6 +1784,7 @@ class DappProviderBridge {
     required String title,
     required String message,
     required String confirmLabel,
+    String? walletAddress,
   }) async {
     final originSource =
         sessionController.currentUri?.toString() ??
@@ -1792,13 +1797,14 @@ class DappProviderBridge {
         ((originHost != null && originHost.isNotEmpty) ? originHost : 'DApp');
     final blockchain = context.read<BlockchainService>();
     final activeChainName = blockchain.activeNetworkName;
-    final walletAddress = await _walletService.getCurrentWalletAddress();
+    final resolvedWallet =
+        walletAddress ?? await _walletService.getCurrentWalletAddress();
     if (!context.mounted) {
       return false;
     }
-    final walletLabel = walletAddress == null || walletAddress.isEmpty
+    final walletLabel = resolvedWallet == null || resolvedWallet.isEmpty
         ? 'No active wallet'
-        : _shortAddress(walletAddress);
+        : _shortAddress(resolvedWallet);
 
     final request = DiscoverProviderApprovalRequest(
       title: title,
@@ -1845,7 +1851,7 @@ class DappProviderBridge {
                             ),
                             padding: const EdgeInsets.all(7),
                             child: Image.asset(
-                              'assets/images/launcher_icon.png',
+                              'assets/images/splash_logo.png',
                               fit: BoxFit.contain,
                             ),
                           ),

@@ -10,12 +10,16 @@ class RpcService extends BaseService {
   final HttpClientService _httpClientService = HttpClientService();
   static const Duration _resolvedRpcUrlCacheTtl = Duration(minutes: 5);
   final Map<String, _ResolvedRpcUrlCacheEntry> _resolvedRpcUrlCache = {};
+  final Map<String, Future<String>> _inFlightRpcResolution = {};
 
   RpcCallException? get lastError => _lastError;
 
-  final Map<int, List<String>> _publicRpcFallbacks = {
+  static const Map<int, List<String>> _publicRpcFallbacks = {
     1: ['https://cloudflare-eth.com'],
-    56: ['https://bsc-dataseed.bnbchain.org'],
+    56: [
+      'https://bsc-dataseed.bnbchain.org',
+      'https://bsc-dataseed1.defibit.io',
+    ],
     137: ['https://polygon.drpc.org'],
     42161: ['https://arb1.arbitrum.io/rpc'],
     10: ['https://mainnet.optimism.io'],
@@ -32,7 +36,24 @@ class RpcService extends BaseService {
     5042: ['https://rpc.mainnet.arc.io'],
     98866: ['https://rpc.plume.org'],
     34443: ['https://1rpc.io/mode', 'https://mode.drpc.org'],
+    42420: ['https://mainnet-rpc.assetchain.org'],
+    42421: ['https://enugu-rpc.assetchain.org'],
   };
+
+  static List<String> publicFallbacksForChain(int chainId) =>
+      _publicRpcFallbacks[chainId] ?? const [];
+
+  @visibleForTesting
+  static bool isTransientRpcError(int? code, String message) =>
+      _isTransientRpcError(code, message);
+
+  static bool _isTransientRpcError(int? code, String message) {
+    if (code == -32005 || code == -32016) return true;
+    final lower = message.toLowerCase();
+    return lower.contains('limit exceeded') ||
+        lower.contains('too many requests') ||
+        lower.contains('rate limit');
+  }
 
   /// Make a JSON-RPC call with automatic fallback support
   Future<dynamic> rpcCall({
@@ -41,8 +62,23 @@ class RpcService extends BaseService {
     required String method,
     required List<dynamic> params,
     Duration timeout = const Duration(seconds: 10),
+    int maxRetries = 3,
+    bool retryOnRpcError = true,
   }) async {
-    final candidates = [primaryRpcUrl, ...(_publicRpcFallbacks[chainId] ?? [])];
+    final cacheKey = '$chainId|$primaryRpcUrl';
+    final cached = _resolvedRpcUrlCache[cacheKey];
+    final preferredUrl =
+        cached != null &&
+            cached.rpcUrl.isNotEmpty &&
+            DateTime.now().difference(cached.resolvedAt) <
+                _resolvedRpcUrlCacheTtl
+        ? cached.rpcUrl
+        : primaryRpcUrl;
+    final candidates = <String>{
+      preferredUrl,
+      primaryRpcUrl,
+      ...(_publicRpcFallbacks[chainId] ?? const <String>[]),
+    };
     final requestId = _nextRequestId++;
     _lastError = null;
 
@@ -60,6 +96,7 @@ class RpcService extends BaseService {
                   'id': requestId,
                 }),
               ),
+              maxRetries: maxRetries,
             )
             .timeout(timeout);
 
@@ -94,19 +131,31 @@ class RpcService extends BaseService {
               message: errorObj,
             );
             debugPrint(_lastError.toString());
+            if (!retryOnRpcError && !_isTransientRpcError(null, errorObj)) {
+              return null;
+            }
             continue;
           }
           final error = errorObj as Map<String, dynamic>?;
+          final code = error?['code'] as int?;
+          final message = error?['message']?.toString() ?? 'Unknown RPC error';
           _lastError = RpcCallException(
             method: method,
             rpcUrl: rpcUrl,
-            code: error?['code'] as int?,
-            message: error?['message']?.toString() ?? 'Unknown RPC error',
+            code: code,
+            message: message,
           );
           debugPrint(_lastError.toString());
+          if (!retryOnRpcError && !_isTransientRpcError(code, message)) {
+            return null;
+          }
           continue;
         }
 
+        _resolvedRpcUrlCache[cacheKey] = _ResolvedRpcUrlCacheEntry(
+          rpcUrl: rpcUrl,
+          resolvedAt: DateTime.now(),
+        );
         return data['result'];
       } catch (e) {
         _lastError = RpcCallException(
@@ -238,22 +287,36 @@ class RpcService extends BaseService {
       _resolvedRpcUrlCache.remove(cacheKey);
     }
 
-    final candidates = <String>{
-      primaryRpcUrl,
-      ...(_publicRpcFallbacks[chainId] ?? const []),
-    };
-    for (final rpcUrl in candidates) {
-      final resolvedChainId = await getChainIdForRpcUrl(rpcUrl);
-      if (resolvedChainId == chainId) {
-        _resolvedRpcUrlCache[cacheKey] = _ResolvedRpcUrlCacheEntry(
-          rpcUrl: rpcUrl,
-          resolvedAt: DateTime.now(),
-        );
-        return rpcUrl;
-      }
+    final inFlight = _inFlightRpcResolution[cacheKey];
+    if (inFlight != null) {
+      return inFlight;
     }
 
-    return primaryRpcUrl;
+    final future = () async {
+      final candidates = <String>{
+        primaryRpcUrl,
+        ...(_publicRpcFallbacks[chainId] ?? const []),
+      };
+      for (final rpcUrl in candidates) {
+        final resolvedChainId = await getChainIdForRpcUrl(rpcUrl);
+        if (resolvedChainId == chainId) {
+          _resolvedRpcUrlCache[cacheKey] = _ResolvedRpcUrlCacheEntry(
+            rpcUrl: rpcUrl,
+            resolvedAt: DateTime.now(),
+          );
+          return rpcUrl;
+        }
+      }
+      return primaryRpcUrl;
+    }();
+    _inFlightRpcResolution[cacheKey] = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_inFlightRpcResolution[cacheKey], future)) {
+        _inFlightRpcResolution.remove(cacheKey);
+      }
+    }
   }
 }
 

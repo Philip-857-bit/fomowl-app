@@ -53,6 +53,16 @@ import 'swap_slippage_section.dart';
 import 'swap_token_chip.dart';
 import 'swap_token_selector_dialog.dart';
 
+/// Number of foreground status checks to run after the origin deposit lands
+/// before handing long-running settlement tracking off to background polling.
+int bridgeStatusPollAttempts(BridgeQuote quote) {
+  if (quote.bitcoinQuote != null ||
+      quote.destinationChainId == BridgeService.relayBitcoinChainId) {
+    return 3;
+  }
+  return 15;
+}
+
 List<Token> filterBridgeOriginTokens({
   required List<Token> tokens,
   required String activeNetworkKey,
@@ -247,6 +257,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   String? _lastNetworkKey;
   PendingBridgeOperation? _pendingOperation;
   bool _isCheckingPending = false;
+  Timer? _pendingPoll;
   final BitcoinBridgeFundingService _bitcoinFunding =
       BitcoinBridgeFundingService();
   BitcoinDerivedAddress? _bitcoinReceive;
@@ -471,30 +482,47 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final pending = _pendingOperation;
     if (pending == null || _isCheckingPending) return;
     setState(() => _isCheckingPending = true);
-    if (pending.requestId.startsWith('near:')) {
-      await _bridgeService.submitNearDeposit(
-        requestId: pending.requestId,
-        txHash: pending.originTxHash,
-      );
-    }
-    final status = await _bridgeService.getStatus(requestId: pending.requestId);
-    if (!mounted) return;
-    if (status?.isSuccess == true || status?.isFailure == true) {
-      await _bridgeOperationStore.clear(pending.walletAddress);
-      if (!mounted) return;
-      setState(() {
-        _pendingOperation = null;
-        _isCheckingPending = false;
-      });
-      if (status!.isSuccess) {
-        _scheduleCompletedBridgeRecording(pending);
-        ToastUtils.showSuccess('Your pending bridge completed.');
-      } else {
-        ToastUtils.showInfo(status.userFacingFailureMessage);
+    try {
+      if (pending.requestId.startsWith('near:')) {
+        await _bridgeService.submitNearDeposit(
+          requestId: pending.requestId,
+          txHash: pending.originTxHash,
+        );
       }
-      return;
+      final status = await _bridgeService.getStatus(
+        requestId: pending.requestId,
+      );
+      if (!mounted) return;
+      if (status?.isSuccess == true || status?.isFailure == true) {
+        await _bridgeOperationStore.clear(pending.walletAddress);
+        if (!mounted) return;
+        setState(() => _pendingOperation = null);
+        if (status!.isSuccess) {
+          _scheduleCompletedBridgeRecording(pending);
+          ToastUtils.showSuccess('Your pending bridge completed.');
+        } else {
+          ToastUtils.showInfo(status.userFacingFailureMessage);
+        }
+        return;
+      }
+    } catch (_) {
+      // Transient status check failure; keep pending and retry on timer.
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingPending = false);
+        _schedulePendingObservation();
+      }
     }
-    setState(() => _isCheckingPending = false);
+  }
+
+  void _schedulePendingObservation() {
+    _pendingPoll?.cancel();
+    if (!mounted || _pendingOperation == null) return;
+    _pendingPoll = Timer(const Duration(seconds: 15), () {
+      if (mounted && _pendingOperation != null && !_isCheckingPending) {
+        unawaited(_checkPendingBridge());
+      }
+    });
   }
 
   Future<void> _persistPendingBridge(BridgeQuote quote, String txHash) async {
@@ -523,6 +551,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (!alreadyTracked) {
       await _recordBridgeSubmission(operation);
     }
+  }
+
+  String _originExplorerTxUrl(String? txHash, {EvmChain? evmChain}) {
+    if (txHash == null || txHash.trim().length < 40) return '';
+    final explorerUrl =
+        (evmChain?.explorerUrl ?? widget.blockchain.activeNetworkExplorerUrl)
+            ?.trim();
+    if (explorerUrl == null || explorerUrl.isEmpty) return '';
+    final normalized = explorerUrl.endsWith('/')
+        ? explorerUrl.substring(0, explorerUrl.length - 1)
+        : explorerUrl;
+    return '$normalized/tx/${txHash.trim()}';
   }
 
   String _bridgeChainName(int chainId) {
@@ -631,6 +671,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   @override
   void dispose() {
     _bitcoinPoll?.cancel();
+    _pendingPoll?.cancel();
     _debounce?.cancel();
     _amountController.dispose();
     super.dispose();
@@ -1531,6 +1572,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     controller.setSwapSubmitting();
 
     EvmSigningAccount? evmAccount;
+    EvmChain? latestEvmChain;
     try {
       String? firstTxHash;
       String? latestTxHash;
@@ -1545,6 +1587,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         final step = quote.steps[stepIndex];
         final isFinalStep = stepIndex == quote.steps.length - 1;
         if (step.isSolanaTransfer) {
+          latestEvmChain = null;
           final signature = await widget.walletService.sendSolanaTransaction(
             fromAddress: widget.walletAddress!,
             toAddress: step.solanaTransferTo!,
@@ -1560,6 +1603,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           continue;
         }
         if (step.isTron) {
+          latestEvmChain = null;
           final raw = jsonDecode(step.tronTransactionJson!);
           if (raw is! Map) {
             controller.setError(
@@ -1610,7 +1654,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             return;
           }
           if (confirmation == TransactionConfirmationStatus.pending) {
-            controller.setSwapPending(reference: shortHash(hash));
+            _schedulePendingObservation();
+            controller.setSubmitted(
+              reference: shortHash(hash),
+              detailsUrl: _originExplorerTxUrl(hash),
+            );
             ToastUtils.showInfo(
               'Your TRON bridge is still processing. You can close this screen and track it in Activity.',
             );
@@ -1668,6 +1716,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           return;
         }
         final chain = matchingChains.first;
+        latestEvmChain = chain;
         final account = evmAccount ??= await widget.walletService
             .getEvmSigningAccount();
         final client = Web3Client(chain.rpcUrl, _httpClientService.client);
@@ -1713,7 +1762,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           return;
         }
         if (confirmation == TransactionConfirmationStatus.pending) {
-          controller.setSwapPending(reference: shortHash(txHash));
+          _schedulePendingObservation();
+          controller.setSubmitted(
+            reference: shortHash(txHash),
+            detailsUrl: _originExplorerTxUrl(txHash, evmChain: chain),
+          );
           ToastUtils.showInfo(
             'Your bridge is still processing. You can close this screen and track it in Activity.',
           );
@@ -1738,13 +1791,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         }
       }
 
-      // Relay fills the destination side once the origin deposit lands —
-      // poll the intent status until it resolves.
+      // Poll briefly after the origin deposit lands, then hand long-running
+      // settlement (such as Bitcoin confirmations) off to background tracking
+      // so the fullscreen spinner does not remain stuck indefinitely.
       if (quote.requestId.isNotEmpty) {
         var bridgeCompleted = false;
-        for (var attempt = 0; attempt < 45; attempt++) {
+        final pollAttempts = bridgeStatusPollAttempts(quote);
+        for (var attempt = 0; attempt < pollAttempts; attempt++) {
           if (attempt > 0) {
-            await Future<void>.delayed(const Duration(seconds: 4));
+            await Future<void>.delayed(const Duration(seconds: 3));
           }
           final status = await _bridgeService.getStatus(
             requestId: quote.requestId,
@@ -1768,11 +1823,16 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           }
         }
         if (!bridgeCompleted) {
-          controller.setSwapPending(
-            reference: latestTxHash == null ? null : shortHash(latestTxHash),
+          _schedulePendingObservation();
+          controller.setSubmitted(
+            reference: latestTxHash == null ? '' : shortHash(latestTxHash),
+            detailsUrl: _originExplorerTxUrl(
+              latestTxHash,
+              evmChain: latestEvmChain,
+            ),
           );
           ToastUtils.showInfo(
-            'Your bridge is still processing. You can close this screen and track it in Activity.',
+            'Origin deposit confirmed. Settlement is in progress — track it in Activity.',
           );
           return;
         }
@@ -1780,6 +1840,10 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
       controller.setSuccess(
         reference: firstTxHash != null ? shortHash(firstTxHash) : null,
+        detailsUrl: _originExplorerTxUrl(
+          latestTxHash,
+          evmChain: latestEvmChain,
+        ),
       );
 
       // The bridge changes the origin balance immediately. Notify the owning

@@ -250,6 +250,27 @@ void main() {
     expect(find.text('selected:USDT'), findsOneWidget);
     expect(blockchain.activeNetworkKey, 'tron:mainnet');
   });
+
+  test(
+    'bridgeStatusPollAttempts bounds foreground wait for Bitcoin routes',
+    () {
+      expect(
+        bridgeStatusPollAttempts(
+          _bridgeQuote(
+            originChainId: 56,
+            destinationChainId: BridgeService.relayBitcoinChainId,
+          ),
+        ),
+        3,
+      );
+      expect(
+        bridgeStatusPollAttempts(
+          _bridgeQuote(originChainId: 56, destinationChainId: 8453),
+        ),
+        15,
+      );
+    },
+  );
 }
 
 BridgeQuote _bridgeQuote({
