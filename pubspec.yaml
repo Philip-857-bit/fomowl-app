@@ -127,6 +127,7 @@ flutter:
     - assets/images/chains/
     - assets/images/tokens/
     - assets/images/discover/
+    - assets/images/transaction_success/
     - assets/burst/
 
   # An image asset can refer to one or more resolution-specific "variants", see

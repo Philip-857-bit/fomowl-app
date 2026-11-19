@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/rate_us_prompt_service.dart';
+import '../../services/runtime_config_service.dart';
 import '../../utils/in_app_link_router.dart';
 import '../../widgets/entrance_motion.dart';
 
@@ -244,7 +247,9 @@ class TransactionProcessingArguments {
 }
 
 class TransactionProcessingScreen extends StatelessWidget {
-  const TransactionProcessingScreen({super.key});
+  const TransactionProcessingScreen({super.key, this.festiveOverride});
+
+  final bool? festiveOverride;
 
   @override
   Widget build(BuildContext context) {
@@ -252,24 +257,38 @@ class TransactionProcessingScreen extends StatelessWidget {
         ModalRoute.of(context)?.settings.arguments
             as TransactionProcessingArguments?;
     final controller = args?.controller;
-    if (controller == null) {
-      return const _ProcessingScaffold(
-        state: TransactionProgressState(
-          stage: TransactionProgressStage.preparing,
-        ),
-      );
-    }
+    return ListenableBuilder(
+      listenable: RuntimeConfigService.instance,
+      builder: (context, _) {
+        final festiveSuccess =
+            festiveOverride ??
+            RuntimeConfigService
+                .instance
+                .snapshot
+                .festiveTransactionSuccessEnabled;
+        if (controller == null) {
+          return _ProcessingScaffold(
+            state: const TransactionProgressState(
+              stage: TransactionProgressStage.preparing,
+            ),
+            festiveSuccess: festiveSuccess,
+          );
+        }
 
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) => _RateUsPromptSuccessListener(
-        state: controller.state,
-        child: _ProcessingScaffold(
-          state: controller.state,
-          terminalRouteName: args?.terminalRouteName,
-          clearStackOnTerminalRoute: args?.clearStackOnTerminalRoute ?? false,
-        ),
-      ),
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) => _RateUsPromptSuccessListener(
+            state: controller.state,
+            child: _ProcessingScaffold(
+              state: controller.state,
+              terminalRouteName: args?.terminalRouteName,
+              clearStackOnTerminalRoute:
+                  args?.clearStackOnTerminalRoute ?? false,
+              festiveSuccess: festiveSuccess,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -326,11 +345,13 @@ class _ProcessingScaffold extends StatelessWidget {
     required this.state,
     this.terminalRouteName,
     this.clearStackOnTerminalRoute = false,
+    this.festiveSuccess = false,
   });
 
   final TransactionProgressState state;
   final String? terminalRouteName;
   final bool clearStackOnTerminalRoute;
+  final bool festiveSuccess;
 
   IconData get _icon {
     switch (state.stage) {
@@ -619,6 +640,21 @@ class _ProcessingScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    if (state.isSuccessful) {
+      final hasDetailsUrl =
+          state.detailsUrl != null && state.detailsUrl!.trim().isNotEmpty;
+      return _TransactionSuccessStageView(
+        festive: festiveSuccess,
+        title: _title(l),
+        subtitle: _subtitle(l),
+        reference: state.reference,
+        primaryActionLabel: _primaryActionLabel(l),
+        closeLabel: l.closeLabel,
+        showSecondaryClose: hasDetailsUrl,
+        onPrimaryAction: () => _openDetails(context),
+        onClose: () => _close(context),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.cardDark,
@@ -1160,4 +1196,837 @@ class _ArcRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ArcRingPainter oldDelegate) => false;
+}
+
+class _TransactionSuccessStageView extends StatelessWidget {
+  const _TransactionSuccessStageView({
+    required this.festive,
+    required this.title,
+    required this.subtitle,
+    required this.reference,
+    required this.primaryActionLabel,
+    required this.closeLabel,
+    required this.showSecondaryClose,
+    required this.onPrimaryAction,
+    required this.onClose,
+  });
+
+  final bool festive;
+  final String title;
+  final String subtitle;
+  final String? reference;
+  final String primaryActionLabel;
+  final String closeLabel;
+  final bool showSecondaryClose;
+  final VoidCallback onPrimaryAction;
+  final VoidCallback onClose;
+
+  static const _badgeAsset =
+      'assets/images/transaction_success/success_checkmark.svg';
+  static const _underlineAsset =
+      'assets/images/transaction_success/signature_underline.svg';
+
+  @override
+  Widget build(BuildContext context) {
+    final backgroundColor = festive ? const Color(0xFF070103) : Colors.black;
+
+    return Scaffold(
+      key: ValueKey<String>(
+        'transaction-success-${festive ? 'festive' : 'standard'}',
+      ),
+      backgroundColor: backgroundColor,
+      body: ClipRect(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Positioned.fill(
+              child: IgnorePointer(
+                child: festive
+                    ? const _FestiveSuccessBackdrop()
+                    : const _StandardSuccessBackdrop(),
+              ),
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
+                      child: GestureDetector(
+                        onTap: onClose,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: EntranceMotion(
+                      beginOffset: const Offset(0, 0.03),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          return SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
+                            ),
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: math.max(
+                                  0,
+                                  constraints.maxHeight - 32,
+                                ),
+                              ),
+                              child: Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildStatusCard(),
+                                    if (festive) ...[
+                                      const SizedBox(height: 24),
+                                      _buildSeasonsGreetings(),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: onPrimaryAction,
+                          child: Container(
+                            width: double.infinity,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC0000),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x6610B981),
+                                  offset: Offset(0, 4),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              primaryActionLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (showSecondaryClose) ...[
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: onClose,
+                            child: Container(
+                              width: double.infinity,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                closeLabel,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard() {
+    final trimmedReference = reference?.trim();
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 342),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 43),
+            padding: const EdgeInsets.fromLTRB(28, 65, 28, 28),
+            decoration: BoxDecoration(
+              color: festive
+                  ? const Color(0xA60A0A0A)
+                  : const Color(0xF00A0A0A),
+              borderRadius: BorderRadius.circular(34),
+              border: festive
+                  ? Border.all(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      width: 1,
+                    )
+                  : null,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.625,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildSignatureTagline(),
+                const SizedBox(height: 22),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 270),
+                  child: Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFFB2B7C2),
+                      height: 24.38 / 15,
+                    ),
+                  ),
+                ),
+                if (trimmedReference != null &&
+                    trimmedReference.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    trimmedReference,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFB5BAC7),
+                      letterSpacing: 0.4,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Positioned(
+            top: 0,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.72, end: 1.0),
+              duration: const Duration(milliseconds: 520),
+              curve: Curves.elasticOut,
+              builder: (context, scale, child) {
+                return Transform.scale(scale: scale, child: child);
+              },
+              child: Container(
+                width: 86,
+                height: 86,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF4DCE9E),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Color(0xFF4DCE9E), blurRadius: 12.5),
+                    BoxShadow(color: Color(0xBF4DCE9E), blurRadius: 25),
+                    BoxShadow(color: Color(0xFF4DCE9E), blurRadius: 40),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  _badgeAsset,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignatureTagline() {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Just Like ',
+                  style: GoogleFonts.inter(
+                    fontSize: 31,
+                    fontWeight: FontWeight.w700,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white,
+                    letterSpacing: -0.775,
+                    height: 1.25,
+                  ),
+                ),
+                TextSpan(
+                  text: 'That',
+                  style: GoogleFonts.inter(
+                    fontSize: 31,
+                    fontWeight: FontWeight.w800,
+                    fontStyle: FontStyle.italic,
+                    color: const Color(0xFFFF1A2B),
+                    letterSpacing: -0.775,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          SvgPicture.asset(
+            _underlineAsset,
+            width: 210,
+            height: 10,
+            fit: BoxFit.contain,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeasonsGreetings() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('🎄', style: TextStyle(fontSize: 14)),
+        const SizedBox(width: 8),
+        Text(
+          "SEASON'S GREETINGS",
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xE6FCD34D),
+            letterSpacing: 1.1,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(width: 8),
+        const Text('🎄', style: TextStyle(fontSize: 14)),
+      ],
+    );
+  }
+}
+
+class _StandardSuccessBackdrop extends StatelessWidget {
+  const _StandardSuccessBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(-0.8, -0.6),
+              radius: 0.9,
+              colors: [Color(0x1F10B981), Colors.transparent],
+            ),
+          ),
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0.8, 0.6),
+              radius: 0.9,
+              colors: [Color(0x26059669), Colors.transparent],
+            ),
+          ),
+        ),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0.0, -0.7),
+              radius: 0.85,
+              colors: [Color(0x2E22C55E), Colors.transparent],
+            ),
+          ),
+        ),
+        Positioned(
+          left: -190,
+          top: -112,
+          child: Transform.rotate(
+            angle: -18 * math.pi / 180,
+            child: Container(
+              width: 420,
+              height: 520,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(235),
+                border: Border.all(color: const Color(0x80DC0000), width: 1),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x4D34D399), blurRadius: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: -224,
+          bottom: -64,
+          child: Transform.rotate(
+            angle: 25 * math.pi / 180,
+            child: Container(
+              width: 520,
+              height: 560,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(270),
+                border: Border.all(color: const Color(0x80DC0000), width: 1),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x5922C55E), blurRadius: 36),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FestiveSuccessBackdrop extends StatelessWidget {
+  const _FestiveSuccessBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 270,
+          child: Opacity(opacity: 0.23, child: _FestiveBottomScene()),
+        ),
+        Positioned(
+          right: -130,
+          top: -30,
+          child: Container(
+            width: 440,
+            height: 440,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(220),
+              border: Border.all(color: const Color(0x59FF2D41), width: 1),
+              boxShadow: const [
+                BoxShadow(color: Color(0x1FFF283C), blurRadius: 25),
+              ],
+            ),
+          ),
+        ),
+        const Positioned(
+          right: 32,
+          top: 112,
+          child: _BokehOrb(size: 96, color: Color(0x59DC2626)),
+        ),
+        const Positioned(
+          left: 24,
+          top: 64,
+          child: _BokehOrb(size: 80, color: Color(0x4DB91C1C)),
+        ),
+        const Positioned(
+          left: -48,
+          top: 398,
+          child: _BokehOrb(size: 112, color: Color(0x66DC2626)),
+        ),
+        const Positioned(
+          left: 64,
+          bottom: 256,
+          child: _BokehOrb(size: 80, color: Color(0x66B91C1C)),
+        ),
+        const Positioned(
+          right: 48,
+          bottom: 192,
+          child: _BokehOrb(size: 128, color: Color(0x40D97706)),
+        ),
+        const Positioned(
+          left: -24,
+          bottom: 128,
+          child: _BokehOrb(size: 96, color: Color(0x59DC2626)),
+        ),
+        const Positioned(
+          left: 97.5,
+          top: 48,
+          child: _SnowParticle(size: 6, opacity: 0.8),
+        ),
+        const Positioned(
+          left: 192,
+          top: 112,
+          child: _SnowParticle(size: 8, opacity: 0.9),
+        ),
+        const Positioned(
+          right: 97.5,
+          top: 176,
+          child: _SnowParticle(size: 4, opacity: 0.7),
+        ),
+        const Positioned(
+          left: 40,
+          top: 240,
+          child: _SnowParticle(size: 10, opacity: 0.6),
+        ),
+        const Positioned(
+          right: 32,
+          top: 420,
+          child: _SnowParticle(size: 6, opacity: 0.75),
+        ),
+        const Positioned(
+          left: 56,
+          top: 500,
+          child: _SnowParticle(size: 8, opacity: 0.8),
+        ),
+        const Positioned(
+          right: 96,
+          top: 560,
+          child: _SnowParticle(size: 4, opacity: 0.7),
+        ),
+        const Positioned(
+          left: 112,
+          bottom: 288,
+          child: _SnowParticle(size: 10, opacity: 0.85),
+        ),
+        const Positioned(
+          right: 144,
+          bottom: 192,
+          child: _SnowParticle(size: 6, opacity: 0.9),
+        ),
+        const Positioned(
+          right: 56,
+          bottom: 240,
+          child: _SnowParticle(size: 8, opacity: 0.8),
+        ),
+        Positioned(
+          right: 46,
+          top: 88,
+          child: Opacity(
+            opacity: 0.9,
+            child: SvgPicture.asset(
+              'assets/images/transaction_success/festive_snowflake_top_right.svg',
+              width: 44,
+              height: 44,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 32,
+          top: 572,
+          child: Opacity(
+            opacity: 0.8,
+            child: SvgPicture.asset(
+              'assets/images/transaction_success/festive_snowflake_mid_left.svg',
+              width: 38,
+              height: 38,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: -12,
+          height: 140,
+          child: SvgPicture.asset(
+            'assets/images/transaction_success/festive_top_garland.svg',
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FestiveBottomScene extends StatelessWidget {
+  const _FestiveBottomScene();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          left: -16,
+          bottom: 64,
+          child: SvgPicture.asset(
+            'assets/images/transaction_success/festive_pine_spray_left.svg',
+            width: 144,
+            height: 112,
+            fit: BoxFit.contain,
+          ),
+        ),
+        Positioned(
+          right: 8,
+          bottom: 24,
+          child: SvgPicture.asset(
+            'assets/images/transaction_success/festive_christmas_tree.svg',
+            width: 208,
+            height: 288,
+            fit: BoxFit.contain,
+          ),
+        ),
+        const Positioned(
+          left: 8,
+          bottom: 16,
+          child: _FestiveGiftBoxesCluster(),
+        ),
+        Positioned(
+          right: 4,
+          bottom: -8,
+          child: SvgPicture.asset(
+            'assets/images/transaction_success/festive_snowman.svg',
+            width: 176,
+            height: 224,
+            fit: BoxFit.contain,
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 56,
+          child: SvgPicture.asset(
+            'assets/images/transaction_success/festive_snow_drifts.svg',
+            fit: BoxFit.fill,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GiftVectorLayer {
+  const _GiftVectorLayer(
+    this.asset,
+    this.top,
+    this.right,
+    this.bottom,
+    this.left,
+  );
+
+  final String asset;
+  final double top;
+  final double right;
+  final double bottom;
+  final double left;
+}
+
+class _FestiveGiftBoxesCluster extends StatelessWidget {
+  const _FestiveGiftBoxesCluster();
+
+  static const double _width = 195;
+  static const double _height = 135;
+
+  static const List<_GiftVectorLayer> _layers = [
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_0.svg',
+      0.40,
+      0.3764,
+      0.0643,
+      0.0549,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_1.svg',
+      0.3429,
+      0.3615,
+      0.55,
+      0.0401,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_2.svg',
+      0.3429,
+      0.6286,
+      0.0643,
+      0.2824,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_3.svg',
+      0.6143,
+      0.3764,
+      0.2714,
+      0.0549,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_4.svg',
+      0.2707,
+      0.7225,
+      0.6571,
+      0.1838,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_5.svg',
+      0.2707,
+      0.53,
+      0.6571,
+      0.3764,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_6.svg',
+      0.30,
+      0.6434,
+      0.6143,
+      0.2973,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_7.svg',
+      0.5857,
+      0.3121,
+      0.0429,
+      0.3121,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_8.svg',
+      0.55,
+      0.3022,
+      0.3714,
+      0.3022,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_9.svg',
+      0.55,
+      0.4753,
+      0.0429,
+      0.4604,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_10.svg',
+      0.7286,
+      0.3121,
+      0.1857,
+      0.3121,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_11.svg',
+      0.5117,
+      0.5297,
+      0.45,
+      0.4142,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_12.svg',
+      0.5117,
+      0.424,
+      0.45,
+      0.5198,
+    ),
+    _GiftVectorLayer(
+      'assets/images/transaction_success/gift_vector_13.svg',
+      0.5179,
+      0.4827,
+      0.4179,
+      0.4728,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: _width,
+      height: _height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final layer in _layers)
+            Positioned(
+              left: layer.left * _width,
+              top: layer.top * _height,
+              width: (1 - layer.left - layer.right) * _width,
+              height: (1 - layer.top - layer.bottom) * _height,
+              child: SvgPicture.asset(layer.asset, fit: BoxFit.contain),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BokehOrb extends StatelessWidget {
+  const _BokehOrb({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size * 1.4,
+      height: size * 1.4,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color, color.withValues(alpha: 0)],
+          stops: const [0.15, 1.0],
+        ),
+      ),
+    );
+  }
+}
+
+class _SnowParticle extends StatelessWidget {
+  const _SnowParticle({required this.size, required this.opacity});
+
+  final double size;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: opacity),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: opacity * 0.6),
+            blurRadius: 2,
+          ),
+        ],
+      ),
+    );
+  }
 }

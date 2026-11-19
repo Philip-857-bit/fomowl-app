@@ -71,6 +71,7 @@ class RuntimePolicySnapshot {
     this.bitcoinTestnetEnabled = false,
     this.bitcoinRolloutStage = 'off',
     this.bitcoinRolloutPercent = 0,
+    this.festiveTransactionSuccessEnabled = false,
   });
 
   final int revision;
@@ -100,6 +101,7 @@ class RuntimePolicySnapshot {
   final bool bitcoinTestnetEnabled;
   final String bitcoinRolloutStage;
   final int bitcoinRolloutPercent;
+  final bool festiveTransactionSuccessEnabled;
 
   bool get fullMaintenance => maintenanceMode == 'full';
   bool get readOnly => maintenanceMode == 'read_only';
@@ -188,7 +190,9 @@ class RuntimePolicySnapshot {
       other.bitcoinEnabled == bitcoinEnabled &&
       other.bitcoinTestnetEnabled == bitcoinTestnetEnabled &&
       other.bitcoinRolloutStage == bitcoinRolloutStage &&
-      other.bitcoinRolloutPercent == bitcoinRolloutPercent;
+      other.bitcoinRolloutPercent == bitcoinRolloutPercent &&
+      other.festiveTransactionSuccessEnabled ==
+          festiveTransactionSuccessEnabled;
 
   @override
   int get hashCode => Object.hashAll([
@@ -219,6 +223,7 @@ class RuntimePolicySnapshot {
     bitcoinTestnetEnabled,
     bitcoinRolloutStage,
     bitcoinRolloutPercent,
+    festiveTransactionSuccessEnabled,
   ]);
 
   Map<String, dynamic> toJson() => {
@@ -252,6 +257,7 @@ class RuntimePolicySnapshot {
         'bitcoinTestnetEnabled': bitcoinTestnetEnabled,
         'bitcoinRolloutStage': bitcoinRolloutStage,
         'bitcoinRolloutPercent': bitcoinRolloutPercent,
+        'festiveTransactionSuccessEnabled': festiveTransactionSuccessEnabled,
       },
     },
   };
@@ -364,6 +370,11 @@ class RuntimePolicySnapshot {
       legacySystemEnabled: readFlag(
         features,
         'legacySystemEnabled',
+        fallback: false,
+      ),
+      festiveTransactionSuccessEnabled: readFlag(
+        features,
+        'festiveTransactionSuccessEnabled',
         fallback: false,
       ),
     );
