@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fomowl_wallet/models/network_entry.dart';
 import 'package:fomowl_wallet/services/blockchain/blockchain_catalog.dart';
+import 'package:fomowl_wallet/services/blockchain_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('retired Kaia network is not exposed by the built-in catalog', () {
@@ -76,7 +78,7 @@ void main() {
       expect(assetChain.symbol, 'RWA');
       expect(
         assetChain.logoUrl,
-        'https://scan.assetchain.org/assets/configs/network_icon.png',
+        'https://ipfs.io/ipfs/QmXc4bxuyWvQFqjuunXmvZZs1AwGChyY7sGYK6tgCkp3nJ',
       );
       expect(
         BlockchainCatalog.defaultChainLogoUrl(42420),
@@ -199,4 +201,40 @@ void main() {
       );
     }
   });
+
+  test(
+    'Asset Chain Testnet is hidden from built-in and selector chains like Bitcoin Testnet4',
+    () {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      SharedPreferences.setMockInitialValues({});
+      expect(
+        BlockchainCatalog.builtInChains.any((chain) => chain.chainId == 42421),
+        isFalse,
+      );
+      expect(
+        BlockchainCatalog.developerChains.any(
+          (chain) => chain.chainId == 42421,
+        ),
+        isTrue,
+      );
+      final found = BlockchainCatalog.findChain(42421);
+      expect(found, isNotNull);
+      expect(found!.name, 'Asset Chain Testnet');
+
+      final blockchain = BlockchainService();
+      addTearDown(blockchain.dispose);
+      expect(
+        blockchain.allChains.any((chain) => chain.chainId == 42421),
+        isFalse,
+      );
+      expect(
+        blockchain.networkEntries.any(
+          (entry) =>
+              entry.networkKey == 'evm:42421' ||
+              entry.networkKey == 'bitcoin:testnet4',
+        ),
+        isFalse,
+      );
+    },
+  );
 }

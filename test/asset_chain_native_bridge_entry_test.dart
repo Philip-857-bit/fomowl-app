@@ -17,7 +17,7 @@ class _Wallet extends WalletService {
 }
 
 void main() {
-  testWidgets('EVM bridge tab exposes the native Asset Chain bridge flow', (
+  testWidgets('EVM bridge tab hides the native Asset Chain bridge flow', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -41,7 +41,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Asset Chain native bridge'), findsOneWidget);
+    expect(find.text('Asset Chain native bridge'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     blockchain.dispose();
   });

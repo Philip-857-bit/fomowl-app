@@ -170,7 +170,9 @@ void main() {
         expect(chain.symbol, equals('RWA'));
         expect(
           chain.logoUrl,
-          equals('https://scan.assetchain.org/assets/configs/network_icon.png'),
+          equals(
+            'https://ipfs.io/ipfs/QmXc4bxuyWvQFqjuunXmvZZs1AwGChyY7sGYK6tgCkp3nJ',
+          ),
         );
         expect(chain.explorerUrl, equals('https://scan.assetchain.org'));
         expect(chain.rpcUrl, contains('/42420/rpc'));
