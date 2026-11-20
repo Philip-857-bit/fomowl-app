@@ -139,68 +139,78 @@ void main() {
   });
 
   for (final festive in [false, true]) {
-    testWidgets(
-      'transaction success screen renders ${festive ? 'festive' : 'standard'} Figma layout without overflow',
-      (tester) async {
-        tester.view.physicalSize = const Size(390, 844);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
+    for (final viewportSize in const [Size(390, 844), Size(360, 740)]) {
+      testWidgets(
+        'transaction success screen renders ${festive ? 'festive' : 'standard'} Figma layout without overflow at ${viewportSize.width.toInt()}x${viewportSize.height.toInt()}',
+        (tester) async {
+          tester.view.physicalSize = viewportSize;
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-        final progress = TransactionProgressController();
-        progress.setSuccess(
-          reference: '0x7713...c737',
-          detailsUrl: 'https://example.com/tx/0x7713',
-        );
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            routes: {
-              '/processing': (_) =>
-                  TransactionProcessingScreen(festiveOverride: festive),
-            },
-            home: Builder(
-              builder: (context) => Scaffold(
-                body: TextButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    '/processing',
-                    arguments: TransactionProcessingArguments(
-                      controller: progress,
+          final progress = TransactionProgressController();
+          progress.setSuccess(
+            reference: '0x7713...c737',
+            detailsUrl: 'https://example.com/tx/0x7713',
+          );
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routes: {
+                '/processing': (_) =>
+                    TransactionProcessingScreen(festiveOverride: festive),
+              },
+              home: Builder(
+                builder: (context) => Scaffold(
+                  body: TextButton(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      '/processing',
+                      arguments: TransactionProcessingArguments(
+                        controller: progress,
+                      ),
                     ),
+                    child: const Text('Open'),
                   ),
-                  child: const Text('Open'),
                 ),
               ),
             ),
-          ),
-        );
-        await tester.tap(find.text('Open'));
-        await tester.pumpAndSettle();
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
 
-        expect(
-          find.byKey(
-            ValueKey('transaction-success-${festive ? 'festive' : 'standard'}'),
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('Transaction completed'), findsOneWidget);
-        expect(
-          find.text('Your transaction has been confirmed successfully.'),
-          findsOneWidget,
-        );
-        expect(find.text('0x7713...c737'), findsOneWidget);
-        expect(find.text('View on Explorer'), findsOneWidget);
-        expect(find.text('Close'), findsOneWidget);
-        expect(
-          find.text("SEASON'S GREETINGS"),
-          festive ? findsOneWidget : findsNothing,
-        );
+          expect(
+            find.byKey(
+              ValueKey(
+                'transaction-success-${festive ? 'festive' : 'standard'}',
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('Transaction completed'), findsOneWidget);
+          expect(
+            find.text('Your transaction has been confirmed successfully.'),
+            findsOneWidget,
+          );
+          expect(find.text('0x7713...c737'), findsOneWidget);
+          expect(find.text('View on Explorer'), findsOneWidget);
+          expect(find.text('Close'), findsOneWidget);
+          expect(
+            find.text("SEASON'S GREETINGS"),
+            festive ? findsOneWidget : findsNothing,
+          );
+          expect(find.text('OwlletPay'), findsNothing);
+          expect(
+            find.byKey(const Key('transaction-success-back-button')),
+            findsNothing,
+          );
+          expect(find.byIcon(Icons.close), findsNothing);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        progress.dispose();
-      },
-    );
+          await tester.pumpWidget(const SizedBox.shrink());
+          progress.dispose();
+        },
+      );
+    }
   }
 
   testWidgets('RuntimeConfigService parses festive transaction success flag', (

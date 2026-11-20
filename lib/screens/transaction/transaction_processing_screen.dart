@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -1249,43 +1250,27 @@ class _TransactionSuccessStageView extends StatelessWidget {
             SafeArea(
               child: Column(
                 children: [
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
-                      child: GestureDetector(
-                        onTap: onClose,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                   Expanded(
                     child: EntranceMotion(
                       beginOffset: const Offset(0, 0.03),
                       child: LayoutBuilder(
                         builder: (context, constraints) {
+                          final topPadding = festive ? 28.0 : 16.0;
+                          const bottomPadding = 16.0;
                           return SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
+                            padding: EdgeInsets.fromLTRB(
+                              24,
+                              topPadding,
+                              24,
+                              bottomPadding,
                             ),
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 minHeight: math.max(
                                   0,
-                                  constraints.maxHeight - 32,
+                                  constraints.maxHeight -
+                                      topPadding -
+                                      bottomPadding,
                                 ),
                               ),
                               child: Center(
@@ -1294,7 +1279,7 @@ class _TransactionSuccessStageView extends StatelessWidget {
                                   children: [
                                     _buildStatusCard(),
                                     if (festive) ...[
-                                      const SizedBox(height: 24),
+                                      const SizedBox(height: 36),
                                       _buildSeasonsGreetings(),
                                     ],
                                   ],
@@ -1307,63 +1292,68 @@ class _TransactionSuccessStageView extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: onPrimaryAction,
-                          child: Container(
-                            width: double.infinity,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDC0000),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x6610B981),
-                                  offset: Offset(0, 4),
-                                  blurRadius: 8,
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 342),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: onPrimaryAction,
+                              child: Container(
+                                width: double.infinity,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC0000),
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Color(0x6610B981),
+                                      offset: Offset(0, 4),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              primaryActionLabel,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                height: 1.5,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  primaryActionLabel,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                    height: 1.5,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            if (showSecondaryClose) ...[
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: onClose,
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    closeLabel,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (showSecondaryClose) ...[
-                          const SizedBox(height: 12),
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: onClose,
-                            child: Container(
-                              width: double.infinity,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                closeLabel,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -1377,76 +1367,94 @@ class _TransactionSuccessStageView extends StatelessWidget {
 
   Widget _buildStatusCard() {
     final trimmedReference = reference?.trim();
+    final cardContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.inter(
+            fontSize: 25,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+            letterSpacing: -0.625,
+            height: 37.5 / 25,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _buildSignatureTagline(),
+        const SizedBox(height: 22),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 270),
+          child: Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFFB2B7C2),
+              height: 24.38 / 15,
+            ),
+          ),
+        ),
+        if (trimmedReference != null && trimmedReference.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          Text(
+            trimmedReference,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFB5BAC7),
+              letterSpacing: 0.4,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ],
+    );
+
+    final Widget cardBody = festive
+        ? Container(
+            margin: const EdgeInsets.only(top: 43),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(34),
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: CustomPaint(
+                  foregroundPainter: const _FestiveGlassBorderPainter(
+                    borderRadius: 34,
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 319),
+                    padding: const EdgeInsets.fromLTRB(28, 65, 28, 28),
+                    color: const Color(0x52080204),
+                    child: cardContent,
+                  ),
+                ),
+              ),
+            ),
+          )
+        : Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 43),
+            constraints: const BoxConstraints(minHeight: 319),
+            padding: const EdgeInsets.fromLTRB(28, 65, 28, 28),
+            decoration: BoxDecoration(
+              color: const Color(0xF00A0A0A),
+              borderRadius: BorderRadius.circular(34),
+            ),
+            child: cardContent,
+          );
+
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 342),
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.only(top: 43),
-            padding: const EdgeInsets.fromLTRB(28, 65, 28, 28),
-            decoration: BoxDecoration(
-              color: festive
-                  ? const Color(0xA60A0A0A)
-                  : const Color(0xF00A0A0A),
-              borderRadius: BorderRadius.circular(34),
-              border: festive
-                  ? Border.all(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      width: 1,
-                    )
-                  : null,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 25,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: -0.625,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildSignatureTagline(),
-                const SizedBox(height: 22),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 270),
-                  child: Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFFB2B7C2),
-                      height: 24.38 / 15,
-                    ),
-                  ),
-                ),
-                if (trimmedReference != null &&
-                    trimmedReference.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  Text(
-                    trimmedReference,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFB5BAC7),
-                      letterSpacing: 0.4,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          cardBody,
           Positioned(
             top: 0,
             child: TweenAnimationBuilder<double>(
@@ -1486,46 +1494,52 @@ class _TransactionSuccessStageView extends StatelessWidget {
   Widget _buildSignatureTagline() {
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Just Like ',
-                  style: GoogleFonts.inter(
-                    fontSize: 31,
-                    fontWeight: FontWeight.w700,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.white,
-                    letterSpacing: -0.775,
-                    height: 1.25,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Just Like ',
+                    style: GoogleFonts.inter(
+                      fontSize: 31,
+                      fontWeight: FontWeight.w700,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.white,
+                      letterSpacing: -0.775,
+                      height: 1.25,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: 'That',
-                  style: GoogleFonts.inter(
-                    fontSize: 31,
-                    fontWeight: FontWeight.w800,
-                    fontStyle: FontStyle.italic,
-                    color: const Color(0xFFFF1A2B),
-                    letterSpacing: -0.775,
-                    height: 1.25,
+                  TextSpan(
+                    text: 'That',
+                    style: GoogleFonts.inter(
+                      fontSize: 31,
+                      fontWeight: FontWeight.w800,
+                      fontStyle: FontStyle.italic,
+                      color: const Color(0xFFFF1A2B),
+                      letterSpacing: -0.775,
+                      height: 1.25,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          SvgPicture.asset(
-            _underlineAsset,
-            width: 210,
-            height: 10,
-            fit: BoxFit.contain,
-          ),
-        ],
+            Positioned(
+              bottom: -6,
+              child: SvgPicture.asset(
+                _underlineAsset,
+                width: 210,
+                height: 10,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1553,80 +1567,120 @@ class _TransactionSuccessStageView extends StatelessWidget {
   }
 }
 
+class _FestiveGlassBorderPainter extends CustomPainter {
+  const _FestiveGlassBorderPainter({required this.borderRadius});
+
+  final double borderRadius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(0.5),
+      Radius.circular(borderRadius - 0.5),
+    );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0x88FFFFFF),
+          Color(0x16FFFFFF),
+          Color(0x10FFFFFF),
+          Color(0x78FFFFFF),
+        ],
+        stops: [0.0, 0.35, 0.65, 1.0],
+      ).createShader(rect);
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _FestiveGlassBorderPainter oldDelegate) =>
+      oldDelegate.borderRadius != borderRadius;
+}
+
 class _StandardSuccessBackdrop extends StatelessWidget {
   const _StandardSuccessBackdrop();
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(-0.8, -0.6),
-              radius: 0.9,
-              colors: [Color(0x1F10B981), Colors.transparent],
-            ),
-          ),
-        ),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(0.8, 0.6),
-              radius: 0.9,
-              colors: [Color(0x26059669), Colors.transparent],
-            ),
-          ),
-        ),
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(0.0, -0.7),
-              radius: 0.85,
-              colors: [Color(0x2E22C55E), Colors.transparent],
-            ),
-          ),
-        ),
-        Positioned(
-          left: -190,
-          top: -112,
-          child: Transform.rotate(
-            angle: -18 * math.pi / 180,
-            child: Container(
-              width: 420,
-              height: 520,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(235),
-                border: Border.all(color: const Color(0x80DC0000), width: 1),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x4D34D399), blurRadius: 32),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          right: -224,
-          bottom: -64,
-          child: Transform.rotate(
-            angle: 25 * math.pi / 180,
-            child: Container(
-              width: 520,
-              height: 560,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(270),
-                border: Border.all(color: const Color(0x80DC0000), width: 1),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x5922C55E), blurRadius: 36),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+    return const SizedBox.expand(
+      child: CustomPaint(painter: _StandardSuccessRingsPainter()),
     );
   }
+}
+
+/// Paints the rotated curved neon rings with stroke-only outer glow.
+///
+/// Using CustomPainter with PaintingStyle.stroke avoids Flutter's BoxDecoration
+/// BoxShadow behavior on transparent containers, which fills the box interior.
+class _StandardSuccessRingsPainter extends CustomPainter {
+  const _StandardSuccessRingsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    _paintRing(
+      canvas: canvas,
+      center: const Offset(90.0, 200.0),
+      angleRadians: -18 * math.pi / 180,
+      width: 420,
+      height: 520,
+      cornerRadius: 235,
+      glowColor: const Color(0x3334D399),
+      glowSigma: 14,
+    );
+    _paintRing(
+      canvas: canvas,
+      center: Offset(size.width - 130.0, size.height - 300.0),
+      angleRadians: 25 * math.pi / 180,
+      width: 520,
+      height: 560,
+      cornerRadius: 270,
+      glowColor: const Color(0x3822C55E),
+      glowSigma: 16,
+    );
+  }
+
+  void _paintRing({
+    required Canvas canvas,
+    required Offset center,
+    required double angleRadians,
+    required double width,
+    required double height,
+    required double cornerRadius,
+    required Color glowColor,
+    required double glowSigma,
+  }) {
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: Offset.zero, width: width, height: height),
+      Radius.circular(cornerRadius),
+    );
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(angleRadians);
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = glowColor
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowSigma),
+    );
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = const Color(0x80DC0000),
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _StandardSuccessRingsPainter oldDelegate) =>
+      false;
 }
 
 class _FestiveSuccessBackdrop extends StatelessWidget {
@@ -1641,53 +1695,14 @@ class _FestiveSuccessBackdrop extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          height: 270,
+          height: 341,
           child: Opacity(opacity: 0.23, child: _FestiveBottomScene()),
         ),
-        Positioned(
-          right: -130,
-          top: -30,
-          child: Container(
-            width: 440,
-            height: 440,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(220),
-              border: Border.all(color: const Color(0x59FF2D41), width: 1),
-              boxShadow: const [
-                BoxShadow(color: Color(0x1FFF283C), blurRadius: 25),
-              ],
-            ),
-          ),
+        const Positioned.fill(
+          child: CustomPaint(painter: _FestiveAmbientArcPainter()),
         ),
-        const Positioned(
-          right: 32,
-          top: 112,
-          child: _BokehOrb(size: 96, color: Color(0x59DC2626)),
-        ),
-        const Positioned(
-          left: 24,
-          top: 64,
-          child: _BokehOrb(size: 80, color: Color(0x4DB91C1C)),
-        ),
-        const Positioned(
-          left: -48,
-          top: 398,
-          child: _BokehOrb(size: 112, color: Color(0x66DC2626)),
-        ),
-        const Positioned(
-          left: 64,
-          bottom: 256,
-          child: _BokehOrb(size: 80, color: Color(0x66B91C1C)),
-        ),
-        const Positioned(
-          right: 48,
-          bottom: 192,
-          child: _BokehOrb(size: 128, color: Color(0x40D97706)),
-        ),
-        const Positioned(
-          left: -24,
-          bottom: 128,
-          child: _BokehOrb(size: 96, color: Color(0x59DC2626)),
+        const Positioned.fill(
+          child: CustomPaint(painter: _FestiveBokehPainter()),
         ),
         const Positioned(
           left: 97.5,
@@ -1739,46 +1754,195 @@ class _FestiveSuccessBackdrop extends StatelessWidget {
           bottom: 240,
           child: _SnowParticle(size: 8, opacity: 0.8),
         ),
-        Positioned(
+        const Positioned(
           right: 46,
           top: 88,
-          child: Opacity(
+          child: _GlowingSnowflake(
+            asset:
+                'assets/images/transaction_success/festive_snowflake_top_right.svg',
+            size: 44,
             opacity: 0.9,
-            child: SvgPicture.asset(
-              'assets/images/transaction_success/festive_snowflake_top_right.svg',
-              width: 44,
-              height: 44,
-              fit: BoxFit.contain,
-            ),
           ),
         ),
-        Positioned(
+        const Positioned(
           left: 32,
           top: 572,
-          child: Opacity(
+          child: _GlowingSnowflake(
+            asset:
+                'assets/images/transaction_success/festive_snowflake_mid_left.svg',
+            size: 38,
             opacity: 0.8,
-            child: SvgPicture.asset(
-              'assets/images/transaction_success/festive_snowflake_mid_left.svg',
-              width: 38,
-              height: 38,
-              fit: BoxFit.contain,
-            ),
           ),
         ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: -12,
-          height: 140,
-          child: SvgPicture.asset(
-            'assets/images/transaction_success/festive_top_garland.svg',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
+        Positioned.fill(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final garlandHeight = constraints.maxWidth * (140 / 390);
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: -12,
+                    height: garlandHeight,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        const CustomPaint(
+                          painter: _FestiveGarlandGlowPainter(),
+                        ),
+                        SvgPicture.asset(
+                          'assets/images/transaction_success/festive_top_garland.svg',
+                          fit: BoxFit.fill,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
     );
   }
+}
+
+class _FestiveAmbientArcPainter extends CustomPainter {
+  const _FestiveAmbientArcPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width - 90, 190);
+    const radius = 220.0;
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..color = const Color(0x2EFF283C)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0
+        ..color = const Color(0x59FF2D41),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _FestiveAmbientArcPainter oldDelegate) => false;
+}
+
+class _FestiveBokehPainter extends CustomPainter {
+  const _FestiveBokehPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+    final orbs = [
+      (Offset(size.width - 80, 160), 48.0, const Color(0x59DC2626)),
+      (const Offset(64, 104), 40.0, const Color(0x4DB91C1C)),
+      (const Offset(8, 453.8), 56.0, const Color(0x66DC2626)),
+      (Offset(104, size.height - 296), 40.0, const Color(0x66B91C1C)),
+      (
+        Offset(size.width - 112, size.height - 256),
+        64.0,
+        const Color(0x40D97706),
+      ),
+      (Offset(24, size.height - 176), 48.0, const Color(0x59DC2626)),
+    ];
+    for (final (center, radius, color) in orbs) {
+      paint.color = color;
+      canvas.drawCircle(center, radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FestiveBokehPainter oldDelegate) => false;
+}
+
+class _GlowingSnowflake extends StatelessWidget {
+  const _GlowingSnowflake({
+    required this.asset,
+    required this.size,
+    required this.opacity,
+  });
+
+  final String asset;
+  final double size;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: opacity,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 3.2, sigmaY: 3.2),
+              child: SvgPicture.asset(
+                asset,
+                width: size,
+                height: size,
+                fit: BoxFit.contain,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xD9FFFFFF),
+                  BlendMode.srcIn,
+                ),
+              ),
+            ),
+            SvgPicture.asset(
+              asset,
+              width: size,
+              height: size,
+              fit: BoxFit.contain,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compensates for flutter_svg ignoring SVG `<filter>` glows on garland lights.
+class _FestiveGarlandGlowPainter extends CustomPainter {
+  const _FestiveGarlandGlowPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xE6FACC15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    const points = [
+      Offset(25.4 / 390, 26.5 / 140),
+      Offset(52.6 / 390, 47.3 / 140),
+      Offset(92.5 / 390, 53.7 / 140),
+      Offset(149.7 / 390, 42.8 / 140),
+      Offset(36.3 / 390, 83.6 / 140),
+    ];
+    for (final p in points) {
+      canvas.drawCircle(
+        Offset(p.dx * size.width, p.dy * size.height),
+        8,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FestiveGarlandGlowPainter oldDelegate) => false;
 }
 
 class _FestiveBottomScene extends StatelessWidget {
@@ -1802,11 +1966,21 @@ class _FestiveBottomScene extends StatelessWidget {
         Positioned(
           right: 8,
           bottom: 24,
-          child: SvgPicture.asset(
-            'assets/images/transaction_success/festive_christmas_tree.svg',
-            width: 208,
-            height: 288,
-            fit: BoxFit.contain,
+          width: 208,
+          height: 288,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Positioned.fill(
+                child: CustomPaint(painter: _FestiveTreeGlowPainter()),
+              ),
+              SvgPicture.asset(
+                'assets/images/transaction_success/festive_christmas_tree.svg',
+                width: 208,
+                height: 288,
+                fit: BoxFit.contain,
+              ),
+            ],
           ),
         ),
         const Positioned(
@@ -1837,6 +2011,44 @@ class _FestiveBottomScene extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Compensates for flutter_svg ignoring SVG `<filter>` glows on the tree star
+/// and fairy lights.
+class _FestiveTreeGlowPainter extends CustomPainter {
+  const _FestiveTreeGlowPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawCircle(
+      const Offset(109.5, 36.7),
+      18,
+      Paint()
+        ..color = const Color(0xD9FACC15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
+    );
+    final lightPaint = Paint()
+      ..color = const Color(0x99FACC15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    const lights = [
+      Offset(104.0, 61.9),
+      Offset(85.4, 98.0),
+      Offset(129.2, 105.7),
+      Offset(65.7, 149.5),
+      Offset(107.3, 144.0),
+      Offset(147.8, 160.4),
+      Offset(52.5, 207.5),
+      Offset(100.7, 198.7),
+      Offset(142.3, 215.2),
+      Offset(175.2, 226.1),
+    ];
+    for (final light in lights) {
+      canvas.drawCircle(light, 5, lightPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FestiveTreeGlowPainter oldDelegate) => false;
 }
 
 class _GiftVectorLayer {
@@ -1979,28 +2191,6 @@ class _FestiveGiftBoxesCluster extends StatelessWidget {
               child: SvgPicture.asset(layer.asset, fit: BoxFit.contain),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _BokehOrb extends StatelessWidget {
-  const _BokehOrb({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size * 1.4,
-      height: size * 1.4,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          colors: [color, color.withValues(alpha: 0)],
-          stops: const [0.15, 1.0],
-        ),
       ),
     );
   }

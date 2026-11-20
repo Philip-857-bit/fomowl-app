@@ -60,6 +60,9 @@ import 'widgets/swap_network_card.dart';
 import 'widgets/swap_tab_content.dart';
 import 'widgets/swap_token_selector_dialog.dart';
 
+/// Whether the Swap screen exposes the Bridge tab for [blockchain].
+bool supportsSwapBridgeTab(BlockchainService blockchain) => true;
+
 /// Swap Screen — DEX token swap interface
 class SwapScreen extends StatelessWidget {
   final bool showBottomNavigation;
@@ -512,13 +515,8 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
         blockchain.activeFamily == ChainFamily.solana;
   }
 
-  bool _supportsBridgeTab(BlockchainService blockchain) {
-    if (blockchain.activeFamily == ChainFamily.evm &&
-        SwapService.isAssetChain(blockchain.activeChain.chainId)) {
-      return false;
-    }
-    return true;
-  }
+  bool _supportsBridgeTab(BlockchainService blockchain) =>
+      supportsSwapBridgeTab(blockchain);
 
   bool _tabAvailable(
     SwapTab tab,

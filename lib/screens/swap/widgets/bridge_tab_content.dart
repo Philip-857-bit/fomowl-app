@@ -46,6 +46,7 @@ import '../../../utils/token_trust_utils.dart';
 import '../../../utils/value_formatter.dart';
 import '../../transaction/transaction_processing_screen.dart';
 import '../../transaction/transactions_screen.dart';
+import '../asset_chain_native_bridge_screen.dart';
 import '../swap_screen_helpers.dart';
 import 'swap_figma_icons.dart';
 import 'swap_primary_button.dart';
@@ -317,6 +318,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   bool get _isSolanaOrigin =>
       widget.blockchain.activeFamily == ChainFamily.solana;
   bool get _isTronOrigin => widget.blockchain.activeFamily == ChainFamily.tron;
+  bool get _isAssetChainOrigin =>
+      widget.blockchain.activeFamily == ChainFamily.evm &&
+      SwapService.isAssetChain(widget.blockchain.activeChain.chainId);
 
   List<Token> get _originTokens {
     final scoped = filterBridgeOriginTokens(
@@ -760,6 +764,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
   void _requestQuote() {
     _debounce?.cancel();
+    if (_isAssetChainOrigin) {
+      _quoteSeq++;
+      _resetQuote();
+      _isQuoting = false;
+      setState(() {});
+      return;
+    }
     if (_isBitcoinOrigin) {
       _quoteSeq++;
       _quote = null;
@@ -772,6 +783,15 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0;
 
   Future<void> _fetchQuote() async {
+    if (_isAssetChainOrigin) {
+      if (mounted) {
+        setState(() {
+          _resetQuote();
+          _isQuoting = false;
+        });
+      }
+      return;
+    }
     final from = _fromToken;
     final toChain = _toChain;
     final wallet = widget.walletAddress;
@@ -2023,6 +2043,20 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
   }
 
+  void _openAssetChainNativeBridge() {
+    final address = widget.walletAddress;
+    if (_isBridging || address == null || address.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AssetChainNativeBridgeScreen(
+          blockchain: widget.blockchain,
+          walletService: widget.walletService,
+          walletAddress: address,
+        ),
+      ),
+    );
+  }
+
   // ── Build ───────────────────────────────────────────────────────────────
 
   @override
@@ -2038,6 +2072,53 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _isBitcoinOrigin || _isSolanaOrigin || _isTronOrigin
         ? null
         : widget.blockchain.activeChain.chainId;
+
+    if (_isAssetChainOrigin) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _BridgeCard(
+            label: 'BRIDGE FROM',
+            chainName: fromChainName,
+            chainLogoUrl: fromChainLogo,
+            onSelectChain: widget.onSelectFromChain,
+            child: Text(
+              'Asset Chain uses its native BridgeAssist bridge to transfer supported tokens to and from Asset Chain.',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                height: 1.45,
+                color: const Color(0xFFB2B5BD),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC0000),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.account_tree_outlined),
+            label: Text(
+              'Asset Chain native bridge',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            onPressed:
+                _isBridging ||
+                    widget.walletAddress == null ||
+                    widget.walletAddress!.isEmpty
+                ? null
+                : _openAssetChainNativeBridge,
+          ),
+        ],
+      );
+    }
 
     final fromUsd = from != null && from.priceUsd > 0
         ? _amountValue * from.priceUsd
@@ -2076,6 +2157,19 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.blockchain.activeFamily == ChainFamily.evm) ...[
+          OutlinedButton.icon(
+            icon: const Icon(Icons.account_tree_outlined),
+            label: const Text('Asset Chain native bridge'),
+            onPressed:
+                _isBridging ||
+                    widget.walletAddress == null ||
+                    widget.walletAddress!.isEmpty
+                ? null
+                : _openAssetChainNativeBridge,
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_bitcoinHasPending || _bitcoinRecovery != null) ...[
           Container(
             padding: const EdgeInsets.all(12),
