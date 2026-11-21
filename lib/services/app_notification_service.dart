@@ -4,9 +4,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 
 import '../app/app_navigator.dart';
+import 'http_client_service.dart';
 
 class AppNotificationEvent {
   const AppNotificationEvent({this.walletAddress});
@@ -208,7 +208,9 @@ class AppNotificationService {
       if (uri == null || !uri.isScheme('https')) {
         return null;
       }
-      final response = await http.get(uri).timeout(const Duration(seconds: 8));
+      final response = await HttpClientService().client
+          .get(uri)
+          .timeout(const Duration(seconds: 8));
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
         return null;
       }

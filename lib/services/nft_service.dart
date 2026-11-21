@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
-
 import '../config/app_environment.dart';
 import '../models/chain.dart';
+import 'http_client_service.dart';
 
 class NftAsset {
   final String name;
@@ -183,7 +182,9 @@ class NftService {
     final url = AppEnvironment.blockchain(
       '/networks/solana:mainnet/nfts/$walletAddress',
     );
-    final response = await http.get(url).timeout(const Duration(seconds: 60));
+    final response = await HttpClientService().client
+        .get(url)
+        .timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) {
       throw Exception('Solana NFT API error: ${response.statusCode}');
     }
@@ -252,7 +253,9 @@ class NftService {
     }
 
     final url = AppEnvironment.blockchain('/$chainId/nfts/$walletAddress');
-    final response = await http.get(url).timeout(const Duration(seconds: 60));
+    final response = await HttpClientService().client
+        .get(url)
+        .timeout(const Duration(seconds: 60));
     if (response.statusCode != 200) {
       throw Exception('NFT API error: ${response.statusCode}');
     }

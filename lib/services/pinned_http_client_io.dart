@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:cronet_http/cronet_http.dart';
 import 'package:cupertino_http/cupertino_http.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
@@ -14,17 +15,39 @@ HttpClient _createConfiguredIoHttpClient() {
     ..idleTimeout = const Duration(seconds: 30);
 }
 
+CronetEngine _buildCronetEngine() {
+  try {
+    // Force Android's system DNS resolver instead of Cronet's built-in async
+    // DNS resolver (which is otherwise enabled automatically when QUIC is on
+    // and can fail with ERROR_HOSTNAME_NOT_RESOLVED under Android Private DNS,
+    // VPNs, NAT64/IPv6-only 5G carriers, or certain Wi-Fi routers).
+    return CronetEngine.build(
+      cacheMode: CacheMode.memory,
+      cacheMaxSize: 2 * 1024 * 1024,
+      enableHttp2: true,
+      enableQuic: true,
+      enableBrotli: true,
+      useBuiltInDnsResolver: false,
+    );
+  } catch (_) {
+    // Older Google Play Services Cronet modules may not support DnsOptions.
+    // Disabling QUIC also disables Cronet's built-in DNS resolver while keeping
+    // HTTP/2 over TCP and Brotli enabled.
+    return CronetEngine.build(
+      cacheMode: CacheMode.memory,
+      cacheMaxSize: 2 * 1024 * 1024,
+      enableHttp2: true,
+      enableQuic: false,
+      enableBrotli: true,
+    );
+  }
+}
+
 http.Client _createNativeTransportClient() {
   if (Platform.isAndroid) {
     try {
-      final engine = CronetEngine.build(
-        cacheMode: CacheMode.memory,
-        cacheMaxSize: 2 * 1024 * 1024,
-        enableHttp2: true,
-        enableQuic: true,
-        enableBrotli: true,
-      );
-      return _ResilientNativeHttpClient(
+      final engine = _buildCronetEngine();
+      return ResilientNativeHttpClient(
         CronetClient.fromCronetEngine(engine, closeEngine: true),
       );
     } catch (_) {
@@ -35,7 +58,7 @@ http.Client _createNativeTransportClient() {
     try {
       final config = URLSessionConfiguration.ephemeralSessionConfiguration()
         ..timeoutIntervalForRequest = const Duration(seconds: 15);
-      return _ResilientNativeHttpClient(
+      return ResilientNativeHttpClient(
         CupertinoClient.fromSessionConfiguration(config),
       );
     } catch (_) {
@@ -45,25 +68,119 @@ http.Client _createNativeTransportClient() {
   return IOClient(_createConfiguredIoHttpClient());
 }
 
-class _ResilientNativeHttpClient extends http.BaseClient {
-  _ResilientNativeHttpClient(this._native);
+/// Wraps a native HTTP/2 + HTTP/3 transport (`CronetClient` on Android,
+/// `CupertinoClient` on iOS/macOS) and automatically falls back to `dart:io`
+/// [IOClient] (HTTP/1.1) when the native transport fails or times out.
+class ResilientNativeHttpClient extends http.BaseClient {
+  ResilientNativeHttpClient(
+    http.Client native, {
+    http.Client Function()? fallbackFactory,
+    Duration nativeAttemptTimeout = const Duration(seconds: 10),
+  }) : _native = native,
+       _fallbackFactory =
+           fallbackFactory ?? (() => IOClient(_createConfiguredIoHttpClient())),
+       _nativeAttemptTimeout = nativeAttemptTimeout;
 
   http.Client? _native;
   http.Client? _fallback;
+  final http.Client Function() _fallbackFactory;
+  final Duration _nativeAttemptTimeout;
   bool _closed = false;
 
-  http.Client _activeFallback() =>
-      _fallback ??= IOClient(_createConfiguredIoHttpClient());
+  @visibleForTesting
+  bool get isUsingFallback => _native == null;
 
-  static http.Request? _snapshotRequest(http.BaseRequest request) {
+  http.Client _activeFallback() => _fallback ??= _fallbackFactory();
+
+  void _degradeToFallback([http.Client? failedNative]) {
+    final current = failedNative ?? _native;
+    if (current != null && identical(_native, current)) {
+      _native = null;
+      _closeClientSafely(current);
+    }
+  }
+
+  static void _closeClientSafely(http.Client client) {
+    try {
+      client.close();
+    } on StateError {
+      // CupertinoClient.close() throws StateError while a cancelled task's
+      // completion callback is still draining. Retry once after it settles.
+      unawaited(
+        Future<void>.delayed(const Duration(milliseconds: 250), () {
+          try {
+            client.close();
+          } catch (_) {}
+        }),
+      );
+    } catch (_) {}
+  }
+
+  static http.Request? _snapshotRequest(
+    http.BaseRequest request, {
+    Future<void>? abortTrigger,
+  }) {
     if (request is! http.Request) return null;
-    final copy = http.Request(request.method, request.url)
+    final effectiveTrigger =
+        abortTrigger ??
+        (request is http.Abortable
+            ? (request as http.Abortable).abortTrigger
+            : null);
+    final http.Request copy = effectiveTrigger != null
+        ? http.AbortableRequest(
+            request.method,
+            request.url,
+            abortTrigger: effectiveTrigger,
+          )
+        : http.Request(request.method, request.url);
+    copy
       ..headers.addAll(request.headers)
+      ..encoding = request.encoding
       ..bodyBytes = request.bodyBytes
       ..followRedirects = request.followRedirects
       ..maxRedirects = request.maxRedirects
       ..persistentConnection = request.persistentConnection;
     return copy;
+  }
+
+  static bool _isStandardNetworkException(Object error) {
+    return error is http.ClientException ||
+        error is SocketException ||
+        error is TimeoutException ||
+        error is TlsException ||
+        error is HttpException;
+  }
+
+  http.StreamedResponse _wrapNativeStreamedResponse(
+    http.Client native,
+    http.StreamedResponse response,
+    http.BaseRequest originalRequest,
+    bool Function() isCallerAborted,
+  ) {
+    final guardedStream = response.stream.transform(
+      StreamTransformer<List<int>, List<int>>.fromHandlers(
+        handleData: (data, sink) => sink.add(data),
+        handleError:
+            (Object error, StackTrace stackTrace, EventSink<List<int>> sink) {
+              if (!isCallerAborted() &&
+                  error is! http.RequestAbortedException) {
+                _degradeToFallback(native);
+              }
+              sink.addError(error, stackTrace);
+            },
+        handleDone: (sink) => sink.close(),
+      ),
+    );
+    return http.StreamedResponse(
+      guardedStream,
+      response.statusCode,
+      contentLength: response.contentLength,
+      request: response.request ?? originalRequest,
+      headers: response.headers,
+      isRedirect: response.isRedirect,
+      persistentConnection: response.persistentConnection,
+      reasonPhrase: response.reasonPhrase,
+    );
   }
 
   @override
@@ -78,27 +195,81 @@ class _ResilientNativeHttpClient extends http.BaseClient {
     if (native == null) {
       return _activeFallback().send(request);
     }
+
+    final abortCompleter = Completer<void>();
+    var callerAborted = false;
+    if (request case http.Abortable(:final abortTrigger?)) {
+      unawaited(
+        abortTrigger.whenComplete(() {
+          callerAborted = true;
+          if (!abortCompleter.isCompleted) {
+            abortCompleter.complete();
+          }
+        }),
+      );
+    }
+
     final retryCopy = _snapshotRequest(request);
+    final nativeRequest =
+        _snapshotRequest(request, abortTrigger: abortCompleter.future) ??
+        request;
+    if (!identical(nativeRequest, request) && !request.finalized) {
+      request.finalize();
+    }
+
+    var timedOut = false;
     try {
-      return await native.send(request);
+      final response = await native
+          .send(nativeRequest)
+          .timeout(
+            _nativeAttemptTimeout,
+            onTimeout: () {
+              timedOut = true;
+              if (!abortCompleter.isCompleted) {
+                abortCompleter.complete();
+              }
+              throw TimeoutException(
+                'Native HTTP transport timed out waiting for response headers.',
+                _nativeAttemptTimeout,
+              );
+            },
+          );
+      return _wrapNativeStreamedResponse(
+        native,
+        response,
+        request,
+        () => callerAborted,
+      );
     } catch (error) {
-      if (error is http.ClientException ||
-          error is SocketException ||
-          error is TimeoutException ||
-          error is TlsException ||
-          error is HttpException) {
+      if (_closed ||
+          callerAborted ||
+          (error is http.RequestAbortedException && !timedOut)) {
         rethrow;
       }
-      // Native wrapper failed asynchronously (e.g. GMS-free Android device missing
-      // Play Services Cronet): permanently degrade to dart:io IOClient.
-      _native = null;
-      try {
-        native.close();
-      } catch (_) {}
-      if (retryCopy != null) {
-        return _activeFallback().send(retryCopy);
+
+      // Immediately demote when the native wrapper threw a non-HTTP binding/JNI
+      // error (e.g. GMS-free Android device missing Play Services Cronet) or an
+      // explicit QUIC protocol failure (UDP/443 blocked on carrier/Wi-Fi).
+      if (!_isStandardNetworkException(error) || error is QuicException) {
+        _degradeToFallback(native);
       }
-      rethrow;
+
+      if (retryCopy == null) {
+        rethrow;
+      }
+
+      try {
+        final fallbackResponse = await _activeFallback().send(retryCopy);
+        // The dart:io HTTP/1.1 fallback succeeded where the native HTTP/2/3
+        // transport failed or timed out: demote the native transport so future
+        // requests use the working fallback directly.
+        _degradeToFallback(native);
+        return fallbackResponse;
+      } catch (_) {
+        // Both native and dart:io failed (e.g. device is genuinely offline).
+        // Surface the original error.
+        rethrow;
+      }
     }
   }
 
@@ -108,9 +279,7 @@ class _ResilientNativeHttpClient extends http.BaseClient {
     final native = _native;
     _native = null;
     if (native != null) {
-      try {
-        native.close();
-      } catch (_) {}
+      _closeClientSafely(native);
     }
     final fallback = _fallback;
     _fallback = null;
@@ -267,6 +436,8 @@ class _SpkiPinnedHttpClient extends http.BaseClient {
         inner: response,
       );
     } on SocketException catch (error) {
+      throw http.ClientException(error.message, request.url);
+    } on TlsException catch (error) {
       throw http.ClientException(error.message, request.url);
     } on HttpException catch (error) {
       throw http.ClientException(error.message, error.uri);

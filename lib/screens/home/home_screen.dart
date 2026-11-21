@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -51,6 +50,7 @@ import 'widgets/network_selector_sheet.dart';
 import 'widgets/quick_actions_row.dart';
 import 'widgets/tokens_section.dart';
 import '../../services/home_snapshot_service.dart';
+import '../../services/http_client_service.dart';
 import '../../services/app_release_checker.dart';
 import '../../services/connectivity_recovery.dart';
 import 'widgets/whats_new_sheet.dart';
@@ -894,7 +894,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _checkConnectivity() async {
     var online = false;
     try {
-      final response = await http
+      final response = await HttpClientService().client
           .get(Uri.parse(AppEnvironment.connectivityCheckUrl))
           .timeout(const Duration(seconds: 5));
       online = response.statusCode == 200 || response.statusCode == 429;
@@ -1495,7 +1495,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final normalizedAddress = walletAddress.trim().toLowerCase();
       final url = AppEnvironment.notifications('/$normalizedAddress');
-      final response = await http.get(url).timeout(const Duration(seconds: 20));
+      final response = await HttpClientService().client
+          .get(url)
+          .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) {
         if (mounted) {
           setState(() => _hasUnreadNotifications = false);

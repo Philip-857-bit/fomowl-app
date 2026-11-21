@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -9,6 +8,7 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/chain.dart';
 import '../../services/blockchain_service.dart';
+import '../../services/http_client_service.dart';
 import '../../utils/rpc_url_validator.dart';
 import '../../utils/toast_utils.dart';
 
@@ -241,7 +241,9 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
   Future<List<dynamic>> _loadChainRegistry() async {
     if (_chainRegistryCache != null) return _chainRegistryCache!;
     final uri = Uri.parse('https://chainid.network/chains.json');
-    final response = await http.get(uri).timeout(const Duration(seconds: 8));
+    final response = await HttpClientService().client
+        .get(uri)
+        .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) {
       throw Exception('Failed to fetch chain registry');
     }
@@ -266,7 +268,7 @@ class _AddNetworkScreenState extends State<AddNetworkScreen> {
 
   Future<Map<String, String>> _loadChainLogoCache() async {
     if (_chainLogoCache != null) return _chainLogoCache!;
-    final response = await http
+    final response = await HttpClientService().client
         .get(Uri.parse('https://chainid.network/chain_icons.json'))
         .timeout(const Duration(seconds: 8));
     if (response.statusCode != 200) {
