@@ -10,8 +10,34 @@ import '../../constants/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/rate_us_prompt_service.dart';
 import '../../services/runtime_config_service.dart';
+import '../../theme/app_chain_theme.dart';
 import '../../utils/in_app_link_router.dart';
 import '../../widgets/entrance_motion.dart';
+
+BoxDecoration _adaptivePrimaryButtonDecoration(
+  AppChainTheme chainTheme, {
+  double borderRadius = 12,
+  double blurRadius = 12,
+  Offset shadowOffset = const Offset(0, 4),
+}) => BoxDecoration(
+  gradient: chainTheme.buttonGradient,
+  borderRadius: BorderRadius.circular(borderRadius),
+  boxShadow: [
+    BoxShadow(
+      color: chainTheme.accentColor.withValues(alpha: 0.35),
+      offset: shadowOffset,
+      blurRadius: blurRadius,
+    ),
+  ],
+);
+
+Color _adaptivePrimaryButtonTextColor(LinearGradient gradient) {
+  if (gradient.colors.isEmpty) return Colors.white;
+  final averageLuminance =
+      gradient.colors.map((c) => c.computeLuminance()).reduce((a, b) => a + b) /
+      gradient.colors.length;
+  return averageLuminance > 0.415 ? Colors.black : Colors.white;
+}
 
 enum TransactionProgressFlow { generic, swap, transfer }
 
@@ -740,6 +766,7 @@ class _ProcessingStageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final chainTheme = context.chainTheme;
     return Column(
       children: [
         Expanded(
@@ -788,11 +815,12 @@ class _ProcessingStageView extends StatelessWidget {
               GestureDetector(
                 onTap: onOpenDetails,
                 child: Container(
+                  key: const Key('transaction-processing-primary-button'),
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(16),
+                  decoration: _adaptivePrimaryButtonDecoration(
+                    chainTheme,
+                    borderRadius: 16,
                   ),
                   child: Center(
                     child: Text(
@@ -800,7 +828,9 @@ class _ProcessingStageView extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: _adaptivePrimaryButtonTextColor(
+                          chainTheme.buttonGradient,
+                        ),
                       ),
                     ),
                   ),
@@ -1230,6 +1260,7 @@ class _TransactionSuccessStageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = festive ? const Color(0xFF070103) : Colors.black;
+    final chainTheme = context.chainTheme;
 
     return Scaffold(
       key: ValueKey<String>(
@@ -1250,27 +1281,43 @@ class _TransactionSuccessStageView extends StatelessWidget {
             SafeArea(
               child: Column(
                 children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 12, 16, 0),
+                      child: GestureDetector(
+                        onTap: onClose,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   Expanded(
                     child: EntranceMotion(
                       beginOffset: const Offset(0, 0.03),
                       child: LayoutBuilder(
                         builder: (context, constraints) {
-                          final topPadding = festive ? 28.0 : 16.0;
-                          const bottomPadding = 16.0;
                           return SingleChildScrollView(
-                            padding: EdgeInsets.fromLTRB(
-                              24,
-                              topPadding,
-                              24,
-                              bottomPadding,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 16,
                             ),
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                 minHeight: math.max(
                                   0,
-                                  constraints.maxHeight -
-                                      topPadding -
-                                      bottomPadding,
+                                  constraints.maxHeight - 32,
                                 ),
                               ),
                               child: Center(
@@ -1292,7 +1339,7 @@ class _TransactionSuccessStageView extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 342),
@@ -1302,18 +1349,13 @@ class _TransactionSuccessStageView extends StatelessWidget {
                             GestureDetector(
                               onTap: onPrimaryAction,
                               child: Container(
+                                key: const Key(
+                                  'transaction-success-primary-button',
+                                ),
                                 width: double.infinity,
                                 height: 48,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDC0000),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x6610B981),
-                                      offset: Offset(0, 4),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
+                                decoration: _adaptivePrimaryButtonDecoration(
+                                  chainTheme,
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
@@ -1321,7 +1363,9 @@ class _TransactionSuccessStageView extends StatelessWidget {
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
-                                    color: Colors.white,
+                                    color: _adaptivePrimaryButtonTextColor(
+                                      chainTheme.buttonGradient,
+                                    ),
                                     height: 1.5,
                                   ),
                                 ),
@@ -1465,16 +1509,12 @@ class _TransactionSuccessStageView extends StatelessWidget {
                 return Transform.scale(scale: scale, child: child);
               },
               child: Container(
+                key: const Key('transaction-success-checkmark-badge'),
                 width: 86,
                 height: 86,
                 decoration: const BoxDecoration(
                   color: Color(0xFF4DCE9E),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(color: Color(0xFF4DCE9E), blurRadius: 12.5),
-                    BoxShadow(color: Color(0xBF4DCE9E), blurRadius: 25),
-                    BoxShadow(color: Color(0xFF4DCE9E), blurRadius: 40),
-                  ],
                 ),
                 alignment: Alignment.center,
                 child: SvgPicture.asset(

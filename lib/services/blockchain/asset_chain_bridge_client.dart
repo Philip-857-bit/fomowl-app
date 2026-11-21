@@ -472,6 +472,48 @@ class AssetChainBridgeClaimResult {
   };
 }
 
+class AssetChainBridgeFeeQuote {
+  final bool enabled;
+  final int platformFeeBps;
+  final double platformFeeUsd;
+  final String? feeRecipient;
+
+  const AssetChainBridgeFeeQuote({
+    required this.enabled,
+    required this.platformFeeBps,
+    required this.platformFeeUsd,
+    this.feeRecipient,
+  });
+
+  const AssetChainBridgeFeeQuote.disabled()
+    : enabled = false,
+      platformFeeBps = 0,
+      platformFeeUsd = 0.0,
+      feeRecipient = null;
+
+  factory AssetChainBridgeFeeQuote.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map<String, dynamic>
+        ? json['data'] as Map<String, dynamic>
+        : json;
+    final bps = _readInt(data['platformFeeBps']) ?? 0;
+    final rawUsd = data['platformFeeUsd'];
+    final usd = rawUsd is num
+        ? rawUsd.toDouble()
+        : double.tryParse(rawUsd?.toString() ?? '') ?? 0.0;
+    final recipientRaw = data['feeRecipient']?.toString().trim();
+    final recipient = recipientRaw != null && recipientRaw.isNotEmpty
+        ? recipientRaw
+        : null;
+    final enabled = data['enabled'] == true && bps > 0 && recipient != null;
+    return AssetChainBridgeFeeQuote(
+      enabled: enabled,
+      platformFeeBps: enabled ? bps : 0,
+      platformFeeUsd: enabled && usd.isFinite && usd > 0 ? usd : 0.0,
+      feeRecipient: enabled ? recipient : null,
+    );
+  }
+}
+
 /// Exception thrown on Asset Chain Bridge HTTP errors or guard rejections.
 class AssetChainBridgeException implements Exception {
   final int statusCode;
@@ -909,6 +951,65 @@ class AssetChainBridgeClient {
         .toList();
   }
 
+  /// GET /fee-quote: Resolves Owllet platform fee configuration for a bridge route.
+  Future<AssetChainBridgeFeeQuote> getFeeQuote({
+    required int chainId,
+    required String sellToken,
+    required String amount,
+    double? amountUsd,
+  }) async {
+    if (isMockMode) {
+      return const AssetChainBridgeFeeQuote.disabled();
+    }
+
+    final queryParams = <String, String>{
+      'chainId': chainId.toString(),
+      'sellToken': sellToken,
+      'amount': amount,
+      if (amountUsd != null && amountUsd.isFinite && amountUsd > 0)
+        'amountUsd': amountUsd.toString(),
+    };
+
+    try {
+      final http.Response response;
+      if (useProxy) {
+        response = await _send(
+          'GET',
+          '/fee-quote',
+          queryParameters: queryParams,
+        );
+      } else {
+        final uri = AppEnvironment.swap(
+          '/assetchain/bridge/fee-quote',
+          queryParams,
+        );
+        response = await httpClient
+            .get(uri, headers: const {'Accept': 'application/json'})
+            .timeout(const Duration(seconds: 15));
+        if (response.statusCode == 404) {
+          return const AssetChainBridgeFeeQuote.disabled();
+        }
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          throw AssetChainBridgeException(
+            statusCode: response.statusCode,
+            message: 'Failed to load bridge fee quote (${response.statusCode})',
+            responseBody: response.body,
+          );
+        }
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return const AssetChainBridgeFeeQuote.disabled();
+      }
+      return AssetChainBridgeFeeQuote.fromJson(decoded);
+    } on AssetChainBridgeException catch (e) {
+      if (e.statusCode == 404 || e.isNotFound) {
+        return const AssetChainBridgeFeeQuote.disabled();
+      }
+      rethrow;
+    }
+  }
+
   /// GET /transactions: Returns stored bridge transfers for a wallet address.
   Future<AssetChainBridgeTransactionList> getTransactions({
     required String userAddress,
@@ -1096,6 +1197,25 @@ class AssetChainBridgeClient {
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      try {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map) {
+          final errorText = decoded['error']?.toString().trim();
+          if (errorText != null &&
+              errorText.isNotEmpty &&
+              decoded['data'] == null &&
+              decoded['success'] != true) {
+            throw AssetChainBridgeException(
+              statusCode: response.statusCode,
+              message: errorText,
+              errorCode: decoded['code']?.toString(),
+              responseBody: response.body,
+            );
+          }
+        }
+      } on AssetChainBridgeException {
+        rethrow;
+      } catch (_) {}
       return response;
     }
 

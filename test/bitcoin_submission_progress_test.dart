@@ -3,10 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fomowl_wallet/l10n/app_localizations.dart';
 import 'package:fomowl_wallet/screens/transaction/transaction_processing_screen.dart';
+import 'package:fomowl_wallet/services/blockchain_service.dart';
 import 'package:fomowl_wallet/services/runtime_config_service.dart';
+import 'package:fomowl_wallet/theme/app_chain_theme.dart';
+import 'package:fomowl_wallet/theme/theme_controller.dart';
 import 'helpers/test_fonts.dart';
 
 void main() {
@@ -204,7 +208,12 @@ void main() {
             find.byKey(const Key('transaction-success-back-button')),
             findsNothing,
           );
-          expect(find.byIcon(Icons.close), findsNothing);
+          expect(find.byIcon(Icons.close), findsOneWidget);
+          final badge = tester.widget<Container>(
+            find.byKey(const Key('transaction-success-checkmark-badge')),
+          );
+          final badgeDecoration = badge.decoration! as BoxDecoration;
+          expect(badgeDecoration.boxShadow, anyOf(isNull, isEmpty));
 
           await tester.pumpWidget(const SizedBox.shrink());
           progress.dispose();
@@ -232,4 +241,110 @@ void main() {
       isFalse,
     );
   });
+
+  testWidgets(
+    'View on Explorer button adapts to active chain theme and classic toggle',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final blockchain = BlockchainService();
+      blockchain.setActiveChainByChainId(1);
+      final themeController = ThemeController();
+      final progress = TransactionProgressController()
+        ..setSuccess(
+          reference: '0x7713...c737',
+          detailsUrl: 'https://etherscan.io/tx/0x7713',
+        );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<BlockchainService>.value(value: blockchain),
+            ChangeNotifierProvider<ThemeController>.value(
+              value: themeController,
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routes: {
+              '/processing': (_) =>
+                  const TransactionProcessingScreen(festiveOverride: false),
+            },
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    '/processing',
+                    arguments: TransactionProcessingArguments(
+                      controller: progress,
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      Container primaryContainer() => tester.widget<Container>(
+        find.byKey(const Key('transaction-success-primary-button')),
+      );
+      Text primaryText() => tester.widget<Text>(
+        find.descendant(
+          of: find.byKey(const Key('transaction-success-primary-button')),
+          matching: find.text('View on Explorer'),
+        ),
+      );
+
+      expect(
+        (primaryContainer().decoration! as BoxDecoration).gradient,
+        AppChainTheme.ethereum.buttonGradient,
+      );
+      expect(primaryText().style?.color, Colors.white);
+
+      // Switching to BSC uses its gold button gradient and high-contrast dark text.
+      blockchain.setActiveChainByChainId(56);
+      await tester.pumpAndSettle();
+      expect(
+        (primaryContainer().decoration! as BoxDecoration).gradient,
+        AppChainTheme.bsc.buttonGradient,
+      );
+      expect(primaryText().style?.color, Colors.black);
+
+      // Switching to Classic mode uses FOMOwl signature gradient.
+      await themeController.setThemeMode(AppThemeMode.classic);
+      await tester.pumpAndSettle();
+      expect(
+        (primaryContainer().decoration! as BoxDecoration).gradient,
+        AppChainTheme.fomowlSignature.buttonGradient,
+      );
+      expect(primaryText().style?.color, Colors.white);
+
+      // In-flight submitted view with explorer URL also follows active chain theme.
+      await themeController.setThemeMode(AppThemeMode.adaptive);
+      blockchain.setActiveChainByChainId(8453);
+      progress.setSubmitted(
+        reference: '0x7713...c737',
+        detailsUrl: 'https://basescan.org/tx/0x7713',
+      );
+      await tester.pumpAndSettle();
+      final processingButton = tester.widget<Container>(
+        find.byKey(const Key('transaction-processing-primary-button')),
+      );
+      expect(
+        (processingButton.decoration! as BoxDecoration).gradient,
+        AppChainTheme.base.buttonGradient,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      progress.dispose();
+      blockchain.dispose();
+      themeController.dispose();
+    },
+  );
 }

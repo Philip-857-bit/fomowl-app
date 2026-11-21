@@ -23,6 +23,9 @@ import '../../../utils/sensitive_access_guard.dart';
 import '../../../utils/bitcoin_amount_utils.dart';
 import '../../wallet/bitcoin_transfer_confirmation_screen.dart';
 import '../../../models/token.dart';
+import '../../../services/blockchain/asset_chain_bridge_client.dart';
+import '../../../services/blockchain/asset_chain_native_bridge_service.dart';
+import '../../../services/blockchain/blockchain_catalog.dart';
 import '../../../services/blockchain/solana_catalog.dart';
 import '../../../services/blockchain/bitcoin_catalog.dart';
 import '../../../services/blockchain/tron_catalog.dart';
@@ -44,9 +47,10 @@ import '../../../utils/app_error_utils.dart';
 import '../../../utils/toast_utils.dart';
 import '../../../utils/token_trust_utils.dart';
 import '../../../utils/value_formatter.dart';
+import '../../../widgets/chain_logo_image.dart';
+import '../../../widgets/token_icon.dart';
 import '../../transaction/transaction_processing_screen.dart';
 import '../../transaction/transactions_screen.dart';
-import '../asset_chain_native_bridge_screen.dart';
 import '../swap_screen_helpers.dart';
 import 'swap_figma_icons.dart';
 import 'swap_primary_button.dart';
@@ -71,8 +75,16 @@ List<Token> filterBridgeOriginTokens({
   required String nativeSymbol,
 }) {
   final expectedKey = activeNetworkKey.trim().toLowerCase();
+  final evmChainId =
+      activeFamily == ChainFamily.evm && expectedKey.startsWith('evm:')
+      ? int.tryParse(expectedKey.substring(4))
+      : null;
   return tokens
       .where((token) {
+        if (evmChainId != null &&
+            !isSwapEligibleTokenForChain(token, evmChainId)) {
+          return false;
+        }
         final tokenKey = token.networkKey?.trim().toLowerCase();
         if (tokenKey != null && tokenKey.isNotEmpty) {
           return tokenKey == expectedKey;
@@ -211,6 +223,7 @@ class BridgeTabContent extends StatefulWidget {
   /// Opens the app's network selector (switches the active chain).
   final VoidCallback onSelectFromChain;
   final Future<void> Function()? onBridgeCompleted;
+  final AssetChainNativeBridgeService? assetChainBridgeService;
 
   const BridgeTabContent({
     super.key,
@@ -220,6 +233,7 @@ class BridgeTabContent extends StatefulWidget {
     required this.tokens,
     required this.onSelectFromChain,
     this.onBridgeCompleted,
+    this.assetChainBridgeService,
   });
 
   @override
@@ -236,6 +250,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   final WalletHistoryService _walletHistoryService = WalletHistoryService();
   final WalletNotificationService _walletNotificationService =
       WalletNotificationService();
+  late final AssetChainNativeBridgeService _assetChainBridgeService =
+      widget.assetChainBridgeService ??
+      AssetChainNativeBridgeService(wallet: widget.walletService);
 
   Token? _fromToken;
   EvmChain? _toChain;
@@ -245,6 +262,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   BridgeCurrency? _toCurrency;
   int _selectedPercentage = -1;
   BridgeQuote? _quote;
+  AssetChainNativeBridgeQuote? _assetChainQuote;
   bool _isQuoting = false;
   bool _isBridging = false;
   bool _bridgeActionActive = false;
@@ -259,6 +277,14 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   PendingBridgeOperation? _pendingOperation;
   bool _isCheckingPending = false;
   Timer? _pendingPoll;
+  List<AssetChainNativeBridgeRoute> _assetChainRoutes = const [];
+  bool _assetChainRoutesLoading = false;
+  String? _assetChainRoutesError;
+  List<AssetChainBridgeTransaction> _assetChainTransfers = const [];
+  List<Map<String, dynamic>> _assetChainPending = const [];
+  String? _claimingAssetChainTransferId;
+  bool _isRefreshingAssetChain = false;
+  int _assetChainRouteGeneration = 0;
   final BitcoinBridgeFundingService _bitcoinFunding =
       BitcoinBridgeFundingService();
   BitcoinDerivedAddress? _bitcoinReceive;
@@ -321,6 +347,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   bool get _isAssetChainOrigin =>
       widget.blockchain.activeFamily == ChainFamily.evm &&
       SwapService.isAssetChain(widget.blockchain.activeChain.chainId);
+  bool get _isAssetChainDestination =>
+      widget.blockchain.activeFamily == ChainFamily.evm &&
+      _toChain != null &&
+      _toChain!.family == ChainFamily.evm &&
+      SwapService.isAssetChain(_toChain!.chainId);
+  bool get _isAssetChainRoute =>
+      _isAssetChainOrigin || _isAssetChainDestination;
 
   List<Token> get _originTokens {
     final scoped = filterBridgeOriginTokens(
@@ -329,7 +362,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       activeFamily: widget.blockchain.activeFamily,
       nativeSymbol: widget.blockchain.activeNetworkSymbol,
     );
-    return scoped.isNotEmpty ? scoped : widget.blockchain.tokens;
+    if (scoped.isNotEmpty) return scoped;
+    return filterBridgeOriginTokens(
+      tokens: widget.blockchain.tokens,
+      activeNetworkKey: widget.blockchain.activeNetworkKey,
+      activeFamily: widget.blockchain.activeFamily,
+      nativeSymbol: widget.blockchain.activeNetworkSymbol,
+    );
   }
 
   @override
@@ -340,6 +379,8 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     _syncToChain();
     unawaited(_loadFamilyAddresses());
     unawaited(_loadRelayChains());
+    unawaited(_loadAssetChainRoutes());
+    unawaited(_loadAssetChainTransfers());
   }
 
   Future<void> _loadFamilyAddresses() async {
@@ -653,9 +694,17 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       if (networkChanged) {
         _bitcoinRecoveryLoaded = false;
         _bitcoinBalanceLoading = false;
+        _toCurrency = null;
+        if (_isAssetChainRoute) {
+          _autoPairAssetChainFromTokenIfNeeded();
+          _syncAssetChainDestinationCurrency();
+        }
         unawaited(_loadBitcoinAddress());
+        unawaited(_loadAssetChainTransfers());
         _resetQuote();
         _requestQuote();
+      } else if (_isAssetChainRoute) {
+        _syncAssetChainDestinationCurrency();
       }
     }
     if (oldWidget.walletAddress != widget.walletAddress) {
@@ -669,15 +718,20 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _bitcoinLoadGeneration++;
       _resetQuote();
       unawaited(_loadFamilyAddresses());
+      unawaited(_loadAssetChainTransfers());
     }
   }
 
   @override
   void dispose() {
+    _assetChainRouteGeneration++;
     _bitcoinPoll?.cancel();
     _pendingPoll?.cancel();
     _debounce?.cancel();
     _amountController.dispose();
+    if (widget.assetChainBridgeService == null) {
+      _assetChainBridgeService.dispose();
+    }
     super.dispose();
   }
 
@@ -720,9 +774,31 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   /// EVM destinations are limited to chains Relay actually supports, so
-  /// user-added custom networks don't produce dead-end quotes. When the
-  /// Relay chain list is unavailable, no filtering is applied.
+  /// user-added custom networks don't produce dead-end quotes. When Asset
+  /// Chain is origin or destination, routes resolve through the Asset Chain
+  /// BridgeAssist service under the hood instead of Relay.
   List<EvmChain> _destinationChains() {
+    if (_isAssetChainOrigin) {
+      final activeId = widget.blockchain.activeChain.chainId;
+      final configured = <EvmChain>[];
+      final seenIds = <int>{};
+      for (final route in _assetChainRoutes) {
+        if (route.sourceChain.chainId == activeId &&
+            !SwapService.isAssetChain(route.destinationChain.chainId) &&
+            seenIds.add(route.destinationChain.chainId)) {
+          configured.add(route.destinationChain);
+        }
+      }
+      if (configured.isNotEmpty) return configured;
+      return widget.blockchain.allChains
+          .where(
+            (chain) =>
+                chain.family == ChainFamily.evm &&
+                !SwapService.isAssetChain(chain.chainId),
+          )
+          .toList(growable: false);
+    }
+
     final relayIds = _relayChainIds;
     if (_isBitcoinOrigin && relayIds == null) return [];
     final evmChains = widget.blockchain.allChains.where((chain) {
@@ -735,8 +811,33 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       }
       return relayIds == null || relayIds.contains(chain.chainId);
     });
+
+    final assetChainDestinations = <EvmChain>[];
+    if (widget.blockchain.activeFamily == ChainFamily.evm) {
+      final activeId = widget.blockchain.activeChain.chainId;
+      final seenIds = <int>{};
+      for (final route in _assetChainRoutes) {
+        if (route.sourceChain.chainId == activeId &&
+            SwapService.isAssetChain(route.destinationChain.chainId) &&
+            seenIds.add(route.destinationChain.chainId)) {
+          assetChainDestinations.add(route.destinationChain);
+        }
+      }
+      if (assetChainDestinations.isEmpty) {
+        final mainnet =
+            widget.blockchain.allChains
+                .where((c) => c.chainId == 42420)
+                .firstOrNull ??
+            BlockchainCatalog.findChain(42420);
+        if (mainnet != null) {
+          assetChainDestinations.add(mainnet);
+        }
+      }
+    }
+
     return [
       ...evmChains,
+      ...assetChainDestinations,
       // Solana destination requires the wallet to have a Solana address.
       if (!_isSolanaOrigin && _solanaAddress != null) _solanaChain,
       if (!_isTronOrigin && !_isBitcoinOrigin && _tronAddress != null)
@@ -750,10 +851,351 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     ];
   }
 
+  // ── Asset Chain Bridge helpers ──────────────────────────────────────────
+
+  String _cleanAssetChainError(Object error) {
+    if (error is AssetChainBridgeException) {
+      final msg = error.message.trim();
+      final lower = msg.toLowerCase();
+      final code = error.errorCode?.trim().toUpperCase() ?? '';
+      if (error.statusCode >= 500 ||
+          code == 'INTERNAL_ERROR' ||
+          lower.contains('postgres') ||
+          lower.contains('password authentication') ||
+          lower.contains('failed to parse upstream') ||
+          lower.contains('<!doctype') ||
+          lower.contains('<html') ||
+          msg.isEmpty) {
+        return 'Asset Chain bridge service is temporarily unavailable. Please try again later.';
+      }
+      return msg;
+    }
+    return error
+        .toString()
+        .replaceFirst(RegExp(r'^(Bad state: |Exception: )'), '')
+        .trim();
+  }
+
+  bool _isAssetChainNativeAddress(String? address) {
+    final normalized = (address ?? '').trim().toLowerCase();
+    return normalized.isEmpty ||
+        normalized == '0x0000000000000000000000000000000000000000' ||
+        normalized == AssetChainNativeBridgeService.nativeToken;
+  }
+
+  bool _isDisallowedAssetChainBridgeToken(
+    AssetChainBridgeToken? token,
+    int chainId,
+  ) {
+    if (token == null || !SwapService.isAssetChain(chainId)) return false;
+    final addr = token.tokenAddress.trim().toLowerCase();
+    final wrwa = BlockchainCatalog.wrappedNativeAddress(chainId)?.toLowerCase();
+    if (_isAssetChainNativeAddress(addr) || (wrwa != null && addr == wrwa)) {
+      return true;
+    }
+    final sym = token.symbol.trim().toUpperCase();
+    return sym == 'RWA' || sym == 'WRWA';
+  }
+
+  bool _isBridgeEligibleAssetChainRoute(AssetChainNativeBridgeRoute route) =>
+      !_isDisallowedAssetChainBridgeToken(
+        route.source.token,
+        route.sourceChain.chainId,
+      ) &&
+      !_isDisallowedAssetChainBridgeToken(
+        route.destination.token,
+        route.destinationChain.chainId,
+      );
+
+  List<AssetChainNativeBridgeRoute> _assetChainRoutesForPair(
+    int originChainId,
+    int destinationChainId,
+  ) {
+    return _assetChainRoutes
+        .where(
+          (route) =>
+              route.sourceChain.chainId == originChainId &&
+              route.destinationChain.chainId == destinationChainId,
+        )
+        .toList(growable: false);
+  }
+
+  bool _tokenMatchesAssetChainRoute(
+    Token token,
+    AssetChainNativeBridgeRoute route,
+  ) {
+    final srcToken = route.source.token;
+    if (srcToken == null) return false;
+    final tokenContract = (token.contractAddress ?? '').trim().toLowerCase();
+    final tokenIsNative = _isAssetChainNativeAddress(tokenContract);
+    final routeContract = srcToken.tokenAddress.trim().toLowerCase();
+    final routeIsNative = _isAssetChainNativeAddress(routeContract);
+    if (tokenIsNative && routeIsNative) return true;
+    if (!tokenIsNative && !routeIsNative && tokenContract == routeContract) {
+      return true;
+    }
+    return AssetChainNativeBridgeService.normalizedSymbol(token.symbol) ==
+        AssetChainNativeBridgeService.normalizedSymbol(srcToken.symbol);
+  }
+
+  void _autoPairAssetChainFromTokenIfNeeded() {
+    if (widget.blockchain.activeFamily != ChainFamily.evm) return;
+    final toChain = _toChain;
+    if (toChain == null || !_isAssetChainRoute) return;
+    final routes = _assetChainRoutesForPair(
+      widget.blockchain.activeChain.chainId,
+      toChain.chainId,
+    );
+    if (routes.isEmpty) return;
+    final currentFrom = _fromToken;
+    if (currentFrom != null &&
+        routes.any(
+          (route) => _tokenMatchesAssetChainRoute(currentFrom, route),
+        )) {
+      return;
+    }
+    if (_amountValue > 0) return;
+    for (final candidate in _originTokens) {
+      if (routes.any(
+        (route) => _tokenMatchesAssetChainRoute(candidate, route),
+      )) {
+        _fromToken = candidate;
+        return;
+      }
+    }
+  }
+
+  AssetChainNativeBridgeRoute? _matchingAssetChainRoute({
+    Token? fromToken,
+    EvmChain? toChain,
+    BridgeCurrency? toCurrency,
+  }) {
+    if (widget.blockchain.activeFamily != ChainFamily.evm) return null;
+    final destinationChainId = (toChain ?? _toChain)?.chainId;
+    if (destinationChainId == null) return null;
+    final routes = _assetChainRoutesForPair(
+      widget.blockchain.activeChain.chainId,
+      destinationChainId,
+    );
+    if (routes.isEmpty) return null;
+
+    final effectiveFrom = fromToken ?? _fromToken;
+    final effectiveToCurrency = toCurrency ?? _toCurrency;
+
+    if (effectiveFrom != null) {
+      final fromContract = (effectiveFrom.contractAddress ?? '')
+          .trim()
+          .toLowerCase();
+      final fromIsNative = _isAssetChainNativeAddress(fromContract);
+      final fromSymbol = AssetChainNativeBridgeService.normalizedSymbol(
+        effectiveFrom.symbol,
+      );
+
+      for (final route in routes) {
+        final srcToken = route.source.token;
+        if (srcToken == null) continue;
+        final routeContract = srcToken.tokenAddress.trim().toLowerCase();
+        if (fromIsNative && _isAssetChainNativeAddress(routeContract)) {
+          return route;
+        }
+        if (!fromIsNative && routeContract == fromContract) {
+          return route;
+        }
+      }
+      for (final route in routes) {
+        final srcToken = route.source.token;
+        if (srcToken == null) continue;
+        if (AssetChainNativeBridgeService.normalizedSymbol(srcToken.symbol) ==
+            fromSymbol) {
+          return route;
+        }
+      }
+      return null;
+    }
+
+    if (effectiveToCurrency != null) {
+      final toSymbol = AssetChainNativeBridgeService.normalizedSymbol(
+        effectiveToCurrency.symbol,
+      );
+      for (final route in routes) {
+        final dstToken = route.destination.token;
+        if (dstToken == null) continue;
+        if (effectiveToCurrency.isNative &&
+            _isAssetChainNativeAddress(dstToken.tokenAddress)) {
+          return route;
+        }
+        if (!effectiveToCurrency.isNative &&
+            dstToken.tokenAddress.toLowerCase() ==
+                effectiveToCurrency.address.toLowerCase()) {
+          return route;
+        }
+        if (AssetChainNativeBridgeService.normalizedSymbol(dstToken.symbol) ==
+            toSymbol) {
+          return route;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  BridgeCurrency? _assetChainDestinationCurrency(
+    AssetChainNativeBridgeRoute route,
+  ) {
+    final dstToken = route.destination.token;
+    if (dstToken == null) return null;
+    final native = _isAssetChainNativeAddress(dstToken.tokenAddress);
+    if (native) return null;
+    final symbolLower = dstToken.symbol.trim().toLowerCase();
+    final logoUrl = switch (symbolLower) {
+      'usdt' || 'usdt0' || 'usd₮0' =>
+        'https://assets.coingecko.com/coins/images/325/large/Tether.png',
+      'usdc' => 'https://assets.coingecko.com/coins/images/6319/large/usdc.png',
+      _ => BlockchainCatalog.defaultChainLogoUrl(
+        route.destinationChain.chainId,
+      ),
+    };
+    return BridgeCurrency(
+      chainId: route.destinationChain.chainId,
+      address: dstToken.tokenAddress,
+      symbol: dstToken.symbol,
+      name: dstToken.name,
+      decimals: route.destination.tokenDecimal,
+      isNative: false,
+      logoUri: logoUrl,
+      priceUsd:
+          _fromToken != null &&
+              AssetChainNativeBridgeService.normalizedSymbol(
+                    _fromToken!.symbol,
+                  ) ==
+                  AssetChainNativeBridgeService.normalizedSymbol(
+                    dstToken.symbol,
+                  ) &&
+              _fromToken!.priceUsd > 0
+          ? _fromToken!.priceUsd
+          : null,
+    );
+  }
+
+  void _syncAssetChainDestinationCurrency() {
+    if (!_isAssetChainRoute) return;
+    final route = _matchingAssetChainRoute();
+    _toCurrency = route == null ? null : _assetChainDestinationCurrency(route);
+  }
+
+  Future<void> _loadAssetChainRoutes() async {
+    if (_assetChainRoutesLoading) return;
+    final generation = ++_assetChainRouteGeneration;
+    _assetChainRoutesLoading = true;
+    try {
+      final deployments = await _assetChainBridgeService.api.getBridges();
+      final routes = AssetChainNativeBridgeService.routes(
+        deployments,
+        widget.blockchain.allChains,
+      ).where(_isBridgeEligibleAssetChainRoute).toList(growable: false);
+      if (!mounted || generation != _assetChainRouteGeneration) return;
+      final hadNoRoutes = _assetChainRoutes.isEmpty;
+      setState(() {
+        _assetChainRoutes = routes;
+        _assetChainRoutesError = null;
+        _syncToChain();
+        if (_isAssetChainRoute) {
+          _autoPairAssetChainFromTokenIfNeeded();
+          _syncAssetChainDestinationCurrency();
+        }
+      });
+      if (_isAssetChainRoute) {
+        unawaited(_loadAssetChainTransfers());
+        if (hadNoRoutes && _amountValue > 0) {
+          _requestQuote();
+        }
+      }
+    } catch (error) {
+      if (!mounted || generation != _assetChainRouteGeneration) return;
+      setState(() {
+        _assetChainRoutesError = _cleanAssetChainError(error);
+      });
+    } finally {
+      _assetChainRoutesLoading = false;
+    }
+  }
+
+  Future<void> _loadAssetChainTransfers() async {
+    final wallet = widget.walletAddress?.trim();
+    if (wallet == null || wallet.isEmpty) {
+      if (mounted &&
+          (_assetChainTransfers.isNotEmpty || _assetChainPending.isNotEmpty)) {
+        setState(() {
+          _assetChainTransfers = const [];
+          _assetChainPending = const [];
+        });
+      }
+      return;
+    }
+    if (mounted) {
+      setState(() => _isRefreshingAssetChain = true);
+    }
+    try {
+      final pending = await _assetChainBridgeService.pending(wallet);
+      List<AssetChainBridgeTransaction> claimable = const [];
+      if (_isAssetChainRoute ||
+          _assetChainRoutes.isNotEmpty ||
+          pending.isNotEmpty) {
+        final history = await _assetChainBridgeService.api.getTransactions(
+          userAddress: wallet,
+          forceSync: true,
+          limit: 50,
+        );
+        final lowerWallet = wallet.toLowerCase();
+        claimable = history.items
+            .where(
+              (tx) =>
+                  !tx.fulfilled &&
+                  tx.fromUser.toLowerCase() == lowerWallet &&
+                  tx.toUser.toLowerCase() == lowerWallet,
+            )
+            .toList(growable: false);
+      }
+      if (!mounted) return;
+      setState(() {
+        _assetChainPending = pending;
+        _assetChainTransfers = claimable;
+      });
+    } catch (_) {
+      // Non-fatal: bridge quotes and standard Relay flows still operate.
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshingAssetChain = false);
+      }
+    }
+  }
+
+  AssetChainNativeBridgeRoute? _claimRouteForAssetChain(
+    AssetChainBridgeTransaction transfer,
+  ) {
+    final matches = _assetChainRoutes
+        .where(
+          (route) =>
+              route.source.chainId ==
+                  transfer.fromChain.replaceFirst('evm.', '') &&
+              route.destination.chainId ==
+                  transfer.toChain.replaceFirst('evm.', '') &&
+              AssetChainNativeBridgeService.normalizedSymbol(route.symbol) ==
+                  AssetChainNativeBridgeService.normalizedSymbol(
+                    transfer.symbol,
+                  ) &&
+              (transfer.bridgeInfoId == null ||
+                  transfer.bridgeInfoId == route.source.id),
+        )
+        .toList();
+    return matches.length == 1 ? matches.single : null;
+  }
+
   // ── Quote handling ──────────────────────────────────────────────────────
 
   void _resetQuote() {
     _quote = null;
+    _assetChainQuote = null;
     _quoteError = null;
   }
 
@@ -764,16 +1206,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
 
   void _requestQuote() {
     _debounce?.cancel();
-    if (_isAssetChainOrigin) {
-      _quoteSeq++;
-      _resetQuote();
-      _isQuoting = false;
-      setState(() {});
-      return;
-    }
     if (_isBitcoinOrigin) {
       _quoteSeq++;
       _quote = null;
+    }
+    if (_isAssetChainRoute) {
+      _quoteSeq++;
+      _assetChainQuote = null;
     }
     _debounce = Timer(const Duration(milliseconds: 600), _fetchQuote);
     setState(() {});
@@ -782,14 +1221,86 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   double get _amountValue =>
       double.tryParse(_amountController.text.replaceAll(',', '')) ?? 0;
 
-  Future<void> _fetchQuote() async {
-    if (_isAssetChainOrigin) {
-      if (mounted) {
-        setState(() {
-          _resetQuote();
-          _isQuoting = false;
-        });
+  Future<void> _fetchAssetChainQuote() async {
+    final from = _fromToken;
+    final toChain = _toChain;
+    if (from == null || toChain == null) return;
+
+    final amountText = _amountController.text.replaceAll(',', '').trim();
+    if (amountText.isEmpty || _amountValue <= 0) {
+      if (mounted) setState(_resetQuote);
+      return;
+    }
+
+    final seq = ++_quoteSeq;
+    setState(() {
+      _isQuoting = true;
+      _quote = null;
+      _assetChainQuote = null;
+      _quoteError = null;
+    });
+
+    if (_assetChainRoutes.isEmpty) {
+      await _loadAssetChainRoutes();
+    }
+    if (!mounted || seq != _quoteSeq) return;
+
+    final route = _matchingAssetChainRoute(fromToken: from, toChain: toChain);
+    if (route == null) {
+      final pairRoutes = _assetChainRoutesForPair(
+        widget.blockchain.activeChain.chainId,
+        toChain.chainId,
+      );
+      final supportedSymbols = pairRoutes.map((r) => r.symbol).toSet().toList();
+      final String message;
+      if (_assetChainRoutes.isEmpty && _assetChainRoutesError != null) {
+        message =
+            'Unable to load Asset Chain bridge routes: $_assetChainRoutesError';
+      } else if (supportedSymbols.isNotEmpty) {
+        message =
+            'Asset Chain bridge supports ${supportedSymbols.join(', ')} between ${widget.blockchain.activeChain.name} and ${toChain.name}. Select a supported token.';
+      } else {
+        message =
+            'No Asset Chain bridge route is configured between ${widget.blockchain.activeChain.name} and ${toChain.name}.';
       }
+      setState(() {
+        _isQuoting = false;
+        _assetChainQuote = null;
+        _quoteError = message;
+      });
+      return;
+    }
+
+    try {
+      final amountUsd = _amountValue > 0 && from.priceUsd > 0
+          ? _amountValue * from.priceUsd
+          : null;
+      final nativeQuote = await _assetChainBridgeService.quote(
+        route,
+        amountText,
+        amountUsd: amountUsd,
+      );
+      if (!mounted || seq != _quoteSeq) return;
+      setState(() {
+        _isQuoting = false;
+        _quote = null;
+        _assetChainQuote = nativeQuote;
+        _toCurrency = _assetChainDestinationCurrency(route);
+        _quoteError = null;
+      });
+    } catch (error) {
+      if (!mounted || seq != _quoteSeq) return;
+      setState(() {
+        _isQuoting = false;
+        _assetChainQuote = null;
+        _quoteError = _cleanAssetChainError(error);
+      });
+    }
+  }
+
+  Future<void> _fetchQuote() async {
+    if (_isAssetChainRoute) {
+      await _fetchAssetChainQuote();
       return;
     }
     final from = _fromToken;
@@ -1050,10 +1561,19 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   Future<void> _selectFromToken() async {
+    final candidates = _originTokens;
+    if (candidates.isEmpty) {
+      ToastUtils.showInfo(
+        _isAssetChainOrigin
+            ? 'No bridgeable tokens available on ${widget.blockchain.activeChain.name}. RWA and WRWA cannot be bridged.'
+            : 'No bridgeable tokens available on this network.',
+      );
+      return;
+    }
     final selected = await showDialog<Object?>(
       context: context,
       builder: (ctx) => buildBridgeOriginTokenDialog(
-        tokens: widget.tokens,
+        tokens: candidates,
         chainId: widget.blockchain.activeTokenStorageChainId,
         activeNetworkKey: widget.blockchain.activeNetworkKey,
         activeFamily: widget.blockchain.activeFamily,
@@ -1066,6 +1586,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         _fromToken = selected;
         _selectedPercentage = -1;
         _resetQuote();
+        if (_isAssetChainRoute) {
+          _syncAssetChainDestinationCurrency();
+        }
       });
       _requestQuote();
     }
@@ -1075,6 +1598,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final chains = _destinationChains();
     final selected = await showModalBottomSheet<EvmChain>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: const Color(0xFF0E0E0E),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -1088,17 +1612,90 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         // selected token doesn't exist on the new chain.
         _toCurrency = null;
         _resetQuote();
+        if (_isAssetChainRoute) {
+          _autoPairAssetChainFromTokenIfNeeded();
+          _syncAssetChainDestinationCurrency();
+        }
       });
+      if (_isAssetChainRoute) {
+        unawaited(_loadAssetChainTransfers());
+      }
       _requestQuote();
     }
   }
 
-  /// Pick the destination token (native or any Relay-supported token on the
-  /// destination chain).
+  /// Pick the destination token (Relay-supported tokens for Relay routes, or
+  /// configured BridgeAssist tokens when bridging to/from Asset Chain).
   Future<void> _selectToCurrency() async {
     final toChain = _toChain;
     if (toChain == null) return;
     if (toChain.family == ChainFamily.bitcoin) return;
+
+    if (_isAssetChainRoute) {
+      if (_assetChainRoutes.isEmpty) {
+        await _loadAssetChainRoutes();
+        if (!mounted) return;
+      }
+      final routes = _assetChainRoutesForPair(
+        widget.blockchain.activeChain.chainId,
+        toChain.chainId,
+      );
+      final seenKeys = <String>{};
+      final options = <BridgeCurrency>[];
+      for (final route in routes) {
+        final dst = route.destination.token;
+        if (dst == null) continue;
+        final isNative = _isAssetChainNativeAddress(dst.tokenAddress);
+        final key =
+            '${dst.symbol.toUpperCase()}:${dst.tokenAddress.toLowerCase()}';
+        if (!seenKeys.add(key)) continue;
+        options.add(
+          BridgeCurrency(
+            chainId: toChain.chainId,
+            address: isNative ? BridgeService.nativeCurrency : dst.tokenAddress,
+            symbol: dst.symbol,
+            name: dst.name,
+            decimals: route.destination.tokenDecimal,
+            isNative: isNative,
+            logoUri: _assetChainDestinationCurrency(route)?.logoUri,
+          ),
+        );
+      }
+      final selected = await showModalBottomSheet<BridgeCurrency>(
+        context: context,
+        backgroundColor: const Color(0xFF0E0E0E),
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (ctx) => _AssetChainCurrencyPickerSheet(
+          chainName: toChain.name,
+          chainId: toChain.chainId,
+          currencies: options,
+        ),
+      );
+      if (selected != null && mounted) {
+        setState(() {
+          _toCurrency = selected.isNative ? null : selected;
+          final matchedRoute = _matchingAssetChainRoute(
+            toChain: toChain,
+            toCurrency: selected,
+          );
+          if (matchedRoute != null) {
+            for (final candidate in _originTokens) {
+              if (_tokenMatchesAssetChainRoute(candidate, matchedRoute)) {
+                _fromToken = candidate;
+                break;
+              }
+            }
+          }
+          _resetQuote();
+        });
+        _requestQuote();
+      }
+      return;
+    }
+
     final selected = await showModalBottomSheet<BridgeCurrency>(
       context: context,
       backgroundColor: const Color(0xFF0E0E0E),
@@ -1194,7 +1791,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
       _selectedPercentage = -1;
       _amountController.clear();
       _resetQuote();
+      if (_isAssetChainRoute) {
+        _syncFromToken();
+        _autoPairAssetChainFromTokenIfNeeded();
+        _syncAssetChainDestinationCurrency();
+      }
     });
+    if (_isAssetChainRoute && _assetChainRoutes.isEmpty) {
+      unawaited(_loadAssetChainRoutes());
+    }
+    if (_isAssetChainRoute) {
+      unawaited(_loadAssetChainTransfers());
+    }
   }
 
   // ── Execution ───────────────────────────────────────────────────────────
@@ -1234,6 +1842,9 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   String? get _buttonLabel {
     if (_isBridging) return 'Bridging...';
     if (_bridgeActionActive) return 'Preparing bridge...';
+    if (_isAssetChainRoute && _assetChainPending.isNotEmpty) {
+      return 'Check pending transfer';
+    }
     if (_isBitcoinOrigin && _bitcoinBalanceLoading) {
       return 'Checking BTC balance…';
     }
@@ -1243,28 +1854,36 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     if (_amountValue > 0 && !_hasSufficientBalance) {
       return 'Insufficient ${_fromToken?.symbol ?? 'balance'}';
     }
-    if (_toCurrency != null && _bridgeCurrencyBlocked(_toCurrency!)) {
+    if (!_isAssetChainRoute &&
+        _toCurrency != null &&
+        _bridgeCurrencyBlocked(_toCurrency!)) {
       return 'Unverified token blocked';
     }
     return 'Bridge';
   }
 
-  bool get _canBridge =>
-      !_bridgeActionActive &&
-      !_isBridging &&
-      !_isQuoting &&
-      _pendingOperation == null &&
-      !_bitcoinHasPending &&
-      (_toChain?.family != ChainFamily.bitcoin || _bitcoinAllowed) &&
-      (!_isBitcoinOrigin ||
-          _bitcoinRecoveryLoaded &&
-              _bitcoinAllowed &&
-              widget.blockchain.activeNetworkKey == 'bitcoin:mainnet') &&
-      _quote != null &&
-      _hasSufficientBalance &&
-      widget.walletAddress != null &&
-      (_toCurrency == null || !_bridgeCurrencyBlocked(_toCurrency!)) &&
-      _quote!.canBeginExecution;
+  bool get _canBridge {
+    if (_bridgeActionActive || _isBridging || _isQuoting) return false;
+    if (widget.walletAddress == null || widget.walletAddress!.isEmpty) {
+      return false;
+    }
+    if (_isAssetChainRoute) {
+      return _assetChainPending.isEmpty &&
+          _assetChainQuote != null &&
+          _hasSufficientBalance;
+    }
+    return _pendingOperation == null &&
+        !_bitcoinHasPending &&
+        (_toChain?.family != ChainFamily.bitcoin || _bitcoinAllowed) &&
+        (!_isBitcoinOrigin ||
+            _bitcoinRecoveryLoaded &&
+                _bitcoinAllowed &&
+                widget.blockchain.activeNetworkKey == 'bitcoin:mainnet') &&
+        _quote != null &&
+        _hasSufficientBalance &&
+        (_toCurrency == null || !_bridgeCurrencyBlocked(_toCurrency!)) &&
+        _quote!.canBeginExecution;
+  }
 
   bool _bitcoinDestinationCurrent(BridgeQuote quote) {
     final bitcoin = quote.bitcoinQuote;
@@ -1419,6 +2038,13 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
   }
 
   Future<void> _prepareAndExecuteBridge() async {
+    if (_isAssetChainRoute) {
+      final approved = _assetChainQuote;
+      if (approved != null) {
+        await _executeAssetChainBridge(approved);
+      }
+      return;
+    }
     var quote = _quote;
     final from = _fromToken;
     if (quote == null || from == null || _pendingOperation != null) {
@@ -2043,18 +2669,243 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     }
   }
 
-  void _openAssetChainNativeBridge() {
-    final address = widget.walletAddress;
-    if (_isBridging || address == null || address.isEmpty) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => AssetChainNativeBridgeScreen(
-          blockchain: widget.blockchain,
-          walletService: widget.walletService,
-          walletAddress: address,
-        ),
-      ),
+  Future<void> _executeAssetChainBridge(
+    AssetChainNativeBridgeQuote approved,
+  ) async {
+    final wallet = widget.walletAddress?.trim();
+    if (wallet == null || wallet.isEmpty) return;
+    final runtime = RuntimeConfigService.instance.snapshot;
+    if (!runtime.allows(RuntimeFeature.bridges) ||
+        !runtime.allows(RuntimeFeature.transfers)) {
+      if (mounted) {
+        setState(
+          () => _quoteError = 'Asset Chain bridging is currently unavailable.',
+        );
+      }
+      return;
+    }
+
+    final approvalNetwork = widget.blockchain.activeNetworkKey;
+    final approvalWallet = widget.walletAddress;
+    final approvalAmount = _amountController.text;
+    final approvalDestination = _toChain;
+    final approvalFrom = _fromToken;
+    bool isCurrent() =>
+        mounted &&
+        widget.blockchain.activeNetworkKey == approvalNetwork &&
+        widget.walletAddress == approvalWallet &&
+        _amountController.text == approvalAmount &&
+        identical(_toChain, approvalDestination) &&
+        identical(_fromToken, approvalFrom) &&
+        RuntimeConfigService.instance.snapshot.allows(RuntimeFeature.bridges) &&
+        RuntimeConfigService.instance.snapshot.allows(RuntimeFeature.transfers);
+
+    var authenticated = false;
+    try {
+      authenticated =
+          await SensitiveAccessGuard.verify(
+            context,
+            reason: 'Authenticate to confirm this bridge.',
+            requireTwoFactor: false,
+          ) &&
+          isCurrent();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _quoteError = 'Unable to unlock this wallet. Please try again.',
+        );
+      }
+    }
+    if (!authenticated || !mounted) return;
+
+    final controller = TransactionProgressController(
+      flow: TransactionProgressFlow.generic,
     );
+    var progressOpen = true;
+    unawaited(
+      Navigator.of(context)
+          .pushNamed(
+            '/transaction-processing',
+            arguments: TransactionProcessingArguments(controller: controller),
+          )
+          .whenComplete(() {
+            progressOpen = false;
+            controller.dispose();
+          }),
+    );
+    controller.setSwapSubmitting();
+
+    try {
+      final txHash = await _assetChainBridgeService.send(
+        approved,
+        wallet,
+        isCurrent: isCurrent,
+        onStatus: (status) {
+          if (!mounted || !progressOpen) return;
+          controller.setSwapPending(message: status);
+        },
+      );
+      if (progressOpen) {
+        controller.setSuccess(
+          reference: shortHash(txHash),
+          detailsUrl: _originExplorerTxUrl(
+            txHash,
+            evmChain: approved.route.sourceChain,
+          ),
+        );
+      }
+      if (approved.platformFeeBps > 0) {
+        unawaited(
+          _bridgeService
+              .recordExecutedBridge(
+                originChainId: approved.route.sourceChain.chainId,
+                destinationChainId: approved.route.destinationChain.chainId,
+                walletAddress: wallet,
+                sellToken:
+                    approved.route.source.token?.symbol ?? _fromToken?.symbol,
+                buyToken:
+                    approved.route.destination.token?.symbol ??
+                    _toCurrency?.symbol,
+                amountUsd: approved.amountUsd,
+                txHash: txHash,
+              )
+              .catchError((Object error, StackTrace stackTrace) {
+                debugPrint(
+                  'Asset Chain bridge completion bookkeeping failed: $error\n$stackTrace',
+                );
+              }),
+        );
+      }
+      try {
+        await widget.onBridgeCompleted?.call();
+      } catch (error) {
+        debugPrint('Post-bridge wallet refresh failed: $error');
+      }
+      if (mounted) {
+        setState(() {
+          _amountController.clear();
+          _selectedPercentage = -1;
+          _resetQuote();
+        });
+        unawaited(_loadAssetChainTransfers());
+      }
+    } catch (error) {
+      if (progressOpen) {
+        controller.setError(_cleanAssetChainError(error));
+      }
+      if (mounted) {
+        unawaited(_loadAssetChainTransfers());
+      }
+    }
+  }
+
+  Future<void> _claimAssetChainTransfer(
+    AssetChainBridgeTransaction transfer,
+    AssetChainNativeBridgeRoute route,
+  ) async {
+    if (_isBridging || _claimingAssetChainTransferId != null) return;
+    final wallet = widget.walletAddress?.trim();
+    if (wallet == null || wallet.isEmpty) return;
+    final runtime = RuntimeConfigService.instance.snapshot;
+    if (!runtime.allows(RuntimeFeature.bridges) ||
+        !runtime.allows(RuntimeFeature.transfers)) {
+      if (mounted) {
+        setState(
+          () => _quoteError = 'Asset Chain claiming is currently unavailable.',
+        );
+      }
+      return;
+    }
+
+    setState(() => _claimingAssetChainTransferId = transfer.id);
+    final approvalWallet = widget.walletAddress;
+    final approvalNetwork = widget.blockchain.activeNetworkKey;
+    bool isCurrent() =>
+        mounted &&
+        widget.walletAddress == approvalWallet &&
+        widget.blockchain.activeNetworkKey == approvalNetwork &&
+        RuntimeConfigService.instance.snapshot.allows(RuntimeFeature.bridges) &&
+        RuntimeConfigService.instance.snapshot.allows(RuntimeFeature.transfers);
+
+    var authenticated = false;
+    try {
+      authenticated =
+          await SensitiveAccessGuard.verify(
+            context,
+            reason: 'Authenticate to claim this bridge transfer.',
+            requireTwoFactor: false,
+          ) &&
+          isCurrent();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _quoteError = 'Unable to unlock this wallet. Please try again.',
+        );
+      }
+    } finally {
+      if (!authenticated && mounted) {
+        setState(() => _claimingAssetChainTransferId = null);
+      }
+    }
+    if (!authenticated || !mounted) return;
+
+    final controller = TransactionProgressController(
+      flow: TransactionProgressFlow.generic,
+    );
+    var progressOpen = true;
+    unawaited(
+      Navigator.of(context)
+          .pushNamed(
+            '/transaction-processing',
+            arguments: TransactionProcessingArguments(controller: controller),
+          )
+          .whenComplete(() {
+            progressOpen = false;
+            controller.dispose();
+          }),
+    );
+    controller.setSwapSubmitting();
+
+    try {
+      final txHash = await _assetChainBridgeService.claim(
+        transfer,
+        route,
+        wallet,
+        isCurrent: isCurrent,
+        onStatus: (status) {
+          if (!mounted || !progressOpen) return;
+          controller.setSwapPending(message: status);
+        },
+      );
+      if (progressOpen) {
+        controller.setSuccess(
+          reference: shortHash(txHash),
+          detailsUrl: _originExplorerTxUrl(
+            txHash,
+            evmChain: route.destinationChain,
+          ),
+        );
+      }
+      try {
+        await widget.onBridgeCompleted?.call();
+      } catch (error) {
+        debugPrint('Post-claim wallet refresh failed: $error');
+      }
+      if (mounted) {
+        unawaited(_loadAssetChainTransfers());
+      }
+    } catch (error) {
+      if (progressOpen) {
+        controller.setError(_cleanAssetChainError(error));
+      }
+      if (mounted) {
+        unawaited(_loadAssetChainTransfers());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _claimingAssetChainTransferId = null);
+      }
+    }
   }
 
   // ── Build ───────────────────────────────────────────────────────────────
@@ -2064,6 +2915,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
     final from = _fromToken;
     final toChain = _toChain;
     final quote = _quote;
+    final acQuote = _assetChainQuote;
     // Family-aware origin display: shows "Solana" + its logo when the
     // active network is Solana, the active EVM chain otherwise.
     final fromChainName = widget.blockchain.activeNetworkName;
@@ -2073,59 +2925,18 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ? null
         : widget.blockchain.activeChain.chainId;
 
-    if (_isAssetChainOrigin) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _BridgeCard(
-            label: 'BRIDGE FROM',
-            chainName: fromChainName,
-            chainLogoUrl: fromChainLogo,
-            onSelectChain: widget.onSelectFromChain,
-            child: Text(
-              'Asset Chain uses its native BridgeAssist bridge to transfer supported tokens to and from Asset Chain.',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                height: 1.45,
-                color: const Color(0xFFB2B5BD),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFDC0000),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: const Icon(Icons.account_tree_outlined),
-            label: Text(
-              'Asset Chain native bridge',
-              style: GoogleFonts.inter(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            onPressed:
-                _isBridging ||
-                    widget.walletAddress == null ||
-                    widget.walletAddress!.isEmpty
-                ? null
-                : _openAssetChainNativeBridge,
-          ),
-        ],
-      );
-    }
-
     final fromUsd = from != null && from.priceUsd > 0
         ? _amountValue * from.priceUsd
         : 0.0;
 
     String toAmountText = '0.0';
-    if (quote != null) {
+    if (acQuote != null) {
+      toAmountText = AmountUtils.formatBaseUnits(
+        acQuote.receivedAmount,
+        acQuote.route.destination.tokenDecimal,
+        maxFractionDigits: 6,
+      );
+    } else if (quote != null) {
       final outWei = BigInt.tryParse(quote.amountOut) ?? BigInt.zero;
       // Use the selected token's decimals; otherwise the chain's native
       // decimals (SOL uses 9, EVM gas tokens 18).
@@ -2145,31 +2956,40 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         maxFractionDigits: toChain?.family == ChainFamily.bitcoin ? 8 : 6,
       );
     }
-    final destinationUsd = quote == null
-        ? null
-        : destinationAmountUsd(
-            quoteAmountUsd: quote.amountOutUsd,
-            amountText: toAmountText,
-            destinationSymbol: _toCurrency?.symbol ?? toChain?.symbol ?? '',
-            destinationPriceUsd: _toCurrency?.priceUsd,
-          );
+    final double? destinationUsd;
+    if (acQuote != null) {
+      final sameSymbol =
+          from != null &&
+          AssetChainNativeBridgeService.normalizedSymbol(from.symbol) ==
+              AssetChainNativeBridgeService.normalizedSymbol(
+                acQuote.route.symbol,
+              );
+      destinationUsd = destinationAmountUsd(
+        quoteAmountUsd: 0,
+        amountText: toAmountText,
+        destinationSymbol:
+            _toCurrency?.symbol ??
+            acQuote.route.destination.token?.symbol ??
+            toChain?.symbol ??
+            '',
+        destinationPriceUsd:
+            _toCurrency?.priceUsd ??
+            (sameSymbol && from.priceUsd > 0 ? from.priceUsd : null),
+      );
+    } else if (quote != null) {
+      destinationUsd = destinationAmountUsd(
+        quoteAmountUsd: quote.amountOutUsd,
+        amountText: toAmountText,
+        destinationSymbol: _toCurrency?.symbol ?? toChain?.symbol ?? '',
+        destinationPriceUsd: _toCurrency?.priceUsd,
+      );
+    } else {
+      destinationUsd = null;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.blockchain.activeFamily == ChainFamily.evm) ...[
-          OutlinedButton.icon(
-            icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Asset Chain native bridge'),
-            onPressed:
-                _isBridging ||
-                    widget.walletAddress == null ||
-                    widget.walletAddress!.isEmpty
-                ? null
-                : _openAssetChainNativeBridge,
-          ),
-          const SizedBox(height: 12),
-        ],
         if (_bitcoinHasPending || _bitcoinRecovery != null) ...[
           Container(
             padding: const EdgeInsets.all(12),
@@ -2251,10 +3071,112 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             ),
           ),
         ],
+        if (_isAssetChainRoute ||
+            _assetChainPending.isNotEmpty ||
+            _assetChainTransfers.isNotEmpty) ...[
+          if (_assetChainPending.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF171717),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF333333)),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'An Asset Chain bridge submission is saved. Check status before sending again.',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _isRefreshingAssetChain
+                        ? null
+                        : _loadAssetChainTransfers,
+                    child: Text(
+                      _isRefreshingAssetChain ? 'Refreshing…' : 'Refresh',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          for (final transfer in _assetChainTransfers) ...[
+            Builder(
+              builder: (context) {
+                final route = _claimRouteForAssetChain(transfer);
+                final amountText = AmountUtils.formatBaseUnits(
+                  BigInt.tryParse(transfer.amount) ?? BigInt.zero,
+                  route?.source.tokenDecimal ?? 18,
+                  maxFractionDigits: 6,
+                );
+                final hasPendingEntry = _assetChainPending.any(
+                  (item) => item['transactionId'] == transfer.id,
+                );
+                final claimingThis =
+                    _claimingAssetChainTransferId == transfer.id;
+                final canClaim =
+                    route != null &&
+                    !_isBridging &&
+                    _claimingAssetChainTransferId == null &&
+                    !hasPendingEntry;
+                final claimLabel = route == null
+                    ? 'Route unavailable'
+                    : claimingThis
+                    ? 'Claiming…'
+                    : 'Claim on ${route.destinationChain.name}';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF171717),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF333333)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$amountText ${transfer.symbol} · ${route?.sourceChain.name ?? transfer.fromChain} → ${route?.destinationChain.name ?? transfer.toChain}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'Awaiting destination claim',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: canClaim
+                            ? () => _claimAssetChainTransfer(transfer, route)
+                            : null,
+                        child: Text(claimLabel),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
         _BridgeCard(
           label: 'BRIDGE FROM',
           chainName: fromChainName,
           chainLogoUrl: fromChainLogo,
+          chainId: fromTokenIconChainId,
           onSelectChain: widget.onSelectFromChain,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2386,6 +3308,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
           label: 'BRIDGE TO',
           chainName: toChain?.name ?? '--',
           chainLogoUrl: toChain?.logoUrl,
+          chainId: toChain?.family == ChainFamily.evm ? toChain?.chainId : null,
           onSelectChain: _isBridging ? null : _selectToChain,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2400,7 +3323,7 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: quote == null
+                        color: quote == null && acQuote == null
                             ? const Color(0x4DE2E2E2)
                             : const Color(0xFFE2E2E2),
                       ),
@@ -2427,10 +3350,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             ],
           ),
         ),
-        if (quote != null || _isQuoting) ...[
+        if (quote != null || acQuote != null || _isQuoting) ...[
           const SizedBox(height: 16),
           _BridgeDetailsCard(
             quote: quote,
+            assetChainQuote: acQuote,
             isLoading: _isQuoting,
             swapAmountUsd: fromUsd,
           ),
@@ -2453,17 +3377,19 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
             ),
           ),
         ],
-        const SizedBox(height: 16),
-        SwapSlippageSection(
-          slippageBps: _slippageBps,
-          onChanged: (bps) {
-            setState(() {
-              _slippageBps = bps;
-              _resetQuote();
-            });
-            _requestQuote();
-          },
-        ),
+        if (!_isAssetChainRoute) ...[
+          const SizedBox(height: 16),
+          SwapSlippageSection(
+            slippageBps: _slippageBps,
+            onChanged: (bps) {
+              setState(() {
+                _slippageBps = bps;
+                _resetQuote();
+              });
+              _requestQuote();
+            },
+          ),
+        ],
         const SizedBox(height: 20),
         if (_isBitcoinOrigin &&
             !_bitcoinRecoveryLoaded &&
@@ -2481,7 +3407,11 @@ class _BridgeTabContentState extends State<BridgeTabContent> {
         ),
         const SizedBox(height: 12),
         Text(
-          'You receive ${_toCurrency?.symbol ?? toChain?.symbol ?? 'the selected token'} on ${toChain?.name ?? 'the destination network'}.',
+          _isAssetChainOrigin && _originTokens.isEmpty
+              ? 'RWA and WRWA cannot be bridged. Hold a bridgeable token on ${widget.blockchain.activeChain.name} to bridge.'
+              : _isAssetChainRoute
+              ? 'You bridge ${_toCurrency?.symbol ?? toChain?.symbol ?? 'the selected token'} to ${toChain?.name ?? 'the destination network'} via Asset Chain Bridge and claim on the destination network.'
+              : 'You receive ${_toCurrency?.symbol ?? toChain?.symbol ?? 'the selected token'} on ${toChain?.name ?? 'the destination network'}.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
             fontSize: 11,
@@ -2501,6 +3431,7 @@ class _BridgeCard extends StatelessWidget {
   final String label;
   final String chainName;
   final String? chainLogoUrl;
+  final int? chainId;
   final VoidCallback? onSelectChain;
   final Widget child;
 
@@ -2508,6 +3439,7 @@ class _BridgeCard extends StatelessWidget {
     required this.label,
     required this.chainName,
     required this.chainLogoUrl,
+    this.chainId,
     required this.onSelectChain,
     required this.child,
   });
@@ -2542,6 +3474,7 @@ class _BridgeCard extends StatelessWidget {
               _ChainPill(
                 name: chainName,
                 logoUrl: chainLogoUrl,
+                chainId: chainId,
                 onTap: onSelectChain,
               ),
             ],
@@ -2557,9 +3490,15 @@ class _BridgeCard extends StatelessWidget {
 class _ChainPill extends StatelessWidget {
   final String name;
   final String? logoUrl;
+  final int? chainId;
   final VoidCallback? onTap;
 
-  const _ChainPill({required this.name, required this.logoUrl, this.onTap});
+  const _ChainPill({
+    required this.name,
+    required this.logoUrl,
+    this.chainId,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2575,7 +3514,7 @@ class _ChainPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ChainLogoDot(url: logoUrl),
+            _ChainLogoDot(url: logoUrl, chainId: chainId),
             const SizedBox(width: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 130),
@@ -2601,8 +3540,9 @@ class _ChainPill extends StatelessWidget {
 
 class _ChainLogoDot extends StatelessWidget {
   final String? url;
+  final int? chainId;
 
-  const _ChainLogoDot({this.url});
+  const _ChainLogoDot({this.url, this.chainId});
 
   @override
   Widget build(BuildContext context) {
@@ -2618,7 +3558,6 @@ class _ChainLogoDot extends StatelessWidget {
       ),
     );
     final trimmed = url?.trim() ?? '';
-    if (trimmed.isEmpty) return fallback;
     if (trimmed.startsWith('assets/')) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(10),
@@ -2631,6 +3570,20 @@ class _ChainLogoDot extends StatelessWidget {
         ),
       );
     }
+    if (chainId != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: ChainLogoImage(
+          chainId: chainId!,
+          logoUrl: trimmed.isEmpty ? null : trimmed,
+          width: 20,
+          height: 20,
+          fit: BoxFit.cover,
+          fallback: fallback,
+        ),
+      );
+    }
+    if (trimmed.isEmpty) return fallback;
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: Image.network(
@@ -2661,6 +3614,8 @@ class _DestinationTokenChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final symbol = currency?.symbol ?? chain?.symbol ?? '--';
     final logo = currency?.logoUri ?? chain?.logoUrl;
+    final chainId = chain?.family == ChainFamily.evm ? chain?.chainId : null;
+    final showTokenIcon = currency != null && !currency!.isNative;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -2673,7 +3628,16 @@ class _DestinationTokenChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _ChainLogoDot(url: logo),
+            if (showTokenIcon)
+              TokenIcon(
+                tokenSymbol: symbol,
+                tokenAddress: currency!.address,
+                tokenImageUrl: currency!.logoUri,
+                size: 20,
+                chainId: chainId,
+              )
+            else
+              _ChainLogoDot(url: logo, chainId: chainId),
             const SizedBox(width: 7),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 90),
@@ -2863,7 +3827,18 @@ class _CurrencyPickerSheetState extends State<_CurrencyPickerSheet> {
                             onTap: blocked
                                 ? null
                                 : () => Navigator.of(ctx).pop(c),
-                            leading: _ChainLogoDot(url: c.logoUri),
+                            leading: c.isNative
+                                ? _ChainLogoDot(
+                                    url: c.logoUri,
+                                    chainId: widget.chainId,
+                                  )
+                                : TokenIcon(
+                                    tokenSymbol: c.symbol,
+                                    tokenAddress: c.address,
+                                    tokenImageUrl: c.logoUri,
+                                    size: 24,
+                                    chainId: widget.chainId,
+                                  ),
                             title: Text(
                               c.symbol,
                               style: GoogleFonts.inter(
@@ -2966,11 +3941,13 @@ class _BridgePercentChip extends StatelessWidget {
 /// Fee/details box: platform fee, bridge fee, estimated gas, arrival.
 class _BridgeDetailsCard extends StatelessWidget {
   final BridgeQuote? quote;
+  final AssetChainNativeBridgeQuote? assetChainQuote;
   final bool isLoading;
   final double swapAmountUsd;
 
   const _BridgeDetailsCard({
     required this.quote,
+    this.assetChainQuote,
     required this.isLoading,
     required this.swapAmountUsd,
   });
@@ -2978,6 +3955,7 @@ class _BridgeDetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final q = quote;
+    final ac = assetChainQuote;
     return Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
@@ -2985,7 +3963,7 @@ class _BridgeDetailsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0x0DFFFFFF)),
       ),
-      child: isLoading && q == null
+      child: isLoading && q == null && ac == null
           ? Center(
               child: Text(
                 'Fetching quote…',
@@ -2994,6 +3972,36 @@ class _BridgeDetailsCard extends StatelessWidget {
                   color: const Color(0xFF9CA3AF),
                 ),
               ),
+            )
+          : ac != null
+          ? Column(
+              children: [
+                const _DetailRow(label: 'Route', value: 'Asset Chain Bridge'),
+                if (ac.platformFeeBps > 0 || (ac.platformFeeUsd ?? 0) > 0)
+                  _DetailRow(
+                    label: 'Platform Fee',
+                    value: formatBridgePlatformFee(
+                      swapAmountUsd: swapAmountUsd > 0
+                          ? swapAmountUsd
+                          : (ac.amountUsd ?? 0),
+                      feeUsd: ac.platformFeeUsd,
+                      feeBps: ac.platformFeeBps > 0 ? ac.platformFeeBps : null,
+                    ),
+                  ),
+                _DetailRow(
+                  label: 'Send Fee',
+                  value: '${_feePercentLabel(ac.sendFee, ac.denominator)}%',
+                ),
+                _DetailRow(
+                  label: 'Claim Fee',
+                  value: '${_feePercentLabel(ac.receiveFee, ac.denominator)}%',
+                ),
+                _DetailRow(
+                  label: 'Estimated Arrival',
+                  value: 'Claim on ${ac.route.destinationChain.name}',
+                  isLast: true,
+                ),
+              ],
             )
           : Column(
               children: [
@@ -3023,6 +4031,12 @@ class _BridgeDetailsCard extends StatelessWidget {
               ],
             ),
     );
+  }
+
+  static String _feePercentLabel(BigInt fee, BigInt denominator) {
+    final denom = denominator.toDouble();
+    if (denom <= 0) return '0.00';
+    return (fee.toDouble() / denom * 100).toStringAsFixed(2);
   }
 
   static String _usdLabel(double? value) {
@@ -3084,10 +4098,184 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _ChainPickerSheet extends StatelessWidget {
+class _ChainPickerSheet extends StatefulWidget {
   final List<EvmChain> chains;
 
   const _ChainPickerSheet({required this.chains});
+
+  @override
+  State<_ChainPickerSheet> createState() => _ChainPickerSheetState();
+}
+
+class _ChainPickerSheetState extends State<_ChainPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<EvmChain> get _filteredChains {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.chains;
+    return widget.chains.where((chain) {
+      return chain.name.toLowerCase().contains(q) ||
+          chain.symbol.toLowerCase().contains(q) ||
+          chain.chainId.toString().contains(q);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filteredChains;
+    return AnimatedPadding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOut,
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.72,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+                child: Text(
+                  'Bridge to network',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                child: TextField(
+                  key: const ValueKey('bridge-chain-search-field'),
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _query = value),
+                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white),
+                  cursorColor: Colors.white,
+                  decoration: InputDecoration(
+                    hintText: 'Search network or symbol',
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: const Color(0xFF848E9C),
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 18,
+                      color: Color(0xFF848E9C),
+                    ),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            key: const ValueKey('bridge-chain-search-clear'),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Color(0xFF848E9C),
+                            ),
+                          ),
+                    filled: true,
+                    fillColor: const Color(0xFF161616),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF262A30)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF262A30)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF3E4552)),
+                    ),
+                  ),
+                ),
+              ),
+              if (filtered.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+                  child: Center(
+                    child: Text(
+                      'No matching networks found.',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF848E9C),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filtered.length,
+                    itemBuilder: (ctx, index) {
+                      final chain = filtered[index];
+                      return ListTile(
+                        onTap: () => Navigator.of(ctx).pop(chain),
+                        leading: _ChainLogoDot(
+                          url: chain.logoUrl,
+                          chainId: chain.family == ChainFamily.evm
+                              ? chain.chainId
+                              : null,
+                        ),
+                        title: Text(
+                          chain.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
+                        trailing: Text(
+                          chain.symbol,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: const Color(0xFF848E9C),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AssetChainCurrencyPickerSheet extends StatelessWidget {
+  final String chainName;
+  final int chainId;
+  final List<BridgeCurrency> currencies;
+
+  const _AssetChainCurrencyPickerSheet({
+    required this.chainName,
+    required this.chainId,
+    required this.currencies,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3103,7 +4291,7 @@ class _ChainPickerSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
               child: Text(
-                'Bridge to network',
+                'Receive on $chainName',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -3111,34 +4299,56 @@ class _ChainPickerSheet extends StatelessWidget {
                 ),
               ),
             ),
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: chains.length,
-                itemBuilder: (ctx, index) {
-                  final chain = chains[index];
-                  return ListTile(
-                    onTap: () => Navigator.of(ctx).pop(chain),
-                    leading: _ChainLogoDot(url: chain.logoUrl),
-                    title: Text(
-                      chain.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
+            if (currencies.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: Text(
+                  'No supported Asset Chain bridge tokens found for this route.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: const Color(0xFF848E9C),
+                  ),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: currencies.length,
+                  itemBuilder: (ctx, index) {
+                    final c = currencies[index];
+                    return ListTile(
+                      onTap: () => Navigator.of(ctx).pop(c),
+                      leading: c.isNative
+                          ? _ChainLogoDot(url: c.logoUri, chainId: chainId)
+                          : TokenIcon(
+                              tokenSymbol: c.symbol,
+                              tokenAddress: c.address,
+                              tokenImageUrl: c.logoUri,
+                              size: 24,
+                              chainId: chainId,
+                            ),
+                      title: Text(
+                        c.symbol,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    trailing: Text(
-                      chain.symbol,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: const Color(0xFF848E9C),
+                      subtitle: Text(
+                        c.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF848E9C),
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ),

@@ -106,6 +106,26 @@ void main() {
 
     expect(tronTokens.map((item) => item.symbol), ['USDT']);
     expect(baseTokens.map((item) => item.symbol), ['USDC']);
+
+    final acTokens = filterBridgeOriginTokens(
+      tokens: [
+        token('RWA', 'evm:42420'),
+        token(
+          'WRWA',
+          'evm:42420',
+          address: '0x2584d40b5553e81bb9dec0b6cd1a2e504aab1709',
+        ),
+        token(
+          'USDC',
+          'evm:42420',
+          address: '0x2b7c1342cc64add10b2a79c8f9767d2667de64b2',
+        ),
+      ],
+      activeNetworkKey: 'evm:42420',
+      activeFamily: ChainFamily.evm,
+      nativeSymbol: 'RWA',
+    );
+    expect(acTokens.map((item) => item.symbol), ['USDC']);
   });
 
   test('bridge fee and origin network fee placeholders are accurate', () {

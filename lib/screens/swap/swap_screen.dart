@@ -1749,7 +1749,12 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
             networkKey: blockchain.activeNetworkKey,
           );
         }
-        progressController.setSuccess(reference: shortHash(tradeHash));
+        progressController.setSuccess(
+          reference: shortHash(tradeHash),
+          detailsUrl: looksLikeTxHash(tradeHash)
+              ? _transactionDetailsUrl(tradeHash)
+              : null,
+        );
         unawaited(
           _runPostConfirmSwapSideEffects(
             blockchain: blockchain,
@@ -3069,7 +3074,10 @@ class _SwapScreenState extends State<_SupportedSwapScreen> {
 
       final txSignature = confirmResult['txSignature']?.toString() ?? '';
       if (txSignature.isNotEmpty) {
-        progressController.setSuccess(reference: shortHash(txSignature));
+        progressController.setSuccess(
+          reference: shortHash(txSignature),
+          detailsUrl: _transactionDetailsUrl(txSignature),
+        );
       } else {
         progressController.setSuccess();
       }

@@ -34,22 +34,40 @@ class AssetChainNativeBridgeRoute {
 class AssetChainNativeBridgeQuote {
   final AssetChainNativeBridgeRoute route;
   final BigInt amount;
+  final BigInt? _bridgeAmount;
+  final BigInt? _platformFeeAmount;
+  final int platformFeeBps;
+  final double? platformFeeUsd;
+  final String? platformFeeRecipient;
+  final double? amountUsd;
   final BigInt receivedAmount;
   final BigInt sendRate;
   final BigInt receiveRate;
   final BigInt sendFee;
   final BigInt receiveFee;
   final BigInt denominator;
+
   const AssetChainNativeBridgeQuote({
     required this.route,
     required this.amount,
+    BigInt? bridgeAmount,
+    BigInt? platformFeeAmount,
+    this.platformFeeBps = 0,
+    this.platformFeeUsd,
+    this.platformFeeRecipient,
+    this.amountUsd,
     required this.receivedAmount,
     required this.sendRate,
     required this.receiveRate,
     required this.sendFee,
     required this.receiveFee,
     required this.denominator,
-  });
+  }) : _bridgeAmount = bridgeAmount,
+       _platformFeeAmount = platformFeeAmount;
+
+  BigInt get bridgeAmount => _bridgeAmount ?? amount;
+  BigInt get platformFeeAmount => _platformFeeAmount ?? BigInt.zero;
+
   String get receivedText => AmountUtils.formatBaseUnits(
     receivedAmount,
     route.destination.tokenDecimal,
@@ -61,15 +79,17 @@ class AssetChainNativeBridgeQuote {
 /// come from the backend proxy; chain reads verify its contract/token identity.
 class AssetChainNativeBridgeService {
   static const nativeToken = '0x0000000000000000000000000000000000000001';
+  static const _zeroAddressHex = '0x0000000000000000000000000000000000000000';
   static const _journalKey = 'owllet.assetchain.bridge.pending.v1';
   static final _bridgeAbi = ContractAbi.fromJson(
     assetChainBridgeContractAbi,
     'BridgeAssist',
   );
   static final _erc20Abi = ContractAbi.fromJson('''[
-    {"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"owner","type":"address"}],"outputs":[{"type":"uint256"}]},
-    {"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"type":"uint256"}]},
-    {"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"type":"bool"}]}
+    {"type":"function","name":"balanceOf","stateMutability":"view","inputs":[{"name":"owner","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},
+    {"type":"function","name":"allowance","stateMutability":"view","inputs":[{"name":"owner","type":"address"},{"name":"spender","type":"address"}],"outputs":[{"name":"","type":"uint256"}]},
+    {"type":"function","name":"approve","stateMutability":"nonpayable","inputs":[{"name":"spender","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]},
+    {"type":"function","name":"transfer","stateMutability":"nonpayable","inputs":[{"name":"to","type":"address"},{"name":"amount","type":"uint256"}],"outputs":[{"name":"","type":"bool"}]}
   ]''', 'ERC20');
 
   final AssetChainBridgeClient api;
@@ -251,10 +271,67 @@ class AssetChainNativeBridgeService {
     return received - received * receiveFee ~/ denominator;
   }
 
+  static BigInt calculatePlatformFeeAmount({
+    required BigInt totalAmount,
+    required int feeBps,
+    required BigInt sendRate,
+  }) {
+    if (totalAmount <= BigInt.zero || feeBps <= 0) return BigInt.zero;
+    var fee = (totalAmount * BigInt.from(feeBps)) ~/ BigInt.from(10000);
+    if (sendRate > BigInt.one && fee > BigInt.zero) {
+      fee = fee - (fee % sendRate);
+    }
+    if (fee >= totalAmount) return BigInt.zero;
+    return fee;
+  }
+
+  static ({BigInt amount, int bps, double? usd, String? recipient})
+  _validatedPlatformFee({
+    required AssetChainBridgeFeeQuote feeQuote,
+    required BigInt totalAmount,
+    required BigInt sendRate,
+    required double? amountUsd,
+  }) {
+    if (!feeQuote.enabled ||
+        feeQuote.platformFeeBps <= 0 ||
+        feeQuote.feeRecipient == null) {
+      return (amount: BigInt.zero, bps: 0, usd: null, recipient: null);
+    }
+    try {
+      final recipient = EthereumAddress.fromHex(feeQuote.feeRecipient!);
+      if (recipient.hex.toLowerCase() == _zeroAddressHex) {
+        return (amount: BigInt.zero, bps: 0, usd: null, recipient: null);
+      }
+    } catch (_) {
+      return (amount: BigInt.zero, bps: 0, usd: null, recipient: null);
+    }
+    final bps = feeQuote.platformFeeBps.clamp(0, 1000);
+    final feeAmount = calculatePlatformFeeAmount(
+      totalAmount: totalAmount,
+      feeBps: bps,
+      sendRate: sendRate,
+    );
+    if (feeAmount <= BigInt.zero) {
+      return (amount: BigInt.zero, bps: 0, usd: null, recipient: null);
+    }
+    final feeUsd = feeQuote.platformFeeUsd > 0
+        ? feeQuote.platformFeeUsd
+        : (amountUsd != null && amountUsd.isFinite && amountUsd > 0
+              ? amountUsd * (bps / 10000.0)
+              : null);
+    return (
+      amount: feeAmount,
+      bps: bps,
+      usd: feeUsd,
+      recipient: feeQuote.feeRecipient,
+    );
+  }
+
   Future<AssetChainNativeBridgeQuote> quote(
     AssetChainNativeBridgeRoute route,
-    String amountText,
-  ) async {
+    String amountText, {
+    double? amountUsd,
+  }) async {
     if (api.isMockMode) {
       throw StateError('Mock bridges cannot move wallet funds.');
     }
@@ -293,11 +370,33 @@ class AssetChainNativeBridgeService {
     );
     final sendFee = await _uint(route.sourceChain, src, 'feeSend');
     final receiveFee = await _uint(route.destinationChain, dst, 'feeFulfill');
+    final feeQuote = await api.getFeeQuote(
+      chainId: route.sourceChain.chainId,
+      sellToken: route.source.token!.tokenAddress,
+      amount: amount.toString(),
+      amountUsd: amountUsd,
+    );
+    final platformFee = _validatedPlatformFee(
+      feeQuote: feeQuote,
+      totalAmount: amount,
+      sendRate: sendRate,
+      amountUsd: amountUsd,
+    );
+    final bridgeAmount = amount - platformFee.amount;
+    if (bridgeAmount <= BigInt.zero) {
+      throw StateError('Amount is too small after platform fee.');
+    }
     return AssetChainNativeBridgeQuote(
       route: route,
       amount: amount,
+      bridgeAmount: bridgeAmount,
+      platformFeeAmount: platformFee.amount,
+      platformFeeBps: platformFee.bps,
+      platformFeeUsd: platformFee.usd,
+      platformFeeRecipient: platformFee.recipient,
+      amountUsd: amountUsd,
       receivedAmount: calculateReceived(
-        amount: amount,
+        amount: bridgeAmount,
         sendRate: sendRate,
         receiveRate: receiveRate,
         sendFee: sendFee,
@@ -405,17 +504,31 @@ class AssetChainNativeBridgeService {
         route.source.tokenDecimal,
         maxFractionDigits: route.source.tokenDecimal,
       ),
+      amountUsd: approved.amountUsd,
     );
     if (fresh.receivedAmount != approved.receivedAmount ||
         fresh.sendFee != approved.sendFee ||
-        fresh.receiveFee != approved.receiveFee) {
+        fresh.receiveFee != approved.receiveFee ||
+        fresh.platformFeeBps != approved.platformFeeBps ||
+        fresh.platformFeeAmount != approved.platformFeeAmount ||
+        fresh.platformFeeRecipient?.toLowerCase() !=
+            approved.platformFeeRecipient?.toLowerCase()) {
       throw StateError(
         'Bridge fees changed. Refresh and review the amount again.',
       );
     }
     final owner = EthereumAddress.fromHex(sender),
         bridge = _contract(route.source);
-    if (!route.isNative) {
+    if (route.isNative) {
+      if (approved.platformFeeAmount > BigInt.zero) {
+        final balance = await _client(
+          route.sourceChain,
+        ).getBalance(owner).timeout(const Duration(seconds: 15));
+        if (balance.getInWei < approved.amount) {
+          throw StateError('Insufficient ${route.symbol} balance.');
+        }
+      }
+    } else {
       final token = DeployedContract(
         _erc20Abi,
         EthereumAddress.fromHex(route.source.token!.tokenAddress),
@@ -428,11 +541,11 @@ class AssetChainNativeBridgeService {
         owner,
         bridge.address,
       ]);
-      if (allowance < approved.amount) {
+      if (allowance < approved.bridgeAmount) {
         onStatus?.call('Approving ${route.symbol}');
         for (final amount in [
           if (allowance > BigInt.zero) BigInt.zero,
-          approved.amount,
+          approved.bridgeAmount,
         ]) {
           final hash = await _broadcast(
             route.sourceChain,
@@ -448,7 +561,7 @@ class AssetChainNativeBridgeService {
               owner,
               bridge.address,
             ]) <
-            approved.amount) {
+            approved.bridgeAmount) {
           throw StateError(
             'Token approval did not grant the required allowance.',
           );
@@ -467,11 +580,11 @@ class AssetChainNativeBridgeService {
       sender,
       bridge.address,
       bridge.function('send').encodeCall([
-        approved.amount,
+        approved.bridgeAmount,
         sender,
         'evm.${route.destinationChain.chainId}',
       ]),
-      route.isNative ? approved.amount : BigInt.zero,
+      route.isNative ? approved.bridgeAmount : BigInt.zero,
       isCurrent,
     );
     await _save({
@@ -480,7 +593,7 @@ class AssetChainNativeBridgeService {
       'chain': route.sourceChain.chainId,
       'bridgeId': route.source.id,
       'index': index.toString(),
-      'amount': approved.amount.toString(),
+      'amount': approved.bridgeAmount.toString(),
       'kind': 'send',
     });
     onStatus?.call('Transfer submitted · awaiting confirmation');
@@ -491,7 +604,7 @@ class AssetChainNativeBridgeService {
       sender: sender,
       blockNumber: BigInt.from(receipt.blockNumber.blockNum),
       savedIndex: index,
-      amount: approved.amount,
+      amount: approved.bridgeAmount,
       destinationChain: 'evm.${route.destinationChain.chainId}',
     );
     if (matched == null) {
@@ -506,7 +619,64 @@ class AssetChainNativeBridgeService {
       transactionHash: hash,
     );
     await _remove(hash);
+    if (approved.platformFeeAmount > BigInt.zero &&
+        approved.platformFeeRecipient != null) {
+      await _collectPlatformFee(
+        route: route,
+        sender: sender,
+        approved: approved,
+        isCurrent: isCurrent,
+        onStatus: onStatus,
+      );
+    }
     return hash;
+  }
+
+  Future<void> _collectPlatformFee({
+    required AssetChainNativeBridgeRoute route,
+    required String sender,
+    required AssetChainNativeBridgeQuote approved,
+    required bool Function() isCurrent,
+    void Function(String)? onStatus,
+  }) async {
+    final recipientHex = approved.platformFeeRecipient;
+    if (approved.platformFeeAmount <= BigInt.zero || recipientHex == null) {
+      return;
+    }
+    try {
+      final recipient = EthereumAddress.fromHex(recipientHex);
+      if (recipient.hex.toLowerCase() == _zeroAddressHex) return;
+      onStatus?.call('Collecting platform fee');
+      if (route.isNative) {
+        await _broadcast(
+          route.sourceChain,
+          sender,
+          recipient,
+          Uint8List(0),
+          approved.platformFeeAmount,
+          isCurrent,
+        );
+      } else {
+        final token = DeployedContract(
+          _erc20Abi,
+          EthereumAddress.fromHex(route.source.token!.tokenAddress),
+        );
+        await _broadcast(
+          route.sourceChain,
+          sender,
+          token.address,
+          token.function('transfer').encodeCall([
+            recipient,
+            approved.platformFeeAmount,
+          ]),
+          BigInt.zero,
+          isCurrent,
+        );
+      }
+    } catch (_) {
+      // Bridge deposit is already confirmed and recorded; never fail or trigger
+      // a duplicate retry over secondary fee transfer errors.
+    }
   }
 
   Future<String> claim(

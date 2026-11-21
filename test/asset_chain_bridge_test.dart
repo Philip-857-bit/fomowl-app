@@ -859,7 +859,7 @@ void main() {
         final mainnetUrl = AppEnvironment.assetChainBridgeBaseUrl(
           testnet: false,
         );
-        expect(mainnetUrl, 'https://bridge.assetchain.org');
+        expect(mainnetUrl, 'https://orchestrator.assetchain.org');
 
         final testnetUrl = AppEnvironment.assetChainBridgeBaseUrl(
           testnet: true,
@@ -913,6 +913,93 @@ void main() {
           fromUser: '0x1111111111111111111111111111111111111111',
         );
         expect(sigs.signatures, hasLength(2));
+      },
+    );
+  });
+
+  group('Group 7: Platform Fee Quote Client', () {
+    test('TC-FEE-01: Returns disabled in mock mode', () async {
+      final client = AssetChainBridgeClient(mockEnabled: true);
+      final quote = await client.getFeeQuote(
+        chainId: 42420,
+        sellToken: '0x0000000000000000000000000000000000000001',
+        amount: '1000000000000000000',
+        amountUsd: 50,
+      );
+      expect(quote.enabled, isFalse);
+      expect(quote.platformFeeBps, 0);
+      expect(quote.feeRecipient, isNull);
+    });
+
+    test(
+      'TC-FEE-02: Requests proxy /fee-quote and parses enabled fee',
+      () async {
+        Uri? capturedUri;
+        final client = AssetChainBridgeClient(
+          baseUrl:
+              'https://corestaging.owlletapp.com/api/swap/assetchain/bridge',
+          useProxy: true,
+          httpClient: MockClient((request) async {
+            capturedUri = request.url;
+            return http.Response(
+              jsonEncode({
+                'success': true,
+                'data': {
+                  'enabled': true,
+                  'platformFeeBps': 200,
+                  'platformFeeUsd': 1.0,
+                  'feeRecipient': '0x9999999999999999999999999999999999999999',
+                },
+              }),
+              200,
+            );
+          }),
+        );
+
+        final quote = await client.getFeeQuote(
+          chainId: 42420,
+          sellToken: '0x0000000000000000000000000000000000000001',
+          amount: '50000000000000000000',
+          amountUsd: 50,
+        );
+
+        expect(capturedUri?.path, '/api/swap/assetchain/bridge/fee-quote');
+        expect(capturedUri?.queryParameters['chainId'], '42420');
+        expect(
+          capturedUri?.queryParameters['sellToken'],
+          '0x0000000000000000000000000000000000000001',
+        );
+        expect(capturedUri?.queryParameters['amount'], '50000000000000000000');
+        expect(capturedUri?.queryParameters['amountUsd'], '50.0');
+        expect(quote.enabled, isTrue);
+        expect(quote.platformFeeBps, 200);
+        expect(quote.platformFeeUsd, 1.0);
+        expect(
+          quote.feeRecipient,
+          '0x9999999999999999999999999999999999999999',
+        );
+      },
+    );
+
+    test(
+      'TC-FEE-03: Falls back to disabled when endpoint returns 404',
+      () async {
+        final client = AssetChainBridgeClient(
+          baseUrl:
+              'https://corestaging.owlletapp.com/api/swap/assetchain/bridge',
+          useProxy: true,
+          httpClient: MockClient(
+            (request) async => http.Response('Not found', 404),
+          ),
+        );
+
+        final quote = await client.getFeeQuote(
+          chainId: 1,
+          sellToken: '0x2222222222222222222222222222222222222222',
+          amount: '1000000',
+        );
+        expect(quote.enabled, isFalse);
+        expect(quote.platformFeeBps, 0);
       },
     );
   });

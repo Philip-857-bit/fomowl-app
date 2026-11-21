@@ -141,7 +141,7 @@ class AppEnvironment {
   }
 
   /// Base URL for the Asset Chain Bridge API.
-  /// Defaults to Mainnet (https://bridge.assetchain.org) or Testnet (https://bridge-testnet.assetchain.org).
+  /// Defaults to Mainnet (https://orchestrator.assetchain.org) or Testnet (https://bridge-testnet.assetchain.org).
   static String assetChainBridgeBaseUrl({bool testnet = false}) {
     final configured = _optionalEnv(_assetchainBridgeBaseUrlEnv);
     if (configured != null) {
@@ -149,7 +149,7 @@ class AppEnvironment {
     }
     return testnet
         ? 'https://bridge-testnet.assetchain.org'
-        : 'https://bridge.assetchain.org';
+        : 'https://orchestrator.assetchain.org';
   }
 
   /// Backend proxy URL for Asset Chain Bridge.
