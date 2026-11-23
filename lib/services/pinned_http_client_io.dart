@@ -17,22 +17,22 @@ HttpClient _createConfiguredIoHttpClient() {
 
 CronetEngine _buildCronetEngine() {
   try {
-    // Force Android's system DNS resolver instead of Cronet's built-in async
-    // DNS resolver (which is otherwise enabled automatically when QUIC is on
-    // and can fail with ERROR_HOSTNAME_NOT_RESOLVED under Android Private DNS,
-    // VPNs, NAT64/IPv6-only 5G carriers, or certain Wi-Fi routers).
+    // Keep HTTP/2 and Brotli over TCP while disabling QUIC (UDP/443) and
+    // Cronet's built-in async DNS resolver. On many 5G carrier CGNAT networks,
+    // Wi-Fi routers, and Android Private DNS / VPN setups, QUIC UDP/443 packets
+    // or Cronet's internal c-ares DNS resolver stall on every cold start while
+    // TCP/443 + Android system DNS works reliably.
     return CronetEngine.build(
       cacheMode: CacheMode.memory,
       cacheMaxSize: 2 * 1024 * 1024,
       enableHttp2: true,
-      enableQuic: true,
+      enableQuic: false,
       enableBrotli: true,
       useBuiltInDnsResolver: false,
     );
   } catch (_) {
     // Older Google Play Services Cronet modules may not support DnsOptions.
-    // Disabling QUIC also disables Cronet's built-in DNS resolver while keeping
-    // HTTP/2 over TCP and Brotli enabled.
+    // With enableQuic: false, Cronet already defaults to the system DNS resolver.
     return CronetEngine.build(
       cacheMode: CacheMode.memory,
       cacheMaxSize: 2 * 1024 * 1024,
@@ -57,7 +57,7 @@ http.Client _createNativeTransportClient() {
   if (Platform.isIOS || Platform.isMacOS) {
     try {
       final config = URLSessionConfiguration.ephemeralSessionConfiguration()
-        ..timeoutIntervalForRequest = const Duration(seconds: 15);
+        ..timeoutIntervalForRequest = const Duration(seconds: 8);
       return ResilientNativeHttpClient(
         CupertinoClient.fromSessionConfiguration(config),
       );
@@ -68,14 +68,14 @@ http.Client _createNativeTransportClient() {
   return IOClient(_createConfiguredIoHttpClient());
 }
 
-/// Wraps a native HTTP/2 + HTTP/3 transport (`CronetClient` on Android,
+/// Wraps a native HTTP/2 transport (`CronetClient` on Android,
 /// `CupertinoClient` on iOS/macOS) and automatically falls back to `dart:io`
 /// [IOClient] (HTTP/1.1) when the native transport fails or times out.
 class ResilientNativeHttpClient extends http.BaseClient {
   ResilientNativeHttpClient(
     http.Client native, {
     http.Client Function()? fallbackFactory,
-    Duration nativeAttemptTimeout = const Duration(seconds: 10),
+    Duration nativeAttemptTimeout = const Duration(seconds: 4),
   }) : _native = native,
        _fallbackFactory =
            fallbackFactory ?? (() => IOClient(_createConfiguredIoHttpClient())),

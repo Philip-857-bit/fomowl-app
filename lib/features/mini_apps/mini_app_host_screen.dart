@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import '../../widgets/bitcoin_capability_gate.dart';
 import 'dart:convert';
 import 'dart:io' show Platform, SocketException;
@@ -17,7 +18,9 @@ import '../../models/chain.dart';
 import '../../models/network_entry.dart';
 import '../../models/token.dart';
 import '../../models/token_standard.dart';
+import '../../models/wallet_account.dart';
 import '../../services/auth_service.dart';
+import '../../services/home_snapshot_service.dart';
 import '../../services/app_store_service.dart';
 import '../../services/cashin_profile_auth_service.dart';
 import '../../services/wallet_backend_auth_service.dart';
@@ -291,6 +294,11 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   int _progress = 0;
   bool _canGoBack = false;
   bool _loadingContext = true;
+  bool _isPageLoading = true;
+  String? _pageLoadErrorMessage;
+  int _autoRetryCount = 0;
+  Timer? _loadStallTimer;
+  String? _lastAppliedBridgeScript;
   bool _switchNetworkRequestInFlight = false;
   bool _bitcoinCashoutInFlight = false;
   bool _burstSessionFlowBusy = false;
@@ -497,6 +505,8 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
 
   @override
   void dispose() {
+    _loadStallTimer?.cancel();
+    _loadStallTimer = null;
     if (identical(_activeInstance, this)) {
       _activeInstance = null;
     }
@@ -573,22 +583,23 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }
 
   Future<void> _prepareBridgeContext() async {
-    final profile = await _authService.getCachedProfile();
-    final isLoggedIn = await _authService.isLoggedIn();
+    // Run local profile/session/wallet reads in parallel so the WebView can
+    // mount immediately instead of waiting on 5 sequential storage round-trips.
+    final results = await Future.wait<Object?>([
+      _authService.getCachedProfile(),
+      _authService.isLoggedIn(),
+      _walletService.getCurrentWalletAddress().catchError((_) => null),
+      _walletService.getActiveWalletAccount().catchError((_) => null),
+    ]);
+    final profile = results[0] as Map<String, dynamic>?;
+    final isLoggedIn = results[1] == true;
+    var rawWalletAddress = results[2] as String?;
+    final activeAccount = results[3] as WalletAccount?;
 
-    // Resolve the EVM wallet address from the wallet itself first â€” the most
-    // reliable source. The cached backend profile does not always carry
-    // `primary_wallet_address`, which previously left mini-apps with no wallet
-    // context at all. Fall back to the profile field when the wallet lookup is
-    // unavailable.
-    String? rawWalletAddress;
-    try {
-      rawWalletAddress = await _walletService.getCurrentWalletAddress();
-    } catch (_) {
-      rawWalletAddress = null;
-    }
     if (rawWalletAddress == null || rawWalletAddress.isEmpty) {
-      rawWalletAddress = profile?['primary_wallet_address']?.toString();
+      rawWalletAddress =
+          activeAccount?.getWalletAddressForFamily(ChainFamily.evm) ??
+          profile?['primary_wallet_address']?.toString();
     }
     final String? walletAddress =
         (rawWalletAddress != null && rawWalletAddress.isNotEmpty)
@@ -596,24 +607,13 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         : null;
     final hasWallet = walletAddress != null;
 
-    // The user's Solana address â€” needed by cross-chain flows (e.g. cash-in's
-    // sell-any-token saga uses it as the USDC refund address). Best-effort.
-    String? solanaWalletAddress;
-    try {
-      solanaWalletAddress = await _walletService.getWalletAddressForFamily(
-        ChainFamily.solana,
-      );
-    } catch (_) {
-      solanaWalletAddress = null;
-    }
-    String? tronWalletAddress;
-    try {
-      tronWalletAddress = await _walletService.getWalletAddressForFamily(
-        ChainFamily.tron,
-      );
-    } catch (_) {
-      tronWalletAddress = null;
-    }
+    // The user's Solana & Tron addresses — read directly from the already-loaded
+    // active WalletAccount so we don't re-parse SharedPreferences twice.
+    final String? solanaWalletAddress = activeAccount
+        ?.getWalletAddressForFamily(ChainFamily.solana);
+    final String? tronWalletAddress = activeAccount?.getWalletAddressForFamily(
+      ChainFamily.tron,
+    );
 
     // Surface the wallet-auth (ws_) session token to the mini-app so it can call
     // wallet-scoped backend endpoints (e.g. the affiliate dashboard) as the user.
@@ -863,6 +863,11 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
       );
     }
 
+    final initialScriptSource = _isTrustedOrigin(launchUri)
+        ? _buildBridgeScript()
+        : null;
+    _lastAppliedBridgeScript ??= initialScriptSource;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -870,101 +875,204 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           children: [
             _buildChrome(),
             Expanded(
-              child: InAppWebView(
-                initialSettings: InAppWebViewSettings(
-                  javaScriptEnabled: true,
-                  supportZoom: false,
-                  transparentBackground: true,
-                  useShouldOverrideUrlLoading: true,
-                  allowsBackForwardNavigationGestures: true,
-                  // Expose the webview to chrome://inspect (Android) and Safari
-                  // Web Inspector (iOS) for debugging the mini-app's JS console.
-                  // On by default in debug builds; to debug a RELEASE build, build
-                  // with --dart-define=OWLLET_WEBVIEW_INSPECTABLE=true. A normal
-                  // production release (no flag) stays locked.
-                  isInspectable: kDebugMode || _webviewInspectable,
-                  // Allow the in-app live camera (getUserMedia) used by KYC
-                  // capture so the flow never has to background into the
-                  // external camera app (which trips the app lock and loses
-                  // the captured image).
-                  mediaPlaybackRequiresUserGesture: false,
-                  allowsInlineMediaPlayback: true,
-                  iframeAllow: 'camera; microphone',
-                  iframeAllowFullscreen: true,
-                ),
-                onPermissionRequest: (controller, request) async {
-                  // Only a trusted mini-app origin may use the device camera
-                  // (e.g. OwlletPay KYC selfie). Some Android WebView builds report
-                  // an empty/null permission-request origin, which previously
-                  // tripped the trust check and silently denied getUserMedia
-                  // (NotAllowedError) even with the OS camera permission granted.
-                  // Fall back to the CURRENTLY-LOADED page origin â€” that URL is
-                  // already origin-guarded by shouldOverrideUrlLoading, so only a
-                  // trusted page can ever be the top-level document here.
-                  final pageTrusted =
-                      _isTrustedOrigin(request.origin) ||
-                      await _isCurrentPageTrusted();
-                  if (!pageTrusted) {
-                    return PermissionResponse(
-                      resources: request.resources,
-                      action: PermissionResponseAction.DENY,
-                    );
-                  }
-                  // Tell the host lock guard this backgrounding (system
-                  // permission dialog / camera) is expected so it doesn't throw
-                  // up the unlock screen and wipe the capture in progress.
-                  SystemPickerGuard.arm();
-                  final granted = await _ensureNativeCameraPermission();
-                  return PermissionResponse(
-                    resources: request.resources,
-                    action: granted
-                        ? PermissionResponseAction.GRANT
-                        : PermissionResponseAction.DENY,
-                  );
-                },
-                onWebViewCreated: (controller) {
-                  _controller = controller;
-                  controller.addJavaScriptHandler(
-                    handlerName: _handlerName,
-                    callback: (args) async => _handleBridgeCall(args),
-                  );
-                  _initializeWebView(controller, launchUri);
-                },
-                shouldOverrideUrlLoading: (controller, action) async {
-                  final next = action.request.url?.uriValue;
-                  if (next == null) {
-                    return NavigationActionPolicy.CANCEL;
-                  }
-                  if (!isSupportedDiscoverWebUri(next)) {
-                    return NavigationActionPolicy.CANCEL;
-                  }
-                  if (!_isTrustedOrigin(next)) {
-                    await _openExternal(next);
-                    return NavigationActionPolicy.CANCEL;
-                  }
-                  if (!_runtimeAllowsMiniAppUrl(next)) {
-                    return NavigationActionPolicy.CANCEL;
-                  }
-                  await _applyBridgeIfTrusted(next);
-                  return NavigationActionPolicy.ALLOW;
-                },
-                onLoadStart: (controller, url) {
-                  setState(() => _progress = 0);
-                },
-                onProgressChanged: (_, progress) {
-                  setState(() => _progress = progress);
-                },
-                onLoadStop: (controller, url) async {
-                  final next = url?.uriValue;
-                  if (next != null) {
-                    await _applyBridgeIfTrusted(next);
-                  }
-                  await _refreshNavigationState();
-                },
-                onUpdateVisitedHistory:
-                    (controller, url, androidIsReload) async {
+              child: Stack(
+                children: [
+                  InAppWebView(
+                    initialUrlRequest: URLRequest(url: WebUri.uri(launchUri)),
+                    initialUserScripts: UnmodifiableListView<UserScript>([
+                      if (initialScriptSource != null)
+                        UserScript(
+                          groupName: _scriptGroup,
+                          injectionTime:
+                              UserScriptInjectionTime.AT_DOCUMENT_START,
+                          source: initialScriptSource,
+                        ),
+                    ]),
+                    initialSettings: InAppWebViewSettings(
+                      javaScriptEnabled: true,
+                      javaScriptCanOpenWindowsAutomatically: false,
+                      supportZoom: false,
+                      domStorageEnabled: true,
+                      databaseEnabled: true,
+                      cacheEnabled: true,
+                      // Only trusted mini-app origins are allowed to load in the
+                      // main frame; skip redundant Play Services Safe Browsing IPC
+                      // lookups that can stall navigation on slow mobile networks.
+                      safeBrowsingEnabled: false,
+                      transparentBackground: true,
+                      useShouldOverrideUrlLoading: true,
+                      allowsBackForwardNavigationGestures: true,
+                      // Expose the webview to chrome://inspect (Android) and Safari
+                      // Web Inspector (iOS) for debugging the mini-app's JS console.
+                      // On by default in debug builds; to debug a RELEASE build, build
+                      // with --dart-define=OWLLET_WEBVIEW_INSPECTABLE=true. A normal
+                      // production release (no flag) stays locked.
+                      isInspectable: kDebugMode || _webviewInspectable,
+                      // Allow the in-app live camera (getUserMedia) used by KYC
+                      // capture so the flow never has to background into the
+                      // external camera app (which trips the app lock and loses
+                      // the captured image).
+                      mediaPlaybackRequiresUserGesture: false,
+                      allowsInlineMediaPlayback: true,
+                      iframeAllow: 'camera; microphone',
+                      iframeAllowFullscreen: true,
+                    ),
+                    onPermissionRequest: (controller, request) async {
+                      // Only a trusted mini-app origin may use the device camera
+                      // (e.g. OwlletPay KYC selfie). Some Android WebView builds report
+                      // an empty/null permission-request origin, which previously
+                      // tripped the trust check and silently denied getUserMedia
+                      // (NotAllowedError) even with the OS camera permission granted.
+                      // Fall back to the CURRENTLY-LOADED page origin — that URL is
+                      // already origin-guarded by shouldOverrideUrlLoading, so only a
+                      // trusted page can ever be the top-level document here.
+                      final pageTrusted =
+                          _isTrustedOrigin(request.origin) ||
+                          await _isCurrentPageTrusted();
+                      if (!pageTrusted) {
+                        return PermissionResponse(
+                          resources: request.resources,
+                          action: PermissionResponseAction.DENY,
+                        );
+                      }
+                      // Tell the host lock guard this backgrounding (system
+                      // permission dialog / camera) is expected so it doesn't throw
+                      // up the unlock screen and wipe the capture in progress.
+                      SystemPickerGuard.arm();
+                      final granted = await _ensureNativeCameraPermission();
+                      return PermissionResponse(
+                        resources: request.resources,
+                        action: granted
+                            ? PermissionResponseAction.GRANT
+                            : PermissionResponseAction.DENY,
+                      );
+                    },
+                    onWebViewCreated: (controller) {
+                      _controller = controller;
+                      controller.addJavaScriptHandler(
+                        handlerName: _handlerName,
+                        callback: (args) async => _handleBridgeCall(args),
+                      );
+                      _armLoadStallWatchdog(launchUri);
+                    },
+                    shouldOverrideUrlLoading: (controller, action) async {
+                      final next = action.request.url?.uriValue;
+                      if (next == null) {
+                        return action.isForMainFrame
+                            ? NavigationActionPolicy.CANCEL
+                            : NavigationActionPolicy.ALLOW;
+                      }
+                      // Do not treat third-party subframes/iframes (e.g. WalletConnect,
+                      // KYC, or payment widgets) as top-level external navigations,
+                      // and do not block them on user-script IPC round-trips.
+                      if (!action.isForMainFrame) {
+                        return isSupportedDiscoverWebUri(next)
+                            ? NavigationActionPolicy.ALLOW
+                            : NavigationActionPolicy.CANCEL;
+                      }
+                      if (!isSupportedDiscoverWebUri(next)) {
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                      if (!_isTrustedOrigin(next)) {
+                        await _openExternal(next);
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                      if (!_runtimeAllowsMiniAppUrl(next)) {
+                        return NavigationActionPolicy.CANCEL;
+                      }
+                      await _applyBridgeIfTrusted(next);
+                      return NavigationActionPolicy.ALLOW;
+                    },
+                    onLoadStart: (controller, url) {
+                      final next = url?.uriValue ?? launchUri;
+                      _armLoadStallWatchdog(next);
+                      if (mounted) {
+                        setState(() {
+                          _progress = 0;
+                          _isPageLoading = true;
+                          _pageLoadErrorMessage = null;
+                        });
+                      }
+                    },
+                    onPageCommitVisible: (_, _) {
+                      _loadStallTimer?.cancel();
+                      if (mounted && _isPageLoading) {
+                        setState(() => _isPageLoading = false);
+                      }
+                    },
+                    onProgressChanged: (_, progress) {
+                      if (progress >= 45) {
+                        _loadStallTimer?.cancel();
+                      }
+                      if (mounted) {
+                        setState(() {
+                          _progress = progress;
+                          if (progress >= 80 && _isPageLoading) {
+                            _isPageLoading = false;
+                          }
+                        });
+                      }
+                    },
+                    onLoadStop: (controller, url) async {
+                      _loadStallTimer?.cancel();
+                      _autoRetryCount = 0;
+                      if (mounted) {
+                        setState(() {
+                          _isPageLoading = false;
+                          _pageLoadErrorMessage = null;
+                        });
+                      }
+                      final next = url?.uriValue;
+                      if (next != null) {
+                        await _applyBridgeIfTrusted(next);
+                        await _publishBridgeContext();
+                      }
                       await _refreshNavigationState();
                     },
+                    onReceivedError: (controller, request, error) async {
+                      if (request.isForMainFrame != true) {
+                        return;
+                      }
+                      await _handleMainFrameLoadFailure(
+                        request.url.uriValue,
+                        'Unable to load ${widget.definition.title}. Check your connection and try again.',
+                      );
+                    },
+                    onReceivedHttpError:
+                        (controller, request, errorResponse) async {
+                          final statusCode = errorResponse.statusCode ?? 0;
+                          if (request.isForMainFrame != true ||
+                              statusCode < 500) {
+                            return;
+                          }
+                          await _handleMainFrameLoadFailure(
+                            request.url.uriValue,
+                            '${widget.definition.title} is taking longer than usual to respond. Please try again.',
+                          );
+                        },
+                    onUpdateVisitedHistory:
+                        (controller, url, androidIsReload) async {
+                          await _refreshNavigationState();
+                        },
+                  ),
+                  if (_isPageLoading && _pageLoadErrorMessage == null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Container(
+                          color: AppColors.background,
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_pageLoadErrorMessage != null)
+                    Positioned.fill(
+                      child: _buildPageLoadErrorOverlay(_pageLoadErrorMessage!),
+                    ),
+                ],
               ),
             ),
           ],
@@ -974,6 +1082,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }
 
   Widget _buildChrome() {
+    final showProgress =
+        _pageLoadErrorMessage == null &&
+        (_isPageLoading || (_progress > 0 && _progress < 100));
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(
@@ -1013,9 +1124,9 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
               ),
             ],
           ),
-          if (_progress > 0 && _progress < 100)
+          if (showProgress)
             LinearProgressIndicator(
-              value: _progress / 100,
+              value: _progress > 5 && _progress < 100 ? _progress / 100 : null,
               backgroundColor: Colors.white12,
               color: AppColors.success,
             ),
@@ -1024,13 +1135,102 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     );
   }
 
-  Future<void> _initializeWebView(
-    InAppWebViewController controller,
-    Uri launchUri,
+  void _armLoadStallWatchdog(Uri targetUri) {
+    _loadStallTimer?.cancel();
+    _loadStallTimer = Timer(const Duration(seconds: 9), () {
+      if (!mounted || !_isPageLoading || _pageLoadErrorMessage != null) {
+        return;
+      }
+      unawaited(
+        _handleMainFrameLoadFailure(
+          targetUri,
+          '${widget.definition.title} took too long to load. Tap Try again to reload.',
+        ),
+      );
+    });
+  }
+
+  Future<void> _handleMainFrameLoadFailure(
+    Uri targetUri,
+    String fallbackMessage,
   ) async {
-    await _applyBridgeIfTrusted(launchUri);
-    await controller.loadUrl(
-      urlRequest: URLRequest(url: WebUri.uri(launchUri)),
+    _loadStallTimer?.cancel();
+    if (!mounted) {
+      return;
+    }
+    final controller = _controller;
+    if (_autoRetryCount < 1 && controller != null) {
+      _autoRetryCount += 1;
+      final retryUri = _isTrustedOrigin(targetUri)
+          ? targetUri
+          : (_launchUri ?? targetUri);
+      await _applyBridgeIfTrusted(retryUri);
+      await controller.loadUrl(
+        urlRequest: URLRequest(url: WebUri.uri(retryUri)),
+      );
+      return;
+    }
+    setState(() {
+      _isPageLoading = false;
+      _progress = 0;
+      _pageLoadErrorMessage = fallbackMessage;
+    });
+  }
+
+  Widget _buildPageLoadErrorOverlay(String message) {
+    return Container(
+      color: AppColors.background,
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.cardDark,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.wifi_off_rounded,
+                color: AppColors.success,
+                size: 44,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Unable to open ${widget.definition.title}',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Try again'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1039,15 +1239,24 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     if (controller == null) {
       return;
     }
-    await controller.removeUserScriptsByGroupName(groupName: _scriptGroup);
     if (!_isTrustedOrigin(uri)) {
+      if (_lastAppliedBridgeScript != null) {
+        _lastAppliedBridgeScript = null;
+        await controller.removeUserScriptsByGroupName(groupName: _scriptGroup);
+      }
       return;
     }
+    final nextScript = _buildBridgeScript();
+    if (_lastAppliedBridgeScript == nextScript) {
+      return;
+    }
+    _lastAppliedBridgeScript = nextScript;
+    await controller.removeUserScriptsByGroupName(groupName: _scriptGroup);
     await controller.addUserScript(
       userScript: UserScript(
         groupName: _scriptGroup,
         injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-        source: _buildBridgeScript(),
+        source: nextScript,
       ),
     );
   }
@@ -1727,35 +1936,57 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         complete: false,
       );
     }
+    final cachedBalances = await _cachedBridgeBalancesForNetwork(
+      family,
+      networkKey,
+      address,
+    );
+    if (cachedBalances.isNotEmpty) {
+      unawaited(
+        _publishBalancesProgress(
+          cachedBalances,
+          walletAddress: address,
+          networkKey: networkKey,
+          complete: false,
+        ),
+      );
+    }
     try {
       final uri = AppEnvironment.blockchain(
         '/networks/${Uri.encodeComponent(networkKey)}'
         '/wallet-tokens/${Uri.encodeComponent(address)}',
       );
-      final response = await HttpClientService().client
-          .get(uri)
-          .timeout(const Duration(seconds: 15));
+      final response = await HttpClientService()
+          .sendWithRetry(
+            () => HttpClientService().client.get(uri),
+            maxRetries: 2,
+            delay: const Duration(milliseconds: 350),
+          )
+          .timeout(const Duration(seconds: 9));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return (
-          walletAddress: address,
-          balances: const <Map<String, dynamic>>[],
-          complete: false,
+        return _fallbackBridgeBalancesForNetwork(
+          family,
+          networkKey,
+          address,
+          cachedBalances: cachedBalances,
         );
       }
       final decoded = jsonDecode(response.body);
       if (decoded is! Map<String, dynamic>) {
-        return (
-          walletAddress: address,
-          balances: const <Map<String, dynamic>>[],
-          complete: false,
+        return _fallbackBridgeBalancesForNetwork(
+          family,
+          networkKey,
+          address,
+          cachedBalances: cachedBalances,
         );
       }
       final rawTokens = decoded['tokens'];
       if (rawTokens is! List) {
-        return (
-          walletAddress: address,
-          balances: const <Map<String, dynamic>>[],
-          complete: false,
+        return _fallbackBridgeBalancesForNetwork(
+          family,
+          networkKey,
+          address,
+          cachedBalances: cachedBalances,
         );
       }
       final defaultDecimals = family == ChainFamily.solana
@@ -1799,19 +2030,144 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
           : null;
       final partialFailure =
           discovery is Map && discovery['partialFailure'] == true;
-      return (
-        walletAddress: address,
-        balances: result,
-        complete: completeness != 'partial' && !partialFailure,
-      );
+      final isComplete = completeness != 'partial' && !partialFailure;
+      if (result.isEmpty && !isComplete && cachedBalances.isNotEmpty) {
+        return (
+          walletAddress: address,
+          balances: cachedBalances,
+          complete: false,
+        );
+      }
+      return (walletAddress: address, balances: result, complete: isComplete);
     } catch (error) {
       debugPrint('Mini-app getBalances: $networkKey fetch failed: $error');
-      return (
-        walletAddress: address,
-        balances: const <Map<String, dynamic>>[],
-        complete: false,
+      return _fallbackBridgeBalancesForNetwork(
+        family,
+        networkKey,
+        address,
+        cachedBalances: cachedBalances,
       );
     }
+  }
+
+  List<Map<String, dynamic>> _mapWalletTokensToBridgeBalances(
+    Iterable<Token> tokens, {
+    required ChainFamily family,
+    required String networkKey,
+  }) {
+    final defaultDecimals = family == ChainFamily.solana
+        ? 9
+        : family == ChainFamily.tron
+        ? 6
+        : 18;
+    final result = <Map<String, dynamic>>[];
+    for (final token in tokens) {
+      final symbol = token.symbol.trim();
+      if (symbol.isEmpty || token.balance <= 0) continue;
+      result.add(<String, dynamic>{
+        'symbol': symbol,
+        'name': token.name.trim().isEmpty ? symbol : token.name.trim(),
+        'networkKey': networkKey,
+        'chainFamily': family.wireValue,
+        'contractAddress': token.contractAddress,
+        'decimals': token.decimals > 0 ? token.decimals : defaultDecimals,
+        'balance': token.balance,
+        'valueUsd': token.valueUsd,
+        'priceUsd': token.unitPriceUsd,
+        'isCertified': token.isCertified,
+        'imageUrl': token.imageUrl,
+        'logoUrl': token.imageUrl,
+      });
+    }
+    return result;
+  }
+
+  Future<List<Map<String, dynamic>>> _cachedBridgeBalancesForNetwork(
+    ChainFamily family,
+    String networkKey,
+    String address,
+  ) async {
+    final blockchain = _blockchain;
+    if (blockchain == null) {
+      return const <Map<String, dynamic>>[];
+    }
+    final chainId = family == ChainFamily.evm
+        ? NetworkKey.evmChainIdOf(networkKey)
+        : (blockchain.activeNetworkKey == networkKey
+              ? blockchain.activeTokenStorageChainId
+              : null);
+    var tokens = <Token>[];
+    if (chainId != null) {
+      tokens = blockchain.getCachedWalletTokens(address, chainId: chainId);
+    }
+    if (tokens.isEmpty &&
+        blockchain.activeNetworkKey == networkKey &&
+        blockchain.activeWalletAddress.trim().toLowerCase() ==
+            address.trim().toLowerCase()) {
+      tokens = blockchain.tokens;
+    }
+    if (tokens.isEmpty && family == ChainFamily.evm && chainId != null) {
+      try {
+        final snapshot = await HomeSnapshotService().loadSnapshot(
+          chainId,
+          address,
+        );
+        if (snapshot != null && snapshot.tokens.isNotEmpty) {
+          tokens = snapshot.tokens;
+        }
+      } catch (_) {}
+    }
+    if (tokens.isEmpty) {
+      return const <Map<String, dynamic>>[];
+    }
+    return _mapWalletTokensToBridgeBalances(
+      tokens,
+      family: family,
+      networkKey: networkKey,
+    );
+  }
+
+  Future<
+    ({
+      String? walletAddress,
+      List<Map<String, dynamic>> balances,
+      bool complete,
+    })
+  >
+  _fallbackBridgeBalancesForNetwork(
+    ChainFamily family,
+    String networkKey,
+    String address, {
+    required List<Map<String, dynamic>> cachedBalances,
+  }) async {
+    final blockchain = _blockchain;
+    if (blockchain != null && blockchain.activeNetworkKey == networkKey) {
+      try {
+        final liveTokens = await blockchain
+            .fetchWalletTokens(address)
+            .timeout(const Duration(seconds: 8));
+        final mapped = _mapWalletTokensToBridgeBalances(
+          liveTokens,
+          family: family,
+          networkKey: networkKey,
+        );
+        if (mapped.isNotEmpty || !blockchain.lastDiscoveryPartialFailure) {
+          return (
+            walletAddress: address,
+            balances: mapped,
+            complete: !blockchain.lastDiscoveryPartialFailure,
+          );
+        }
+      } catch (_) {}
+    }
+    if (cachedBalances.isNotEmpty) {
+      return (walletAddress: address, balances: cachedBalances, complete: true);
+    }
+    return (
+      walletAddress: address,
+      balances: const <Map<String, dynamic>>[],
+      complete: false,
+    );
   }
 
   Future<Map<String, dynamic>> _handleContractTransactionRequest(
@@ -4595,7 +4951,32 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   }
 
   Future<void> _reload() async {
-    await _controller?.reload();
+    final controller = _controller;
+    final launchUri = _launchUri;
+    _autoRetryCount = 0;
+    if (mounted) {
+      setState(() {
+        _pageLoadErrorMessage = null;
+        _isPageLoading = true;
+        _progress = 0;
+      });
+    }
+    if (controller == null) {
+      return;
+    }
+    final currentUri = (await controller.getUrl())?.uriValue;
+    final targetUri = (currentUri != null && _isTrustedOrigin(currentUri))
+        ? currentUri
+        : launchUri;
+    if (targetUri != null) {
+      _armLoadStallWatchdog(targetUri);
+      await _applyBridgeIfTrusted(targetUri);
+      await controller.loadUrl(
+        urlRequest: URLRequest(url: WebUri.uri(targetUri)),
+      );
+      return;
+    }
+    await controller.reload();
   }
 }
 
