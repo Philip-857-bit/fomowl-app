@@ -232,6 +232,17 @@ jobs:
             printf '%s' "$1" | tr -d '\r\n'
           }
 
+          cash_in_allowed_origins="$(sanitize "${CASH_IN_MINI_APP_ALLOWED_ORIGINS:-}" | tr -d ' ')"
+          cash_in_allowed_origins="${cash_in_allowed_origins#,}"
+          cash_in_allowed_origins="${cash_in_allowed_origins%,}"
+          for required_origin in "https://owlletpay.owlletapp.com" "https://pay.owlletapp.com"; do
+            case ",${cash_in_allowed_origins}," in
+              *",${required_origin},"*) ;;
+              ",,") cash_in_allowed_origins="$required_origin" ;;
+              *) cash_in_allowed_origins="${cash_in_allowed_origins},${required_origin}" ;;
+            esac
+          done
+
           {
             echo "args<<EOF"
             echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
@@ -247,7 +258,7 @@ jobs:
             echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
             echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
             echo "--dart-define=CASH_IN_MINI_APP_URL=$(sanitize "$CASH_IN_MINI_APP_URL")"
-            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$cash_in_allowed_origins"
             echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
             echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
             echo "--dart-define=BURST_MINI_APP_URL=$(sanitize "$BURST_MINI_APP_URL")"
@@ -460,6 +471,17 @@ jobs:
             printf '%s' "$1" | tr -d '\r\n'
           }
 
+          cash_in_allowed_origins="$(sanitize "${CASH_IN_MINI_APP_ALLOWED_ORIGINS:-}" | tr -d ' ')"
+          cash_in_allowed_origins="${cash_in_allowed_origins#,}"
+          cash_in_allowed_origins="${cash_in_allowed_origins%,}"
+          for required_origin in "https://owlletpay.owlletapp.com" "https://pay.owlletapp.com"; do
+            case ",${cash_in_allowed_origins}," in
+              *",${required_origin},"*) ;;
+              ",,") cash_in_allowed_origins="$required_origin" ;;
+              *) cash_in_allowed_origins="${cash_in_allowed_origins},${required_origin}" ;;
+            esac
+          done
+
           {
             echo "args<<EOF"
             echo "--dart-define=BACKEND_BASE_URL=$(sanitize "$BACKEND_BASE_URL")"
@@ -475,7 +497,7 @@ jobs:
             echo "--dart-define=FIREBASE_STORAGE_BUCKET=$(sanitize "$FIREBASE_STORAGE_BUCKET")"
             echo "--dart-define=FIREBASE_IOS_BUNDLE_ID=$(sanitize "$FIREBASE_IOS_BUNDLE_ID")"
             echo "--dart-define=CASH_IN_MINI_APP_URL=$(sanitize "$CASH_IN_MINI_APP_URL")"
-            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$CASH_IN_MINI_APP_ALLOWED_ORIGINS")"
+            echo "--dart-define=CASH_IN_MINI_APP_ALLOWED_ORIGINS=$cash_in_allowed_origins"
             echo "--dart-define=AFFILIATE_MINI_APP_URL=$(sanitize "$AFFILIATE_MINI_APP_URL")"
             echo "--dart-define=AFFILIATE_MINI_APP_ALLOWED_ORIGINS=$(sanitize "$AFFILIATE_MINI_APP_ALLOWED_ORIGINS")"
             echo "--dart-define=BURST_MINI_APP_URL=$(sanitize "$BURST_MINI_APP_URL")"
