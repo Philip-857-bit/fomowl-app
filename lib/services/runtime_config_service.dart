@@ -67,9 +67,9 @@ class RuntimePolicySnapshot {
     this.billsEnabled = true,
     this.shopEnabled = true,
     this.legacySystemEnabled = true,
-    this.bitcoinEnabled = false,
+    this.bitcoinEnabled = true,
     this.bitcoinTestnetEnabled = false,
-    this.bitcoinRolloutStage = 'off',
+    this.bitcoinRolloutStage = 'default',
     this.bitcoinRolloutPercent = 0,
     this.festiveTransactionSuccessEnabled = false,
   });
@@ -304,9 +304,17 @@ class RuntimePolicySnapshot {
     }
 
     return RuntimePolicySnapshot(
-      bitcoinEnabled: features['bitcoinEnabled'] == true,
+      bitcoinEnabled:
+          features.containsKey('bitcoinEnabled') &&
+              features['bitcoinEnabled'] != null
+          ? features['bitcoinEnabled'] == true
+          : true,
       bitcoinTestnetEnabled: features['bitcoinTestnetEnabled'] == true,
-      bitcoinRolloutStage: features['bitcoinRolloutStage'] is String
+      bitcoinRolloutStage:
+          !features.containsKey('bitcoinRolloutStage') ||
+              features['bitcoinRolloutStage'] == null
+          ? 'default'
+          : features['bitcoinRolloutStage'] is String
           ? features['bitcoinRolloutStage'] as String
           : 'off',
       bitcoinRolloutPercent:

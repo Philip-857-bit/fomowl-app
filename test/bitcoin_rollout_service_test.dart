@@ -26,18 +26,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
   test(
-    'missing/malformed policy stays disabled and audience stages remain explicit',
+    'missing policy defaults enabled while malformed policy fails closed and audience stages remain explicit',
     () {
-      expect(RuntimePolicySnapshot.fromJson({}).bitcoinEnabled, isFalse);
+      final omitted = RuntimePolicySnapshot.fromJson({});
+      expect(omitted.bitcoinEnabled, isTrue);
+      expect(omitted.bitcoinRolloutStage, 'default');
       final malformed = RuntimePolicySnapshot.fromJson({
         'policy': {
-          'features': {
-            'bitcoinEnabled': 'true',
-            'bitcoinRolloutStage': 'default',
-          },
+          'features': {'bitcoinEnabled': 'true', 'bitcoinRolloutStage': 123},
         },
       });
       expect(malformed.bitcoinEnabled, isFalse);
+      expect(malformed.bitcoinRolloutStage, 'off');
       const internal = RuntimePolicySnapshot(
         bitcoinEnabled: true,
         bitcoinRolloutStage: 'internal',
@@ -158,7 +158,12 @@ void main() {
       network.delayed = Completer<bool>();
       final late = service.refresh(on);
       await Future<void>.delayed(Duration.zero);
-      await service.refresh(const RuntimePolicySnapshot());
+      await service.refresh(
+        const RuntimePolicySnapshot(
+          bitcoinEnabled: false,
+          bitcoinRolloutStage: 'off',
+        ),
+      );
       network.delayed!.complete(true);
       await late;
       expect(blockchain.isBitcoinNetworkAvailable('bitcoin:mainnet'), isFalse);
