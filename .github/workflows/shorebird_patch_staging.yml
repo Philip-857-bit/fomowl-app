@@ -139,6 +139,23 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Match the Rust compiler used by Android staging 1.9.0+61
+        if: inputs.release_version == '1.9.0+61'
+        run: |
+          set -euo pipefail
+          # Cargokit explicitly invokes `rustup run stable`, so choosing an
+          # older default toolchain alone would still rebuild with newer Rust.
+          release_rust=1.100.0
+          rustup toolchain install "$release_rust" --profile minimal
+          host="$(rustc +"$release_rust" -vV | sed -n 's/^host: //p')"
+          pinned_rustc="$(rustup which --toolchain "$release_rust" rustc)"
+          stable_rustc="$(rustup which --toolchain stable rustc)"
+          pinned_toolchain="$(dirname "$(dirname "$pinned_rustc")")"
+          stable_toolchain="$(dirname "$(dirname "$stable_rustc")")"
+          rustup toolchain uninstall "stable-$host"
+          ln -s "$pinned_toolchain" "$stable_toolchain"
+          rustup run stable rustc --version | grep -F "rustc $release_rust (0ef1bc386 "
+
       - name: Add Rust Android targets
         run: rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android i686-linux-android
 
