@@ -9,27 +9,43 @@ import 'wallet_service.dart';
 import 'http_client_service.dart';
 
 class WalletBackendAuthService {
-  static final Map<String, Future<String>> _inflightSessionRequests =
+  static final Map<String, Future<String>> _defaultInflightSessionRequests =
       <String, Future<String>>{};
 
   WalletBackendAuthService({
     StorageService? storageService,
     WalletService? walletService,
     HttpClientService? httpClientService,
-  }) : _storageService = storageService ?? StorageService(),
+  }) : _productionAffiliate = false,
+       _inflightSessionRequests = _defaultInflightSessionRequests,
+       _storageService = storageService ?? StorageService(),
        _walletService = walletService ?? WalletService(),
        _httpClientService = httpClientService ?? HttpClientService();
 
-  final StorageService _storageService;
+  WalletBackendAuthService.productionAffiliate({
+    WalletService? walletService,
+    HttpClientService? httpClientService,
+  }) : _productionAffiliate = true,
+       _inflightSessionRequests = <String, Future<String>>{},
+       _storageService = null,
+       _walletService = walletService ?? WalletService(),
+       _httpClientService = httpClientService ?? HttpClientService();
+
+  final bool _productionAffiliate;
+  final Map<String, Future<String>> _inflightSessionRequests;
+  final StorageService? _storageService;
   final WalletService _walletService;
   final HttpClientService _httpClientService;
+  final _productionSessions = <String, Map<String, String>>{};
 
   Future<String?> getValidSessionToken(String walletAddress) async {
-    final session = await _storageService.getBackendSession(walletAddress);
+    final session = _productionAffiliate
+        ? _productionSessions[walletAddress]
+        : await _storageService!.getBackendSession(walletAddress);
     if (session == null) return null;
     final expiresAt = DateTime.tryParse(session['expiresAt'] ?? '');
     if (expiresAt == null || !expiresAt.isAfter(DateTime.now().toUtc())) {
-      await _storageService.clearBackendSession(walletAddress);
+      await invalidateSession(walletAddress);
       return null;
     }
     return session['token'];
@@ -60,8 +76,12 @@ class WalletBackendAuthService {
     }
   }
 
-  Future<void> invalidateSession(String walletAddress) {
-    return _storageService.clearBackendSession(walletAddress);
+  Future<void> invalidateSession(String walletAddress) async {
+    if (_productionAffiliate) {
+      _productionSessions.remove(walletAddress.trim().toLowerCase());
+      return;
+    }
+    await _storageService!.clearBackendSession(walletAddress);
   }
 
   Future<http.Response> sendAuthorized(
@@ -92,7 +112,7 @@ class WalletBackendAuthService {
     final challengeResponse = await _httpClientService
         .sendWithRetry(
           () => _httpClientService.client.post(
-            AppEnvironment.settings('/auth/challenge'),
+            _authEndpoint('challenge'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'walletAddress': walletAddress}),
           ),
@@ -127,7 +147,7 @@ class WalletBackendAuthService {
     final verifyResponse = await _httpClientService
         .sendWithRetry(
           () => _httpClientService.client.post(
-            AppEnvironment.settings('/auth/verify'),
+            _authEndpoint('verify'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'walletAddress': walletAddress,
@@ -157,13 +177,24 @@ class WalletBackendAuthService {
       throw Exception('Unable to verify wallet ownership.');
     }
 
-    await _storageService.saveBackendSession(
-      walletAddress: walletAddress,
-      token: token,
-      expiresAt: expiresAt,
-    );
+    if (_productionAffiliate) {
+      _productionSessions[walletAddress] = {
+        'token': token,
+        'expiresAt': expiresAt,
+      };
+    } else {
+      await _storageService!.saveBackendSession(
+        walletAddress: walletAddress,
+        token: token,
+        expiresAt: expiresAt,
+      );
+    }
     return token;
   }
+
+  Uri _authEndpoint(String action) => _productionAffiliate
+      ? Uri.https('core.owlletapp.com', '/api/settings/auth/$action')
+      : AppEnvironment.settings('/auth/$action');
 
   String _extractError(String body, String fallback) {
     return AppErrorUtils.backendMessage(body, fallback: fallback);

@@ -286,6 +286,8 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
   final AuthService _authService = AuthService();
   final WalletBackendAuthService _walletBackendAuthService =
       WalletBackendAuthService();
+  late final WalletBackendAuthService _productionAffiliateAuthService =
+      WalletBackendAuthService.productionAffiliate();
   final WalletService _walletService = WalletService();
   final WalletHistoryService _walletHistoryService = WalletHistoryService();
   final TransactionMonitor _transactionMonitor = TransactionMonitor();
@@ -482,7 +484,19 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     overrideUri: _overrideUri,
   );
 
-  List<String> get _trustedOrigins => widget.definition.trustedOrigins;
+  static const _productionAffiliateOrigin = 'https://affiliate.owlletapp.com';
+
+  bool get _usesProductionAffiliateSession {
+    final launchUri = _launchUri;
+    return AppEnvironment.backendHost == 'corestaging.owlletapp.com' &&
+        widget.definition.id == 'affiliate' &&
+        launchUri != null &&
+        normalizeOriginFromUri(launchUri) == _productionAffiliateOrigin;
+  }
+
+  List<String> get _trustedOrigins => _usesProductionAffiliateSession
+      ? const [_productionAffiliateOrigin]
+      : widget.definition.trustedOrigins;
 
   @override
   void initState() {
@@ -624,13 +638,14 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
         !OwlletMiniApps.isOwlletPayId(widget.definition.id) &&
         widget.definition.id != 'burst') {
       try {
+        final authService = _usesProductionAffiliateSession
+            ? _productionAffiliateAuthService
+            : _walletBackendAuthService;
         walletSessionToken = widget.definition.requiresWalletSession
-            ? await _walletBackendAuthService
+            ? await authService
                   .ensureWalletSession(walletAddress)
                   .timeout(const Duration(seconds: 12))
-            : await _walletBackendAuthService.getValidSessionToken(
-                walletAddress,
-              );
+            : await authService.getValidSessionToken(walletAddress);
       } catch (_) {
         walletSessionToken = null;
       }
@@ -889,6 +904,12 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
                         ),
                     ]),
                     initialSettings: InAppWebViewSettings(
+                      javaScriptHandlersForMainFrameOnly:
+                          _usesProductionAffiliateSession ? true : null,
+                      javaScriptHandlersOriginAllowList:
+                          _usesProductionAffiliateSession
+                          ? {r'^https://affiliate\.owlletapp\.com(?::443)?$'}
+                          : null,
                       javaScriptEnabled: true,
                       javaScriptCanOpenWindowsAutomatically: false,
                       supportZoom: false,
@@ -1265,6 +1286,7 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     final encodedContext = jsonEncode(_bridgeContext);
     return '''
 (function() {
+  $_productionAffiliateScriptGuard
   let context = $encodedContext;
   const callHost = function(payload) {
     return window.flutter_inappwebview.callHandler('$_handlerName', payload);
@@ -1337,7 +1359,15 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
 ''';
   }
 
+  String get _productionAffiliateScriptGuard => _usesProductionAffiliateSession
+      ? 'if (window !== window.top || '
+            'window.location.origin !== "$_productionAffiliateOrigin") return;'
+      : '';
+
   Future<Map<String, dynamic>> _handleBridgeCall(List<dynamic> args) async {
+    if (_usesProductionAffiliateSession && !await _isCurrentPageTrusted()) {
+      return const {'ok': false, 'error': 'Untrusted mini app origin.'};
+    }
     final raw = args.isNotEmpty && args.first is Map
         ? (args.first as Map).cast<String, dynamic>()
         : <String, dynamic>{};
@@ -1670,7 +1700,13 @@ class _MiniAppHostScreenState extends State<_SupportedMiniAppHostScreen> {
     }
     final encodedContext = jsonEncode(_bridgeContext);
     await controller.evaluateJavascript(
-      source: '''window.OwlletMiniApp?.__updateContext?.($encodedContext);''',
+      source:
+          '''
+(function() {
+  $_productionAffiliateScriptGuard
+  window.OwlletMiniApp?.__updateContext?.($encodedContext);
+})();
+''',
     );
   }
 

@@ -1,6 +1,7 @@
 # Staging Shorebird patches for releases created by
 # "Shorebird Android Release (Staging)". Uses the same staging hosts hardcoded
-# in that workflow. Prefer SHOREBIRD_STAGING_APP_ID when set.
+# in that workflow. Publish to the staging app ID's stable track, which
+# installed staging builds check by default.
 name: Shorebird Patch (Staging)
 
 on:
@@ -33,7 +34,7 @@ jobs:
       FLUTTER_VERSION: 3.44.6
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_STAGING_APP_ID || secrets.SHOREBIRD_STAGING_APP_ID || vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_STAGING_APP_ID || secrets.SHOREBIRD_STAGING_APP_ID || '' }}
       SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
       SHOREBIRD_PATCH_PRIVATE_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 }}
       GRADLE_OPTS: -Dorg.gradle.vfs.watch=false
@@ -309,7 +310,7 @@ jobs:
           read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird patch android \
-            --track=staging \
+            --track=stable \
             --release-version="${{ inputs.release_version }}" \
             --allow-asset-diffs \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
@@ -332,7 +333,7 @@ jobs:
       XCODE_VERSION: '16.4'
       SHOREBIRD_FLUTTER_BUILD_ARGS: --no-tree-shake-icons
       SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_STAGING_APP_ID || secrets.SHOREBIRD_STAGING_APP_ID || vars.SHOREBIRD_APP_ID || secrets.SHOREBIRD_APP_ID || '' }}
+      SHOREBIRD_APP_ID: ${{ vars.SHOREBIRD_STAGING_APP_ID || secrets.SHOREBIRD_STAGING_APP_ID || '' }}
       SHOREBIRD_PATCH_PUBLIC_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PUBLIC_KEY_BASE64 }}
       SHOREBIRD_PATCH_PRIVATE_KEY_BASE64: ${{ secrets.SHOREBIRD_PATCH_PRIVATE_KEY_BASE64 }}
       BACKEND_BASE_URL: https://corestaging.owlletapp.com
@@ -588,7 +589,7 @@ jobs:
           read -r -a SHOREBIRD_BUILD_ARGS <<< "${SHOREBIRD_FLUTTER_BUILD_ARGS:-}"
           set +o pipefail
           printf 'y\n' | shorebird patch ios \
-            --track=staging \
+            --track=stable \
             --release-version="${{ inputs.release_version }}" \
             --allow-asset-diffs \
             --public-key-path="$RUNNER_TEMP/shorebird_public.pem" \
